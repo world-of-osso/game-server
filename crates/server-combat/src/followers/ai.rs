@@ -258,6 +258,9 @@ fn use_freightrunners_flask(world: &mut World, unit: Entity) {
     {
         return;
     }
+    if !super::spell_safety::safe(world, unit, unit, on_use.spell_id) {
+        return;
+    }
     if let Err(failure) = crate::spell_cast::cast_item_spell(
         world,
         unit,
@@ -611,7 +614,9 @@ pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, sp
     let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
-    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy) {
+    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy)
+        || !super::spell_safety::safe(world, caster, enemy, spell)
+    {
         return false;
     }
     if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
@@ -652,6 +657,9 @@ fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) ->
     let Some(spell) = defensive_spell(class) else {
         return false;
     };
+    if !super::spell_safety::safe(world, unit, unit, spell) {
+        return false;
+    }
     match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
         Ok(()) => true,
         Err(failure) => {
