@@ -805,6 +805,23 @@ fn tank_fight_position_avoids_windrunner_hatchling_and_aoe_reach() {
         .unwrap()
         .expect("native route to safe point");
     assert!(!route.is_empty());
+
+    // An attackable reactive hostile has no proximity acquisition, but spread can still hit it.
+    h.app
+        .world_mut()
+        .entity_mut(hatchling)
+        .remove::<crate::creature_aggro::AggroRange>();
+    let reactive =
+        super::tank_pull_back::read_exclusions(h.app.world_mut(), tank, h.npc, 40.0).unwrap();
+    assert!(
+        reactive
+            .iter()
+            .any(|(center, radius)| *center == hatchling_at && *radius == 40.0)
+    );
+    assert!(!super::tank_pull_back::outside_exclusions(
+        hatchling_at + Vec3::X * 39.0,
+        &reactive
+    ));
 }
 
 #[test]

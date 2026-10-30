@@ -43,7 +43,12 @@ pub(super) fn read_exclusions(
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
         .filter(|&actor| {
-            positioning::is_unpulled_hostile(world, tank, actor)
+            targets::is_alive(world, actor)
+                && world.get::<shared::components::Npc>(actor).is_some()
+                && world
+                    .get::<crate::creature_ai::CreatureState>(actor)
+                    .is_some_and(|state| state.is_idle())
+                && targets::relation_matches(world, tank, actor, targets::Relation::Enemy)
                 && !world
                     .get::<shared::components::CombatStatus>(actor)
                     .is_some_and(|status| status.0)
@@ -53,7 +58,12 @@ pub(super) fn read_exclusions(
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let mut exclusion = Vec::new();
     for watcher in watchers {
-        let radius = pull_route::read_native_radius(world, &mut geometry, tank, watcher)? + reach;
+        let aggro_radius = if positioning::is_unpulled_hostile(world, tank, watcher) {
+            pull_route::read_native_radius(world, &mut geometry, tank, watcher)?
+        } else {
+            0.0
+        };
+        let radius = aggro_radius + reach;
         let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
         exclusion.push((center, radius));
     }
