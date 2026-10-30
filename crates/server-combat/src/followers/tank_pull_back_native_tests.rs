@@ -265,8 +265,15 @@ fn run_native_pull_back(production: bool, full_party: bool) {
         let point = crate::spell_cast::targets::position(h.app.world(), tank).unwrap();
         farthest = farthest.max(start.distance(point));
         assert!(
-            !crate::combat_refs::has_active_reference_to(h.app.world(), hatchling, tank),
-            "unrelated hatchling acquired the tank: tank={:?} target={:?} hatchling={:?} waited={waited} acquired={acquired} target_victim={:?} hatchling_victim={:?} recent_events={:?}",
+            std::iter::once(owner)
+                .chain(std::iter::once(tank))
+                .chain(companions.iter().copied())
+                .all(|member| !crate::combat_refs::has_active_reference_to(
+                    h.app.world(),
+                    hatchling,
+                    member
+                )),
+            "unrelated hatchling acquired a party member: tank={:?} target={:?} hatchling={:?} waited={waited} acquired={acquired} target_victim={:?} hatchling_victim={:?} recent_events={:?}",
             crate::spell_cast::targets::position(h.app.world(), tank),
             crate::spell_cast::targets::position(h.app.world(), target),
             crate::spell_cast::targets::position(h.app.world(), hatchling),
