@@ -71,7 +71,7 @@ fn spawn_follower(h: &mut crate::spell_cast::test_harness::Harness, profile: Pro
 #[ignore = "requires Windrunner navmesh"]
 fn wrong_floor_hostile_is_dropped_instead_of_pursued() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[133], 8).unwrap();
-    let mut fighter = profile(209059, GroupRole::Dps, 133, 0);
+    let mut fighter = profile(209059, GroupRole::Dps, 0, 0);
     fighter.melee = true;
     let follower = spawn_follower(&mut h, fighter);
     let enemy = h.npc;

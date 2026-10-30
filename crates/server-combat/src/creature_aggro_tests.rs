@@ -1056,6 +1056,37 @@ fn evading_creature_ignores_attacks_until_it_returns_home() {
     );
 }
 
+#[test]
+fn blocked_chase_creature_evades_melee_without_threat() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let player = spawn_player(&mut app, at(1.0, 0.0), 5);
+    crate::creature_ai::mark_chase_blocked(app.world_mut(), spider, player.to_bits());
+    attack(&mut app, player, spider);
+    let before = health(&app, spider);
+    crate::combat::repeat_melee_swing(app.world_mut(), player, spider, crate::melee::Hand::Main);
+    assert_eq!(health(&app, spider), before);
+    assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
+    app.world_mut()
+        .entity_mut(spider)
+        .remove::<crate::creature_ai::CannotReachTarget>();
+    for _ in 0..20 {
+        crate::combat::repeat_melee_swing(
+            app.world_mut(),
+            player,
+            spider,
+            crate::melee::Hand::Main,
+        );
+        if health(&app, spider) < before {
+            break;
+        }
+    }
+    assert!(
+        health(&app, spider) < before,
+        "melee works after reachability is restored"
+    );
+}
+
 fn in_combat(app: &App, unit: Entity) -> bool {
     app.world()
         .get::<CombatStatus>(unit)

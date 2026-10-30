@@ -73,6 +73,11 @@ fn remove_immune_effect_targets(
     for planned in plan.iter_mut() {
         let effect = &spell.effects[planned.index];
         let harmful = negative & (1 << effect.index) != 0;
+        planned.selected_units.retain(|unit| {
+            !misses
+                .iter()
+                .any(|(missed, kind)| missed == unit && *kind == MissKind::Evade)
+        });
         planned.units.retain(|unit| {
             // A whole-spell miss removes every effect on that unit. Numeric
             // Dummy markers cannot turn an immune primary into a successful hit.
