@@ -153,6 +153,7 @@ pub(super) fn advance(
         world.resource_mut::<Navigation>().cancel_query(unit, goal);
         return true;
     };
+    debug!(?unit, ?owner, ?origin, destination = ?to, "Follower retracing owner trail");
     world.resource_mut::<Navigation>().adopt_candidate_route(
         unit,
         MoveRequest {
