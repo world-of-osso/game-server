@@ -174,6 +174,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
     }
     for (entity, id) in arrived {
         world.entity_mut(entity).remove::<PointMovement>();
+        super::tagged_trash_intro::on_point_arrival(world, entity, id);
         super::dispatch(world, entity, Hook::MovementInform(MotionType::Point, id));
     }
 }

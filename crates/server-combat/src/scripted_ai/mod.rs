@@ -68,6 +68,7 @@ mod scripted_alerts;
 pub(crate) mod shattered_halls;
 mod skarmorak;
 pub mod smart_ai;
+pub(crate) mod tagged_trash_intro;
 mod talondras;
 pub mod the_stockade;
 mod treemouth;
@@ -152,6 +153,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, skarmorak::register_aura_scripts)
             .add_systems(Startup, neltharus_initial::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
+            .add_systems(FixedPostUpdate, tagged_trash_intro::advance)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
             .add_systems(
@@ -691,6 +693,7 @@ fn trigger_just_appeared(world: &mut World, appearing: &mut AppearingCreatures) 
             continue;
         };
         entity.remove::<TriggerJustAppeared>();
+        tagged_trash_intro::on_appeared(world, creature);
         dispatch(world, creature, Hook::JustAppeared);
     }
 }
