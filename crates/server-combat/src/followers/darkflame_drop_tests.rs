@@ -459,11 +459,16 @@ fn candlelight_follower_walks_into_authored_box_and_receives_light() {
         .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
     let map = InMap::continent(MAP);
     crate::world_area_triggers::spawn_map(h.app.world_mut(), map, 205);
-    let at = Position {
-        x: 153.0,
-        y: 74.2,
-        z: 155.0,
+    let start = Vec3::new(153.0, 71.22188, 155.0);
+    let GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<GroundMap>()
+        .ground_at(MAP, start)
+    else {
+        panic!("actual Candle King approach floor");
     };
+    let at = position(Vec3::new(start.x, height, start.z));
     h.app.world_mut().entity_mut(follower).insert((map, at));
     h.app.world_mut().entity_mut(h.npc).insert((
         map,
@@ -481,7 +486,7 @@ fn candlelight_follower_walks_into_authored_box_and_receives_light() {
         let after = *h.app.world().get::<Position>(follower).unwrap();
         assert!(
             point(after).distance(point(before)) < 2.0,
-            "ordinary movement, not teleport"
+            "ordinary movement, not teleport: {before:?} -> {after:?}"
         );
         if !seeking {
             entered = true;
