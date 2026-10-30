@@ -27,9 +27,7 @@ fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if matches!(spell.id, 206930 | 433895) {
         roll_proc(world, caster);
     } else if spell.id == 50842 && auras::has_aura(world, caster, 1265968) {
-        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-            aura.spell_id == 1265968 && aura.caster == caster
-        });
+        consume_boiling_point(world, caster);
     }
 }
 
@@ -52,6 +50,12 @@ fn roll_proc(world: &mut World, caster: Entity) {
     }
 }
 
+fn consume_boiling_point(world: &mut World, unit: Entity) {
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1265968 && aura.caster == unit
+    });
+}
+
 fn queue_echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     if unit != aura.caster || reason != RemoveReason::Consumed {
         return;
@@ -71,6 +75,9 @@ fn echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReas
                 .expect("native Blood Boil")
                 .clone();
             super::blood_rune_weapon::copy_weapon_actions(world, unit, &spell);
+            // SimC76f8118 sc_death_knight.cpp9069–9079: an echo can consume
+            // a new Boiling Point proc and schedule a subsequent echo.
+            consume_boiling_point(world, unit);
         }
     }
 }
