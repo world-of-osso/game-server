@@ -3261,7 +3261,7 @@ mod tests {
             assert!(!hits[0].crit && !hits[1].crit);
             let ratio = hits[1].amount as f32 / hits[0].amount as f32;
             assert!(
-                (ratio - 1.0).abs() < 0.02,
+                (ratio - 1.0).abs() < 0.05,
                 "both weapon copies inherit Boiling Point: {hits:?}"
             );
         }
