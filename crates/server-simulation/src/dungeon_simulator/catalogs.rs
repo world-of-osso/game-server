@@ -37,6 +37,7 @@ catalogs! {
     item_scaling: crate::item_stats::ItemScalingTables,
     item_templates: crate::item_templates::ItemTemplates,
     item_instances: crate::stats::NativeItemInstances,
+    item_procs: crate::item_proc_data::ItemProcInputs,
     follower_gear: crate::followers::gear::FollowerGearSource,
     factions: crate::faction::FactionTemplates,
     maps: crate::maps::MapStore,
@@ -56,6 +57,32 @@ catalogs! {
     destinations: crate::spell_cast::teleport_positions::SpellTargetPositions,
     disenchant: crate::spell_cast::disenchant::DisenchantData,
     locks: crate::spell_cast::open_lock::ItemLocks,
+}
+
+#[test]
+fn native_set_bonus_is_available_in_fresh_and_cached_seeded_worlds() {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use shared::protocol::EquipmentSlot;
+    let mut catalogs = None;
+    for _ in 0..2 {
+        let mut app = super::runtime::build_cached_app(&mut catalogs);
+        let owner = app
+            .world_mut()
+            .spawn(crate::stats::EquippedItems {
+                items: vec![
+                    (EquipmentSlot::Chest, Retail, 6473),
+                    (EquipmentSlot::Legs, Retail, 10410),
+                ],
+            })
+            .id();
+        let spells = crate::equipment_effects::item_sets::read_set_spells(app.world(), owner);
+        assert!(
+            spells
+                .iter()
+                .any(|(set, spell)| *set == 162 && spell.id == 41740)
+        );
+        catalogs = Some(Catalogs::take(app.world_mut()));
+    }
 }
 
 #[test]
