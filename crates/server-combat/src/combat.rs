@@ -810,6 +810,13 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         .iter(world)
         .collect();
     for attacker in attackers {
+        // TC Creature.h:240: both authored no-melee modes suppress swings.
+        if world
+            .get::<crate::creature_static::CreatureStaticFlags>(attacker)
+            .is_some_and(|flags| !flags.can_melee())
+        {
+            continue;
+        }
         // SimC76f8118 pets.cpp1510–1573: Antoran Tyrant's Burning Cleave is
         // its only swing. Native1251000 also replaces white swings with the
         // same spell, so a separate auto-attack would duplicate it.

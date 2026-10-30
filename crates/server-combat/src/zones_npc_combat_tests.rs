@@ -640,3 +640,30 @@ fn a_creature_in_northshire_abbey_aggroes_a_player_through_the_doorway() {
         Some(false)
     );
 }
+
+#[test]
+fn sessile_meat_pile_stays_rooted_outside_melee_but_attacks_in_range() {
+    let base = spawn_of(INFANTRY);
+    let source = placed(base, 244041, 0.0);
+    let mut app = fight_app(vec![source.clone()]).unwrap();
+    let creature = spawned(&app, 0);
+    let player = spawn_player_near(&mut app, &source, 15.0);
+    let start = *app.world().get::<Position>(creature).unwrap();
+    let initial_health = health(&app, player).0;
+    let template = world_data().template_for(244041, 205).unwrap();
+    assert_eq!(template.static_flags[0], 0x3000_0100);
+    run(&mut app, NOTIFY_TICKS * 8);
+    assert_eq!(state(&app, creature), pursuing(player));
+    assert_eq!(*app.world().get::<Position>(creature).unwrap(), start);
+    assert_eq!(health(&app, player).0, initial_health);
+    app.world_mut().entity_mut(player).insert(Position {
+        x: start.x + 1.0,
+        ..start
+    });
+    run(&mut app, NOTIFY_TICKS * 8);
+    assert_eq!(*app.world().get::<Position>(creature).unwrap(), start);
+    assert!(
+        health(&app, player).0 < initial_health,
+        "root must not prevent melee"
+    );
+}

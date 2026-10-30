@@ -11,6 +11,10 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 #[cfg(test)]
+mod consecration_vision_tests;
+#[cfg(test)]
+mod follower_dps_diagnostic;
+#[cfg(test)]
 mod tank_fixture_tests;
 #[cfg(test)]
 mod vengeance_consume_soul_tests;
@@ -839,6 +843,17 @@ pub(crate) fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
         }
     }
     Err("literal rotation exceeded 128 same-tick actions".into())
+}
+
+pub(crate) fn drive_literal_off_gcd(run: &mut Run) -> Result<bool, String> {
+    let world = run.app.world_mut();
+    world.init_resource::<LiteralTickProgress>();
+    world.resource_mut::<LiteralTickProgress>().0 = false;
+    run.spec_driver
+        .as_mut()
+        .expect("literal driver is present")
+        .drive(world, run.actor, &run.targets)?;
+    Ok(world.resource::<LiteralTickProgress>().0)
 }
 
 fn drive_player(run: &mut Run) -> Result<(), String> {

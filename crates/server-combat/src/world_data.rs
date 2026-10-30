@@ -29,6 +29,8 @@ pub struct CreatureTemplate {
     pub type_flags: u32,
     /// Source creature_template.flags_extra, including dungeon-boss/knockback immunity.
     pub flags_extra: u32,
+    /// TDB creature_template_difficulty StaticFlags1–8 for this resolved difficulty.
+    pub static_flags: [u32; 8],
     pub min_level: u8,
     pub max_level: u8,
     pub faction: u16,
@@ -55,6 +57,7 @@ pub struct CreatureTemplate {
     pub trigger: bool,
     /// `unit_flags` (TrinityCore `UnitFlags`), unless the spawn overrides them.
     pub unit_flags: u32,
+    pub unit_flags2: u32,
     pub models: Vec<CreatureModelInfo>,
     /// Retail ContentTuning scaling; `None` keeps the fixed `min_level` and
     /// creature_classlevelstats health.
@@ -610,6 +613,16 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         0 => DEFAULT_BASE_ATTACK_TIME_MS,
         authored => authored,
     };
+    let static_flags = [
+        row.get("StaticFlags1")?,
+        row.get("StaticFlags2")?,
+        row.get("StaticFlags3")?,
+        row.get("StaticFlags4")?,
+        row.get("StaticFlags5")?,
+        row.get("StaticFlags6")?,
+        row.get("StaticFlags7")?,
+        row.get("StaticFlags8")?,
+    ];
     let unit_class = row.get::<_, i64>(14)? as u8;
     let health_modifier = row.get(6)?;
     let armor_modifier = row.get(23)?;
@@ -645,6 +658,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         family: row.get::<_, i64>(28)? as u32,
         type_flags: row.get::<_, i64>(29)? as u32,
         flags_extra: row.get::<_, i64>(11)? as u32,
+        static_flags,
         rank: classification_rank(row, 8)?,
         experience_modifier: row.get(9)?,
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
@@ -654,14 +668,20 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         script_name: row.get(13)?,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
-        aggro_mode: AggroMode::for_template(
-            row.get::<_, i64>(10)? as u32,
-            row.get::<_, i64>(11)? as u32,
-            row.get::<_, i64>(17)? as u32,
-            &row.get::<_, String>(13)?,
-        ),
+        aggro_mode: if static_flags[0] & crate::creature_static::IGNORE_COMBAT != 0 {
+            // TC Creature.cpp:1300–1309: IGNORE_COMBAT selects passive react state.
+            AggroMode::Passive
+        } else {
+            AggroMode::for_template(
+                row.get::<_, i64>(10)? as u32,
+                row.get::<_, i64>(11)? as u32,
+                row.get::<_, i64>(17)? as u32,
+                &row.get::<_, String>(13)?,
+            )
+        },
         trigger: row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_TRIGGER != 0,
         unit_flags: row.get::<_, i64>(17)? as u32,
+        unit_flags2: row.get::<_, i64>(26)? as u32,
         models: Vec::new(),
         armor: expected.untuned_armor(row.get::<_, i64>(1)? as u8, unit_class, armor_modifier),
         armor_modifier,
@@ -684,7 +704,9 @@ pub(crate) fn load_templates(
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
                     LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
-                    ManaModifier, unit_flags2, RegenHealth, family, type_flags, BaseAttackTime
+                    ManaModifier, unit_flags2, RegenHealth, family, type_flags, BaseAttackTime,
+                    StaticFlags1, StaticFlags2, StaticFlags3, StaticFlags4,
+                    StaticFlags5, StaticFlags6, StaticFlags7, StaticFlags8
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -736,7 +758,9 @@ pub(crate) fn load_difficulty_templates(
                     d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin,
                     d.LevelScalingDeltaMax, d.DamageModifier, d.ArmorModifier, t.subname,
                     d.ManaModifier, t.unit_flags2, t.RegenHealth, t.family, t.type_flags,
-                    d.DifficultyID, t.BaseAttackTime
+                    d.DifficultyID, t.BaseAttackTime,
+                    d.StaticFlags1, d.StaticFlags2, d.StaticFlags3, d.StaticFlags4,
+                    d.StaticFlags5, d.StaticFlags6, d.StaticFlags7, d.StaticFlags8
              FROM content_creature_template_difficulty d
              JOIN content_creature_template t ON t.entry = d.entry",
         )

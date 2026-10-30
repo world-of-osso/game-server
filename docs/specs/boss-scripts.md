@@ -102,8 +102,9 @@ TC a352b1fa `CombatReference::EndCombat` clears both units' threat for each ende
 
 ## Deios source ingress boundary
 
-- Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
-- `DEIOS_PC_IMMUNITY_INGRESS_UNSOURCED`: actual source/runtime flags320 retain PC immunity0x100; source spawn9004522 and native spells exist, but no authored unlock/controller is available in pinned TC a352b1fa. Native ordinary threat ingress is blocked with no threat table. Preserve flags and do not manufacture engaged state, timer GREEN, death/kill-credit or a completed fight. Ordinary outgoing Wing damage qualification is separate from combat ingress; keep the first-Wing RED ignored until authentic ingress exists.
+- Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. The defeated-health>1 check does not establish a surrender/credit controller; the Deios combat script is not ported.
+- `DEIOS_WARMUP_PROXIMITY_INFERRED`: after Emberon2558 is Done, a living player within the static Deios template's 20-yard detection range starts the RP once per copy. The exact Normal/Follower trigger is unsourced: native70448 has no map2451 AreaTrigger or parent effect for 375500/386104/382264; TDB has no matching spell-area, gossip, spellclick or area-trigger action. The Disc of Tyr GO is type5, with no script or gossip.
+- `DEIOS_WARMUP_LITTLEWIGS_TIMER`: authored RP actor191220 spawn9004512 casts Temporal Theft382264; 16.9s after the successful cast, clear only PC immunity0x100 from static Deios184125 spawn9004522, establish its combat components and permit ordinary engagement. LittleWigs observes the cast and warmup but does not source the exact flag transition. Do not invent earlier aura or RP effects.
 
 ## Emberon current Lua partial
 

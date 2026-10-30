@@ -8,6 +8,7 @@ use crate::auras::{
 use crate::spell_cast::{self, TriggeredSpellOverrides};
 use bevy::prelude::*;
 
+mod focus;
 mod font;
 pub(crate) use font::SPLATTER as FONT_SPLATTER;
 pub(crate) use font::{
@@ -67,6 +68,7 @@ pub(crate) fn iris_dot_amount(
 }
 
 pub(crate) fn register(scripts: &mut AuraScripts) {
+    focus::register(scripts);
     font::register(scripts);
     for driver in [VENOM_DRIVER, HEART, FIRE] {
         scripts.0.insert(

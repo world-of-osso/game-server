@@ -292,14 +292,19 @@ fn wander_system(
             &mut WanderState,
             Option<&CreatureState>,
             Option<&InMap>,
+            Option<&crate::creature_static::CreatureStaticFlags>,
             Bearing,
         ),
         Roaming,
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, spawn, mut state, creature_state, map, bearing) in &mut query {
-        if matches!(creature_state, Some(s) if !s.is_idle()) {
+    for (entity, mut pos, spawn, mut state, creature_state, map, static_flags, bearing) in
+        &mut query
+    {
+        if static_flags.is_some_and(|flags| flags.sessile())
+            || matches!(creature_state, Some(s) if !s.is_idle())
+        {
             continue;
         }
         // RandomMovementGenerator rejects non-walkable paths. Unlike a routed
@@ -433,12 +438,13 @@ type Bearing = (
 );
 
 #[derive(bevy::ecs::system::SystemParam)]
-pub(crate) struct MoveQueues<'w> {
+pub(crate) struct MoveQueues<'w, 's> {
     interest: Option<Res<'w, InterestDirtyQueue>>,
     replication: Option<Res<'w, ReplicationDirtyQueue>>,
+    flags2: Query<'w, 's, &'static shared::components::UnitFlags2>,
 }
 
-impl MoveQueues<'_> {
+impl MoveQueues<'_, '_> {
     /// Write `stride` back: the position (interest), the facing and motion (replication)
     /// when they change.
     fn apply(
@@ -457,7 +463,13 @@ impl MoveQueues<'_> {
             mark_interest_position_changed(self.interest.as_deref(), entity);
         }
         let mut changed = false;
+        // TC UNIT_FLAG2_CANNOT_TURN, set from static flag 3 at initialization.
+        let can_turn = self
+            .flags2
+            .get(entity)
+            .map_or(true, |flags| flags.0 & 0x0000_8000 == 0);
         if let (Some(mut rotation), Some(facing)) = (rotation, stride.facing)
+            && can_turn
             && rotation.y != facing
         {
             rotation.y = facing;
@@ -610,15 +622,18 @@ fn waypoint_system(
             &mut WaypointState,
             Option<&CreatureState>,
             Option<&InMap>,
+            Option<&crate::creature_static::CreatureStaticFlags>,
             Bearing,
         ),
         Roaming,
     >,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut pos, mut state, creature_state, map, bearing) in &mut query {
+    for (entity, mut pos, mut state, creature_state, map, static_flags, bearing) in &mut query {
         state.moved = 0.0;
-        if matches!(creature_state, Some(s) if !s.is_idle()) {
+        if static_flags.is_some_and(|flags| flags.sessile())
+            || matches!(creature_state, Some(s) if !s.is_idle())
+        {
             continue;
         }
         if state.pause_remaining_ms > 0 {
@@ -894,6 +909,7 @@ pub(crate) fn chase_system(
         cannot_reach,
         follower_reach,
         default_waypoint,
+        static_flags,
     ) in &mut units.p0()
     {
         let CreatureState::Pursuing { target } = *state else {
@@ -928,7 +944,11 @@ pub(crate) fn chase_system(
             || combat_move_disabled.is_some()
             || cast.is_some_and(|cast| !cast.cast_while_moving)
         {
-            let stride = Stride::still(*pos);
+            let mut stride = Stride::still(*pos);
+            if static_flags.is_some_and(|flags| flags.sessile()) {
+                let target_pos = &targets[&entity].position;
+                stride.facing = facing_along(target_pos.x - pos.x, target_pos.z - pos.z);
+            }
             queues.apply(entity, &mut pos, bearing, stride);
             continue;
         }
@@ -1003,6 +1023,7 @@ type Chaser = (
     Option<&'static CannotReachTarget>,
     Option<&'static crate::followers::FollowerReach>,
     Option<&'static mut crate::scripted_ai::waypoint_path::PathMovement>,
+    Option<&'static crate::creature_static::CreatureStaticFlags>,
 );
 
 /// `Creature::Update`: no-path evade after five seconds, never on raid maps.
@@ -1101,7 +1122,7 @@ fn read_chase_targets(
     let chasing: Vec<_> = units
         .p0()
         .iter()
-        .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _)| {
+        .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _, _)| {
             let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0.min(CHASE_REACH));
             match *state {
                 CreatureState::Pursuing { target } => {

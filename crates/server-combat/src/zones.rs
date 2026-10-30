@@ -1063,6 +1063,7 @@ mod tests {
             family: 0,
             type_flags: 0,
             flags_extra: 0,
+            static_flags: [0; 8],
             min_level: 1,
             max_level: 1,
             faction: 0,
@@ -1080,6 +1081,7 @@ mod tests {
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             trigger: false,
             unit_flags: 0,
+            unit_flags2: 0,
             models: vec![CreatureModelInfo {
                 display_id,
                 display_scale: 1.0,
@@ -1308,6 +1310,14 @@ mod tests {
                 rusqlite::params![entry, angle],
             )
             .unwrap();
+        }
+        for table in [
+            "content_creature_template",
+            "content_creature_template_difficulty",
+        ] {
+            for index in 1..=8 {
+                conn.execute(&format!("ALTER TABLE {table} ADD COLUMN StaticFlags{index} INTEGER NOT NULL DEFAULT 0"), []).unwrap();
+            }
         }
         drop(conn);
         let data = crate::world_data::load_world_data(&path);

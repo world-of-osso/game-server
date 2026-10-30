@@ -2259,11 +2259,17 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         .map_or(0.0, |mods| mods.temporary_threat);
     let player_controlled_npc = world.get::<Npc>(unit).is_some()
         && crate::faction::player_affected(false, world.get::<shared::components::UnitFlags>(unit));
+    let sessile = world
+        .get::<crate::creature_static::CreatureStaticFlags>(unit)
+        .is_some_and(|flags| flags.sessile());
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };
     auras.dirty = true;
     let (mut stats, mut combat) = stat_mods::compute(&auras, player_controlled_npc);
+    if sessile {
+        combat.movement_speed = 0.0;
+    }
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     let primary_support = ebon_might::primary_bonus(&auras);

@@ -189,7 +189,8 @@ pub(super) fn sourced_nazan_fixture() -> WorldData {
            d.HealthScalingExpansion exp,t.unit_flags,d.ContentTuningID,d.HealthScalingExpansion,
            d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,d.DamageModifier,d.ArmorModifier,
            t.subname,d.ManaModifier,t.unit_flags2,t.RegenHealth,t.family,d.TypeFlags type_flags,
-           NULL detection_range,t.BaseAttackTime
+           NULL detection_range,t.BaseAttackTime,d.StaticFlags1,d.StaticFlags2,d.StaticFlags3,d.StaticFlags4,
+           d.StaticFlags5,d.StaticFlags6,d.StaticFlags7,d.StaticFlags8
          FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry
          LEFT JOIN content_tuning_level l ON l.ID=d.ContentTuningID
          WHERE t.entry IN(17307,17536) AND d.DifficultyID=0;

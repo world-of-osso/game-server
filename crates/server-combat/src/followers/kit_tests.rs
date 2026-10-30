@@ -83,6 +83,16 @@ fn follower_kit_garrick32_emergency_heal() {
 }
 
 #[test]
+#[ignore = "requires a private follower kit generated with the Sentinel policy"]
+fn follower_kit_garrick90_casts_sentinel_in_combat() {
+    let (mut h, unit) = at_level(209057, 90, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    uses_spell(&mut h, unit, 389539);
+    assert!(crate::auras::has_aura(h.app.world(), unit, 389539));
+}
+
+#[test]
 fn follower_kit_crenna32_rejuvenation() {
     let (mut h, unit) = level32(209072);
     let patient = h.caster;

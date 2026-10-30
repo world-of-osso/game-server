@@ -11,7 +11,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] In SimC healer replay, project the enemy training dummy's health from 100% to 0% over the requested fixed fight duration, using the DPS fixture's SimC fixed-time target-health model. This controls execute thresholds and does not change the incoming damage trace.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, time to first party death, and idle-GCD percentage. Idle-GCD percentage is the fraction of fight time sampled at 50 ms when the living healer has no active cast or channel and no active GCD, after the policy has acted; dead time is not idle. Sample mana at one-second intervals. Use the recorded combat duration for HPS and report no death as null.
 - [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and consumed absorbs per second, time to death without a healer, active-mitigation uptime, and largest five-second damage spike. Raw incoming damage includes avoided attacks; mitigation includes avoidance. Damage taken and spike include self-sourced periodic damage from tank mechanics. Stop the tank measurement at death; report no death as null. For the initial Protection Paladin, active mitigation is Shield of the Righteous.
-- [ ] In SimC dummy tank replay, reconsider the literal APL at the active global cooldown's ready time, without waiting for the next 50 ms sampling boundary. Other simulation and sampling boundaries remain at 50 ms.
+- [ ] In SimC dummy tank replay, reconsider the literal APL at the active global cooldown's ready time. During a GCD, check off-GCD actions immediately and retry at Gaussian 100±10 ms intervals; when no action is ready, retry the foreground APL at the same distribution. Draw poll delays from the seeded replay RNG (SimC `player.cpp:343–351,6790–6793,7130–7133`, `action.cpp:303–306`). Simulation and sampling boundaries remain at 50 ms.
+- [ ] In SimC tank replay, apply the trace-selected Touch of Elune day or night racial for a Night Elf; reject a trace and profile whose racial state disagrees. SimC defaults to night (`player.cpp:1003,16405–16407`).
 - [ ] In SimC dummy comparison mode, apply and report the trace-declared Mark of the Wild, Arcane Intellect, Power Word: Fortitude, Battle Shout, Skyfury and the player's class-specific Blessing of the Bronze. Apply the target's Chaos Brand, Mystic Touch, Hunter's Mark and Mortal Wounds, and preserve its trace-declared bleeding state without generating a bleed spell or damage. Do not add them to raid-free DPS parity or no-healer replay.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
 - [ ] Print report tables with `scripts/healer_tank_replay.py`. SimC healer reports include actual mana paid by spell, frame-sampled minimum healer mana, minimum tank health including immediately after each incoming hit, and tank damage receipts per replay second.
@@ -45,6 +46,21 @@ Healed native replays of each tank's 300-second dummy trace used seeds 70448–7
 | 581 | 5,837,808 | 5,783,904 | 5,949,784 |
 
 The paired change in damage has standard error 217,665 / 38,987 / 86,436 / 14,251 / 56,211 / 55,522 respectively. Native reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-gcd-events-ten-seeds/`. These samples do not establish full parity.
+
+## Gaussian decision-poll comparison (2026-10-29)
+
+The replay now schedules foreground readiness and Gaussian 100±10 ms off-GCD and idle polls instead of polling every 50 ms. It still does not reproduce SimC's optimization that suppresses off-GCD checks when no off-GCD action can become ready before the foreground event; extra checks can consume RNG draws. Healed replays use the same traces and ten native seeds as above. SimC has ten independent measured iterations; 104 uses the corrected single-application reference.
+
+| Spec | 50 ms baseline | Gaussian polls | SimC |
+|---:|---:|---:|---:|
+| 66 | 3,304,981 | 2,852,249 | 3,341,843 |
+| 73 | 2,893,245 | 2,900,928 | 2,783,862 |
+| 104 | 1,766,524 | 1,855,710 | 1,850,456 |
+| 250 | 47,621 | 49,054 | 88,144 |
+| 268 | 3,429,579 | 3,376,957 | 3,318,109 |
+| 581 | 5,837,808 | 5,759,202 | 5,949,784 |
+
+All native runs survived. The paired mean damage changes have standard errors 247,554 / 42,753 / 83,599 / 18,516 / 87,889 / 71,242 respectively. The Paladin shift of −452,732 is about 1.8 paired standard errors and remains unresolved at this sample size. Both native samples averaged 92.8 Shield of the Righteous, zero Guardian of Ancient Kings and 5 Ardent Defender casts; SimC averaged 91.6, no Guardian entry and 5.0 respectively. Mean Holy Bulwark consumption rose from 3,156,938 to 3,617,946, accounting for most of the damage difference, but its cause and persistence are unproven. Reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-simc-polls-ten-seeds/`.
 
 ## Scaled tank pressure
 
