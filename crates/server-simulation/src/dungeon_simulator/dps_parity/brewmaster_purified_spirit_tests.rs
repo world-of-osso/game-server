@@ -101,34 +101,28 @@ fn purifying_brew_clarity_funds_purified_spirit() {
     for _ in 0..400 {
         run.app.update();
     }
-    let damage: i32 = run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .iter()
-        .filter(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(450820)
-                && event.target == Some(target.to_bits())
-        })
-        .map(|event| event.amount)
-        .sum();
     let events = &run
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
-    eprintln!(
-        "Clarity events: {:?}",
+    let damage_for = |spell| -> i32 {
         events
             .iter()
-            .filter(|event| event.kind == CombatLogKind::Damage)
-            .collect::<Vec<_>>()
-    );
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.spell_id == Some(spell)
+                    && event.target == Some(target.to_bits())
+            })
+            .map(|event| event.amount)
+            .sum()
+    };
+    let harmony = damage_for(450763);
+    let purified = damage_for(450820);
+    assert!(purified > 0, "Clarity must fund Purified Spirit");
     assert!(
-        (damage as f32 - expected).abs() < 5.0,
-        "Purified Spirit {damage}, expected {expected}"
+        ((harmony + purified) as f32 - expected).abs() < 5.0,
+        "Harmony {harmony} + Purified Spirit {purified}, expected {expected}"
     );
 }
 
