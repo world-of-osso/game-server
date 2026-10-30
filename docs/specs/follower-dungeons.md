@@ -37,6 +37,10 @@ For an in-memory follower run, disconnect and logout retain the same instance an
 
 `WINDRUNNER_TAXIPATH_PASSAGE_LOG_CORRELATED` (including `WINDRUNNER_TAXIPATH_10308_PASSAGE_LOG_CORRELATED`): A living owner within 20 yards of native TaxiPath node 0 automatically boards with living followers and their pets after the preceding encounter is Done: 10301 after Emberdawn (3056), 10303 after the Derelict Duo (3057), and 10308 after Commander Kroluk (3058). WCL `X4tT9P73BvRrGxyM` fight 1 correlates 10301 and 10303 with player movement; `jpfFa36xhQkZqr4d` fight 6 correlates 10308. The 20-yard proximity activation is a project inference; the authored trigger and mount identities are unsourced. The shared taxi mover uses its existing flight speed; the observed Retail segments are faster.
 
+## Nexus-Point Xenas passage
+
+`NEXUS_POINT_TAXIPATH_PASSAGE_LOG_CORRELATED`: After Corewarden Nysarra (3332) is Done, a living owner within 20 yards of native TaxiPath 11073 node 0 boards with living followers and their pets. Five player paths in WCL `frjtBDLW2AdnHQk4` fight 9 correlate with the native route. The proximity trigger and radius are inferred; the authored trigger and mount identities are unsourced.
+
 ## Murder Row live clear
 
 On 2026-10-30, Rowthree entered map 2813, difficulty 205, through ordinary LFG 3089 with Garrick, Crenna, Shuja and Meredy. In instance 7, Kystia (3101), Zaen (3102), Xathuux (3103) and Lithiel (3105, creature 234763) each reached Done without a server restart. Rowthree died during Kystia and released inside; no follower died, so follower-death recovery has no live proof in this run. All five were alive at the end. Rowthree earned achievement 41960, Murder Row, at Lithiel's completion. Follower copies do not produce an instance-lock record here.

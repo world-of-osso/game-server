@@ -88,16 +88,19 @@ pub fn read_registrations(
     if map == 2515 {
         registrations.extend(read_azure_books(db)?);
     }
-    if map == crate::scripted_ai::windrunner_passage::MAP {
+    let passages = crate::scripted_ai::dungeon_passage::PASSAGES
+        .iter()
+        .filter(|passage| passage.map == map);
+    if passages.clone().next().is_some() {
         let network =
             crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
-        for passage in crate::scripted_ai::windrunner_passage::PASSAGES {
+        for passage in passages {
             let points = network
                 .scripted_path(passage.path)
-                .ok_or_else(|| format!("Windrunner TaxiPath {} unavailable", passage.path))?;
+                .ok_or_else(|| format!("Dungeon TaxiPath {} unavailable", passage.path))?;
             let endpoint = *points
                 .last()
-                .ok_or_else(|| format!("Windrunner TaxiPath {} is empty", passage.path))?;
+                .ok_or_else(|| format!("Dungeon TaxiPath {} is empty", passage.path))?;
             registrations.push(Registration {
                 entry: passage.path,
                 source_guid: None,
@@ -107,7 +110,7 @@ pub fn read_registrations(
                     .windows(2)
                     .map(|pair| pair[0].distance(pair[1]))
                     .sum(),
-                radius: crate::scripted_ai::windrunner_passage::RADIUS,
+                radius: crate::scripted_ai::dungeon_passage::RADIUS,
                 departure: None,
                 action: Action::TaxiProximity,
             });
@@ -398,9 +401,9 @@ pub fn activate(
         return Ok(());
     }
     if edge.action == Action::TaxiProximity {
-        crate::scripted_ai::windrunner_passage::update(world);
+        crate::scripted_ai::dungeon_passage::update(world);
         if world.get::<crate::taxi::TaxiFlight>(owner).is_none() {
-            return Err("Windrunner proximity did not start taxi flight".into());
+            return Err("Dungeon passage proximity did not start taxi flight".into());
         }
         world.entity_mut(owner).insert(TaxiLandingPending);
         return Ok(());

@@ -33,6 +33,7 @@ mod dailcry;
 pub(crate) mod darkness;
 pub(crate) mod door_data;
 mod doragosa;
+pub(crate) mod dungeon_passage;
 mod emberon;
 pub(crate) mod encounter_doors;
 pub mod event_map;
@@ -80,7 +81,6 @@ mod vexamus;
 pub(crate) mod voidscar_portal;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
-pub(crate) mod windrunner_passage;
 mod wratheye;
 
 use std::collections::VecDeque;
@@ -178,7 +178,7 @@ impl Plugin for ScriptedAiPlugin {
                     bossmod::advance_schedules,
                     academy_transport::launch_entrance_pad,
                     murder_row_gateway::update,
-                    windrunner_passage::update,
+                    dungeon_passage::update,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
                     nethekurse_intro::detect_entries,
