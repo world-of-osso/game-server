@@ -15,7 +15,8 @@ fn follower_dps_production_dummy() {
         .parse()
         .unwrap();
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
-    let _seed = crate::random::seed_scope(1);
+    let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
+    let _seed = crate::random::seed_scope(seed);
     let mut app = super::super::runtime::build_app();
     if let Some(path) = std::env::var_os("FOLLOWER_DPS_WORLD_DB") {
         let data = crate::world_data::load_world_data(std::path::Path::new(&path));
@@ -273,7 +274,7 @@ fn follower_dps_production_dummy() {
     }
     println!(
         "FOLLOWER_DPS {}",
-        json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
+        json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
