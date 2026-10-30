@@ -176,7 +176,9 @@ pub(super) fn read_movement_admission(
     }) else {
         return Ok(None);
     };
-    if super::hazards::route_crosses_hostile_field(world, tank, &route.points) {
+    if super::hazards::route_crosses_hostile_field(world, tank, &route.points)
+        || super::positioning::route_enters_unpulled_sight(world, tank, target, &route.points)?
+    {
         return Ok(Some(false));
     }
     debug!(

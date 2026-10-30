@@ -115,6 +115,35 @@ fn approach_enters_unpulled_sight(
         return Ok(None);
     };
     path.insert(0, from);
+    blockers_on_path(world, unit, &path, watchers).map(Some)
+}
+
+pub(super) fn route_enters_unpulled_sight(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    path: &[Vec3],
+) -> Result<bool, String> {
+    let map = *world
+        .get::<InMap>(unit)
+        .ok_or("Follower positioning lacks map")?;
+    let watchers = world
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(map)
+        .filter(|watcher| {
+            is_unpulled_hostile(world, unit, *watcher)
+                && !in_target_formation(world, target, *watcher)
+        })
+        .collect();
+    Ok(!blockers_on_path(world, unit, path, watchers)?.is_empty())
+}
+
+fn blockers_on_path(
+    world: &mut World,
+    unit: Entity,
+    path: &[Vec3],
+    watchers: Vec<Entity>,
+) -> Result<Vec<Entity>, String> {
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let mut blockers = Vec::new();
     for watcher in watchers {
@@ -125,7 +154,6 @@ fn approach_enters_unpulled_sight(
         }) {
             debug!(
                 ?unit,
-                ?target,
                 ?watcher,
                 ?center,
                 radius,
@@ -134,10 +162,10 @@ fn approach_enters_unpulled_sight(
             blockers.push(watcher);
         }
     }
-    Ok(Some(blockers))
+    Ok(blockers)
 }
 
-fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {
+pub(super) fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {
     if target == watcher {
         return true;
     }
