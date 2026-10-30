@@ -133,7 +133,7 @@ mod group_buff_tests;
 pub use ai::FollowerReach;
 pub use catalog::FollowerCatalog;
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
-pub use unintended_reach::party_unintended_reach;
+pub use unintended_reach::{party_unintended_reach, spell_unintended_reach};
 
 #[derive(Clone, Debug)]
 pub struct Profile {

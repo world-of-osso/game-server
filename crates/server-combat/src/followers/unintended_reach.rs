@@ -53,20 +53,36 @@ fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
     units
 }
 
+/// Reach of one spell around its caster and explicit target. Missing spells or
+/// target entities return `None`; radii do not depend on the target's identity.
+pub fn spell_unintended_reach(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Option<(f32, f32)> {
+    world.get_entity(target).ok()?;
+    let spell = world.resource::<SpellStore>().get(spell_id)?;
+    let registry = *world.resource::<SpellScriptRegistry>();
+    let reach = spell_reach(world, caster, spell, registry, 0);
+    Some((reach.caster_radius, reach.target_radius))
+}
+
 fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
-    let store = world.resource::<SpellStore>();
     let registry = *world.resource::<SpellScriptRegistry>();
     let mut reach = DeclaredReach::default();
     for spell in unit_spells(world, unit)
         .into_iter()
         .chain(registry.additional_reach_actions(world, unit))
     {
-        let Some(spell) = store.get(spell) else {
+        // Radii are target-independent; the actor supplies a valid entity for
+        // this maximum over possible actions when no primary target exists.
+        let Some((caster_radius, target_radius)) = spell_unintended_reach(world, unit, spell, unit)
+        else {
             continue;
         };
-        let current = spell_reach(world, unit, spell, registry, 0);
-        reach.caster_radius = reach.caster_radius.max(current.caster_radius);
-        reach.target_radius = reach.target_radius.max(current.target_radius);
+        reach.caster_radius = reach.caster_radius.max(caster_radius);
+        reach.target_radius = reach.target_radius.max(target_radius);
     }
     reach.caster_radius = reach.caster_radius.max(active_field_extent(world, unit));
     reach

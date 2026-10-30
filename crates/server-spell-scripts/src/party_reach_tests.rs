@@ -1,6 +1,6 @@
 //! Production follower kits and the native spell/script registries.
 use super::*;
-use combat::followers::{native_fixture, party_unintended_reach};
+use combat::followers::{native_fixture, party_unintended_reach, spell_unintended_reach};
 use shared::components::Level;
 
 fn follower(entry: u32, class: u8) -> (crate::test_support::Harness, Entity) {
@@ -18,6 +18,31 @@ fn follower(entry: u32, class: u8) -> (crate::test_support::Harness, Entity) {
         .0 = 32;
     let unit = native_fixture::spawn(harness.app.world_mut(), harness.caster, entry).unwrap();
     (harness, unit)
+}
+
+#[test]
+fn per_spell_reach_distinguishes_area_and_single_target_actions() {
+    let mut harness = crate::test_support::harness(Vec::new(), &[], 1).unwrap();
+    harness.app.insert_resource(
+        crate::test_support::world_db()
+            .unwrap()
+            .spell_store()
+            .clone(),
+    );
+    let target = harness.app.world_mut().spawn_empty().id();
+    let world = harness.app.world();
+    let area = spell_unintended_reach(world, harness.caster, 6343, target).unwrap();
+    let single = spell_unintended_reach(world, harness.caster, 6603, target).unwrap();
+    assert!(area.0 >= 8.0, "{area:?}");
+    assert_eq!(single, (0.0, 0.0));
+    assert_eq!(
+        spell_unintended_reach(world, harness.caster, u32::MAX, target),
+        None
+    );
+    assert_eq!(
+        spell_unintended_reach(world, harness.caster, 6343, Entity::PLACEHOLDER),
+        None
+    );
 }
 
 #[test]
