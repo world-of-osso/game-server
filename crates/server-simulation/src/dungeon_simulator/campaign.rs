@@ -232,17 +232,15 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
 }
 
 #[test]
+#[ignore = "requires extracted Neltharus follower graph"]
 fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let owner = run.party.owner;
-    let entrance = Position {
-        x: run.graph.entrance[0],
-        y: run.graph.entrance_height,
-        z: run.graph.entrance[1],
-    };
+    assert_eq!(run.graph.map_id, 2519);
     let corpse = Position {
-        x: entrance.x + 30.0,
-        ..entrance
+        x: -257.5076,
+        y: 124.9674,
+        z: 488.93933,
     };
     run.app.world_mut().entity_mut(owner).insert(corpse);
     let attacker = *run.actors.values().next().unwrap();
