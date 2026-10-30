@@ -263,15 +263,21 @@ pub(crate) fn expire_combat_refs_system(world: &mut World) {
         .filter(|(_, gone)| !gone.is_empty())
         .collect();
     for (unit, gone) in expired {
-        let mut refs = world.get_mut::<CombatRefs>(unit).expect("queried");
         for other in gone {
-            refs.0.remove(&other);
+            for (endpoint, opponent) in [(unit, other), (other, unit)] {
+                if let Some(mut threat) = world.get_mut::<ThreatTable>(endpoint) {
+                    threat.remove(opponent.to_bits());
+                }
+                if let Some(mut refs) = world.get_mut::<CombatRefs>(endpoint) {
+                    refs.0.remove(&opponent);
+                    update_combat_status(world, endpoint);
+                }
+            }
         }
-        update_combat_status(world, unit);
     }
 }
 
-fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
+pub(crate) fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
     let dead = |unit: Entity| {
         world
             .get::<Health>(unit)
