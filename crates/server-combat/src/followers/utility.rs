@@ -357,6 +357,9 @@ fn cast_utility(
     target: Entity,
     urgent: bool,
 ) -> bool {
+    if !super::spell_safety::safe(world, caster, target, spell) {
+        return false;
+    }
     let result = if urgent {
         crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(target))
     } else {

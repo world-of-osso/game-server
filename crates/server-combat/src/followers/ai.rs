@@ -282,6 +282,10 @@ fn update_auto_shot(world: &mut World, unit: Entity, follower: &Follower, enemy:
         crate::spell_cast::auto_repeat::cancel(world, unit);
         return;
     };
+    if !super::spell_safety::safe(world, unit, enemy, AUTO_SHOT) {
+        crate::spell_cast::auto_repeat::cancel(world, unit);
+        return;
+    }
     if let Some(mut repeat) = world.get_mut::<crate::spell_cast::auto_repeat::AutoRepeat>(unit) {
         if repeat.retarget_auto_shot(enemy) {
             return;
