@@ -70,9 +70,6 @@ pub(super) fn advance(
             ?owner,
             "Follower trail hold timed out; resume ordinary follow"
         );
-        if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-            nav.cancel_query(unit, Goal::OwnerTrail(owner.to_bits()));
-        }
         return false;
     }
     if let Some(to) = destination {
