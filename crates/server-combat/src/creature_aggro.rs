@@ -59,6 +59,7 @@ impl Plugin for CreatureAggroPlugin {
         app.add_systems(
             FixedUpdate,
             (
+                activate_unblocked_creatures,
                 aggro_on_sight_system,
                 update_victim_system,
                 publish_woken_threat_lists,
@@ -95,7 +96,11 @@ impl AggroMode {
         let passive = flags_extra & CREATURE_FLAG_EXTRA_TRIGGER != 0
             || creature_type == CREATURE_TYPE_CRITTER
             || creature_type == CREATURE_TYPE_NON_COMBAT_PET
-            || unit_flags & UNIT_FLAG_IMMUNE_TO_PC != 0
+            || unit_flags
+                & (UNIT_FLAG_IMMUNE_TO_PC
+                    | UnitFlags::NON_ATTACKABLE
+                    | UnitFlags::NON_ATTACKABLE_2)
+                != 0
             || script_name == crate::creature_scripts::TRAINING_DUMMY_SCRIPT;
         if passive {
             Self::Passive
@@ -111,6 +116,31 @@ impl AggroMode {
 /// from TC GetAttackDistance, not the legacy template detection_range column.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct AggroRange;
+
+/// A spawn whose combat initialization was deferred by attackability flags.
+#[derive(Component)]
+pub(crate) struct DeferredCombat(pub AggroMode);
+
+/// TC 15e0ed76 Creature.cpp:1300–1310 selects react state independently of
+/// player immunity; CreatureAI.cpp UpdateVictim uses the creature's threat list.
+/// Once immunity and non-attackability are cleared, install the same components
+/// as an ordinary spawn. The marker excludes intrinsically passive creatures.
+fn activate_unblocked_creatures(
+    mut commands: Commands,
+    units: Query<(Entity, &UnitFlags, &DeferredCombat), Changed<UnitFlags>>,
+) {
+    for (entity, flags, deferred) in &units {
+        if flags.0
+            & (UnitFlags::IMMUNE_TO_PC | UnitFlags::NON_ATTACKABLE | UnitFlags::NON_ATTACKABLE_2)
+            != 0
+        {
+            continue;
+        }
+        let mut actor = commands.entity(entity);
+        insert_aggro_components(&mut actor, deferred.0);
+        actor.remove::<DeferredCombat>();
+    }
+}
 
 /// Spawn-time combat components: a threat list for every non-passive
 /// creature, an aggro radius for aggressive ones.

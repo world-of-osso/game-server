@@ -513,6 +513,22 @@ pub fn spawn_creature(
     insert_ai_components(&mut entity, spawn, template, addon, world_data);
     crate::pvp::insert_track_switch(&mut entity, spawn);
     crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
+    if template.aggro_mode == crate::creature_aggro::AggroMode::Passive
+        && template.static_flags[0] & crate::creature_static::IGNORE_COMBAT == 0
+    {
+        let unblocked = crate::creature_aggro::AggroMode::for_template(
+            template.creature_type,
+            template.flags_extra,
+            template.unit_flags
+                & !(shared::components::UnitFlags::IMMUNE_TO_PC
+                    | shared::components::UnitFlags::NON_ATTACKABLE
+                    | shared::components::UnitFlags::NON_ATTACKABLE_2),
+            &template.script_name,
+        );
+        if unblocked != crate::creature_aggro::AggroMode::Passive {
+            entity.insert(crate::creature_aggro::DeferredCombat(unblocked));
+        }
+    }
     crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
     crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
     insert_spawn_identity(&mut entity, world_data, template, spawn);
