@@ -15,6 +15,7 @@ pub fn install(app: &mut App, db: &rusqlite::Connection, nav_root: &Path) -> Res
     app.insert_resource(
         crate::area_table::load_area_table(db).map_err(|error| format!("flight areas: {error}"))?,
     );
+    crate::navigation::install_publication(app);
     Ok(())
 }
 
