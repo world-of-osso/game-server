@@ -32,15 +32,32 @@ fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
     let hold =
         now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
     if hold {
-        world
-            .entity_mut(unit)
-            .remove::<crate::creature_ai::FollowOwner>()
-            .insert(crate::creature_ai::CreatureState::Idle);
+        hold_position(world, unit);
     }
     hold
 }
 
-pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
+fn hold_position(world: &mut World, unit: Entity) {
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+}
+
+fn hold_pending_approach(world: &mut World, unit: Entity, target: Entity, is_owner: bool) -> bool {
+    if is_owner {
+        return bounded_hold(world, unit, target);
+    }
+    hold_position(world, unit);
+    true
+}
+
+pub(super) fn hold_unsafe_approach(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    reach: Option<f32>,
+) -> bool {
     let is_owner = world
         .get::<super::Follower>(unit)
         .is_some_and(|follower| follower.owner == target);
@@ -53,19 +70,19 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     if is_owner && super::trail_follow::active(world, unit, target) {
         return super::trail_follow::advance(world, unit, target, Vec::new());
     }
-    let blockers = match approach_enters_unpulled_sight(world, unit, target) {
+    let blockers = match approach_enters_unpulled_sight(world, unit, target, reach) {
         Ok(None) => {
             debug!(
                 ?unit,
                 ?target,
                 "Follower approach waiting for a navigation result"
             );
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
         Ok(Some(blockers)) => blockers,
         Err(error) => {
             warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
     };
     if blockers.is_empty() {
@@ -73,20 +90,18 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         world.entity_mut(unit).remove::<HoldTimeout>();
         return false;
     }
-    world
-        .entity_mut(unit)
-        .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
+    hold_position(world, unit);
     if is_owner {
         return super::trail_follow::advance(world, unit, target, blockers);
     }
-    bounded_hold(world, unit, target)
+    true
 }
 
 fn approach_enters_unpulled_sight(
     world: &mut World,
     unit: Entity,
     target: Entity,
+    reach: Option<f32>,
 ) -> Result<Option<Vec<Entity>>, String> {
     let map = *world
         .get::<InMap>(unit)
@@ -106,6 +121,9 @@ fn approach_enters_unpulled_sight(
         return Ok(None);
     };
     path.insert(0, from);
+    if let Some(reach) = reach {
+        path = route_to_casting_position(world, unit, target, to, reach, &path)?;
+    }
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let mut blockers = Vec::new();
     for watcher in watchers {
@@ -126,6 +144,37 @@ fn approach_enters_unpulled_sight(
         }
     }
     Ok(Some(blockers))
+}
+
+fn route_to_casting_position(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    target_position: Vec3,
+    reach: f32,
+    path: &[Vec3],
+) -> Result<Vec<Vec3>, String> {
+    let mut prefix = vec![path[0]];
+    for leg in path.windows(2) {
+        let samples = (leg[0].distance(leg[1]) / 1.0).ceil().max(1.0) as usize;
+        for step in 0..=samples {
+            let point = leg[0].lerp(leg[1], step as f32 / samples as f32);
+            if point.distance(target_position) > reach {
+                continue;
+            }
+            let position = shared::components::Position {
+                x: point.x,
+                y: point.y,
+                z: point.z,
+            };
+            if crate::line_of_sight::sees_at(world, unit, position, target)? {
+                prefix.push(point);
+                return Ok(prefix);
+            }
+        }
+        prefix.push(leg[1]);
+    }
+    Err("Follower approach has no visible casting position".into())
 }
 
 fn read_approach_path(

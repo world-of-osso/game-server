@@ -567,10 +567,6 @@ pub(super) fn pursue(
     {
         return true;
     }
-    if super::positioning::hold_unsafe_approach(world, unit, target) {
-        world.entity_mut(unit).insert(CombatTarget(Some(target)));
-        return true;
-    }
     let reach = if melee {
         Some(MELEE_REACH)
     } else {
@@ -580,6 +576,10 @@ pub(super) fn pursue(
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
+    if super::positioning::hold_unsafe_approach(world, unit, target, Some(reach)) {
+        world.entity_mut(unit).insert(CombatTarget(Some(target)));
+        return true;
+    }
     let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, target) else {
         return true;
     };
@@ -630,7 +630,7 @@ pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     {
         return;
     }
-    if super::positioning::hold_unsafe_approach(world, unit, owner) {
+    if super::positioning::hold_unsafe_approach(world, unit, owner, None) {
         world.entity_mut(unit).insert(CombatTarget(None));
         return;
     }

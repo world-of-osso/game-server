@@ -301,6 +301,9 @@ fn current_victim_within_two_yards_but_blocked_by_server_los_does_not_stop() {
     ];
     let wall = shared::los::LosTile::build(0, 0, vertices, vec![[0, 1, 2], [0, 2, 3]]);
     let map = crate::maps::InMap::continent(STOCKADE);
+    app.world_mut()
+        .entity_mut(chaser)
+        .insert(crate::followers::FollowerReach(30.0));
     let mut hulls = std::collections::HashMap::new();
     hulls.insert(map, vec![std::sync::Arc::new(wall)]);
     app.world_mut()
