@@ -33,6 +33,21 @@ fn halls_wmo_swimming_follower_uses_navigation_height() {
     let height =
         crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
     assert!((height - to.y).abs() < 0.01, "swimmer snapped to {height}");
+    let vertical = Position {
+        x: from.x,
+        y: to.y,
+        z: from.z,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        from,
+        vertical,
+    );
+    assert!(
+        (height - vertical.y).abs() < 0.01,
+        "vertical swim stopped at {height}"
+    );
 }
 
 fn wow(x: f32, y: f32, z: f32) -> Position {
