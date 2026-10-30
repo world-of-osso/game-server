@@ -191,7 +191,11 @@ fn heal_death_strike(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 
 // SimC76f8118 sc_death_knight.cpp10125–10130 consumes the whole buff
 // after the Death Strike heal has used its stacks, including on a miss.
-pub(super) fn consume_hemostasis(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+pub(super) fn consume_hemostasis(
+    world: &mut World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) {
     if spell.id == DEATH_STRIKE && blood(world, caster) {
         combat::auras::remove_auras(
             world,
