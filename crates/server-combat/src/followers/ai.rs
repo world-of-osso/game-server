@@ -143,11 +143,12 @@ fn trace_target_selection(
         return;
     };
     let mut combat_party = party.to_vec();
-    combat_party.extend(
-        party
-            .iter()
-            .filter_map(|&member| crate::hunter_pet::summoned_pet(world, member)),
-    );
+    let map = world.get::<InMap>(unit);
+    combat_party.extend(party.iter().filter_map(|&member| {
+        crate::hunter_pet::summoned_pet(world, member).filter(|&pet| {
+            world.get::<InMap>(pet) == map && crate::spell_cast::targets::is_alive(world, pet)
+        })
+    }));
     let refs: Vec<_> = combat_party
         .iter()
         .copied()
