@@ -1343,6 +1343,21 @@ fn follower_making_native_route_progress_prevents_a_false_stall() {
 #[test]
 fn follower_changing_goals_without_route_progress_still_stalls() {
     let mut run = spawn_run(1, &mut None).unwrap();
+    let others: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .chain(
+            run.party
+                .members
+                .iter()
+                .copied()
+                .filter(|unit| *unit != run.party.tank),
+        )
+        .collect();
+    for unit in others {
+        run.app.world_mut().despawn(unit);
+    }
     for _ in 0..400 {
         run.app.update();
     }
