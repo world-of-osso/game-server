@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::instance_script::{self, EncounterState};
 use crate::game_objects::{GO_STATE_ACTIVE, set_go_state};
 use crate::maps::InMap;
-use shared::components::{Health, Npc, Player, Position, ThreatTable, UnitFlags};
+use shared::components::{Health, Npc, Player, Position, UnitFlags};
 use shared::protocol::GameObjectInfo;
 
 const ULDAMAN: u32 = 2451;
@@ -117,11 +117,6 @@ fn update_deios_copy(world: &mut World, boss: Entity, map: InMap, position: Posi
         if let Some(mut flags) = actor.get_mut::<UnitFlags>() {
             flags.0 &= !IMMUNE_TO_PC;
         }
-        actor.entry::<ThreatTable>().or_default();
-        actor.insert((
-            crate::creature_aggro::AggroRange,
-            crate::creature_ai::CreatureState::Idle,
-        ));
         instance_script::set_data(world, map, WARMUP_STATE, ACTIVATED);
     }
 }
