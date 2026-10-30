@@ -1669,6 +1669,24 @@ fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
                 .distance(Vec3::new(point.x, point.y, point.z))
         })
         .collect();
+    let grid = app
+        .world()
+        .resource::<crate::creature_sight::NpcGrid>()
+        .within_cells(map, &caller_position, 10.0);
+    for &helper in &helpers {
+        println!(
+            "ASSIST_INPUT helper={} indexed={} los={} state={:?} flags={:?} faction={:?} display={:?}",
+            helper.to_bits(),
+            grid.contains(&helper),
+            crate::line_of_sight::sees_in_world(app.world(), caller, helper),
+            app.world().get::<CreatureState>(helper),
+            app.world().get::<UnitFlags>(helper).map(|f| f.0),
+            app.world().get::<UnitFactionTemplate>(helper).map(|f| f.0),
+            app.world()
+                .get::<shared::components::ModelDisplay>(helper)
+                .map(|d| d.display_id)
+        );
+    }
     let start = app.world().resource::<Time>().elapsed_secs_f64();
     attack_start(app.world_mut(), caller, target);
     for &helper in &helpers {
