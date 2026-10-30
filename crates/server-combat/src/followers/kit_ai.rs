@@ -828,9 +828,10 @@ fn attempt_cast(
             entry.spell_id,
             Some(target),
         )
-    } else if entry.spell_id == 19574 {
-        // SimC76f8118 sc_hunter.cpp6746–6750: self-cast Bestial Wrath
-        // sends its pets' Bloodshed to the selected enemy, not the caster.
+    } else if matches!(entry.spell_id, 19574 | 53600) {
+        // Bestial Wrath sends Bloodshed to the enemy; Shield of the Righteous
+        // applies Valor to that primary and Blaze only to secondary targets.
+        // Native self/cone validation must not replace the selected enemy.
         crate::spell_cast::creature_cast_with_targets(
             world,
             unit,

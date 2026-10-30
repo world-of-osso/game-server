@@ -209,6 +209,8 @@ fn follower_dps_production_dummy() {
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
     let mut damage = BTreeMap::<u32, i64>::new();
+    let mut hits = BTreeMap::<u32, usize>::new();
+    let mut damage_sources = BTreeMap::<String, usize>::new();
     let mut casts = BTreeMap::<u32, usize>::new();
     let incoming: Vec<_> = events
         .iter()
@@ -223,6 +225,10 @@ fn follower_dps_production_dummy() {
         let id = event.spell_id.unwrap_or(0);
         if event.kind == CombatLogKind::Damage && event.target == Some(target.to_bits()) {
             *damage.entry(id).or_default() += i64::from(event.amount);
+            *hits.entry(id).or_default() += 1;
+            *damage_sources
+                .entry(format!("{id}:{:?}", event.source))
+                .or_default() += 1;
         }
         if event.kind == CombatLogKind::CastSuccess && event.source == Some(actor.to_bits()) {
             *casts.entry(id).or_default() += 1;
@@ -237,6 +243,10 @@ fn follower_dps_production_dummy() {
         "follower died before completing the dummy measurement"
     );
     if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
+        assert!(
+            !hits.contains_key(&1269224),
+            "Blaze of Glory must not hit Shield of the Righteous's primary target"
+        );
         assert!(
             casts.get(&389539).is_some_and(|count| *count > 0),
             "Sentinel must start"
@@ -275,7 +285,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"sources":damage_sources,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
