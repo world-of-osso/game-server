@@ -115,7 +115,9 @@ impl BossAi {
         if let Some(map) = ctx.map()
             && instance_script::get_boss_state(ctx.world, map, self.boss_id).is_some()
         {
-            instance_script::set_boss_state(ctx.world, map, self.boss_id, EncounterState::Done);
+            if !crate::maps::raid::bound_peer_alive(ctx.world, ctx.me) {
+                instance_script::set_boss_state(ctx.world, map, self.boss_id, EncounterState::Done);
+            }
             instance_script::send_disengage_unit(ctx.world, map, ctx.me);
         }
     }

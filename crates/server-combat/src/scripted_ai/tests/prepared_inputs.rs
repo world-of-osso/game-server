@@ -203,6 +203,7 @@ fn decode_encounter_inputs(
             || (entry == 186739 && *id == 190187)
             || (entry == 184018 && *id == 186696)
             || (entry == 189232 && *id == 189886)
+            || ([213216, 213217].contains(&entry) && [213216, 213217].contains(id))
             || ([190484, 190485].contains(&entry) && [190484, 190485].contains(id))
             || ([184580, 184581, 184582].contains(&entry) && [184580, 184581, 184582].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))

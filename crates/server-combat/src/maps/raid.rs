@@ -138,8 +138,49 @@ pub(crate) fn send(world: &mut World) {
     }
 }
 
+/// Whether a spawned peer bound to this encounter remains alive in the same copy.
+pub(crate) fn bound_peer_alive(world: &mut World, creature: Entity) -> bool {
+    let Some(map) = world.get::<InMap>(creature).copied() else {
+        return false;
+    };
+    let Some(npc) = world.get::<shared::components::Npc>(creature) else {
+        return false;
+    };
+    let Some(store) = world.get_resource::<MapStore>() else {
+        return false;
+    };
+    let Some(&bit) = store
+        .raid_creature_encounters
+        .get(&(map.map_id, npc.template_id))
+    else {
+        return false;
+    };
+    let entries: std::collections::HashSet<u32> = store
+        .raid_creature_encounters
+        .iter()
+        .filter_map(|(&(map_id, entry), &other_bit)| {
+            (map_id == map.map_id && other_bit == bit).then_some(entry)
+        })
+        .collect();
+    let mut query = world.query::<(
+        Entity,
+        &InMap,
+        &shared::components::Npc,
+        Option<&crate::combat::DeathState>,
+        Option<&shared::components::Health>,
+    )>();
+    query
+        .iter(world)
+        .any(|(entity, other_map, npc, death, health)| {
+            entity != creature
+                && *other_map == map
+                && entries.contains(&npc.template_id)
+                && death.is_none()
+                && health.is_none_or(|health| health.current > 0.0)
+        })
+}
+
 /// Real creature death boundary, shared by melee, spells and periodic damage.
-/// Only unambiguous authored single-creature encounters receive generic credit.
 pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
     // The Ruby final script owns the joint-death condition; generic single-boss
     // credit must not mark the encounter complete on either actor alone.
@@ -162,6 +203,12 @@ pub(crate) fn record_creature_death(world: &mut World, creature: Entity) {
         .raid_creature_encounters
         .get(&(map.map_id, npc.template_id))
     else {
+        return;
+    };
+    if bound_peer_alive(world, creature) {
+        return;
+    }
+    let Some(store) = world.get_resource::<MapStore>() else {
         return;
     };
     let Some(instances) = world.get_resource::<InstanceManager>() else {

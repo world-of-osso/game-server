@@ -142,6 +142,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ### Gameplay (acceptance remains open until behavioral/live proof)
 
+A death-driven encounter completes only after every bound creature spawned in that copy is dead. Unspawned gated creatures do not block completion. Script-owned living surrender, including Lost Dwarves, retains its own completion condition. This is a project policy; TC InstanceScript checks registered living world-boss minions rather than all journal bindings.
+
 - If the owner reconnects while the follower copy remains loaded, restore the owner to that copy with the same follower party and dungeon-finder state. The copy follows its ordinary empty-instance unload policy.
 - A new queue admits a fresh copy, even while the owner's earlier progressed copy is still loaded or checkpointed (TC `LFGMgr::MakeNewGroup` forms a new group, with no recent instance, before `TeleportPlayer`).
 - Combat coverage includes each party member's actual living, same-copy summoned hunter/warlock pet. An enemy attacking or holding active combat/threat with only that pet is admitted for the existing follower tank pickup/taunt policy. Foreign pets and merely nearby unengaged packs are excluded. This does not add pets to healer patient/party membership or change pet stats/native autocast policy.
