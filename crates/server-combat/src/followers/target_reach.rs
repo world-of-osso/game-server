@@ -104,6 +104,9 @@ fn attack_range(world: &World, unit: Entity, follower: &Follower) -> Option<f32>
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
         .filter(|entry| entry.available(follower.profile.spec_id, level))
+        .cloned()
+        .map(super::utility::normalize_entry)
+        .filter(|entry| entry.conditions.target == super::kit::Target::Enemy)
         .map(|entry| entry.spell_id);
     std::iter::once(follower.profile.attack_spell)
         .chain(kit)
