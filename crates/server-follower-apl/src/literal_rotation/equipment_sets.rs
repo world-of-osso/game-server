@@ -12,7 +12,9 @@ pub(super) fn read_set_facts(
         .into_iter()
         .map(|(set, spell)| (set, spell.id))
         .collect();
-    let catalog = world.resource::<ItemProcInputs>();
+    let catalog = world
+        .get_resource::<ItemProcInputs>()
+        .ok_or("native ItemProcInputs catalog is not loaded")?;
     let mut facts = BTreeMap::new();
     for (tier, id) in parse_tier_aliases()? {
         let set = catalog

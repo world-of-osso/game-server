@@ -49,6 +49,8 @@ fn dungeon_owner(h: &mut Harness) {
             enchants: server_combat::item_instance::load::load_enchantment_tables(&db).unwrap(),
             effects: server_combat::item_instance::load::load_item_effect_tables(&db).unwrap(),
         });
+    h.app
+        .insert_resource(server_combat::item_proc_data::load(&db).unwrap());
     let maps = server_combat::maps::store::load_map_store(&db).unwrap();
     let mut instances = server_combat::maps::InstanceManager::default();
     let entrant = InstanceEntrant {
