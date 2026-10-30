@@ -28,6 +28,7 @@ mod broggok;
 mod bromach;
 mod candle_king;
 pub(crate) mod caster_chase;
+mod city_of_threads;
 pub mod creature_text;
 mod dailcry;
 pub(crate) mod darkness;
@@ -159,7 +160,11 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
             .add_systems(
                 FixedPostUpdate,
-                (uldaman::update_door, uldaman::update_deios_warmup),
+                (
+                    uldaman::update_door,
+                    uldaman::update_deios_warmup,
+                    city_of_threads::update_fangs_warmup,
+                ),
             )
             .add_systems(
                 FixedPreUpdate,
