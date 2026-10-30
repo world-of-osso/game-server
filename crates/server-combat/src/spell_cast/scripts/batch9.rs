@@ -242,6 +242,17 @@ fn spawn_ground_pulses(
     }
     if ctx.spell.id == CONSECRATION {
         field.insert(ConsecrationTargets::default());
+        let entity = field.id();
+        if crate::combat_refs::active_opponents(world, ctx.caster)
+            .next()
+            .is_some()
+        {
+            // SimC76f8118 sc_paladin.cpp:591–600: in-combat casts execute
+            // both the immediate ground event and an additional damage tick.
+            let pulses = world.get::<GroundPulses>(entity).unwrap().clone();
+            cast_ground_pulse(world, entity, &pulses);
+            cast_ground_pulse(world, entity, &pulses);
+        }
     }
 }
 
