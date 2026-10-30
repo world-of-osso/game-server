@@ -111,14 +111,26 @@ fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
         owner_trail::record(h.app.world_mut(), owner);
     }
     h.app.world_mut().entity_mut(tank).insert(at(start));
-    h.attack(target);
-    h.advance(3);
+    // The source spawn is about 21 yards away: an attack request alone cannot
+    // land a melee swing. Start combat with the mage's native ranged spell.
+    h.cast(30451, Some(target));
+    for _ in 0..180 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<shared::components::CombatStatus>(owner)
+            .is_some_and(|status| status.0)
+        {
+            break;
+        }
+    }
     assert!(
         h.app
             .world()
             .get::<shared::components::CombatStatus>(owner)
             .is_some_and(|status| status.0),
-        "ordinary owner attack must start combat"
+        "ordinary owner ranged attack must start combat: {:?}",
+        h.inbox.failed
     );
     owner_trail::record(h.app.world_mut(), owner);
     pull_history::sample_all(h.app.world_mut());
