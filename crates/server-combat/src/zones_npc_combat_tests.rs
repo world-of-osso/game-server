@@ -646,6 +646,7 @@ fn sessile_meat_pile_stays_rooted_outside_melee_but_attacks_in_range() {
     let base = spawn_of(INFANTRY);
     let source = placed(base, 244041, 0.0);
     let mut app = fight_app(vec![source.clone()]).unwrap();
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     let creature = spawned(&app, 0);
     let player = spawn_player_near(&mut app, &source, 15.0);
     let start = *app.world().get::<Position>(creature).unwrap();
