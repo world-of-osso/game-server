@@ -150,12 +150,7 @@ fn surrender(ctx: &mut Ctx, boss_id: u32) {
         reset_pending: false,
         original_faction,
     });
-    crate::creature_aggro::enter_evade_mode(ctx.world, ctx.me);
-    ctx.world
-        .entity_mut(ctx.me)
-        .insert(UnitFactionTemplate(FRIENDLY_FACTION));
-    // Stop re-engagement without inventing a friendly faction or immunity flags.
-    ctx.world.entity_mut(ctx.me).remove::<ThreatTable>();
+    leave_combat_friendly(ctx.world, ctx.me);
     let surrendered = ctx
         .world
         .query::<(&InMap, &Npc, &Surrendered)>()
@@ -177,6 +172,14 @@ fn surrender(ctx: &mut Ctx, boss_id: u32) {
             super::instance_script::EncounterState::Done,
         );
     }
+}
+
+pub(super) fn leave_combat_friendly(world: &mut World, unit: Entity) {
+    crate::creature_aggro::enter_evade_mode(world, unit);
+    world
+        .entity_mut(unit)
+        .insert(UnitFactionTemplate(FRIENDLY_FACTION));
+    world.entity_mut(unit).remove::<ThreatTable>();
 }
 
 fn reset_surrendered_peers(ctx: &mut Ctx) {

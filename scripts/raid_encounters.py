@@ -91,8 +91,12 @@ def prepare(db, journal, creatures, output, report, build):
                         "creature_entry INTEGER NOT NULL,encounter_id INTEGER NOT NULL,"
                         "bit INTEGER NOT NULL,journal_encounter_id INTEGER NOT NULL,"
                         "journal_creature_id INTEGER NOT NULL,display_id INTEGER NOT NULL,"
+                        "complete_at_health_pct REAL CHECK(complete_at_health_pct IS NULL OR "
+                        "(complete_at_health_pct >= 0 AND complete_at_health_pct <= 100)),"
                         "PRIMARY KEY(map_id,creature_entry))")
-        staging.executemany("INSERT INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)", bindings)
+        staging.executemany("INSERT INTO raid_encounter_creature "
+                            "(map_id,creature_entry,encounter_id,bit,journal_encounter_id,"
+                            "journal_creature_id,display_id) VALUES(?,?,?,?,?,?,?)", bindings)
         statements = list(staging.iterdump())
     statements.insert(1, "DROP TABLE IF EXISTS raid_encounter_creature;")
     output.write_text("\n".join(statements) + "\n")

@@ -22,6 +22,14 @@ The party walked from the entrance through Kystia and Zaen, took the inferred ga
 
 Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` contains the four encounter transitions; `instance7-achievements.json` contains the owner readback; `lithiel-resume.log` records the blocked approach and `lithiel-resume2.log` records the kill and final approach; `obstacle-exact.log` and `obstacle-engine-master-exact-trace.json` record the engine-master retest. `instance7-lithiel-forever.webp` and `instance7-lithiel-modern.webp` are post-kill captures, not kill-frame captures; the Modern image was taken after a client reconnect, with the same server still running.
 
+## Living encounter completion
+
+`raid_encounter_creature.complete_at_health_pct` is an optional sourced completion boundary. Damage crossing that percentage leaves the bound creature alive, completes the active encounter and applies the existing living-surrender combat exit. A zero threshold intercepts lethal damage at one health. An unset threshold preserves ordinary death completion. The completion is not a creature death or a new loot-corpse policy.
+
+`ENCOUNTER_END_AT_HEALTH_THRESHOLD_LOG_CORRELATED`: Rasha'nan 213937 / encounter 2839 completes at 59.5%, as LittleWigs `WarWithin/TheDawnbreaker/Rashanan.lua` records. WCL x3HzDRn6yVjqCbt8/7 and NW7zAgkTDbyqKZBf/1 show the living actor near 60% immediately before successful encounter end; they do not independently establish 59.5% exactly.
+
+`ENCOUNTER_END_ON_LETHAL_DAMAGE_LOG_CORRELATED`: Zul'jan 259447 / encounter 3458 completes on lethal damage while alive at one health. WCL JpHdnbhYD8ZFWvma/1, z1C2HFkf6VpGqWZD/1 and MzD8pFb9YaW6fA1K/15 show successful endings with final sampled health below 0.03% and no observed boss death. The lethal trigger is inferred; no death credit is claimed.
+
 ## Known gaps
 
 `WOWHEAD_PLACEMENT_INCLUDES_SUMMONS`: The one-time Wowhead placement import can classify spell-summoned actors as independent static spawns. Murder Row GUID63813226 is entry255050, the native Effect28 summon of spell1264098, and must not be statically placed. Audit other follower-map placements against native summon effects before publication; a match alone does not prove that every static placement is invalid.

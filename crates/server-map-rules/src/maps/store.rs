@@ -323,6 +323,8 @@ pub struct MapStore {
     pub dungeon_encounters: HashMap<u32, DungeonEncounter>,
     /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
+    /// Health percentages that complete a bound encounter without a creature death.
+    pub encounter_health_thresholds: HashMap<(u32, u32), f32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
     /// Destination map → source position of its first world-static teleport trigger.
     entrance_portals: HashMap<u32, WorldLocation>,
@@ -563,6 +565,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         difficulty_entries: load_difficulty_entries(conn)?,
         dungeon_encounters: load_dungeon_encounters(conn)?,
         raid_creature_encounters: load_raid_creature_encounters(conn)?,
+        encounter_health_thresholds: load_encounter_health_thresholds(conn)?,
         area_triggers: load_area_triggers(conn, &safe_locs)?,
         entrance_portals,
         exit_destinations,
@@ -658,6 +661,34 @@ fn load_raid_creature_encounters(conn: &Connection) -> rusqlite::Result<HashMap<
     };
     load_bossmod_bindings(conn, &mut bindings)?;
     Ok(bindings)
+}
+
+fn load_encounter_health_thresholds(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<(u32, u32), f32>> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='raid_encounter_creature')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        return Ok(HashMap::new());
+    }
+    let mut statement = conn.prepare(
+        "SELECT map_id, creature_entry, complete_at_health_pct FROM raid_encounter_creature \
+         WHERE complete_at_health_pct IS NOT NULL",
+    )?;
+    let mut thresholds = HashMap::new();
+    for row in statement.query_map([], |row| {
+        Ok(((row.get(0)?, row.get(1)?), row.get::<_, f32>(2)?))
+    })? {
+        let (key, percent) = row?;
+        if !percent.is_finite() || !(0.0..=100.0).contains(&percent) {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+        thresholds.insert(key, percent);
+    }
+    Ok(thresholds)
 }
 
 fn load_bossmod_bindings(
