@@ -137,6 +137,17 @@ fn approach_enters_unpulled_sight(
     Ok(Some(blockers))
 }
 
+pub(super) fn approach_goal(world: &World, unit: Entity, target: Entity) -> Goal {
+    if world
+        .get::<super::Follower>(unit)
+        .is_some_and(|follower| follower.owner == target)
+    {
+        Goal::RegroupApproach(target.to_bits())
+    } else {
+        Goal::Approach(target.to_bits())
+    }
+}
+
 fn read_approach_path(
     world: &mut World,
     unit: Entity,
@@ -149,15 +160,11 @@ fn read_approach_path(
     if let Some(space) = world.get_resource::<crate::test_support::Space>() {
         return space.route(from, to).map(Some);
     }
+    let goal = approach_goal(world, unit, target);
     let Some(result) = world
         .get_resource_mut::<Navigation>()
         .ok_or("Follower positioning requires authored navigation")?
-        .query_deferred(
-            unit,
-            map.map_id,
-            Goal::Approach(target.to_bits()),
-            NavQuery::Path { from, to },
-        )
+        .query_deferred(unit, map.map_id, goal, NavQuery::Path { from, to })
     else {
         return Ok(None);
     };

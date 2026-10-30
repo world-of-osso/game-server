@@ -604,6 +604,7 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
+    debug!(target: "game_server::follower_target", ?unit, ?target, spell_id, melee, "spell approach requested");
     if super::candlelight::hold_pursuit(world, unit, target) {
         return true;
     }

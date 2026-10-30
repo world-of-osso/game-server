@@ -125,7 +125,8 @@ fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -
     let Some(to) = world.get::<Position>(target).copied() else {
         return Some(false);
     };
-    read_route_hazard(world, unit, to, Goal::Approach(target.to_bits()))
+    let goal = super::positioning::approach_goal(world, unit, target);
+    read_route_hazard(world, unit, to, goal)
 }
 
 pub(super) fn point_route_crosses_hostile_field(

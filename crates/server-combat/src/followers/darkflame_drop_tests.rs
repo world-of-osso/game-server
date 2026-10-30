@@ -623,7 +623,7 @@ fn follower_approach_query_completes_after_hold_timeout() {
         .query_deferred(
             follower,
             MAP,
-            crate::navigation::Goal::Approach(h.caster.to_bits()),
+            crate::navigation::Goal::RegroupApproach(h.caster.to_bits()),
             ::navigation::worker::Query::Path { from, to },
         );
     assert!(
