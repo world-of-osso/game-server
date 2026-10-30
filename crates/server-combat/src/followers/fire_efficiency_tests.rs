@@ -86,6 +86,53 @@ fn summarize_events(
 }
 
 #[test]
+fn ignite_spread_does_not_attack_uldaman_floating_bunny_with_invalid_source_faction() {
+    use shared::components::UnitFactionTemplate;
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let targets = prepare_dummies(&mut h, 3);
+    let primary = targets[0];
+    let hostile = targets[1];
+    let bunny = targets[2];
+    let data = crate::test_data::world_data();
+    let source = data
+        .template_for(189649, 1)
+        .expect("real Uldaman bunny difficulty row");
+    assert_eq!(
+        source.faction, 35,
+        "invalid source faction is normalized at template load"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(bunny)
+        .insert(UnitFactionTemplate(u32::from(source.faction)));
+    crate::spell_cast::cast_triggered_with_effect0_amount(
+        h.app.world_mut(),
+        caster,
+        12654,
+        Some(primary),
+        1,
+        100.0,
+    );
+    assert!(crate::auras::has_aura(h.app.world(), primary, 12654));
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(108853)
+        .unwrap()
+        .clone();
+    crate::auras::spread_ignite(h.app.world_mut(), caster, primary, &spell);
+    assert!(
+        crate::auras::has_aura(h.app.world(), hostile, 12654),
+        "hostile target control receives spread"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), bunny, 12654),
+        "faction35 bunny must not receive spread"
+    );
+}
+
+#[test]
 fn fire_efficiency_native70_ordinary_fireball_earns_native_ignite() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, caster) = prepare_follower(209059, 63, 70);
