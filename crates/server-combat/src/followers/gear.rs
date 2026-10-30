@@ -14,6 +14,9 @@ use serde::Deserialize;
 use shared::components::Level;
 use shared::item_data::ItemDefinitionSource;
 
+// Stockade is a Normal simulator fixture, not a follower LFG catalog entry.
+const STOCKADE_SIMULATOR_MAP: u32 = 34;
+
 #[derive(Deserialize)]
 struct JournalInstance {
     #[serde(rename = "ID")]
@@ -90,6 +93,7 @@ pub fn read_dungeon_item_pools(
         .filter_map(|row| instances.get(&row.instance).map(|map| (row.id, *map)))
         .collect();
     let mut by_tier: HashMap<i32, BTreeSet<JournalGearCandidate>> = HashMap::new();
+    let mut stockade = BTreeSet::new();
     for row in read_rows::<JournalItem>(db2, "JournalEncounterItem.csv")? {
         if row.season != 0 || row.world_state != 0 {
             continue;
@@ -97,20 +101,20 @@ pub fn read_dungeon_item_pools(
         let Some(map) = encounters.get(&row.encounter) else {
             continue;
         };
-        let Some(tier) = tiers.get(map) else {
-            continue;
+        let item = JournalGearCandidate {
+            item_id: row.item,
+            source_map: *map,
+            difficulty_mask: row.difficulty_mask,
+            faction_mask: row.faction_mask,
         };
-        by_tier
-            .entry(*tier)
-            .or_default()
-            .insert(JournalGearCandidate {
-                item_id: row.item,
-                source_map: *map,
-                difficulty_mask: row.difficulty_mask,
-                faction_mask: row.faction_mask,
-            });
+        if *map == STOCKADE_SIMULATOR_MAP {
+            stockade.insert(item);
+        }
+        if let Some(tier) = tiers.get(map) {
+            by_tier.entry(*tier).or_default().insert(item);
+        }
     }
-    tiers
+    let mut pools: HashMap<u32, Vec<JournalGearCandidate>> = tiers
         .into_iter()
         .map(|(map, tier)| {
             let items = by_tier
@@ -121,7 +125,12 @@ pub fn read_dungeon_item_pools(
                 })?;
             Ok((map, items.iter().copied().collect()))
         })
-        .collect()
+        .collect::<Result<_, String>>()?;
+    if stockade.is_empty() {
+        return Err("FOLLOWER_STOCKADE_JOURNAL_LOOT_UNAVAILABLE".into());
+    }
+    pools.insert(STOCKADE_SIMULATOR_MAP, stockade.into_iter().collect());
+    Ok(pools)
 }
 
 /// Active source data needed to select and scale a follower's equipment.
@@ -213,10 +222,17 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
         templates,
     );
     if !selection.missing.is_empty() {
-        return Err(format!(
-            "FOLLOWER_GEAR_SLOTS_UNAVAILABLE spec{}: {:?}",
-            profile.spec_id, selection.missing
-        ));
+        if copy.map_id == STOCKADE_SIMULATOR_MAP {
+            warn!(
+                "FOLLOWER_STOCKADE_JOURNAL_SLOTS_UNAVAILABLE spec{}: {:?}",
+                profile.spec_id, selection.missing
+            );
+        } else {
+            return Err(format!(
+                "FOLLOWER_GEAR_SLOTS_UNAVAILABLE spec{}: {:?}",
+                profile.spec_id, selection.missing
+            ));
+        }
     }
     let representative = pool
         .iter()
@@ -271,6 +287,18 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
 mod tests {
     use super::*;
     use rusqlite::OpenFlags;
+
+    #[test]
+    fn stockade_fixture_uses_only_its_own_journal_loot() {
+        let path = crate::test_data::world_db_path();
+        let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let pools =
+            read_dungeon_item_pools(&db, &path.parent().unwrap().join("db2/active")).unwrap();
+        let stockade = &pools[&34];
+        assert!(stockade.iter().any(|item| item.item_id == 2168));
+        assert!(stockade.iter().all(|item| item.source_map == 34));
+        assert_eq!(stockade.len(), 15);
+    }
 
     #[test]
     fn follower_gear_journal_pool_uses_content_tuning_expansion() {
