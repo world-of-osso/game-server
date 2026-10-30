@@ -46,6 +46,7 @@ fn azure_simulator_registrations_use_real_book_transport() {
     for registration in registrations {
         let book = h.spawn_real_npc(registration.entry, 1.0);
         h.app.world_mut().entity_mut(book).insert(copy);
+        h.app.world_mut().entity_mut(h.player).insert(copy);
         let edge = crate::test_support::graph::TransportEdge {
             from: 0,
             to: 1,
