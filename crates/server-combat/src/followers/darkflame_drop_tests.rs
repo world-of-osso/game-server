@@ -866,6 +866,21 @@ fn tank_enters_target_formation_but_holds_for_another_formation() {
             should_hold,
             "watcher formation leader {watcher_leader}"
         );
+        let mut path = vec![from];
+        path.extend(
+            h.app
+                .world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .query_path(MAP, from, to)
+                .unwrap()
+                .expect("native complete route"),
+        );
+        assert_eq!(
+            super::positioning::route_enters_unpulled_sight(h.app.world_mut(), tank, h.npc, &path)
+                .unwrap(),
+            should_hold,
+            "admitted route must apply the same formation boundary"
+        );
     }
 }
 
