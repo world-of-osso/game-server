@@ -16,7 +16,15 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         return false;
     }
     let unsafe_approach = match approach_enters_unpulled_sight(world, unit, target) {
-        Ok(unsafe_approach) => unsafe_approach.unwrap_or(true),
+        Ok(None) => {
+            debug!(
+                ?unit,
+                ?target,
+                "Follower approach waiting for a navigation result"
+            );
+            true
+        }
+        Ok(Some(unsafe_approach)) => unsafe_approach,
         Err(error) => {
             warn!(?unit, %error, "Follower positioning lacks native sight geometry");
             true

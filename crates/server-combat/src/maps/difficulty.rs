@@ -469,6 +469,28 @@ mod admin_game_object_tests {
     }
 }
 
+type NpcMotion<'a> = (
+    Option<&'a crate::creature_ai::FollowOwner>,
+    Option<&'a shared::casting::CastState>,
+    Option<&'a crate::auras::AuraStatMods>,
+    Has<crate::scripted_ai::jump_movement::JumpMovement>,
+    Has<crate::scripted_ai::fall_movement::FallMovement>,
+    Has<crate::knockback::KnockbackFlight>,
+    Has<crate::auras::Confused>,
+    Has<crate::auras::Feared>,
+);
+
+type NpcMotionResult<'a> = (
+    Option<&'a crate::creature_ai::FollowOwner>,
+    Option<&'a shared::casting::CastState>,
+    Option<&'a crate::auras::AuraStatMods>,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+);
+
 /// Admin commands on the server clock and instance locks.
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct AdminInstances<'w, 's> {
@@ -487,6 +509,7 @@ pub(crate) struct AdminInstances<'w, 's> {
         ),
         Without<crate::persistence::ClientId>,
     >,
+    follower_motion: Query<'w, 's, NpcMotion<'static>>,
     creatures: Query<
         'w,
         's,
@@ -629,7 +652,7 @@ impl AdminInstances<'_, '_> {
                                 position.map(|p| [p.x, p.y, p.z]),
                                 state,
                                 dormant,
-                                npc_combat_metrics(stats, armor, target, threat)
+                                npc_combat_metrics(stats, armor, target, threat, self.follower_motion.get(entity).ok())
                             )
                         },
                     )
@@ -681,6 +704,7 @@ fn npc_combat_metrics(
     armor: Option<&crate::level_scaling::CreatureArmor>,
     target: Option<&crate::networking::CombatTarget>,
     threat: Option<&shared::components::ThreatTable>,
+    movement: Option<NpcMotionResult<'_>>,
 ) -> serde_json::Value {
     let stats = stats.map(|stats| {
         serde_json::json!({
@@ -706,6 +730,13 @@ fn npc_combat_metrics(
         "creature_armor": armor.map(|armor| armor.0),
         "victim": target.and_then(|target| target.0).map(Entity::to_bits),
         "threat": threat,
+        "movement": movement.map(|(follow, cast, mods, jump, fall, knockback, confused, feared)| serde_json::json!({
+            "follow": follow.map(|follow| follow.owner.to_bits()),
+            "cast": cast.map(|cast| cast.spell_id),
+            "speed_modifier": mods.map(|mods| mods.movement_speed),
+            "jump": jump, "fall": fall, "knockback": knockback,
+            "confused": confused, "feared": feared
+        })),
     })
 }
 
@@ -804,6 +835,22 @@ mod admin_npc_combat_tests {
             450.0
         );
         assert_eq!(world.get::<Health>(npc).unwrap().current, 7500.0);
+    }
+
+    #[test]
+    fn npc_info_reports_follower_motion_blockers() {
+        let mut world = World::new();
+        let owner = world.spawn_empty().id();
+        let npc = spawn_npc(&mut world);
+        world.entity_mut(npc).insert((
+            crate::creature_ai::FollowOwner::new(owner),
+            crate::auras::Feared { flee_from: owner },
+        ));
+        let metrics = inspect(&mut world);
+        assert_eq!(metrics["movement"]["follow"], owner.to_bits());
+        assert_eq!(metrics["movement"]["feared"], true);
+        assert_eq!(metrics["movement"]["knockback"], false);
+        assert_eq!(metrics["movement"]["jump"], false);
     }
 
     #[test]
