@@ -70,7 +70,24 @@ Recipient rolls (avoidance, block, critical block) for each replayed attack draw
 
 `--pressure-sweep` runs each tank without external healing at every scale from 1.0 to 5.0 in 0.25 steps (17 scales) and ten consecutive native seeds, starting at 70448 by default. The survival scale is the last grid scale before the first scale with fewer than five survivors; a later recovery does not count. The sweep also reports mean net damage per second at 1.0×. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Per-seed reports and `summary.json` are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
 
-### Pressure grid results
+### Integrated pressure grid at `a14a55cc97`
+
+All six tanks were rerun on one integrated tree, with 300-second traces, no external healer, ten seeds 70448–70457 and the full 1.00–5.00× grid at 0.25 increments. The preceding comparison is the mixed-tree grid in `pressure-sweep-731ff1b3dc-66-104/merged-summary.json`: 66 and 104 used `731ff1b3dc`, while the other four used `fc2dbbabb6`. Results and all 1,020 reports are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-a14a55cc97/`.
+
+| Tank | Survival scale, previous → current | Net damage/s at 1×, previous → current | Survivors at current scale |
+|---|---:|---:|---:|
+| Vengeance (581) | 4.50 → 4.75 | −58 → −11 | 6/10 |
+| Protection Warrior (73) | 4.75 → 4.50 | +5 → +3 | 10/10 |
+| Blood (250) | 3.50 → 3.75 | 0 → 0 | 5/10 |
+| Brewmaster (268) | 3.25 → 3.25 | +72 → +42 | 8/10 |
+| Guardian (104) | 2.00 → 2.00 | −433 → −262 | 8/10 |
+| Protection Paladin (66) | 1.25 → 1.25 | +483 → +404 | 8/10 |
+
+The current sample reverses Vengeance and Warrior; the 0.25-step separation is not reliable with ten seeds. Blood's 3.75 result is exactly 5/10. All tanks survived 10/10 at 1×. Effective self-healing is limited by missing health, so net damage is not a ranking of surviving tanks.
+
+The trees differ in multiple ways. Vengeance includes trace-selected Touch of Elune and shared replay scheduling changes; Blood includes Rune Weapon/Hemostasis, Boiling Point and Icy Talons changes; Guardian includes Galactic Guardian, Keeper haste, Touch of Elune and Thrash modifiers; Paladin includes Sacred Weapon target and callback changes. Warrior and Brewmaster include shared scheduling and other integrated changes. These changes are potential contributors, not established causes of a particular grid shift: no isolated counterfactual was run for this ranking.
+
+### Earlier pressure grid results
 
 Protection Paladin (66) and Guardian Druid (104) were rerun on master `731ff1b3dc` after the Matted Fur total-AP fix. Warrior (73), Blood (250), Brewmaster (268) and Vengeance (581) retain master `fc2dbbabb6` results. Each uses its 300-second SimC trace, no healer, seeds 70448–70457, and 17 pressure scales. Cells show survivors/10 and mean time, counting survivors as 300 s. New reports and `merged-summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-731ff1b3dc-66-104/`; the four older rows are in `pressure-sweep-fc2dbbabb6/`. The two master trees differ, so the combined ranking is not a same-tree comparison. The newer grid predates the subsequent Guardian two-piece and Sacred Weapon RPPM-clock fixes.
 
