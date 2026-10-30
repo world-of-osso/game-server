@@ -139,13 +139,13 @@ fn prepare_follower(
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
-    use crate::test_support::healer_intake::{Hit, HitKind};
+    use server::test_support::healer_intake::{Hit, HitKind};
     use shared::components::Health;
     let _seed = crate::random::seed_scope(70448);
     let (mut app, actor, source, _) = prepare_follower(209057, 90, 2813);
     app.world_mut()
         .entity_mut(actor)
-        .insert(crate::test_support::LiteralParityFixture);
+        .insert(server::test_support::LiteralParityFixture);
     for _ in 0..5 {
         app.update();
     }
@@ -235,6 +235,11 @@ fn follower_dps_production_dummy() {
     let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(seed);
     let (mut app, actor, target, profile) = prepare_follower(entry, level, map);
+    let armor = app
+        .world()
+        .get::<crate::level_scaling::CreatureArmor>(target)
+        .unwrap()
+        .0;
     let owner = app
         .world()
         .get::<crate::followers::Follower>(actor)

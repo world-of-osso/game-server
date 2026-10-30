@@ -34,7 +34,7 @@ impl TankScenario {
         });
         world
             .entity_mut(tank)
-            .insert(crate::test_support::SimcInfiniteHealth);
+            .insert(server::test_support::SimcInfiniteHealth);
         crate::combat_refs::set_in_combat_with(world, tank, source);
         Ok(Self {
             scenario,
