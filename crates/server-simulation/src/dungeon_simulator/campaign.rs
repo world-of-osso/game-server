@@ -319,7 +319,7 @@ fn darkflame_withheld_darkness_does_not_abort_initialization() {
         0,
         crate::scripted_ai::instance_script::EncounterState::Done,
     ));
-    run.control().unwrap();
+    run.refresh_population();
     let darkness = run.actors[&63651001];
     let capture = run.app.world().resource::<super::healer_intake::Capture>();
     assert_eq!(capture.sources[&darkness].0, 63651001);
@@ -2028,7 +2028,7 @@ impl Run {
         false
     }
 
-    fn control(&mut self) -> Result<(), String> {
+    fn refresh_population(&mut self) {
         if let Some(copy) = self
             .app
             .world()
@@ -2048,6 +2048,10 @@ impl Run {
                 );
             }
         }
+    }
+
+    fn control(&mut self) -> Result<(), String> {
+        self.refresh_population();
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
