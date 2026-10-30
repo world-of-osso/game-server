@@ -14,6 +14,14 @@ A dead follower's corpse persists for the active dungeon run, including an owner
 
 Dungeon spirit release uses one location policy for players and followers: a zone graveyard on the instance map, otherwise the authored dungeon entrance, otherwise the reciprocal exit. A dungeon release resurrects at that location. TC 15e0ed76 `Player.cpp:4688-4720` supplies the dungeon resurrection semantics; the location order is the user decision.
 
+## Murder Row live clear
+
+On 2026-10-30, Rowthree entered map 2813, difficulty 205, through ordinary LFG 3089 with Garrick, Crenna, Shuja and Meredy. In instance 7, Kystia (3101), Zaen (3102), Xathuux (3103) and Lithiel (3105, creature 234763) each reached Done without a server restart. Rowthree died during Kystia and released inside; no follower died, so follower-death recovery has no live proof in this run. All five were alive at the end. Rowthree earned achievement 41960, Murder Row, at Lithiel's completion. Follower copies do not produce an instance-lock record here.
+
+The party walked from the entrance through Kystia and Zaen, took the inferred gateway to the upper level, then walked through Xathuux to Lithiel. Short movement pulses and a stop at the gateway kept the party on the landing. On the Lithiel approach, movement blocked near Bevy (8983.214, 150.816, 4974.944) toward (8986.332, 151.355, 4974.455); walking south to z4964 and then east bypassed it. A later retest on engine master 1063a70c6 reached the same target from (8983.219, 150.823, 4974.947); the original block did not reproduce. The gateway and stair limitations are recorded below.
+
+Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` contains the four encounter transitions; `instance7-achievements.json` contains the owner readback; `lithiel-resume.log` records the blocked approach and `lithiel-resume2.log` records the kill and final approach; `obstacle-exact.log` and `obstacle-engine-master-exact-trace.json` record the engine-master retest. `instance7-lithiel-forever.webp` and `instance7-lithiel-modern.webp` are post-kill captures, not kill-frame captures; the Modern image was taken after a client reconnect, with the same server still running.
+
 ## Known gaps
 
 `WOWHEAD_PLACEMENT_INCLUDES_SUMMONS`: The one-time Wowhead placement import can classify spell-summoned actors as independent static spawns. Murder Row GUID63813226 is entry255050, the native Effect28 summon of spell1264098, and must not be statically placed. Audit other follower-map placements against native summon effects before publication; a match alone does not prove that every static placement is invalid.
