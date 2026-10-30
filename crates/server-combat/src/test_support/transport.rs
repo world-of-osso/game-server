@@ -34,7 +34,8 @@ pub fn read_registrations(
                     crate::taxi::RUBY_FERRY_PATH
                 )
             })?;
-        let destination = *points.last().ok_or("registered taxi path has no points")?;
+        let endpoint = *points.last().ok_or("registered taxi path has no points")?;
+        let destination = landing_floor(db, map, endpoint)?;
         let distance = points
             .windows(2)
             .map(|pair| pair[0].distance(pair[1]))
@@ -61,11 +62,55 @@ pub fn read_registrations(
     Ok(registrations)
 }
 
+fn open_ground(db: &rusqlite::Connection) -> Result<crate::ground::GroundMap, String> {
+    let maps = crate::maps::store::load_map_store(db)
+        .map_err(|error| format!("transport maps: {error}"))?;
+    let wdts = maps
+        .maps
+        .values()
+        .map(|entry| (entry.id, entry.wdt_file_data_id))
+        .collect();
+    Ok(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        wdts,
+    ))
+}
+
+fn landing_floor(db: &rusqlite::Connection, map: u32, endpoint: Vec3) -> Result<Vec3, String> {
+    let mut ground = open_ground(db)?;
+    match ground.creature_ground_at(map, endpoint) {
+        crate::ground::GroundProbe::Supported(height) if height <= endpoint.y => {
+            Ok(Vec3::new(endpoint.x, height, endpoint.z))
+        }
+        other => Err(format!(
+            "map{map} taxi endpoint {endpoint:?} has no native landing floor: {other:?}"
+        )),
+    }
+}
+
+#[derive(Component)]
+struct TaxiLandingPending;
+
+fn start_player_landing(world: &mut World) {
+    let owners: Vec<_> = world
+        .query_filtered::<Entity, (With<TaxiLandingPending>, Without<crate::taxi::TaxiFlight>)>()
+        .iter(world)
+        .collect();
+    for owner in owners {
+        world.entity_mut(owner).remove::<TaxiLandingPending>();
+        crate::scripted_ai::fall_movement::move_fall(world, owner, 0);
+    }
+}
+
 pub fn install_taxi_system(app: &mut App, db: &rusqlite::Connection) -> Result<(), String> {
     let network =
         crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
     app.insert_resource(network);
-    app.add_systems(FixedUpdate, crate::taxi::fly_taxis);
+    app.insert_resource(open_ground(db)?);
+    app.add_systems(
+        FixedUpdate,
+        (crate::taxi::fly_taxis, start_player_landing).chain(),
+    );
     Ok(())
 }
 
@@ -75,6 +120,10 @@ pub fn interaction_distance() -> f32 {
 
 pub fn in_progress(world: &World, unit: Entity) -> bool {
     world.get::<crate::taxi::TaxiFlight>(unit).is_some()
+        || world.get::<TaxiLandingPending>(unit).is_some()
+        || world
+            .get::<crate::scripted_ai::fall_movement::FallMovement>(unit)
+            .is_some()
         || world
             .get::<crate::scripted_ai::academy_transport::AcademyPadFlight>(unit)
             .is_some()
@@ -98,10 +147,58 @@ pub fn activate(
                     "transport spellclick npc{entry} did not start taxi flight"
                 ));
             }
+            world.entity_mut(owner).insert(TaxiLandingPending);
         }
         Action::Proximity => {}
     }
     Ok(())
+}
+
+#[test]
+fn headless_taxi_landing_uses_native_fall_to_the_ground() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(crate::ground::GroundMap::flat_arena(10.0));
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    app.insert_resource(Time::<Fixed>::from_hz(20.0));
+    app.add_systems(
+        FixedPreUpdate,
+        crate::scripted_ai::fall_movement::release_finished_falls,
+    );
+    app.add_systems(
+        FixedUpdate,
+        (
+            start_player_landing,
+            crate::scripted_ai::fall_movement::advance_falls,
+        )
+            .chain(),
+    );
+    let owner = app
+        .world_mut()
+        .spawn((
+            TaxiLandingPending,
+            crate::maps::InMap {
+                map_id: 2521,
+                instance_id: 1,
+            },
+            shared::components::Position {
+                x: 0.0,
+                y: 20.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    for _ in 0..100 {
+        app.update();
+    }
+    let position = app
+        .world()
+        .get::<shared::components::Position>(owner)
+        .unwrap();
+    assert!((position.y - 10.0).abs() < 0.1);
+    assert!(!in_progress(app.world(), owner));
 }
 
 #[test]
