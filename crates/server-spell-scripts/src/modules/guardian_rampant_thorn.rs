@@ -7,6 +7,7 @@ use combat::random::seq::SliceRandom;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, targets};
 use combat::spell_info::SpellStore;
 
+const TWO_PIECE: u32 = 1296607;
 const SET: u32 = 1296608;
 const FORMS: &[u32] = &[102558, 50334];
 
@@ -83,11 +84,24 @@ fn tick(world: &mut World, caster: Entity, aura: &AuraInstance, effect: u8) {
     }
 }
 
+fn roll_gorestained_claws(world: &mut World, caster: Entity, depth: u8) {
+    let effect = world.get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == TWO_PIECE && aura.caster == caster))
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0));
+    let Some(effect) = effect else { return };
+    let (chance, child) = (effect.amount, effect.trigger_spell);
+    // SimC76f8118 sc_druid.cpp5968–5972,11447–11449: each Thrash rolls the equipped set.
+    if combat::random::random::<f32>() * 100.0 < chance {
+        spell_cast::cast_triggered(world, caster, child, Some(caster), depth + 1);
+    }
+}
+
 fn after_cast(world: &mut World, ctx: &EffectCtx<'_>) {
     let caster = ctx.caster;
     if ctx.spell.id != 77758 {
         return;
     }
+    roll_gorestained_claws(world, caster, ctx.depth);
     let Some(auras) = world.get::<ActiveAuras>(caster) else {
         return;
     };

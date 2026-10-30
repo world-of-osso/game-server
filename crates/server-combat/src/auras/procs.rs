@@ -586,6 +586,23 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
 }
 
+/// Preserve an aura's proc clock when its sourced callback outlives the aura.
+pub fn snapshot_proc_timers(aura: &AuraInstance) -> super::ProcTimers {
+    aura.proc
+}
+
+/// Restore a previously preserved proc clock to an applied aura instance.
+pub fn restore_proc_timers(world: &mut World, unit: Entity, id: u32, timers: super::ProcTimers) {
+    let mut auras = world
+        .get_mut::<ActiveAuras>(unit)
+        .expect("applied proc aura");
+    auras
+        .bypass_change_detection()
+        .get_mut(id)
+        .expect("applied proc instance")
+        .proc = timers;
+}
+
 /// Read the native internal-cooldown deadline of an active proc aura.
 pub fn proc_deadline(world: &World, unit: Entity, id: u32) -> Option<f64> {
     world
