@@ -32,7 +32,11 @@ fn after_heal(
     {
         return;
     }
-    let mastery = world.get::<CharacterStats>(ctx.caster).expect("Guardian mastery stats").mastery_pct / 100.0;
+    let mastery = world
+        .get::<CharacterStats>(ctx.caster)
+        .expect("Guardian mastery stats")
+        .mastery_pct
+        / 100.0;
     let spell = combat::spell_cast::load_triggered_spell(world, MASTERY_HEAL, 1)
         .expect("native Nature's Guardian heal");
     let proc_ctx = EffectCtx {

@@ -701,14 +701,34 @@ fn guardian_incarnation_does_not_add_unobserved_leech() {
     for _ in 0..40 {
         run.app.update();
     }
-    let before = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().leech_pct;
-    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false).unwrap();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .leech_pct;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false)
+        .unwrap();
     for _ in 0..2 {
         run.app.update();
     }
-    assert!(run.app.world().get::<ActiveAuras>(actor).unwrap().has_spell(102558));
-    let after = run.app.world().get::<crate::stats::CharacterStats>(actor).unwrap().leech_pct;
-    assert!((before - after).abs() < 0.01, "Incarnation must not add the unobserved 15% leech: {before} -> {after}");
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .has_spell(102558)
+    );
+    let after = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .leech_pct;
+    assert!(
+        (before - after).abs() < 0.01,
+        "Incarnation must not add the unobserved 15% leech: {before} -> {after}"
+    );
 }
 
 #[test]
