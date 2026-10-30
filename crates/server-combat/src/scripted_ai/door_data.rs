@@ -21,6 +21,15 @@ const DOORS: &[Door] = &[
         entry: 531150,
         encounter: 3207,
     },
+    // NALORAKK_CAVE_DOOR_OPENS_ON_SENTINEL_DONE_LOG_CORRELATED:
+    // WoWCombatLog-102026_223255.txt lines 136024, 136191 and 136205 show
+    // Sentinel's success and a player on both sides of the door. Its state and
+    // exact trigger are not recorded.
+    Door {
+        map_id: 2825,
+        entry: 570512,
+        encounter: 3208,
+    },
     // ACADEMY_BRAMBLE_BARRIER_UNLOCK_LOG_CORRELATED: WCL gWkPyzwJ2mbxRtdr fight 3
     // and tjnzpa3Axg6QLHfJ fight 1 place players past this door after all three
     // encounters. The three-boss gate is project policy; Retail's trigger is unknown.
