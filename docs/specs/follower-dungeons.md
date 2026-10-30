@@ -30,6 +30,12 @@ Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` conta
 
 `ENCOUNTER_END_ON_LETHAL_DAMAGE_LOG_CORRELATED`: Zul'jan 259447 / encounter 3458 completes on lethal damage while alive at one health. WCL JpHdnbhYD8ZFWvma/1, z1C2HFkf6VpGqWZD/1 and MzD8pFb9YaW6fA1K/15 show successful endings with final sampled health below 0.03% and no observed boss death. The lethal trigger is inferred; no death credit is claimed.
 
+## Dawnbreaker flight traversal
+
+`DAWNBREAKER_FLIGHT_TRAVERSAL` (planned, not implemented): native AreaTable 14971 on map 2662 has MountFlags 15, including the flying-mount bit 0x2. Subareas 15544–15547 have MountFlags 13, without that bit. TC 15e0ed76 `DBCEnums.h:162–170` defines these flags; `Unit.cpp:8405–8442` also permits mount-restriction auras to override them. Native spell 449208 carries aura 336 with mount flags 15, but its application in the sampled Shadowcrown-to-Anub'ikkaj transition is not established.
+
+Where flying is allowed, an airborne leader on a flying mount leads followers that mount and fly-follow in three dimensions without the walking navmesh. Followers land on the navmesh floor connected to the leader's landing point. The simulator leader uses this rule for the Shadowcrown-to-Anub'ikkaj leg. This is an approved design, not evidence that follower flight works today.
+
 ## Known gaps
 
 `WOWHEAD_PLACEMENT_INCLUDES_SUMMONS`: The one-time Wowhead placement import can classify spell-summoned actors as independent static spawns. Murder Row GUID63813226 is entry255050, the native Effect28 summon of spell1264098, and must not be statically placed. Audit other follower-map placements against native summon effects before publication; a match alone does not prove that every static placement is invalid.
