@@ -110,6 +110,14 @@ fn nalorakk_cave_door_opens_after_sentinel_in_its_copy() {
     );
     let world = h.app.world_mut();
     let boss = instance_script::boss_id_for_encounter(world, map, 3208).unwrap();
+    if instance_script::get_boss_state(world, map, boss) == Some(EncounterState::InProgress) {
+        assert!(instance_script::set_boss_state(
+            world,
+            map,
+            boss,
+            EncounterState::NotStarted
+        ));
+    }
     assert!(instance_script::set_boss_state(
         world,
         map,
