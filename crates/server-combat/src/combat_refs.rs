@@ -109,6 +109,12 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     let existing = world
         .get::<CombatRefs>(a)
         .is_some_and(|refs| refs.0.contains_key(&b));
+    if !existing
+        && (world.get::<shared::components::Npc>(a).is_some()
+            || world.get::<shared::components::Npc>(b).is_some())
+    {
+        debug!(target: "game_server::aggro_acquisition", reason = "combat_reference", first = a.to_bits(), second = b.to_bits(), suppress_second = suppress_b, "combat reference created");
+    }
     let expires_at = read_reference_deadline(world, a, b);
     for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
         store_combat_reference(

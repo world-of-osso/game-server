@@ -252,32 +252,12 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     }
 }
 
-/// Project a caster's feet while retaining both units' native body geometry.
-pub(crate) fn sees_at(
-    world: &World,
-    unit: Entity,
-    position: Position,
-    other: Entity,
-) -> Result<bool, String> {
-    projected_visibility(world, unit, position, other, false)
-}
-
 /// Project only a unit's feet; both bodies still use actual native eyes/pose/facing.
 pub(crate) fn mutually_visible_at(
     world: &World,
     unit: Entity,
     position: Position,
     other: Entity,
-) -> Result<bool, String> {
-    projected_visibility(world, unit, position, other, true)
-}
-
-fn projected_visibility(
-    world: &World,
-    unit: Entity,
-    position: Position,
-    other: Entity,
-    mutual: bool,
 ) -> Result<bool, String> {
     let map = *world
         .get::<InMap>(unit)
@@ -301,7 +281,7 @@ fn projected_visibility(
     let target = los
         .body(other_parts)
         .ok_or("Projected LOS target lacks native eye geometry")?;
-    Ok(los.sees(map, &body, &target) && (!mutual || los.sees(map, &target, &body)))
+    Ok(los.sees(map, &body, &target) && los.sees(map, &target, &body))
 }
 
 /// Area-hit visibility from the recipient to the area center. TC's point LOS

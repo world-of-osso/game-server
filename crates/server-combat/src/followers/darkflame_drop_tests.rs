@@ -571,7 +571,6 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
                 h.app.world_mut(),
                 healer,
                 h.caster,
-                None,
             ));
             crate::navigation::drain_fixture(&mut h.app);
         }
@@ -603,8 +602,7 @@ fn follower_approach_query_completes_after_hold_timeout() {
     assert!(super::positioning::hold_unsafe_approach(
         h.app.world_mut(),
         follower,
-        h.caster,
-        None
+        h.caster
     ));
     h.app
         .world_mut()
@@ -614,8 +612,7 @@ fn follower_approach_query_completes_after_hold_timeout() {
         assert!(!super::positioning::hold_unsafe_approach(
             h.app.world_mut(),
             follower,
-            h.caster,
-            None
+            h.caster
         ));
     }
     crate::navigation::drain_fixture(&mut h.app);
@@ -637,22 +634,31 @@ fn follower_approach_query_completes_after_hold_timeout() {
 
 #[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
-fn ranged_approach_checks_only_the_path_to_casting_range() {
-    let from = Vec3::new(365.0142, 87.06531, -32.37358);
-    let to = Vec3::new(421.7417, 87.0782, -29.7178);
-    for (watcher_x, expected_hold) in [(410.0, false), (380.0, true)] {
-        let (mut h, follower) = create_native_follower_fixture_for(209072);
-        h.app
-            .insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+fn follower_combat_approach_holds_for_every_watcher_on_full_path() {
+    let map_id = 2805;
+    let from = Vec3::new(5314.9, 131.6, 3112.4);
+    let to = Vec3::new(5312.32, 101.26369, 3121.98);
+    for (entry, watcher_at) in [
+        (209053, Vec3::new(5302.6, 126.463684, 3155.28)),
+        (209059, Vec3::new(5305.12, 126.4978, 3152.31)),
+    ] {
+        let (mut h, follower) = create_native_follower_fixture_for(entry);
+        h.app.insert_resource(GroundMap::new(
+            &assets(),
+            HashMap::from([(map_id, 6_099_383)]),
+        ));
         h.app
             .world_mut()
             .entity_mut(follower)
-            .insert(position(from));
-        h.app.world_mut().entity_mut(h.npc).insert(position(to));
+            .insert((position(from), InMap::continent(map_id)));
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert((position(to), InMap::continent(map_id)));
         let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
         h.app.world_mut().entity_mut(watcher).insert((
-            position(Vec3::new(watcher_x, 87.07, -31.0)),
-            InMap::continent(MAP),
+            position(watcher_at),
+            InMap::continent(map_id),
             shared::components::UnitFactionTemplate(16),
             shared::components::UnitLevel(80),
             crate::creature_aggro::AggroRange,
@@ -660,12 +666,7 @@ fn ranged_approach_checks_only_the_path_to_casting_range() {
         ));
         h.advance(1);
         for _ in 0..3 {
-            super::positioning::hold_unsafe_approach(
-                h.app.world_mut(),
-                follower,
-                h.npc,
-                Some(30.0),
-            );
+            super::positioning::hold_unsafe_approach(h.app.world_mut(), follower, h.npc);
             crate::navigation::drain_fixture(&mut h.app);
         }
         h.app
@@ -673,14 +674,9 @@ fn ranged_approach_checks_only_the_path_to_casting_range() {
             .resource_mut::<Time>()
             .advance_by(std::time::Duration::from_secs(6));
         assert_eq!(
-            super::positioning::hold_unsafe_approach(
-                h.app.world_mut(),
-                follower,
-                h.npc,
-                Some(30.0)
-            ),
-            expected_hold,
-            "watcher at x={watcher_x}"
+            super::positioning::hold_unsafe_approach(h.app.world_mut(), follower, h.npc),
+            true,
+            "watcher at {watcher_at:?}"
         );
     }
 }
