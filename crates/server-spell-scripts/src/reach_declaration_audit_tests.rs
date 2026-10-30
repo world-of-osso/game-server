@@ -63,12 +63,146 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
     ("survival_wildfire.rs", "select_recipients", "area", 1),
     ("unholy_necrotic_coil.rs", "enemies", "area", 1),
     ("unholy_permanent_claws.rs", "update", "query", 1),
+    ("unholy_eruption.rs", "command_army", "query", 1),
     ("unholy_undeath.rs", "spread", "area", 1),
 ];
 
 // Exceptions are explicit and site-specific. Counts make new calls in the same
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
+    (
+        "unholy_doomed_bidding.rs",
+        "command_ghouls",
+        "query",
+        1,
+        "commands owned Army ghouls; their order reach is declared by unholy_eruption",
+    ),
+    (
+        "warlock_ritual.rs",
+        "advance_ritual",
+        "query",
+        1,
+        "finds an owned Tyrant",
+    ),
+    (
+        "hunter_dire_command.rs",
+        "start_new_beasts",
+        "query",
+        1,
+        "finds owned Dire Beasts",
+    ),
+    (
+        "stacking_summons.rs",
+        "has_living_summon",
+        "query",
+        1,
+        "checks an owned summon",
+    ),
+    (
+        "unholy_lesser_claws.rs",
+        "regenerate",
+        "query",
+        1,
+        "updates owned ghoul energy",
+    ),
+    (
+        "unholy_rider_proc.rs",
+        "on_cast",
+        "query",
+        2,
+        "finds owned riders",
+    ),
+    (
+        "unholy_putrefy.rs",
+        "convert_magi_to_lord",
+        "query",
+        1,
+        "finds owned magi",
+    ),
+    (
+        "unholy_army.rs",
+        "dismiss_active_lesser_ghouls",
+        "query",
+        1,
+        "dismisses owned ghouls",
+    ),
+    (
+        "unholy_army.rs",
+        "summon_apocalypse_now_riders",
+        "query",
+        2,
+        "finds owned ghouls and riders",
+    ),
+    (
+        "guardian_wild_guardian.rs",
+        "active_spirit",
+        "query",
+        1,
+        "finds an owned spirit",
+    ),
+    (
+        "blood_rune_weapon.rs",
+        "sync_rune_weapon_buff",
+        "query",
+        1,
+        "finds owned rune weapons",
+    ),
+    (
+        "unholy_soul_reaper.rs",
+        "order_army",
+        "query",
+        1,
+        "commands owned Army ghouls; their order reach is declared by unholy_eruption",
+    ),
+    (
+        "discipline_atonement.rs",
+        "update_voidwraith",
+        "query",
+        1,
+        "updates owned Voidwraiths and their previously selected targets",
+    ),
+    (
+        "unholy_undeath.rs",
+        "whitemane_spender",
+        "query",
+        1,
+        "finds owned summons",
+    ),
+    (
+        "unholy_undeath.rs",
+        "update",
+        "query",
+        1,
+        "updates owned summons",
+    ),
+    (
+        "hunter_huntmaster.rs",
+        "owned_summons",
+        "query",
+        1,
+        "finds owned summons",
+    ),
+    (
+        "hunter_bear.rs",
+        "rend_on_summon",
+        "query",
+        1,
+        "finds owned Bears; Rend reach is declared by hunter_bear",
+    ),
+    (
+        "demonology_reign.rs",
+        "on_tyrant",
+        "query",
+        1,
+        "finds owned demons",
+    ),
+    (
+        "hunter_howl/summons.rs",
+        "read_owned_summons",
+        "query",
+        1,
+        "finds owned summons",
+    ),
     (
         "affliction_agony.rs",
         "active_agonies",
@@ -171,8 +305,8 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "demonology_hellbent.rs",
         "reconcile",
         "query",
-        1,
-        "counts owned pets",
+        2,
+        "counts owned pets and summons",
     ),
     (
         "destruction_echo.rs",
@@ -445,6 +579,13 @@ fn scan_source(path: &str, source: &str, sites: &mut Sites) {
             "Position",
             "Npc",
             "InMap",
+            "HunterPet",
+            "SummonedCreature",
+            "CreatureState",
+            "ThreatTable",
+            "UnitFactionTemplate",
+            "CombatTarget",
+            "UnitSummonedBy",
         ];
         if components.iter().any(|name| signature.contains(name))
             || line.contains("query::<Entity>")
@@ -541,7 +682,7 @@ fn scanner_detects_new_sites_in_existing_functions() {
     let mut sites = Sites::new();
     scan_source(
         "sample.rs",
-        "fn cast() {\n targets::area_units(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n}",
+        "fn cast() {\n targets::area_units(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n world.query::<(Entity, &SummonedCreature)>();\n}",
         &mut sites,
     );
     assert_eq!(
@@ -550,7 +691,7 @@ fn scanner_detects_new_sites_in_existing_functions() {
     );
     assert_eq!(
         sites.get(&("sample.rs".into(), "cast".into(), "query".into())),
-        Some(&1)
+        Some(&2)
     );
     assert!(
         !inventory_matches(&sites, &Sites::new()),

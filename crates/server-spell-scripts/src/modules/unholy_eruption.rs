@@ -14,9 +14,21 @@ use combat::spell_info::{SpellInfo, SpellStore};
 const SCOURGE_STRIKE: u32 = 55090;
 const VIRULENT_PLAGUE: u32 = 191587;
 pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(army_order_actions),
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::NativeAfterCast(after_cast),
 ];
+
+fn army_order_actions(world: &World, actor: Entity) -> Vec<u32> {
+    if world
+        .get::<spell_cast::summon::SummonedCreature>(actor)
+        .is_some_and(|summon| summon.spell_id == 1294026)
+    {
+        vec![1294264, 1300330]
+    } else {
+        Vec::new()
+    }
+}
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     (spell == SCOURGE_STRIKE).then_some(spend_ready_ghoul)
