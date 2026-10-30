@@ -32,7 +32,6 @@ fn declared_reach(
     spell: &SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
     use combat::spell_cast::script_registry::{DeclaredReach, ScriptReach, reach_source_selected};
-    let store = world.resource::<combat::spell_info::SpellStore>();
     let wave =
         matches!(spell.id, REAPERS_MARK | 435802) && reach_source_selected(world, caster, 439851);
     let rupture =
@@ -40,6 +39,7 @@ fn declared_reach(
     if !wave && !rupture {
         return ScriptReach::None;
     }
+    let store = world.resource::<combat::spell_info::SpellStore>();
     let caster_radius = if wave {
         store
             .get(435802)
