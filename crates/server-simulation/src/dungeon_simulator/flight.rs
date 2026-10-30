@@ -6,6 +6,29 @@ use bevy::prelude::*;
 const CLEARANCE: f32 = 15.0;
 const SAMPLE_SPACING: f32 = 5.0;
 
+/// Highest baked solid in this column, including sloped geometry and neighbouring-tile overhangs.
+fn native_surface(los: &mut los::LosMap, point: Vec2) -> Result<Option<f32>, String> {
+    let (row, col) = los::tile_of(point.x, point.y);
+    if los.tile((row, col))?.is_none() {
+        return Err(format!("missing flight LOS tile ({row}, {col})"));
+    }
+    let mut bounds = None::<(f32, f32)>;
+    for r in row.saturating_sub(1)..=(row + 1).min(los::MAP_TILES - 1) {
+        for c in col.saturating_sub(1)..=(col + 1).min(los::MAP_TILES - 1) {
+            if let Some((min, max)) = los.tile((r, c))?.and_then(|tile| tile.bounds()) {
+                bounds =
+                    Some(bounds.map_or((min.y, max.y), |(lo, hi)| (lo.min(min.y), hi.max(max.y))));
+            }
+        }
+    }
+    let Some((low, high)) = bounds else {
+        return Ok(None);
+    };
+    let top = Vec3::new(point.x, high + 1.0, point.y);
+    let bottom = Vec3::new(point.x, low - 1.0, point.y);
+    Ok(los.first_hit(top, bottom)?.map(|t| top.lerp(bottom, t).y))
+}
+
 /// Give logged horizontal waypoints inferred altitudes, preserving projected ground endpoints.
 fn flight_path(
     ground_start: Vec3,
@@ -75,11 +98,14 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
     let mut missing = Vec::new();
     for (x, z) in points {
         let heights = los.floor_heights(x, z).unwrap();
+        let surface = native_surface(&mut los, Vec2::new(x, z)).unwrap();
         let floors: Vec<_> = heights
             .iter()
             .filter_map(|&y| nav.floor_polygon(Vec3::new(x, y, z)).unwrap())
             .collect();
-        println!("DAWNBREAKER_SURFACES x={x} z={z} los={heights:?} nav={floors:?}");
+        println!(
+            "DAWNBREAKER_SURFACES x={x} z={z} highest={surface:?} los={heights:?} nav={floors:?}"
+        );
         if floors.is_empty() {
             missing.push((x, z));
         }
