@@ -63,7 +63,7 @@ mod kit_rotation_tests;
 #[cfg(test)]
 mod meteor_tests;
 mod pack_identity;
-mod party;
+pub(crate) mod party;
 mod positioning;
 mod pull_admission;
 #[cfg(test)]

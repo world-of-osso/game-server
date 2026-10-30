@@ -10,6 +10,8 @@
 
 Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
+A dead follower's corpse persists for the active dungeon run, including an owner disconnect, and remains eligible for ordinary party resurrection.
+
 Dungeon spirit release uses one location policy for players and followers: a zone graveyard on the instance map, otherwise the authored dungeon entrance, otherwise the reciprocal exit. A dungeon release resurrects at that location. TC 15e0ed76 `Player.cpp:4688-4720` supplies the dungeon resurrection semantics; the location order is the user decision.
 
 ## Known gaps

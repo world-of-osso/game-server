@@ -29,6 +29,10 @@ impl DisconnectedRuns {
         self.0.get(&character)?.run.copy
     }
 
+    pub(crate) fn contains_member(&self, member: Entity) -> bool {
+        self.0.values().any(|run| run.run.contains_member(member))
+    }
+
     pub(crate) fn member_difficulty(&self, member: Entity) -> Option<u32> {
         self.0
             .values()
@@ -46,6 +50,12 @@ pub(crate) struct FollowerRun {
     previous_difficulty: u32,
     origin: WorldLocation,
     player_role: GroupRole,
+}
+
+impl FollowerRun {
+    pub(crate) fn contains_member(&self, member: Entity) -> bool {
+        self.copy.is_some() && self.members.contains(&member)
+    }
 }
 
 /// Admitted copy, companion IDs (including missing entities), and owner's role.
@@ -767,6 +777,29 @@ mod copy_tests {
             app.world().get::<FollowerRun>(reconnected).unwrap().members,
             run.members
         );
+    }
+
+    #[test]
+    fn active_follower_corpse_survives_decay_and_disconnect() {
+        use bevy::ecs::system::RunSystemOnce;
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        app.world_mut().entity_mut(owner).insert(run.clone());
+        app.world_mut()
+            .entity_mut(member)
+            .insert(crate::combat::Corpse { remaining: 0.0 });
+        app.world_mut()
+            .run_system_once(crate::combat::corpse_decay_system)
+            .unwrap();
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::lfg::PlayerLfgState::default());
+        retire_owner(app.world_mut(), owner);
+        app.world_mut()
+            .run_system_once(crate::combat::corpse_decay_system)
+            .unwrap();
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
     }
 
     #[test]
