@@ -291,6 +291,50 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn guardian_thrash_real_hit_uses_selected_damage_modifiers() {
+        use crate::spell_cast::effects::factor_capture::FactorCapture;
+        let mut run = super::super::prepare_registered_player(104, 70448).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102558, Some(actor), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        run.app
+            .insert_resource(FactorCapture::new(actor, target, 77758, "thrash", 1));
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 77758, Some(target), false)
+            .unwrap();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        let events = capture["events"].as_array().unwrap();
+        let direct = events
+            .iter()
+            .find(|e| e["event"] == "direct_amount" && e["spell_id"] == 77758)
+            .unwrap();
+        let result = events
+            .iter()
+            .find(|e| e["event"] == "result" && e["spell_id"] == 77758)
+            .unwrap();
+        let base = direct["factors"]["native_scaled_amount"].as_f64().unwrap();
+        let vers = result["factors"]["versatility"].as_f64().unwrap();
+        let actual = result["factors"]["raw_amount"].as_f64().unwrap();
+        // Guardian 8% and 125%, Killer Instinct 6%, Grievous Wounds 10%,
+        // Lunar Calling 12%, Circle 5%, Fury of Nature rank two 30%.
+        let expected = base * vers * 1.08 * 2.25 * 1.06 * 1.10 * 1.12 * 1.05 * 1.30 * 1.10;
+        assert!(
+            (actual / expected - 1.0).abs() < 0.026,
+            "actual={actual} expected={expected} trace={capture}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
     fn guardian_spirit_wrath_follows_real_mangle_with_delayed_damage() {
         let mut run = super::super::prepare_registered_player(104, 1).unwrap();
         let actor = run.actor;
