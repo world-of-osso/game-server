@@ -91,7 +91,10 @@ fn elemental_spenders_apply_rod_and_lightning_copies_resolved_damage() {
         .get(197568)
         .unwrap();
     let taken = crate::auras::damage_taken_multiplier(world, target, run.actor, spell);
-    assert!((copy.amount as f32 - bolt.amount as f32 * 0.1 * taken).abs() <= 2.0);
+    assert!(
+        (copy.amount as f32 - bolt.amount as f32 * 0.1 * taken).abs() <= 2.0,
+        "bolt={bolt:?}, copy={copy:?}, target_multiplier={taken}, events={events:?}"
+    );
     assert_eq!(copy.target, Some(target.to_bits()));
     assert!(!copy.crit);
     crate::auras::remove_auras(
