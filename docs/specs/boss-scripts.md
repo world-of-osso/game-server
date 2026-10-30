@@ -94,6 +94,8 @@ TC a352b1fa `CombatReference::EndCombat` clears both units' threat for each ende
 
 `ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED`: GO376554 opens when Sentinel Talondras2557 is Done in its copy, using passage-door state. Its TDB position lies on the nav route to Emberon, and DungeonEncounter orders Talondras before Emberon. [Warcraft Wiki Hall of the Keepers](https://warcraft.wiki.gg/wiki/Hall_of_the_Keepers) corroborates onward progression after Talondras. No log or script sources this door's exact trigger or a possible post-RP delay.
 
+`NAV_ROUTES_THROUGH_STATIC_CLOSED_DOOR_377366`: TDB spawn 9003963 starts READY and has no identified unlock script. Keep it closed; the shared navmesh generator can route through static closed doors and must account for them as obstacles. Retail crossing is unverified: three WCL reports returned archived-event errors.
+
 ## Uldaman Emberon vault passages
 
 - `ULDAMAN_EMBERON_VAULT_DOOR_PASSAGE_INFERRED`: GO376191 opens when Talondras2557 is Done. The TDB door blocks the nav route into Emberon's vault; no log or script sources its exact trigger.
