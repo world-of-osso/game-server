@@ -56,9 +56,23 @@ fn consume_boiling_point(world: &mut World, unit: Entity) {
     });
 }
 
+#[derive(Component)]
+struct ForcedEchoMultiplier(f32);
+
 fn queue_echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
     if unit != aura.caster || reason != RemoveReason::Consumed {
         return;
+    }
+    if auras::has_aura(world, unit, 1265982) {
+        let amount = aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("Boiling Point damage modifier")
+            .amount;
+        world
+            .entity_mut(unit)
+            .insert(ForcedEchoMultiplier(1.0 + amount / 100.0));
     }
     auras::remove_auras(world, unit, RemoveReason::Consumed, |old| {
         old.spell_id == 1265982 && old.caster == unit
@@ -70,14 +84,17 @@ fn echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReas
     if unit != aura.caster || !matches!(reason, RemoveReason::Expired | RemoveReason::Consumed) {
         return;
     }
-    if !spell_cast::try_cast_triggered(world, unit, 50842, None, 1) {
+    let multiplier = world
+        .entity_mut(unit)
+        .take::<ForcedEchoMultiplier>()
+        .map(|value| value.0);
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, 50842, 1) else {
+        return;
+    };
+    spell.cast_damage_multiplier = multiplier;
+    if !spell_cast::launch_triggered_spell(world, unit, &spell, None, 1) {
         return;
     }
-    let spell = world
-        .resource::<combat::spell_info::SpellStore>()
-        .get(50842)
-        .expect("native Blood Boil")
-        .clone();
     super::blood_rune_weapon::copy_weapon_actions(world, unit, &spell);
     // SimC76f8118 sc_death_knight.cpp9069–9079: an echo can consume
     // a new Boiling Point proc and schedule a subsequent echo.
