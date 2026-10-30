@@ -57,7 +57,7 @@ fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
     let mut commands = Commands::new(&mut queue, h.app.world());
     let count = crate::zones::spawn_map_creatures(
         &mut commands,
-        data,
+        &data,
         crate::zones::MapContent {
             map,
             difficulty_id: 1,
