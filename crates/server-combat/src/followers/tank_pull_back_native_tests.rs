@@ -130,6 +130,16 @@ fn run_native_pull_back(production: bool) {
         owner_trail::record(h.app.world_mut(), owner);
     }
     h.app.world_mut().entity_mut(tank).insert(at(start));
+    if production {
+        assert!(
+            !super::spell_safety::safe(h.app.world(), tank, target, 31935),
+            "Avenger's Shield must not bounce into the idle hatchling"
+        );
+        assert!(
+            super::spell_safety::safe(h.app.world(), tank, target, 62124),
+            "the single-target native taunt remains available"
+        );
+    }
     // The source spawn is about 21 yards away: an attack request alone cannot
     // land a melee swing. Start combat with the mage's native ranged spell.
     h.app
@@ -215,6 +225,12 @@ fn run_native_pull_back(production: bool) {
     );
     assert!(waited, "party must wait for the pull-back");
     assert!(acquired, "tank must acquire the intended Groundskeeper");
+    if production {
+        assert!(
+            super::spell_safety::safe(h.app.world(), tank, target, 31935),
+            "Avenger's Shield must become available after the pack arrives safely"
+        );
+    }
     assert!(
         !tank_pull_back::party_should_wait(h.app.world(), owner),
         "tank must wait for the acquired pack to arrive before releasing the party"
