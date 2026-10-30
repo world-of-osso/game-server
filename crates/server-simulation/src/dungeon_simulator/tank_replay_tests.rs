@@ -1503,8 +1503,9 @@ fn replay_decides_when_global_cooldown_expires() {
     assert!(next > now && next < now + std::time::Duration::from_secs(5));
     let step = std::time::Duration::from_millis(50);
     while run.app.world().resource::<Time>().elapsed() + step < next {
-        let boundary = run.app.world().resource::<Time>().elapsed() + step;
-        super::dps_parity::advance_fixture_step(&mut run, boundary).unwrap();
+        run.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(step));
+        run.app.update();
     }
     let now = run.app.world().resource::<Time>().elapsed();
     let decision = super::tank_replay::next_gcd_decision_boundary(&run, now + step);
@@ -1512,7 +1513,11 @@ fn replay_decides_when_global_cooldown_expires() {
         decision < now + step,
         "the GCD event must precede the next 50 ms boundary"
     );
-    super::dps_parity::advance_fixture_step(&mut run, decision).unwrap();
+    run.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            decision - now,
+        ));
+    run.app.update();
     assert!(
         !run.app
             .world()
