@@ -191,8 +191,17 @@ fn choose_route(
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let mut circles = Vec::new();
     for watcher in watchers {
-        let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher).ok()?;
-        let center = crate::spell_cast::targets::position(world, watcher)?;
+        let radius = match pull_route::read_native_radius(world, &mut geometry, unit, watcher) {
+            Ok(radius) => radius,
+            Err(error) => {
+                warn!(?unit, ?watcher, %error, "Follower trail lacks watcher geometry");
+                return None;
+            }
+        };
+        let Some(center) = crate::spell_cast::targets::position(world, watcher) else {
+            warn!(?unit, ?watcher, "Follower trail watcher lacks position");
+            return None;
+        };
         circles.push((center, radius));
     }
     candidates

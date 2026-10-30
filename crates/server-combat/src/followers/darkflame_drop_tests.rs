@@ -636,10 +636,11 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         Vec3::new(417.0, 87.07, -54.0),
         Vec3::new(417.0, 87.07, -31.0),
     ];
-    h.app
-        .world_mut()
-        .entity_mut(owner)
-        .insert((position(start), InMap::continent(MAP)));
+    h.app.world_mut().entity_mut(owner).insert((
+        position(start),
+        InMap::continent(MAP),
+        UnitLevel(10),
+    ));
     for &unit in &followers {
         h.app.world_mut().entity_mut(unit).insert((
             position(start),
@@ -660,6 +661,12 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         crate::creature_ai::CreatureState::Idle,
         shared::components::ThreatTable::default(),
     ));
+    assert!(
+        followers
+            .iter()
+            .all(|&unit| super::positioning::is_unpulled_hostile(h.app.world(), unit, watcher)),
+        "fixture watcher must be hostile to every follower"
+    );
     let mut geometry = bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
         h.app.world_mut(),
     );
@@ -686,7 +693,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                     owner
                 )
                 .unwrap(),
-                "owner path must not pull watcher"
+                "owner path must not pull watcher at {point:?}"
             );
         }
     }
