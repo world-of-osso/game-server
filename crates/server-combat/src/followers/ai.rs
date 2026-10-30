@@ -43,7 +43,11 @@ pub(super) fn update(world: &mut World) {
         }
     }
     for (unit, follower) in followers {
-        if crate::spell_cast::targets::is_alive(world, unit) {
+        if crate::spell_cast::targets::is_alive(world, unit)
+            && world
+                .get::<crate::creature_ai::flight_follow::FlightFollow>(unit)
+                .is_none()
+        {
             update_follower(world, unit, &follower);
         }
     }
