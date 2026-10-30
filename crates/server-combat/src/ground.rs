@@ -48,6 +48,8 @@ const GROUND_VALIDATION_WORKERS: usize = 4;
 /// `GridMap::getMinHeight` / `TerrainInfo::GetMinHeight` without flight bounds (no MFBO, or
 /// no grid at all as on a WMO-only map).
 const DEFAULT_MIN_HEIGHT: f32 = -500.0;
+/// TrinityCore GridDefines.h MAX_FALL_DISTANCE, used by MotionMaster::MoveFall.
+const MAX_FALL_DISTANCE: f32 = 250_000.0;
 /// TrinityCore `SIZE_OF_GRIDS`, `CENTER_GRID_ID`, `MAP_HALFSIZE`.
 const SIZE_OF_GRIDS: f32 = 533.3333;
 const CENTER_GRID_ID: i32 = 32;
@@ -440,6 +442,46 @@ impl GroundMap {
         self.add_live_height(map, feet, base)
     }
 
+    /// MoveFall searches beyond the ordinary ground-snap depth.
+    pub(crate) fn creature_fall_ground_in(
+        &mut self,
+        map: crate::maps::InMap,
+        feet: Vec3,
+    ) -> GroundProbe {
+        if let Some(height) = self.flat_arena_height {
+            return GroundProbe::Supported(height);
+        }
+        if !self.maps.contains_key(&map.map_id) {
+            let loaded = self.open_map(map.map_id);
+            self.maps.insert(map.map_id, loaded);
+        }
+        let base = match self.maps.get_mut(&map.map_id) {
+            Some(Some(ground)) => ground.fall_ground_at(feet),
+            _ => GroundProbe::Unloaded,
+        };
+        let m2 = self
+            .m2_floors
+            .entry(map.map_id)
+            .or_insert_with(|| {
+                los::LosMap::new(&self.data_dir.join(format!("los/{}/m2", map.map_id)))
+            })
+            .floor_heights(feet.x, feet.z);
+        let heights = match m2 {
+            Ok(heights) => heights,
+            Err(error) => {
+                error!("M2 fall-floor query on map {}: {error}", map.map_id);
+                return GroundProbe::Unsupported;
+            }
+        };
+        let live = self
+            .live_hulls
+            .get(&map)
+            .into_iter()
+            .flatten()
+            .flat_map(|hull| hull.floor_heights(feet.x, feet.z));
+        select_fall_height(feet, base, heights.into_iter().chain(live))
+    }
+
     pub(crate) fn player_solid_ground_in(
         &mut self,
         map: crate::maps::InMap,
@@ -744,6 +786,18 @@ impl MapGround {
         probe_collision_height(feet, terrain, wmos, walkable_only)
     }
 
+    fn fall_ground_at(&mut self, feet: Vec3) -> GroundProbe {
+        if let Some(wmo) = &self.global_wmo {
+            return probe_fall_height(feet, None, std::slice::from_ref(wmo));
+        }
+        let Some(tile) = self.load_collision_tile(bevy_to_tile(feet.x, feet.z)) else {
+            return GroundProbe::Unloaded;
+        };
+        let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
+        let wmos = tile.wmos.as_ref().expect("collision tile has loaded WMOs");
+        probe_fall_height(feet, terrain, wmos)
+    }
+
     fn load_collision_tile(&mut self, coordinates: (u32, u32)) -> Option<&TileGround> {
         if self.tile(coordinates)?.wmos.is_none() {
             let wmos = self.load_tile_wmos(coordinates);
@@ -858,6 +912,41 @@ fn probe_collision_height<'a>(
     match support {
         Some(ground) => GroundProbe::Supported(ground.height),
         None => GroundProbe::Unsupported,
+    }
+}
+
+fn probe_fall_height(feet: Vec3, terrain: Option<f32>, wmos: &[WmoCollision]) -> GroundProbe {
+    let mut floors = Vec::new();
+    for wmo in wmos {
+        wmo.collision_heights(
+            feet.x,
+            feet.z,
+            feet.y + shared::ground::STEP_UP_HEIGHT,
+            feet.y - MAX_FALL_DISTANCE,
+            &mut floors,
+        );
+    }
+    shared::ground::select_ground(feet.y, terrain, floors)
+        .map_or(GroundProbe::Unsupported, |ground| {
+            GroundProbe::Supported(ground.height)
+        })
+}
+
+fn select_fall_height(
+    feet: Vec3,
+    base: GroundProbe,
+    heights: impl Iterator<Item = f32>,
+) -> GroundProbe {
+    let highest = heights
+        .filter(|height| {
+            *height <= feet.y + shared::ground::STEP_UP_HEIGHT
+                && *height >= feet.y - MAX_FALL_DISTANCE
+        })
+        .max_by(f32::total_cmp);
+    match (base, highest) {
+        (GroundProbe::Supported(base), Some(height)) => GroundProbe::Supported(base.max(height)),
+        (_, Some(height)) => GroundProbe::Supported(height),
+        (base, None) => base,
     }
 }
 
