@@ -112,16 +112,17 @@ mod rotation_dummy_tests;
 pub mod simulator;
 mod spawning;
 pub mod spec_selection;
+mod spell_safety;
 mod stockade_diagnostic;
 mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
+#[cfg(test)]
+mod tank_planner_tests;
 mod tank_pull_back;
 #[cfg(test)]
 mod tank_pull_back_native_tests;
 mod tank_pull_back_party;
-#[cfg(test)]
-mod tank_planner_tests;
 mod trail_follow;
 mod unintended_reach;
 #[cfg(test)]

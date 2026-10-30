@@ -745,6 +745,9 @@ fn spell_reach(world: &World, spell_id: u32) -> Option<f32> {
 }
 
 fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
+    if !super::spell_safety::safe(world, unit, target, spell) {
+        return false;
+    }
     match crate::spell_cast::creature_cast(world, unit, spell, Some(target), false) {
         Ok(()) => true,
         Err(

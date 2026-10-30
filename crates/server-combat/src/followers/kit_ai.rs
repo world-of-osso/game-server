@@ -226,7 +226,9 @@ fn try_entry(
     let Some(target) = select_target(world, unit, party, enemy, &entry) else {
         return false;
     };
-    if !conditions_met(world, unit, target, party, enemies, &entry) {
+    if !conditions_met(world, unit, target, party, enemies, &entry)
+        || !super::spell_safety::safe(world, unit, target, spell_id)
+    {
         return false;
     }
     if follower.profile.spec_id == 262
