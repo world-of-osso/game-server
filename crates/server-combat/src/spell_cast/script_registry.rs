@@ -296,6 +296,22 @@ pub enum ScriptReach {
     EngagedOnly,
 }
 
+impl ScriptReach {
+    pub fn caster(radius: f32) -> Self {
+        Self::Area(DeclaredReach {
+            caster_radius: radius,
+            target_radius: 0.0,
+        })
+    }
+
+    pub fn target(radius: f32) -> Self {
+        Self::Area(DeclaredReach {
+            caster_radius: 0.0,
+            target_radius: radius,
+        })
+    }
+}
+
 pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
 
 #[derive(Clone, Copy)]

@@ -9,6 +9,7 @@ use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, t
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EarlyAuraRegistration(bursting::register),
     SpellScriptHook::EnemyContextHit(bursting::enemy_hit),
     // SimC76f8118 sc_druid.cpp13755–13764 explicitly overrides the native
@@ -33,6 +34,21 @@ const TWIN_SPROUTS: u32 = 440117;
 const THRESHOLD: f64 = 1000.0;
 const RANDOM_SCALE: f64 = 2.0;
 const SOURCES: &[(u32, u8)] = &[(1079, 0), (155722, 1)];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !SOURCES.iter().any(|(source, _)| *source == spell.id) {
+        return Default::default();
+    }
+    let vines = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(BLOODSEEKER_VINES)
+        .expect("native Bloodseeker Vines");
+    combat::spell_cast::script_registry::ScriptReach::caster(targets::spell_range(vines, true).1)
+}
 
 #[derive(Component)]
 struct GrowthAccumulator(f64);
