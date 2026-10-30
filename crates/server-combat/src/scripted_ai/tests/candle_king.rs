@@ -431,7 +431,23 @@ fn candlelight_source_box_clears_darklight_on_entry_and_removes_light_on_exit() 
         x: center.x + 40.0,
         ..center
     });
-    crate::spell_cast::cast_triggered(h.app.world_mut(), player, 426127, Some(player), 0);
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(426127)
+        .unwrap()
+        .clone();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: 426127,
+            effect_mask: crate::auras::aura_effect_mask(&spell),
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
     assert!(h.has_aura(player, 426127));
     crate::world_area_triggers::update_candlelight(h.app.world_mut());
     assert!(!h.has_aura(player, 426125));
