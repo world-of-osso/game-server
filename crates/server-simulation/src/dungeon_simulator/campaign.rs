@@ -274,6 +274,30 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+#[ignore = "requires extracted Uldaman follower graph"]
+fn completed_dwarf_encounter_is_skipped_even_if_olaf_is_alive() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2451);
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.party.owner)
+        .unwrap();
+    let olaf = run.actors[&29004388];
+    assert!(crate::spell_cast::targets::is_alive(run.app.world(), olaf));
+    run.graph.route.retain(|step| step.pack == 29004388);
+    assert_eq!(run.next_pack().unwrap().1, olaf);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(copy, &[], 1, Some(0), 0);
+    assert!(
+        run.next_pack().is_none(),
+        "completed encounter must not revisit an immune living actor"
+    );
+}
+
+#[test]
 #[ignore = "requires extracted Neltharus follower graph"]
 fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -2235,6 +2259,14 @@ impl Run {
 
     fn next_pack(&self) -> Option<(u32, Entity)> {
         let world = self.app.world();
+        let completed = world
+            .get::<crate::maps::InMap>(self.party.owner)
+            .map(|map| {
+                world
+                    .resource::<crate::maps::InstanceManager>()
+                    .completed_encounters(*map)
+            })
+            .unwrap_or(0);
         self.graph.route.iter().find_map(|step| {
             let pack = self.graph.packs.iter().find(|pack| pack.id == step.pack)?;
             let target = pack
@@ -2247,7 +2279,20 @@ impl Run {
                         .map(|actor| (spawn, actor))
                 })
                 .find(|(spawn, actor)| {
-                    crate::spell_cast::targets::is_alive(world, *actor)
+                    let bits: Vec<_> = self
+                        .graph
+                        .follower_boss_sources
+                        .iter()
+                        .filter_map(|(boss, source)| {
+                            (*source == spawn.entry)
+                                .then(|| self.graph.follower_boss_bits.get(boss))
+                                .flatten()
+                        })
+                        .collect();
+                    let pending =
+                        bits.is_empty() || bits.iter().any(|bit| completed & (1 << **bit) == 0);
+                    pending
+                        && crate::spell_cast::targets::is_alive(world, *actor)
                         && (self.graph.boss_entries().contains(&spawn.entry)
                             || self
                                 .graph
