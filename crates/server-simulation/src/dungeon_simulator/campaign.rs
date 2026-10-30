@@ -302,8 +302,12 @@ fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
         pack.position[0] += 500.0;
         pack.point()
     };
-    let unrelated = run.graph.edges[0].clone();
-    run.graph.teleports = vec![unrelated];
+    // A self-loop enables translocation planning without lying on any shortest path.
+    run.graph.teleports = vec![server::test_support::graph::Edge {
+        from: neighbour,
+        to: neighbour,
+        yards: 0.0,
+    }];
     run.app
         .world_mut()
         .insert_resource(super::Space(run.graph.clone()));
