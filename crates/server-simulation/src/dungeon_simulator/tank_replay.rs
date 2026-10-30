@@ -13,6 +13,23 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 
+pub(super) fn next_gcd_decision_boundary(
+    run: &super::dps_parity::Run,
+    boundary: std::time::Duration,
+) -> std::time::Duration {
+    let world = run.app.world();
+    let now = crate::spell_cast::history_now(world);
+    let Some(ready) = world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .and_then(|history| history.active_gcd_ready_at(now))
+    else {
+        return boundary;
+    };
+    let delay =
+        std::time::Duration::from_secs_f64(ready - now) + std::time::Duration::from_nanos(1);
+    boundary.min(world.resource::<Time>().elapsed() + delay)
+}
+
 pub(super) fn sampled_blocked_pct(
     world: &World,
     source: Entity,
@@ -1049,6 +1066,7 @@ fn replay_registered_run_with_healing(
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
         while run.app.world().resource::<Time>().elapsed() < boundary {
             let next = super::dps_parity::next_fixture_boundary(&run, boundary);
+            let next = next_gcd_decision_boundary(&run, next);
             super::dps_parity::advance_fixture_step(&mut run, next)?;
             super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
             if next < boundary {

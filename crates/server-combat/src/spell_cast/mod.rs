@@ -825,6 +825,15 @@ impl SpellHistory {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    pub fn active_gcd_ready_at(&self, now: f64) -> Option<f64> {
+        self.gcd_ready_at
+            .values()
+            .copied()
+            .filter(|&deadline| deadline > now)
+            .max_by(f64::total_cmp)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
     pub fn clear_fixture_precombat_gcd(&mut self) {
         self.gcd_ready_at.clear();
     }
