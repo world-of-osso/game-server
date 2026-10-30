@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+import subprocess
 from pathlib import Path
 
 from dps_parity import parse_profile
@@ -47,15 +48,34 @@ def generate(db, simc, parity):
     return [profiles[key] for key in sorted(profiles)]
 
 
+def decode_profiles(profiles, decoder, db2):
+    completed = subprocess.run(
+        [str(decoder), str(db2)], input=json.dumps(profiles), text=True,
+        capture_output=True, check=True,
+    )
+    results = {row['spec_id']: row for row in json.loads(completed.stdout)}
+    if len(results) != len(profiles) or set(results) != {row['spec_id'] for row in profiles}:
+        raise ValueError('decoder did not return exactly one result per spec')
+    for profile in profiles:
+        result = results[profile['spec_id']]
+        profile['talents_sha256'] = hashlib.sha256(profile['talents'].encode()).hexdigest()
+        profile['talent_entries'] = result['entries']
+        profile['rejection'] = result['error']
+    return profiles
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--world-db", type=Path, required=True)
     parser.add_argument("--simc", type=Path, required=True)
     parser.add_argument("--parity", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--decoder", type=Path, required=True)
+    parser.add_argument("--db2", type=Path, required=True)
     args = parser.parse_args()
     with sqlite3.connect(f"file:{args.world_db}?mode=ro", uri=True) as db:
         profiles = generate(db, args.simc, args.parity)
+    profiles = decode_profiles(profiles, args.decoder, args.db2)
     args.output.write_text(json.dumps(profiles, indent=2) + "\n")
 
 

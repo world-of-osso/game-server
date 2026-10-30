@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from generate_class_follower_profiles import generate
+from generate_class_follower_profiles import decode_profiles, generate
 
 
 class ClassFollowerProfilesTest(unittest.TestCase):
@@ -38,6 +38,25 @@ class ClassFollowerProfilesTest(unittest.TestCase):
         self.assertEqual([(row['spec_id'], row['race'], row['role']) for row in rows], [(65, 1, 1), (66, 3, 0)])
         self.assertEqual([row['race_source'] for row in rows], ['RACE_FROM_PARITY_PROFILE', 'RACE_FROM_SIMC_PROFILE'])
         self.assertEqual(rows[1]['talents'], 'abc')
+
+    def test_decode_records_success_and_failure(self):
+        profiles = [
+            {'spec_id': 66, 'talents': 'valid'},
+            {'spec_id': 65, 'talents': 'invalid'},
+        ]
+        with tempfile.TemporaryDirectory() as root:
+            decoder = Path(root) / 'decoder'
+            decoder.write_text('''#!/usr/bin/env python3
+import json, sys
+rows = json.load(sys.stdin)
+print(json.dumps([{"spec_id": row["spec_id"], "entries": [[7, 2]] if row["spec_id"] == 66 else None, "error": None if row["spec_id"] == 66 else "InvalidNodes"} for row in rows]))
+''')
+            decoder.chmod(0o755)
+            actual = decode_profiles(profiles, decoder, root)
+        self.assertEqual(actual[0]['talent_entries'], [[7, 2]])
+        self.assertIsNone(actual[0]['rejection'])
+        self.assertEqual(actual[1]['rejection'], 'InvalidNodes')
+        self.assertEqual(len(actual[0]['talents_sha256']), 64)
 
 
 if __name__ == '__main__':
