@@ -333,6 +333,90 @@ fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
 }
 
 #[test]
+fn locked_gated_boss_on_an_off_graph_perch_holds_until_it_lands() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let landing = run
+        .graph
+        .edges
+        .iter()
+        .find_map(|edge| (edge.from == source).then_some(edge.to))
+        .unwrap();
+    let landing = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == landing)
+        .unwrap()
+        .point();
+    run.graph
+        .edges
+        .retain(|edge| edge.from != source && edge.to != source);
+    let perch = {
+        let pack = run
+            .graph
+            .packs
+            .iter_mut()
+            .find(|pack| pack.id == source)
+            .unwrap();
+        pack.position[0] += 500.0;
+        pack.point()
+    };
+    run.graph.teleports = vec![server::test_support::graph::Edge {
+        from: source,
+        to: source,
+        yards: 0.0,
+    }];
+    run.app
+        .world_mut()
+        .insert_resource(super::Space(run.graph.clone()));
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: perch.to_array(),
+    }];
+    // Crawth (Academy2526) stays immune on its perch until the Alpha Eagles die and it lands.
+    run.graph.map_id = 2526;
+    let boss = run.actors[&source];
+    let unlocked = *run
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(boss)
+        .unwrap();
+    run.app.world_mut().entity_mut(boss).insert((
+        shared::components::Npc {
+            template_id: 191736,
+            name: "Crawth".into(),
+        },
+        Position {
+            x: perch.x,
+            y: perch.y,
+            z: perch.z,
+        },
+        shared::components::UnitFlags(shared::components::UnitFlags::IMMUNE_TO_PC),
+    ));
+    run.control().unwrap();
+    assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_none());
+    assert_eq!(run.waiting_objective.map(|(pack, _)| pack), Some(source));
+    run.app.world_mut().entity_mut(boss).insert((
+        Position {
+            x: landing.x,
+            y: landing.y,
+            z: landing.z,
+        },
+        unlocked,
+    ));
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        landing
+    );
+}
+
+#[test]
 fn reached_anchor_that_did_not_engage_gives_way_to_the_live_source() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let source = 20375720;
@@ -2449,6 +2533,18 @@ impl Run {
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        let attackable = crate::spell_cast::targets::relation_matches(
+            self.app.world(),
+            self.party.owner,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        );
+        if !attackable && self.is_gated_boss(target) {
+            // Production unlocks a gated boss after its gate packs die and may relocate it
+            // (Crawth descends from an off-graph perch), so its spawn needs no path.
+            self.hold_for_objective(pack_id);
+            return Ok(());
+        }
         let approach = self.approach_point(pack_id, target, to);
         if self.approach_translocation(approach)? {
             return Ok(());
@@ -2459,12 +2555,6 @@ impl Run {
         let (_, range) =
             crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
-        let attackable = crate::spell_cast::targets::relation_matches(
-            self.app.world(),
-            self.party.owner,
-            target,
-            crate::spell_cast::targets::Relation::Enemy,
-        );
         if !attackable {
             if let Some(step) = server::test_support::objectives::next(
                 self.app.world_mut(),
@@ -2519,16 +2609,7 @@ impl Run {
                     .entity_mut(self.party.owner)
                     .insert(MoveIntent(to));
             } else {
-                if self
-                    .waiting_objective
-                    .is_none_or(|(pack, _)| pack != pack_id)
-                {
-                    self.waiting_objective = Some((pack_id, self.now()));
-                }
-                self.app
-                    .world_mut()
-                    .entity_mut(self.party.owner)
-                    .remove::<MoveIntent>();
+                self.hold_for_objective(pack_id);
             }
             return Ok(());
         }
@@ -2594,6 +2675,30 @@ impl Run {
                 "native tank opening failed on pack{pack_id}: {error:?}"
             )),
         }
+    }
+
+    fn is_gated_boss(&self, target: Entity) -> bool {
+        self.app
+            .world()
+            .get::<shared::components::Npc>(target)
+            .is_some_and(|npc| {
+                server::test_support::objectives::boss_gate_entries(self.graph.map_id)
+                    .contains_key(&npc.template_id)
+            })
+    }
+
+    /// Stops the party at a source that is not attackable yet; `stalled` reports it if it stays so.
+    fn hold_for_objective(&mut self, pack_id: u32) {
+        if self
+            .waiting_objective
+            .is_none_or(|(pack, _)| pack != pack_id)
+        {
+            self.waiting_objective = Some((pack_id, self.now()));
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
     }
 
     /// An unmoved source is approached at its frozen route anchor, which lies on the walk graph
