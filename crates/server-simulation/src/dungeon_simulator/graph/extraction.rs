@@ -223,6 +223,7 @@ fn extract(
         follower_boss_entries: bosses,
         follower_boss_sources: sources,
         follower_boss_bits: bits,
+        follower_encounter_actor_bits: BTreeMap::new(),
     };
     Ok((graph, route_bosses))
 }
@@ -301,6 +302,28 @@ fn boss_source_uses_the_spawned_vehicle_for_its_bound_accessory() {
             .unwrap_err()
             .contains("bound boss210149 missing")
     );
+}
+
+#[test]
+#[ignore = "requires Azure native population and world database"]
+fn azure_generic_extraction_registers_each_native_book() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut packs = topology::source_packs(crate::test_data::world_data(), 2515, 205).unwrap();
+    let registrations = server::test_support::transport::read_registrations(2515, &db).unwrap();
+    let (edges, transports) =
+        append_registered_transports(2515, &mut packs, &registrations).unwrap();
+    assert_eq!(edges.len(), 9);
+    assert_eq!(transports.len(), 9);
+    assert!(
+        transports
+            .iter()
+            .all(|edge| edge.action == server::test_support::transport::Action::AzureBook)
+    );
+    assert!(edges.iter().all(|edge| edge.yards == 0.0));
 }
 
 #[test]

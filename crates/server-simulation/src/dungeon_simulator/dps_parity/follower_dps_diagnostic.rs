@@ -117,6 +117,7 @@ fn follower_dps_production_dummy() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap();
     let sheet = json!({"primary": stats.primary, "spell_power": stats.spell_power, "attack_power": stats.attack_power,
+        "ranged_attack_power":stats.ranged_attack_power,"weapon_attack_power":format!("{:?}", stats.weapon_attack_power), "weapon":format!("{:?}", stats.main_hand),
         "crit_pct": stats.crit_pct, "haste_pct": stats.haste_pct, "mastery_pct": stats.mastery_pct,
         "versatility_pct": stats.versatility_pct});
     let items = format!(
@@ -150,7 +151,10 @@ fn follower_dps_production_dummy() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
-    if let Ok(spell) = std::env::var("FOLLOWER_FACTOR_SPELL") {
+    let pet_factor = std::env::var_os("FOLLOWER_FACTOR_PET").is_some();
+    if let Ok(spell) = std::env::var("FOLLOWER_FACTOR_SPELL")
+        && !pet_factor
+    {
         let spell = spell.parse().expect("numeric FOLLOWER_FACTOR_SPELL");
         app.insert_resource(
             crate::spell_cast::effects::factor_capture::FactorCapture::new(
@@ -297,6 +301,31 @@ fn follower_dps_production_dummy() {
                 .count() as u32;
         }
         seen_events = events.len();
+        if pet_factor
+            && app
+                .world()
+                .get_resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                .is_none()
+        {
+            let mut pets = app
+                .world_mut()
+                .query::<(Entity, &crate::hunter_pet::HunterPet)>();
+            let pet = pets
+                .iter(app.world())
+                .find(|(_, pet)| pet.owner == actor && pet.slot == 0)
+                .map(|(entity, _)| entity);
+            if let Some(pet) = pet {
+                let spell = std::env::var("FOLLOWER_FACTOR_SPELL")
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                app.insert_resource(
+                    crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                        pet, target, spell, "pet", 128,
+                    ),
+                );
+            }
+        }
         let mut query = app.world_mut().query::<(Entity, &UnitSummonedBy)>();
         for (entity, owner) in query.iter(app.world()) {
             if sources.contains(&owner.0) {

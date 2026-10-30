@@ -7,6 +7,53 @@ use crate::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 const ARMORED_TO_THE_TEETH: u32 = 384124;
 const BATTLEFIELD_COMMANDER: u32 = 424742;
 
+#[test]
+#[ignore = "requires Protection Warrior MID2 profile and native world data"]
+fn warrior_pain_and_gain_real_damage_heals_observed_health_fraction() {
+    use shared::{components::Health, protocol::CombatLogKind};
+    let mut run = prepare_registered_player(73, 70448).unwrap();
+    let actor = run.actor;
+    let enemy = run.targets[0];
+    engage(&mut run);
+    let max = run.app.world().get::<Health>(actor).unwrap().max;
+    run.app
+        .world_mut()
+        .get_mut::<Health>(actor)
+        .unwrap()
+        .current = max * 0.5;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        run.app.world_mut(),
+        enemy,
+        actor,
+        max * 0.01,
+        false,
+        false,
+    );
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|e| {
+            e.spell_id == Some(382551)
+                && e.kind == CombatLogKind::Heal
+                && e.target == Some(actor.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 1, "one heal from incoming damage");
+    let ratio = heals[0].amount as f32 / max;
+    assert!(
+        (0.02..0.03).contains(&ratio),
+        "heal={} max={max} ratio={ratio}",
+        heals[0].amount
+    );
+}
+
 fn advance_stats(run: &mut Run) {
     for _ in 0..6 {
         run.app.update();

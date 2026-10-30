@@ -2628,9 +2628,16 @@ fn apply_heal_with_raw(
     periodic: bool,
     raw: Option<f32>,
 ) {
-    let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
-        * versatility_multiplier(world, ctx.caster)
-        * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
+    // TC a352b1fa Unit.cpp7464–7470: attr6 bypasses healing-done bonuses.
+    const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;
+    let ignore_healing = super::attributes(ctx.spell, 6) & IGNORE_HEALING_MODIFIERS != 0;
+    let done = if ignore_healing {
+        1.0
+    } else {
+        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
+            * versatility_multiplier(world, ctx.caster)
+            * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell)
+    };
     let periodic_taken = if periodic {
         crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
     } else {
@@ -2639,9 +2646,14 @@ fn apply_heal_with_raw(
     let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
         world, ctx.caster, target, ctx.spell,
     );
-    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
-        * periodic_taken
-        * caster_taken;
+    let general_taken = if ignore_healing {
+        crate::auras::combat_stats::ignored_healing_taken_multiplier(
+            world, ctx.caster, target, ctx.spell,
+        )
+    } else {
+        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+    };
+    let taken = general_taken * periodic_taken * caster_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,

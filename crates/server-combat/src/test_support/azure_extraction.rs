@@ -38,6 +38,36 @@ fn extract_azure_graph() {
                 })
         })
         .collect::<Vec<_>>();
+    let transports = teleports
+        .iter()
+        .map(|edge| {
+            let destination = packs
+                .iter()
+                .find(|pack| pack.id == edge.to)
+                .unwrap()
+                .point();
+            let source = packs.iter().find(|pack| pack.id == edge.from).unwrap();
+            let guid = source
+                .spawns
+                .iter()
+                .find(|spawn| {
+                    crate::npc_interaction::azure_translocation::LINKS
+                        .iter()
+                        .any(|link| link.entry == spawn.entry)
+                })
+                .unwrap()
+                .guid;
+            TransportEdge {
+                from: edge.from,
+                to: edge.to,
+                source_guid: guid,
+                radius: 0.1,
+                departure: None,
+                landing: destination.to_array(),
+                action: super::super::transport::Action::AzureBook,
+            }
+        })
+        .collect();
     let opening = packs
         .iter()
         .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == 196102))
@@ -59,7 +89,8 @@ fn extract_azure_graph() {
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),
         follower_boss_bits: BTreeMap::new(),
-        transports: Vec::new(),
+        follower_encounter_actor_bits: BTreeMap::new(),
+        transports,
         entrance: [-5050.48, -1024.56],
         entrance_height: 594.216,
         entrance_pack: opening,

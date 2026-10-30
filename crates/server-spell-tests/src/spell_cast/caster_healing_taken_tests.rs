@@ -11,6 +11,7 @@ const REVERSION: u32 = 366_155;
 const REJUVENATION: u32 = 774;
 const COPIED_REJUVENATION: u32 = 70_691;
 const DARK_REGENERATION: u32 = 108_359;
+const MORTAL_WOUND: u32 = 25_646;
 
 fn fixture() -> Harness {
     harness(
@@ -23,6 +24,7 @@ fn fixture() -> Harness {
             REJUVENATION,
             COPIED_REJUVENATION,
             DARK_REGENERATION,
+            MORTAL_WOUND,
         ],
         5,
     )
@@ -124,6 +126,31 @@ fn census_tail_504_native_ignore_healing_flags_keep_only_permitted_negative() {
     assert_eq!(healed_amount(&mut h, COPIED_REJUVENATION, true), 100);
     assert_eq!(healed_amount(&mut h, DARK_REGENERATION, true), 91);
     assert_eq!(healed_amount(&mut h, REJUVENATION, true), 136);
+}
+
+#[test]
+fn ignored_healing_skips_done_and_taken_bonuses_for_direct_and_periodic() {
+    let mut h = fixture();
+    let caster = h.caster;
+    let mut stats = crate::stats::CharacterStats::default();
+    stats.versatility_pct = 20.0;
+    let mut mods = crate::auras::AuraStatMods::default();
+    mods.healing_done_mult = 1.5;
+    mods.healing_taken_mult = 1.4;
+    h.app.world_mut().entity_mut(caster).insert((stats, mods));
+    for periodic in [false, true] {
+        assert_eq!(healed_amount(&mut h, COPIED_REJUVENATION, periodic), 100);
+        assert_eq!(healed_amount(&mut h, REJUVENATION, periodic), 252);
+    }
+}
+
+#[test]
+fn ignored_healing_retains_only_permitted_negative_mortal_wound() {
+    let mut h = fixture();
+    let caster = h.caster;
+    apply(&mut h, MORTAL_WOUND, caster, caster);
+    assert_eq!(healed_amount(&mut h, COPIED_REJUVENATION, false), 100);
+    assert_eq!(healed_amount(&mut h, DARK_REGENERATION, false), 90);
 }
 
 #[test]

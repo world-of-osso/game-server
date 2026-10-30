@@ -12,7 +12,7 @@ const MAULING: u32 = 447439;
 
 fn dailcry_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(DAILCRY, MAP, BIT, difficulty, None);
-    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64 | 0x8000);
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);

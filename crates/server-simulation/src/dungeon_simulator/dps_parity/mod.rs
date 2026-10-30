@@ -22,6 +22,8 @@ mod refining_fire_tests;
 mod tank_fixture_tests;
 #[cfg(test)]
 mod vengeance_consume_soul_tests;
+#[cfg(test)]
+mod vengeful_wrath_tests;
 
 const DUMMY_ENTRY: u32 = 31_146;
 const DUMMY_LATERAL_STEP: f32 = 0.5;

@@ -11,7 +11,11 @@ const SMASH: u32 = 422233;
 
 fn skarmorak_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(SKARMORAK, MAP, BIT, difficulty, None);
-    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
+    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64 | 0x8000);
     assert!(
         h.app.world().get::<Mana>(boss).is_none(),
         "actual sourceclass4 is Energy, not Mana"
@@ -242,6 +246,7 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             423324
         );
         let player = h.player();
+        h.app.world_mut().entity_mut(player).insert(UnitLevel(90));
         // Replay this native melee boundary, independent of setup/prephase draws.
         let _rng = crate::random::seed_scope(u64::from(difficulty));
         let mut queue = bevy::ecs::world::CommandQueue::default();
@@ -256,9 +261,18 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
         crate::combat::attack_stop(h.app.world_mut(), player);
         assert!(
             !h.has_aura(boss, 423228),
-            "native melee must consume real45-point absorb within15s; boss{:?},player{:?}",
+            "native melee must consume real45-point absorb within15s; boss{:?},player{:?}, positions {:?} {:?}, reach {:?}, events {:?}",
             h.health(boss),
-            h.health(player)
+            h.health(player),
+            h.app.world().get::<Position>(boss),
+            h.app.world().get::<Position>(player),
+            crate::scripted_ai::model_reach::melee_range(h.app.world(), player, boss),
+            h.inbox(0)
+                .log
+                .iter()
+                .filter(|event| event.source == Some(player.to_bits())
+                    && event.target == Some(boss.to_bits()))
+                .collect::<Vec<_>>()
         );
         assert_eq!(
             h.app.world().resource::<AbsorbRemovals>().reasons,

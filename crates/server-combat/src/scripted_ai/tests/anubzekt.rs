@@ -11,7 +11,7 @@ const EYE: u32 = 433766;
 
 fn anubzekt_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(ANUBZEKT, MAP, BIT, difficulty, None);
-    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64 | 0x8000);
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
@@ -77,7 +77,7 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             "actual source unit_flags2 lacks regenerate-power0x800"
         );
         assert_eq!(completed_casts(&h, boss, EYE), 1);
-        assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+        assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64 | 0x8000);
     }
 }
 

@@ -9,7 +9,7 @@ const HOARDMONGER: u32 = 241812;
 const CARRY: u32 = 1239428;
 const FEAST: u32 = 1249737;
 // No source specifies the interaction radius; this is an inferred five yards.
-const DELIVERY_RADIUS: f32 = 5.0;
+pub(crate) const DELIVERY_RADIUS: f32 = 5.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Offering {
@@ -19,19 +19,19 @@ enum Offering {
 }
 
 #[derive(Component)]
-struct PendingOffering {
+pub(crate) struct PendingOffering {
     spell: u32,
     source: Entity,
     kind: Offering,
 }
 #[derive(Component)]
-struct CarryingOffering {
+pub(crate) struct CarryingOffering {
     kind: Offering,
 }
 #[derive(Component)]
 struct AvatarPrepared;
 #[derive(Component)]
-struct AvatarFed;
+pub(crate) struct AvatarFed;
 
 fn offering(entry: u32, spell: u32) -> Option<Offering> {
     match (entry, spell) {
@@ -40,6 +40,12 @@ fn offering(entry: u32, spell: u32) -> Option<Offering> {
         (245716, 1239300) => Some(Offering::Apples),
         _ => None,
     }
+}
+
+pub(crate) fn is_offering_source(entry: u32) -> bool {
+    [1239001, 1239040, 1239227, 1239300]
+        .into_iter()
+        .any(|spell| offering(entry, spell).is_some())
 }
 
 pub(super) fn begin_pickup(
@@ -99,7 +105,7 @@ pub(crate) fn finish_pickup(world: &mut World, player: Entity, spell: u32, targe
     }
 }
 
-pub(super) fn update_offerings(world: &mut World) {
+pub(crate) fn update_offerings(world: &mut World) {
     clear_interrupted_pickups(world);
     prepare_avatars(world);
     let carriers: Vec<_> = world
@@ -165,6 +171,15 @@ fn prepare_avatars(world: &mut World) {
     }
 }
 
+pub(crate) fn all_avatars_fed(world: &mut World, map: InMap) -> bool {
+    world
+        .query::<(&Npc, &InMap, &AvatarFed)>()
+        .iter(world)
+        .filter(|(npc, other, _)| npc.template_id == AVATAR && **other == map)
+        .count()
+        >= 6
+}
+
 fn deliver(world: &mut World, player: Entity, avatar: Entity, map: InMap) {
     crate::auras::remove_auras(
         world,
@@ -186,12 +201,7 @@ fn deliver(world: &mut World, player: Entity, avatar: Entity, map: InMap) {
         crate::spell_cast::cancel_cast(world, avatar);
     }
     world.entity_mut(avatar).insert(AvatarFed);
-    let delivered = world
-        .query::<(&Npc, &InMap, &AvatarFed)>()
-        .iter(world)
-        .filter(|(npc, other, _)| npc.template_id == AVATAR && **other == map)
-        .count();
-    if delivered < 6 {
+    if !all_avatars_fed(world, map) {
         return;
     }
     let boss = world

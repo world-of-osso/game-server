@@ -2,6 +2,37 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "requires Vengeance MID2 profile and world database"]
+fn live_by_the_glaive_ignores_healing_modifiers_on_real_heal() {
+    use shared::{components::Health, protocol::CombatLogKind};
+    let mut run = super::dps_parity::prepare_registered_player(581, 70448).unwrap();
+    let tank = run.actor;
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let max = run.app.world().get::<Health>(tank).unwrap().max;
+    run.app.world_mut().get_mut::<Health>(tank).unwrap().current = max * 0.5;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), tank, 428608, Some(tank), 1);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heal = events
+        .iter()
+        .find(|e| e.spell_id == Some(428608) && e.kind == CombatLogKind::Heal)
+        .expect("real Live by the Glaive heal");
+    assert!(
+        (heal.amount as f32 - max * 0.02).abs() <= 1.0,
+        "heal={} max={max}",
+        heal.amount
+    );
+}
+
+#[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn training_of_niuzao_tracks_live_stagger_levels() {
     use crate::auras::{self, ActiveAuras, RemoveReason};
@@ -1761,6 +1792,47 @@ fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
         5,
         "each proc spends one charge"
     );
+}
+
+#[test]
+#[ignore = "uses real Protection Paladin casts and native Lesser Weapon procs"]
+fn lesser_weapon_routes_cast_procs_to_the_cast_target() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    for (spell, enemy, expected, kind) in [
+        (204019, true, 1239282, CombatLogKind::Damage),
+        (432472, false, 1239276, CombatLogKind::Heal),
+    ] {
+        let mut run = engaged_protection_paladin();
+        let actor = run.actor;
+        let target = if enemy { run.targets[0] } else { actor };
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .remove::<crate::combat::AutoAttack>();
+        apply_self_aura(&mut run, 1239091);
+        run.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+            .unwrap();
+        run.app.update();
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events.iter().any(|event| {
+                event.spell_id == Some(expected)
+                    && event.kind == kind
+                    && event.target == Some(target.to_bits())
+                    && event.amount > 0
+            }),
+            "Lesser Weapon must use the cast target for spell {spell}"
+        );
+        let wrong = if enemy { 1239276 } else { 1239282 };
+        assert!(!events.iter().any(|event| event.spell_id == Some(wrong)));
+    }
 }
 
 #[test]
