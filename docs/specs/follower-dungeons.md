@@ -39,7 +39,9 @@ For an in-memory follower run, disconnect and logout retain the same instance an
 
 ## Floodgate drop
 
-`FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. WMO liquid at the landing is untested. NPC fall damage remains unmodeled.
+Routed followers and pets use navigation height while submerged in liquid deep enough to swim, bounded by the floor below and the swim surface. Dry movement retains footprint ground support.
+
+`FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. The landing lies under WMO liquid type 941 at Y 278.167; a live-party water crossing remains untested. NPC fall damage remains unmodeled.
 
 ## Windrunner Spire passage
 
