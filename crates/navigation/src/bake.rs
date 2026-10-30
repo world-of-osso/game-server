@@ -566,10 +566,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires local Ara-Kara geometry"]
+    #[ignore = "requires FOLLOWER_NAV_DATA local assets"]
     fn arakara_kikatal_floor_survives_vertical_bake() {
-        let data = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data");
-        let mut baker = los::bake::Baker::for_navigation(data);
+        let data = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_DATA").unwrap());
+        let mut baker = los::bake::Baker::for_navigation(&data);
         let tiles = baker.map_tiles(5_280_631).unwrap();
         let tile = (29, 32);
         let (geometry, _) = baker.collect_tile(&tiles, tile).unwrap().unwrap();
