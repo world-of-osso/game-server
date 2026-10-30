@@ -611,6 +611,9 @@ pub fn can_proc(aura_type: u32) -> bool {
             | MOD_SPELL_DAMAGE_FROM_CASTER
             | MOD_POWER_REGEN_PERCENT
             | MOD_MELEE_HASTE
+            | MOD_BLOCK_PERCENT
+            | MOD_WEAPON_CRIT_PERCENT
+            | MOD_HIT_CHANCE
             | REFLECT_SPELLS
             | REFLECT_SPELLS_SCHOOL
     )
