@@ -201,8 +201,16 @@ mod tests {
                 name: "No display".into(),
             })
             .id();
+        assert_eq!(
+            crate::scripted_ai::model_reach::melee_range(app.world(), watcher, character),
+            crate::scripted_ai::model_reach::melee_range(app.world(), watcher, player),
+        );
+        assert_eq!(
+            crate::scripted_ai::model_reach::bounding_radius(app.world(), character),
+            crate::scripted_ai::model_reach::bounding_radius(app.world(), player),
+        );
         let mut state = SystemState::<AggroDistance>::new(app.world_mut());
-        let geometry = state.get(app.world());
+        let geometry = state.get(app.world()).unwrap();
         let player_radius = geometry.center_radius(watcher, player, 90, 90).unwrap();
         assert_eq!(
             geometry.center_radius(watcher, character, 90, 90),
