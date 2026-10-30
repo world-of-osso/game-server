@@ -34,6 +34,9 @@ use crate::networking::PlayerLink;
 pub mod azure_translocation;
 mod gossip;
 pub(crate) mod nalorakk_pyre;
+pub(crate) mod nalorakk_offerings;
+#[cfg(test)]
+mod nalorakk_offerings_tests;
 pub(crate) mod spellclick;
 #[cfg(test)]
 mod spellclick_tests;
@@ -83,6 +86,7 @@ impl Plugin for NpcInteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GossipCatalog>();
         app.init_resource::<SpellClickCatalog>();
+        app.add_systems(FixedUpdate, nalorakk_offerings::update_offerings);
         app.add_systems(
             Update,
             (

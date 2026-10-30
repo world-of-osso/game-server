@@ -3130,6 +3130,7 @@ fn execute_cast_with_primary(
         crate::combat::attack_stop(world, caster);
     }
     auto_repeat::on_cast(world, caster, spell, explicit);
+    crate::npc_interaction::nalorakk_offerings::finish_pickup(world, caster, spell.id, explicit);
     Ok(())
 }
 

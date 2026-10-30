@@ -57,9 +57,14 @@ pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, en
             );
             continue;
         }
+        let pending =
+            super::nalorakk_offerings::begin_pickup(world, player, npc, entry, spell.spell_id);
         if let Err(failure) =
             crate::spell_cast::start_spellclick_cast(world, player, spell.spell_id, npc)
         {
+            if pending {
+                super::nalorakk_offerings::cancel_pickup(world, player);
+            }
             warn!(
                 "Spellclick NPC {entry} spell {} failed: {failure:?}",
                 spell.spell_id
