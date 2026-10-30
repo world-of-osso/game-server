@@ -87,8 +87,8 @@ fn pull(spec: u32) -> Pull {
     })
     .expect("native world database");
     let data = world_db().unwrap();
-    harness.app.insert_resource(data.store.clone());
-    harness.app.insert_resource(data.classes.clone());
+    harness.app.insert_resource(data.spell_store().clone());
+    harness.app.insert_resource(data.class_spells().clone());
     harness.app.init_resource::<ObservedCombatEvents>();
     dungeon_owner(&mut harness);
     let profiles = read_profiles().unwrap();
