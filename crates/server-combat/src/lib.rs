@@ -136,7 +136,6 @@ mod rest;
 pub mod scripted_ai;
 mod seething_parachute;
 mod sheet_visibility;
-#[cfg(any(test, feature = "test-support"))]
 pub mod simc_apl_native;
 mod skyriding;
 pub mod soul_fragments;

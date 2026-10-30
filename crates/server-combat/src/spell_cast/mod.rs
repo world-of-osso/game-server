@@ -183,7 +183,6 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
-#[cfg(any(test, feature = "test-support"))]
 pub mod native_apl;
 #[cfg(test)]
 mod protection_producer_tests;
@@ -1343,7 +1342,6 @@ fn send_inventory_rejection(
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::followers::pull_history::record_event(world, &event);
-    #[cfg(any(test, feature = "test-support"))]
     crate::followers::live_facts::record_damage(world, &event);
     #[cfg(any(test, feature = "test-support"))]
     if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {

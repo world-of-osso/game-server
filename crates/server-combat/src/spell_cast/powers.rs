@@ -926,7 +926,6 @@ fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u
     (interrupted, out_of_combat_ms)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 /// Raw potential continuous regen, independent of the pool's cap and applied cache.
 /// Pet Focus reads its owner's rate; rune cooldowns have a separate producer.
 /// Reading this fact never advances clocks, grants power or updates wire state.

@@ -1410,7 +1410,6 @@ fn roll_periodic_heal_crit(
 /// SimC76f8118 action.cpp3214-3260: one-target direct snapshot, average crit,
 /// mitigation, and no cast, proc, resource spend or random sample.
 /// The native pipeline supplies every coefficient and source/target multiplier.
-#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn expected_direct_damage(
     world: &World,
     caster: Entity,
@@ -1444,7 +1443,6 @@ pub(crate) fn expected_direct_damage(
         .sum())
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn expected_school_damage(
     world: &World,
     ctx: &EffectCtx,
@@ -1477,7 +1475,6 @@ fn expected_school_damage(
     expected_damage_after_mitigation(world, ctx, effect, target, amount)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn expected_damage_after_mitigation(
     world: &World,
     ctx: &EffectCtx,

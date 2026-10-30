@@ -35,10 +35,9 @@ mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
-#[cfg(any(test, feature = "test-support"))]
-pub(crate) mod live_facts;
 #[cfg(test)]
 mod kit_light_of_titans_tests;
+pub(crate) mod live_facts;
 #[cfg(test)]
 mod native_action_override_tests;
 #[cfg(test)]
