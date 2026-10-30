@@ -137,52 +137,52 @@ impl RasterInput {
         input
     }
 
-    /// Split only at vertical gaps larger than an agent, so no band hides a ceiling
-    /// or a surface that could connect to another band.
+    /// Split over-height input around its walkable surfaces. Each layer also
+    /// receives the nearby portions of walls and ceilings.
     fn vertical_bands(self) -> Result<Vec<Self>, String> {
         const SPAN_LIMIT: f32 = 8190.0 * CELL_HEIGHT;
         const MAX_LAYERS: usize = 32; // Detour's MAX_NEIS during tile linking.
         if self.max[1] - self.min[1] <= SPAN_LIMIT {
             return Ok(vec![self]);
         }
-        let mut intervals: Vec<_> = self
+        let input = self.clip_to_bounds(self.min, self.max);
+        let mut intervals: Vec<_> = input
             .vertices
             .chunks_exact(9)
-            .enumerate()
-            .map(|(index, tri)| {
-                let min = tri[1].min(tri[4]).min(tri[7]);
-                let max = tri[1].max(tri[4]).max(tri[7]);
-                (min, max, index)
+            .zip(&input.areas)
+            .filter(|(_, area)| **area == RC_WALKABLE_AREA)
+            .map(|(tri, _)| {
+                (
+                    tri[1].min(tri[4]).min(tri[7]),
+                    tri[1].max(tri[4]).max(tri[7]),
+                )
             })
             .collect();
         intervals.sort_by(|a, b| a.0.total_cmp(&b.0));
-        let padding = CELL_HEIGHT + AGENT_HEIGHT;
-        let clearance = AGENT_HEIGHT + 2.0 * CELL_HEIGHT;
-        let mut components: Vec<(f32, f32, Vec<usize>)> = Vec::new();
-        for (min, max, index) in intervals {
+        let padding = AGENT_HEIGHT + AGENT_CLIMB + 2.0 * CELL_HEIGHT;
+        let mut components: Vec<(f32, f32)> = Vec::new();
+        for (min, max) in intervals {
             if let Some(last) = components.last_mut()
-                && min <= last.1 + clearance
+                && min <= last.1 + padding
             {
                 last.1 = last.1.max(max);
-                last.2.push(index);
             } else {
-                components.push((min, max, vec![index]));
+                components.push((min, max));
             }
         }
-        let mut groups: Vec<(f32, f32, Vec<usize>)> = Vec::new();
-        for (min, max, indices) in components {
-            if max - min + padding > SPAN_LIMIT {
+        let mut groups: Vec<(f32, f32)> = Vec::new();
+        for (min, max) in components {
+            if max - min + 2.0 * padding > SPAN_LIMIT {
                 return Err(format!(
-                    "vertical geometry has no safe split within Recast span limit: {min}..{max}"
+                    "walkable geometry has no safe split within Recast span limit: {min}..{max}"
                 ));
             }
             if let Some(last) = groups.last_mut()
-                && max - last.0 + padding <= SPAN_LIMIT
+                && max - last.0 + 2.0 * padding <= SPAN_LIMIT
             {
                 last.1 = max;
-                last.2.extend(indices);
             } else {
-                groups.push((min, max, indices));
+                groups.push((min, max));
             }
         }
         if groups.len() > MAX_LAYERS {
@@ -193,28 +193,73 @@ impl RasterInput {
         }
         Ok(groups
             .into_iter()
-            .map(|(min, max, mut indices)| {
-                indices.sort_unstable();
-                let mut band = Self {
-                    cells: self.cells,
-                    vertices: Vec::with_capacity(indices.len() * 9),
-                    indices: Vec::with_capacity(indices.len() * 3),
-                    areas: Vec::with_capacity(indices.len()),
-                    min: [self.min[0], min - CELL_HEIGHT, self.min[2]],
-                    max: [self.max[0], max + AGENT_HEIGHT, self.max[2]],
-                };
-                for index in indices {
-                    let base = band.vertices.len() / 3;
-                    band.vertices
-                        .extend_from_slice(&self.vertices[index * 9..index * 9 + 9]);
-                    band.indices
-                        .extend([base as i32, base as i32 + 1, base as i32 + 2]);
-                    band.areas.push(self.areas[index]);
-                }
-                band
+            .map(|(min, max)| {
+                let mut lower = input.min;
+                let mut upper = input.max;
+                lower[1] = min - padding;
+                upper[1] = max + padding;
+                input.clip_to_bounds(lower, upper)
             })
             .collect())
     }
+
+    fn clip_to_bounds(&self, min: [f32; 3], max: [f32; 3]) -> Self {
+        let mut result = Self {
+            cells: self.cells,
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            areas: Vec::new(),
+            min,
+            max,
+        };
+        for (tri, &area) in self.vertices.chunks_exact(9).zip(&self.areas) {
+            let mut polygon = vec![
+                Vec3::from_slice(&tri[0..3]),
+                Vec3::from_slice(&tri[3..6]),
+                Vec3::from_slice(&tri[6..9]),
+            ];
+            for axis in 0..3 {
+                polygon = clip_polygon(polygon, axis, min[axis], true);
+                polygon = clip_polygon(polygon, axis, max[axis], false);
+            }
+            for i in 1..polygon.len().saturating_sub(1) {
+                let base = result.vertices.len() / 3;
+                for point in [polygon[0], polygon[i], polygon[i + 1]] {
+                    result.vertices.extend_from_slice(&point.to_array());
+                }
+                result
+                    .indices
+                    .extend([base as i32, base as i32 + 1, base as i32 + 2]);
+                result.areas.push(area);
+            }
+        }
+        result
+    }
+}
+
+fn clip_polygon(polygon: Vec<Vec3>, axis: usize, plane: f32, keep_above: bool) -> Vec<Vec3> {
+    let mut result = Vec::new();
+    let Some(mut previous) = polygon.last().copied() else {
+        return result;
+    };
+    let inside = |p: Vec3| {
+        if keep_above {
+            p[axis] >= plane
+        } else {
+            p[axis] <= plane
+        }
+    };
+    for current in polygon {
+        if inside(current) != inside(previous) {
+            let t = (plane - previous[axis]) / (current[axis] - previous[axis]);
+            result.push(previous.lerp(current, t));
+        }
+        if inside(current) {
+            result.push(current);
+        }
+        previous = current;
+    }
+    result
 }
 
 /// Owns every Recast allocation, including on a failed pipeline step.
@@ -555,14 +600,33 @@ mod tests {
     }
 
     #[test]
-    fn continuous_vertical_geometry_fails_instead_of_clamping() {
-        let triangles = [[
-            Vec3::new(10.0, -3000.0, 10.0),
-            Vec3::new(20.0, 100.0, 10.0),
-            Vec3::new(20.0, 100.0, 20.0),
-        ]];
-        let error = bake_tile(&triangles, (32, 31)).unwrap_err();
-        assert!(error.contains("no safe split"), "{error}");
+    fn tall_wall_blocks_both_vertical_bands() {
+        let a = Vec3::new(40.0, -3001.0, 0.0);
+        let b = Vec3::new(40.0, 105.0, 0.0);
+        let c = Vec3::new(40.0, 105.0, 40.0);
+        let d = Vec3::new(40.0, -3001.0, 40.0);
+        let triangles: Vec<_> = floor(10.0, 70.0, -3000.0)
+            .into_iter()
+            .chain(floor(10.0, 70.0, 97.0))
+            .chain([[a, b, c], [a, c, d]])
+            .collect();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("32_31.nav"),
+            bake_tile(&triangles, (32, 31)).unwrap(),
+        )
+        .unwrap();
+        let mut map = crate::NavigationMap::open(dir.path()).unwrap();
+        for height in [-3000.0, 97.0] {
+            let left = Vec3::new(20.0, height, 20.0);
+            let right = Vec3::new(60.0, height, 20.0);
+            assert!(map.floor_polygon(left).unwrap().is_some());
+            assert!(map.floor_polygon(right).unwrap().is_some());
+            assert!(
+                map.complete_path(left, right).is_err(),
+                "wall must block at {height}"
+            );
+        }
     }
 
     #[test]
