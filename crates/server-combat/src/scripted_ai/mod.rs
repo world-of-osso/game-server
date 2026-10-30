@@ -16,7 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
-mod academy_transport;
+pub(crate) mod academy_transport;
 pub(crate) mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;

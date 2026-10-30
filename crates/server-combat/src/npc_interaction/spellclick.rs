@@ -33,8 +33,8 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
     Ok(catalog)
 }
 
-pub(super) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
-    if entry == 194667 {
+pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
+    if entry == crate::taxi::RUBY_FERRY_ENTRY {
         crate::taxi::start_ruby_ferry(world, player, npc);
         return;
     }

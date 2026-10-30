@@ -101,6 +101,7 @@ pub(super) fn can_move(world: &World, unit: Entity) -> bool {
     world
         .get::<Health>(unit)
         .is_some_and(|health| health.current > 0.0)
+        && !server::test_support::transport::in_progress(world, unit)
         && world
             .get::<shared::casting::CastState>(unit)
             .is_none_or(|cast| cast.cast_while_moving)

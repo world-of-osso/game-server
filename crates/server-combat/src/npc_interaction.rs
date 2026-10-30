@@ -33,7 +33,7 @@ use crate::networking::PlayerLink;
 
 pub mod azure_translocation;
 mod gossip;
-mod spellclick;
+pub(crate) mod spellclick;
 pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};
 
 use gossip::{GossipAction, Opening};
