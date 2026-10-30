@@ -84,7 +84,9 @@ pub fn next(
     if distance > radius {
         return Ok(Some(InteractionStep::Approach { target }));
     }
-    if carrying {
+    // The fishing channel outlives its pickup; the next click waits for it instead of failing.
+    let casting = world.get::<shared::casting::CastState>(owner).is_some();
+    if carrying || casting {
         Ok(Some(InteractionStep::Wait))
     } else {
         Ok(Some(InteractionStep::Interact { target }))
