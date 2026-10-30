@@ -70,7 +70,27 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
                 && event.spell_id == Some(382264)
         })
         .count();
-    assert_eq!(cast, 1, "authored RP actor casts Temporal Theft");
+    let cast_at = h
+        .app
+        .world()
+        .get::<crate::spell_cast::SpellHistory>(rp)
+        .and_then(|history| history.last_successful_cast_at(382264));
+    let state = instance_script::get_data(h.app.world_mut(), map, 2451001);
+    if state == 0 {
+        panic!(
+            "RP cast admission: {:?}",
+            crate::spell_cast::creature_cast(h.app.world_mut(), rp, 382264, None, false)
+        );
+    }
+    assert_eq!(
+        cast,
+        1,
+        "authored RP actor casts Temporal Theft: history={cast_at:?} state={state} cast_state={:?} player={:?} boss={:?} rp={:?}",
+        h.app.world().get::<CastState>(rp),
+        h.app.world().get::<Position>(h.player()),
+        h.app.world().get::<Position>(boss),
+        h.app.world().get::<Position>(rp)
+    );
     assert_eq!(
         h.app.world().get::<UnitFlags>(boss).unwrap().0,
         SOURCE_FLAGS
