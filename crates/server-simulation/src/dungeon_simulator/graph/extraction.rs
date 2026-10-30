@@ -144,6 +144,8 @@ fn append_registered_transports(
             to: next,
             source_guid,
             radius: registration.radius,
+            departure: registration.departure.map(|point| point.to_array()),
+            landing: destination.to_array(),
             action: registration.action,
         });
     }
@@ -190,7 +192,19 @@ fn extract(
         .iter()
         .map(|(bit, entry)| (*entry, *bit))
         .collect();
-    let registrations = server::test_support::transport::read_registrations(map, db)?;
+    let mut registrations = server::test_support::transport::read_registrations(map, db)?;
+    if let Some((source, drop)) = nav.registered_collision_drop() {
+        registrations.push(server::test_support::transport::Registration {
+            entry: 0,
+            source_guid: Some(0),
+            source,
+            destination: drop.landing,
+            distance: source.distance(drop.departure) + drop.departure.distance(drop.landing),
+            radius: navigation::AGENT_RADIUS,
+            departure: Some(drop.departure),
+            action: server::test_support::transport::Action::CollisionDrop,
+        });
+    }
     let (teleports, transports) = append_registered_transports(map, &mut packs, &registrations)?;
     let edges = topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
     let unreachable = topology::unreachable(&packs, &edges, &teleports, opening);
@@ -233,6 +247,7 @@ fn registered_transport_creates_a_directed_edge_to_the_native_landing() {
         destination: Vec3::new(4.0, 30.0, 5.0),
         distance: 42.0,
         radius: 7.0,
+        departure: None,
         action: Action::SpellClick,
     };
     let (edges, transports) =
@@ -250,6 +265,7 @@ fn registered_transport_creates_a_directed_edge_to_the_native_landing() {
         destination: Vec3::new(10.0, 30.0, 5.0),
         distance: 30.0,
         radius: 5.0,
+        departure: None,
         action: Action::ObjectScript,
     };
     let (edges, transports) = append_registered_transports(2923, &mut packs, &[object]).unwrap();
