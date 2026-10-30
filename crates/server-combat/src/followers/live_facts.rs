@@ -28,10 +28,13 @@ pub(crate) fn record_damage(world: &mut World, event: &CombatLogEvent) {
     let Some(target) = event.target.and_then(Entity::try_from_bits) else {
         return;
     };
-    let now = crate::spell_cast::now(world);
-    let Some(mut history) = world.get_mut::<DamageHistory>(target) else {
+    if world.get::<DamageHistory>(target).is_none() {
         return;
-    };
+    }
+    let now = crate::spell_cast::now(world);
+    let mut history = world
+        .get_mut::<DamageHistory>(target)
+        .expect("tracked target");
     let damage = event.amount.saturating_sub(event.overflow.max(0)).max(0);
     history.record(now, f64::from(damage));
 }
