@@ -484,7 +484,6 @@ fn start_scripted_party_flight(
         let pets: Vec<_> = riders
             .iter()
             .flat_map(|&rider| crate::hunter_pet::active_owned_pets(world, rider))
-            .filter(|&pet| world.get::<crate::maps::InMap>(pet) == Some(&map))
             .collect();
         riders.extend(pets);
     }
