@@ -1,5 +1,6 @@
 //! Literal SimC76f8118 APL decisions; native numeric facts/castability stay caller-owned.
 mod expression;
+pub mod gcd_history;
 mod program;
 pub use program::Program;
 use std::collections::{BTreeMap, BTreeSet};
