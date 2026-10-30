@@ -56,7 +56,7 @@ game-server-admin game-object-info <map_id> <instance_id> <entry>
 game-server-admin game-object-info 0 0 197134
 ```
 
-Read-only admin IPC lookup, following `npc-info`'s runtime resource-query path. Returns every matching live GameObject's entity bits, entry, display ID, name, map copy, and WoW world `(x, y, z)` coordinates. No matching object returns an explicit not-found error.
+Read-only admin IPC lookup, following `npc-info`'s runtime resource-query path. Returns every matching live GameObject's entity bits, entry, display ID, name, map copy, and WoW world `(x, y, z)` coordinates. When present, it also reports authoritative numeric GO state, replicated collision, and visible sender IDs. No matching object returns an explicit not-found error.
 
 Use the returned entity bits for `game-cli mail open`; entry IDs and database spawn GUIDs are not runtime entity IDs. The reported coordinates are the object's world origin, suitable for positioning within interaction reach. Lookup does not open or claim mail. See [[game-objects]] for interaction reach validation.
 
