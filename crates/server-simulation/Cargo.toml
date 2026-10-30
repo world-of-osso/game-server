@@ -10,7 +10,7 @@ server-combat = { path = "../server-combat", features = ["test-support"] }
 server-spell-scripts = { path = "../server-spell-scripts", features = ["test-support"] }
 navigation = { path = "../navigation" }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "1660f5bf4a8a18b8a4d6d0c8cc0962fc62ba0024" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "5fe2ff2ec050b0a1662c74f88f8a274964f264c9" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 blake3 = "1.8"
