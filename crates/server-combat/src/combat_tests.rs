@@ -853,6 +853,13 @@ fn creature_death_removes_party_threat_and_combat_references() {
                 .threat_for(enemy.to_bits()),
             0.0
         );
+        assert!(
+            app.world()
+                .get::<ThreatTable>(*member)
+                .unwrap()
+                .entries()
+                .is_empty()
+        );
         assert!(!app.world().get::<CombatStatus>(*member).unwrap().0);
     }
     for member in &party {
@@ -879,6 +886,13 @@ fn creature_death_removes_party_threat_and_combat_references() {
                 .threat_for(enemy.to_bits()),
             0.0
         );
+        assert!(
+            app.world()
+                .get::<ThreatTable>(*member)
+                .unwrap()
+                .entries()
+                .is_empty()
+        );
         assert!(!crate::combat_refs::has_active_reference_to(
             app.world(),
             *member,
@@ -897,6 +911,13 @@ fn creature_death_removes_party_threat_and_combat_references() {
             .unwrap()
             .threat_for(enemy.to_bits()),
         0.0
+    );
+    assert!(
+        app.world()
+            .get::<ThreatTable>(party[1])
+            .unwrap()
+            .entries()
+            .is_empty()
     );
     combat_stop(app.world_mut(), other);
     assert!(!app.world().get::<CombatStatus>(party[0]).unwrap().0);
