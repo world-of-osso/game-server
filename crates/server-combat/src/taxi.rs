@@ -52,9 +52,11 @@ const RUN_SPEED: f32 = 7.0;
 // moved ~36.7 yd/s. The landing is that second XY projected to the native
 // navmesh (87.4). Heights between TaxiPath9458's endpoint and the landing are
 // unsourced; the taxi mover interpolates them linearly.
-const DARKFLAME_CART_PATH: u32 = 9458;
+pub(crate) const DARKFLAME_CART_PATH: u32 = 9458;
+pub(crate) const DARKFLAME_CART_MAP: u32 = 2651;
+pub(crate) const DARKFLAME_CART_ENTRY: u32 = 209439;
 const DARKFLAME_CART_SPEED: f32 = 36.7;
-const DARKFLAME_CART_LANDING: Vec3 = Vec3::new(543.72, 87.4, 69.77);
+pub(crate) const DARKFLAME_CART_LANDING: Vec3 = Vec3::new(543.72, 87.4, 69.77);
 
 #[derive(Component)]
 pub(crate) struct ScriptedTaxiSpeed(f32);
@@ -402,12 +404,11 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
 /// node; WCL WBYDm1N6JTZzCFnd fight3 pull14 shows the party on the same path
 /// using Throw Dynamite423374. The exact boarding trigger is unsourced.
 pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entity) {
-    const MAP: u32 = 2651;
     const CART_DISPLAY: u32 = 118139;
     let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
         return;
     };
-    if map.map_id != MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
+    if map.map_id != DARKFLAME_CART_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
         return;
     }
     let encounter = crate::scripted_ai::instance_script::boss_id_for_encounter(world, map, 2787);
