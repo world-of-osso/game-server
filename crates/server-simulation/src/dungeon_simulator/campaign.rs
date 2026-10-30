@@ -1837,6 +1837,9 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
+            return Ok(());
+        }
         if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
             self.app
                 .world_mut()
@@ -1960,6 +1963,47 @@ impl Run {
         let Some((source, destination)) = edge else {
             return Ok(false);
         };
+        if let Some(transport) = self
+            .graph
+            .transports
+            .iter()
+            .find(|edge| edge.from == source && edge.to == destination)
+            .cloned()
+        {
+            let npc = *self
+                .actors
+                .get(&transport.source_guid)
+                .ok_or("registered transport source actor absent")?;
+            let at = *self
+                .app
+                .world()
+                .get::<Position>(npc)
+                .ok_or("registered transport source lacks position")?;
+            let position = Vec3::new(at.x, at.y, at.z);
+            if Vec3::new(from.x, from.y, from.z).distance(position) > transport.radius {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(position));
+                return Ok(true);
+            }
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            server::test_support::transport::activate(
+                self.app.world_mut(),
+                self.party.owner,
+                npc,
+                transport.action,
+            )?;
+            super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+            self.record_pull(
+                source,
+                format!("REGISTERED_TRANSPORT {source}->{destination}"),
+            );
+            return Ok(true);
+        }
         let book = *self
             .actors
             .get(&source)

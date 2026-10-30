@@ -102,6 +102,30 @@ fn open_map_pet_without_a_frozen_graph_chases_directly_then_holds_reach() {
 }
 
 #[test]
+fn pet_holds_when_its_chase_target_has_no_walkable_graph_path() {
+    let mut space = stockade_space();
+    let from = space.0.packs[0].point();
+    let to = space
+        .0
+        .packs
+        .iter()
+        .map(|pack| pack.point())
+        .find(|point| point.distance(from) > 10.0)
+        .unwrap();
+    space.0.edges.clear();
+    space.0.teleports.clear();
+    let (mut world, pet) = pet_world(Some(space), from, to);
+    for _ in 0..10 {
+        tick(&mut world);
+    }
+    assert_eq!(point(world.get::<Position>(pet).unwrap()), from);
+    assert!(matches!(
+        world.get::<PetMotion>(pet),
+        Some(PetMotion::Chase(_))
+    ));
+}
+
+#[test]
 fn out_of_reach_pet_on_a_real_dungeon_graph_still_uses_frozen_anchors() {
     let space = stockade_space();
     let edge = space.0.edges.iter().find(|edge| edge.yards > 20.0).unwrap();

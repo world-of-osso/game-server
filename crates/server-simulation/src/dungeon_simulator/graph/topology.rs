@@ -147,7 +147,12 @@ where
     Ok(edges)
 }
 
-pub(super) fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
+pub(super) fn unreachable(
+    packs: &[Pack],
+    edges: &[Edge],
+    transports: &[Edge],
+    entrance: u32,
+) -> Vec<u32> {
     let mut reached = BTreeSet::from([entrance]);
     loop {
         let size = reached.len();
@@ -157,6 +162,11 @@ pub(super) fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<
             }
             if reached.contains(&edge.to) {
                 reached.insert(edge.from);
+            }
+        }
+        for edge in transports {
+            if reached.contains(&edge.from) {
+                reached.insert(edge.to);
             }
         }
         if size == reached.len() {
@@ -188,6 +198,13 @@ fn edges_follow_real_path_corners_and_do_not_connect_unreachable_packs() {
     .unwrap();
     assert_eq!(edges.len(), 2);
     assert_eq!(packs[3].point(), Vec3::new(5.0, 0.0, 5.0));
-    assert_eq!(unreachable(&packs, &edges, 1), vec![3]);
+    assert_eq!(unreachable(&packs, &edges, &[], 1), vec![3]);
     assert!(edges.iter().all(|edge| edge.yards > 7.0));
+    let link = [Edge {
+        from: 3,
+        to: 1,
+        yards: 1.0,
+    }];
+    assert_eq!(unreachable(&packs, &edges, &link, 1), vec![3]);
+    assert!(unreachable(&packs, &edges, &link, 3).is_empty());
 }

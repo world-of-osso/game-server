@@ -353,23 +353,25 @@ fn process_activate_taxi(
     }
 }
 
+pub(crate) const RUBY_FERRY_MAP: u32 = 2521;
+pub(crate) const RUBY_FERRY_ENTRY: u32 = 194667;
+pub(crate) const RUBY_FERRY_PATH: u32 = 11715;
+pub(crate) const RUBY_FERRY_SOURCE: Vec3 = Vec3::new(1540.7935, 131.9674, 246.033);
+
 /// Start the lead-approved Ruby ferry approximation. The source action set and
 /// vehicle seat are unavailable; see the follower-dungeon spec for the inference.
 pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
-    const RUBY_MAP: u32 = 2521;
-    const RUBY_PATH: u32 = 11715;
     const RADIANT_DRAKE_DISPLAY: u32 = 107204;
     let Some(map) = world.get::<crate::maps::InMap>(player).copied() else {
         return;
     };
-    if map.map_id != RUBY_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
+    if map.map_id != RUBY_FERRY_MAP || world.get::<crate::maps::InMap>(npc) != Some(&map) {
         return;
     }
     let Some(npc_position) = world.get::<Position>(npc) else {
         return;
     };
-    let lower_spawn = Vec3::new(1540.7935, 131.9674, 246.033);
-    if Vec3::new(npc_position.x, npc_position.y, npc_position.z).distance(lower_spawn) > 1.0 {
+    if Vec3::new(npc_position.x, npc_position.y, npc_position.z).distance(RUBY_FERRY_SOURCE) > 1.0 {
         return;
     }
     let encounter = crate::scripted_ai::instance_script::boss_id_for_encounter(world, map, 2609);
@@ -378,8 +380,11 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
     {
         return;
     }
-    let Some(points) = world.resource::<TaxiNetwork>().scripted_path(RUBY_PATH) else {
-        error!("Ruby ferry TaxiPath {RUBY_PATH} is unavailable");
+    let Some(points) = world
+        .resource::<TaxiNetwork>()
+        .scripted_path(RUBY_FERRY_PATH)
+    else {
+        error!("Ruby ferry TaxiPath {RUBY_FERRY_PATH} is unavailable");
         return;
     };
     let mut riders = vec![player];
@@ -447,7 +452,7 @@ type Flyers<'w, 's> = Query<
     ),
 >;
 
-fn fly_taxis(
+pub(crate) fn fly_taxis(
     time: Res<Time>,
     mut flyers: Flyers,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
