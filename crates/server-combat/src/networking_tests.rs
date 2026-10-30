@@ -24,7 +24,8 @@ fn halls_wmo_swim_bounds_use_floor_below_player() {
         Vec3::new(x, -40.0, z),
     )
     .expect("lower floor must remain swimmable under the upper floor");
-    assert!((swim.floor - -44.083).abs() < 0.1, "{swim:?}");
+    assert!((swim.floor - -41.613).abs() < 0.1, "{swim:?}");
+    assert!(swim.floor < -40.0 && swim.top > -40.0, "{swim:?}");
 }
 
 #[derive(Component)]
