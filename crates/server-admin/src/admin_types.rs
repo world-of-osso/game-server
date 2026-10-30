@@ -14,6 +14,9 @@ pub enum AdminRequest {
     ListEquipment {
         character_name: String,
     },
+    ListAchievements {
+        character_name: String,
+    },
     ListAccounts,
     ListCharacters {
         username: Option<String>,
@@ -307,6 +310,11 @@ pub enum AdminRequest {
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    AchievementsListed {
+        character_name: String,
+        character: serde_json::Value,
+        account: Option<serde_json::Value>,
+    },
     EconomyStatus {
         status: serde_json::Value,
     },
