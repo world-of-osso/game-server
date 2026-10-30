@@ -87,6 +87,42 @@ fn talent_lightforged_blessing_visible_to_holy_and_protection_not_retribution() 
 }
 
 #[test]
+fn logged_trait_entries_resolve_and_use_strict_player_validation() {
+    use std::collections::BTreeMap;
+
+    let tree = paladin_tree().unwrap();
+    let ctx = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 90,
+    };
+    let purchases = starter_purchases(tree, ctx).unwrap();
+    let player = build_config(tree, ctx, &purchases).unwrap();
+    let logged: Vec<_> = player
+        .iter()
+        .filter(|entry| entry.total() > 0)
+        .map(|entry| (entry.entry_id, entry.total()))
+        .collect();
+    let resolved = build_logged_config(tree, ctx, &logged).unwrap();
+    let totals = |entries: &[ConfigEntry]| {
+        entries
+            .iter()
+            .map(|entry| ((entry.node_id, entry.entry_id), entry.total()))
+            .collect::<BTreeMap<_, _>>()
+    };
+    assert_eq!(totals(&resolved), totals(&player));
+    assert!(build_logged_config(tree, ctx, &[(JURISDICTION.1, 1)]).is_err());
+    assert!(
+        build_logged_config(
+            tree,
+            ctx,
+            &[(BLADE_OF_JUSTICE.1, 1), (BLADE_OF_JUSTICE.1, 1)]
+        )
+        .is_err()
+    );
+    assert!(build_logged_config(tree, ctx, &[(u32::MAX, 1)]).is_err());
+}
+
+#[test]
 fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
     let classes = classes().unwrap();
     for (class_id, spec_id) in [(2, 70), (8, 62)] {

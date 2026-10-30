@@ -127,6 +127,51 @@ pub fn build_config(
     Ok(entries)
 }
 
+/// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
+/// Logged ranks include any native granted ranks; only the remainder is purchased.
+pub fn build_logged_config(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    entries: &[(u32, u32)],
+) -> Result<Vec<ConfigEntry>, String> {
+    let grants = granted_entries(tree, ctx);
+    let mut seen = std::collections::HashSet::new();
+    let mut purchases = Vec::new();
+    for &(entry_id, total) in entries {
+        if total == 0 || !seen.insert(entry_id) {
+            return Err(format!(
+                "invalid or duplicate logged trait entry {entry_id}"
+            ));
+        }
+        let nodes: Vec<_> = tree
+            .nodes
+            .iter()
+            .filter(|node| node.entry(entry_id).is_some())
+            .collect();
+        let [node] = nodes.as_slice() else {
+            return Err(format!(
+                "logged trait entry {entry_id} maps to {} nodes",
+                nodes.len()
+            ));
+        };
+        let granted = grants
+            .iter()
+            .find(|grant| grant.node_id == node.id && grant.entry_id == entry_id)
+            .map_or(0, |grant| grant.granted);
+        let ranks = total.checked_sub(granted).ok_or_else(|| {
+            format!("logged trait entry {entry_id} ranks {total} below native grant {granted}")
+        })?;
+        if ranks > 0 {
+            purchases.push(Purchase {
+                node_id: node.id,
+                entry_id,
+                ranks,
+            });
+        }
+    }
+    build_config(tree, ctx, &purchases)
+}
+
 /// SIMC_PARITY_ALLOCATIONS: pinned player.cpp2696–2860 decodes allocations
 /// without validating parent edges or currency gates. Only parity fixtures use
 /// this policy; native membership, ranks, non-hero spec, choice, subtree and budget remain.
