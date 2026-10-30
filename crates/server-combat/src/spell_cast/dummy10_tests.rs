@@ -71,17 +71,18 @@ fn dummy10_consecration_stays_at_cast_position_pulses_and_expires() {
     let mut h = harness(Vec::new(), &[26573, 81297], 2).unwrap();
     let far = spawn_npc(&mut h.app, 8.1);
     let ally = spawn_player(&mut h.app, 2, 1.0);
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
     h.cast_and_deliver(26573, None);
     h.advance(5);
     landed(&h);
-    assert!(hits(&h, 81297).is_empty());
+    assert_eq!(hits(&h, 81297), vec![h.npc, h.npc]);
     h.app.world_mut().entity_mut(h.caster).insert(Position {
         x: 40.0,
         y: 0.0,
         z: 0.0,
     });
     h.advance(22);
-    assert_eq!(hits(&h, 81297), vec![h.npc]);
+    assert_eq!(hits(&h, 81297), vec![h.npc, h.npc, h.npc]);
     assert!(!hits(&h, 81297).contains(&far));
     assert!(!hits(&h, 81297).contains(&ally));
     h.advance(300);
