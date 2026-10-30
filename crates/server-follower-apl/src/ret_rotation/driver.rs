@@ -1,20 +1,12 @@
 //! Exact pinned Ret Program over canonical fixture lifecycle and native dispatch.
 use bevy::prelude::*;
 use serde_json::{Value, json};
-use server::simc_apl::Action;
 
-use super::super::{
-    Run,
-    literal_rotation::{
-        self, Driver, PrecombatPoll,
-        equipment::Equipment,
-        execution::{Execution, Prepared},
-    },
-};
 use super::{bindings, context::Context, execution_actions, read_program};
+use crate::literal_rotation::{Driver, PrecombatPoll, equipment::Equipment, execution::Prepared};
 use crate::simc_apl_native::{Bindings, Encounter};
 
-pub(crate) struct Rotation {
+pub struct Rotation {
     driver: Driver,
     bindings: Bindings,
     equipment: Equipment,
@@ -35,14 +27,12 @@ impl Rotation {
         }
         let mut bindings = bindings();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
-        let rotation = Self {
+        Ok(Self {
             driver: Driver::new(read_program()?),
             bindings,
             equipment,
             encounter,
-        };
-        literal_rotation::capture_fixture(world, actor, encounter)?;
-        Ok(rotation)
+        })
     }
 
     pub fn poll_precombat(
@@ -65,13 +55,8 @@ impl Rotation {
             .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
-    pub fn execute_precombat(
-        &mut self,
-        run: &mut Run,
-        action: Action,
-        execution: Execution,
-    ) -> Result<(), String> {
-        super::super::preparation::execute_precombat_plan(run, &mut self.driver, action, execution)
+    pub fn driver(&mut self) -> &mut Driver {
+        &mut self.driver
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {

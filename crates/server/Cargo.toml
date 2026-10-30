@@ -6,6 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 server-combat = { path = "../server-combat" }
+server-follower-apl = { path = "../server-follower-apl" }
 server-spell-scripts = { path = "../server-spell-scripts" }
 server-core = { path = "../server-core" }
 server-admin = { path = "../server-admin" }

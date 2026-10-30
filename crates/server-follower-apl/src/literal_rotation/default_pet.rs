@@ -1,11 +1,11 @@
 //! Profile-selected summon_pet resolves a learned native spell and its native entry.
-use super::super::inputs::Profile;
 use super::execution::NativeAction;
 use crate::simc_apl_native::Bindings;
 use bevy::prelude::*;
+use server::followers::parity_profile::Profile;
 use shared::components::{Health, Npc};
 
-pub(in super::super) struct ConfiguredPet {
+pub struct ConfiguredPet {
     spell: u32,
     entry: u32,
 }

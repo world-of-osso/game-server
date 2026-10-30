@@ -3,8 +3,7 @@ use super::inputs::Profile;
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags};
 
-#[derive(Component, Clone, Copy)]
-pub(super) struct Potion(pub super::literal_rotation::equipment::ItemUse);
+pub(super) use super::literal_rotation::equipment::Potion;
 
 fn database() -> Result<Connection, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("native effect database absent")?;

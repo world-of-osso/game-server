@@ -2,12 +2,12 @@
 use super::equipment::{Equipment, ItemUse};
 use bevy::prelude::*;
 use server::simc_apl::Action;
-pub(crate) use server::spell_cast::knowledge::resolve_action;
+pub use server::spell_cast::knowledge::resolve_action;
 use shared::components::PowerType;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone)]
-pub(crate) enum Execution {
+pub enum Execution {
     Snapshot,
     Wait(f64),
     Queue(Box<Execution>, f64),
@@ -23,14 +23,14 @@ pub(crate) enum Execution {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct NativeAction<'a> {
+pub struct NativeAction<'a> {
     pub name: &'a str,
     pub spell: u32,
     pub talent: Option<u32>,
     pub self_target: bool,
 }
 
-pub(crate) struct NativeComposite<'a> {
+pub struct NativeComposite<'a> {
     pub name: &'a str,
     pub steps: &'a [NativeAction<'a>],
 }
@@ -47,7 +47,7 @@ struct NativeReadiness {
     queue_delay: Option<f64>,
 }
 
-pub(crate) struct Prepared {
+pub struct Prepared {
     now: f64,
     ready: ReadyActions,
     limits: BTreeMap<ActionKey, PowerType>,
@@ -223,10 +223,7 @@ impl Prepared {
             actions.into_iter().chain([repeated]),
             &mut prepared,
         )?;
-        if let Some(potion) = world
-            .get::<super::super::profile_effects::Potion>(actor)
-            .copied()
-        {
+        if let Some(potion) = world.get::<super::equipment::Potion>(actor).copied() {
             let name = "potion".to_owned();
             prepared.declared.insert(name.clone());
             let state = native_readiness(
@@ -613,7 +610,7 @@ fn filter_primary_range(
         world.resource::<crate::spell_info::SpellStore>(),
         spell,
     ) != 0;
-    let returning = super::super::melee_return::returning_after_displacement(world, actor);
+    let returning = super::melee_intent::returning_after_displacement(world, actor);
     let channel = crate::spell_cast::is_channeled_for_actor(world, actor, spell);
     if !harmful && !(returning && channel) {
         return state;
@@ -631,7 +628,7 @@ fn filter_primary_range(
     // while the actor is out of melee, even if its own spell range is longer.
     let unstable_channel = returning
         && channel
-        && (super::super::melee_return::forced_movement(world, actor) || (dh && outside_melee));
+        && (super::melee_intent::forced_movement(world, actor) || (dh && outside_melee));
     if !unstable_channel && primary_in_native_range(world, actor, spell, primary) {
         return state;
     }
@@ -1013,7 +1010,7 @@ fn refused_admission(
     }
 }
 
-pub(crate) fn execute_row(
+pub fn execute_row(
     world: &mut World,
     actor: Entity,
     row: &Action,
@@ -1055,7 +1052,7 @@ pub(crate) fn execute_row(
     .map_err(|error| format!("native empower{spell} stage{stage} rejected: {error:?}"))
 }
 
-pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
+pub fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
     match action {
         Execution::Snapshot | Execution::Wait(_) | Execution::Queue(_, _) => {
             Err("snapshot and wait execution belong to the literal driver".into())
@@ -1143,12 +1140,10 @@ pub(crate) fn execute(world: &mut World, actor: Entity, action: Execution) -> Re
                 )
             })?;
             if world
-                .get::<super::super::profile_effects::Potion>(actor)
+                .get::<super::equipment::Potion>(actor)
                 .is_some_and(|potion| potion.0.item_id == item.item_id)
             {
-                world
-                    .entity_mut(actor)
-                    .remove::<super::super::profile_effects::Potion>();
+                world.entity_mut(actor).remove::<super::equipment::Potion>();
             }
             Ok(())
         }

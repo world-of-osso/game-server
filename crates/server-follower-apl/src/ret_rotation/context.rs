@@ -2,11 +2,11 @@
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 
-use super::super::literal_rotation::{equipment::Equipment, execution::Prepared};
 use super::{Bindings, NativeFacts, RetFacts, with_equipment};
+use crate::literal_rotation::{equipment::Equipment, execution::Prepared};
 use crate::simc_apl_native::Encounter;
 
-pub(super) struct Context<'a> {
+pub struct Context<'a> {
     ret: RetFacts<'a>,
     bindings: &'a Bindings,
     prepared: &'a Prepared,

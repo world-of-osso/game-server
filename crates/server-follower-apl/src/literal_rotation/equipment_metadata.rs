@@ -51,14 +51,14 @@ impl Buffs {
     }
 }
 
-pub(super) struct Cooldown {
+pub struct Cooldown {
     pub spell: SpellInfo,
     pub proc: bool,
     pub duration: f64,
 }
 
 #[derive(Default)]
-pub(super) struct Metadata {
+pub struct Metadata {
     drivers: BTreeSet<u32>,
     pub buff_spells: BTreeSet<u32>,
     pub stats: BTreeSet<&'static str>,
@@ -238,7 +238,7 @@ fn rating_names(mask: u32) -> Vec<&'static str> {
     names
 }
 
-fn read_cooldown(store: &SpellStore, effect: &ItemEffect) -> Result<Cooldown, String> {
+pub fn read_cooldown(store: &SpellStore, effect: &ItemEffect) -> Result<Cooldown, String> {
     let mut spell = read_spell(store, effect.spell_id)?.clone();
     let proc = effect.trigger == ON_EQUIP;
     if !proc {
@@ -285,38 +285,6 @@ fn cooldown_duration_ms(spell: &SpellInfo, proc: bool) -> u32 {
             };
             row.recovery_ms.max(category_ms)
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore = "native ItemEffect source-only cooldown override matrix"]
-    fn literal_equipment_native_item_cooldown_zero_and_mixed_signs() {
-        let world = super::super::tests::load_world();
-        let effects = &world
-            .resource::<crate::stats::NativeItemInstances>()
-            .effects
-            .effects;
-        let store = world.resource::<SpellStore>();
-        // Exact native rows: zero/positive, negative/positive, zero/negative,
-        // zero/zero, negative/zero, both-negative, positive/negative.
-        let expected = [
-            (45, 60.0),
-            (553, 60.0),
-            (15477, 0.0),
-            (15541, 0.0),
-            (31108, 0.0),
-            (170101, 120.0),
-            (4894, 180.0),
-        ];
-        let actual: Vec<_> = expected
-            .iter()
-            .map(|&(id, _)| (id, read_cooldown(store, &effects[&id]).unwrap().duration))
-            .collect();
-        assert_eq!(actual, expected);
     }
 }
 

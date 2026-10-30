@@ -1,32 +1,32 @@
 //! Original equipped native identities, item-use context and shared APL operands.
 #[path = "equipment_metadata.rs"]
-mod metadata;
+pub mod metadata;
 #[path = "equipment_sets.rs"]
 mod sets;
 use crate::item_templates::{ItemTemplates, OnUseSpell};
 use crate::simc_apl_native::{Bindings, NativeFacts};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
-use metadata::Metadata;
+pub use metadata::Metadata;
 use server::simc_apl::Action;
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::EquipmentSlot;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-#[cfg(test)]
-#[path = "equipment_tests.rs"]
-mod tests;
-
 // Pinned SimC use_items preference, independent of map ordering.
-const SLOTS: &[(&str, EquipmentSlot)] = &[
+pub const SLOTS: &[(&str, EquipmentSlot)] = &[
     ("trinket1", EquipmentSlot::Trinket1),
     ("trinket2", EquipmentSlot::Trinket2),
     ("main_hand", EquipmentSlot::MainHand),
 ];
 
+/// The actor's configured combat potion, used by the APL's potion rows.
+#[derive(Component, Clone, Copy)]
+pub struct Potion(pub ItemUse);
+
 #[derive(Clone, Copy)]
-pub(crate) struct ItemUse {
+pub struct ItemUse {
     pub item_id: u32,
     pub on_use: OnUseSpell,
     pub item_level: u16,
@@ -34,7 +34,7 @@ pub(crate) struct ItemUse {
 }
 
 impl ItemUse {
-    pub(crate) fn consumable(world: &World, item_id: u32) -> Result<Self, String> {
+    pub fn consumable(world: &World, item_id: u32) -> Result<Self, String> {
         let template = world
             .resource::<ItemTemplates>()
             .get(ItemDefinitionSource::Retail, item_id)
@@ -50,16 +50,16 @@ impl ItemUse {
     }
 }
 
-struct Slot {
-    item_id: u32,
-    item_level: u16,
-    native_slot: EquipmentSlot,
-    on_use: Option<ItemUse>,
-    metadata: Metadata,
+pub struct Slot {
+    pub item_id: u32,
+    pub item_level: u16,
+    pub native_slot: EquipmentSlot,
+    pub on_use: Option<ItemUse>,
+    pub metadata: Metadata,
 }
 
 impl Slot {
-    fn empty(native_slot: EquipmentSlot) -> Self {
+    pub fn empty(native_slot: EquipmentSlot) -> Self {
         Self {
             item_id: 0,
             item_level: 0,
@@ -70,11 +70,11 @@ impl Slot {
     }
 }
 
-pub(crate) struct Equipment {
-    slots: BTreeMap<String, Slot>,
-    equipped: BTreeSet<u32>,
-    names: Arc<BTreeMap<String, BTreeSet<u32>>>,
-    set_facts: BTreeMap<String, bool>,
+pub struct Equipment {
+    pub slots: BTreeMap<String, Slot>,
+    pub equipped: BTreeSet<u32>,
+    pub names: Arc<BTreeMap<String, BTreeSet<u32>>>,
+    pub set_facts: BTreeMap<String, bool>,
 }
 
 impl Equipment {
@@ -397,7 +397,10 @@ fn read_slot_item(
         &template.scaling,
         &properties.bonus_list,
         &native.bonuses,
-        world.get::<shared::components::Level>(actor).ok_or("equipped actor level missing")?.0,
+        world
+            .get::<shared::components::Level>(actor)
+            .ok_or("equipped actor level missing")?
+            .0,
     )?;
     let metadata = read_slot_metadata(world, item_id, &modified.effect_ids)?;
     let item_level = server::item_instance::item_instance_stats(

@@ -1,54 +1,71 @@
-//! Shared native fixture machinery; source rows and spec facts belong to adapters.
+//! Shared native APL driver; source rows and spec facts belong to adapters.
 mod channel;
-#[cfg(test)]
-mod channel_tests;
-pub(crate) use channel::Decision as ChannelDecision;
-#[cfg(test)]
-mod composite_tests;
-pub(crate) mod default_pet;
-pub(crate) mod equipment;
-pub(crate) mod execution;
-#[cfg(test)]
-mod gating_tests;
-#[cfg(test)]
-mod hostile_item_tests;
-#[cfg(test)]
-mod interrupt_tests;
+pub use channel::Decision as ChannelDecision;
+pub mod default_pet;
+pub mod equipment;
+pub mod execution;
 mod item_context;
-#[cfg(test)]
-mod precombat_poll_tests;
+pub mod melee_intent;
 mod precombat_potion;
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod use_items_tests;
-use crate::simc_apl_native::Encounter;
+pub mod snapshot;
 use bevy::prelude::*;
 use equipment::Equipment;
 use execution::{Execution, Prepared};
 use serde_json::Value;
 use server::simc_apl::{Action, ActionFacts, Expression, Facts, Program, Variables};
 
-pub(crate) use server::test_support::LiteralParityFixture;
+/// Set by every executed row; a caller advancing frames reads whether the tick progressed.
+#[derive(Resource, Default)]
+pub struct LiteralTickProgress(pub bool);
 
-pub(crate) fn capture_fixture(
-    world: &mut World,
-    actor: Entity,
-    encounter: Encounter,
-) -> Result<(), String> {
-    if matches!(encounter, Encounter::Dungeon { .. }) {
-        // The live follower brain keeps its owner-follow and positioning behavior.
-        return Ok(());
+/// The same encounter with its combat clock restarted when precombat finishes.
+pub fn encounter_starting_at(
+    encounter: crate::simc_apl_native::Encounter,
+    started_at: f64,
+) -> crate::simc_apl_native::Encounter {
+    use crate::simc_apl_native::Encounter;
+    match encounter {
+        Encounter::Fixture {
+            duration, style, ..
+        } => Encounter::Fixture {
+            started_at,
+            duration,
+            style,
+        },
+        Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
     }
-    // Literal control must not keep the retired kit's owner-follow movement.
-    world
-        .entity_mut(actor)
-        .remove::<crate::creature_ai::FollowOwner>()
-        .insert(LiteralParityFixture);
-    Ok(())
 }
 
-pub(crate) enum PrecombatPoll {
+/// Repeat same-tick decisions until one starts a GCD or cast, or none executes.
+pub fn drive_tick(
+    world: &mut World,
+    actor: Entity,
+    mut drive: impl FnMut(&mut World) -> Result<(), String>,
+) -> Result<(), String> {
+    world.init_resource::<LiteralTickProgress>();
+    for _ in 0..128 {
+        world.resource_mut::<LiteralTickProgress>().0 = false;
+        let (gcd_before, cast_before) = read_busy(world, actor);
+        drive(world)?;
+        let progressed = world.resource::<LiteralTickProgress>().0;
+        let (gcd_after, cast_after) = read_busy(world, actor);
+        if !progressed || (!gcd_before && gcd_after) || (!cast_before && cast_after) {
+            return Ok(());
+        }
+    }
+    Err("literal rotation exceeded 128 same-tick actions".into())
+}
+
+/// Whether the actor's GCD and foreground cast are active.
+pub fn read_busy(world: &World, actor: Entity) -> (bool, bool) {
+    let gcd = world
+        .get::<crate::spell_cast::SpellHistory>(actor)
+        .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+    let cast = world.get::<shared::casting::CastState>(actor).is_some();
+    (gcd, cast)
+}
+
+pub enum PrecombatPoll {
     Waiting,
     Selected {
         action: Action,
@@ -57,7 +74,7 @@ pub(crate) enum PrecombatPoll {
     Finished,
 }
 
-pub(crate) struct Driver {
+pub struct Driver {
     program: Program,
     variables: Variables,
     precombat_cursor: usize,
@@ -259,7 +276,7 @@ impl Driver {
         };
         let continues_tick = !matches!(execution, Execution::Wait(_));
         match execution {
-            Execution::Snapshot => self.snapshot = Some(super::report::stats(world, actor)),
+            Execution::Snapshot => self.snapshot = Some(snapshot::stats(world, actor)?),
             Execution::Wait(deadline) => self.wait_until = Some(deadline),
             Execution::Queue(_, _) => unreachable!("queued actions return before execution"),
             execution => execution::execute_row(world, actor, &action, execution)?,
@@ -278,7 +295,7 @@ impl Driver {
         }
         self.precombat_harmful_executed |= ends_precombat;
         self.decisions += 1;
-        if let Some(mut progress) = world.get_resource_mut::<super::LiteralTickProgress>() {
+        if let Some(mut progress) = world.get_resource_mut::<LiteralTickProgress>() {
             progress.0 = continues_tick;
         }
         Ok(())

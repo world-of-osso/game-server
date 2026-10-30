@@ -2,7 +2,7 @@
 use super::*;
 use shared::casting::{CastState, CastType};
 
-pub(crate) enum Decision {
+pub enum Decision {
     Cancel,
     Chain(Action, Execution),
 }

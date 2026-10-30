@@ -1,4 +1,5 @@
 //! Literal target placement must reach the ordinary native destination request.
+use super::super::equipment::{SLOTS, Slot};
 use super::super::*;
 use crate::spell_cast::test_harness::{harness, spawn_player};
 use server::simc_apl::Action;
@@ -33,12 +34,12 @@ fn literal_destination_heals_at_selected_unit_not_at_the_caster() {
         health.current = health.max / 2.0;
     }
     let equipment = empty_equipment();
-    let prepared = super::super::super::execution::Prepared::read(
+    let prepared = super::super::execution::Prepared::read(
         harness.app.world_mut(),
         caster,
         &[inside],
         &equipment,
-        [super::super::super::execution::NativeAction {
+        [super::super::execution::NativeAction {
             name: "healing_rain",
             spell: 73920,
             self_target: false,
@@ -57,7 +58,7 @@ fn literal_destination_heals_at_selected_unit_not_at_the_caster() {
         .execution(&action, &equipment)
         .unwrap()
         .expect("native placed Healing Rain ready");
-    super::super::super::execution::execute(harness.app.world_mut(), caster, execution).unwrap();
+    super::super::execution::execute(harness.app.world_mut(), caster, execution).unwrap();
     harness.advance(130);
     let heals: Vec<_> = harness
         .inbox
@@ -90,7 +91,7 @@ fn literal_destination_heals_at_selected_unit_not_at_the_caster() {
 #[test]
 #[ignore = "requires native private world DB: actual Havoc Metamorphosis destination"]
 fn literal_metamorphosis_admits_landing_damage_at_selected_destination() {
-    use super::super::super::execution::{NativeAction, Prepared, execute};
+    use super::super::execution::{NativeAction, Prepared, execute};
     let mut harness = harness(Vec::new(), &[191427, 200166, 247121, 162264, 201453], 12).unwrap();
     harness
         .app
