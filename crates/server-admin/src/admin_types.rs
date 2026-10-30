@@ -14,6 +14,9 @@ pub enum AdminRequest {
     ListEquipment {
         character_name: String,
     },
+    ListAchievements {
+        character_name: String,
+    },
     ListAccounts,
     ListCharacters {
         username: Option<String>,
@@ -159,6 +162,18 @@ pub enum AdminRequest {
         character_name: String,
         percent: u32,
     },
+    /// The signed reputation `value` with `faction_id`.
+    SetReputation {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
+    },
+    /// Live proofs only: one controlled `item_id` loot slot on the nearest corpse the
+    /// character tapped.
+    StageCorpseLoot {
+        character_name: String,
+        item_id: u32,
+    },
     SetAppearance {
         character_name: String,
         appearance: CharacterAppearance,
@@ -295,6 +310,11 @@ pub enum AdminRequest {
 /// IPC response from server to CLI.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum AdminResponse {
+    AchievementsListed {
+        character_name: String,
+        character: serde_json::Value,
+        account: Option<serde_json::Value>,
+    },
     EconomyStatus {
         status: serde_json::Value,
     },
@@ -426,6 +446,16 @@ pub enum AdminResponse {
     DurabilitySet {
         character_name: String,
         percent: u32,
+    },
+    ReputationSet {
+        character_name: String,
+        faction_id: u32,
+        value: i32,
+    },
+    CorpseLootStaged {
+        character_name: String,
+        item_id: u32,
+        corpse: u64,
     },
     AppearanceSet {
         character_name: String,

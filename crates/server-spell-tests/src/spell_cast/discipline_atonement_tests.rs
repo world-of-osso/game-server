@@ -5,6 +5,33 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn dark_indulgence_grants_dark_side_from_real_mind_blast() {
+    for selected in [false, true] {
+        let mut h = harness(Vec::new(), &[8092, 372972, 198069], 5).unwrap();
+        let caster = h.caster;
+        let target = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![8092, 372972]
+            } else {
+                vec![8092]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(8092, Some(target));
+        h.advance(50);
+        assert_eq!(
+            crate::auras::has_aura(h.app.world(), caster, 198069),
+            selected
+        );
+    }
+}
+
+#[test]
 fn twist_of_fate_triggers_from_preimpact_health_for_real_spells() {
     for (spell, healing) in [(585, false), (2061, true)] {
         for (selected, health_pct, expected) in [

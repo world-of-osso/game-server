@@ -78,6 +78,7 @@ impl Plugin for MapPlugin {
                 (
                     area_triggers::detect_area_trigger_teleports
                         .after(crate::networking::apply_terrain_gravity),
+                    crate::world_area_triggers::update_candlelight,
                     (difficulty::expire_instance_locks, unload_expired_instances).chain(),
                     // complete_transfer runs in Update: the next interest update shows
                     // the arrival its destination.

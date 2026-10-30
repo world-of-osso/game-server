@@ -1485,6 +1485,50 @@ fn engaged_protection_paladin() -> super::dps_parity::Run {
     run
 }
 
+#[test]
+#[ignore = "uses a real Protection Paladin cast and replay clock"]
+fn replay_decides_when_global_cooldown_expires() {
+    use bevy::prelude::Time;
+
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    run.app.update();
+    let now = run.app.world().resource::<Time>().elapsed();
+    let next = super::tank_replay::next_gcd_decision_boundary(
+        &run,
+        now + std::time::Duration::from_secs(5),
+    );
+    assert!(next > now && next < now + std::time::Duration::from_secs(5));
+    let step = std::time::Duration::from_millis(50);
+    while run.app.world().resource::<Time>().elapsed() + step < next {
+        run.app
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(step));
+        run.app.update();
+    }
+    let now = run.app.world().resource::<Time>().elapsed();
+    let decision = super::tank_replay::next_gcd_decision_boundary(&run, now + step);
+    assert!(
+        decision < now + step,
+        "the GCD event must precede the next 50 ms boundary"
+    );
+    run.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            decision - now,
+        ));
+    run.app.update();
+    assert!(
+        !run.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .has_active_gcd(crate::spell_cast::history_now(run.app.world()))
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 20271, Some(target), false)
+        .expect("Judgment is ready at the replay decision event");
+}
+
 fn set_holy_power(run: &mut super::dps_parity::Run, amount: f32) {
     let actor = run.actor;
     run.app
@@ -1622,6 +1666,300 @@ fn blessing_of_the_forge_wings_summon_weapon_and_echo_spenders() {
         "Shield echoes Forge's Reckoning on its target"
     );
     assert!(sacred_word, "Word of Glory echoes Sacred Word");
+}
+
+#[test]
+#[ignore = "uses the selected MID2 Protection player and native Masterwork"]
+fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = engaged_protection_paladin();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let stacks =
+        |run: &super::dps_parity::Run, spell| owned_aura(run, spell).map_or(0, |aura| aura.stacks);
+    let before = stacks(&run, 1271436);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 432472, Some(actor), false)
+        .unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run, 1271436),
+        before + 3,
+        "Sacred Weapon hardcast adds three"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run, 1271436),
+        before + 2,
+        "Blessed Hammer spends one"
+    );
+    assert_eq!(
+        stacks(&run, 1239091),
+        5,
+        "one forged Lesser Weapon holds five charges"
+    );
+    // Auto attacks over 6 s; Lesser Weapon's native ICD is 0.75 s.
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let count = |spell: u32, kind: CombatLogKind| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == kind
+            })
+            .count()
+    };
+    let strikes = count(1239282, CombatLogKind::Damage);
+    let heals = count(1239276, CombatLogKind::Heal);
+    assert!(strikes > 0, "Lesser Weapon strikes the dummy");
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(1239282)
+            && event.target == Some(target.to_bits())
+            && event.amount > 0),
+        "strikes deal damage to the dummy"
+    );
+    assert_eq!(
+        usize::from(stacks(&run, 1239091)) + strikes + heals,
+        5,
+        "each proc spends one charge"
+    );
+}
+
+#[test]
+#[ignore = "uses the selected MID2 Protection player and native Sacred Weapon"]
+fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    // Non-crit strikes on one unit; Holy damage ignores armor.
+    let strikes = |run: &super::dps_parity::Run, unit: bevy::prelude::Entity| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(unit.to_bits())
+                    && event.spell_id == Some(432616)
+                    && event.kind == CombatLogKind::Damage
+                    && !event.crit
+            })
+            .map(|event| event.amount)
+            .collect::<Vec<_>>()
+    };
+    // Native 432502 procs from abilities, not swings: a Shield every 2 s for 30 s.
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    for round in 0..15 {
+        if round % 9 == 0 {
+            apply_self_aura(&mut run, 432502);
+        }
+        set_holy_power(&mut run, 3.0);
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 53600, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+    }
+    assert!(
+        !strikes(&run, target).is_empty(),
+        "Sacred Weapon strikes the dummy"
+    );
+    // Two dummies share each strike; out of the 8 yd radius, the primary stands alone.
+    let mut run = super::dps_parity::prepare_registered_player(66, 2).unwrap();
+    super::dps_parity::engage(&mut run);
+    let (actor, primary, secondary) = (run.actor, run.targets[0], run.targets[1]);
+    let strike = |run: &mut super::dps_parity::Run| {
+        for _ in 0..12 {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 432616, Some(primary), 1);
+            run.app.update();
+        }
+    };
+    strike(&mut run);
+    let shared = strikes(&run, primary);
+    assert!(!shared.is_empty() && !strikes(&run, secondary).is_empty());
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(secondary)
+        .unwrap()
+        .x += 100.0;
+    strike(&mut run);
+    let lone = strikes(&run, primary)[shared.len()..].to_vec();
+    assert!(!lone.is_empty());
+    let ratio = *lone.iter().min().unwrap() as f32 / *shared.iter().min().unwrap() as f32;
+    assert!(
+        (ratio - 1.5).abs() < 0.01,
+        "lone-target strike ratio {ratio}"
+    );
+}
+
+#[test]
+#[ignore = "uses real Protection Hammer of Wrath and Sacred Weapon procs"]
+fn sacred_weapon_strikes_on_hammer_of_wrath_without_healing_from_energize() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 386730,
+    );
+    apply_self_aura(&mut run, 432502);
+    for _ in 0..10 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1241413, Some(target), 1);
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let strikes = events
+        .iter()
+        .filter(|event| event.spell_id == Some(432616) && event.kind == CombatLogKind::Damage)
+        .count();
+    let heals = events
+        .iter()
+        .filter(|event| event.spell_id == Some(441590) && event.kind == CombatLogKind::Heal)
+        .count();
+    assert!(strikes > 0, "the hostile hits must proc Sacred Weapon");
+    assert_eq!(
+        heals, 0,
+        "caster-only Holy Power gains are not helpful hits"
+    );
+}
+
+#[test]
+#[ignore = "uses the real Sacred Weapon RPPM callback across expiration"]
+fn sacred_weapon_keeps_proc_clock_across_inactive_armaments() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 386730,
+    );
+    apply_self_aura(&mut run, 432502);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1300662, Some(target), 1);
+    run.app.update();
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 432502,
+    );
+    for _ in 0..220 {
+        run.app.update();
+    }
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    apply_self_aura(&mut run, 432502);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1300662, Some(target), 1);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[before..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.spell_id == Some(432616) && event.kind == CombatLogKind::Damage),
+        "the 10-second inactive interval must be retained for the next strike"
+    );
+}
+
+#[test]
+#[ignore = "uses a real Blessed Hammer cast and Sacred Weapon proc"]
+fn sacred_weapon_strikes_blessed_hammers_selected_enemy() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 386730,
+    );
+    apply_self_aura(&mut run, 432502);
+    for _ in 0..210 {
+        run.app.update();
+    }
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    run.app.update();
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[before..];
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(432616)
+            && event.target == Some(target.to_bits())
+            && event.kind == CombatLogKind::Damage),
+        "Blessed Hammer's selected enemy must receive the Sacred Weapon strike"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.spell_id == Some(441590) && event.kind == CombatLogKind::Heal),
+        "the caster's energize is not the proc target"
+    );
+}
+
+#[test]
+#[ignore = "uses actual Sacred Weapon strike and proc callbacks"]
+fn sacred_weapon_strike_does_not_proc_itself() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 386730,
+    );
+    apply_self_aura(&mut run, 432502);
+    for _ in 0..210 {
+        run.app.update();
+    }
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 432616, Some(target), 1);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[before..];
+    let strikes = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(432616)
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+        })
+        .count();
+    assert_eq!(
+        strikes, 1,
+        "the weapon's own strike must not trigger another strike"
+    );
 }
 
 #[test]
@@ -2013,6 +2351,21 @@ fn simc_dummy_debuffs_modify_real_damage_by_school() {
             "spell {spell}: base {base}, debuffed {buffed}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires Protection Paladin inputs and a SimC tank-dummy trace"]
+fn replay_reports_sacred_weapon_strikes() {
+    let path = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
+    let report = super::tank_replay::replay_simc(66, Path::new(&path), 300, 70448).unwrap();
+    let hits = report["outgoing_damage_hits_by_spell"]["432616"]
+        .as_u64()
+        .unwrap();
+    let damage = report["outgoing_damage_by_spell"]["432616"]
+        .as_i64()
+        .unwrap();
+    assert!(hits > 0, "Sacred Weapon must land at least one strike");
+    assert!(damage > 0, "Sacred Weapon strikes must deal damage");
 }
 
 #[test]
@@ -3865,8 +4218,18 @@ fn grand_crusader_advances_shared_judgment_charge() {
             .unwrap();
         crate::spell_cast::test_harness::charge_recovery(history, 1663).1
     };
-    let before = recharge(&run).expect("Judgment must start recharging");
     for _ in 0..100 {
+        if recharge(&run).is_none() {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                275779,
+                Some(target),
+                false,
+            )
+            .unwrap();
+        }
+        let before = recharge(&run).expect("Judgment must be recharging");
         crate::combat::replay_healer_hit(run.app.world_mut(), target, actor, &avoided_hit("Parry"))
             .unwrap();
         run.app.update();
@@ -3875,6 +4238,10 @@ fn grand_crusader_advances_shared_judgment_charge() {
             || (after.is_none() && before - crate::spell_cast::now(run.app.world()) > 0.1)
         {
             return;
+        }
+        // Native 85043 has a one-second proc cooldown; space the replayed swings.
+        for _ in 0..21 {
+            run.app.update();
         }
     }
     panic!("Grand Crusader did not advance the shared charge by 3 seconds");

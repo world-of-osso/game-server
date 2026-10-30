@@ -1343,6 +1343,7 @@ fn record_swing(
                 AuraEvent {
                     actor: attacker_entity,
                     target: Some(target_entity),
+                    action_target: None,
                     actor_mask: [0; 2],
                     target_mask: [procs::PROC_TAKE_MELEE_SWING, 0],
                     spell_id: None,
@@ -1408,6 +1409,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
     let mut events = vec![AuraEvent {
         actor: attacker,
         target: Some(target),
+        action_target: None,
         actor_mask: [procs::PROC_DEAL_MELEE_SWING | hand_swing, 0],
         target_mask: [
             procs::PROC_TAKE_MELEE_SWING | procs::PROC_TAKE_ANY_DAMAGE,
@@ -1426,6 +1428,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         events.push(AuraEvent {
             actor: attacker,
             target: Some(target),
+            action_target: None,
             actor_mask: [procs::PROC_KILL, 0],
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
@@ -2711,6 +2714,8 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::mythic_plus::record_kill(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
         crate::scripted_ai::hellfire_ramparts::on_unit_death(world, npc);
+        crate::scripted_ai::algethar_academy::on_unit_death(world, npc);
+        crate::vehicle::accessory::on_vehicle_death(world, npc);
         crate::zones::notify_group_depletion(world, npc);
     });
 }

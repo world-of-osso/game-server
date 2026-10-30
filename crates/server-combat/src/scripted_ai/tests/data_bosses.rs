@@ -11,6 +11,8 @@ mod azure_absolute_zero;
 mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
+#[path = "azure_evade.rs"]
+mod azure_evade;
 #[path = "azure_explosive_brand.rs"]
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
@@ -43,6 +45,8 @@ mod azure_sprouts;
 mod azure_telash;
 #[path = "azure_telash_return.rs"]
 mod azure_telash_return;
+#[path = "azure_tender.rs"]
+mod azure_tender;
 #[path = "broggok.rs"]
 mod broggok;
 #[path = "bromach.rs"]
@@ -163,9 +167,13 @@ mod vazruden_slay;
 mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
+#[path = "waxbeard.rs"]
+mod waxbeard;
 #[path = "wratheye.rs"]
 mod wratheye;
 
+#[path = "nalorakk_credit.rs"]
+mod nalorakk_credit;
 #[path = "prepared_input_concurrency_tests.rs"]
 mod prepared_input_concurrency_tests;
 #[path = "prepared_input_tests.rs"]
@@ -244,6 +252,19 @@ pub(crate) fn prepare_encounter_database(
     source
         .execute("VACUUM INTO ?1", [path.to_str().unwrap()])
         .expect("snapshot canonical encounter data without writing source");
+    if encounter == "nalorakk" {
+        let db2 = world_db_path().parent().unwrap().join("db2/active");
+        run_preparation_script(
+            "nalorakk_encounter_bindings.py",
+            &[
+                "--db".as_ref(),
+                path.as_os_str(),
+                "--db2".as_ref(),
+                db2.as_os_str(),
+            ],
+        );
+        return (directory, path);
+    }
     if encounter == "ruby-final" {
         run_preparation_script("ruby_population.py", &["--db".as_ref(), path.as_os_str()]);
         return (directory, path);

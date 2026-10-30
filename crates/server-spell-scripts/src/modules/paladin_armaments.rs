@@ -947,6 +947,7 @@ fn summon_forge(world: &mut World, caster: Entity, spell: u32) {
             None => combat::auras::apply_aura(world, &application),
         }
     }
+    super::paladin_masterwork::grant_masterwork_weapon(world, caster);
 }
 
 /// SimC76f8118 sc_paladin.cpp1286–1289, 2951–2954: during the buff, Word of Glory
@@ -1021,12 +1022,18 @@ fn reflection_from_absorb(
     spell: u32,
     amount: f32,
 ) {
-    if caster != victim
-        || spell != 432607
-        || amount <= 0.0
-        || !world
-            .get::<ActiveSpec>(caster)
-            .is_some_and(|spec| spec.0 == 66)
+    // SimC76f8118 sc_paladin.hpp777–780,1002–1012: a self Bulwark absorb
+    // rolls the 20% solo chance; fake allied Solidarity stacks are not present.
+    if caster == victim && spell == 432607 && amount > 0.0 {
+        roll_reflection_of_radiance(world, caster, 0.2);
+    }
+}
+
+/// Selected Reflection of Radiance resets Avenger's Shield through Grand Crusader.
+pub(super) fn roll_reflection_of_radiance(world: &mut World, caster: Entity, chance: f32) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 66)
         || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
             let mut talents = traits.active_talent_spells();
             talents.any(|talent| talent.spell_id == 1271466)
@@ -1037,9 +1044,7 @@ fn reflection_from_absorb(
     {
         return;
     }
-    // SimC76f8118 sc_paladin.hpp777–780,1002–1012: a self Bulwark absorb
-    // rolls the 20% solo chance; fake allied Solidarity stacks are not present.
-    if combat::random::random::<f32>() < 0.2 {
+    if combat::random::random::<f32>() < chance {
         reset_avengers_shield(world, caster);
     }
 }

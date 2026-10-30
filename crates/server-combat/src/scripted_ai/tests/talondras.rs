@@ -41,6 +41,78 @@ fn assert_native_admission(attempt: &super::cast_admission::Admission, expected_
 }
 
 #[test]
+fn encounter_coverage_talondras_passages_open_only_after_done_in_their_copy() {
+    for entry in [376554, 376191] {
+        assert_talondras_passage(entry);
+    }
+}
+
+fn assert_talondras_passage(entry: u32) {
+    let (mut h, boss, map) = talondras_copy(205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == entry)
+        .unwrap();
+    assert_eq!(source.map_id, MAP);
+    let door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let other_door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), other_map))
+        .id();
+    h.engage(boss);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(false))
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(other_door),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    let recreated = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    crate::scripted_ai::door_data::update_doors(h.app.world_mut(), map);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(recreated),
+        Some(&shared::protocol::GameObjectCollision(false)),
+        "copy fill restores the open passage"
+    );
+}
+
+#[test]
 fn encounter_coverage_talondras_native_stomp_damage_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = talondras_copy(difficulty);

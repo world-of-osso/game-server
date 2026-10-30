@@ -157,6 +157,80 @@ fn darkflame_drop_native_move_fall_lands_continuously_on_target_polygon() {
     );
 }
 
+#[test]
+#[ignore = "requires actual2526 navigation/ground and imported follower profile"]
+fn academy_pad_follower_regroups_after_crawth_flight() {
+    use crate::scripted_ai::jump_movement;
+    let root = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |app| {
+        install_native_follow_movement(app);
+        app.add_plugins(crate::grid_activity::GridActivityPlugin);
+        app.add_systems(
+            Update,
+            (
+                jump_movement::release_finished_jumps,
+                jump_movement::advance_jumps,
+            )
+                .chain(),
+        );
+    });
+    h.app
+        .insert_resource(GroundMap::new(&root, HashMap::from([(2526, 4_290_605)])));
+    crate::navigation::install_fixture(
+        &mut h.app,
+        crate::navigation::Navigation::new(&root.join("navmesh")),
+    );
+    let departure = Vec3::new(2116.46, 928.646, 3105.17);
+    let landing = Vec3::new(2306.25, 907.3357, 3052.91);
+    let owner = Vec3::new(2331.7, 909.5034, 3050.197);
+    let template = &h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .templates[&209057];
+    let (speed_walk, speed_run) = (template.speed_walk, template.speed_run);
+    h.app.world_mut().entity_mut(follower).insert((
+        position(departure),
+        InMap::continent(2526),
+        crate::creature_ai::PartyFollowSlot::new(0, 4),
+        crate::creature_ai::SpawnPoint {
+            x: 1410.22,
+            y: 955.637,
+            z: 2771.71,
+            wander_distance: 0.0,
+            speed_walk,
+            speed_run,
+        },
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position(departure), InMap::continent(2526)));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    // Register the entrance spawn grid while the owner is still in its neighborhood.
+    h.advance(2);
+    jump_movement::move_jump(h.app.world_mut(), follower, 0, position(landing), 50.0, 0.0);
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(landing);
+    h.advance(120);
+    assert!(
+        h.app
+            .world()
+            .get::<jump_movement::JumpMovement>(follower)
+            .is_none()
+    );
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(owner);
+    h.advance(400);
+    let feet = point(*h.app.world().get::<Position>(follower).unwrap());
+    assert!(
+        feet.distance(owner) < 18.0,
+        "follower did not regroup: feet={feet:?}, owner={owner:?}"
+    );
+}
+
 fn install_native_follow_movement(app: &mut App) {
     crate::creature_ai::install_follow_fixture(app);
     app.add_systems(
@@ -171,15 +245,19 @@ fn install_native_follow_movement(app: &mut App) {
 }
 
 fn create_native_follower_fixture() -> (Harness, Entity) {
+    create_native_follower_fixture_for(209057)
+}
+
+fn create_native_follower_fixture_for(entry: u32) -> (Harness, Entity) {
     let (mut h, follower, _) =
-        spawn_profile_fixture_with_plugins(209057, install_native_follow_movement);
+        spawn_profile_fixture_with_plugins(entry, install_native_follow_movement);
     h.app
         .insert_resource(GroundMap::new(&assets(), HashMap::from([(MAP, WDT)])));
     crate::navigation::install_fixture(
         &mut h.app,
         crate::navigation::Navigation::new(&navigation_root()),
     );
-    place_follower_on_upper(&mut h, follower);
+    place_follower_on_upper(&mut h, follower, entry);
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -192,13 +270,13 @@ fn create_native_follower_fixture() -> (Harness, Entity) {
     (h, follower)
 }
 
-fn place_follower_on_upper(h: &mut Harness, follower: Entity) {
+fn place_follower_on_upper(h: &mut Harness, follower: Entity, entry: u32) {
     let (speed_walk, speed_run) = {
         let template = &h
             .app
             .world()
             .resource::<crate::world_data::WorldData>()
-            .templates[&209057];
+            .templates[&entry];
         (template.speed_walk, template.speed_run)
     };
     h.app.world_mut().entity_mut(follower).insert((
@@ -341,4 +419,158 @@ fn darkflame_drop_idle_follower_descends_when_owner_is_directly_below() {
         feet.y < LANDING.y + 1.0,
         "idle follower must not treat a reachable owner30yd below as already in range: {feet:?}"
     );
+}
+
+/// Live Follow failure 2026-10-29 in the Sprawling Trackyard: the slot point lies on a
+/// walkable strip that the follower's polygon does not connect to.
+const TRACKYARD_FROM: Vec3 = Vec3::new(297.12, 86.53, -38.58);
+const TRACKYARD_TO: Vec3 = Vec3::new(331.23, 86.91, -36.79);
+
+#[test]
+#[ignore = "requires actual2651 navigation assets"]
+fn darkflame_trackyard_follow_walks_the_incomplete_corridor_chase_stays_blocked() {
+    let mut map =
+        ::navigation::NavigationMap::open(&navigation_root().join(MAP.to_string())).unwrap();
+    let mut plan = ::navigation::NavigationPlan::default();
+    assert!(
+        map.path_with_plan(TRACKYARD_FROM, TRACKYARD_TO, &mut plan)
+            .is_err(),
+        "non-Follow movers keep the disconnect as no path"
+    );
+    let path = map
+        .follow_path(TRACKYARD_FROM, TRACKYARD_TO, &mut plan)
+        .expect("Follow walks PATHFIND_INCOMPLETE");
+    assert!(!path.complete);
+    let end = *path.points.last().unwrap();
+    let gap = |p: Vec3| (p.x - TRACKYARD_TO.x).hypot(p.z - TRACKYARD_TO.z);
+    assert!(
+        gap(end) < gap(TRACKYARD_FROM) - 10.0,
+        "closest reachable polygon is toward the target: {end:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_trackyard_follower_advances_toward_unreachable_slot_point() {
+    let slot = crate::creature_ai::PartyFollowSlot::new(2, 4);
+    // Facing PI - slot puts the slot point 4yd south of the owner: the live target.
+    let owner = Vec3::new(TRACKYARD_TO.x, TRACKYARD_TO.y, TRACKYARD_TO.z + 4.0);
+    let (mut h, follower) = create_native_follower_fixture();
+    h.app.world_mut().entity_mut(follower).insert(slot);
+    *h.app.world_mut().get_mut::<Position>(follower).unwrap() = position(TRACKYARD_FROM);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        position(owner),
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::PI - slot.angle(),
+            z: 0.0,
+        },
+    ));
+    let gap = |p: Vec3| (p.x - TRACKYARD_TO.x).hypot(p.z - TRACKYARD_TO.z);
+    let mut before = TRACKYARD_FROM;
+    for _ in 0..80 {
+        h.advance(1);
+        let after = point(*h.app.world().get::<Position>(follower).unwrap());
+        assert!(
+            after.distance(before) < 4.0,
+            "teleported: {before:?}->{after:?}"
+        );
+        before = after;
+    }
+    assert!(
+        gap(before) < gap(TRACKYARD_FROM) - 10.0,
+        "follower walks toward the slot point: {before:?}"
+    );
+}
+
+/// Live 2026-10-29 instance 9: idle faction-0 Menial Laborers (210148) beside Ol' Waxbeard
+/// never start an attack (`Creature::CanStartAttack` needs a hostile reaction), yet they
+/// held the healer's regroup indefinitely. Only a watcher that would aggro holds a non-tank.
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
+    let from = Vec3::new(365.0142, 87.06531, -32.37358);
+    let owner = Vec3::new(421.7417, 87.0782, -29.7178);
+    let on_path = Vec3::new(393.4, 87.07, -31.0);
+    // Actual factions: Royal Wicklighter 210812's 16 and Menial Laborer 210148's 0.
+    for (faction, held) in [(16, true), (0, false)] {
+        let (mut h, healer) = create_native_follower_fixture_for(209072);
+        *h.app.world_mut().get_mut::<Position>(healer).unwrap() = position(from);
+        *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(owner);
+        let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        h.app.world_mut().entity_mut(watcher).insert((
+            position(on_path),
+            InMap::continent(MAP),
+            shared::components::UnitFactionTemplate(faction),
+            shared::components::UnitLevel(80),
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        h.advance(1);
+        let mut hold = None;
+        for _ in 0..4 {
+            hold = Some(super::positioning::hold_unsafe_approach(
+                h.app.world_mut(),
+                healer,
+                h.caster,
+            ));
+            crate::navigation::drain_fixture(&mut h.app);
+        }
+        assert_eq!(hold, Some(held), "watcher faction {faction}");
+    }
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn candlelight_follower_walks_into_authored_box_and_receives_light() {
+    let (mut h, follower) = create_native_follower_fixture();
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    let map = InMap::continent(MAP);
+    crate::world_area_triggers::spawn_map(h.app.world_mut(), map, 205);
+    let start = Vec3::new(153.0, 71.22188, 155.0);
+    let GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<GroundMap>()
+        .ground_at(MAP, start)
+    else {
+        panic!("actual Candle King approach floor");
+    };
+    let at = position(Vec3::new(start.x, height, start.z));
+    h.app.world_mut().entity_mut(follower).insert((map, at));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        map,
+        shared::components::Npc {
+            template_id: 208745,
+            name: "The Candle King".into(),
+        },
+        shared::components::CombatStatus(true),
+    ));
+    let mut entered = false;
+    for _ in 0..1000 {
+        let before = *h.app.world().get::<Position>(follower).unwrap();
+        let seeking = super::candlelight::seek(h.app.world_mut(), follower);
+        h.advance(1);
+        let after = *h.app.world().get::<Position>(follower).unwrap();
+        assert!(
+            point(after).distance(point(before)) < 2.0,
+            "ordinary movement, not teleport: {before:?} -> {after:?}"
+        );
+        if !seeking {
+            entered = true;
+            break;
+        }
+    }
+    assert!(
+        entered,
+        "follower reached the authored light via native navigation"
+    );
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(crate::auras::has_aura(h.app.world(), follower, 426125));
 }

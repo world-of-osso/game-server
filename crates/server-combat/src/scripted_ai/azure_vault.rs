@@ -22,6 +22,16 @@ const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
 const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
+const TENDER_SCRIPT: &str = "npc_arcane_tender";
+const STASIS_RITUAL: u32 = 375732;
+const STASIS_RITUAL_MISSILE: u32 = 375738;
+const ERRATIC_GROWTH_CHANNEL: u32 = 375596;
+pub(crate) const WILD_ERUPTION: u32 = 375652;
+const WILD_ERUPTION_MISSILE: u32 = 375650;
+const EVENT_ERRATIC_GROWTH: u32 = 1;
+const EVENT_WILD_ERUPTION: u32 = 2;
+const ERRATIC_GROWTH_MS: u64 = 22_000;
+const WILD_ERUPTION_MS: u64 = 12_000;
 const LEY_LINE_SPROUT_AURA: u32 = 374161;
 const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
@@ -85,6 +95,7 @@ pub(super) fn is_creature_script(name: &str) -> bool {
         LEYMOR_SCRIPT
             | TELASH_SCRIPT
             | SPROUT_SCRIPT
+            | TENDER_SCRIPT
             | super::azureblade::SCRIPT
             | super::umbrelskul::SCRIPT
     )
@@ -102,6 +113,11 @@ pub(super) fn creature_ai(
     }
     if script_name == SPROUT_SCRIPT {
         return Some(Box::new(LeyLineSprout));
+    }
+    if script_name == TENDER_SCRIPT {
+        return Some(Box::new(ArcaneTender {
+            events: super::EventMap::default(),
+        }));
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
     match script_name {
@@ -138,18 +154,85 @@ pub(super) fn finish_leymor_intro(
         return;
     }
     super::instance_script::set_data(world, map, DATA_LEYMOR_INTRO_DONE, 1);
-    let leymor = world
-        .query::<(Entity, &shared::components::Npc, &crate::maps::InMap)>()
-        .iter(world)
-        .find_map(|(entity, npc, copy)| {
-            (npc.template_id == LEYMOR && *copy == map).then_some(entity)
-        });
-    if let Some(leymor) = leymor {
+    if let Some(leymor) = find_leymor(world, map) {
         super::dispatch(
             world,
             leymor,
             super::Hook::DoAction(ACTION_FINISH_LEYMOR_INTRO),
         );
+    }
+}
+
+/// TC InstanceScript::GetCreature(DATA_LEYMOR): this copy's Leymor only.
+fn find_leymor(world: &mut World, map: crate::maps::InMap) -> Option<Entity> {
+    world
+        .query::<(Entity, &shared::components::Npc, &crate::maps::InMap)>()
+        .iter(world)
+        .find_map(|(entity, npc, copy)| {
+            (npc.template_id == LEYMOR && *copy == map).then_some(entity)
+        })
+}
+
+/// TC a352b1fa boss_leymor.cpp:191164 npc_arcane_tender.
+struct ArcaneTender {
+    events: super::EventMap,
+}
+
+impl ArcaneTender {
+    fn channel_stasis_ritual(ctx: &mut super::Ctx) {
+        let Some(map) = ctx.map() else {
+            return;
+        };
+        if let Some(leymor) = find_leymor(ctx.world, map) {
+            ctx.do_cast_at(Some(leymor), STASIS_RITUAL, false);
+        }
+    }
+}
+
+impl super::CreatureAi for ArcaneTender {
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        Self::channel_stasis_ritual(ctx);
+    }
+
+    fn just_reached_home(&mut self, ctx: &mut super::Ctx) {
+        Self::channel_stasis_ritual(ctx);
+    }
+
+    fn reset(&mut self, _ctx: &mut super::Ctx) {
+        self.events.reset();
+    }
+
+    fn just_engaged_with(&mut self, _ctx: &mut super::Ctx, _who: Entity) {
+        self.events
+            .schedule(EVENT_ERRATIC_GROWTH, ERRATIC_GROWTH_MS);
+        self.events.schedule(EVENT_WILD_ERUPTION, WILD_ERUPTION_MS);
+    }
+
+    fn update_ai(&mut self, ctx: &mut super::Ctx, diff_ms: u32) {
+        if !ctx.update_victim() {
+            return;
+        }
+        self.events.update(u64::from(diff_ms));
+        if ctx.is_casting() {
+            return;
+        }
+        while let Some(event) = self.events.execute_event() {
+            match event {
+                EVENT_ERRATIC_GROWTH => {
+                    ctx.do_cast_aoe(ERRATIC_GROWTH_CHANNEL);
+                    self.events
+                        .schedule(EVENT_ERRATIC_GROWTH, ERRATIC_GROWTH_MS);
+                }
+                EVENT_WILD_ERUPTION => {
+                    ctx.do_cast_aoe(WILD_ERUPTION);
+                    self.events.schedule(EVENT_WILD_ERUPTION, WILD_ERUPTION_MS);
+                }
+                _ => {}
+            }
+            if ctx.is_casting() {
+                return;
+            }
+        }
     }
 }
 
@@ -249,6 +332,20 @@ impl super::CreatureAi for Leymor {
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
         self.tasks.reset();
         self.boss.just_died(ctx);
+    }
+
+    fn just_summoned(&mut self, ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    /// TC boss_leymor.cpp EnterEvadeMode: DespawnAll, _EnterEvadeMode, _DespawnAtEvade.
+    fn enter_evade_mode(&mut self, ctx: &mut super::Ctx) {
+        self.boss.summons.despawn_all(ctx.world);
+        super::boss_ai::despawn_at_evade(ctx, self.boss.boss_id);
     }
 
     fn do_action(&mut self, _ctx: &mut super::Ctx, action: i32) {
@@ -418,6 +515,21 @@ impl super::CreatureAi for Telash {
         self.boss.just_died(ctx);
     }
 
+    fn just_summoned(&mut self, ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut super::Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
+    /// TC boss_telash_greywing.cpp EnterEvadeMode: DespawnAll, _EnterEvadeMode,
+    /// _DespawnAtEvade; the respawned boss re-summons its Runes on appearing.
+    fn enter_evade_mode(&mut self, ctx: &mut super::Ctx) {
+        self.boss.summons.despawn_all(ctx.world);
+        super::boss_ai::despawn_at_evade(ctx, self.boss.boss_id);
+    }
+
     fn update_ai(&mut self, ctx: &mut super::Ctx, diff_ms: u32) {
         super::boss_ai::boss_update_ai(self, ctx, diff_ms);
     }
@@ -440,6 +552,13 @@ fn read_current_primary_power(world: &World, actor: Entity) -> Option<f32> {
 }
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        STASIS_RITUAL,
+        AuraScript {
+            on_periodic: Some(tick_stasis_ritual),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         ICE_POWER_PERIODIC,
         AuraScript {
@@ -467,6 +586,40 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             on_remove: Some(explode_expired_frost_bomb),
             ..Default::default()
         },
+    );
+}
+
+/// TC a352b1fa375732 effect0/PERIODIC_DUMMY: the channeling Tender casts375738
+/// untargeted; native conditions select Leymor.
+fn tick_stasis_ritual(world: &mut World, _target: Entity, aura: &AuraInstance, index: u8) {
+    if index != 0 || world.get_entity(aura.caster).is_err() {
+        return;
+    }
+    if let Err(error) =
+        crate::spell_cast::creature_cast(world, aura.caster, STASIS_RITUAL_MISSILE, None, true)
+    {
+        warn!(caster = ?aura.caster, ?error, "Stasis Ritual could not cast375738");
+    }
+}
+
+/// TC a352b1fa375652 effect0 OnEffectHitTarget: one missile per hit unit, sent
+/// to the effect destination (`GetHitDest`, the caster-position DEST_CASTER).
+pub(crate) fn cast_wild_eruption_missile(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+    _target: Entity,
+) {
+    let Some(destination) = ctx.dest else {
+        warn!("Wild Eruption375652 cannot cast375650 without its hit destination");
+        return;
+    };
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        ctx.caster,
+        WILD_ERUPTION_MISSILE,
+        destination.position,
+        ctx.depth + 1,
     );
 }
 

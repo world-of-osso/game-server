@@ -67,7 +67,7 @@ fn guild_reward_purchase_needs_standing_then_guild_achievement() {
     let mut reputation = CharacterReputation::default();
     assert_eq!(
         catalog.check_purchase(62038, HUMAN, Some(&reputation)),
-        Err(MerchantError::ReputationRequired)
+        Err(MerchantError::GuildReputationTooLow)
     );
     reputation.set_rep(GUILD_FACTION, threshold_for_standing(Standing::Friendly));
     assert_eq!(

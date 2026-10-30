@@ -106,6 +106,71 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
 }
 #[test]
 #[ignore = "requires selected Discipline profile and native 70448 data"]
+fn equipped_seastone_procs_intellect_and_reverses_after_six_stacks() {
+    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use crate::auras::ActiveAuras;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
+    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
+    let target = run.targets[0];
+    let driver = run
+        .app
+        .world()
+        .get::<ActiveAuras>(healer)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1295058)
+        .expect("equipped Seastone driver");
+    let expected_amount = driver
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(expected_amount > 0.0);
+    let mut stacks_seen = Vec::new();
+    for _ in 0..20 {
+        execute(
+            run.app.world_mut(),
+            healer,
+            Execution::Spell(589, target, Some(target)),
+        )
+        .unwrap();
+        for _ in 0..400 {
+            run.app.update();
+            if let Some(buff) = run
+                .app
+                .world()
+                .get::<ActiveAuras>(healer)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 1295057)
+            {
+                let amount = buff
+                    .effects
+                    .iter()
+                    .find(|effect| effect.index == 0)
+                    .unwrap()
+                    .amount;
+                assert!((amount - expected_amount).abs() < 0.001);
+                if stacks_seen.last().copied() != Some(buff.stacks) {
+                    stacks_seen.push(buff.stacks);
+                }
+            }
+        }
+    }
+    assert!(
+        stacks_seen.contains(&6),
+        "must reach six stacks: {stacks_seen:?}"
+    );
+    assert!(
+        stacks_seen.windows(2).any(|pair| pair == [6, 5]),
+        "must reverse after reaching six: {stacks_seen:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires selected Discipline profile and native 70448 data"]
 fn discipline_pain_observes_power_of_dark_side_procs() {
     use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
     use crate::spell_cast::test_harness::ObservedCombatEvents;

@@ -281,6 +281,29 @@ pub(super) fn instance_script(world: &mut World, map: InMap) -> Option<&mut Inst
         .and_then(|scripts| scripts.0.get_mut(&map))
 }
 
+/// Complete the encounter `entry` is bound to in `map`'s copy without its death;
+/// false when it is unbound or already done.
+pub(crate) fn complete_bound_entry(
+    world: &mut World,
+    map: InMap,
+    entry: u32,
+    unit: Entity,
+) -> bool {
+    let Some(boss_id) = instance_script(world, map).and_then(|script| {
+        script
+            .boss_creatures
+            .iter()
+            .find_map(|&(creature, boss_id)| (creature == entry).then_some(boss_id))
+    }) else {
+        return false;
+    };
+    let done = set_boss_state(world, map, boss_id, EncounterState::Done);
+    if done {
+        send_disengage_unit(world, map, unit);
+    }
+    done
+}
+
 /// `InstanceScript::GetData`: unassigned source keys read zero.
 pub(super) fn get_data(world: &mut World, map: InMap, key: u32) -> u32 {
     instance_script(world, map)
@@ -397,9 +420,12 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         }
         EncounterState::NotStarted | EncounterState::Fail => {}
     }
+    super::encounter_doors::update_doors(world, map);
     super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
     super::hellfire_ramparts::on_boss_state_changed(world, map, encounter_id, state);
     super::darkness::on_boss_state_changed(world, map, encounter_id, state);
+    super::door_data::update_doors(world, map);
+    super::uldaman::on_boss_state_changed(world, map, encounter_id, state);
     true
 }
 

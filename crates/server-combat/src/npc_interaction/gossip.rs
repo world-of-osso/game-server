@@ -22,6 +22,7 @@ pub(crate) enum GossipAction {
     Role(NpcRole),
     Close,
     AzureTranslocation,
+    NalorakkPyre,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,7 +118,7 @@ impl GossipCatalog {
     }
 }
 
-fn gossip_opening(
+pub(super) fn gossip_opening(
     menu_id: u32,
     text: String,
     options: Vec<(u32, u8, String, GossipAction)>,

@@ -121,6 +121,8 @@ const PPM_MAX_ATTEMPT_GAP: f64 = 10.0;
 pub struct AuraEvent {
     pub actor: Entity,
     pub target: Option<Entity>,
+    /// The cast's selected primary, distinct from an effect's recipient.
+    pub action_target: Option<Entity>,
     pub actor_mask: [u32; 2],
     pub target_mask: [u32; 2],
     pub spell_id: Option<u32>,
@@ -311,6 +313,16 @@ fn handle_side(
         interrupt_flags(mask, event.periodic),
         event.spell_id,
     );
+    if unit == event.actor
+        && event.spell_id.is_some_and(|id| {
+            world
+                .get_resource::<super::scripts::AuraScripts>()
+                .and_then(|scripts| scripts.0.get(&id))
+                .is_some_and(|script| script.suppress_outgoing_procs)
+        })
+    {
+        return;
+    }
     let event_spell = event.spell_id.and_then(|id| {
         world
             .get_resource::<SpellStore>()
@@ -584,6 +596,23 @@ fn proc_chance(world: &mut World, unit: Entity, id: u32, now: f64) -> f32 {
         aura.proc.accumulated_blp = accumulated_blp;
     }
     spell_mods::modify(world, unit, &spell, SpellModOp::ProcChance, chance)
+}
+
+/// Preserve an aura's proc clock when its sourced callback outlives the aura.
+pub fn snapshot_proc_timers(aura: &AuraInstance) -> super::ProcTimers {
+    aura.proc
+}
+
+/// Restore a previously preserved proc clock to an applied aura instance.
+pub fn restore_proc_timers(world: &mut World, unit: Entity, id: u32, timers: super::ProcTimers) {
+    let mut auras = world
+        .get_mut::<ActiveAuras>(unit)
+        .expect("applied proc aura");
+    auras
+        .bypass_change_detection()
+        .get_mut(id)
+        .expect("applied proc instance")
+        .proc = timers;
 }
 
 /// Read the native internal-cooldown deadline of an active proc aura.

@@ -33,7 +33,13 @@ use crate::networking::PlayerLink;
 
 pub mod azure_translocation;
 mod gossip;
-mod spellclick;
+pub(crate) mod nalorakk_offerings;
+#[cfg(test)]
+mod nalorakk_offerings_tests;
+pub(crate) mod nalorakk_pyre;
+pub(crate) mod spellclick;
+#[cfg(test)]
+mod spellclick_tests;
 pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};
 
 use gossip::{GossipAction, Opening};
@@ -80,6 +86,7 @@ impl Plugin for NpcInteractionPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GossipCatalog>();
         app.init_resource::<SpellClickCatalog>();
+        app.add_systems(FixedUpdate, nalorakk_offerings::update_offerings);
         app.add_systems(
             Update,
             (
@@ -283,6 +290,7 @@ impl InteractionWorld<'_, '_> {
             // Only ported GameObjectAI scripts; generic door/button use is not modelled.
             crate::game_objects::GAMEOBJECT_TYPE_DOOR
             | crate::game_objects::GAMEOBJECT_TYPE_BUTTON
+            | crate::game_objects::GAMEOBJECT_TYPE_GOOBER
                 if scripted && !in_use =>
             {
                 ObjectUse::Script
@@ -313,6 +321,13 @@ impl InteractionWorld<'_, '_> {
                 || info.is_battleground_banner() =>
             {
                 ObjectUse::BattlegroundFlag
+            }
+            crate::game_objects::GAMEOBJECT_TYPE_GOOBER
+                if nalorakk_pyre::menu(info.entry).is_some()
+                    && self.maps.get(player).ok() == self.maps.get(object).ok()
+                    && self.maps.get(object).is_ok_and(|map| map.map_id == 2825) =>
+            {
+                ObjectUse::NalorakkPyre
             }
             crate::game_objects::GAMEOBJECT_TYPE_CHEST
             | crate::game_objects::GAMEOBJECT_TYPE_GOOBER => ObjectUse::QuestObject,
@@ -354,6 +369,7 @@ impl InteractionWorld<'_, '_> {
 /// Result of using a game object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ObjectUse {
+    NalorakkPyre,
     QuestObject,
     Spellcaster,
     Seaforium,
@@ -558,6 +574,18 @@ fn process_game_object_uses(
                             });
                         }
                     });
+                    continue;
+                }
+                Ok((object, ObjectUse::NalorakkPyre)) => {
+                    let entry = world.objects.get(object).expect("validated object").0.entry;
+                    let opening = nalorakk_pyre::opening(entry);
+                    let (interaction, kind) = apply_opening(&world, object, opening);
+                    if let Some(previous) = current.filter(|previous| *previous != object) {
+                        senders.closed(connection, previous);
+                    }
+                    current = Some(object);
+                    senders.opened(connection, object, kind);
+                    commands.entity(connection).insert(interaction);
                     continue;
                 }
                 Ok((object, ObjectUse::QuestObject)) => {
@@ -765,6 +793,25 @@ fn process_gossip_selections(
             else {
                 continue;
             };
+            if action == GossipAction::NalorakkPyre {
+                if let Err(error) = world.usable_object(link.0, npc).and_then(|kind| {
+                    (kind == ObjectUse::NalorakkPyre)
+                        .then_some(())
+                        .ok_or(InteractionError::InvalidTarget)
+                }) {
+                    senders.failed(connection, request.npc, error);
+                    continue;
+                }
+                current = None;
+                let player = link.0;
+                commands.queue(move |world: &mut World| {
+                    if let Err(error) = nalorakk_pyre::traverse(world, player, npc) {
+                        warn!(?player, ?npc, %error, "Nalorakk pyre teleport refused");
+                    }
+                    close_gossip_menu(world, player, npc);
+                });
+                continue;
+            }
             let flags = match world.interactable(link.0, npc) {
                 Ok((_, flags, ..)) => *flags,
                 Err(error) => {
@@ -773,6 +820,7 @@ fn process_gossip_selections(
                 }
             };
             let opening = match action {
+                GossipAction::NalorakkPyre => unreachable!("handled above"),
                 GossipAction::AzureTranslocation => {
                     current = None;
                     let player = link.0;

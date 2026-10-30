@@ -94,6 +94,7 @@ pub mod stagger;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub mod summon_damage;
+mod trigger_on_expire;
 mod unit_state;
 mod venomcursed;
 mod warrior_stats;
@@ -2020,6 +2021,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     crate::simc_apl_native::reaction::removed(world, unit, aura.instance_id);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
+    trigger_on_expire::on_removed(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
     crate::spell_cast::area_trigger::on_aura_removed(world, unit, aura);
@@ -2835,6 +2837,7 @@ fn complete_timed_channel_aura(world: &mut World, unit: Entity, instance_id: u32
         .cloned();
     if let Some(aura) = aura {
         scripts::run_natural_end(world, unit, &aura);
+        trigger_on_expire::fire(world, unit, &aura);
     }
 }
 
@@ -3057,19 +3060,24 @@ type AuraUnit = (
     Option<&'static shared::components::Health>,
     Option<&'static shared::components::CombatStatus>,
     Option<&'static crate::class_progression::ActiveSpec>,
+    Option<&'static shared::casting::CastState>,
 );
 
-/// Units that have auras to update. A living unit without auras has nothing to
-/// interrupt, tick or expire, so only its combat and spec tracking advances here
-/// (as `state_interrupts` would), keeping a later aura from seeing a stale
-/// transition.
+/// Units that have auras or a channel to update. A channel's caster often holds
+/// no aura (Stasis Ritual sits on its target) but its ChannelInterruptFlags still
+/// apply (TC Unit::RemoveAurasWithInterruptFlags). Any other living unit without
+/// auras has nothing to interrupt, tick or expire, so only its combat and spec
+/// tracking advances here (as `state_interrupts` would), keeping a later aura
+/// from seeing a stale transition.
 fn units_with_auras(
     world: &mut World,
     units: &mut QueryState<AuraUnit, Without<GridDormant>>,
 ) -> Vec<Entity> {
     let mut with_auras = Vec::new();
-    for (entity, mut auras, health, combat, spec) in units.iter_mut(world) {
-        if !auras.auras.is_empty() {
+    for (entity, mut auras, health, combat, spec, cast) in units.iter_mut(world) {
+        let channeling =
+            cast.is_some_and(|cast| cast.cast_type == shared::casting::CastType::Channel);
+        if !auras.auras.is_empty() || channeling {
             with_auras.push(entity);
             continue;
         }

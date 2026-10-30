@@ -104,6 +104,7 @@ Creature templates and levels
 - [x] Retail-spawned NPCs use TrinityCore loot when TrinityCore has rows for their LootID, with gold from difficulty 0. Otherwise they use AzerothCore's loot id.
 - [x] Retail-spawned NPCs with no loot table in either source (7,745 entries) drop nothing and have no money, even where TrinityCore's difficulty 0 has gold (54 entries). Each one is in content-dropped.csv. This is a user decision.
 - [x] Retail-spawned NPCs use TrinityCore's lowest `creature_template_gossip` menu when they have one.
+- [x] The full rebuild imports every TDB `npc_spellclick_spells` row from the pinned full dump and projects its entry, spell, cast flags and user type into `content_npc_spellclick_spells`. Reprojection updates matching source keys and preserves unrelated content rows. This imports source data; it does not imply support for every cast flag, user restriction or spell effect.
 
 Services
 - [x] A Retail-spawned vendor with a TrinityCore list sells that list, items only. Currency rows are dropped.

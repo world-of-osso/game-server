@@ -11,6 +11,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] In SimC healer replay, project the enemy training dummy's health from 100% to 0% over the requested fixed fight duration, using the DPS fixture's SimC fixed-time target-health model. This controls execute thresholds and does not change the incoming damage trace.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, time to first party death, and idle-GCD percentage. Idle-GCD percentage is the fraction of fight time sampled at 50 ms when the living healer has no active cast or channel and no active GCD, after the policy has acted; dead time is not idle. Sample mana at one-second intervals. Use the recorded combat duration for HPS and report no death as null.
 - [ ] For each tank report raw and mitigated damage taken and mitigation percentage, self-healing and consumed absorbs per second, time to death without a healer, active-mitigation uptime, and largest five-second damage spike. Raw incoming damage includes avoided attacks; mitigation includes avoidance. Damage taken and spike include self-sourced periodic damage from tank mechanics. Stop the tank measurement at death; report no death as null. For the initial Protection Paladin, active mitigation is Shield of the Righteous.
+- [ ] In SimC dummy tank replay, reconsider the literal APL at the active global cooldown's ready time, without waiting for the next 50 ms sampling boundary. Other simulation and sampling boundaries remain at 50 ms.
 - [ ] In SimC dummy comparison mode, apply and report the trace-declared Mark of the Wild, Arcane Intellect, Power Word: Fortitude, Battle Shout, Skyfury and the player's class-specific Blessing of the Bronze. Apply the target's Chaos Brand, Mystic Touch, Hunter's Mark and Mortal Wounds, and preserve its trace-declared bleeding state without generating a bleed spell or damage. Do not add them to raid-free DPS parity or no-healer replay.
 - [ ] Mistweaver Mana Tea uses native-description-derived spending, stack cap, channel consumption and mana restoration. The pinned SimC source has no Mistweaver Mana Tea model.
 - [ ] Print report tables with `scripts/healer_tank_replay.py`. SimC healer reports include actual mana paid by spell, frame-sampled minimum healer mana, minimum tank health including immediately after each incoming hit, and tank damage receipts per replay second.
@@ -40,29 +41,29 @@ Recipient rolls (avoidance, block, critical block) for each replayed attack draw
 
 ### Pressure grid results
 
-Measured on game-server master `fc2dbbabb625af18e587a10ae861569e64b79c7a`, with separate recipient rolls, Paladin Valiance and Paladin Afterimage. Each tank uses its 300-second SimC trace, no healer, native seeds 70448–70457 (1,020 replays). Cells are survivors/10 and mean time, counting survivors as 300 s. Per-seed reports and `summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-fc2dbbabb6/`. Later master commits 353d2b797c (Lightsmith armament rules for Protection) and 4fe801a1a4 (Master Shapeshifter Ironfur gate) change Paladin and Guardian; these results do not include them.
+Protection Paladin (66) and Guardian Druid (104) were rerun on master `731ff1b3dc` after the Matted Fur total-AP fix. Warrior (73), Blood (250), Brewmaster (268) and Vengeance (581) retain master `fc2dbbabb6` results. Each uses its 300-second SimC trace, no healer, seeds 70448–70457, and 17 pressure scales. Cells show survivors/10 and mean time, counting survivors as 300 s. New reports and `merged-summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-731ff1b3dc-66-104/`; the four older rows are in `pressure-sweep-fc2dbbabb6/`. The two master trees differ, so the combined ranking is not a same-tree comparison. The newer grid predates the subsequent Guardian two-piece and Sacred Weapon RPPM-clock fixes.
 
 | Scale | 66 | 73 | 104 | 250 | 268 | 581 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1.00 | 9/10, 294 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.25 | 1/10, 245 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.50 | 0/10, 145 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.75 | 0/10, 108 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.00 | 0/10, 81 s | 10/10, 300 s | 9/10, 290 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.25 | 0/10, 68 s | 10/10, 300 s | 0/10, 203 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.50 | 0/10, 58 s | 10/10, 300 s | 0/10, 144 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.75 | 0/10, 56 s | 10/10, 300 s | 0/10, 119 s | 10/10, 300 s | 9/10, 281 s | 10/10, 300 s |
-| 3.00 | 0/10, 44 s | 10/10, 300 s | 0/10, 100 s | 10/10, 300 s | 8/10, 272 s | 10/10, 300 s |
-| 3.25 | 0/10, 42 s | 10/10, 300 s | 0/10, 92 s | 9/10, 296 s | 5/10, 246 s | 10/10, 300 s |
-| 3.50 | 0/10, 39 s | 10/10, 300 s | 0/10, 79 s | 8/10, 283 s | 2/10, 221 s | 10/10, 300 s |
-| 3.75 | 0/10, 37 s | 10/10, 300 s | 0/10, 72 s | 2/10, 218 s | 5/10, 246 s | 9/10, 296 s |
-| 4.00 | 0/10, 35 s | 10/10, 300 s | 0/10, 68 s | 0/10, 167 s | 1/10, 171 s | 8/10, 287 s |
-| 4.25 | 0/10, 33 s | 10/10, 300 s | 0/10, 64 s | 3/10, 164 s | 0/10, 130 s | 7/10, 280 s |
-| 4.50 | 0/10, 32 s | 9/10, 297 s | 0/10, 61 s | 0/10, 134 s | 0/10, 137 s | 6/10, 266 s |
-| 4.75 | 0/10, 30 s | 6/10, 261 s | 0/10, 59 s | 0/10, 90 s | 0/10, 120 s | 4/10, 225 s |
-| 5.00 | 0/10, 29 s | 2/10, 218 s | 0/10, 57 s | 0/10, 56 s | 0/10, 87 s | 3/10, 214 s |
+| 1.00 | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.25 | 8/10, 287 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.50 | 1/10, 171 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.75 | 0/10, 128 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.00 | 0/10, 95 s | 10/10, 300 s | 8/10, 288 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.25 | 0/10, 73 s | 10/10, 300 s | 0/10, 176 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.50 | 0/10, 59 s | 10/10, 300 s | 0/10, 145 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.75 | 0/10, 50 s | 10/10, 300 s | 0/10, 108 s | 10/10, 300 s | 9/10, 281 s | 10/10, 300 s |
+| 3.00 | 0/10, 44 s | 10/10, 300 s | 0/10, 98 s | 10/10, 300 s | 8/10, 272 s | 10/10, 300 s |
+| 3.25 | 0/10, 39 s | 10/10, 300 s | 0/10, 89 s | 9/10, 296 s | 5/10, 246 s | 10/10, 300 s |
+| 3.50 | 0/10, 39 s | 10/10, 300 s | 0/10, 80 s | 8/10, 283 s | 2/10, 221 s | 10/10, 300 s |
+| 3.75 | 0/10, 38 s | 10/10, 300 s | 0/10, 75 s | 2/10, 218 s | 5/10, 246 s | 9/10, 296 s |
+| 4.00 | 0/10, 38 s | 10/10, 300 s | 0/10, 72 s | 0/10, 167 s | 1/10, 171 s | 8/10, 287 s |
+| 4.25 | 0/10, 37 s | 10/10, 300 s | 0/10, 69 s | 3/10, 164 s | 0/10, 130 s | 7/10, 280 s |
+| 4.50 | 0/10, 35 s | 9/10, 297 s | 0/10, 65 s | 0/10, 134 s | 0/10, 137 s | 6/10, 266 s |
+| 4.75 | 0/10, 34 s | 6/10, 261 s | 0/10, 63 s | 0/10, 90 s | 0/10, 120 s | 4/10, 225 s |
+| 5.00 | 0/10, 33 s | 2/10, 218 s | 0/10, 61 s | 0/10, 56 s | 0/10, 87 s | 3/10, 214 s |
 
-Paladin, Warrior, Guardian and Vengeance survivor counts now fall monotonically with scale. Blood (0/10 at 4.00, 3/10 at 4.25) and Brewmaster (2/10 at 3.50, 5/10 at 3.75) still recover. Their own procs change their avoidance chances, so their per-seed outcomes differ across scales, as described above. The previous grid on `897f408cc7` shared one stream between recipient rolls and tank decisions. Since then, Warrior rose from 3.75 to 4.75, Vengeance from 3.75 to 4.50, Blood from 3.25 to 3.50 and Paladin from 6/10 to 9/10 survivors at 1.0×. The new outcome sequence and other master changes between the two commits both contribute; this grid does not separate them.
+Paladin, Warrior, Guardian and Vengeance survivor counts fall monotonically with scale. Blood (0/10 at 4.00, 3/10 at 4.25) and Brewmaster (2/10 at 3.50, 5/10 at 3.75) recover; their own procs change avoidance chances across scales. Against the earlier `fc2dbbabb6` grid, Paladin's survival scale rises from 1.00 to 1.25 and Guardian remains at 2.00. The trees contain multiple changes, so this comparison does not isolate individual fixes.
 
 Ranking: the highest scale before the first scale with fewer than five survivors (0.25 resolution).
 
@@ -72,25 +73,54 @@ Ranking: the highest scale before the first scale with fewer than five survivors
 | 2 | Vengeance Demon Hunter (581) | 4.50 | −58 |
 | 3 | Blood Death Knight (250) | 3.50 | 0 |
 | 4 | Brewmaster Monk (268) | 3.25 | 72 |
-| 5 | Guardian Druid (104) | 2.00 | −153 |
-| 6 | Protection Paladin (66) | 1.00 | 1,829 |
+| 5 | Guardian Druid (104) | 2.00 | −433 |
+| 6 | Protection Paladin (66) | 1.25 | 483 |
 
 Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so adjacent ranks one grid step apart (Warrior and Vengeance; Blood and Brewmaster) are not reliably separated. Brewmaster's 3.25 depends on 5/10 at that scale exactly. Effective healing cannot exceed missing health, so a tank that stays at full health shows zero net damage; that column does not rank surviving tanks.
 
 ## Ten-seed healed replay versus corrected SimC
 
-Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`, and SimC's extra 100% Ursoc's Fury shield recorded in `104.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`.
+Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing, native seeds 70448–70457. SimC is the mean of `collected_data.dtps` over ten measured iterations, after absorbs and including self-Stagger. `timeline_dmg_taken` sums run about 9% higher (consistent with 11 iterations divided by 10); do not use them. The corrected references remove SimC double applications and the Demon Spikes armor omission recorded in `healer-tank-replay/73.md`, `268.md` and `581.md`, and SimC's extra 100% Ursoc's Fury shield recorded in `104.md`. Reports and `SUMMARY.md` are in `game-engine/data/diagnostics/healer-tank-replay/all-10seeds-93a42f1f4a/`. Rows marked with a later commit were rerun after that tank's fixes; see its page.
 
 | Tank | Native taken | SimC | Δ | Healed / unhealed deaths |
 |---|---:|---:|---:|---:|
-| 66 | 3,798,647 | 3,249,867 (solo, `fake_solidarity=0`) | +16.9% | 0 / 4 |
+| 66 | 3,316,668 (`745943a0a`) | 3,249,867 (solo, `fake_solidarity=0`) | +2.1% | 0 / 0 |
 | 73 | 3,010,673 | 2,951,770 (corrected) | +2.0% | 0 / 0 |
-| 104 | 2,132,723 | 1,901,807 (corrected: Ursoc's Fury percentage) | +12.1% | 0 / 0 |
+| 104 | 1,741,972 (`04110b594`) | 1,901,807 (corrected: Ursoc's Fury percentage) | −8.4% | 0 / 0 |
 | 250 | 101,591 | 88,144 (canonical) | +15.3% | 0 / 0 |
 | 268 | 3,465,194 | 3,471,015 (corrected) | −0.2% | 0 / 0 |
 | 581 | 5,922,231 | 5,812,546 (corrected) | +1.9% | 0 / 0 |
 
 Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. The Protection Paladin native replay has no Solidarity, so its reference is the solo SimC run; the default reference adds fictional allied effects. Its absorb drop from 3.13M to 2.85M between runs is random Bulwark-application variation, and the remaining gap was missing Lightsmith armament rules; see [Protection Paladin](healer-tank-replay/66.md#mitigation-decomposition-and-lightsmith-fix-2026-10-29). The Guardian reference corrects SimC's Ursoc's Fury shield size; see [Guardian](healer-tank-replay/104.md#ursocs-fury-counterfactual-reference).
+
+### Midnight Season 2 boss-pressure calibration (2026-10-29; provisional)
+
+Warcraft Logs extracts are in `game-engine/data/diagnostics/mplus-calibration-2026-10-29/`. They include report metadata and affixes, boss-pull lists, resource-bearing damage events, and selected Guardian buff streams. The current-season Altar of Fangs sample has one run each at +2, +4, +6, +8, +10, +12, +15, +22, +23 and +24; three bosses provide health observations in each run. Den of Nalorakk and Ruby Life Pools each have +22 and +24 runs. These are convenience samples, not population-weighted estimates.
+
+For Rav'i, observed maximum HP at +2/+4/+6/+8/+10/+12/+15/+22/+23/+24 was 21,793,375 / 25,052,199 / 28,514,697 / 40,989,878 / 46,845,573 / 56,520,201 / 75,360,268 / 146,901,603 / 161,668,150 / 177,707,656. The +8 sample has Tyrannical; +10 and higher have both Fortified and Tyrannical. After dividing Tyrannical boss HP by 1.25, all three Altar bosses match the rounded factors 1.07, 1.23, 1.40, 1.61, 1.84, 2.22 and 2.96 through +15. These observations support the rounded factors and a 25% Tyrannical boss-health increase, not a direct measurement of Mythic 0. Affix IDs 9 and 10 appear together in every sampled +10 and higher run; there is no Fortified-only week at those levels.
+
+The following uses normal auto-attacks against Guardian tanks on +2, with no Tyrannical affix. The median logged `unmitigatedAmount` is divided by 1.07 and by the SimC dungeon dummy's 250,000 melee. The ranges are individual logged hits, not confidence intervals. Buff streams are saved alongside the extracts; the sample includes defensive auras and does not isolate cooldown-free hits.
+
+| Boss | Report / fight / pull | Hits | Logged hit range | Median | M0-normalized median / dummy |
+|---|---|---:|---:|---:|---:|
+| Writhing Coil | `zyRhmrY2NxnGgTPZ` / 1 / 8 | 9 | 260,419–280,615 | 274,277 | 1.025 |
+| Zul'jan | `zyRhmrY2NxnGgTPZ` / 1 / 14 | 22 | 131,593–294,574 | 200,384.5 | 0.749 |
+| Hoardmonger | `YcgyAmbfv1JLhq39` / 1 / 4 | 16 | 140,022–327,637 | 161,350.5 | 0.603 |
+| Sentinel of Winter | `YcgyAmbfv1JLhq39` / 1 / 10 | 16 | 277,030–326,297 | 282,633.5 | 1.057 |
+| Nalorakk | `YcgyAmbfv1JLhq39` / 1 / 14 | 8 | 316,949–365,884 | 326,249 | 1.220 |
+
+The resulting 0.603–1.220 band is a spread of five boss medians, not an uncertainty interval for a universal boss. WCL's field may still include persistent tank reductions; if it does, the raw damage before those reductions is higher. The extracts do not establish which reductions WCL has already reversed, so do not divide the field by Thick Hide or versatility without additional proof. Tyrannical's damage factor is assumed to be 1.15, not independently isolated by this sample.
+
+Applying each end of this proxy band to the survival scales gives the following **illustrative** highest keys: low boss pressure gives the upper end; high boss pressure gives the lower end. Fortified and Tyrannical differ only at +7–+9; at +10 and above both apply. A dash means the modeled +2 exceeds the survival scale, not that Mythic 0 is proven survivable.
+
+| Rank | Tank | Fortified | Tyrannical |
+|---:|---|---:|---:|
+| 1= | Protection Warrior, Vengeance Demon Hunter | +13–+21 | +13–+21 |
+| 3= | Blood Death Knight, Brewmaster Monk | +12–+19 | +12–+19 |
+| 5 | Guardian Druid | +8–+14 | +6–+14 |
+| 6 | Protection Paladin | below +2–+8 | below +2–+6 |
+
+These are not validated real-key ceilings: the field is not proven attacker-side raw, the sample includes cooldowns and other modifiers, and the pressure grid scales dummy strikes and bleed ticks as well as melee. The 1.15 damage assumption and survival grid also carry their own uncertainty.
 
 ## SimC party-pressure trace
 

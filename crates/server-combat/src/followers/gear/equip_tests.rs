@@ -4,12 +4,14 @@ use crate::stats::{
     CharacterStats, EquippedItemModifiers, EquippedItems, NativeItemInstances, StatsPlugin,
 };
 
-fn equipped_fire_mage(difficulty: u32) -> (f32, f32, Vec<u16>) {
-    let (mut h, actor) = super::super::kit_tests::at_level_unengaged(209059, 70, |app| {
+fn equipped_follower(entry: u32, level: u8, map: u32, difficulty: u32) -> (f32, f32, Vec<u16>) {
+    let (mut h, actor) = super::super::kit_tests::at_level_unengaged(entry, level, |app| {
         app.add_plugins(StatsPlugin);
     });
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::item_proc_data::load(&db).unwrap());
     let source = load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap();
     h.app.insert_resource(source);
     h.app
@@ -26,7 +28,7 @@ fn equipped_fire_mage(difficulty: u32) -> (f32, f32, Vec<u16>) {
     let copy = instances
         .create_map(
             &maps,
-            2515,
+            map,
             crate::maps::instances::InstanceEntrant {
                 character_id: 1,
                 leader: 1,
@@ -66,7 +68,7 @@ fn equipped_fire_mage(difficulty: u32) -> (f32, f32, Vec<u16>) {
         .spell_power;
     let items = h.app.world().get::<EquippedItems>(actor).unwrap();
     let modifiers = h.app.world().get::<EquippedItemModifiers>(actor).unwrap();
-    assert_eq!(items.items.len(), 16, "all mage equipment slots filled");
+    assert!(!items.items.is_empty(), "follower equipment is populated");
     let levels = modifiers
         .items
         .iter()
@@ -77,8 +79,9 @@ fn equipped_fire_mage(difficulty: u32) -> (f32, f32, Vec<u16>) {
 
 #[test]
 fn follower_gear_equips_real_items_and_stats_follow_dungeon_difficulty() {
-    let (before, normal, normal_levels) = equipped_fire_mage(205);
-    let (_, mythic, mythic_levels) = equipped_fire_mage(23);
+    let (before, normal, normal_levels) = equipped_follower(209059, 70, 2515, 205);
+    let (_, mythic, mythic_levels) = equipped_follower(209059, 70, 2515, 23);
+    assert_eq!(normal_levels.len(), 16, "all mage equipment slots filled");
     assert!(normal_levels.iter().all(|level| *level == 73));
     assert!(mythic_levels.iter().all(|level| *level == 76));
     assert!(normal > before, "real equipment increases spell power");
@@ -86,4 +89,19 @@ fn follower_gear_equips_real_items_and_stats_follow_dungeon_difficulty() {
         mythic > normal,
         "sourced difficulty level changes the same follower's stats"
     );
+}
+
+#[test]
+fn murder_row_level_90_followers_equip_the_same_sourced_difficulty_level() {
+    let mut dungeon_level = None;
+    for entry in [209057, 209072, 209053, 209059] {
+        let (_, _, levels) = equipped_follower(entry, 90, 2813, 205);
+        let level = levels[0];
+        assert!(levels.iter().all(|value| *value == level));
+        assert_eq!(*dungeon_level.get_or_insert(level), level);
+        eprintln!(
+            "follower {entry}: {} slots at item level {level}",
+            levels.len()
+        );
+    }
 }

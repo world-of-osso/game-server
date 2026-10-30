@@ -444,3 +444,83 @@ fn follower_healer_walks_through_actual_stockade_doorway_before_healing() {
         h.inbox.log
     );
 }
+
+#[test]
+#[ignore = "requires FOLLOWER_RUBY_DATA and FOLLOWER_RUBY_GROUND authored private bakes"]
+fn follower_chase_crosses_ruby_raised_path_seam_without_dropping_into_floor_pocket() {
+    let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
+    let ground = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_GROUND").unwrap());
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let wdts = HashMap::from([(2521, maps.map(2521).unwrap().wdt_file_data_id)]);
+    let map = InMap::continent(2521);
+    // Live instance 3: Crenna and Meredy chased across the raised path's narrow
+    // collision crack at 1465.6,156.85 and stuck in the floor pocket below.
+    let target = wow(1480.0, -159.5, 126.62);
+    let (corner, crack) = (Vec2::new(1464.01, 157.86), Vec2::new(1465.61, 156.85));
+    let approach = (crack - corner).normalize();
+    let mut support = GroundMap::new(&data, wdts.clone());
+    for offset in 0..12 {
+        let start = corner + approach * (offset as f32 * 0.04);
+        let GroundProbe::Supported(height) =
+            support.creature_ground_at(2521, Vec3::new(start.x, 131.0, start.y))
+        else {
+            panic!("raised path start {start} lacks support")
+        };
+        let from = Position {
+            x: start.x,
+            y: height,
+            z: start.y,
+        };
+        let (mut h, unit, _) = spawn_profile_fixture(209057);
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(unit).insert((
+            from,
+            map,
+            crate::creature_ai::SpawnPoint {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+        ));
+        h.app.world_mut().entity_mut(enemy).insert((target, map));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((wow(1482.0, -162.0, 127.1), map));
+        h.app.insert_resource(GroundMap::new(&data, wdts.clone()));
+        h.app
+            .insert_resource(crate::navigation::Navigation::new(&ground.join("navmesh")));
+        crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+        let (mut chased_across, mut reached) = (false, false);
+        for tick in 0..200 {
+            h.advance(1);
+            let at = *h.app.world().get::<Position>(unit).unwrap();
+            let pursuing = matches!(
+                h.app.world().get::<crate::creature_ai::CreatureState>(unit),
+                Some(crate::creature_ai::CreatureState::Pursuing { .. })
+            );
+            chased_across |= pursuing && (1465.5..1466.5).contains(&at.x);
+            assert!(
+                !((1464.0..1474.0).contains(&at.x)
+                    && (155.0..158.0).contains(&at.z)
+                    && at.y < 128.0),
+                "offset{offset} tick{tick}: chase dropped through the raised path crack to {at:?}"
+            );
+            let enemy_at = *h.app.world().get::<Position>(enemy).unwrap();
+            reached |= (enemy_at.x - at.x).hypot(enemy_at.z - at.z) < 5.0;
+        }
+        assert!(
+            chased_across,
+            "offset{offset}: follower must cross the crack while pursuing"
+        );
+        assert!(reached, "offset{offset}: follower never reached its target");
+    }
+}

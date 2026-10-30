@@ -13,6 +13,23 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 
+pub(super) fn next_gcd_decision_boundary(
+    run: &super::dps_parity::Run,
+    boundary: std::time::Duration,
+) -> std::time::Duration {
+    let world = run.app.world();
+    let now = crate::spell_cast::history_now(world);
+    let Some(ready) = world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .and_then(|history| history.active_gcd_ready_at(now))
+    else {
+        return boundary;
+    };
+    let delay =
+        std::time::Duration::from_secs_f64(ready - now) + std::time::Duration::from_nanos(1);
+    boundary.min(world.resource::<Time>().elapsed() + delay)
+}
+
 pub(super) fn sampled_blocked_pct(
     world: &World,
     source: Entity,
@@ -772,6 +789,7 @@ fn replay_registered_run_with_healing(
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
+    let mut outgoing_damage_hits_by_spell = BTreeMap::<u32, u64>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut energize_timeline = Vec::new();
     let mut cast_timeline = Vec::new();
@@ -1048,6 +1066,7 @@ fn replay_registered_run_with_healing(
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
         while run.app.world().resource::<Time>().elapsed() < boundary {
             let next = super::dps_parity::next_fixture_boundary(&run, boundary);
+            let next = next_gcd_decision_boundary(&run, next);
             super::dps_parity::advance_fixture_step(&mut run, next)?;
             super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
             if next < boundary {
@@ -1107,9 +1126,10 @@ fn replay_registered_run_with_healing(
                                 .is_some_and(|summon| summon.owner == tank)
                     })
             {
-                *outgoing_damage_by_spell
-                    .entry(event.spell_id.unwrap_or(0))
-                    .or_default() += i64::from((event.amount - event.overflow.max(0)).max(0));
+                let spell_id = event.spell_id.unwrap_or(0);
+                *outgoing_damage_by_spell.entry(spell_id).or_default() +=
+                    i64::from((event.amount - event.overflow.max(0)).max(0));
+                *outgoing_damage_hits_by_spell.entry(spell_id).or_default() += 1;
             }
             if event.source == Some(tank.to_bits())
                 && event.kind == CombatLogKind::Damage
@@ -1294,6 +1314,7 @@ fn replay_registered_run_with_healing(
     report["cast_timeline"] = json!(cast_timeline);
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
+    report["outgoing_damage_hits_by_spell"] = json!(outgoing_damage_hits_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
     report["melee_rage"] = json!(
         capture

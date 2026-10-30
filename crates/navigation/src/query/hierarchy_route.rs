@@ -23,6 +23,9 @@ impl NavigationMap {
         let filter = filter();
         let (start_ref, start_pos) = self.nearest(start, &filter)?;
         let (end_ref, end_pos) = self.nearest(end, &filter)?;
+        if self.disconnected.contains(&(start_ref, end_ref)) {
+            return Err("unreachable target (hierarchy disconnected)".into());
+        }
         let (start_cluster, mut start_tile, start_base) =
             self.hierarchy_cluster(&graph, start_ref)?;
         let route = if plan.target == Some(end) && plan.expected_cluster == Some(start_cluster) {
@@ -47,9 +50,11 @@ impl NavigationMap {
                 end_pos,
                 true,
             )?;
-            graph
-                .route(&starts, &goals, Vec3::from_array(end_pos))?
-                .ok_or("unreachable target (hierarchy disconnected)")?
+            let Some(route) = graph.route(&starts, &goals, Vec3::from_array(end_pos))? else {
+                self.disconnected.insert((start_ref, end_ref));
+                return Err("unreachable target (hierarchy disconnected)".into());
+            };
+            route
         };
         let Some(crossing) = route.windows(2).position(|pair| {
             graph.nodes[pair[0] as usize].cluster != graph.nodes[pair[1] as usize].cluster
@@ -83,6 +88,7 @@ impl NavigationMap {
             destination_ref,
             destination_pos,
             &filter,
+            false,
         )?;
         let points = self.pull_corners(&leg.start, &leg.end, &leg.polygons)?;
         plan.target = Some(end);

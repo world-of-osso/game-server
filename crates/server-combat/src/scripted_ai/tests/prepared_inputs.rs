@@ -301,6 +301,12 @@ fn decode_encounter_inputs(
     }
     inputs.push(store);
     inputs.push(scripts);
+    if entry == 210149 {
+        let (vehicles, accessories) =
+            crate::vehicle::load_runtime(&crate::ground::ground_data_dir(), &conn).unwrap();
+        inputs.push(vehicles);
+        inputs.push(accessories);
+    }
     if !populate {
         inputs.spawn = Some(load_authored_spawn(&conn, entry, map_id, 0));
     }

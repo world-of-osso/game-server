@@ -391,6 +391,10 @@ pub(crate) fn queue_map_content(
             difficulty_id,
             world_data.map(|data| &data.spawn_groups),
         );
+        // TC OnGameObjectCreate → AddDoor: a door spawns in its encounters' state.
+        commands.queue(move |world: &mut World| {
+            crate::scripted_ai::encounter_doors::update_doors(world, map);
+        });
     }
 }
 

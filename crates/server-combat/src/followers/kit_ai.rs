@@ -426,6 +426,9 @@ pub(super) fn conditions_met(
     {
         return false;
     }
+    if entry.spell_id == 118 && !polymorph_target_allowed(world, target, party) {
+        return false;
+    }
     if !action_history_allows(world, unit, entry)
         || !cooldown_allows(world, unit, entry)
         || !entry
@@ -658,6 +661,44 @@ fn maintenance_aura_present(
                     Some(window) => active.expires_at.is_none_or(|expiry| expiry - now > window),
                 })
         }))
+}
+
+fn polymorph_target_allowed(world: &World, target: Entity, party: &[Entity]) -> bool {
+    let boss = world
+        .get::<InMap>(target)
+        .zip(world.get::<shared::components::Npc>(target))
+        .zip(world.get_resource::<crate::maps::MapStore>())
+        .is_some_and(|((map, npc), store)| {
+            store
+                .raid_creature_encounters
+                .contains_key(&(map.map_id, npc.template_id))
+        });
+    if boss {
+        return false;
+    }
+    let attacking = party.iter().any(|member| {
+        world
+            .get::<crate::combat::AutoAttack>(*member)
+            .is_some_and(|attack| attack.victim == target)
+            || world
+                .get::<crate::spell_cast::auto_repeat::AutoRepeat>(*member)
+                .is_some_and(|repeat| repeat.targets(target))
+            || world
+                .get::<CastState>(*member)
+                .is_some_and(|cast| cast.target == target.to_bits())
+    });
+    let periodic_damage = world
+        .get::<crate::auras::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                party.contains(&aura.caster)
+                    && aura
+                        .effects
+                        .iter()
+                        .any(|effect| effect.aura_type == crate::auras::PERIODIC_DAMAGE_AURA)
+            })
+        });
+    !attacking && !periodic_damage
 }
 
 pub(super) fn combat_allows(

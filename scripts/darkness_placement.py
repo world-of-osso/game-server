@@ -14,11 +14,16 @@ from contextlib import closing
 from pathlib import Path
 import sqlite3
 
+# TDB's 1,266 existing spawns on the follower dungeon maps use 7,200 seconds.
+DUNGEON_RESPAWN_SECONDS = 7200
+
 POLICY = 'DARKNESS_PLACEMENT_FROM_WCL_ENCOUNTER_START_SAMPLE'
 MAP = 2651
 ENTRY = 208747
 WCL_X, WCL_Y, WCL_FACING = -2799, 39193, -746
 FLOOR_Z = 87.26754
+COMMENT = (f'{POLICY}; wcl:WBYDm1N6JTZzCFnd fight3 pull16 actor51 ENCOUNTER_START+975ms '
+           f'x={WCL_X} y={WCL_Y} facing={WCL_FACING}; floor=navmesh2651 {FLOOR_Z}')
 
 
 def logged_pose():
@@ -33,7 +38,8 @@ def place(connection):
         raise ValueError(f'expected one map{MAP} {ENTRY} placement, found {len(rows)}')
     x, y, z, o = logged_pose()
     connection.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,'
-                       'orientation=? WHERE guid=?', (x, y, z, o, rows[0][0]))
+                       'orientation=?,spawntimesecs=?,Comment=? WHERE guid=?',
+                       (x, y, z, o, DUNGEON_RESPAWN_SECONDS, COMMENT, rows[0][0]))
     return rows[0][0]
 
 

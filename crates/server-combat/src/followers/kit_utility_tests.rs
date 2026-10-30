@@ -7,7 +7,7 @@ use shared::casting::CastState;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
-fn add_other_engaged_enemy(h: &mut Harness, unit: bevy::prelude::Entity) {
+fn add_other_engaged_enemy(h: &mut Harness, unit: bevy::prelude::Entity) -> bevy::prelude::Entity {
     let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 4.0);
     let map = *h.app.world().get::<crate::maps::InMap>(unit).unwrap();
     h.app
@@ -15,6 +15,7 @@ fn add_other_engaged_enemy(h: &mut Harness, unit: bevy::prelude::Entity) {
         .entity_mut(other)
         .insert((map, crate::networking::CombatTarget(Some(unit))));
     crate::creature_aggro::add_threat(h.app.world_mut(), other, unit, 1.0);
+    other
 }
 
 pub(super) fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
@@ -264,7 +265,8 @@ fn follower_kit_utility_crenna_does_not_dispel_an_empty_patient() {
 #[test]
 fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     let (mut h, unit) = level32(209059);
-    add_other_engaged_enemy(&mut h, unit);
+    let add = add_other_engaged_enemy(&mut h, unit);
+    h.npc = add;
     // Polymorph admits native creature types. The generic Kobold actor has no
     // template authority until this fixture loads its real row; never guess7.
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
@@ -297,6 +299,68 @@ fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
             .count(),
         1
     );
+}
+
+#[test]
+fn follower_kit_utility_meredy_does_not_polymorph_party_attack_target() {
+    let (mut h, unit) = level32(209059);
+    add_other_engaged_enemy(&mut h, unit);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    wait_for_native_school_unlock(&mut h, 2139);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    for _ in 0..200 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(h.inbox.log.iter().all(|event| {
+        event.source != Some(unit.to_bits())
+            || event.spell_id != Some(118)
+            || event.kind != CombatLogKind::CastStart
+    }));
+}
+
+#[test]
+fn follower_kit_utility_meredy_does_not_polymorph_real_uldaman_boss() {
+    let (mut h, unit) = level32(209059);
+    h.stop_attack();
+    h.advance(3);
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let store = crate::maps::store::load_map_store(&db).unwrap();
+    assert!(store.raid_creature_encounters.contains_key(&(2451, 184582)));
+    h.app.insert_resource(store);
+    let map = crate::maps::InMap {
+        map_id: 2451,
+        instance_id: 1,
+    };
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        map,
+        shared::components::Npc {
+            template_id: 184582,
+            name: "Eric the Swift".into(),
+        },
+    ));
+    h.app.world_mut().entity_mut(h.caster).insert(map);
+    h.app.world_mut().entity_mut(unit).insert(map);
+    add_other_engaged_enemy(&mut h, unit);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    wait_for_native_school_unlock(&mut h, 2139);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    for _ in 0..200 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(h.inbox.log.iter().all(|event| {
+        event.source != Some(unit.to_bits())
+            || event.spell_id != Some(118)
+            || event.kind != CombatLogKind::CastStart
+    }));
 }
 
 #[test]

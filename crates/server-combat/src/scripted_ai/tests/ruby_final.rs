@@ -67,6 +67,67 @@ fn ruby_final_joint_death_grants_only_one_copy_credit() {
 }
 
 #[test]
+fn ruby_final_death_awards_owner_real_achievement() {
+    let (mut h, erkhart, kyrakka, map) = ruby_copy(205);
+    let conn = Connection::open(world_db_path()).unwrap();
+    h.app
+        .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
+    h.app.init_resource::<crate::maps::ServerClock>();
+    let player = h.players[0].0;
+    h.app.world_mut().entity_mut(player).insert((
+        crate::achievement::PlayerAchievementState::default(),
+        crate::persistence::ClientId(2001),
+    ));
+    // A complete run has already defeated the first two authored encounters.
+    for encounter in [2609, 2606] {
+        let boss =
+            instance_script::boss_id_for_encounter(h.app.world_mut(), map, encounter).unwrap();
+        assert!(instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            boss,
+            EncounterState::Done
+        ));
+    }
+    h.engage(erkhart);
+    h.advance(0.2);
+    h.hit_pct(erkhart, 200.0);
+    h.advance(0.1);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap()
+            .earned_ids
+            .contains(&16266)
+    );
+    h.hit_pct(kyrakka, 200.0);
+    h.advance(0.1);
+    let state = h
+        .app
+        .world()
+        .get::<crate::achievement::PlayerAchievementState>(player)
+        .unwrap();
+    assert_eq!(state.criteria_progress.get(&54034), Some(&1));
+    assert!(state.earned_ids.contains(&16266));
+    let response = crate::admin_ipc::dispatch_staging_fixture(
+        h.app.world_mut(),
+        serde_json::json!({"ListAchievements": {"character_name": "Fixshout1"}}),
+    );
+    let crate::admin_types::AdminResponse::AchievementsListed { character, .. } = response else {
+        panic!("achievement admin readback unavailable");
+    };
+    assert_eq!(character["criteria_progress"]["54034"], 1);
+    assert!(
+        character["earned_ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| *id == 16266)
+    );
+}
+
+#[test]
 fn ruby_final_erkhart_logged_clocks() {
     for difficulty in [1, 205] {
         let (mut h, erkhart, _kyrakka, _) = ruby_copy(difficulty);

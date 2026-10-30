@@ -12,6 +12,8 @@ import retail_content
 from follower_placement_sources import (digest, read_cached_npc, read_db2,
     read_source_floor_support, read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
+# TDB's 1,266 existing spawns on the follower dungeon maps use 7,200 seconds.
+DUNGEON_RESPAWN_SECONDS = 7200
 PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 TABLE_KEYS = {'content_creature_template': ('entry',),
@@ -137,8 +139,8 @@ def write_placements(target, manifest, placements, bindings):
         existing = target.execute('SELECT id1,map,Comment,position_x,position_y,position_z FROM content_creature WHERE guid=?', (guid,)).fetchone()
         if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment, x, y, z):
             raise ValueError(f'reserved placement GUID collision at{guid}')
-        target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
-                       (guid, record['entry'], manifest['map_id'], x, y, z, '1', comment))
+        target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawntimesecs,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?,?)',
+                       (guid, record['entry'], manifest['map_id'], x, y, z, DUNGEON_RESPAWN_SECONDS, '1', comment))
         existing_binding = target.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', binding[:2]).fetchone()
         if existing_binding is not None and tuple(existing_binding) != binding:
             raise ValueError(f'primary binding conflicts for{binding[:2]}')

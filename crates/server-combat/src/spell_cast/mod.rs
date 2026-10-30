@@ -825,6 +825,15 @@ impl SpellHistory {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    pub fn active_gcd_ready_at(&self, now: f64) -> Option<f64> {
+        self.gcd_ready_at
+            .values()
+            .copied()
+            .filter(|&deadline| deadline > now)
+            .max_by(f64::total_cmp)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
     pub fn clear_fixture_precombat_gcd(&mut self) {
         self.gcd_ready_at.clear();
     }
@@ -2718,6 +2727,21 @@ fn preserve_cost_sign(initial: f32, modified: f32) -> f32 {
     }
 }
 
+/// TDB non-vehicle spellclicks use an ordinary cast, not a triggered cast.
+pub(crate) fn start_spellclick_cast(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Result<(), CastFailure> {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)?;
+    start_cast(world, caster, &spell, Some(target))
+}
+
 fn start_cast(
     world: &mut World,
     caster: Entity,
@@ -3062,6 +3086,7 @@ fn execute_cast_with_primary(
         AuraEvent {
             actor: caster,
             target: None,
+            action_target: explicit,
             actor_mask: [0, procs::PROC2_CAST_SUCCESSFUL],
             target_mask: [0; 2],
             spell_id: Some(spell.id),
@@ -3114,6 +3139,7 @@ fn execute_cast_with_primary(
         crate::combat::attack_stop(world, caster);
     }
     auto_repeat::on_cast(world, caster, spell, explicit);
+    crate::npc_interaction::nalorakk_offerings::finish_pickup(world, caster, spell.id, explicit);
     Ok(())
 }
 
@@ -3941,6 +3967,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                action_target: spell.cast_primary_target,
                 actor_mask: [0; 2],
                 target_mask: [procs::PROC_TAKE_ANY_DAMAGE, 0],
                 spell_id: Some(spell.id),
@@ -3987,6 +4014,7 @@ fn push_hit_events(
             AuraEvent {
                 actor: caster,
                 target: Some(target),
+                action_target: spell.cast_primary_target,
                 actor_mask: [actor_mask, 0],
                 target_mask: [target_mask, 0],
                 spell_id: Some(spell.id),
@@ -4585,6 +4613,21 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    let cast = take_cast_state(world, caster)?;
+    end_channel_effects(world, caster, &cast);
+    Some(cast)
+}
+
+/// The channel's auras and ritual end with it.
+fn end_channel_effects(world: &mut World, caster: Entity, cast: &CastState) {
+    if cast.cast_type == CastType::Channel {
+        crate::auras::channel_ended(world, caster, cast.spell_id);
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
+    }
+}
+
+/// Clear the cast bar and its pending state, leaving channel effects in place.
+fn take_cast_state(world: &mut World, caster: Entity) -> Option<CastState> {
     empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
     world
@@ -4596,10 +4639,6 @@ pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     let cast = world.entity_mut(caster).take::<CastState>()?;
     debug!(caster = ?caster, state = ?cast, "Cast state ended");
     mark_dirty(world, caster);
-    if cast.cast_type == CastType::Channel {
-        crate::auras::channel_ended(world, caster, cast.spell_id);
-        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
-    }
     Some(cast)
 }
 
@@ -4704,14 +4743,20 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     }
 }
 
+/// TC Spell::update: `finish()` then `OnChannelFinished`, while the channel's
+/// target auras still stand (Leymor's Stomp damage reads its Sprout stacks before
+/// their Stomp auras end and kill them).
 fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
     crate::auras::channel_completed(world, caster, spell_id);
-    end_cast(world, caster);
+    let cast = take_cast_state(world, caster);
     crate::scripted_ai::dispatch(
         world,
         caster,
         crate::scripted_ai::Hook::ChannelFinished { spell_id },
     );
+    if let Some(cast) = cast {
+        end_channel_effects(world, caster, &cast);
+    }
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.

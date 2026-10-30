@@ -39,6 +39,11 @@ Implementation/proof: [navigation drop ownership](../wiki/systems/navigation.md#
 
 [Source/proof](../wiki/systems/navigation.md#idle-follow-vertical-range--2026-10-22): one nine-case GREEN at3009881d7 covers the new RED and eight existing follow controls; merged tip awaits lead gate. No new connector, query/profile change or NPC fall damage.
 
+## Follow PATHFIND_INCOMPLETE
+
+- [x] Follow only (TC a352b1fa FollowMovementGenerator walks PATHFIND_INCOMPLETE; only NOPATH stops): when the follow point is proven disconnected (completed Detour search or hierarchy disconnect), the follower walks the corridor to the polygon Detour found closest to it. Chase and entrance→boss movers keep the disconnect as Blocked. Regression: `darkflame_drop_tests.rs::darkflame_trackyard_*` (live pair (297.1,86.5,-38.6)→(331.2,86.9,-36.8)).
+- [x] A navigation map remembers endpoint polygon pairs its portal hierarchy proved disconnected and does not search the hierarchy again for them; tiles never unload, so the verdict is fixed by the bake.
+
 ## Dense-map bake capacity
 
 - [x] Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.

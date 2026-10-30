@@ -74,8 +74,11 @@ fn npc_kill_updates_primary_and_spillover_reputation() {
     assert_eq!(reputation.get_value(72), stormwind + 10);
     assert_eq!(reputation.get_value(47), ironforge + 2);
     assert_eq!(reputation.get_value(76), orgrimmar);
-    assert!(message.contains("Stormwind"));
-    assert!(message.contains("spillover"));
+    // FACTION_STANDING_INCREASED, one CHAT_MSG_COMBAT_FACTION_CHANGE line per faction.
+    assert_eq!(
+        message,
+        "Reputation with Stormwind increased by 10.\nReputation with Ironforge increased by 2."
+    );
 }
 
 #[test]

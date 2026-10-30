@@ -3,3 +3,6 @@ pub use server::test_support::graph::*;
 
 #[path = "corridor_inputs.rs"]
 mod corridor_inputs;
+pub(super) mod extraction;
+mod source;
+mod topology;

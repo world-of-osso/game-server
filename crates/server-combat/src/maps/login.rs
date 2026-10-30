@@ -77,14 +77,21 @@ impl LoginMaps<'_> {
             checkpoint.map_or(difficulty_id, |(_, difficulty)| difficulty),
             raid_difficulty,
         );
+        let unix = self.clock.as_deref().copied().unwrap_or_default().unix();
+        if self.is_dungeon(map_id)
+            && self
+                .instances
+                .find_instance(&self.store, map_id, entrant, unix)
+                .is_none()
+        {
+            // Refuse before creating a copy; otherwise the next login could reuse
+            // that empty copy and bypass entrance validation.
+            self.reset_entrance(map_id)?;
+        }
         let place = match self.enter(map_id, entrant) {
             Some(resolved) => {
-                let restored = checkpoint.is_some_and(|(map, _)| map == resolved.map);
-                let position = match (resolved.created && !restored, self.is_dungeon(map_id)) {
-                    (true, true) => self
-                        .store
-                        .entrance_location(map_id)
-                        .map_or(position, |entrance| entrance.bevy_position()),
+                let position = match (resolved.created, self.is_dungeon(map_id)) {
+                    (true, true) => self.reset_entrance(map_id)?.bevy_position(),
                     _ => position,
                 };
                 self.spawn_if_created(commands, resolved);
@@ -203,6 +210,17 @@ impl LoginMaps<'_> {
             )
             .ok()?;
         Some(())
+    }
+
+    fn reset_entrance(&self, map_id: u32) -> Option<WorldLocation> {
+        let entrance = self.store.dungeon_entrance_location(map_id);
+        match entrance.filter(|location| location.map_id == map_id) {
+            Some(location) => Some(location),
+            None => {
+                error!("Dungeon map {map_id} has no login entrance");
+                None
+            }
+        }
     }
 
     fn is_dungeon(&self, map_id: u32) -> bool {
