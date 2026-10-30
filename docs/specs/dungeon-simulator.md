@@ -78,6 +78,10 @@ An NPC chase without a walking path must hold its actual position and use the ex
 
 Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
 
+## Dawnbreaker flight legs
+
+`DAWNBREAKER_FLIGHT_ALTITUDE_TERRAIN_CLEARANCE_INFERRED` (approved 2026-10-30): WCL report `x3HzDRn6yVjqCbt8` fight 7 supplies horizontal positions but not altitude. Project logged ground endpoints onto native geometry. For each horizontal segment, sample native ground and collision surfaces at no more than five-yard intervals; use the highest sampled surface plus 15 yards for clearance. Shared waypoints use the higher adjacent segment altitude. Check every resulting 3D segment against native LOS and fail explicitly on missing surfaces or blocked segments; this inferred height is not logged flight evidence. The leader flies and production follower flight follows. Keep sourced boss placements and do not simulate a moving ship. Simulator integration and seed qualification remain pending.
+
 ## Native addon auras
 
 Apply source creature and template addon auras at spawn and on actual home return through the production addon system. Preserve native evade removal and restoration.
