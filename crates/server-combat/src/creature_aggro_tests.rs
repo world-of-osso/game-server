@@ -1659,7 +1659,13 @@ fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
         },
         90,
     );
-    app.world_mut().entity_mut(target).insert(map);
+    app.world_mut().entity_mut(target).insert((
+        map,
+        Health {
+            current: 433_060.0,
+            max: 433_060.0,
+        },
+    ));
     let caller_position = *app.world().get::<Position>(caller).unwrap();
     let distances: Vec<_> = helpers
         .iter()
