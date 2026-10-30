@@ -191,6 +191,7 @@ pub(crate) fn unload_map_content(world: &mut World, maps: &[InMap]) {
         inactive.0.retain(|map, _| !maps.contains(map));
     }
     crate::scripted_ai::instance_script::unload_instance_scripts(world, maps);
+    crate::achievement::unload_scenario_runs(world, maps);
 }
 
 #[cfg(test)]
