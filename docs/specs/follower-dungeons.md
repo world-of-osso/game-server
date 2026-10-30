@@ -20,6 +20,8 @@ Follower party roster portraits carry the spawned NPC's actual template-selected
 
 `MURDER_ROW_DEMONIC_GATEWAY_LOG_CORRELATED`: After Zaen3102 is Done, a player within the inferred20-yard radius of Bevy (8878.12, 61.60762, 4777.14) takes an automatic near teleport to (8872.60, 100.26132, 4857.73), with living owned followers and companions. Endpoint XY follows the Retail 1216138 landing and pre-landing observations; nav connectivity selects the landing Z. Launcher identity and flight duration are unsourced (≤3.70s from Thalecgos); TC no-ops without JumpChargeParams1272. The activation and radius are project-inferred, not an authored click or flight.
 
+`LITHIEL_ENCOUNTER_ENTRY_LOG_CORRELATED`: Bind encounter3105 to creature234763, not the gateway actor237415. Ten archived Retail kills show 234763 dying within102ms of successful encounter completion; 237415 appears in gateway casts without combat events. Keep the existing234763 placement and do not assign the gateway actor a boss faction or encounter credit.
+
 `FOLLOWER_RUN_RESTART_PERSISTENCE_GAP`: A server restart does not restore the follower party or its active run. Murder Row's owner logged back into difficulty 205 without a group; releasing spirit then created a difficulty-1 copy. A resumed clear and its encounter credit are not established. Run live clears without restarting the server until run persistence is implemented.
 
 ## Admin harness party staging

@@ -8,8 +8,10 @@ from pathlib import Path
 from import_log_population import import_population, validate_copy
 
 # TC 15e0ed76 murder_row.h and instance_murder_row.cpp; Journal DB2 70448.
+# LITHIEL_ENCOUNTER_ENTRY_LOG_CORRELATED: ten Retail 234763 deaths occur within
+# 102 ms of successful encounter3105 completion. TC's 237415 is the gateway actor.
 BINDINGS = [(2813, 234647, 3103, 2, 2681, 5853, 75659),
-            (2813, 237415, 3105, 3, 2682, 5855, 124577)]
+            (2813, 234763, 3105, 3, 2682, 5855, 124577)]
 # 100526_202005 combat log 20:51:17.725: first hit on Xathuux.
 # The closest logged pack at (8662.72,-5014.65,127) has a baked navmesh
 # route to this upper floor (126.20164), but not to the lower candidates.
@@ -21,32 +23,18 @@ XATHUUX = dict(source_key='murder-row-xathuux-100526-205117', map=2813,
     population_kind='likely_spawn', summoned=False, identity_ambiguous=False)
 
 
-# Same GUID casts Summon Infernal at this position before encounter 3105 in
-# WoWCombatLog-100726_223902.txt:314933; geometry resolves one floor candidate.
-LITHIEL_SOURCE_KEY = 'dec5d45220c7a4a01959d0ab2dbb67778cda60ca547223947122653cb8d07640'
-LITHIEL_PRE_PULL = (9151.12, -4944.43, 141.43365, 5.2962)
+# This observation was mistakenly treated as the encounter boss's static spawn.
+LITHIEL_RP_SOURCE_KEY = 'dec5d45220c7a4a01959d0ab2dbb67778cda60ca547223947122653cb8d07640'
 
 
-def correct_lithiel(db):
-    rows = db.execute('''SELECT c.guid,c.position_x,c.position_y,c.position_z,c.orientation,p.observation_json
-        FROM content_creature c JOIN log_derived_population p ON p.guid=c.guid
-        WHERE c.map=2813 AND c.id1=237415 AND c.Comment='LOG_DERIVED_POPULATION'
-          AND p.source_key=?''', (LITHIEL_SOURCE_KEY,)).fetchall()
-    if len(rows) != 1:
-        raise ValueError('expected exactly one source-identified log-derived Lithiel')
-    guid, x, y, z, facing, raw = rows[0]
-    if (x, y, z, facing) not in ((8873.37, -4848.47, -7.0737424, 4.6299), LITHIEL_PRE_PULL):
-        raise ValueError(f'unexpected Lithiel position: {(x, y, z, facing)}')
-    observation = json.loads(raw)
-    observation.update(x=LITHIEL_PRE_PULL[0], y=LITHIEL_PRE_PULL[1], z=LITHIEL_PRE_PULL[2],
-        observed_x=LITHIEL_PRE_PULL[0], observed_y=LITHIEL_PRE_PULL[1], facing=LITHIEL_PRE_PULL[3],
-        position_method='last_pre_encounter_start', z_method='single_candidate', floor_anchor_rows=None,
-        observation_event='SPELL_CAST_SUCCESS', observation_time='10/7/2026 23:06:53.269-5')
-    db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,orientation=? WHERE guid=?',
-               (*LITHIEL_PRE_PULL, guid))
-    db.execute('UPDATE log_derived_population SET z_method=?,observed_event=?,observed_time=?,observation_json=? WHERE guid=?',
-               ('single_candidate', 'SPELL_CAST_SUCCESS', observation['observation_time'],
-                json.dumps(observation, sort_keys=True, separators=(',', ':')), guid))
+def retire_lithiel_rp_spawn(db):
+    db.execute('''DELETE FROM content_creature WHERE map=2813 AND id1=237415
+        AND Comment='LOG_DERIVED_POPULATION' AND guid IN
+        (SELECT guid FROM log_derived_population WHERE source_key=? AND npc_id=237415)''',
+        (LITHIEL_RP_SOURCE_KEY,))
+    db.execute('DELETE FROM log_derived_population WHERE source_key=? AND npc_id=237415',
+               (LITHIEL_RP_SOURCE_KEY,))
+    db.execute('DELETE FROM raid_encounter_creature WHERE map_id=2813 AND creature_entry=237415 AND encounter_id=3105')
 
 
 # First positioned player event after zone entry, 100126_203256 line 737884.
@@ -60,7 +48,7 @@ def prepare(path):
     path = validate_copy(path)
     report = import_population(path, [XATHUUX])
     with sqlite3.connect(path) as db:
-        correct_lithiel(db)
+        retire_lithiel_rp_spawn(db)
         existing = db.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=?', (ENTRANCE[0],)).fetchone()
         if existing is not None and existing != ENTRANCE:
             raise ValueError(f'conflicting entrance: {existing}')
