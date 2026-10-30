@@ -135,6 +135,14 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('attack', 110, required_aura=264173,
                       resources=[dict(power='SoulShards', below=4)])
 
+    # SimC76f8118 sc_shaman.cpp9336–9339: this totem heals, not attacks.
+    # Elemental's default APL does not schedule it; retain it as utility.
+    if spec == 262 and spell == 5394:
+        return policy('utility', 1000, 'self')
+    # SimC76f8118 sc_monk.cpp3338–3357 casts115203 to grant120954.
+    if spec == 269 and spell == 115203:
+        return policy('defensive', 30, 'self', health_below=0.50,
+                      attacked=True, missing_aura=120954)
     # SimC76f8118 apl_paladin.cpp106/110: Hammer replaces Judgment while wings are active.
     if spec == 66 and spell == 1241413:
         return policy('attack', 110, required_self_aura=1241410)

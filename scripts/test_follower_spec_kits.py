@@ -66,6 +66,8 @@ class FollowerKitProducerTests(unittest.TestCase):
         ]:
             self.assertEqual(active(spec, parent, level)[0][4], 'passive')
             self.assertEqual(active(spec, action, level)[0][4], slot)
+        self.assertEqual(json.loads(active(262, 5394, 90)[0][6])['target'], 'self')
+        self.assertEqual(json.loads(active(269, 115203, 90)[0][6])['missing_aura'], 120954)
         self.assertEqual(active(103, 106951, 90), [], 'Incarnation replaces Berserk')
         self.assertEqual(active(103, 102543, 90)[0][4], 'buff')
 
