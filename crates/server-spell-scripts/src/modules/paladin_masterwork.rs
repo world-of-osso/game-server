@@ -2,7 +2,9 @@
 //! 448–462, 636–658: Masterwork forges Lesser Weapon charges.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{AuraApplication, AuraInstance, AuraSource, procs::AuraEvent, scripts::AuraScripts};
+use combat::auras::{
+    AuraApplication, AuraInstance, AuraSource, procs::AuraEvent, scripts::AuraScripts,
+};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::targets::{Relation, relation_matches};
