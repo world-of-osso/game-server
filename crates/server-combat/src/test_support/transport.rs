@@ -76,7 +76,10 @@ pub fn read_registrations(
             source_guid: None,
             source,
             destination,
-            distance: points.windows(2).map(|pair| pair[0].distance(pair[1])).sum(),
+            distance: points
+                .windows(2)
+                .map(|pair| pair[0].distance(pair[1]))
+                .sum(),
             radius: crate::npc_interaction::INTERACTION_DISTANCE,
             departure: None,
             action: Action::SpellClick,

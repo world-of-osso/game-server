@@ -441,7 +441,14 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, Some(CART_DISPLAY), false);
+    start_scripted_party_flight(
+        world,
+        player,
+        map,
+        DARKFLAME_CART_PATH,
+        Some(CART_DISPLAY),
+        false,
+    );
 }
 
 pub(crate) fn start_windrunner_flight(
