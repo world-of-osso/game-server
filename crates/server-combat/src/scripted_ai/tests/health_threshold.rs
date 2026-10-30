@@ -30,7 +30,20 @@ fn bound_health_threshold_completes_alive_on_spell_and_lethal_direct_damage() {
             let player = h.player();
             if !large_health {
                 h.app.world_mut().get_mut::<Health>(boss).unwrap().current = 16.0;
-                crate::combat::deal_direct_damage(h.app.world_mut(), player, boss, 15.0);
+                let world = h.app.world();
+                let attacker = crate::level_scaling::UnitScaling::of(world, player);
+                let victim = crate::level_scaling::UnitScaling::of(world, boss);
+                let nonlethal_damage = 15.5 * victim.health_multiplier(&attacker);
+                assert_eq!(
+                    crate::level_scaling::health_loss(&attacker, &victim, nonlethal_damage),
+                    15.0
+                );
+                crate::combat::deal_direct_damage(
+                    h.app.world_mut(),
+                    player,
+                    boss,
+                    nonlethal_damage,
+                );
                 assert_eq!(h.health(boss).current, 1.0);
                 assert_eq!(
                     h.app
