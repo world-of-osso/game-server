@@ -451,7 +451,7 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     );
 }
 
-pub(crate) fn start_windrunner_flight(
+pub(crate) fn start_dungeon_passage_flight(
     world: &mut World,
     player: Entity,
     map: crate::maps::InMap,

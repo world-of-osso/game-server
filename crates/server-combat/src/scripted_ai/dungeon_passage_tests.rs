@@ -3,7 +3,7 @@ use crate::maps::{DungeonDifficulty, InstanceManager};
 use shared::components::Health;
 
 #[test]
-fn windrunner_passages_require_previous_boss_and_fly_owner_followers_and_pets() {
+fn dungeon_passages_require_previous_boss_and_fly_owner_followers_and_pets() {
     for passage in PASSAGES {
         check_passage(passage);
     }
@@ -22,7 +22,7 @@ fn check_passage(passage: &Passage) {
     let copy = instances
         .create_map(
             &maps,
-            MAP,
+            passage.map,
             crate::maps::instances::InstanceEntrant {
                 character_id: 1,
                 leader: 1,
@@ -38,6 +38,10 @@ fn check_passage(passage: &Passage) {
         .map;
     let network = crate::taxi::load_taxi_network(&db).unwrap();
     let expected = network.scripted_path(passage.path).expect("native path");
+    assert!(
+        expected[0].distance(source) < 0.01,
+        "source must match native node 0"
+    );
     h.app.insert_resource(network);
     h.app.insert_resource(maps);
     h.app.insert_resource(instances);
