@@ -202,6 +202,34 @@ impl NavigationMap {
         }
     }
 
+    /// Resolve the formation point on the owner's connected surface before following it.
+    pub fn follow_formation_path(
+        &mut self,
+        start: Vec3,
+        offset: Vec3,
+        owner: Vec3,
+        plan: &mut NavigationPlan,
+    ) -> Result<NavigationPath, String> {
+        // TC 15e0ed76 FollowMovementGenerator.cpp:159 uses target GetNearPoint;
+        // Object.cpp:2718–2752 checks collision and updates the ground height.
+        for fraction in [1.0, 0.75, 0.5, 0.25, 0.0] {
+            let candidate = owner.lerp(offset, fraction);
+            let projected = match self.first_collision(owner, candidate) {
+                Ok(point) => point,
+                Err(error) if error.starts_with("no walkable polygon near ") => continue,
+                Err(error) => return Err(error),
+            };
+            match self.complete_walk_path(owner, projected) {
+                Ok(_) => return self.follow_path(start, projected, plan),
+                Err(error) if error.starts_with("unreachable target") => continue,
+                Err(error) => return Err(error),
+            }
+        }
+        Err(format!(
+            "no connected follow point near owner {owner:?} toward {offset:?}"
+        ))
+    }
+
     fn closest_reachable_path(&mut self, start: Vec3, end: Vec3) -> Result<NavigationPath, String> {
         self.load_around(start, end)?;
         let filter = filter();

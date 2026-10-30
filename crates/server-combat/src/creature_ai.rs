@@ -1326,7 +1326,10 @@ fn follow_owner_system(
         let movement = if companion.is_some() || companion_pet.is_some() {
             let request = map.map(|map| MoveRequest {
                 map_id: map.map_id,
-                goal: Goal::Follow(follow.owner.to_bits()),
+                goal: Goal::FollowFormation(
+                    follow.owner.to_bits(),
+                    Vec3::new(leader.position.x, leader.position.y, leader.position.z),
+                ),
                 from: *pos,
                 to: Position {
                     x: point.0,

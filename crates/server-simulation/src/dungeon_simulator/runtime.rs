@@ -206,7 +206,13 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
         .0
         .transports
         .iter()
-        .any(|edge| edge.action == server::test_support::transport::Action::SpellClick);
+        .any(|edge| {
+            matches!(
+                edge.action,
+                server::test_support::transport::Action::SpellClick
+                    | server::test_support::transport::Action::TaxiProximity
+            )
+        });
     let has_drop = app
         .world()
         .resource::<super::Space>()

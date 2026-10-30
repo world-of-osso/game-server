@@ -397,7 +397,14 @@ pub(crate) fn start_ruby_ferry(world: &mut World, player: Entity, npc: Entity) {
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, RUBY_FERRY_PATH, RADIANT_DRAKE_DISPLAY);
+    start_scripted_party_flight(
+        world,
+        player,
+        map,
+        RUBY_FERRY_PATH,
+        Some(RADIANT_DRAKE_DISPLAY),
+        false,
+    );
 }
 
 /// DARKFLAME_CART_BOARDING_LOG_CORRELATED: the point is TaxiPath9458's first
@@ -434,7 +441,23 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     {
         return;
     }
-    start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, CART_DISPLAY);
+    start_scripted_party_flight(
+        world,
+        player,
+        map,
+        DARKFLAME_CART_PATH,
+        Some(CART_DISPLAY),
+        false,
+    );
+}
+
+pub(crate) fn start_windrunner_flight(
+    world: &mut World,
+    player: Entity,
+    map: crate::maps::InMap,
+    path: u32,
+) {
+    start_scripted_party_flight(world, player, map, path, None, true);
 }
 
 fn start_scripted_party_flight(
@@ -442,7 +465,8 @@ fn start_scripted_party_flight(
     player: Entity,
     map: crate::maps::InMap,
     path: u32,
-    display: u32,
+    display: Option<u32>,
+    carry_pets: bool,
 ) {
     let Some(mut points) = world.resource::<TaxiNetwork>().scripted_path(path) else {
         error!("Scripted party TaxiPath {path} is unavailable");
@@ -460,6 +484,14 @@ fn start_scripted_party_flight(
         })
         .collect();
     riders.extend(followers);
+    if carry_pets {
+        riders.retain(|&rider| crate::spell_cast::targets::is_alive(world, rider));
+        let pets: Vec<_> = riders
+            .iter()
+            .flat_map(|&rider| crate::hunter_pet::active_owned_pets(world, rider))
+            .collect();
+        riders.extend(pets);
+    }
     if riders.iter().any(|&rider| {
         world.get::<TaxiFlight>(rider).is_some()
             || world.get::<Mounted>(rider).is_some()
@@ -470,17 +502,19 @@ fn start_scripted_party_flight(
         return;
     }
     for rider in riders {
-        crate::hunter_pet::unsummon_for_taxi(world, rider);
-        world.entity_mut(rider).insert((
-            TaxiFlight {
-                points: points.clone(),
-                next: 0,
-            },
-            Mounted {
+        if !carry_pets {
+            crate::hunter_pet::unsummon_for_taxi(world, rider);
+        }
+        world.entity_mut(rider).insert(TaxiFlight {
+            points: points.clone(),
+            next: 0,
+        });
+        if let Some(display) = display {
+            world.entity_mut(rider).insert(Mounted {
                 mount_display_id: display,
                 ..Default::default()
-            },
-        ));
+            });
+        }
         if path == DARKFLAME_CART_PATH {
             world
                 .entity_mut(rider)

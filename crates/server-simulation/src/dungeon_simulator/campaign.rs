@@ -2502,6 +2502,7 @@ impl Run {
                 transport.action,
                 server::test_support::transport::Action::CollisionDrop
                     | server::test_support::transport::Action::GatewayProximity
+                    | server::test_support::transport::Action::TaxiProximity
             );
             let actors = if source_objects {
                 &self.objects

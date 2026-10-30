@@ -17,10 +17,11 @@ mod requests;
 use deferred::PendingQuery;
 use requests::{PendingRoute, publish_navigation_results};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Goal {
     Chase(u64),
     Follow(u64),
+    FollowFormation(u64, Vec3),
     Hazard(u64),
     Approach(u64),
     PullAdmission,
@@ -159,11 +160,12 @@ impl Navigation {
 impl Route {
     fn reusable(&self, request: &MoveRequest) -> bool {
         let same_goal = self.map_id == request.map_id && self.goal == request.goal;
-        let target_is_current = if matches!(request.goal, Goal::Follow(_)) {
-            self.destination == point(request.to)
-        } else {
-            self.destination.distance(point(request.to)) <= REPATH_DISTANCE
-        };
+        let target_is_current =
+            if matches!(request.goal, Goal::Follow(_) | Goal::FollowFormation(..)) {
+                self.destination == point(request.to)
+            } else {
+                self.destination.distance(point(request.to)) <= REPATH_DISTANCE
+            };
         let position_is_current =
             horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
         same_goal && target_is_current && position_is_current && !self.partial_endpoint_reached
