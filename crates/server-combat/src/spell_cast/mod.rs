@@ -4033,10 +4033,16 @@ fn push_hit_events(
         );
     }
     let mut first_harmful_hit = true;
+    let hit_count = hit.len();
     for target in hit {
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {
+            if world.get::<shared::components::Npc>(target).is_some() {
+                let already_engaged =
+                    crate::combat_refs::has_active_reference_to(world, target, caster);
+                debug!(target: "game_server::aggro_acquisition", reason = "spell_hit", creature = target.to_bits(), attacker = caster.to_bits(), spell_id = spell.id, primary_target = ?spell.cast_primary_target, hit_count, already_engaged, "creature hostile spell hit");
+            }
             crate::creature_aggro::add_threat(world, target, caster, 0.0);
             if attacks_with(world, spell) {
                 crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));

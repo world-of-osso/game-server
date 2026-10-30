@@ -10,6 +10,7 @@ pub(super) struct PendingQuery {
     pub(super) goal: Goal,
     query: WorkerQuery,
     pub(super) result: Option<QueryResult>,
+    consumed: bool,
 }
 
 impl Navigation {
@@ -21,12 +22,20 @@ impl Navigation {
         goal: Goal,
         query: WorkerQuery,
     ) -> Option<QueryResult> {
-        if let Some(previous) = self.queries.get(&entity)
-            && previous.map_id == map_id
-            && previous.goal == goal
-            && same_query(goal, &previous.query, &query)
-        {
-            return previous.result.clone();
+        if let Some(previous) = self.queries.get_mut(&entity) {
+            if previous.map_id == map_id
+                && previous.goal == goal
+                && same_query(goal, &previous.query, &query)
+            {
+                previous.consumed |= previous.result.is_some();
+                return previous.result.clone();
+            }
+            if previous.map_id == map_id
+                && !previous.consumed
+                && previous.goal.query_priority() > goal.query_priority()
+            {
+                return None;
+            }
         }
         // A probe replaces an unfinished plan, never the route's current progress.
         self.pending.remove(&entity);
@@ -39,6 +48,7 @@ impl Navigation {
                 goal,
                 query: query.clone(),
                 result: None,
+                consumed: false,
             },
         );
         self.worker.submit(Request {

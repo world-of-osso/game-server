@@ -964,7 +964,13 @@ pub(crate) fn chase_system(
         }
         let target_pos = &targets[&entity].position;
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
-        let reach = follower_reach.map_or(CHASE_REACH, |reach| reach.0);
+        let reach = follower_reach.map_or(CHASE_REACH, |reach| {
+            if targets[&entity].visible {
+                reach.0
+            } else {
+                0.0
+            }
+        });
         let mut next_position = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -1090,6 +1096,7 @@ type ChaseView = (
 );
 struct ChaseTarget {
     position: Position,
+    visible: bool,
     in_reach_and_visible: bool,
 }
 
@@ -1159,15 +1166,15 @@ fn read_chase_targets(
             let from = Vec3::new(watcher.2.x, watcher.2.y, watcher.2.z);
             let to = Vec3::new(target.2.x, target.2.y, target.2.z);
             let in_reach = crate::navigation::within_reach(from, to, stop_reach);
-            let visible = in_reach
-                && los.zip(map).is_some_and(|(los, map)| {
-                    crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
-                });
+            let visible = los.zip(map).is_some_and(|(los, map)| {
+                crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
+            });
             Some((
                 entity,
                 ChaseTarget {
                     position: *target.2,
-                    in_reach_and_visible: visible,
+                    visible,
+                    in_reach_and_visible: in_reach && visible,
                 },
             ))
         })

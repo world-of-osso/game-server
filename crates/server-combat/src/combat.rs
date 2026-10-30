@@ -2856,6 +2856,11 @@ fn commit_melee_loss(
     }
     let before = health.current;
     outcome.health_before = before;
+    if world.get::<shared::components::Npc>(victim).is_some()
+        && !crate::combat_refs::has_active_reference_to(world, victim, attacker)
+    {
+        debug!(target: "game_server::aggro_acquisition", reason = "melee", creature = victim.to_bits(), attacker = attacker.to_bits(), "creature combat acquisition");
+    }
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
     crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let health = world.get::<Health>(victim).expect("living melee victim");

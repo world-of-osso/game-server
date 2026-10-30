@@ -54,6 +54,7 @@ pub(super) fn update(world: &mut World) {
 }
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    debug!(target: "game_server::follower_target", ?unit, owner = ?follower.owner, current = ?world.get::<CombatTarget>(unit).and_then(|target| target.0), position = ?world.get::<shared::components::Position>(unit), "follower tick");
     escape_pet_hazard(world, unit);
     if super::hazards::escape(world, unit) || super::candlelight::seek(world, unit) {
         return;
@@ -79,6 +80,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         hold_combat(world, unit);
     }
     if pending {
+        debug!(target: "game_server::follower_target", ?unit, owner = ?follower.owner, "target reachability pending");
         return;
     }
     super::tank_frontal::update_goal(world, unit, follower, &party);
@@ -91,6 +93,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
     };
+    trace_target_selection(world, unit, follower.owner, &party, enemy);
     update_auto_shot(world, unit, follower, enemy);
     if enemy.is_some() {
         use_freightrunners_flask(world, unit);
@@ -122,6 +125,50 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn trace_target_selection(
+    world: &World,
+    unit: Entity,
+    owner: Entity,
+    party: &[Entity],
+    enemy: Option<Entity>,
+) {
+    if !bevy::log::tracing::enabled!(target: "game_server::follower_target", bevy::log::tracing::Level::DEBUG)
+    {
+        return;
+    }
+    let Some(enemy) = enemy else {
+        debug!(target: "game_server::follower_target", ?unit, ?owner, "no selected enemy");
+        return;
+    };
+    let mut combat_party = party.to_vec();
+    combat_party.extend(
+        party
+            .iter()
+            .filter_map(|&member| crate::hunter_pet::summoned_pet(world, member)),
+    );
+    let refs: Vec<_> = combat_party
+        .iter()
+        .copied()
+        .filter(|&member| crate::combat_refs::has_active_reference_to(world, enemy, member))
+        .collect();
+    let victim = world.get::<CombatTarget>(enemy).and_then(|target| target.0);
+    let threat: Vec<_> = world
+        .get::<shared::components::ThreatTable>(enemy)
+        .into_iter()
+        .flat_map(|table| table.entries())
+        .filter(|entry| {
+            combat_party
+                .iter()
+                .any(|member| member.to_bits() == entry.entity)
+        })
+        .map(|entry| entry.entity)
+        .collect();
+    let owner_victim = world
+        .get::<crate::combat::AutoAttack>(owner)
+        .is_some_and(|attack| attack.victim == enemy);
+    debug!(target: "game_server::follower_target", ?unit, ?owner, ?enemy, ?victim, ?refs, ?threat, owner_victim, "selected enemy");
 }
 
 /// The pinned Elemental APL uses this equipped on-use trinket in combat.
@@ -558,6 +605,7 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
+    debug!(target: "game_server::follower_target", ?unit, ?target, spell_id, melee, "spell approach requested");
     if super::candlelight::hold_pursuit(world, unit, target) {
         return true;
     }
@@ -565,10 +613,6 @@ pub(super) fn pursue(
         || super::tank_planner::apply_admitted_caster_target(world, unit)
         || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
     {
-        return true;
-    }
-    if super::positioning::hold_unsafe_approach(world, unit, target) {
-        world.entity_mut(unit).insert(CombatTarget(Some(target)));
         return true;
     }
     let reach = if melee {
@@ -580,6 +624,14 @@ pub(super) fn pursue(
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
+    let in_range_and_visible = crate::spell_cast::targets::position(world, unit)
+        .zip(crate::spell_cast::targets::position(world, target))
+        .is_some_and(|(from, to)| from.distance(to) <= reach)
+        && crate::line_of_sight::sees_in_world(world, unit, target);
+    if !in_range_and_visible && super::positioning::hold_unsafe_approach(world, unit, target) {
+        world.entity_mut(unit).insert(CombatTarget(Some(target)));
+        return true;
+    }
     let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, target) else {
         return true;
     };

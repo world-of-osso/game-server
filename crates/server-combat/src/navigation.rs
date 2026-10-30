@@ -24,6 +24,7 @@ pub enum Goal {
     FollowFormation(u64, Vec3),
     Hazard(u64),
     Approach(u64),
+    RegroupApproach(u64),
     PullAdmission,
     FollowerTargetSelection,
     OwnerTrail(u64),
@@ -34,6 +35,16 @@ pub enum Goal {
     Point,
     Home,
     Waypoint(u32, usize),
+}
+
+impl Goal {
+    fn query_priority(self) -> u8 {
+        match self {
+            Self::RegroupApproach(_) => 0,
+            Self::Hazard(_) | Self::FearCollision | Self::FearPath => 2,
+            _ => 1,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]

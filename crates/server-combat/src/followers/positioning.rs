@@ -3,7 +3,7 @@ use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::{Health, UnitFactionTemplate};
 
-use super::{kit_ai, pull_route};
+use super::pull_route;
 use crate::creature_aggro::AggroDistance;
 use crate::faction::{FactionTemplates, Reaction};
 use crate::maps::InMap;
@@ -32,12 +32,24 @@ fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
     let hold =
         now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
     if hold {
-        world
-            .entity_mut(unit)
-            .remove::<crate::creature_ai::FollowOwner>()
-            .insert(crate::creature_ai::CreatureState::Idle);
+        hold_position(world, unit);
     }
     hold
+}
+
+fn hold_position(world: &mut World, unit: Entity) {
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+}
+
+fn hold_pending_approach(world: &mut World, unit: Entity, target: Entity, is_owner: bool) -> bool {
+    if is_owner {
+        return bounded_hold(world, unit, target);
+    }
+    hold_position(world, unit);
+    true
 }
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -46,9 +58,6 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         .is_some_and(|follower| follower.owner == target);
     if !is_owner {
         super::trail_follow::clear(world, unit);
-    }
-    if kit_ai::is_tank(world, unit) && !is_owner {
-        return false;
     }
     if is_owner && super::trail_follow::active(world, unit, target) {
         return super::trail_follow::advance(world, unit, target, Vec::new());
@@ -60,12 +69,12 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
                 ?target,
                 "Follower approach waiting for a navigation result"
             );
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
         Ok(Some(blockers)) => blockers,
         Err(error) => {
             warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
     };
     if blockers.is_empty() {
@@ -73,14 +82,11 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         world.entity_mut(unit).remove::<HoldTimeout>();
         return false;
     }
-    world
-        .entity_mut(unit)
-        .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
+    hold_position(world, unit);
     if is_owner {
         return super::trail_follow::advance(world, unit, target, blockers);
     }
-    bounded_hold(world, unit, target)
+    true
 }
 
 fn approach_enters_unpulled_sight(
@@ -97,7 +103,10 @@ fn approach_enters_unpulled_sight(
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
+        .filter(|watcher| {
+            is_unpulled_hostile(world, unit, *watcher)
+                && !in_target_formation(world, target, *watcher)
+        })
         .collect();
     if watchers.is_empty() {
         return Ok(Some(Vec::new()));
@@ -128,6 +137,42 @@ fn approach_enters_unpulled_sight(
     Ok(Some(blockers))
 }
 
+fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {
+    if target == watcher {
+        return true;
+    }
+    let (Some(target), Some(watcher)) = (
+        world.get::<crate::zones::CreatureOrigin>(target),
+        world.get::<crate::zones::CreatureOrigin>(watcher),
+    ) else {
+        return false;
+    };
+    if target.guid == 0 || watcher.guid == 0 {
+        return false;
+    }
+    let Some(data) = world.get_resource::<crate::world_data::WorldData>() else {
+        return false;
+    };
+    let pack = |guid| {
+        super::pack_identity::pack_guid(
+            guid,
+            data.formations.get(&guid).map(|entry| entry.leader_guid),
+        )
+    };
+    pack(target.guid) == pack(watcher.guid)
+}
+
+pub(super) fn approach_goal(world: &World, unit: Entity, target: Entity) -> Goal {
+    if world
+        .get::<super::Follower>(unit)
+        .is_some_and(|follower| follower.owner == target)
+    {
+        Goal::RegroupApproach(target.to_bits())
+    } else {
+        Goal::Approach(target.to_bits())
+    }
+}
+
 fn read_approach_path(
     world: &mut World,
     unit: Entity,
@@ -140,15 +185,11 @@ fn read_approach_path(
     if let Some(space) = world.get_resource::<crate::test_support::Space>() {
         return space.route(from, to).map(Some);
     }
+    let goal = approach_goal(world, unit, target);
     let Some(result) = world
         .get_resource_mut::<Navigation>()
         .ok_or("Follower positioning requires authored navigation")?
-        .query_deferred(
-            unit,
-            map.map_id,
-            Goal::Approach(target.to_bits()),
-            NavQuery::Path { from, to },
-        )
+        .query_deferred(unit, map.map_id, goal, NavQuery::Path { from, to })
     else {
         return Ok(None);
     };

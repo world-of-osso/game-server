@@ -176,6 +176,63 @@ fn navigation_probe_and_route_share_entity_without_starving_or_replacing_progres
 }
 
 #[test]
+fn higher_priority_approach_completes_before_competing_regroup_query() {
+    let (mut nav, _dir) = fixture();
+    let entity = Entity::from_bits(41);
+    let from = point(start());
+    let high = ::navigation::worker::Query::Path {
+        from,
+        to: Vec3::new(140.0, 0.2, 100.0),
+    };
+    let low = ::navigation::worker::Query::Path {
+        from,
+        to: Vec3::new(100.0, 0.2, 140.0),
+    };
+    for _ in 0..5 {
+        assert!(
+            nav.query_deferred(entity, 0, Goal::Approach(99), high.clone())
+                .is_none()
+        );
+        assert!(
+            nav.query_deferred(entity, 0, Goal::RegroupApproach(100), low.clone())
+                .is_none()
+        );
+    }
+    nav.drain_until_idle();
+    let Some(Ok(Some(::navigation::worker::Output::Path(path)))) =
+        nav.query_deferred(entity, 0, Goal::Approach(99), high)
+    else {
+        panic!("the higher-priority approach must complete");
+    };
+    assert!(path.complete);
+    assert!(
+        path.points
+            .last()
+            .unwrap()
+            .distance(Vec3::new(140.0, 0.2, 100.0))
+            < 1.0
+    );
+    assert!(
+        nav.query_deferred(entity, 0, Goal::RegroupApproach(100), low.clone())
+            .is_none()
+    );
+    nav.drain_until_idle();
+    let Some(Ok(Some(::navigation::worker::Output::Path(path)))) =
+        nav.query_deferred(entity, 0, Goal::RegroupApproach(100), low)
+    else {
+        panic!("the regroup approach must complete after the higher-priority result is consumed");
+    };
+    assert!(path.complete);
+    assert!(
+        path.points
+            .last()
+            .unwrap()
+            .distance(Vec3::new(100.0, 0.2, 140.0))
+            < 1.0
+    );
+}
+
+#[test]
 fn navigation_chase_cancel_does_not_strand_an_unrelated_probe() {
     let (mut nav, _dir) = fixture();
     let entity = Entity::from_bits(41);
