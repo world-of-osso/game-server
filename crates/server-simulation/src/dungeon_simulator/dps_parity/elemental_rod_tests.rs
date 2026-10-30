@@ -12,6 +12,21 @@ fn rod(run: &Run, target: Entity) -> Option<f64> {
         .expires_at
 }
 
+fn select_rod(run: &mut Run) {
+    let mut spells: Vec<u32> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(run.actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.push(210689);
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(crate::class_progression::KnownSpells::fixture(spells));
+}
+
 fn trigger(run: &mut Run, spell: u32, target: Entity) {
     assert!(
         crate::spell_cast::try_cast_triggered(
@@ -33,13 +48,7 @@ fn trigger(run: &mut Run, spell: u32, target: Entity) {
 fn elemental_spenders_apply_rod_and_lightning_copies_resolved_damage() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(262, 1).unwrap();
-    assert!(
-        run.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(run.actor)
-            .unwrap()
-            .contains(210689)
-    );
+    select_rod(&mut run);
     engage(&mut run);
     let target = run.targets[0];
     trigger(&mut run, 188196, target);
@@ -100,6 +109,7 @@ fn elemental_spenders_apply_rod_and_lightning_copies_resolved_damage() {
 fn elemental_earthquake_spreads_to_unmarked_targets_without_refresh() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(262, 3).unwrap();
+    select_rod(&mut run);
     engage(&mut run);
     let primary = run.targets[0];
     trigger(&mut run, 462620, primary);
