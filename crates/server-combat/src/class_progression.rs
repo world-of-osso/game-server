@@ -76,6 +76,14 @@ impl KnownSpells {
         Self(spells, Vec::new(), Vec::new())
     }
 
+    /// Grant a fixture spell without replacing native class or membership grants.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn grant_fixture_spell(&mut self, spell: u32) {
+        if !self.0.contains(&spell) {
+            self.0.push(spell);
+        }
+    }
+
     pub fn contains(&self, spell_id: u32) -> bool {
         self.iter().any(|id| id == spell_id)
     }
