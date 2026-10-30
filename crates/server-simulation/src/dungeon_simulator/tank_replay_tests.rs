@@ -1542,6 +1542,7 @@ fn simc_night_elf_racial_increases_haste_for_both_tanks() {
             .unwrap()
             .haste_pct;
         super::tank_replay::apply_simc_touch_of_elune(&mut run, Some(154797)).unwrap();
+        run.app.update();
         let after = run
             .app
             .world()

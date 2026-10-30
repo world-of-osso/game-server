@@ -644,6 +644,9 @@ pub(super) fn replay_simc_with_targets(
         super::dps_parity::prepare_registered_player_with(spec_id, target_count, |run| {
             apply_simc_touch_of_elune(run, racial)?;
             apply_simc_raid_buffs(run, &raid_buffs)?;
+            if racial.is_some() && raid_buffs.is_empty() {
+                run.app.update();
+            }
             apply_simc_dummy_debuffs(run, &dummy_debuffs)
         })?;
     apply_simc_starting_holy_power(&mut run);
@@ -751,7 +754,6 @@ pub(super) fn apply_simc_touch_of_elune(
         if !crate::auras::has_aura(world, actor, spell_id) {
             return Err(format!("SIMC_TOUCH_OF_ELUNE_NOT_APPLIED:{spell_id}"));
         }
-        run.app.update();
     }
     Ok(())
 }
