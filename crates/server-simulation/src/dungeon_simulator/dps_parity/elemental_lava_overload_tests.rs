@@ -8,10 +8,22 @@ fn sample(with_crit_buff: bool, spell: u32, feedback_crit: bool) -> (f64, f64) {
     let mut run = fixture();
     cast(&mut run, 188389);
     if !feedback_crit {
-        let instance = run.app.world().get::<crate::auras::ActiveAuras>(run.actor).unwrap()
-            .iter().find(|aura| aura.spell_id == 1270062 && aura.caster == run.actor)
-            .expect("selected Feedback Loop").instance_id;
-        assert!(crate::auras::set_effect_amount(run.app.world_mut(), run.actor, instance, 0, 0.0));
+        let instance = run
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(run.actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1270062 && aura.caster == run.actor)
+            .expect("selected Feedback Loop")
+            .instance_id;
+        assert!(crate::auras::set_effect_amount(
+            run.app.world_mut(),
+            run.actor,
+            instance,
+            0,
+            0.0
+        ));
     }
     if with_crit_buff {
         assert!(crate::spell_cast::try_cast_triggered(
@@ -24,8 +36,12 @@ fn sample(with_crit_buff: bool, spell: u32, feedback_crit: bool) -> (f64, f64) {
         settle(&mut run);
     }
     let world = run.app.world();
-    let parent = world.resource::<crate::spell_info::SpellStore>().get(51505).unwrap();
-    let crit = crate::spell_cast::effects::caster_action_crit_chance(world, run.actor, parent) as f64;
+    let parent = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(51505)
+        .unwrap();
+    let crit =
+        crate::spell_cast::effects::caster_action_crit_chance(world, run.actor, parent) as f64;
     run.app
         .world_mut()
         .resource_mut::<ObservedCombatEvents>()
@@ -84,6 +100,9 @@ fn elemental_lava_and_overload_scale_with_action_crit_bonus() {
         assert!((buffed_crit - base_crit - 10.0).abs() < 0.01);
         let expected = (1.0 + buffed_crit / 100.0) / (1.0 + base_crit / 100.0);
         let ratio = buffed / base;
-        assert!((ratio - expected).abs() < 0.01, "spell {spell}: {buffed}/{base} = {ratio}, expected {expected}");
+        assert!(
+            (ratio - expected).abs() < 0.01,
+            "spell {spell}: {buffed}/{base} = {ratio}, expected {expected}"
+        );
     }
 }
