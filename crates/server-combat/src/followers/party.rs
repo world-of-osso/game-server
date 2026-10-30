@@ -29,6 +29,10 @@ impl DisconnectedRuns {
         self.0.get(&character)?.run.copy
     }
 
+    pub(crate) fn contains_member(&self, member: Entity) -> bool {
+        self.0.values().any(|run| run.run.contains_member(member))
+    }
+
     pub(crate) fn member_difficulty(&self, member: Entity) -> Option<u32> {
         self.0
             .values()
@@ -46,6 +50,12 @@ pub(crate) struct FollowerRun {
     previous_difficulty: u32,
     origin: WorldLocation,
     player_role: GroupRole,
+}
+
+impl FollowerRun {
+    pub(crate) fn contains_member(&self, member: Entity) -> bool {
+        self.copy.is_some() && self.members.contains(&member)
+    }
 }
 
 /// Admitted copy, companion IDs (including missing entities), and owner's role.
@@ -767,6 +777,200 @@ mod copy_tests {
             app.world().get::<FollowerRun>(reconnected).unwrap().members,
             run.members
         );
+    }
+
+    #[test]
+    fn follower_release_waits_for_combat_and_requires_a_complete_follow_path() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        let entrance = run.dungeon.entrance.bevy_position();
+        app.world_mut()
+            .insert_resource(crate::navigation::Navigation::new(
+                &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/ground/navmesh"),
+            ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            CombatStatus(true),
+            Position {
+                x: 1403.56,
+                y: 128.0,
+                z: 173.39,
+            },
+        ));
+        app.world_mut().entity_mut(member).insert((
+            Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
+        super::super::release::update(app.world_mut());
+        assert!(
+            app.world().get::<crate::combat::Corpse>(member).is_some(),
+            "combat keeps the follower dead"
+        );
+        app.world_mut().get_mut::<CombatStatus>(owner).unwrap().0 = false;
+        super::super::release::update(app.world_mut());
+        app.world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        super::super::release::update(app.world_mut());
+        assert!(
+            app.world().get::<crate::combat::Corpse>(member).is_none(),
+            "complete route releases the follower"
+        );
+        assert_eq!(*app.world().get::<Position>(member).unwrap(), entrance);
+        assert_eq!(app.world().get::<Health>(member).unwrap().current, 500.0);
+        assert_eq!(
+            app.world()
+                .get::<crate::creature_ai::FollowOwner>(member)
+                .unwrap()
+                .owner,
+            owner
+        );
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(100),
+        ));
+        crate::creature_ai::install_follow_fixture(&mut app);
+        for _ in 0..80 {
+            app.update();
+            app.world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .drain_until_idle();
+        }
+        let moved = *app.world().get::<Position>(member).unwrap();
+        let target = *app.world().get::<Position>(owner).unwrap();
+        let distance = |p: Position| (p.x - target.x).hypot(p.z - target.z);
+        assert!(
+            distance(moved) < distance(entrance) - 5.0,
+            "normal Follow must walk toward the owner"
+        );
+    }
+
+    #[test]
+    fn follower_release_keeps_a_corpse_when_the_route_is_unreachable() {
+        use shared::components::{Health, Position};
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        let corpse = Position {
+            x: 1390.0,
+            y: 131.0,
+            z: 170.0,
+        };
+        app.world_mut()
+            .insert_resource(crate::navigation::Navigation::new(
+                &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/ground/navmesh"),
+            ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            Position {
+                x: 1403.56,
+                y: 10000.0,
+                z: 173.39,
+            },
+        ));
+        app.world_mut().entity_mut(member).insert((
+            corpse,
+            Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
+        super::super::release::update(app.world_mut());
+        app.world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        super::super::release::update(app.world_mut());
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
+        assert_eq!(*app.world().get::<Position>(member).unwrap(), corpse);
+        assert_eq!(app.world().get::<Health>(member).unwrap().current, 0.0);
+    }
+
+    #[test]
+    fn unreachable_follower_corpse_accepts_a_real_resurrection_in_place() {
+        use shared::components::{Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let copy = run.copy.unwrap();
+        let (mut h, caster) = super::super::kit_tests::level32(209072);
+        let target = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        let corpse = Position {
+            x: 1390.0,
+            y: 131.0,
+            z: 170.0,
+        };
+        run.members = vec![caster, target];
+        h.app.insert_resource(store);
+        h.app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            run,
+            copy,
+            Position {
+                x: 1403.56,
+                y: 10000.0,
+                z: 173.39,
+            },
+        ));
+        h.app.world_mut().entity_mut(caster).insert((
+            copy,
+            Position {
+                x: 1391.0,
+                ..corpse
+            },
+        ));
+        h.app.world_mut().entity_mut(target).insert((
+            copy,
+            corpse,
+            crate::combat::CorpseDelay(60.0),
+        ));
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        super::super::release::update(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        super::super::release::update(h.app.world_mut());
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
+    fn active_follower_corpse_survives_decay_and_disconnect() {
+        use bevy::ecs::system::RunSystemOnce;
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        app.world_mut().entity_mut(owner).insert(run.clone());
+        app.world_mut()
+            .entity_mut(member)
+            .insert(crate::combat::Corpse { remaining: 0.0 });
+        app.world_mut()
+            .run_system_once(crate::combat::corpse_decay_system)
+            .unwrap();
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::lfg::PlayerLfgState::default());
+        retire_owner(app.world_mut(), owner);
+        app.world_mut()
+            .run_system_once(crate::combat::corpse_decay_system)
+            .unwrap();
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
     }
 
     #[test]

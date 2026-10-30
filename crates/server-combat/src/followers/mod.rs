@@ -63,11 +63,12 @@ mod kit_rotation_tests;
 #[cfg(test)]
 mod meteor_tests;
 mod pack_identity;
-mod party;
+pub(crate) mod party;
 mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
+mod release;
 use server_follower_policy::followers::pull_budget;
 #[cfg(test)]
 mod pull_corner_tests;
@@ -238,7 +239,8 @@ impl Plugin for FollowerPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                update_ai
+                (release::update, update_ai)
+                    .chain()
                     .after(crate::creature_aggro::update_victim_system)
                     .before(crate::creature_ai::chase_system),
             );

@@ -3215,13 +3215,30 @@ pub fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
 pub(crate) fn corpse_decay_system(
     time: Res<Time>,
     mut corpses: Query<
-        (Entity, &mut Corpse, Has<crate::zones::TempSummon>),
+        (
+            Entity,
+            &mut Corpse,
+            Has<crate::zones::TempSummon>,
+            Option<&crate::followers::Follower>,
+        ),
         Without<crate::loot::PendingGroupLoot>,
     >,
+    runs: Query<&crate::followers::party::FollowerRun>,
+    disconnected: Option<Res<crate::followers::party::DisconnectedRuns>>,
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut corpse, summon) in &mut corpses {
+    for (entity, mut corpse, summon, follower) in &mut corpses {
+        let active_run = follower.is_some_and(|follower| {
+            runs.get(follower.owner)
+                .is_ok_and(|run| run.contains_member(entity))
+                || disconnected
+                    .as_ref()
+                    .is_some_and(|runs| runs.contains_member(entity))
+        });
+        if active_run {
+            continue;
+        }
         corpse.remaining -= dt;
         if corpse.remaining > 0.0 {
             continue;
