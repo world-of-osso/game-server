@@ -22,6 +22,8 @@ fn deios_copy(difficulty: u32) -> (Harness, Entity, InMap) {
 #[test]
 fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     let (mut h, boss, map) = deios_copy(205);
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[191220]);
@@ -43,8 +45,10 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     let (other_rp, _) = spawn_authored_actor(&mut h.app, &conn, 191220, other_map, 205);
     h.advance(1.0);
     assert!(
-        h.inbox(0)
-            .log
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
             .iter()
             .all(|event| event.spell_id != Some(382264))
     );
@@ -61,8 +65,10 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     ));
     h.advance(0.2);
     let cast = h
-        .inbox(0)
-        .log
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
         .iter()
         .filter(|event| {
             event.kind == CombatLogKind::CastSuccess
@@ -75,21 +81,9 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
         .world()
         .get::<crate::spell_cast::SpellHistory>(rp)
         .and_then(|history| history.last_successful_cast_at(382264));
-    let state = instance_script::get_data(h.app.world_mut(), map, 2451001);
-    if state == 0 {
-        panic!(
-            "RP cast admission: {:?}",
-            crate::spell_cast::creature_cast(h.app.world_mut(), rp, 382264, None, false)
-        );
-    }
     assert_eq!(
-        cast,
-        1,
-        "authored RP actor casts Temporal Theft: history={cast_at:?} state={state} cast_state={:?} player={:?} boss={:?} rp={:?}",
-        h.app.world().get::<CastState>(rp),
-        h.app.world().get::<Position>(h.player()),
-        h.app.world().get::<Position>(boss),
-        h.app.world().get::<Position>(rp)
+        cast, 1,
+        "authored RP actor casts Temporal Theft: history={cast_at:?}"
     );
     assert_eq!(
         h.app.world().get::<UnitFlags>(boss).unwrap().0,
@@ -129,8 +123,10 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     );
     h.advance(1.0);
     assert_eq!(
-        h.inbox(0)
-            .log
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
             .iter()
             .filter(|event| event.kind == CombatLogKind::CastSuccess
                 && event.source == Some(rp.to_bits())
