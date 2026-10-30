@@ -813,7 +813,7 @@ fn proc_fidelity_262_native_unselected_icefury_without_mastery_has_no_overload()
 }
 
 #[test]
-fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
+fn proc_fidelity_262_native_long_flight_overload_follows_launch_by_400ms() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 168534));
     let mut target_position = *h
@@ -864,10 +864,12 @@ fn proc_fidelity_262_native_long_flight_overload_waits_400ms_after_root_hit() {
         root_hit_at - launched_at > 0.4 + frame,
         "native root flight must distinguish HIT scheduling from launch scheduling"
     );
-    let delay = child_go_at - root_hit_at;
+    let delay = child_go_at - launched_at;
+    // SimC76f8118 sc_shaman.cpp3316–3351 schedules the overload on launch,
+    // before the parent missile reaches its target.
     assert!(
-        (0.4 - frame..=0.4 + 2.0 * frame).contains(&delay),
-        "TC168534 SpellPhaseMask2=HIT: normal child must launch400ms after actual root hit; root={root_hit_at}, child={child_go_at}, delay={delay}"
+        (0.4 - frame..=0.4 + 2.0 * frame).contains(&delay) && child_go_at < root_hit_at,
+        "overload must launch 400ms after root launch, before the long-flight hit; launch={launched_at}, root={root_hit_at}, child={child_go_at}, delay={delay}"
     );
 }
 
