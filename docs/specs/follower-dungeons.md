@@ -29,6 +29,10 @@ A dead follower's corpse persists for the active dungeon run, including an owner
 
 Dungeon spirit release uses one location policy for players and followers: a zone graveyard on the instance map, otherwise the authored dungeon entrance, otherwise the reciprocal exit. A dungeon release resurrects at that location. TC 15e0ed76 `Player.cpp:4688-4720` supplies the dungeon resurrection semantics; the location order is the user decision.
 
+## Windrunner Spire passage
+
+`WINDRUNNER_TAXIPATH_10308_PASSAGE_LOG_CORRELATED`: Once Commander Kroluk (3058) is Done, a living owner within 20 yards of native TaxiPath 10308 node 0 automatically boards the path with living followers and their pets. The 20-yard proximity activation is a project inference; its authored trigger and mount identity are unsourced. WCL report `jpfFa36xhQkZqr4d`, fight 6, correlates player movement to the native path from (5214.278, -3126.375, 100.709) to (5215.815, -3079.736, 302.012). The shared taxi mover uses its existing flight speed; the observed Retail segment is faster.
+
 ## Murder Row live clear
 
 On 2026-10-30, Rowthree entered map 2813, difficulty 205, through ordinary LFG 3089 with Garrick, Crenna, Shuja and Meredy. In instance 7, Kystia (3101), Zaen (3102), Xathuux (3103) and Lithiel (3105, creature 234763) each reached Done without a server restart. Rowthree died during Kystia and released inside; no follower died, so follower-death recovery has no live proof in this run. All five were alive at the end. Rowthree earned achievement 41960, Murder Row, at Lithiel's completion. Follower copies do not produce an instance-lock record here.
