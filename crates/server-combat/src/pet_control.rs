@@ -133,6 +133,15 @@ impl PetCharm {
         })
     }
 
+    /// Learned pet action-bar spells, including spells commanded by the owner.
+    pub(crate) fn known_spells(&self) -> impl Iterator<Item = u32> + '_ {
+        PET_SPELL_SLOTS
+            .clone()
+            .map(|slot| self.action_bar[slot])
+            .filter(|&button| button != 0 && is_spell_button(pet_action_button_type(button)))
+            .map(pet_action_button_action)
+    }
+
     /// `GetPetAutoSpellOnPos`: the spells on the bar with autocast on, in bar order.
     fn autocast_spells(&self) -> Vec<u32> {
         PET_SPELL_SLOTS

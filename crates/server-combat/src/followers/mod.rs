@@ -114,6 +114,7 @@ mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
 mod trail_follow;
+mod unintended_reach;
 mod utility;
 #[cfg(test)]
 mod utility_buff_tests;
@@ -130,6 +131,7 @@ mod group_buff_tests;
 pub use ai::FollowerReach;
 pub use catalog::FollowerCatalog;
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
+pub use unintended_reach::party_unintended_reach;
 
 #[derive(Clone, Debug)]
 pub struct Profile {

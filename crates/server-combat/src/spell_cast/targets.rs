@@ -1239,6 +1239,94 @@ const SPELL_ATTR2_CHAIN_FROM_CASTER: u32 = 0x0000_1000;
 /// `SpellEffectAttributes::ChainFromInitialTarget` (DBCEnums.h:2425).
 const EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET: u32 = 0x0000_0080;
 
+/// Native hostile selection bounds, relative to the caster and explicit target.
+/// Selector meanings follow TrinityCore 15e0ed76 SpellInfo.cpp and Spell.cpp.
+pub fn unintended_effect_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> (f32, f32) {
+    #[derive(Clone, Copy)]
+    enum Center {
+        Caster,
+        Target,
+    }
+    let mut center = None;
+    let mut offset = 0.0;
+    let mut caster_radius: f32 = 0.0;
+    let mut target_radius: f32 = 0.0;
+    for (slot, &id) in effect.implicit_targets.iter().enumerate() {
+        let selector = selector(id);
+        match selector {
+            Some(Selector::CenterCaster) => {
+                center = Some(Center::Caster);
+                offset = 0.0;
+            }
+            Some(Selector::CenterExplicit(_)) => {
+                center = Some(Center::Target);
+                offset = 0.0;
+            }
+            Some(Selector::DestTargetOffset(_)) => {
+                center = Some(Center::Target);
+                offset = radius(effect, slot);
+            }
+            Some(Selector::CasterOffset(_) | Selector::CasterRandom | Selector::CasterRadius) => {
+                center = Some(Center::Caster);
+                offset = radius(effect, slot);
+            }
+            Some(Selector::AreaAroundSrc(Relation::Enemy) | Selector::EntryAreaSource) => {
+                let extent = offset + radius(effect, slot);
+                match center.unwrap_or(Center::Caster) {
+                    Center::Caster => caster_radius = caster_radius.max(extent),
+                    Center::Target => target_radius = target_radius.max(extent),
+                }
+            }
+            Some(
+                Selector::AreaAroundDest(Relation::Enemy)
+                | Selector::EntryAreaDestination
+                | Selector::DynObj(Relation::Enemy),
+            ) => {
+                let extent = offset + radius(effect, slot);
+                match center.unwrap_or(Center::Target) {
+                    Center::Caster => caster_radius = caster_radius.max(extent),
+                    Center::Target => target_radius = target_radius.max(extent),
+                }
+            }
+            Some(
+                Selector::ConeEnemy
+                | Selector::ConeEntry
+                | Selector::CasterLine
+                | Selector::ConeToDest
+                | Selector::LineToDest,
+            ) => {
+                caster_radius = caster_radius.max(radius(effect, slot));
+            }
+            Some(Selector::Explicit(Relation::Enemy | Relation::Any))
+                if !spell.cast_single_target =>
+            {
+                let (jumps, jump_radius) = chain_jump_parameters(world, caster, spell, effect);
+                if jumps == 0 {
+                    continue;
+                }
+                if spell
+                    .misc
+                    .as_ref()
+                    .is_some_and(|misc| misc.attributes[2] & SPELL_ATTR2_CHAIN_FROM_CASTER != 0)
+                {
+                    caster_radius = caster_radius.max(jump_radius);
+                } else if effect.attributes & EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET != 0 {
+                    target_radius = target_radius.max(jump_radius);
+                } else {
+                    target_radius = target_radius.max(jumps as f32 * jump_radius);
+                }
+            }
+            _ => {}
+        }
+    }
+    (caster_radius, target_radius)
+}
+
 /// Native chain count and jump distance, shared with reach forecasting.
 /// TrinityCore 15e0ed76 Spell.cpp:1825–1840,2210–2248.
 pub fn chain_jump_parameters(
