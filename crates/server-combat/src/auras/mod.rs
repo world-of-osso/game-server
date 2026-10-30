@@ -1983,6 +1983,21 @@ pub(crate) fn apply_attack_damage(
         return commit_death_prevention(world, unit, rescue, loss);
     }
     let absorbed_loss = overkill_absorb_amount(world, unit, loss, school);
+    #[cfg(any(test, feature = "test-support"))]
+    if world
+        .get::<crate::test_support::SimcInfiniteHealth>(unit)
+        .is_some()
+    {
+        // SimC76f8118 player.cpp:7500–7508,8409: infinite health prevents demise
+        // while damage events and procs still resolve. Native fixture health floors at 1.
+        if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
+            health.current = (health.current - loss).max(1.0);
+        }
+        return DamageCommit {
+            lethal: false,
+            absorbed_loss,
+        };
+    }
     // Generic316 reports absorption, but only a sourced script may prevent death.
     DamageCommit {
         lethal: world
