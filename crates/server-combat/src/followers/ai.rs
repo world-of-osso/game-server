@@ -44,7 +44,7 @@ pub(super) fn update(world: &mut World) {
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     escape_pet_hazard(world, unit);
-    if super::hazards::escape(world, unit) {
+    if super::hazards::escape(world, unit) || super::candlelight::seek(world, unit) {
         return;
     }
     stop_attacking_cc(world, unit);
@@ -475,6 +475,9 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
+    if super::candlelight::hold_pursuit(world, unit, target) {
+        return true;
+    }
     if super::tank_planner::apply_admitted_position(world, unit, Some(target))
         || super::tank_planner::apply_admitted_caster_target(world, unit)
         || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
