@@ -393,6 +393,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "only modifies damage to an already selected Meteor target",
     ),
     (
+        "fire_procs.rs",
+        "trigger_burnout",
+        "query",
+        1,
+        "damages only enemies with the caster's existing Ignite bank",
+    ),
+    (
         "frost_death_knight.rs",
         "frost_fever_runic_power",
         "query",
