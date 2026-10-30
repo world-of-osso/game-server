@@ -54,6 +54,14 @@ fn on_payment(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(Co
         }
     };
     if trigger {
-        spell_cast::cast_triggered(world, caster, HEAL, Some(caster), 1);
+        let cap = spell_cast::scripts::script_effect_value(world, caster, TALENT, 2) as u32;
+        let mut heal = spell_cast::load_triggered_spell(world, HEAL, 1)
+            .expect("native After the Wildfire heal");
+        heal.target_restrictions
+            .get_or_insert_with(Default::default)
+            .max_targets = cap;
+        if !spell_cast::launch_triggered_spell(world, caster, &heal, Some(caster), 1) {
+            warn!(?caster, "After the Wildfire heal failed");
+        }
     }
 }
