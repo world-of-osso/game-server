@@ -103,20 +103,75 @@ fn mountains_earth_shock_launches_native_overload_with_sourced_effectiveness() {
     let actor = run.actor;
     let target = run.targets[0];
     assert!(own_aura(&run, 381726).is_some());
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 1219480, Some(actor), 0));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        1219480,
+        Some(actor),
+        0
+    ));
     settle(&mut run);
-    run.app.insert_resource(FactorCapture::new(actor, target, 381725, "earth_shock_overload", 4));
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 8042, Some(target), 0));
-    for _ in 0..80 { run.app.update(); }
+    run.app.insert_resource(FactorCapture::new(
+        actor,
+        target,
+        381725,
+        "earth_shock_overload",
+        4,
+    ));
+    let mut powers = run
+        .app
+        .world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap();
+    let maelstrom = powers
+        .get_mut(shared::components::PowerType::Maelstrom)
+        .unwrap();
+    maelstrom.current = maelstrom.max;
+    drop(powers);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8042, Some(target), false)
+        .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits()) && event.target == Some(target.to_bits()) && event.spell_id == Some(381725) && event.kind == CombatLogKind::Damage && event.amount > 0), "actual Earth Shock must launch its damaging overload");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(381725)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "actual Earth Shock must launch its damaging overload"
+    );
     let capture = run.app.world().resource::<FactorCapture>().export();
-    let event = capture["events"].as_array().unwrap().iter()
-        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 381725).unwrap();
-    let factor = event["applied_multipliers"].as_array().unwrap().iter()
-        .find(|factor| factor["factor"] == "cast_effectiveness").unwrap()["value"].as_f64().unwrap();
-    let mountains = f64::from(own_aura(&run, 381726).unwrap().effects.iter().find(|effect| effect.index == 0).unwrap().amount) / 100.0;
-    assert!((factor - mountains).abs() < 0.001, "actual overload uses the selected Mountains percentage");
+    let event = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 381725)
+        .unwrap();
+    let factor = event["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|factor| factor["factor"] == "cast_effectiveness")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap();
+    let mountains = f64::from(
+        own_aura(&run, 381726)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount,
+    ) / 100.0;
+    assert!(
+        (factor - mountains).abs() < 0.001,
+        "actual overload uses the selected Mountains percentage"
+    );
 }
 
 fn overload_damage(multiplier: f32, mote: bool) -> (u64, f32) {

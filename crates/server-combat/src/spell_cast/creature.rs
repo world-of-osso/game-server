@@ -147,6 +147,10 @@ pub(crate) fn creature_cast_instant_background(
     if let Some(misc) = &mut spell.misc {
         misc.cast_time = None;
     }
+    // SimC background actions neither check nor start the foreground GCD.
+    if let Some(categories) = &mut spell.categories {
+        categories.start_recovery_category = 0;
+    }
     spell.cast_parent_owns_modifier_charges = true;
     let target = super::validate_start(world, caster, &spell, explicit, true)?;
     super::begin_validated_cast(world, caster, &spell, target)
