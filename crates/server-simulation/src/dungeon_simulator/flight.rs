@@ -1,13 +1,21 @@
 //! DAWNBREAKER_FLIGHT_ALTITUDE_TERRAIN_CLEARANCE_INFERRED.
 use bevy::prelude::*;
 
-// Fifteen yards keeps the inferred flight corridor above sampled native geometry;
-// LOS checks still reject segments that cross unsampled or vertical obstacles.
+// Fifteen yards separates the inferred path from the selected collision surface.
 const CLEARANCE: f32 = 15.0;
 const SAMPLE_SPACING: f32 = 5.0;
+// FlightCapability 11 caps an impulse at 100 yd/s. Treating that as a vertical
+// continuity bound is inferred; dives may exceed the impulse speed.
+const VERTICAL_BOUND: f32 = shared::skyriding::SKYRIDING.add_impulse_max_speed;
 
-/// Highest baked solid in this column, including sloped geometry and neighbouring-tile overhangs.
-fn native_surface(los: &mut los::LosMap, point: Vec2) -> Result<Option<f32>, String> {
+#[derive(Clone, Copy)]
+struct LoggedPoint {
+    horizontal: Vec2,
+    seconds: f32,
+}
+
+/// Find baked solids in a column, including neighbouring-tile overhangs.
+fn native_surfaces(los: &mut los::LosMap, point: Vec2) -> Result<Vec<f32>, String> {
     let (row, col) = los::tile_of(point.x, point.y);
     if los.tile((row, col))?.is_none() {
         return Err(format!("missing flight LOS tile ({row}, {col})"));
@@ -22,54 +30,71 @@ fn native_surface(los: &mut los::LosMap, point: Vec2) -> Result<Option<f32>, Str
         }
     }
     let Some((low, high)) = bounds else {
-        return Ok(None);
+        return Ok(Vec::new());
     };
-    let top = Vec3::new(point.x, high + 1.0, point.y);
     let bottom = Vec3::new(point.x, low - 1.0, point.y);
-    Ok(los.first_hit(top, bottom)?.map(|t| top.lerp(bottom, t).y))
+    let mut top = Vec3::new(point.x, high + 1.0, point.y);
+    let mut surfaces = los.floor_heights(point.x, point.y)?;
+    while top.y > bottom.y {
+        let Some(t) = los.first_hit(top, bottom)? else {
+            break;
+        };
+        let height = top.lerp(bottom, t).y;
+        surfaces.push(height);
+        // Avoid hitting the same face again. Walkable floors are also enumerated above.
+        top.y = height - 0.01;
+    }
+    surfaces.sort_by(f32::total_cmp);
+    surfaces.dedup_by(|a, b| (*a - *b).abs() < 0.01);
+    Ok(surfaces)
 }
 
-/// Give logged horizontal waypoints inferred altitudes, preserving projected ground endpoints.
+/// Use logged horizontal positions and continuity-selected native layers, then check LOS.
 fn flight_path(
     ground_start: Vec3,
     ground_end: Vec3,
-    samples: &[Vec2],
-    mut surface: impl FnMut(Vec2) -> Result<Option<f32>, String>,
+    samples: &[LoggedPoint],
+    mut surfaces: impl FnMut(Vec2) -> Result<Vec<f32>, String>,
     mut clear: impl FnMut(Vec3, Vec3) -> Result<bool, String>,
 ) -> Result<Vec<Vec3>, String> {
-    if samples.is_empty() {
-        return Err("flight leg has no logged horizontal samples".into());
+    let Some(first) = samples.first() else {
+        return Err("flight leg has no logged samples".into());
+    };
+    let last = samples.last().unwrap();
+    if first.horizontal != Vec2::new(ground_start.x, ground_start.z)
+        || last.horizontal != Vec2::new(ground_end.x, ground_end.z)
+    {
+        return Err("projected flight endpoints do not match logged samples".into());
     }
-    let horizontal: Vec<_> = std::iter::once(Vec2::new(ground_start.x, ground_start.z))
-        .chain(samples.iter().copied())
-        .chain(std::iter::once(Vec2::new(ground_end.x, ground_end.z)))
-        .collect();
-    let mut heights = Vec::with_capacity(horizontal.len() - 1);
-    for pair in horizontal.windows(2) {
-        let count = (pair[0].distance(pair[1]) / SAMPLE_SPACING).ceil().max(1.0) as usize;
-        let mut highest = f32::NEG_INFINITY;
-        for i in 0..=count {
-            let point = pair[0].lerp(pair[1], i as f32 / count as f32);
-            let height =
-                surface(point)?.ok_or_else(|| format!("missing flight surface at {point:?}"))?;
-            if !height.is_finite() {
-                return Err(format!("invalid flight surface at {point:?}"));
-            }
-            highest = highest.max(height);
+    let mut path = vec![ground_start, ground_start + Vec3::Y * CLEARANCE];
+    let mut previous_height = ground_start.y;
+    for pair in samples.windows(2) {
+        let seconds = pair[1].seconds - pair[0].seconds;
+        if !seconds.is_finite() || seconds <= 0.0 {
+            return Err("flight sample timestamps are not strictly increasing".into());
         }
-        heights.push(highest + CLEARANCE);
-    }
-    let mut path = vec![ground_start];
-    for (index, point) in horizontal.iter().enumerate() {
-        let height = match (
-            index.checked_sub(1).and_then(|i| heights.get(i)),
-            heights.get(index),
-        ) {
-            (Some(a), Some(b)) => a.max(*b),
-            (Some(a), None) | (None, Some(a)) => *a,
-            (None, None) => unreachable!(),
-        };
-        path.push(Vec3::new(point.x, height, point.y));
+        let count = (pair[0].horizontal.distance(pair[1].horizontal) / SAMPLE_SPACING)
+            .ceil()
+            .max(1.0) as usize;
+        for i in 1..=count {
+            let point = pair[0]
+                .horizontal
+                .lerp(pair[1].horizontal, i as f32 / count as f32);
+            let max_change = VERTICAL_BOUND * seconds / count as f32;
+            let height = surfaces(point)?
+                .into_iter()
+                .filter(|height| {
+                    height.is_finite() && (height - previous_height).abs() <= max_change
+                })
+                .min_by(|a, b| {
+                    (a - previous_height)
+                        .abs()
+                        .total_cmp(&(b - previous_height).abs())
+                })
+                .ok_or_else(|| format!("no flight surface within continuity bound at {point:?}"))?;
+            previous_height = height;
+            path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
+        }
     }
     path.push(ground_end);
     for (index, pair) in path.windows(2).enumerate() {
@@ -98,13 +123,13 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
     let mut missing = Vec::new();
     for (x, z) in points {
         let heights = los.floor_heights(x, z).unwrap();
-        let surface = native_surface(&mut los, Vec2::new(x, z)).unwrap();
+        let solids = native_surfaces(&mut los, Vec2::new(x, z)).unwrap();
         let floors: Vec<_> = heights
             .iter()
             .filter_map(|&y| nav.floor_polygon(Vec3::new(x, y, z)).unwrap())
             .collect();
         println!(
-            "DAWNBREAKER_SURFACES x={x} z={z} highest={surface:?} los={heights:?} nav={floors:?}"
+            "DAWNBREAKER_SURFACES x={x} z={z} solids={solids:?} walkable={heights:?} nav={floors:?}"
         );
         if floors.is_empty() {
             missing.push((x, z));
@@ -117,15 +142,25 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
 }
 
 #[test]
-fn inferred_flight_uses_sampled_corridor_heights_and_checks_every_segment() {
+fn inferred_flight_selects_continuous_layer_and_checks_every_segment() {
     let start = Vec3::new(0.0, 2.0, 0.0);
-    let end = Vec3::new(20.0, 3.0, 0.0);
+    let end = Vec3::new(10.0, 4.0, 0.0);
+    let samples = [
+        LoggedPoint {
+            horizontal: Vec2::ZERO,
+            seconds: 0.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(10.0, 0.0),
+            seconds: 2.0,
+        },
+    ];
     let mut checked = Vec::new();
     let path = flight_path(
         start,
         end,
-        &[Vec2::new(10.0, 0.0)],
-        |point| Ok(Some(if point.x == 5.0 { 30.0 } else { 10.0 })),
+        &samples,
+        |point| Ok(vec![5000.0, if point.x == 5.0 { 3.0 } else { 4.0 }]),
         |a, b| {
             checked.push((a, b));
             Ok(true)
@@ -136,9 +171,9 @@ fn inferred_flight_uses_sampled_corridor_heights_and_checks_every_segment() {
         path,
         vec![
             start,
-            Vec3::new(0.0, 45.0, 0.0),
-            Vec3::new(10.0, 45.0, 0.0),
-            Vec3::new(20.0, 25.0, 0.0),
+            Vec3::new(0.0, 17.0, 0.0),
+            Vec3::new(5.0, 18.0, 0.0),
+            Vec3::new(10.0, 19.0, 0.0),
             end
         ]
     );
@@ -149,17 +184,29 @@ fn inferred_flight_uses_sampled_corridor_heights_and_checks_every_segment() {
 }
 
 #[test]
-fn inferred_flight_rejects_missing_surface_and_blocked_segments() {
+fn inferred_flight_rejects_missing_layers_impossible_changes_and_blocked_segments() {
     let start = Vec3::ZERO;
     let end = Vec3::new(10.0, 0.0, 0.0);
-    let waypoints = [Vec2::new(5.0, 0.0)];
-    let missing = flight_path(start, end, &waypoints, |_| Ok(None), |_, _| Ok(true)).unwrap_err();
-    assert!(missing.contains("missing flight surface"));
+    let samples = [
+        LoggedPoint {
+            horizontal: Vec2::ZERO,
+            seconds: 0.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(10.0, 0.0),
+            seconds: 1.0,
+        },
+    ];
+    let missing = flight_path(start, end, &samples, |_| Ok(vec![]), |_, _| Ok(true)).unwrap_err();
+    assert!(missing.contains("continuity bound"));
+    let impossible =
+        flight_path(start, end, &samples, |_| Ok(vec![1000.0]), |_, _| Ok(true)).unwrap_err();
+    assert!(impossible.contains("continuity bound"));
     let blocked = flight_path(
         start,
         end,
-        &waypoints,
-        |_| Ok(Some(0.0)),
+        &samples,
+        |_| Ok(vec![0.0]),
         |a, b| Ok(a.x == b.x),
     )
     .unwrap_err();
