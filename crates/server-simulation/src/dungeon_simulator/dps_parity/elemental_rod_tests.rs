@@ -105,7 +105,13 @@ fn elemental_spenders_apply_rod_and_lightning_copies_resolved_damage() {
         |aura| aura.spell_id == 197209,
     );
     trigger(&mut run, 117014, target);
-    assert!(rod(&run, target).is_some(), "Elemental Blast applies Rod");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        rod(&run, target).is_some(),
+        "Elemental Blast applies Rod on missile impact"
+    );
 }
 
 #[test]
