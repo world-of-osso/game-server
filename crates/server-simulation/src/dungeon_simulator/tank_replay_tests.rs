@@ -1488,6 +1488,8 @@ fn engaged_protection_paladin() -> super::dps_parity::Run {
 #[test]
 #[ignore = "uses a real Protection Paladin cast and replay clock"]
 fn replay_decides_when_global_cooldown_expires() {
+    use bevy::prelude::Time;
+
     let mut run = engaged_protection_paladin();
     let (actor, target) = (run.actor, run.targets[0]);
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
