@@ -108,6 +108,7 @@ pub mod retreat;
 mod rotation_dummy_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod simulator;
+pub mod spec_selection;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_defense;
