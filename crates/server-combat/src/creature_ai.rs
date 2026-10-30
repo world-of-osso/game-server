@@ -17,6 +17,8 @@ use shared::casting::CastState;
 use shared::ground::STEP_UP_HEIGHT;
 use std::time::Duration;
 
+pub mod flight_follow;
+
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
 /// Run speed in world-units per second (AzerothCore `baseMoveSpeed[MOVE_RUN]`).
@@ -95,6 +97,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
     Without<crate::taxi::TaxiFlight>,
+    Without<flight_follow::FlightFollow>,
 );
 
 pub struct CreatureAiPlugin;
@@ -116,7 +119,7 @@ impl Plugin for CreatureAiPlugin {
                 )
                     .chain(),
                 confused_movement_system,
-                follow_owner_system,
+                (flight_follow::update, follow_owner_system).chain(),
                 pet_motion_system,
             ),
         );
@@ -1244,6 +1247,7 @@ pub(crate) fn install_follower_follow_fixture(app: &mut App) {
         (
             crate::followers::update_ai,
             chase_system,
+            flight_follow::update,
             follow_owner_system,
         )
             .chain(),
@@ -1424,6 +1428,36 @@ pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32
         (rotation, motion, movement_speed),
         stride,
     );
+    state.apply(world);
+}
+
+fn move_flying_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
+    let mut state = bevy::ecs::system::SystemState::<(
+        MoveQueues,
+        Query<
+            (
+                &mut Position,
+                Option<&mut Rotation>,
+                Option<&mut CreatureMotion>,
+                Option<&mut MovementSpeed>,
+            ),
+            With<flight_follow::FlightFollow>,
+        >,
+    )>::new(world);
+    let (queues, mut units) = state.get_mut(world).expect("flight movement parameters");
+    if let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) {
+        let stride = if *position == to {
+            Stride::still(*position)
+        } else {
+            Stride::moving(*position, to, CreatureMotion::Run, speed)
+        };
+        queues.apply(
+            entity,
+            &mut position,
+            (rotation, motion, movement_speed),
+            stride,
+        );
+    }
     state.apply(world);
 }
 

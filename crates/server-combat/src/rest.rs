@@ -686,8 +686,8 @@ mod tests {
             .execute_batch(
                 "CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER,
              ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER,
-             AreaName_lang TEXT);
-             INSERT INTO area_table VALUES
+             AreaName_lang TEXT, MountFlags INTEGER DEFAULT 0);
+             INSERT INTO area_table (ID,ParentAreaID,ContinentID,Flags_0,FactionGroupMask,Flags_1,AreaName_lang) VALUES
              (12,0,0,16448,2,0,'Elwynn Forest'), (1519,0,0,2113848,2,12288,'Stormwind City'),
              (1637,0,1,2113848,4,12288,'Orgrimmar'),
              (5148,1519,0,1075855672,0,4096,'Trade District'),
