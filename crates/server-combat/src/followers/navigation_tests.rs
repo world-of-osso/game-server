@@ -31,7 +31,8 @@ fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
         z: 145.0,
     };
     let height =
-        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to)
+            .expect("swim route");
     assert!((height - to.y).abs() < 0.01, "swimmer snapped to {height}");
     let vertical = Position {
         x: from.x,
@@ -43,7 +44,8 @@ fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
         Some(&map),
         from,
         vertical,
-    );
+    )
+    .expect("vertical swim route");
     assert!(
         (height - vertical.y).abs() < 0.01,
         "vertical swim stopped at {height}"
@@ -63,11 +65,76 @@ fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
         Some(&map),
         bank,
         entering,
-    );
+    )
+    .expect("water entry route");
     assert!(
         (height - entering.y).abs() < 0.01,
         "water entry snapped to {height}"
     );
+}
+
+#[test]
+fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+    for (floor, should_move) in [(-23.1, true), (-130.65, false)] {
+        let (mut h, unit, _) = spawn_profile_fixture(209072);
+        h.app.world_mut().despawn(h.npc);
+        let from = Position {
+            x: 16.2,
+            y: -23.1,
+            z: -81.3,
+        };
+        let owner = Position {
+            x: 16.2,
+            y: -23.1,
+            z: -71.3,
+        };
+        let map = InMap::continent(2527);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            owner,
+            map,
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(unit)
+            .remove::<crate::creature_ai::PartyFollowSlot>()
+            .insert((from, map, crate::creature_ai::FollowOwner::new(h.caster)));
+        h.app.insert_resource(GroundMap::flat_arena(floor));
+        let dir = tempfile::tempdir().unwrap();
+        let mut nav = Navigation::new(dir.path());
+        let target = Position {
+            x: owner.x + 4.0 * std::f32::consts::FRAC_PI_2.cos(),
+            y: owner.y,
+            z: owner.z - 4.0,
+        };
+        let goal = Goal::FollowFormation(h.caster.to_bits(), point(owner));
+        nav.adopt_candidate_route(
+            unit,
+            MoveRequest {
+                map_id: 2527,
+                goal,
+                from,
+                to: target,
+                distance: 0.0,
+                reach: 0.0,
+            },
+            vec![point(from), point(target)],
+        );
+        h.app.insert_resource(nav);
+        crate::creature_ai::install_follow_fixture(&mut h.app);
+        h.advance(1);
+        let after = *h.app.world().get::<Position>(unit).unwrap();
+        if should_move {
+            assert!(after.z > from.z, "supported route must advance: {after:?}");
+        } else {
+            assert_eq!(after, from, "follower must hold at the upper floor");
+        }
+    }
 }
 
 fn wow(x: f32, y: f32, z: f32) -> Position {

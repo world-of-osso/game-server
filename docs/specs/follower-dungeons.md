@@ -25,6 +25,10 @@ Extract the parity profile loader, player actor initialization and APL drivers f
 
 Follower formation destinations use a collision-limited, walkable point connected to the owner's polygon; shrink the requested offset toward the owner when the requested point cannot be connected. The follower then follows its production navmesh route to that point. TC 15e0ed76 `FollowMovementGenerator.cpp:159` uses the target's `GetNearPoint`; `Object.cpp:2718–2752` performs the near-point collision and ground adjustment. The connected polygon projection and shrink are the project's navmesh implementation of that behavior.
 
+Evaluate follower approach exposure along the complete native route, including every continuation of a partial corridor. If the complete route is unavailable, hold rather than treating the unchecked remainder as safe.
+
+Ground correction must not move a routed follower below its navigation step by more than the walkable step height. Hold and repath instead. Only an authored navigation route or a registered Drop passage can admit a larger descent.
+
 When the follower's regroup corridor crosses an unpulled hostile's aggro radius, it follows a safe route to a recent point on the owner's out-of-combat trail. It rechecks when that hostile is pulled. If no safe route is available for five seconds, it resumes ordinary following instead of holding indefinitely. This is the user-directed follower policy, not a claim of Retail behavior.
 
 Followers select a hostile only when a complete navigation corridor reaches it, or when an available hostile spell can reach it with line of sight. They drop a current target that no longer meets either condition. The same eligible enemy set feeds the primary selection and the follower kit.
