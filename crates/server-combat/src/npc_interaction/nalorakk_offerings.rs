@@ -42,6 +42,7 @@ fn offering(entry: u32, spell: u32) -> Option<Offering> {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn is_offering_source(entry: u32) -> bool {
     [1239001, 1239040, 1239227, 1239300]
         .into_iter()
