@@ -44,7 +44,7 @@ fn on_payment(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(Co
     let trigger = {
         let mut entity = world.entity_mut(caster);
         let mut entry = entity.entry::<RageSpent>().or_default();
-        let progress = entry.get_mut();
+        let mut progress = entry.get_mut();
         progress.0 += paid;
         if progress.0 < threshold {
             false
