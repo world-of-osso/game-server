@@ -27,7 +27,7 @@ use crate::profession::PlayerProfessions;
 use crate::race_class::race_mask_allows;
 use crate::spell_info::{ClassInfo, ClassSpells, SpecInfo};
 use crate::trait_config::{
-    ConfigEntry, Purchase, TraitContext, build_config, granted_entries,
+    ConfigEntry, Purchase, TalentSource, TraitContext, build_config, granted_entries,
     ranked_talent_spell_entries, starter_purchases, unspent,
 };
 
@@ -617,14 +617,16 @@ pub fn evaluate_follower_progression(
     race: u8,
     spec_id: u32,
     level: u8,
+    source: TalentSource,
     logged: &[(u32, u32)],
-) -> Result<(Vec<KnownSpell>, TraitLoadout, &'static str), String> {
+) -> Result<(Vec<KnownSpell>, TraitLoadout, TalentSource), String> {
     let class = class_info(classes, class_id).ok_or("follower class absent")?;
     let spec = resolve_spec(class, level, spec_id)
         .filter(|spec| spec.spec_id == spec_id)
         .ok_or("follower specialization is not available to this class and level")?;
     let ctx = TraitContext { spec_id, level };
-    let (source, entries) = crate::trait_config::build_follower_config(&class.traits, ctx, logged)?;
+    let (source, entries) =
+        crate::trait_config::build_follower_config(&class.traits, ctx, source, logged)?;
     let traits = build_trait_loadout(class, Some(spec), ctx, entries);
     let spells = compute_known_spells(class, race, level, Some(spec), &traits);
     Ok((spells, traits, source))

@@ -94,16 +94,22 @@ fn class_follower_uses_authored_starter_below_cap_and_strict_logged_build_at_cap
         spec_id: SPEC_RETRIBUTION,
         level: 70,
     };
-    let (spells, traits, source) = crate::class_progression::evaluate_follower_progression(
-        classes,
-        PALADIN,
-        1,
-        SPEC_RETRIBUTION,
-        70,
-        &[(u32::MAX, 1)],
-    )
-    .unwrap();
-    assert_eq!(source, TALENTS_FROM_NATIVE_STARTER_LOADOUT);
+    let progression = |level, source, logged: &[(u32, u32)]| {
+        crate::class_progression::evaluate_follower_progression(
+            classes,
+            PALADIN,
+            1,
+            SPEC_RETRIBUTION,
+            level,
+            source,
+            logged,
+        )
+    };
+    // Below the cap the native starter is used whatever the caller decoded.
+    let (spells, traits, source) =
+        progression(70, TalentSource::SimcProfile, &[(u32::MAX, 1)]).unwrap();
+    assert_eq!(source, TalentSource::NativeStarterLoadout);
+    assert_eq!(source.label(), "TALENTS_FROM_NATIVE_STARTER_LOADOUT");
     assert_eq!(
         traits.source_config().0,
         build_config(tree, lower, &starter_purchases(tree, lower).unwrap()).unwrap()
@@ -120,28 +126,21 @@ fn class_follower_uses_authored_starter_below_cap_and_strict_logged_build_at_cap
         .filter(|entry| entry.total() > 0)
         .map(|entry| (entry.entry_id, entry.total()))
         .collect();
-    let (_, cap_traits, source) = crate::class_progression::evaluate_follower_progression(
-        classes,
-        PALADIN,
-        1,
-        SPEC_RETRIBUTION,
-        90,
-        &logged,
-    )
-    .unwrap();
-    assert_eq!(source, TALENTS_FROM_WCL);
-    assert_eq!(cap_traits.source_config().0, starter);
-    assert!(
-        crate::class_progression::evaluate_follower_progression(
-            classes,
-            PALADIN,
-            1,
-            SPEC_RETRIBUTION,
-            90,
-            &[(u32::MAX, 1)],
-        )
-        .is_err()
-    );
+    // At the cap the supplied build keeps the caller's provenance.
+    for (supplied, label) in [
+        (TalentSource::SimcProfile, "TALENTS_FROM_SIMC_PROFILE"),
+        (TalentSource::ParityProfile, "TALENTS_FROM_PARITY_PROFILE"),
+        (TalentSource::Wcl, "TALENTS_FROM_WCL"),
+    ] {
+        let (_, cap_traits, source) = progression(90, supplied, &logged).unwrap();
+        assert_eq!((source, source.label()), (supplied, label));
+        assert_eq!(cap_traits.source_config().0, starter);
+        assert!(progression(90, supplied, &[(u32::MAX, 1)]).is_err());
+        assert!(progression(90, supplied, &[]).unwrap_err().contains(label));
+    }
+    let (_, native_cap, source) = progression(90, TalentSource::NativeStarterLoadout, &[]).unwrap();
+    assert_eq!(source, TalentSource::NativeStarterLoadout);
+    assert_eq!(native_cap.source_config().0, starter);
 }
 
 #[test]

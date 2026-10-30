@@ -127,31 +127,52 @@ pub fn build_config(
     Ok(entries)
 }
 
-pub const TALENTS_FROM_NATIVE_STARTER_LOADOUT: &str = "TALENTS_FROM_NATIVE_STARTER_LOADOUT";
-pub const TALENTS_FROM_WCL: &str = "TALENTS_FROM_WCL";
+/// Provenance of a follower talent build, supplied by whoever decoded it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TalentSource {
+    SimcProfile,
+    ParityProfile,
+    Wcl,
+    NativeStarterLoadout,
+}
 
-/// Select authored level-appropriate starter talents below the level cap and
-/// validated logged talents at the cap; never truncate a logged build.
+impl TalentSource {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::SimcProfile => "TALENTS_FROM_SIMC_PROFILE",
+            Self::ParityProfile => "TALENTS_FROM_PARITY_PROFILE",
+            Self::Wcl => "TALENTS_FROM_WCL",
+            Self::NativeStarterLoadout => "TALENTS_FROM_NATIVE_STARTER_LOADOUT",
+        }
+    }
+}
+
+/// Select authored level-appropriate starter talents below the level cap. At the cap,
+/// validate the supplied build under its supplied provenance; never truncate it.
 pub fn build_follower_config(
     tree: &TraitTree,
     ctx: TraitContext,
+    source: TalentSource,
     logged: &[(u32, u32)],
-) -> Result<(&'static str, Vec<ConfigEntry>), String> {
+) -> Result<(TalentSource, Vec<ConfigEntry>), String> {
     let max_level = crate::spell_info::MAX_LEVEL;
     if ctx.level == 0 || u32::from(ctx.level) > max_level {
         return Err(format!("invalid follower talent level {}", ctx.level));
     }
-    if u32::from(ctx.level) < max_level {
+    if u32::from(ctx.level) < max_level || source == TalentSource::NativeStarterLoadout {
         let purchases = starter_purchases(tree, ctx)?;
         return Ok((
-            TALENTS_FROM_NATIVE_STARTER_LOADOUT,
+            TalentSource::NativeStarterLoadout,
             build_config(tree, ctx, &purchases)?,
         ));
     }
     if logged.is_empty() {
-        return Err("max-level follower has no logged talent build".into());
+        return Err(format!(
+            "max-level follower has no {} talent build",
+            source.label()
+        ));
     }
-    Ok((TALENTS_FROM_WCL, build_logged_config(tree, ctx, logged)?))
+    Ok((source, build_logged_config(tree, ctx, logged)?))
 }
 
 /// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
