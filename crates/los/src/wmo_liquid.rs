@@ -15,11 +15,7 @@ pub fn load_model(data: &std::path::Path, root_fdid: u32) -> Result<Vec<LiquidTr
     let root = read(root_fdid)?;
     let parsed = parser::load_wmo_root(&root)?;
     let mut triangles = Vec::new();
-    for fdid in parsed
-        .group_file_data_ids
-        .into_iter()
-        .take(parsed.n_groups as usize)
-    {
+    for fdid in parser::parse_root_group_file_ids(&root)? {
         let group = read(fdid)?;
         triangles.extend(
             group_triangles(parsed.flags, &group)
