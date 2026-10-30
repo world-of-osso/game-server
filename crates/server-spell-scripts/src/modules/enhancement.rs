@@ -21,7 +21,7 @@ mod enhancement_modes;
 #[path = "enhancement/enhancement_nova.rs"]
 mod enhancement_nova;
 #[path = "enhancement/enhancement_rod.rs"]
-mod enhancement_rod;
+pub(crate) mod enhancement_rod;
 #[path = "enhancement/enhancement_spending.rs"]
 mod enhancement_spending;
 #[path = "enhancement/enhancement_stormblast.rs"]
