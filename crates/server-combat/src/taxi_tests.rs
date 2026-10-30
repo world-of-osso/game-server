@@ -273,7 +273,7 @@ fn darkflame_cart_click_carries_owner_and_follower_on_native_path() {
         })
         .collect();
     assert_eq!(path.len(), 32);
-    let mut observed = Vec::new();
+    let mut observed = vec![Vec3::new(start.x, start.y, start.z)];
     for _ in 0..2000 {
         let position = h.app.world().get::<Position>(h.player).unwrap();
         observed.push(Vec3::new(position.x, position.y, position.z));
