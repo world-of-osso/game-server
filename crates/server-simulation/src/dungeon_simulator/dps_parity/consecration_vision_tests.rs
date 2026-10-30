@@ -14,7 +14,7 @@ fn first_consecration_tick(targets: usize, selected: bool) -> i32 {
     run.app
         .world_mut()
         .entity_mut(run.actor)
-        .insert(crate::test_support::LiteralParityFixture);
+        .insert(literal_rotation::LiteralParityFixture);
     for _ in 0..4 {
         run.app.update();
     }
