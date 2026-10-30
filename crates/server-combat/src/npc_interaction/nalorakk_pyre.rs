@@ -5,14 +5,24 @@ use shared::protocol::GameObjectInfo;
 use super::gossip::{GossipAction, Opening, gossip_opening};
 use crate::maps::{InMap, TeleportOptions, WorldLocation};
 
-const MAP: u32 = 2825;
+pub(crate) const MAP: u32 = 2825;
+pub(crate) const PYRES: &[(u32, u32, Vec3, f32)] = &[
+    (
+        616377,
+        40087,
+        Vec3::new(4339.33, -4947.34, 104.31152),
+        4.3481,
+    ),
+    (
+        613266,
+        40088,
+        Vec3::new(4480.69, -4912.04, 13.435155),
+        3.26377,
+    ),
+];
 
-pub(super) fn menu(entry: u32) -> Option<u32> {
-    match entry {
-        616377 => Some(40087),
-        613266 => Some(40088),
-        _ => None,
-    }
+pub(crate) fn menu(entry: u32) -> Option<u32> {
+    PYRES.iter().find(|row| row.0 == entry).map(|row| row.1)
 }
 
 pub(super) fn opening(entry: u32) -> Opening {
@@ -28,12 +38,8 @@ pub(super) fn opening(entry: u32) -> Opening {
     )
 }
 
-fn destination(entry: u32) -> Option<WorldLocation> {
-    let (position, orientation) = match entry {
-        616377 => (Vec3::new(4339.33, -4947.34, 104.31152), 4.3481),
-        613266 => (Vec3::new(4480.69, -4912.04, 13.435155), 3.26377),
-        _ => return None,
-    };
+pub(crate) fn destination(entry: u32) -> Option<WorldLocation> {
+    let (_, _, position, orientation) = *PYRES.iter().find(|row| row.0 == entry)?;
     Some(WorldLocation {
         map_id: MAP,
         position,
@@ -41,7 +47,7 @@ fn destination(entry: u32) -> Option<WorldLocation> {
     })
 }
 
-pub(super) fn traverse(world: &mut World, player: Entity, pyre: Entity) -> Result<(), String> {
+pub(crate) fn traverse(world: &mut World, player: Entity, pyre: Entity) -> Result<(), String> {
     let copy = *world.get::<InMap>(player).ok_or("pyre user lacks a map")?;
     if copy.map_id != MAP || world.get::<InMap>(pyre) != Some(&copy) {
         return Err("pyre and user must share a Nalorakk instance".into());

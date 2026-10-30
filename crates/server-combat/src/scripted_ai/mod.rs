@@ -74,7 +74,7 @@ pub(crate) mod tww_rookery;
 mod uldaman;
 mod umbrelskul;
 mod vexamus;
-mod voidscar_portal;
+pub(crate) mod voidscar_portal;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 mod wratheye;
