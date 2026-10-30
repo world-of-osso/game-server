@@ -12,6 +12,8 @@ use crate::stats::{StatModifiers, compound_haste_pct};
 /// School bit indexes 0 Physical .. 6 Arcane.
 pub const SCHOOL_COUNT: usize = 7;
 const FRENZY: u32 = 1_264_934;
+// Two 2026-10-30 retail logs show no +15-point leech during Incarnation.
+const INCARNATION_LEECH_NOT_OBSERVED_IN_LOGS: (u32, u8) = (102558, 8);
 
 /// Aura combat multipliers of one unit, read by the damage, heal, regen and
 /// movement paths. Stat changes (primary stats, crit, haste, mastery, max
@@ -640,7 +642,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
                     .push((aura.caster, misc as u32, pct(amount)))
             }
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
-            MOD_LEECH_PERCENT => stats.leech_pct += amount,
+            MOD_LEECH_PERCENT => {
+                if (aura.spell_id, effect.index) != INCARNATION_LEECH_NOT_OBSERVED_IN_LOGS {
+                    stats.leech_pct += amount;
+                }
+            }
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.
             // SimC76f8118 buff.cpp3620 applies every stat_buff_t rating through stat_gain.
