@@ -3,7 +3,7 @@ use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::{Health, UnitFactionTemplate};
 
-use super::{kit_ai, pull_route};
+use super::pull_route;
 use crate::creature_aggro::AggroDistance;
 use crate::faction::{FactionTemplates, Reaction};
 use crate::maps::InMap;
@@ -59,9 +59,6 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     if !is_owner {
         super::trail_follow::clear(world, unit);
     }
-    if kit_ai::is_tank(world, unit) && !is_owner {
-        return false;
-    }
     if is_owner && super::trail_follow::active(world, unit, target) {
         return super::trail_follow::advance(world, unit, target, Vec::new());
     }
@@ -106,7 +103,10 @@ fn approach_enters_unpulled_sight(
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
+        .filter(|watcher| {
+            is_unpulled_hostile(world, unit, *watcher)
+                && !in_target_formation(world, target, *watcher)
+        })
         .collect();
     if watchers.is_empty() {
         return Ok(Some(Vec::new()));
@@ -135,6 +135,31 @@ fn approach_enters_unpulled_sight(
         }
     }
     Ok(Some(blockers))
+}
+
+fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {
+    if target == watcher {
+        return true;
+    }
+    let (Some(target), Some(watcher)) = (
+        world.get::<crate::zones::CreatureOrigin>(target),
+        world.get::<crate::zones::CreatureOrigin>(watcher),
+    ) else {
+        return false;
+    };
+    if target.guid == 0 || watcher.guid == 0 {
+        return false;
+    }
+    let Some(data) = world.get_resource::<crate::world_data::WorldData>() else {
+        return false;
+    };
+    let pack = |guid| {
+        super::pack_identity::pack_guid(
+            guid,
+            data.formations.get(&guid).map(|entry| entry.leader_guid),
+        )
+    };
+    pack(target.guid) == pack(watcher.guid)
 }
 
 pub(super) fn approach_goal(world: &World, unit: Entity, target: Entity) -> Goal {

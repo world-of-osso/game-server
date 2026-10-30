@@ -54,6 +54,7 @@ pub(super) fn update(world: &mut World) {
 }
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    debug!(target: "game_server::follower_target", ?unit, owner = ?follower.owner, current = ?world.get::<CombatTarget>(unit).and_then(|target| target.0), position = ?world.get::<shared::components::Position>(unit), "follower tick");
     escape_pet_hazard(world, unit);
     if super::hazards::escape(world, unit) || super::candlelight::seek(world, unit) {
         return;

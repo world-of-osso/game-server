@@ -682,6 +682,59 @@ fn follower_combat_approach_holds_for_every_watcher_on_full_path() {
 }
 
 #[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn tank_enters_target_formation_but_holds_for_another_formation() {
+    let from = Vec3::new(365.0142, 87.06531, -32.37358);
+    let to = Vec3::new(421.7417, 87.0782, -29.7178);
+    for (watcher_leader, should_hold) in [(100, false), (200, true)] {
+        let (mut h, tank) = create_native_follower_fixture_for(209057);
+        h.app.world_mut().entity_mut(tank).insert(position(from));
+        h.app.world_mut().entity_mut(h.npc).insert((
+            position(to),
+            crate::zones::CreatureOrigin {
+                guid: 100,
+                original_entry: 1,
+            },
+        ));
+        let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        h.app.world_mut().entity_mut(watcher).insert((
+            position(Vec3::new(393.4, 87.07, -31.0)),
+            InMap::continent(MAP),
+            shared::components::UnitFactionTemplate(16),
+            shared::components::UnitLevel(80),
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+            crate::zones::CreatureOrigin {
+                guid: 101,
+                original_entry: 1,
+            },
+        ));
+        let formation = |leader_guid| crate::world_data::FormationInfo {
+            leader_guid,
+            follow_dist: 0.0,
+            follow_angle: 0.0,
+            group_ai: 0,
+        };
+        let mut data = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::world_data::WorldData>();
+        data.formations.insert(100, formation(100));
+        data.formations.insert(101, formation(watcher_leader));
+        h.advance(1);
+        for _ in 0..3 {
+            super::positioning::hold_unsafe_approach(h.app.world_mut(), tank, h.npc);
+            crate::navigation::drain_fixture(&mut h.app);
+        }
+        assert_eq!(
+            super::positioning::hold_unsafe_approach(h.app.world_mut(), tank, h.npc),
+            should_hold,
+            "watcher formation leader {watcher_leader}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires Windrunner navigation/ground and imported follower profile"]
 fn followers_arrive_on_curved_windrunner_route() {
     use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
