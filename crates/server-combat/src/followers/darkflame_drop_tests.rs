@@ -579,11 +579,16 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 }
 
 #[test]
-#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+#[ignore = "requires Windrunner navigation/ground and imported follower profile"]
 fn followers_retrace_owner_curve_around_unpulled_watcher() {
     use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
     use shared::group::GroupRole;
     let (mut h, first) = create_native_follower_fixture_for(209072);
+    let map_id = 2805;
+    h.app.insert_resource(GroundMap::new(
+        &assets(),
+        HashMap::from([(map_id, 6_099_383)]),
+    ));
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
     h.app
         .world_mut()
@@ -619,9 +624,9 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             super::Follower { owner, profile },
             crate::creature_ai::PartyFollowSlot::new(slot, 4),
             crate::creature_ai::SpawnPoint {
-                x: 370.0,
-                y: 87.07,
-                z: -31.0,
+                x: 5358.188,
+                y: 101.434,
+                z: 3146.1702,
                 wander_distance: 0.0,
                 speed_walk: 1.0,
                 speed_run: 1.0,
@@ -629,22 +634,23 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         ));
         followers.push(actor);
     }
-    let start = Vec3::new(370.0, 87.07, -31.0);
+    // Positions from the physical instance10 route through the Windrunner courtyard.
+    let start = Vec3::new(5358.188, 101.434, 3146.1702);
     let corners = [
         start,
-        Vec3::new(370.0, 87.07, -54.0),
-        Vec3::new(417.0, 87.07, -54.0),
-        Vec3::new(417.0, 87.07, -31.0),
+        Vec3::new(5365.77, 101.272, 3187.69),
+        Vec3::new(5331.647, 101.156, 3213.7322),
     ];
+    let watcher_at = Vec3::new(5345.0, 101.115, 3180.0);
     h.app.world_mut().entity_mut(owner).insert((
         position(start),
-        InMap::continent(MAP),
+        InMap::continent(map_id),
         UnitLevel(10),
     ));
     for &unit in &followers {
         h.app.world_mut().entity_mut(unit).insert((
             position(start),
-            InMap::continent(MAP),
+            InMap::continent(map_id),
             crate::auras::AuraStatMods {
                 movement_speed: 0.0,
                 ..Default::default()
@@ -653,8 +659,8 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     }
     let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
     h.app.world_mut().entity_mut(watcher).insert((
-        position(Vec3::new(393.4, 87.07, -31.0)),
-        InMap::continent(MAP),
+        position(watcher_at),
+        InMap::continent(map_id),
         UnitFactionTemplate(16),
         UnitLevel(10),
         crate::creature_aggro::AggroRange,
@@ -679,10 +685,35 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         .collect();
     eprintln!(
         "CURVE_TEST radii={radii:?} start={start:?} end={:?}",
-        corners[3]
+        corners[2]
     );
-    let mut collision = los::LosMap::new(&assets().join(format!("los/{MAP}")));
+    let mut collision = los::LosMap::new(&assets().join(format!("los/{map_id}")));
+    let mut nav =
+        ::navigation::NavigationMap::open(&navigation_root().join(map_id.to_string())).unwrap();
+    let mut direct = vec![start];
+    direct.extend(
+        nav.complete_walk_path(start, corners[2])
+            .expect("direct corridor must exist"),
+    );
+    assert!(
+        direct
+            .windows(2)
+            .any(
+                |leg| super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
+                    < radii[0] * radii[0]
+            ),
+        "direct follower corridor must cross the watcher radius"
+    );
+    let mut owner_route = vec![start];
     for leg in corners.windows(2) {
+        let points = nav
+            .complete_walk_path(leg[0], leg[1])
+            .expect("owner's curved route must be walkable");
+        assert!(points.last().is_some_and(|end| end.distance(leg[1]) < 1.0));
+        owner_route.extend(points);
+    }
+    let mut owner_steps = 0;
+    for leg in owner_route.windows(2) {
         let length = leg[0].distance(leg[1]);
         let steps = (length / 0.35).ceil() as usize;
         for step in 1..=steps {
@@ -692,7 +723,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 .app
                 .world_mut()
                 .resource_mut::<GroundMap>()
-                .ground_at(MAP, point);
+                .ground_at(map_id, point);
             assert!(
                 matches!(floor, GroundProbe::Supported(y) if (y - point.y).abs() < 1.0),
                 "owner path lacks ground at {point:?}: {floor:?}"
@@ -704,6 +735,16 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 "owner path crosses collision at {point:?}"
             );
             h.app.world_mut().entity_mut(owner).insert(position(point));
+            owner_steps += 1;
+            if owner_steps == 60 {
+                for &unit in &followers {
+                    h.app
+                        .world_mut()
+                        .get_mut::<crate::auras::AuraStatMods>(unit)
+                        .unwrap()
+                        .movement_speed = 1.0;
+                }
+            }
             super::update_ai(h.app.world_mut());
             crate::navigation::drain_fixture(&mut h.app);
             h.advance(1);
@@ -716,14 +757,18 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 .unwrap(),
                 "owner path must not pull watcher at {point:?}"
             );
+            for &unit in &followers {
+                assert!(
+                    !crate::creature_sight::read_npc_proximity_acquisition(
+                        h.app.world_mut(),
+                        watcher,
+                        unit
+                    )
+                    .unwrap(),
+                    "watcher must not acquire a follower while owner walks"
+                );
+            }
         }
-    }
-    for &unit in &followers {
-        h.app
-            .world_mut()
-            .get_mut::<crate::auras::AuraStatMods>(unit)
-            .unwrap()
-            .movement_speed = 1.0;
     }
     for _ in 0..800 {
         super::update_ai(h.app.world_mut());
@@ -742,7 +787,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 "watcher acquired follower {unit:?} at {feet:?}, radius={radius}, time={time}"
             );
             assert!(
-                feet.distance(Vec3::new(393.4, 87.07, -31.0)) >= radius,
+                feet.distance(watcher_at) >= radius,
                 "follower entered watcher radius at {feet:?}, radius {radius}"
             );
         }
@@ -750,7 +795,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     for unit in followers {
         let feet = point(*h.app.world().get::<Position>(unit).unwrap());
         assert!(
-            feet.distance(corners[3]) < 12.0,
+            feet.distance(corners[2]) < 12.0,
             "follower did not arrive: {feet:?}"
         );
     }
