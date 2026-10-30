@@ -36,11 +36,9 @@ pub(crate) fn capture_fixture(
     actor: Entity,
     encounter: Encounter,
 ) -> Result<(), String> {
-    if !matches!(encounter, Encounter::Fixture { .. }) {
-        return Err(
-            "DUNGEON_TTD_UNAVAILABLE: literal controller requires an explicit Fixture encounter"
-                .into(),
-        );
+    if matches!(encounter, Encounter::Dungeon { .. }) {
+        // The live follower brain keeps its owner-follow and positioning behavior.
+        return Ok(());
     }
     // Literal control must not keep the retired kit's owner-follow movement.
     world

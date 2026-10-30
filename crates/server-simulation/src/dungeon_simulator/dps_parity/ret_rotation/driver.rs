@@ -23,9 +23,6 @@ pub(crate) struct Rotation {
 
 impl Rotation {
     pub fn load(world: &mut World, actor: Entity, encounter: Encounter) -> Result<Self, String> {
-        if !matches!(encounter, Encounter::Fixture { .. }) {
-            return Err("DUNGEON_TTD_UNAVAILABLE: literal Ret requires a Fixture encounter".into());
-        }
         let follower = world
             .get::<crate::followers::Follower>(actor)
             .is_some_and(|follower| follower.profile.spec_id == 70);
