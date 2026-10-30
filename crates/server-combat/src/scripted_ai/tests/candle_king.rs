@@ -431,23 +431,15 @@ fn candlelight_source_box_clears_darklight_on_entry_and_removes_light_on_exit() 
         x: center.x + 40.0,
         ..center
     });
-    let spell = h
+    let boss = h
         .app
-        .world()
-        .resource::<SpellStore>()
-        .get(426127)
-        .unwrap()
-        .clone();
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster: player,
-            target: player,
-            spell_id: 426127,
-            effect_mask: crate::auras::aura_effect_mask(&spell),
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
+        .world_mut()
+        .query::<(Entity, &InMap, &shared::components::Npc)>()
+        .iter(h.app.world())
+        .find(|(_, copy, npc)| **copy == map && npc.template_id == CANDLE_KING)
+        .map(|(entity, _, _)| entity)
+        .expect("source Candle King in the copy");
+    crate::spell_cast::cast_triggered(h.app.world_mut(), boss, 426127, Some(boss), 0);
     assert!(h.has_aura(player, 426127));
     crate::world_area_triggers::update_candlelight(h.app.world_mut());
     assert!(!h.has_aura(player, 426125));
@@ -455,7 +447,7 @@ fn candlelight_source_box_clears_darklight_on_entry_and_removes_light_on_exit() 
     crate::world_area_triggers::update_candlelight(h.app.world_mut());
     assert!(h.has_aura(player, 426125));
     assert!(!h.has_aura(player, 426127));
-    crate::spell_cast::cast_triggered(h.app.world_mut(), player, 426127, Some(player), 0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), boss, 426127, Some(boss), 0);
     assert!(
         !h.has_aura(player, 426127),
         "native ExcludeTargetAuraSpell prevents darklight reapplication"

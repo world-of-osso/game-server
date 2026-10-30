@@ -3327,6 +3327,11 @@ fn plan_targets(
                     (units, destination)
                 }
             };
+        // TC Spell::AddUnitTarget calls SpellInfo::CheckTarget on each implicit
+        // area recipient, not only on the explicit cast target.
+        units.retain(|&unit| {
+            aura_spell_restrictions::check_target(world, caster, Some(unit), spell).is_ok()
+        });
         effects::retain_threat_level_targets(world, spell, effect, &mut units);
         scripts::filter_secondary_targets(world, caster, spell, effect.index, explicit, &mut units);
         if let Some(filter) = scripts::area_target_filter(world, spell.id, effect.index) {
