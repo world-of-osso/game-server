@@ -714,6 +714,7 @@ pub(crate) fn add_unmodified_threat(
     if creature == attacker
         || !can_engage(world, creature)
         || crate::faction::world_immunity_blocks_attack(world, creature, attacker)
+        || !crate::combat_refs::can_begin_combat(world, creature, attacker)
     {
         return;
     }

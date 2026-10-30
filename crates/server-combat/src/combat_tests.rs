@@ -813,6 +813,96 @@ fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
 }
 
 #[test]
+fn creature_death_removes_party_threat_and_combat_references() {
+    use shared::components::ThreatTable;
+
+    let mut app = setup_replication_app();
+    let party: Vec<_> = (0..4)
+        .map(|_| {
+            app.world_mut()
+                .spawn((
+                    Health {
+                        current: 100.0,
+                        max: 100.0,
+                    },
+                    ThreatTable::default(),
+                ))
+                .id()
+        })
+        .collect();
+    // A threatless creature has timed combat references.
+    let enemy = app
+        .world_mut()
+        .spawn(Health {
+            current: 100.0,
+            max: 100.0,
+        })
+        .id();
+    for member in &party {
+        crate::creature_aggro::add_threat(app.world_mut(), *member, enemy, 10.0);
+    }
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(6));
+    run_expire_combat_refs_tick(&mut app);
+    for member in &party {
+        assert_eq!(
+            app.world()
+                .get::<ThreatTable>(*member)
+                .unwrap()
+                .threat_for(enemy.to_bits()),
+            0.0
+        );
+        assert!(!app.world().get::<CombatStatus>(*member).unwrap().0);
+    }
+    for member in &party {
+        crate::creature_aggro::add_threat(app.world_mut(), *member, enemy, 10.0);
+    }
+    let other = app
+        .world_mut()
+        .spawn((
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            ThreatTable::default(),
+        ))
+        .id();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), party[0], other);
+    app.world_mut().get_mut::<Health>(enemy).unwrap().current = 0.0;
+    mark_npc_dead_world(app.world_mut(), enemy);
+    for member in &party {
+        assert_eq!(
+            app.world()
+                .get::<ThreatTable>(*member)
+                .unwrap()
+                .threat_for(enemy.to_bits()),
+            0.0
+        );
+        assert!(!crate::combat_refs::has_active_reference_to(
+            app.world(),
+            *member,
+            enemy
+        ));
+    }
+    assert!(app.world().get::<CombatStatus>(party[0]).unwrap().0);
+    for member in &party[1..] {
+        assert!(!app.world().get::<CombatStatus>(*member).unwrap().0);
+    }
+    // Late damage processing cannot recreate a threat entry for the corpse.
+    crate::creature_aggro::add_threat(app.world_mut(), party[1], enemy, 20.0);
+    assert_eq!(
+        app.world()
+            .get::<ThreatTable>(party[1])
+            .unwrap()
+            .threat_for(enemy.to_bits()),
+        0.0
+    );
+    combat_stop(app.world_mut(), other);
+    assert!(!app.world().get::<CombatStatus>(party[0]).unwrap().0);
+}
+
+#[test]
 fn ruby_trash_stays_dead_for_three_hours_but_scripted_despawn_respawns() {
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
