@@ -78,6 +78,20 @@ fn voidscar_portal_moves_owned_party_to_logged_atroxus_floor() {
             },
         ))
         .id();
+    let pet = world
+        .spawn((
+            map,
+            pos,
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            crate::hunter_pet::HunterPet {
+                owner: follower,
+                slot: 0,
+            },
+        ))
+        .id();
     let foreign = world
         .spawn((
             Player {
@@ -96,13 +110,14 @@ fn voidscar_portal_moves_owned_party_to_logged_atroxus_floor() {
     super::super::game_object_gossip_hello(world, owner, object);
     assert!(world.get::<JumpMovement>(owner).is_some());
     assert!(world.get::<JumpMovement>(follower).is_some());
+    assert!(world.get::<JumpMovement>(pet).is_some());
     assert!(world.get::<JumpMovement>(foreign).is_none());
     world
         .resource_mut::<Time>()
         .advance_by(std::time::Duration::from_secs(10));
     super::super::jump_movement::advance_jumps(world);
     app.update();
-    for rider in [owner, follower] {
+    for rider in [owner, follower, pet] {
         assert_eq!(
             *app.world().get::<Position>(rider).unwrap(),
             Position {

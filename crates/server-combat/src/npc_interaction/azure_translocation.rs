@@ -103,14 +103,7 @@ fn teleport_member(
         }
         return Ok(());
     }
-    if let Some(mut navigation) = world.get_resource_mut::<crate::navigation::Navigation>() {
-        navigation.cancel_route(unit);
-    }
-    world.entity_mut(unit).insert(destination.bevy_position());
-    crate::interest::mark_interest_position_changed(
-        world.get_resource::<crate::interest::InterestDirtyQueue>(),
-        unit,
-    );
+    crate::maps::transfer::teleport_creature_with_companions(world, unit, &destination);
     Ok(())
 }
 
@@ -139,11 +132,6 @@ fn read_party(world: &mut World, player: Entity, copy: InMap) -> Vec<Entity> {
         .map(|(unit, _, _)| unit)
         .collect();
     owners.extend(followers);
-    let pets: Vec<_> = owners
-        .iter()
-        .flat_map(|unit| crate::hunter_pet::active_owned_pets(world, *unit))
-        .collect();
-    owners.extend(pets);
     owners.retain(|unit| crate::spell_cast::targets::is_alive(world, *unit));
     owners.sort();
     owners.dedup();
