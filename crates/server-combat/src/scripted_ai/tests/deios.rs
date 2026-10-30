@@ -5,7 +5,8 @@ const DEIOS: u32 = 184125;
 const MAP: u32 = 2451;
 const BIT: u32 = 4;
 const WING: u32 = 376049;
-const SOURCE_FLAGS: u32 = 320;
+// ObjectMgr::ChooseCreatureFlags also projects CAN_SWIM from StaticFlags1.
+const SOURCE_FLAGS: u32 = 320 | 0x8000;
 
 fn deios_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(DEIOS, MAP, BIT, difficulty, None);
