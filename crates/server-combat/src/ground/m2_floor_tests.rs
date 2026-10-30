@@ -113,7 +113,8 @@ fn neltharus_follower_keeps_upper_floor_at_recorded_drop() {
         z: 580.92346,
     };
     let height =
-        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to)
+            .expect("supported route");
     assert!(
         (height - 122.875114).abs() < 0.05,
         "follower dropped to {height}"
@@ -136,7 +137,8 @@ fn neltharus_stationary_follower_keeps_floor_at_sargha_seam() {
         z: from.z,
     };
     let height =
-        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to)
+            .expect("stationary route");
     assert!(
         (height - from.y).abs() < 0.01,
         "stationary follower fell to {height}"
@@ -159,7 +161,7 @@ fn follower_footprint_does_not_bridge_a_wide_drop() {
     };
     let height =
         crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
-    assert_eq!(height, 94.0);
+    assert_eq!(height, None);
 }
 
 fn data_dir() -> PathBuf {

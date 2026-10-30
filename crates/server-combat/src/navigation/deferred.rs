@@ -151,6 +151,12 @@ fn same_query(goal: Goal, previous: &WorkerQuery, next: &WorkerQuery) -> bool {
             horizontal(*a - *c) <= TELEPORT_DISTANCE && b.distance(*d) <= REPATH_DISTANCE
         }
         (
+            WorkerQuery::CompleteRoute { from: a, to: b },
+            WorkerQuery::CompleteRoute { from: c, to: d },
+        ) if goal != Goal::FollowerRelease => {
+            horizontal(*a - *c) <= TELEPORT_DISTANCE && b.distance(*d) <= REPATH_DISTANCE
+        }
+        (
             WorkerQuery::Candidates {
                 from: a,
                 targets: b,

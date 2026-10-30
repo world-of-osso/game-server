@@ -359,7 +359,7 @@ pub(crate) fn follower_footprint_ground(
     map: Option<&InMap>,
     from: Position,
     to: Position,
-) -> f32 {
+) -> Option<f32> {
     let mut ground = ground;
     let direction = Vec2::new(to.x - from.x, to.z - from.z).normalize_or_zero();
     let center = Vec3::new(to.x, from.y, to.z);
@@ -368,11 +368,11 @@ pub(crate) fn follower_footprint_ground(
     {
         let top = shared::movement::swim_top(liquid.level);
         if liquid.depth_level <= top && to.y <= top + navigation::AGENT_CLIMB {
-            return to.y.max(liquid.depth_level);
+            return Some(to.y.max(liquid.depth_level));
         }
     }
     if direction == Vec2::ZERO {
-        return from.y;
+        return Some(from.y);
     }
     let offset = Vec3::new(direction.x, 0.0, direction.y) * navigation::AGENT_RADIUS;
     let probes = [center, center - offset, center + offset];
@@ -385,10 +385,11 @@ pub(crate) fn follower_footprint_ground(
             },
         )
         .max_by(f32::total_cmp);
-    run_ground(
+    let height = run_ground(
         supported.map_or(GroundProbe::Unsupported, GroundProbe::Supported),
         from.y,
-    )
+    );
+    (height >= to.y - navigation::AGENT_CLIMB).then_some(height)
 }
 
 /// Exact runtime support for a routed foot position (Recast contours approximate it).
@@ -1015,7 +1016,17 @@ pub(crate) fn chase_system(
         }
         if next_position != *pos {
             next_position.y = if follower_reach.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    let here = *pos;
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
                 run_ground(
@@ -1378,8 +1389,19 @@ fn follow_owner_system(
         let (x, z) = (next_position.x, next_position.z);
         if next_position != *pos {
             let feet = Vec3::new(x, pos.y, z);
-            next_position.y = if companion.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+            next_position.y = if companion.is_some() || companion_pet.is_some() {
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    follow.moving = false;
+                    let here = *pos;
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
             };
@@ -1620,7 +1642,16 @@ fn pet_motion_system(
         let mut next = next_position;
         if next != here {
             next.y = if companion_pet.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, here, next)
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, here, next)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 let feet = Vec3::new(next.x, next.y, next.z);
                 run_ground(probe_ground(ground.as_deref_mut(), map, feet), next.y)

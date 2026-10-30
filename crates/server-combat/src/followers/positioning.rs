@@ -189,21 +189,56 @@ fn read_approach_path(
     let Some(result) = world
         .get_resource_mut::<Navigation>()
         .ok_or("Follower positioning requires authored navigation")?
-        .query_deferred(unit, map.map_id, goal, NavQuery::Path { from, to })
+        .query_deferred(unit, map.map_id, goal, NavQuery::CompleteRoute { from, to })
     else {
         return Ok(None);
     };
     match result? {
-        Some(Output::Path(path)) => {
-            let points = path.into_complete()?;
-            if points.is_empty() {
+        Some(Output::CompleteRoute(route)) => {
+            if !route.complete {
+                return Err(route
+                    .reason
+                    .unwrap_or_else(|| "Follower positioning route is incomplete".into()));
+            }
+            if route.points.is_empty() {
                 return Err("Follower positioning route is empty".into());
             }
-            Ok(Some(points))
+            Ok(Some(route.points))
         }
         None => Err("Follower positioning has no authored navigation bake".into()),
         Some(_) => Err("Follower positioning received a non-path result".into()),
     }
+}
+
+#[cfg(test)]
+#[test]
+fn halls_follower_approach_resolves_all_corridor_segments() {
+    let root =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh");
+    let mut world = World::new();
+    world.insert_resource(Navigation::new(&root));
+    let unit = world.spawn_empty().id();
+    let owner = world.spawn_empty().id();
+    let map = InMap::continent(2527);
+    let from = Vec3::new(3.4296, -130.648, -227.02);
+    let to = Vec3::new(-0.37, 20.816, -228.269);
+    assert!(
+        read_approach_path(&mut world, unit, owner, map, from, to)
+            .unwrap()
+            .is_none()
+    );
+    world.resource_mut::<Navigation>().drain_until_idle();
+    let points = read_approach_path(&mut world, unit, owner, map, from, to)
+        .unwrap()
+        .expect("complete route");
+    assert!(
+        points.len() > 256,
+        "route must include all segments: {}",
+        points.len()
+    );
+    assert!(points.last().unwrap().distance(to) < 1.0);
+    assert!(points.iter().any(|point| point.y < -100.0));
+    assert!(points.iter().any(|point| point.y > 10.0));
 }
 
 pub(super) fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {

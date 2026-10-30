@@ -9,6 +9,7 @@ const MAX_COMPLETE_ROUTE_SEGMENTS: usize = 256;
 
 #[derive(Clone, Debug)]
 pub struct CompleteRoute {
+    pub points: Vec<Vec3>,
     pub distance: f32,
     pub complete: bool,
     pub reason: Option<String>,
@@ -16,6 +17,7 @@ pub struct CompleteRoute {
 
 fn incomplete(distance: f32, reason: impl Into<String>) -> CompleteRoute {
     CompleteRoute {
+        points: Vec::new(),
         distance,
         complete: false,
         reason: Some(reason.into()),
@@ -29,6 +31,7 @@ pub(crate) fn follow_complete_route(
 ) -> CompleteRoute {
     let mut current = from;
     let mut distance = 0.0;
+    let mut points = Vec::new();
     let mut endpoints = HashSet::new();
     let mut plan = NavigationPlan::default();
     for _ in 0..MAX_COMPLETE_ROUTE_SEGMENTS {
@@ -44,9 +47,11 @@ pub(crate) fn follow_complete_route(
         for point in path.points {
             distance += previous.distance(point);
             previous = point;
+            points.push(point);
         }
         if path.complete {
             return CompleteRoute {
+                points,
                 distance,
                 complete: true,
                 reason: None,
