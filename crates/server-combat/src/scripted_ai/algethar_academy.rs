@@ -140,20 +140,7 @@ pub(super) fn finish_crawth_descent(
 }
 
 fn unlock_boss(world: &mut World, boss: Entity) {
-    use shared::components::{ThreatTable, UnitFlags};
-    let Some(mut flags) = world.get_mut::<UnitFlags>(boss) else {
-        return;
-    };
-    if flags.0 & UnitFlags::IMMUNE_TO_PC == 0 {
-        return;
-    }
-    flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
-    world.entity_mut(boss).insert((
-        ThreatTable::default(),
-        crate::creature_ai::CreatureState::Idle,
-        crate::creature_aggro::AggroRange,
-    ));
-    crate::spell_cast::mark_dirty(world, boss);
+    crate::creature_aggro::unlock_immune_creature(world, boss);
 }
 
 pub(super) fn is_creature_script(name: &str) -> bool {

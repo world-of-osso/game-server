@@ -156,6 +156,24 @@ pub(crate) fn insert_aggro_components(entity: &mut EntityCommands, mode: AggroMo
     }
 }
 
+/// A scripted unlock: clear PC/NPC immunity and grant the aggressive combat
+/// components the passive (immune) spawn never received. Without them the boss
+/// takes damage but never builds threat or fights back.
+pub(crate) fn unlock_immune_creature(world: &mut World, creature: Entity) {
+    use shared::components::UnitFlags;
+    let Some(mut flags) = world.get_mut::<UnitFlags>(creature) else {
+        return;
+    };
+    if flags.0 & UnitFlags::IMMUNE_TO_PC == 0 {
+        return;
+    }
+    flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+    let mut entity = world.entity_mut(creature);
+    entity.entry::<ThreatTable>().or_default();
+    entity.insert((CreatureState::Idle, AggroRange));
+    crate::spell_cast::mark_dirty(world, creature);
+}
+
 type Victims<'w, 's> = Query<
     'w,
     's,

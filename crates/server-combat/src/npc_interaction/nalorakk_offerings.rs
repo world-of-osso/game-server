@@ -1,7 +1,7 @@
 //! HOARDMONGER_UNLOCK_LOG_CORRELATED: pickup and delivery are inferred from logs.
 use crate::maps::InMap;
 use bevy::prelude::*;
-use shared::components::{Npc, Position, UnitFlags};
+use shared::components::{Npc, Position};
 
 const MAP: u32 = 2825;
 const AVATAR: u32 = 241805;
@@ -212,9 +212,6 @@ fn deliver(world: &mut World, player: Entity, avatar: Entity, map: InMap) {
             (npc.template_id == HOARDMONGER && *other == map).then_some(entity)
         });
     if let Some(boss) = boss {
-        if let Some(mut flags) = world.get_mut::<UnitFlags>(boss) {
-            flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
-            crate::spell_cast::mark_dirty(world, boss);
-        }
+        crate::creature_aggro::unlock_immune_creature(world, boss);
     }
 }
