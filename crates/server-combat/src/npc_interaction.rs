@@ -283,6 +283,7 @@ impl InteractionWorld<'_, '_> {
             // Only ported GameObjectAI scripts; generic door/button use is not modelled.
             crate::game_objects::GAMEOBJECT_TYPE_DOOR
             | crate::game_objects::GAMEOBJECT_TYPE_BUTTON
+            | crate::game_objects::GAMEOBJECT_TYPE_GOOBER
                 if scripted && !in_use =>
             {
                 ObjectUse::Script
