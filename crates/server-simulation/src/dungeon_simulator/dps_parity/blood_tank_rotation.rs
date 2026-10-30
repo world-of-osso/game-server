@@ -3161,6 +3161,65 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn boiling_point_echo_consumes_intervening_proc_and_queues_another_echo() {
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            1265968,
+            Some(actor),
+            1
+        ));
+        let start = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            1265968,
+            Some(actor),
+            1
+        ));
+        for _ in 0..75 {
+            run.app.update();
+        }
+        assert!(
+            !crate::auras::has_aura(run.app.world(), actor, 1265968),
+            "first echo consumes the intervening proc"
+        );
+        assert!(
+            crate::auras::has_aura(run.app.world(), actor, 1265982),
+            "first echo queues a second echo"
+        );
+        for _ in 0..75 {
+            run.app.update();
+        }
+        let hits = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(50842)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert_eq!(hits, 3, "foreground Blood Boil and two delayed echoes");
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_plague_ticks_apply_selected_brittle() {
         let _seed = crate::random::seed_scope(70448);
         let mut run = super::super::prepare_registered_player(250, 3).unwrap();

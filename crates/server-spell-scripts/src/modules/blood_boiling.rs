@@ -14,7 +14,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 
 fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
     scripts.0.entry(1265982).or_default().on_remove = Some(echo);
-    scripts.0.entry(1265968).or_default().on_remove = Some(queue_echo);
 }
 
 fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -26,10 +25,6 @@ fn on_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     if matches!(spell.id, 206930 | 433895) {
         roll_proc(world, caster);
-    } else if spell.id == 50842 && auras::has_aura(world, caster, 1265968) {
-        auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
-            aura.spell_id == 1265968 && aura.caster == caster
-        });
     }
 }
 
@@ -52,12 +47,23 @@ fn roll_proc(world: &mut World, caster: Entity) {
     }
 }
 
-fn queue_echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
-    if unit != aura.caster || reason != RemoveReason::Consumed {
+// SimC76f8118 sc_death_knight.cpp9069–9079: every Blood Boil, including an
+// echo, consumes the proc; an existing echo fires while the proc is still up.
+pub(super) fn finish_foreground_blood_boil(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if spell.id == 50842 && world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 250) {
+        finish_blood_boil(world, caster);
+    }
+}
+
+fn finish_blood_boil(world: &mut World, unit: Entity) {
+    if !auras::has_aura(world, unit, 1265968) {
         return;
     }
     auras::remove_auras(world, unit, RemoveReason::Consumed, |old| {
         old.spell_id == 1265982 && old.caster == unit
+    });
+    auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 1265968 && aura.caster == unit
     });
     spell_cast::cast_triggered(world, unit, 1265982, Some(unit), 1);
 }
@@ -68,6 +74,7 @@ fn echo(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReas
             let spell = world.resource::<combat::spell_info::SpellStore>()
                 .get(50842).expect("native Blood Boil").clone();
             super::blood_rune_weapon::copy_weapon_actions(world, unit, &spell);
+            finish_blood_boil(world, unit);
         }
     }
 }
