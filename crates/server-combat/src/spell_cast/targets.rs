@@ -1271,9 +1271,27 @@ pub fn unintended_effect_reach(
                 center = Some(Center::Target);
                 offset = radius(effect, slot);
             }
-            Some(Selector::CasterOffset(_) | Selector::CasterRandom | Selector::CasterRadius) => {
+            Some(Selector::CasterOffset(_)) => {
+                center = Some(Center::Caster);
+                let distance = radius(effect, slot);
+                offset = if distance > 0.0 {
+                    distance
+                } else {
+                    DEFAULT_TOTEM_DISTANCE
+                };
+            }
+            Some(Selector::CasterRandom | Selector::CasterRadius | Selector::ForwardLeap) => {
                 center = Some(Center::Caster);
                 offset = radius(effect, slot);
+            }
+            Some(Selector::DestTargetRandom) => {
+                center = Some(Center::Target);
+                offset =
+                    effect.radius[radius_slot(effect, slot)].map_or(0.0, |entry| entry.radius_max);
+            }
+            Some(Selector::DestOffset(_) | Selector::DestRandom) => {
+                center = Some(center.unwrap_or(Center::Caster));
+                offset += radius(effect, slot);
             }
             Some(Selector::AreaAroundSrc(Relation::Enemy) | Selector::EntryAreaSource) => {
                 let extent = offset + radius(effect, slot);

@@ -158,6 +158,35 @@ fn hammer_of_the_righteous_declares_its_native_target_centered_wave() {
 }
 
 #[test]
+fn native_area_reach_includes_destination_offsets() {
+    let store = crate::test_support::world_db().unwrap().spell_store();
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    // 251921 uses caster-front47 with no radius, then a native30-yard area.
+    let front = store.get(251921).unwrap();
+    let effect = front
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(
+        combat::spell_cast::targets::unintended_effect_reach(&world, caster, front, effect),
+        (33.0, 0.0)
+    );
+    // 69660 selects a random point within5 yards, then a4-yard area.
+    let random = store.get(69660).unwrap();
+    let effect = random
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(
+        combat::spell_cast::targets::unintended_effect_reach(&world, caster, random, effect),
+        (9.0, 0.0)
+    );
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));
