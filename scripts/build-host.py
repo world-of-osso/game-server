@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Build, check, test, or run game-server natively on explicit desktop/local hosts."""
+"""Build, check, test, or run game-server natively on explicit local/native hosts."""
 
 import argparse
 import importlib.util
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,8 +20,6 @@ BINARIES = {
     "los-bake": "los",
 }
 DEFAULT_BINARIES = ("game-server", "game-server-admin", "game-server-site-export", "game-cli")
-GROUND_GAPS = Path("crates/server/src/ground_gaps.tsv")
-ASSET_CWD = Path("/home/osso-test/.local/share/game-server/assets")
 ENVIRONMENT_NAMES = (
     "GAME_SERVER_GROUND_DIR",
     "GAME_SERVER_DB_PATH",
@@ -37,46 +34,13 @@ def load_common():
     scripts = Path(os.environ.get("BUILD_HOST_SCRIPTS", COMMON_SCRIPTS)).resolve()
     sys.path.insert(0, str(scripts))
     spec = importlib.util.spec_from_file_location(
-        "depot_build", scripts / "depot-build.py"
+        "engine_build", scripts / "engine-build.py"
     )
     depot = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(depot)
     import native_build_hosts
 
     return depot, native_build_hosts
-
-
-def copy_source(repo, relative, destination):
-    source = repo / relative
-    if source.is_symlink() or any(
-        (repo / parent).is_symlink() for parent in relative.parents
-    ):
-        raise ValueError(f"unsupported source symlink: {source}")
-    if not source.is_file():
-        raise FileNotFoundError(f"missing build dependency: {source}")
-    target = destination / relative
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-
-
-def snapshot(root, context, depot):
-    protocol = depot.sibling_repo(root, "shared-protocol")
-    for name, repo in (("game-server", root), ("shared-protocol", protocol)):
-        if not repo.is_dir():
-            raise FileNotFoundError(f"missing build dependency: {repo}")
-        depot.snapshot_repo(repo, context / name, (".",), name)
-        for config in (Path(".cargo/config"), Path(".cargo/config.toml")):
-            if (repo / config).exists() or (repo / config).is_symlink():
-                copy_source(repo, config, context / name)
-    if GROUND_GAPS in depot.git_files(root, (".",), True):
-        copy_source(root, GROUND_GAPS, context / "game-server")
-    for relative in (
-        "game-server/Cargo.toml",
-        "game-server/Cargo.lock",
-        "shared-protocol/Cargo.toml",
-    ):
-        if not (context / relative).is_file():
-            raise FileNotFoundError(f"missing build dependency: {relative}")
 
 
 def has_package_selection(arguments):
@@ -110,14 +74,6 @@ def runtime_environment(host, key, running):
     environment = {
         name: os.environ[name] for name in ENVIRONMENT_NAMES if name in os.environ
     }
-    if host == "desktop" and running:
-        state = Path("/home/osso-test/.local/share/game-server") / key
-        defaults = {
-            "GAME_SERVER_GROUND_DIR": "/home/osso-test/game-engine-trial/ground",
-            "GAME_SERVER_DB_PATH": str(state / "game.redb"),
-            "GAME_SERVER_ADMIN_SOCKET": str(state / "admin.sock"),
-        }
-        environment = defaults | environment
     return environment
 
 
@@ -126,7 +82,7 @@ def build(args, tail, depot, native):
     host = depot.select_build_host(args.build_host)
     if args.release and host == "native":
         raise ValueError(
-            "release artifacts use the bookworm container: --build-host local|desktop"
+            "release artifacts use the bookworm container: --build-host local"
         )
     if args.release:
         if args.test or args.check or args.run:
@@ -169,12 +125,9 @@ def build(args, tail, depot, native):
     cache, checkout_key = depot.prepare_checkout_cache(root)
     key = "server-" + checkout_key
     runtime_args = tail if args.run else None
-    runtime_cwd = (root if host == "local" else ASSET_CWD) if args.run else None
+    runtime_cwd = root if args.run else None
     with tempfile.TemporaryDirectory(prefix="server-native-", dir=cache) as work:
         context = Path(work)
-        # Local compilation must read the original paths, including its local data.
-        if host == "desktop":
-            snapshot(root, context, depot)
         print(f"native game-server host={host} key={key}", flush=True)
         return native.execute(
             context,
@@ -194,8 +147,8 @@ def build(args, tail, depot, native):
 def parse_arguments(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=SCRIPTS.parent)
-    parser.add_argument("--build-host", choices=("desktop", "local", "native"))
-    parser.add_argument("--save-build-host", choices=("desktop", "local", "native"))
+    parser.add_argument("--build-host", choices=("local", "native"))
+    parser.add_argument("--save-build-host", choices=("local", "native"))
     parser.add_argument("--release", action="store_true")
     parser.add_argument("--bin", dest="binary", choices=BINARIES)
     parser.add_argument("--features", help="Cargo feature CSV")

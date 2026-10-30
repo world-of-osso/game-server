@@ -1,6 +1,5 @@
 """Native adapter contracts, using real Git snapshots and a child fake transport."""
 
-import hashlib
 import json
 import os
 import shutil
@@ -146,7 +145,7 @@ class BuildHostTests(unittest.TestCase):
             self.put(self.root, name, b"LIVE PRIVATE BYTES")
         self.common = self.base / "common"
         self.common.mkdir()
-        for name in ("depot-build.py", "build_hosts.py", "prepare_ui_icons.py", "db2_source.py", "native_cargo.py"):
+        for name in ("engine-build.py", "build_hosts.py", "prepare_ui_icons.py", "db2_source.py", "native_cargo.py", "siblings.py"):
             shutil.copyfile(COMMON / name, self.common / name)
         (self.common / "native_build_hosts.py").write_text(FAKE_NATIVE)
         self.record = self.base / "record.json"
@@ -175,7 +174,7 @@ class BuildHostTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
 
-    def invoke(self, *args, host="desktop"):
+    def invoke(self, *args, host="local"):
         command = [sys.executable, str(ADAPTER), "--root", str(self.root)]
         if host is not None:
             command += ["--build-host", host]
@@ -193,7 +192,7 @@ class BuildHostTests(unittest.TestCase):
 
     def test_running_app_does_not_block_check_or_delete_another_context(self):
         (self.common / "native_build_hosts.py").write_text(CONCURRENT_NATIVE)
-        for host in ("desktop", "local"):
+        for host in ("local",):
             with self.subTest(host=host):
                 self.exercise_concurrent_helpers(host)
 
@@ -291,91 +290,6 @@ class BuildHostTests(unittest.TestCase):
     def test_adapter_exists(self):
         self.assertTrue(ADAPTER.is_file(), "native game-server adapter is missing")
 
-    def test_desktop_snapshot_uses_working_and_owned_source_not_live_state(self):
-        result = self.observed(self.invoke())
-        files = result["files"]
-        for name in self.files:
-            if name != ".gitignore":
-                self.assertEqual(
-                    bytes.fromhex(files["game-server/" + name]),
-                    (self.root / name).read_bytes(),
-                )
-        for name in ("crates/server/src/new.rs", ".cargo/config.toml"):
-            self.assertEqual(
-                bytes.fromhex(files["game-server/" + name]),
-                (self.root / name).read_bytes(),
-            )
-        self.assertEqual(
-            bytes.fromhex(files["shared-protocol/src/new.rs"]),
-            b"pub fn protocol_new() {}\n",
-        )
-        self.assertEqual(
-            set(files),
-            {"game-server/" + name for name in self.files if name != ".gitignore"}
-            | {
-                "game-server/crates/server/src/new.rs",
-                "game-server/.cargo/config.toml",
-                "shared-protocol/Cargo.toml",
-                "shared-protocol/src/lib.rs",
-                "shared-protocol/src/new.rs",
-            },
-        )
-        self.assertFalse(result["ran"])
-        self.assertEqual(
-            result["cargo_args"],
-            [
-                "build",
-                "-p",
-                "server",
-                "-p",
-                "client",
-                "--bin",
-                "game-server",
-                "--bin",
-                "game-server-admin",
-                "--bin",
-                "game-server-site-export",
-                "--bin",
-                "game-cli",
-            ],
-        )
-        self.assertEqual(
-            result["project_cwd"], str(Path(result["context"]) / "game-server")
-        )
-        self.assertFalse((self.root / "target/debug/game-server").exists())
-        self.assertEqual(
-            (self.root / "data/game.redb").read_bytes(), b"LIVE PRIVATE BYTES"
-        )
-
-    def test_default_run_has_persistent_checkout_state_and_asset_cwd(self):
-        result = self.observed(self.invoke("--run", "--", "--port", "5100", "a b"))
-        key = (
-            "server-"
-            + hashlib.sha256(os.fsencode(self.root.resolve())).hexdigest()[:20]
-        )
-        self.assertEqual(result["key"], key)
-        state = "/home/osso-test/.local/share/game-server/" + key
-        self.assertEqual(result["runtime_args"], ["--port", "5100", "a b"])
-        self.assertEqual(result["binary"], "game-server")
-        self.assertEqual(
-            result["environment"],
-            {
-                "GAME_SERVER_GROUND_DIR": "/home/osso-test/game-engine-trial/ground",
-                "GAME_SERVER_DB_PATH": state + "/game.redb",
-                "GAME_SERVER_ADMIN_SOCKET": state + "/admin.sock",
-            },
-        )
-        self.assertEqual(
-            result["runtime_observed_cwd"],
-            "/home/osso-test/.local/share/game-server/assets",
-        )
-        again = self.observed(self.invoke("--run"))
-        self.assertEqual(again["key"], key)
-        self.assertNotEqual(again["context"], result["context"])
-        self.assertFalse(Path(again["context"]).exists())
-        self.assertFalse(Path(result["context"]).exists())
-        self.assertEqual(again["environment"], result["environment"])
-
     def test_release_exports_through_container_adapter(self):
         (self.common / "desktop-server-build.py").write_text(
             "import json, os\nfrom pathlib import Path\n"
@@ -383,7 +297,7 @@ class BuildHostTests(unittest.TestCase):
             "    Path(os.environ['FAKE_RECORD']).write_text(json.dumps(dict("
             "root=str(root), host=host, release=release, binary=binary, features=features)))\n"
         )
-        for host in ("local", "desktop"):
+        for host in ("local",):
             result = self.observed(self.invoke("--release", "--bin", "game-cli", host=host))
             self.assertEqual(
                 result,
@@ -506,8 +420,15 @@ class BuildHostTests(unittest.TestCase):
         self.assertFalse(self.record.exists())
         result = self.observed(self.invoke(host=None))
         self.assertEqual(result["host"], "local")
-        invalid = self.invoke("--save-build-host", "desktop", "--run", host=None)
+        invalid = self.invoke("--save-build-host", "local", "--run", host=None)
         self.assertNotEqual(invalid.returncode, 0)
+
+    def test_desktop_host_is_rejected(self):
+        for option in ("--build-host", "--save-build-host"):
+            with self.subTest(option=option):
+                result = self.invoke(option, "desktop", host=None)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(self.record.exists())
 
     def test_invalid_modes_and_runtime_tail_fail_before_transport(self):
         for args in (("--check", "--run"), ("--check", "--test"), ("--", "ping")):
@@ -515,14 +436,6 @@ class BuildHostTests(unittest.TestCase):
                 self.assertNotEqual(self.invoke(*args).returncode, 0)
                 self.assertFalse(self.record.exists())
 
-    def test_source_symlink_is_rejected_before_transport(self):
-        source = self.root / "crates/server/src/new.rs"
-        source.unlink()
-        source.symlink_to(self.root / "data/game.redb")
-        result = self.invoke("--run")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlink", result.stderr)
-        self.assertFalse(self.record.exists())
 
 
 if __name__ == "__main__":
