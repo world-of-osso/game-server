@@ -9,6 +9,10 @@ fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
     h.app
         .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(shared::components::UnitLevel(90));
     let pos = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert(Position {
         x: pos.x + 3.0,
@@ -22,7 +26,7 @@ fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
         .world_mut()
         .entity_mut(player)
         .insert(crate::combat::AutoAttack::new(boss));
-    h.advance(3.0);
+    h.advance(15.0);
     let threat = h
         .app
         .world()
