@@ -1,16 +1,7 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::guardian_tank_rotation::*;
-use super::literal_rotation::{
-    self, Driver,
-    equipment::Equipment,
-    execution::{NativeAction, Prepared},
-};
-use crate::simc_apl_native::{
-    Bindings, DotRefresh, DotRefreshPolicy, Encounter, NativeFacts, native_dot_spell,
-};
+use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
-use server::simc_apl::{Action, ActionFacts, Facts, Program};
-use shared::components::PowerType;
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {

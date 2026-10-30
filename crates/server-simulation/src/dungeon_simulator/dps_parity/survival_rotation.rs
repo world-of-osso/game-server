@@ -1,10 +1,6 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::survival_rotation::*;
-use super::literal_rotation::{self, Driver, equipment::Equipment, execution::Prepared};
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use serde_json::{Value, json};
-use server::simc_apl::Program;
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {

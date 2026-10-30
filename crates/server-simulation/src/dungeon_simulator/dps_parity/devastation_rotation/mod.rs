@@ -1,10 +1,10 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::devastation_rotation::*;
-use super::literal_rotation::{Driver, PrecombatPoll, equipment::Equipment, execution::Prepared};
-use crate::simc_apl_native::{Bindings, Encounter};
+use super::literal_rotation::Driver;
+use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use facts::DevFacts;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 
 #[cfg(test)]

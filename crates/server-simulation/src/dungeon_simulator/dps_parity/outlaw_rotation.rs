@@ -1,19 +1,11 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::outlaw_rotation::*;
 use super::{
-    assassination_rotation::{RogueFacts, stealthed},
-    inputs::Profile,
-    literal_rotation::{
-        self, Driver, PrecombatPoll,
-        equipment::Equipment,
-        execution::{NativeAction, Prepared},
-    },
+    literal_rotation::PrecombatPoll,
     preparation,
 };
-use crate::simc_apl_native::{Bindings, Encounter, FightStyle};
+use crate::simc_apl_native::{Encounter, FightStyle};
 use bevy::prelude::*;
-use server::simc_apl::{Action, ActionFacts, Facts, Program};
-use shared::components::PowerType;
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {

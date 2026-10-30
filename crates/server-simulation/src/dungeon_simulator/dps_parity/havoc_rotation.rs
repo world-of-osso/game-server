@@ -1,15 +1,6 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::havoc_rotation::*;
-use super::literal_rotation::{
-    self, Driver, PrecombatPoll,
-    equipment::Equipment,
-    execution::{Execution, Prepared},
-};
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use facts::HavocFacts;
-use serde_json::{Value, json};
-use server::simc_apl::{Action, Program};
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {

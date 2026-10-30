@@ -1,12 +1,6 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::fire_rotation::*;
-use super::literal_rotation::{
-    self, Driver, PrecombatPoll, equipment::Equipment, execution::Prepared,
-};
-use crate::simc_apl_native::{Bindings, Encounter};
 use bevy::prelude::*;
-use facts::FireFacts;
-use serde_json::{Value, json};
 
 
 fn apply_initial_spheres(run: &mut super::Run) {

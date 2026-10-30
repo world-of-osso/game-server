@@ -4,14 +4,7 @@ pub(super) use server_follower_apl::devourer_rotation::*;
 #[cfg(test)]
 #[path = "devourer_rotation/facts_tests.rs"]
 mod facts_tests;
-use super::literal_rotation::{
-    self, Driver, PrecombatPoll, equipment::Equipment, execution::Prepared,
-};
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use facts::DevourerFacts;
-use serde_json::{Value, json};
-use server::simc_apl::Program;
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {

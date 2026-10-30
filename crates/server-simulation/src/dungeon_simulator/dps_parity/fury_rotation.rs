@@ -1,16 +1,9 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::fury_rotation::*;
-use super::{
-    Run,
-    literal_rotation::{
-        self, Driver,
-        equipment::Equipment,
-        execution::{NativeAction, Prepared},
-    },
-};
+use super::Run;
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
-use server::simc_apl::{Action, ActionFacts, Facts, Program};
+use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
 
 

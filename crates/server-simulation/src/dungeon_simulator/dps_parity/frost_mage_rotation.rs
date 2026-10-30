@@ -1,12 +1,6 @@
 //! Fixture adapter over the production APL.
 pub(super) use server_follower_apl::frost_mage_rotation::*;
-use super::literal_rotation::{
-    self, Driver, PrecombatPoll, equipment::Equipment, execution::Prepared,
-};
-use crate::simc_apl_native::{Bindings, Encounter, NativeFacts, reaction};
 use bevy::prelude::*;
-use server::simc_apl::{Action, ActionFacts, Facts, Program};
-use std::collections::BTreeSet;
 
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
