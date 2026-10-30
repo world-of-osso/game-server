@@ -15,7 +15,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(grant_bones),
     SpellScriptHook::AfterForegroundSpecial(start_mist),
     SpellScriptHook::AfterForegroundSpecial(copy_weapon_actions),
-    // SimC76f8118 sc_death_knight.cpp10121–10130: copies precede consumption.
+    // SimC76f8118 sc_death_knight.cpp10121–10130: copies precede healing and consumption.
+    SpellScriptHook::AfterForegroundSpecial(super::blood_death_strike::finish_death_strike_heal),
     SpellScriptHook::AfterForegroundSpecial(super::blood_death_strike::consume_hemostasis),
     SpellScriptHook::EarlyAuraRegistration(register_dance),
     SpellScriptHook::AvoidanceProcHitMask(dance_avoidance_mask),
