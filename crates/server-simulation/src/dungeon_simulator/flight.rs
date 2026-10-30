@@ -1,5 +1,6 @@
 //! DAWNBREAKER_FLIGHT_ALTITUDE_TERRAIN_CLEARANCE_INFERRED.
 use bevy::prelude::*;
+use shared::los;
 
 // Fifteen yards separates the inferred path from the selected collision surface.
 const CLEARANCE: f32 = 15.0;
