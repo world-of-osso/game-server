@@ -886,6 +886,73 @@ fn ruby_trash_stays_dead_for_three_hours_but_scripted_despawn_respawns() {
 }
 
 #[test]
+fn dungeon_respawn_policy_applies_only_to_requested_difficulties() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    for difficulty in [1, 2, 8, 23, 205, 24] {
+        let mut instances = crate::maps::InstanceManager::default();
+        let copy = instances
+            .create_map(
+                &maps,
+                2521,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: difficulty,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        assert_eq!(
+            instances.copy_difficulty(copy).unwrap().difficulty_id,
+            difficulty
+        );
+        let mut app = setup_replication_app();
+        app.insert_resource(maps.clone());
+        app.insert_resource(instances);
+        let npc = app
+            .world_mut()
+            .spawn((
+                copy,
+                pos(0.0, 0.0, 0.0),
+                SpawnPoint {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    wander_distance: 0.0,
+                    speed_walk: 1.0,
+                    speed_run: 1.0,
+                },
+                Health {
+                    current: 0.0,
+                    max: 100.0,
+                },
+                RespawnDelay(120.0),
+            ))
+            .id();
+        mark_npc_dead_world(app.world_mut(), npc);
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(10800));
+        app.world_mut().run_system_once(respawn_system).unwrap();
+        assert_eq!(
+            app.world().get::<Health>(npc).unwrap().current,
+            if difficulty == 24 { 100.0 } else { 0.0 },
+            "difficulty {difficulty}"
+        );
+    }
+}
+
+#[test]
 fn dead_creature_in_dormant_grid_respawns_on_its_timer() {
     use bevy::time::TimeUpdateStrategy;
     let mut app = setup_combat_app();
