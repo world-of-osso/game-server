@@ -16,9 +16,7 @@ fn multiplier(world: &World, caster: Entity, _target: Entity, spell: &SpellInfo)
     {
         return 1.0;
     }
-    let crit = world
-        .get::<combat::stats::CharacterStats>(caster)
-        .expect("native Elemental stats")
-        .crit_pct;
+    let parent = world.resource::<combat::spell_info::SpellStore>().get(51505).expect("native Lava Burst parent");
+    let crit = combat::spell_cast::effects::caster_action_crit_chance(world, caster, parent);
     1.0 + crit / 100.0
 }

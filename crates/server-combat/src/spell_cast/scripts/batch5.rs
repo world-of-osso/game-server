@@ -48,7 +48,7 @@ pub(super) fn disintegrate(world: &mut World, caster: Entity, target: Entity, de
     }
 }
 
-/// 116858 and51505 explicitly scale damage with the caster's crit chance.
+/// 116858 explicitly scales damage with the caster's crit chance.
 pub(super) fn crit_scaled_damage(
     world: &World,
     caster: Entity,
@@ -58,6 +58,28 @@ pub(super) fn crit_scaled_damage(
     let crit = world
         .get::<crate::stats::CharacterStats>(caster)
         .map_or(0.0, |stats| stats.crit_pct);
+    amount * (1.0 + crit / 100.0)
+}
+
+/// SimC76f8118 sc_shaman.cpp7197–7211: Elemental Lava Burst scales
+/// with the caster's action crit, before Flame Shock guarantees target crit.
+pub(super) fn lava_burst_scaled_damage(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+) -> f32 {
+    if !world
+        .get::<shared::components::ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 262)
+    {
+        return crit_scaled_damage(world, caster, target, amount);
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(51505)
+        .expect("native Lava Burst parent");
+    let crit = super::super::effects::caster_action_crit_chance(world, caster, spell);
     amount * (1.0 + crit / 100.0)
 }
 
