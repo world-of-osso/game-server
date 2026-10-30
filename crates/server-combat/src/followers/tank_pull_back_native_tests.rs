@@ -16,6 +16,16 @@ fn at(point: Vec3) -> Position {
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
+    run_native_pull_back(false);
+}
+
+#[test]
+#[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
+fn windrunner_production_ai_pulls_back_without_pulling_hatchling() {
+    run_native_pull_back(true);
+}
+
+fn run_native_pull_back(production: bool) {
     use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
     let (mut h, tank, profile) = spawn_profile_fixture_with_plugins(209057, |app| {
         app.insert_resource(crate::test_data::world_data().clone());
@@ -138,15 +148,30 @@ fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
     );
     owner_trail::record(h.app.world_mut(), owner);
     pull_history::sample_all(h.app.world_mut());
-    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 62124, Some(target), false)
-        .expect("native ranged taunt must acquire the intended Groundskeeper");
+    if !production {
+        crate::spell_cast::creature_cast(h.app.world_mut(), tank, 62124, Some(target), false)
+            .expect("native ranged taunt must acquire the intended Groundskeeper");
+    }
     let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
     let party = vec![owner, tank];
+    let minimum_retreat = if production { 1.0 } else { 20.0 };
     let mut farthest = 0.0_f32;
+    let mut waited = false;
+    let mut acquired = false;
     for _ in 0..1200 {
-        owner_trail::record(h.app.world_mut(), owner);
-        pull_history::sample_all(h.app.world_mut());
-        tank_pull_back::update(h.app.world_mut(), tank, &follower, &party, 40.0);
+        if production {
+            super::update_ai(h.app.world_mut());
+        } else {
+            owner_trail::record(h.app.world_mut(), owner);
+            pull_history::sample_all(h.app.world_mut());
+            tank_pull_back::update(h.app.world_mut(), tank, &follower, &party, 40.0);
+        }
+        waited |= tank_pull_back::party_should_wait(h.app.world(), owner);
+        acquired |= h
+            .app
+            .world()
+            .get::<crate::networking::CombatTarget>(target)
+            .is_some_and(|victim| victim.0 == Some(tank));
         h.advance(1);
         let point = crate::spell_cast::targets::position(h.app.world(), tank).unwrap();
         farthest = farthest.max(start.distance(point));
@@ -154,15 +179,21 @@ fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
             !crate::combat_refs::has_active_reference_to(h.app.world(), hatchling, tank),
             "unrelated hatchling acquired the tank"
         );
-        if farthest > 20.0 && !tank_pull_back::party_should_wait(h.app.world(), owner) {
+        if waited
+            && acquired
+            && farthest > minimum_retreat
+            && !tank_pull_back::party_should_wait(h.app.world(), owner)
+        {
             break;
         }
     }
     let end = crate::spell_cast::targets::position(h.app.world(), tank).unwrap();
     assert!(
-        farthest > 20.0,
+        farthest > minimum_retreat,
         "tank must retreat on real ground: start={start:?}, end={end:?}"
     );
+    assert!(waited, "party must wait for the pull-back");
+    assert!(acquired, "tank must acquire the intended Groundskeeper");
     assert!(
         !tank_pull_back::party_should_wait(h.app.world(), owner),
         "tank must wait for the acquired pack to arrive before releasing the party"
