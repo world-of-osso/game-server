@@ -813,6 +813,79 @@ fn respawn_at_spawn_with_full_health_does_not_dirty_replicated_state() {
 }
 
 #[test]
+fn ruby_trash_stays_dead_for_three_hours_but_scripted_despawn_respawns() {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let (x, y, z, seconds): (f32, f32, f32, u32) = conn.query_row(
+        "SELECT position_x,position_y,position_z,spawntimesecs FROM content_creature WHERE guid=3276416159 AND map=2521",
+        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+    ).unwrap();
+    let maps = crate::maps::store::load_map_store(&conn).unwrap();
+    let mut instances = crate::maps::InstanceManager::default();
+    let copy = instances
+        .create_map(
+            &maps,
+            2521,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 205,
+                ..default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1_792_454_400,
+            },
+        )
+        .unwrap()
+        .map;
+    let mut app = setup_replication_app();
+    app.insert_resource(maps);
+    app.insert_resource(instances);
+    let spawn = SpawnPoint {
+        x,
+        y,
+        z,
+        wander_distance: 0.0,
+        speed_walk: 1.0,
+        speed_run: 1.0,
+    };
+    let npc = app
+        .world_mut()
+        .spawn((
+            copy,
+            spawn,
+            pos(x, y, z),
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            RespawnDelay::for_spawn(seconds, 0),
+            CorpseDelay::for_rank(0),
+        ))
+        .id();
+    mark_npc_dead_world(app.world_mut(), npc);
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(3 * 3600));
+    app.world_mut().run_system_once(respawn_system).unwrap();
+    assert_eq!(app.world().get::<Health>(npc).unwrap().current, 0.0);
+    assert!(app.world().get::<DeathState>(npc).is_some());
+
+    // Explicit script-driven despawn overwrites the death timer and can restore the spawn.
+    despawn_creature(app.world_mut(), npc);
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(seconds as u64 + 1));
+    app.world_mut().run_system_once(respawn_system).unwrap();
+    assert_eq!(app.world().get::<Health>(npc).unwrap().current, 100.0);
+    assert!(app.world().get::<DeathState>(npc).is_none());
+}
+
+#[test]
 fn dead_creature_in_dormant_grid_respawns_on_its_timer() {
     use bevy::time::TimeUpdateStrategy;
     let mut app = setup_combat_app();
