@@ -52,6 +52,11 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     super::tank_frontal::update_goal(world, unit, follower, &party);
     let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
+    if let Some(target) = collection_target
+        && !enemies.iter().any(|(enemy, _)| *enemy == target)
+    {
+        enemies.push((target, None));
+    }
     let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
     let lost_target = world
         .get::<CombatTarget>(unit)
@@ -80,7 +85,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     update_auto_shot(world, unit, follower, enemy);
-    if super::kit_ai::update(world, unit, follower, &party, enemy) {
+    if super::kit_ai::update(world, unit, follower, &party, enemy, &enemies) {
         return;
     }
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
