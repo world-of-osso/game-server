@@ -445,3 +445,53 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
         assert_eq!(hold, Some(held), "watcher faction {faction}");
     }
 }
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn candlelight_follower_walks_into_authored_box_and_receives_light() {
+    let (mut h, follower) = create_native_follower_fixture();
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    let map = InMap::continent(MAP);
+    crate::world_area_triggers::spawn_map(h.app.world_mut(), map, 205);
+    let at = Position {
+        x: 153.0,
+        y: 74.2,
+        z: 155.0,
+    };
+    h.app.world_mut().entity_mut(follower).insert((map, at));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        map,
+        shared::components::Npc {
+            template_id: 208745,
+            name: "The Candle King".into(),
+        },
+        shared::components::CombatStatus(true),
+    ));
+    let mut entered = false;
+    for _ in 0..1000 {
+        let before = *h.app.world().get::<Position>(follower).unwrap();
+        let seeking = super::candlelight::seek(h.app.world_mut(), follower);
+        h.advance(1);
+        let after = *h.app.world().get::<Position>(follower).unwrap();
+        assert!(
+            point(after).distance(point(before)) < 2.0,
+            "ordinary movement, not teleport"
+        );
+        if !seeking {
+            entered = true;
+            break;
+        }
+    }
+    assert!(
+        entered,
+        "follower reached the authored light via native navigation"
+    );
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(crate::auras::has_aura(h.app.world(), follower, 426125));
+}
