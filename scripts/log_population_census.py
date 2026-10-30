@@ -563,6 +563,8 @@ def main():
     parser.add_argument("--centroid-requests", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
+    if (args.floor_requests or args.safe_clusters or args.clusters or args.centroid_requests) and not args.world_db:
+        parser.error('population position outputs require --world-db for boss identity')
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
     bosses = load_bosses(args.world_db) if args.world_db else {}
     if args.precombat_samples:

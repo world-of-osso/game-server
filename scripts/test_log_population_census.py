@@ -2,6 +2,8 @@ import importlib.util
 import io
 import json
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,6 +103,18 @@ class CensusTest(unittest.TestCase):
         summary = module.summarize_encounters(runs)[0]
         self.assertEqual(summary['spells'][0]['first_cast_seconds'], [1.5])
         self.assertEqual(summary['spells'][0]['interval_range_seconds'], [5.0, 5.0])
+
+    def test_position_outputs_require_boss_identity_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / 'combat.txt'
+            log.write_text('')
+            result = subprocess.run([sys.executable, str(Path(__file__).with_name('log_population_census.py')),
+                '--map', '2813', '--output', str(root/'census.json'), '--clusters', str(root/'clusters.json'), str(log)],
+                capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('population position outputs require --world-db', result.stderr)
+            self.assertFalse((root/'clusters.json').exists())
 
     def test_boss_population_uses_last_position_before_its_encounter(self):
         with tempfile.TemporaryDirectory() as directory:
