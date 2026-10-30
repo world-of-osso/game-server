@@ -46,10 +46,18 @@ fn summon_after_launch(world: &mut World, owner: Entity, spell: &SpellInfo, _for
     let primal = selected(world, owner, PRIMAL_ELEMENTALIST);
     let elemental = match spell.id {
         ASCENDANCE if selected(world, owner, CALL_OF_FIRE) => {
-            if primal { PRIMAL_FIRE } else { GREATER_FIRE }
+            if primal {
+                PRIMAL_FIRE
+            } else {
+                GREATER_FIRE
+            }
         }
         STORMKEEPER if selected(world, owner, FURY_OF_THE_STORMS) => {
-            if primal { PRIMAL_STORM } else { GREATER_STORM }
+            if primal {
+                PRIMAL_STORM
+            } else {
+                GREATER_STORM
+            }
         }
         _ => return,
     };
