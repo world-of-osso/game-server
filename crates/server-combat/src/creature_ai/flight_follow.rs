@@ -6,8 +6,9 @@ use crate::followers::Follower;
 use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 
+/// Marker used by public creature movement system filters.
 #[derive(Component)]
-pub(crate) struct FlightFollow;
+pub struct FlightFollow;
 
 pub(super) fn update(world: &mut World) {
     let followers: Vec<_> = world

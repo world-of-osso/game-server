@@ -17,7 +17,7 @@ use shared::casting::CastState;
 use shared::ground::STEP_UP_HEIGHT;
 use std::time::Duration;
 
-pub(crate) mod flight_follow;
+pub mod flight_follow;
 
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
