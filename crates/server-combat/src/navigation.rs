@@ -26,6 +26,7 @@ pub enum Goal {
     Approach(u64),
     PullAdmission,
     FollowerTargetSelection,
+    OwnerTrail(u64),
     FollowerRelease,
     FearCollision,
     FearPath,

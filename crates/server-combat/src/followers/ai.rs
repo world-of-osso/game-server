@@ -23,6 +23,13 @@ pub(super) fn update(world: &mut World) {
         .filter(|(_, follower)| world.get_entity(follower.owner).is_ok())
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
+    let owners: std::collections::HashSet<_> = followers
+        .iter()
+        .map(|(_, follower)| follower.owner)
+        .collect();
+    for owner in owners {
+        super::owner_trail::record(world, owner);
+    }
     for (unit, follower) in &followers {
         super::utility::sample_health(world, *unit);
         super::utility::sample_health(world, follower.owner);

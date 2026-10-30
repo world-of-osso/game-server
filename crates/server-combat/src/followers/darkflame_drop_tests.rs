@@ -580,6 +580,134 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 
 #[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn followers_retrace_owner_curve_around_unpulled_watcher() {
+    use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
+    use shared::group::GroupRole;
+    let (mut h, first) = create_native_follower_fixture_for(209072);
+    let owner = h.caster;
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(first)
+        .unwrap()
+        .profile
+        .clone();
+    let faction = *h.app.world().get::<UnitFactionTemplate>(first).unwrap();
+    let mut followers = vec![first];
+    for slot in 1..4 {
+        let actor = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        let mut profile = profile.clone();
+        if slot == 1 {
+            profile.role = GroupRole::Tank;
+        }
+        h.app.world_mut().entity_mut(actor).insert((
+            Npc {
+                template_id: profile.entry,
+                name: profile.name.clone(),
+            },
+            faction,
+            UnitLevel(10),
+            super::Follower { owner, profile },
+            crate::creature_ai::PartyFollowSlot::new(slot, 4),
+            crate::creature_ai::SpawnPoint {
+                x: 370.0,
+                y: 87.07,
+                z: -31.0,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 1.0,
+            },
+        ));
+        followers.push(actor);
+    }
+    let start = Vec3::new(370.0, 87.07, -31.0);
+    let corners = [
+        start,
+        Vec3::new(370.0, 87.07, -54.0),
+        Vec3::new(417.0, 87.07, -54.0),
+        Vec3::new(417.0, 87.07, -31.0),
+    ];
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((position(start), InMap::continent(MAP)));
+    for &unit in &followers {
+        h.app.world_mut().entity_mut(unit).insert((
+            position(start),
+            InMap::continent(MAP),
+            crate::auras::AuraStatMods {
+                movement_speed: 0.0,
+                ..Default::default()
+            },
+        ));
+    }
+    let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(watcher).insert((
+        position(Vec3::new(393.4, 87.07, -31.0)),
+        InMap::continent(MAP),
+        UnitFactionTemplate(16),
+        UnitLevel(10),
+        crate::creature_aggro::AggroRange,
+        crate::creature_ai::CreatureState::Idle,
+        shared::components::ThreatTable::default(),
+    ));
+    let mut geometry = bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
+        h.app.world_mut(),
+    );
+    let radii: Vec<_> = followers
+        .iter()
+        .map(|&unit| {
+            super::pull_route::read_native_radius(h.app.world(), &mut geometry, unit, watcher)
+                .unwrap()
+        })
+        .collect();
+    for leg in corners.windows(2) {
+        let length = leg[0].distance(leg[1]);
+        let steps = (length / 0.35).ceil() as usize;
+        for step in 1..=steps {
+            let point = leg[0].lerp(leg[1], step as f32 / steps as f32);
+            h.app.world_mut().entity_mut(owner).insert(position(point));
+            super::update_ai(h.app.world_mut());
+            h.advance(1);
+        }
+    }
+    for &unit in &followers {
+        h.app
+            .world_mut()
+            .get_mut::<crate::auras::AuraStatMods>(unit)
+            .unwrap()
+            .movement_speed = 1.0;
+    }
+    for _ in 0..800 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        for (&unit, &radius) in followers.iter().zip(&radii) {
+            let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+            assert!(
+                feet.distance(Vec3::new(393.4, 87.07, -31.0)) >= radius,
+                "follower entered watcher radius at {feet:?}, radius {radius}"
+            );
+        }
+    }
+    for unit in followers {
+        let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+        assert!(
+            feet.distance(corners[3]) < 12.0,
+            "follower did not arrive: {feet:?}"
+        );
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::ThreatTable>(watcher)
+            .unwrap()
+            .is_empty(),
+        "unpulled watcher must remain idle"
+    );
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
 fn candlelight_follower_walks_into_authored_box_and_receives_light() {
     let (mut h, follower) = create_native_follower_fixture();
     let conn = rusqlite::Connection::open_with_flags(

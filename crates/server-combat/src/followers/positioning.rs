@@ -11,39 +11,82 @@ use crate::navigation::{Goal, Navigation};
 use crate::spell_cast::targets;
 use ::navigation::worker::{Output, Query as NavQuery};
 
+const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
+
+#[derive(Component)]
+struct HoldTimeout {
+    target: Entity,
+    since: f64,
+}
+
+fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    if world
+        .get::<HoldTimeout>(unit)
+        .is_none_or(|hold| hold.target != target)
+    {
+        world
+            .entity_mut(unit)
+            .insert(HoldTimeout { target, since: now });
+    }
+    let hold =
+        now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
+    if hold {
+        world
+            .entity_mut(unit)
+            .remove::<crate::creature_ai::FollowOwner>()
+            .insert(crate::creature_ai::CreatureState::Idle);
+    } else if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
+        nav.cancel_query(unit, Goal::Approach(target.to_bits()));
+    }
+    hold
+}
+
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
-    if kit_ai::is_tank(world, unit) {
+    let is_owner = world
+        .get::<super::Follower>(unit)
+        .is_some_and(|follower| follower.owner == target);
+    if kit_ai::is_tank(world, unit) && !is_owner {
         return false;
     }
-    let unsafe_approach = match approach_enters_unpulled_sight(world, unit, target) {
+    if is_owner && super::trail_follow::active(world, unit, target) {
+        return super::trail_follow::advance(world, unit, target, Vec::new());
+    }
+    let blockers = match approach_enters_unpulled_sight(world, unit, target) {
         Ok(None) => {
             debug!(
                 ?unit,
                 ?target,
                 "Follower approach waiting for a navigation result"
             );
-            true
+            return bounded_hold(world, unit, target);
         }
-        Ok(Some(unsafe_approach)) => unsafe_approach,
+        Ok(Some(blockers)) => blockers,
         Err(error) => {
             warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            true
+            return bounded_hold(world, unit, target);
         }
     };
-    if unsafe_approach {
-        world
-            .entity_mut(unit)
-            .remove::<crate::creature_ai::FollowOwner>()
-            .insert(crate::creature_ai::CreatureState::Idle);
+    if blockers.is_empty() {
+        super::trail_follow::clear(world, unit);
+        world.entity_mut(unit).remove::<HoldTimeout>();
+        return false;
     }
-    unsafe_approach
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+    if is_owner {
+        return super::trail_follow::advance(world, unit, target, blockers);
+    }
+    bounded_hold(world, unit, target)
 }
 
 fn approach_enters_unpulled_sight(
     world: &mut World,
     unit: Entity,
     target: Entity,
-) -> Result<Option<bool>, String> {
+) -> Result<Option<Vec<Entity>>, String> {
     let map = *world
         .get::<InMap>(unit)
         .ok_or("Follower positioning lacks map")?;
@@ -56,13 +99,14 @@ fn approach_enters_unpulled_sight(
         .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
         .collect();
     if watchers.is_empty() {
-        return Ok(Some(false));
+        return Ok(Some(Vec::new()));
     }
     let Some(mut path) = read_approach_path(world, unit, target, map, from, to)? else {
         return Ok(None);
     };
     path.insert(0, from);
     let mut geometry = SystemState::<AggroDistance>::new(world);
+    let mut blockers = Vec::new();
     for watcher in watchers {
         let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
         let center = targets::position(world, watcher).ok_or("Unpulled watcher lacks position")?;
@@ -77,10 +121,10 @@ fn approach_enters_unpulled_sight(
                 radius,
                 "Follower approach held by unpulled watcher"
             );
-            return Ok(Some(true));
+            blockers.push(watcher);
         }
     }
-    Ok(Some(false))
+    Ok(Some(blockers))
 }
 
 fn read_approach_path(
@@ -120,7 +164,7 @@ fn read_approach_path(
     }
 }
 
-fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
+pub(super) fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
     // Match CreatureSight's optional react state: absent means Aggressive.
     let aggressive = world
         .get::<crate::creature_aggro::AggroRange>(watcher)
