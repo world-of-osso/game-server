@@ -186,7 +186,19 @@ fn run_native_pull_back(production: bool) {
         farthest = farthest.max(start.distance(point));
         assert!(
             !crate::combat_refs::has_active_reference_to(h.app.world(), hatchling, tank),
-            "unrelated hatchling acquired the tank"
+            "unrelated hatchling acquired the tank: tank={:?} target={:?} hatchling={:?} waited={waited} acquired={acquired} target_victim={:?} hatchling_victim={:?} recent_events={:?}",
+            crate::spell_cast::targets::position(h.app.world(), tank),
+            crate::spell_cast::targets::position(h.app.world(), target),
+            crate::spell_cast::targets::position(h.app.world(), hatchling),
+            h.app
+                .world()
+                .get::<crate::networking::CombatTarget>(target)
+                .and_then(|victim| victim.0),
+            h.app
+                .world()
+                .get::<crate::networking::CombatTarget>(hatchling)
+                .and_then(|victim| victim.0),
+            h.inbox.log.iter().rev().take(12).collect::<Vec<_>>()
         );
         if waited
             && acquired
