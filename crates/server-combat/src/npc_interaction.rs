@@ -35,6 +35,8 @@ pub mod azure_translocation;
 mod gossip;
 mod nalorakk_pyre;
 pub(crate) mod spellclick;
+#[cfg(test)]
+mod spellclick_tests;
 pub(crate) use spellclick::{SpellClickCatalog, load_spellclick_catalog};
 
 use gossip::{GossipAction, Opening};

@@ -57,6 +57,13 @@ pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, en
             );
             continue;
         }
-        crate::spell_cast::cast_triggered(world, player, spell.spell_id, Some(npc), 0);
+        if let Err(failure) =
+            crate::spell_cast::start_spellclick_cast(world, player, spell.spell_id, npc)
+        {
+            warn!(
+                "Spellclick NPC {entry} spell {} failed: {failure:?}",
+                spell.spell_id
+            );
+        }
     }
 }
