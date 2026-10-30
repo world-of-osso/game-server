@@ -33,7 +33,10 @@ pub fn next(
     let Some(npc) = world.get::<Npc>(objective) else {
         return Ok(None);
     };
-    if map.map_id != 2825 || npc.template_id != 241812 {
+    if map.map_id != 2825
+        || npc.template_id != 241812
+        || crate::npc_interaction::nalorakk_offerings::all_avatars_fed(world, map)
+    {
         return Ok(None);
     }
     let origin = *world

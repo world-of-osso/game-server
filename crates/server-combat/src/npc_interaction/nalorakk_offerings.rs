@@ -171,6 +171,15 @@ fn prepare_avatars(world: &mut World) {
     }
 }
 
+pub(crate) fn all_avatars_fed(world: &mut World, map: InMap) -> bool {
+    world
+        .query::<(&Npc, &InMap, &AvatarFed)>()
+        .iter(world)
+        .filter(|(npc, other, _)| npc.template_id == AVATAR && **other == map)
+        .count()
+        >= 6
+}
+
 fn deliver(world: &mut World, player: Entity, avatar: Entity, map: InMap) {
     crate::auras::remove_auras(
         world,
@@ -192,12 +201,7 @@ fn deliver(world: &mut World, player: Entity, avatar: Entity, map: InMap) {
         crate::spell_cast::cancel_cast(world, avatar);
     }
     world.entity_mut(avatar).insert(AvatarFed);
-    let delivered = world
-        .query::<(&Npc, &InMap, &AvatarFed)>()
-        .iter(world)
-        .filter(|(npc, other, _)| npc.template_id == AVATAR && **other == map)
-        .count();
-    if delivered < 6 {
+    if !all_avatars_fed(world, map) {
         return;
     }
     let boss = world
