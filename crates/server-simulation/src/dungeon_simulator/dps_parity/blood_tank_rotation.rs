@@ -3161,6 +3161,77 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn boiling_point_empowers_existing_echo_when_a_new_cast_forces_it() {
+        use shared::protocol::CombatLogKind;
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        super::super::engage(&mut run);
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            1265968,
+            Some(actor),
+            1
+        ));
+        for _ in 0..4 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..30 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1265982));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            1265968,
+            Some(actor),
+            1
+        ));
+        for _ in 0..4 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        let start = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        let hits: Vec<_> = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..]
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(50842)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), 2, "the new cast forces the existing echo");
+        assert!(!hits[0].crit && !hits[1].crit);
+        let ratio = hits[1].amount as f32 / hits[0].amount as f32;
+        assert!(
+            (ratio - 1.0).abs() < 0.02,
+            "both hits must use the same Boiling Point buff: {hits:?}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn boiling_point_echo_consumes_intervening_proc_and_queues_another_echo() {
         use shared::protocol::CombatLogKind;
         let mut run = super::super::prepare_registered_player(250, 1).unwrap();
