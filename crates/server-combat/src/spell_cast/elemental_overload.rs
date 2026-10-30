@@ -16,6 +16,8 @@ const CHAIN_LIGHTNING: u32 = 188443;
 const LAVA_BURST: u32 = 51505;
 const ICEFURY: u32 = 210714;
 const ELEMENTAL_BLAST: u32 = 117014;
+const EARTH_SHOCK: u32 = 8042;
+const EARTH_SHOCK_OVERLOAD: u32 = 381725;
 pub(super) const ELEMENTAL_BLAST_OVERLOAD: u32 = 120588;
 pub(super) const ICEFURY_OVERLOAD: u32 = 219271;
 const LAVA_OVERLOAD: u32 = 77451;
@@ -33,6 +35,7 @@ pub fn is_overload_damage(spell: u32) -> bool {
             | LAVA_OVERLOAD_DAMAGE
             | ICEFURY_OVERLOAD
             | ELEMENTAL_BLAST_OVERLOAD
+            | EARTH_SHOCK_OVERLOAD
     )
 }
 
@@ -81,15 +84,16 @@ pub(super) fn after_launch(
         LAVA_BURST => LAVA_OVERLOAD,
         ICEFURY => ICEFURY_OVERLOAD,
         ELEMENTAL_BLAST => ELEMENTAL_BLAST_OVERLOAD,
+        EARTH_SHOCK => EARTH_SHOCK_OVERLOAD,
         _ => return,
     };
-    // SimC76f8118 sc_shaman.cpp7600–7617/7652–7656 requires Mountains
-    // for Blast overloads and removes its scalar for the Fusion variant.
-    let multiplier = if spell.id == ELEMENTAL_BLAST {
+    // SimC76f8118 sc_shaman.cpp7583–7609/8184–8201 requires Mountains
+    // for Blast and Earth Shock overloads; Fusion Blast omits that scalar.
+    let multiplier = if matches!(spell.id, ELEMENTAL_BLAST | EARTH_SHOCK) {
         let Some(percent) = self_aura_amount(world, caster, MOUNTAINS_WILL_FALL, 0) else {
             return;
         };
-        if spell.cast_parent_owns_modifier_charges {
+        if spell.id == ELEMENTAL_BLAST && spell.cast_parent_owns_modifier_charges {
             1.0
         } else {
             percent / 100.0
