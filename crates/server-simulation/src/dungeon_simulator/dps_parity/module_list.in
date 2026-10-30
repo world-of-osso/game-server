@@ -255,6 +255,7 @@ mod hellcaller_counter_tests;
 mod hellcaller_devil_fruit_tests;
 mod howl_tests;
 #[cfg(test)]
+mod guardian_after_the_wildfire_tests;
 mod guardian_berserk_form_tests;
 mod guardian_flashing_claws_tests;
 mod guardian_galactic_tests;

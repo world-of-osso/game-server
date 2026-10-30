@@ -255,6 +255,7 @@ register_modules! {
     germination: (200, "modules/germination.rs"),
     giantkiller: (170, "modules/giantkiller.rs"),
     enhancement_tempest_aoe: (2633, "modules/enhancement_tempest_aoe.rs"),
+    guardian_after_the_wildfire: (1056, "modules/guardian_after_the_wildfire.rs"),
     guardian_impacts: (1000, "modules/guardian_impacts.rs"),
     guardian_ironfur: (9801, "modules/guardian_ironfur.rs"),
     guardian_ursocs_fury: (1040, "modules/guardian_ursocs_fury.rs"),
