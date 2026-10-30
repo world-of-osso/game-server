@@ -118,9 +118,13 @@ fn spawn(spec: u32) -> Pull {
         GearSource::Journal,
     )
     .unwrap();
-    // The owner is injured so a healer has real work during the pull.
-    let mut health = harness.app.world_mut().get_mut::<Health>(owner).unwrap();
-    health.current = health.max * 0.5;
+    // The owner, with a level-90 pool like the follower's, is half injured
+    // so a healer has real work during the pull.
+    let max = harness.app.world().get::<Health>(follower).unwrap().max;
+    harness.app.world_mut().entity_mut(owner).insert(Health {
+        current: max * 0.5,
+        max,
+    });
     Pull { harness, follower }
 }
 
