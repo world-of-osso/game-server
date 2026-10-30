@@ -9,7 +9,8 @@ from import_log_population import validate_copy
 
 POLICY = 'FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE'
 # Murder Row Stalker: logged HOSTILE, pulled near Row Hooligan in the follower walk.
-PACKMATES = {234359: 236073}
+# Charonus: logged only HOSTILE; Voidscar's other encounter boss Atroxus supplies faction 16.
+PACKMATES = {234359: 236073, 239167: 239008}
 
 
 def prepare(db, audit):
@@ -19,7 +20,7 @@ def prepare(db, audit):
         observed_flags TEXT NOT NULL)''')
     applied, mixed, missing = [], [], []
     for entry, donor in sorted(PACKMATES.items()):
-        flags = audit['flags'][str(entry)]
+        flags = audit['flags'].get(str(entry), {})
         if not flags:
             missing.append(entry)
             continue

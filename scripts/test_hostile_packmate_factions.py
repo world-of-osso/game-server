@@ -8,7 +8,8 @@ class HostilePackmateFactionTest(unittest.TestCase):
     def database(self):
         db = sqlite3.connect(':memory:')
         db.execute('CREATE TABLE content_creature_template (entry INTEGER PRIMARY KEY, faction INTEGER NOT NULL)')
-        db.executemany('INSERT INTO content_creature_template VALUES (?,?)', [(234359, 0), (236073, 16), (234852, 0)])
+        db.executemany('INSERT INTO content_creature_template VALUES (?,?)',
+                       [(234359, 0), (236073, 16), (234852, 0), (239167, 0), (239008, 16)])
         return db
 
     def test_hostile_stalker_uses_packmate_and_replays(self):
@@ -21,13 +22,25 @@ class HostilePackmateFactionTest(unittest.TestCase):
             self.assertEqual(db.execute('SELECT policy,packmate_entry,faction,source_line FROM log_derived_hostile_packmate').fetchone(), (POLICY, 236073, 16, 76))
             self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=234852').fetchone(), (0,))
 
+    def test_hostile_charonus_uses_atroxus_faction(self):
+        flags = {'0x40': {'example': {'file': 'WoWCombatLog-100126_203256.txt', 'line': 432659, 'flags': '0xa48'},
+                          'player_event_example': None}}
+        with self.database() as db:
+            report = prepare(db, {'flags': {'239167': flags}})
+            self.assertEqual(report['hostile'], [239167])
+            self.assertEqual(report['no_reaction_observed'], [234359])
+            self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=239167').fetchone(), (16,))
+            self.assertEqual(db.execute('SELECT packmate_entry,source_file,source_line FROM log_derived_hostile_packmate').fetchone(),
+                             (239008, 'WoWCombatLog-100126_203256.txt', 432659))
+            self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=234359').fetchone(), (0,))
+
     def test_mixed_or_missing_flags_do_not_change_faction(self):
         with self.database() as db:
             report = prepare(db, {'flags': {'234359': {'0x40': {}, '0x20': {}}}})
             self.assertEqual(report['mixed_reactions'], [234359])
             self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=234359').fetchone(), (0,))
         with self.database() as db:
-            self.assertEqual(prepare(db, {'flags': {'234359': {}}})['no_reaction_observed'], [234359])
+            self.assertEqual(prepare(db, {'flags': {'234359': {}}})['no_reaction_observed'], [234359, 239167])
 
     def test_changed_packmate_is_rejected(self):
         with self.database() as db:
