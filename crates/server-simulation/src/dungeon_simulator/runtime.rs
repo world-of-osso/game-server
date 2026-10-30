@@ -247,6 +247,9 @@ fn load_gameplay_data(app: &mut App) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
+    app.insert_resource(
+        crate::item_proc_data::load(&db).expect("load native equipped-producer catalogs"),
+    );
     let data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
