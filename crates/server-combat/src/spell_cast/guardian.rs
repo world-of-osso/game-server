@@ -379,6 +379,24 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_shaman.cpp4064–4139/4248–4294: greater variants
+    // inherit owner SP1.0 and omit the Primal-only Meteor/Immolate/Stormfury.
+    GuardianPolicy {
+        summons: &[188592],
+        entry: 95061,
+        spells: &[57984],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[157299],
+        entry: 77936,
+        spells: &[157348, 157331],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 sc_shaman.cpp4026–4042/4070–4139/4248–4315: Primal Fire and
     // Storm APL order with owner SP1.0 x (1 + native Primal Elementalist117013
     // effect0 80%); these native roots exist only with that talent.

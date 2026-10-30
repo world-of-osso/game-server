@@ -67,21 +67,41 @@ pub(crate) fn traverse(world: &mut World, player: Entity, pyre: Entity) -> Resul
             .then_some(entity)
         })
         .collect();
+    // TC 15e0ed76 Player.cpp:1274-1278 temporarily unsummons distant pets;
+    // MovementHandler.cpp:464-465 restores them after a near teleport.
+    let owners: Vec<_> = std::iter::once(player)
+        .chain(followers.iter().copied())
+        .collect();
+    let mut companions: std::collections::HashSet<_> = owners
+        .iter()
+        .flat_map(|&owner| crate::hunter_pet::active_owned_pets(world, owner))
+        .collect();
+    companions.extend(
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature, &InMap)>()
+            .iter(world)
+            .filter_map(|(unit, summon, map)| {
+                (owners.contains(&summon.owner)
+                    && *map == copy
+                    && summon.properties.is_guardian()
+                    && crate::spell_cast::targets::is_alive(world, unit))
+                .then_some(unit)
+            }),
+    );
+
     if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
         return Err("pyre user near teleport refused".into());
     }
-    for follower in followers {
+    for unit in followers.into_iter().chain(companions) {
         if let Some(mut navigation) = world.get_resource_mut::<crate::navigation::Navigation>() {
-            navigation.cancel_route(follower);
+            navigation.cancel_route(unit);
         }
-        world
-            .entity_mut(follower)
-            .insert(destination.bevy_position());
+        world.entity_mut(unit).insert(destination.bevy_position());
         crate::interest::mark_interest_position_changed(
             world.get_resource::<crate::interest::InterestDirtyQueue>(),
-            follower,
+            unit,
         );
-        crate::spell_cast::mark_dirty(world, follower);
+        crate::spell_cast::mark_dirty(world, unit);
     }
     info!(?player, ?pyre, "NALORAKK_PYRE_TELEPORT");
     Ok(())

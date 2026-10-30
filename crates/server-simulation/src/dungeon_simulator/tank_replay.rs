@@ -618,6 +618,7 @@ pub(super) fn replay_simc_with_targets(
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
     }
     let scenario = simc_tank_timeline::read_scenario(path)?;
+    let racial = simc_tank_timeline::read_touch_of_elune(path, &scenario.player)?;
     let mut hits = simc_tank_timeline::read_trace(path, &scenario.dummy)?;
     scale_pressure(&mut hits, pressure_scale);
     let (bloodlust_ms, raid_buffs) = if external_healing {
@@ -641,7 +642,11 @@ pub(super) fn replay_simc_with_targets(
     let _rng = crate::random::seed_scope(seed);
     let mut run =
         super::dps_parity::prepare_registered_player_with(spec_id, target_count, |run| {
+            apply_simc_touch_of_elune(run, racial)?;
             apply_simc_raid_buffs(run, &raid_buffs)?;
+            if racial.is_some() && raid_buffs.is_empty() {
+                run.app.update();
+            }
             apply_simc_dummy_debuffs(run, &dummy_debuffs)
         })?;
     apply_simc_starting_holy_power(&mut run);
@@ -723,6 +728,34 @@ pub(super) fn replay_registered_run(
             heals: Vec::new(),
         },
     )
+}
+
+pub(super) fn apply_simc_touch_of_elune(
+    run: &mut super::dps_parity::Run,
+    racial: Option<u32>,
+) -> Result<(), String> {
+    let is_night_elf = crate::auras::has_aura(run.app.world(), run.actor, 154748);
+    if is_night_elf != racial.is_some() {
+        return Err("SIMC_TOUCH_OF_ELUNE_RACE_OR_STATE_MISMATCH".into());
+    }
+    if let Some(spell_id) = racial {
+        let actor = run.actor;
+        let world = run.app.world_mut();
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if !crate::auras::has_aura(world, actor, spell_id) {
+            return Err(format!("SIMC_TOUCH_OF_ELUNE_NOT_APPLIED:{spell_id}"));
+        }
+    }
+    Ok(())
 }
 
 pub(super) fn apply_simc_raid_buffs(

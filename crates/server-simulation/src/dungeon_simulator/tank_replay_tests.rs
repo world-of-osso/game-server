@@ -1529,6 +1529,34 @@ fn replay_decides_when_global_cooldown_expires() {
         .expect("Judgment is ready at the replay decision event");
 }
 
+#[test]
+#[ignore = "uses selected Guardian and Vengeance profiles and native world data"]
+fn simc_night_elf_racial_increases_haste_for_both_tanks() {
+    for spec in [104, 581] {
+        let mut run = super::dps_parity::prepare_registered_player(spec, 1).unwrap();
+        let actor = run.actor;
+        let before = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        super::tank_replay::apply_simc_touch_of_elune(&mut run, Some(154797)).unwrap();
+        run.app.update();
+        let after = run
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .haste_pct;
+        let expected = (1.0 + before / 100.0) * 101.0 - 100.0;
+        assert!(
+            (after - expected).abs() < 0.01,
+            "spec {spec}: haste {before} -> {after}, expected {expected}"
+        );
+    }
+}
+
 fn set_holy_power(run: &mut super::dps_parity::Run, amount: f32) {
     let actor = run.actor;
     run.app
