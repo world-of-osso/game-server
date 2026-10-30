@@ -69,7 +69,9 @@ pub(super) fn record_observed_frontal(
 }
 
 pub(super) fn update_goal(world: &mut World, tank: Entity, follower: &Follower, party: &[Entity]) {
-    if follower.profile.role != shared::group::GroupRole::Tank {
+    if follower.profile.role != shared::group::GroupRole::Tank
+        || super::tank_pull_back::active(world, tank)
+    {
         return;
     }
     if world.get::<tank_planner::AdmittedPosition>(tank).is_some()
@@ -95,7 +97,7 @@ pub(super) fn update_goal(world: &mut World, tank: Entity, follower: &Follower, 
     }
 }
 
-fn clear_owned_position(world: &mut World, tank: Entity) {
+pub(super) fn clear_owned_position(world: &mut World, tank: Entity) {
     if world.entity_mut(tank).take::<FrontalPosition>().is_some() {
         world
             .entity_mut(tank)
