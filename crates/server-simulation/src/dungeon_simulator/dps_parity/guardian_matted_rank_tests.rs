@@ -22,11 +22,13 @@ fn guardian_matted_fur_uses_selected_rank_and_single_absorb_multiplier() {
         WeaponAttackType::MainHand,
         world.get::<StatModifiers>(actor),
     );
-    assert!(attack_power > stats.attack_power, "the equipped weapon contributes attack power");
-    let expected = (attack_power * coefficient / 100.0
-        * (1.0 + stats.versatility_pct / 100.0)
-        * recipient)
-        .round();
+    assert!(
+        attack_power > stats.attack_power,
+        "the equipped weapon contributes attack power"
+    );
+    let expected =
+        (attack_power * coefficient / 100.0 * (1.0 + stats.versatility_pct / 100.0) * recipient)
+            .round();
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22812, Some(actor), false)
         .unwrap();
     let shield = run
