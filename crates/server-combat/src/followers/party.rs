@@ -429,6 +429,9 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
         if let Some(mut summon) = world.get_mut::<crate::zones::TempSummon>(member) {
             summon.summoner = player;
         }
+        if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(member) {
+            follow.owner = player;
+        }
     }
     world
         .entity_mut(player)
@@ -687,6 +690,19 @@ mod copy_tests {
         ));
         join_party(app.world_mut(), owner, &run, &run.members).unwrap();
         let map = run.copy.unwrap();
+        let dead = run.members[0];
+        let living = run.members[1];
+        app.world_mut()
+            .entity_mut(living)
+            .insert(crate::creature_ai::FollowOwner::new(owner));
+        app.world_mut().entity_mut(dead).insert((
+            shared::components::Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
         let position = *app
             .world()
             .get::<shared::components::Position>(owner)
@@ -776,6 +792,21 @@ mod copy_tests {
         assert_eq!(
             app.world().get::<FollowerRun>(reconnected).unwrap().members,
             run.members
+        );
+        assert!(app.world().get::<crate::combat::Corpse>(dead).is_some());
+        assert_eq!(
+            app.world()
+                .get::<shared::components::Health>(dead)
+                .unwrap()
+                .current,
+            0.0
+        );
+        assert_eq!(
+            app.world()
+                .get::<crate::creature_ai::FollowOwner>(living)
+                .unwrap()
+                .owner,
+            reconnected
         );
     }
 
