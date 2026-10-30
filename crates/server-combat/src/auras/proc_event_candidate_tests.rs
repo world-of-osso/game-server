@@ -8,6 +8,49 @@ const LEYDRINKER: u32 = 453758;
 const FIREBALL: u32 = 133;
 
 #[test]
+fn generated_weapon_crit_proc_spends_charge_only_on_critical_hit() {
+    use crate::auras::{AuraApplication, AuraSource, procs};
+
+    let mut h = harness(vec![], &[66889], 8).unwrap();
+    h.advance(3);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 66889,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let emit = |h: &mut crate::spell_cast::test_harness::Harness, hit_mask| {
+        procs::push_event(
+            h.app.world_mut(),
+            procs::AuraEvent {
+                actor: h.caster,
+                target: Some(h.npc),
+                action_target: None,
+                actor_mask: [procs::PROC_DEAL_MELEE_SWING, 0],
+                target_mask: [0; 2],
+                spell_id: None,
+                can_proc: true,
+                cast_used_proc_modifier: false,
+                periodic: false,
+                damage: 100.0,
+                heal: None,
+                hit_mask,
+                reflected: false,
+            },
+        );
+        h.advance(3);
+    };
+    emit(&mut h, procs::PROC_HIT_NORMAL);
+    assert!(has_aura(h.app.world(), h.caster, 66889));
+    emit(&mut h, procs::PROC_HIT_CRITICAL);
+    assert!(!has_aura(h.app.world(), h.caster, 66889));
+}
+
+#[test]
 fn native_proc_event_candidates_exclude_later_ley_drinker_but_consume_on_next_cast() {
     let _seed = crate::random::seed_scope(70448);
     let mut h = harness(vec![], &[LEYDRINKER, FIREBALL], 8).unwrap();
