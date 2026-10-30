@@ -155,7 +155,7 @@ pub fn build_follower_config(
 }
 
 /// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
-/// Logged ranks include any native granted ranks; only the remainder is purchased.
+/// Treat logged ranks as including native granted ranks; WCL semantics remain unverified.
 pub fn build_logged_config(
     tree: &TraitTree,
     ctx: TraitContext,
