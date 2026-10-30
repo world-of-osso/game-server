@@ -11,10 +11,13 @@ pub struct ClassProfile {
     pub role: u8,
     pub race: u8,
     pub talents: String,
+    pub race_source: String,
+    pub talent_entries: Option<Vec<(u32, u32)>>,
+    pub rejection: Option<String>,
 }
 
 impl ClassProfile {
-    fn group_role(&self) -> Result<GroupRole, String> {
+    pub(super) fn group_role(&self) -> Result<GroupRole, String> {
         match self.role {
             0 => Ok(GroupRole::Tank),
             1 => Ok(GroupRole::Healer),
@@ -23,6 +26,14 @@ impl ClassProfile {
                 "invalid follower spec {} role {role}",
                 self.spec_id
             )),
+        }
+    }
+
+    pub(super) fn talent_source(&self) -> Result<crate::trait_config::TalentSource, String> {
+        match self.race_source.as_str() {
+            "RACE_FROM_SIMC_PROFILE" => Ok(crate::trait_config::TalentSource::SimcProfile),
+            "RACE_FROM_PARITY_PROFILE" => Ok(crate::trait_config::TalentSource::ParityProfile),
+            source => Err(format!("unknown follower profile source {source}")),
         }
     }
 }
@@ -34,6 +45,47 @@ pub fn read_profiles() -> Result<Vec<ClassProfile>, String> {
     .map_err(|error| format!("read class follower profiles: {error}"))
 }
 
+/// Reject profiles that cannot build a native spellbook and trait configuration.
+pub(super) fn validate_profiles(
+    profiles: &[ClassProfile],
+    classes: &crate::spell_info::ClassSpells,
+    level: u8,
+) -> Vec<ClassProfile> {
+    profiles
+        .iter()
+        .filter_map(|profile| {
+            let result = profile.rejection.as_ref().map_or_else(
+                || {
+                    let entries = profile
+                        .talent_entries
+                        .as_ref()
+                        .ok_or("decoded talents are missing".to_owned())?;
+                    let source = profile.talent_source()?;
+                    crate::race_class::validate_race_class(profile.race, profile.class_id)?;
+                    crate::class_progression::evaluate_follower_progression(
+                        classes,
+                        profile.class_id,
+                        profile.race,
+                        profile.spec_id,
+                        level,
+                        source,
+                        entries,
+                    )
+                    .map(|_| ())
+                },
+                |error| Err(error.clone()),
+            );
+            match result {
+                Ok(()) => Some(profile.clone()),
+                Err(error) => {
+                    bevy::log::warn!("follower spec {} rejected: {error}", profile.spec_id);
+                    None
+                }
+            }
+        })
+        .collect()
+}
+
 pub fn select_profiles(
     profiles: &[ClassProfile],
     role: GroupRole,
@@ -42,6 +94,7 @@ pub fn select_profiles(
 ) -> Result<Vec<ClassProfile>, String> {
     let candidates = profiles
         .iter()
+        .filter(|profile| profile.rejection.is_none() && profile.talent_entries.is_some())
         .map(|profile| {
             Ok(QualifiedSpec {
                 spec_id: profile.spec_id,
@@ -68,6 +121,27 @@ mod tests {
     use std::collections::BTreeSet;
 
     #[test]
+    fn class_profiles_validate_native_talents_before_selection() {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, 90);
+        for role in [GroupRole::Tank, GroupRole::Healer, GroupRole::Dps] {
+            let count = profiles
+                .iter()
+                .filter(|profile| profile.group_role().unwrap() == role)
+                .count();
+            assert!(
+                count >= 2,
+                "{role:?}: only {count} profiles passed server validation"
+            );
+        }
+    }
+
+    #[test]
     fn class_profiles_fill_each_missing_role_from_source_profiles() {
         let profiles = read_profiles().unwrap();
         for role in [GroupRole::Tank, GroupRole::Healer, GroupRole::Dps] {
@@ -82,11 +156,15 @@ mod tests {
                     .len(),
                 4
             );
-            assert!(
-                party
-                    .iter()
-                    .all(|p| p.race != 0 && p.class_id != 0 && !p.talents.is_empty())
-            );
+            assert!(party.iter().all(|p| {
+                p.race != 0
+                    && p.class_id != 0
+                    && !p.talents.is_empty()
+                    && p.rejection.is_none()
+                    && p.talent_entries
+                        .as_ref()
+                        .is_some_and(|entries| !entries.is_empty())
+            }));
             for (expected, total) in [
                 (GroupRole::Tank, 1),
                 (GroupRole::Healer, 1),
