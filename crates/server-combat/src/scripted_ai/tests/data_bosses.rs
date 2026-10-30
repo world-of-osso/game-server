@@ -65,6 +65,8 @@ mod dailcry;
 mod deios;
 #[path = "doragosa.rs"]
 mod doragosa;
+#[path = "edna_intro.rs"]
+mod edna_intro;
 #[path = "emberon.rs"]
 mod emberon;
 #[path = "gargolmar.rs"]
