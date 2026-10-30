@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Generate the normal-dungeon follower profile roster from native and pinned SimC data."""
+import argparse
+import hashlib
+import json
+import sqlite3
+from pathlib import Path
+
+from dps_parity import parse_profile
+
+
+def normalized(value):
+    return "".join(c for c in value.lower() if c.isalnum())
+
+
+def generate(db, simc, parity):
+    classes = {normalized(name): ident for ident, name in db.execute("SELECT ID, Filename FROM chr_classes")}
+    specs = {(class_id, normalized(name)): (ident, role) for ident, name, class_id, role in db.execute("SELECT ID, Name_lang, ClassID, Role FROM chr_specialization WHERE Name_lang <> 'Initial'")}
+    races = {}
+    for ident, name in db.execute("SELECT ID, Name_lang FROM chr_races ORDER BY ID"):
+        races.setdefault(normalized(name), ident)
+    profiles = {}
+    # The shortest filename selects the default profile, not a named hero variant.
+    files = [path for tier in ("MID2", "MID1") for path in sorted(
+        (simc / "profiles" / tier).glob("*.simc"), key=lambda p: (len(p.name), p.name)
+    )]
+    for path in files:
+        payload = path.read_bytes()
+        profile = parse_profile(payload.decode())
+        class_id = classes.get(normalized(profile.get("class", "")))
+        spec = specs.get((class_id, normalized(profile.get("spec", ""))))
+        race = races.get(normalized(profile.get("race", "")))
+        if not spec or not race or not profile.get("talents"):
+            continue
+        spec_id, role = spec
+        profiles.setdefault(spec_id, {"spec_id": spec_id, "class_id": class_id, "role": role, "race": race, "talents": profile["talents"], "race_source": "RACE_FROM_SIMC_PROFILE", "source": f"{path.parent.name}/{path.name}", "sha256": hashlib.sha256(payload).hexdigest()})
+    for path in sorted(parity.glob("*.profile.json")):
+        payload = path.read_bytes()
+        profile = json.loads(payload)
+        class_id = classes.get(normalized(profile.get("class", "")))
+        spec = specs.get((class_id, normalized(profile.get("spec", ""))))
+        race = races.get(normalized(profile.get("race", "")))
+        if not spec or not race or not profile.get("talents") or spec[0] != profile.get("spec_id"):
+            continue
+        spec_id, role = spec
+        profiles.setdefault(spec_id, {"spec_id": spec_id, "class_id": class_id, "role": role, "race": race, "talents": profile["talents"], "race_source": "RACE_FROM_PARITY_PROFILE", "source": path.name, "sha256": hashlib.sha256(payload).hexdigest()})
+    return [profiles[key] for key in sorted(profiles)]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--world-db", type=Path, required=True)
+    parser.add_argument("--simc", type=Path, required=True)
+    parser.add_argument("--parity", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    with sqlite3.connect(f"file:{args.world_db}?mode=ro", uri=True) as db:
+        profiles = generate(db, args.simc, args.parity)
+    args.output.write_text(json.dumps(profiles, indent=2) + "\n")
+
+
+if __name__ == "__main__":
+    main()

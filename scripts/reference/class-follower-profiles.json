@@ -1,0 +1,392 @@
+[
+  {
+    "spec_id": 62,
+    "class_id": 8,
+    "role": 2,
+    "race": 29,
+    "talents": "C4DAAAAAAAAAAAAAAAAAAAAAAYGGLzMzswMDamZGAAAGAAEwMzMLLzMxCAAwMzMjNLzMzsMjxYmZwCzYmZGAgBAAYmZBAMDAGmZG",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Mage_Arcane.simc",
+    "sha256": "d7d628c5a9b84c2d7589c5578bf59cacb2a62dc24f9ade22962f567b33d385a3"
+  },
+  {
+    "spec_id": 63,
+    "class_id": 8,
+    "role": 2,
+    "race": 3,
+    "talents": "C8DAAAAAAAAAAAAAAAAAAAAAAYGGLzMzswMzIzMGAAAGAwMz0sstMDAwmZmx2MzMzYBAAAAALmZmZAAgZMmZmZMzsMAMzQGjBMDjB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Mage_Fire.simc",
+    "sha256": "9b855fc9b9970d0834b75c2aec0ae54209db80dee4176a71096aff52a0d23da3"
+  },
+  {
+    "spec_id": 64,
+    "class_id": 8,
+    "role": 2,
+    "race": 6,
+    "talents": "CAEAAAAAAAAAAAAAAAAAAAAAAYGGLzMzsMmZmYmZGjZMziZmZmZMDEAAYmZmllZm2AAAAAAgNA2WGzMzAbzYmZYBAAgZ2AmBGwADD",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Mage_Frost.simc",
+    "sha256": "a1357dee49f280527db0f77e114e7928627ec7bbc0adb0893d3727a114d1bbbf"
+  },
+  {
+    "spec_id": 65,
+    "class_id": 2,
+    "role": 1,
+    "race": 3,
+    "talents": "CEEAAAAAAAAAAAAAAAAAAAAAAAAAALAwMAAwyAmZWmZmlZMjhFzmZWMTTMLGzMDjZLDADAbgNWMzAgAAmZWWWaZmhN2GGsZgZ2GAgZGAmxY0A",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "65.profile.json",
+    "sha256": "87b39eb88288d9d9c907661ea3218a1663e5d15e5b2f9f213442c9df38f15e49"
+  },
+  {
+    "spec_id": 66,
+    "class_id": 2,
+    "role": 0,
+    "race": 6,
+    "talents": "CIEAAAAAAAAAAAAAAAAAAAAAAsNzYWmZMzYmxyyALzCDDAwAAAAAAg0MDzYmZMzs1GAGYGYGsNAAACwMzyySLzMWsthBghZYMAYmBAzAM2A",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Paladin_Protection.simc",
+    "sha256": "1966973157a6bba09fbaff0cea644a5abba0175d1585b091029e769e806036b3"
+  },
+  {
+    "spec_id": 70,
+    "class_id": 2,
+    "role": 2,
+    "race": 3,
+    "talents": "CYEAAAAAAAAAAAAAAAAAAAAAAAAAAAANbbzMzywMDAAAAAAjyYGmZsNmthZ2mxYMGmxCbDDYWmtZmZrBBAAsAYAwYGmBzYmZDYmZYMjBD",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Paladin_Retribution.simc",
+    "sha256": "cc97c926407623d377586106c415e8e8ff1e3308858cca0950a419877c200a46"
+  },
+  {
+    "spec_id": 71,
+    "class_id": 1,
+    "role": 2,
+    "race": 3,
+    "talents": "CcEAAAAAAAAAAAAAAAAAAAAAAAzMzsMzMmZGAAAghphxYmxyMzMzgxMDAAAAgZWmZAhxyyALgBMDTIzgNwMjtx2ALzsMAzMAYGGA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warrior_Arms.simc",
+    "sha256": "847080503d43467467dc6102416f61397f9f2a9cbb2160da614b636a7e088afc"
+  },
+  {
+    "spec_id": 72,
+    "class_id": 1,
+    "role": 2,
+    "race": 3,
+    "talents": "CgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgGDzMmZ2MzMzMDjZmZGzMzsMzMmZmZzYmBAAixy2ALgJYGmAzwGwMDjNAAYmhxYYMYM",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warrior_Fury.simc",
+    "sha256": "e872cca507063e3d63b84e522688b4ad44b2f7f7664e50e3f5553cf3f858088c"
+  },
+  {
+    "spec_id": 73,
+    "class_id": 1,
+    "role": 0,
+    "race": 3,
+    "talents": "CkEAAAAAAAAAAAAAAAAAAAAAA02AAAzMDzMzMzMzmxsMjxYmGGDLzMzMDGzMAAAAYZAYGDAsYGDbwAzwCNmZBmxMDmNAAzMAgZgxA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warrior_Protection.simc",
+    "sha256": "8286b3e8802963e628c099db0de484c5a3ca47a32fa779a0e4d09c65739232ee"
+  },
+  {
+    "spec_id": 102,
+    "class_id": 11,
+    "role": 2,
+    "race": 4,
+    "talents": "CYGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWoMbNjxMDwsYmZmZhBjZZmlZYmZswyMLzMGzshhBYstMzgxsNCMBAAAYxMzMzgNDjxAAwMDMA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID1/MID1_Druid_Balance.simc",
+    "sha256": "1b9c657ee57c0af502a1f945192216030bb9d924669aa145eba64f2f54471011"
+  },
+  {
+    "spec_id": 103,
+    "class_id": 11,
+    "role": 2,
+    "race": 4,
+    "talents": "CcGADBD3hSPCL9Y9gz68WcKvMAAAAAAwYMjHwYmZMmtFPwyYbmZGzMDAAAALBzmhxMjaGzyYmZmtxMAAAAAAwADAAAgmZZ2mZmZ2mZpZZmlNwMDwiZwAAYmBzshB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Druid_Feral.simc",
+    "sha256": "9f419caddee5e8cae94856a05b27bd276b390c6ac6c83d4d6449b1eccd093797"
+  },
+  {
+    "spec_id": 104,
+    "class_id": 11,
+    "role": 0,
+    "race": 4,
+    "talents": "CgGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgZmxsYmZMzmZZgZbZgxMMaimZmFzMzMLjZeADAAAAgZYGLzAAAAQNzysMzMDAgFMDgFzgBsYZbAwMbwA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID1/MID1_Druid_Guardian.simc",
+    "sha256": "808f54a866dcac51ca2c7fd60aa38f6b83101a394a8feca90dfc0a77972c4a48"
+  },
+  {
+    "spec_id": 105,
+    "class_id": 11,
+    "role": 1,
+    "race": 4,
+    "talents": "CkGAAAAAAAAAAAAAAAAAAAAAAMMmZZMjZmxsNMDmNjNbzAAAAAAAAAAgNDNbDmmZAmFmZmZxkZAAAAAYAAmBAgAAAmtZ2a2mZzGzMzMMzAjmBAYmBgB",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "105.profile.json",
+    "sha256": "641f3b710c945f2ae435c50a70e6c5f631a5a3cd7605f3f29b78295160f0d139"
+  },
+  {
+    "spec_id": 250,
+    "class_id": 6,
+    "role": 0,
+    "race": 37,
+    "talents": "CoPAAAAAAAAAAAAAAAAAAAAAAwYWmZmxMmZmhZZmZmmZxMjxMAAAAAmZmZGmZGzMjZAgZmZGAAADMwMW0YZDklBsBYGzAAAmZwgB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Death_Knight_Blood.simc",
+    "sha256": "467a6c8d240875803809dc1eb080e220d071904edb522a23d3ddca7b6e1a5019"
+  },
+  {
+    "spec_id": 251,
+    "class_id": 6,
+    "role": 2,
+    "race": 1,
+    "talents": "CsPAAAAAAAAAAAAAAAAAAAAAAMAGAADYYYMiBjhZGDmZmZmZmZmBAAAAAAAAgxYgBAsMMhMWwMjhBGAGmBAwA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Death_Knight_Frost.simc",
+    "sha256": "e4b1548df5fe2a13aaa6be8bcfa12694870f360e612655db373e8f047e566e1a"
+  },
+  {
+    "spec_id": 252,
+    "class_id": 6,
+    "role": 2,
+    "race": 8,
+    "talents": "CwPAAAAAAAAAAAAAAAAAAAAAAAwMjZMDDz2MzMTzmZmZMjBAAAAAAAgZGmZAwyMmZ2mZGjZAbmFDDZgZjhGLAYGAGzMjZAmZmxYA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Death_Knight_Unholy.simc",
+    "sha256": "6a931073fc75752615f56eaa0a054d5e36d85109d0d6c2c650ba3e08f34de102"
+  },
+  {
+    "spec_id": 253,
+    "class_id": 3,
+    "role": 2,
+    "race": 3,
+    "talents": "C0PAAAAAAAAAAAAAAAAAAAAAAAMmxwCsAzwwMsBAgZYMzyMDzYmxMMzYMzwMjZMziZmxMmBjpZAAAAAzAAAwYmZAmZjxGMLgtBgBA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Hunter_Beast_Mastery.simc",
+    "sha256": "66e65ca1fbffa2ae070a4afba8ee606810a52d1405e3725b74fa12bc913bcda2"
+  },
+  {
+    "spec_id": 254,
+    "class_id": 3,
+    "role": 2,
+    "race": 3,
+    "talents": "C4PAAAAAAAAAAAAAAAAAAAAAAwCMwMGzYZAjZwGAAAAAAAAYGzYmFzYmZMDGTzYwYbZmZmZmZmZWYmlBzAAAGzMjBwM22gBYjZ2mxAA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Hunter_Marksmanship.simc",
+    "sha256": "f3d5c7a12528cd561ae09fd2c8c9e4b74fa5b5b6c1ab2b5471caa8c23520eee2"
+  },
+  {
+    "spec_id": 255,
+    "class_id": 3,
+    "role": 2,
+    "race": 3,
+    "talents": "C8PAAAAAAAAAAAAAAAAAAAAAAMWgBmxoxyAYmgtZMzMGzyAAAAAAwMmxMLmxYGzgx0MAAAADAmxyyMzsYMzMjZmBAzYZDGDjNDAA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Hunter_Survival.simc",
+    "sha256": "80c6cd04c55971a299790f444ed0a00ee58be49ccfde561b378ce134143f8888"
+  },
+  {
+    "spec_id": 256,
+    "class_id": 5,
+    "role": 1,
+    "race": 4,
+    "talents": "CAQAAAAAAAAAAAAAAAAAAAAAAADsNDzyMjxMzMMbzgZmZYGAAAAAAAAAAjZWmBzMzghZwmpZiZAzsghwYWGgxgFAAYMzYMMzAMzMTwM",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "256.profile.json",
+    "sha256": "3db29db9570401246486bd5bfd373cfc4b39a05086222f6b2b2181407f6b6028"
+  },
+  {
+    "spec_id": 257,
+    "class_id": 5,
+    "role": 1,
+    "race": 4,
+    "talents": "CEQAAAAAAAAAAAAAAAAAAAAAAADAAAAAAYzMzYWGzMmZMMDjlZmZGAAAADzyMjZmZGGmZwGmpAYmFMEGz2AMGYxMDAaGzMzYwMAzMDYA",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "257.profile.json",
+    "sha256": "a17a66a1312440f2f7e1d2902fac63d494f41edea0e2de6e11a9a48cfc5da1b6"
+  },
+  {
+    "spec_id": 258,
+    "class_id": 5,
+    "role": 2,
+    "race": 29,
+    "talents": "CIQAAAAAAAAAAAAAAAAAAAAAAMMjZGAAAAAAAAAAAAMLmxMbzMMz2MzYG2mZGzMzYDZGLmpBYmZGAIAz2stEMbMAwgxMzMmtxMYmBzgB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Priest_Shadow.simc",
+    "sha256": "c7f83dcc1784a4b21560fd59ed21f7406001c47bafce56d295f4b56c86533ed2"
+  },
+  {
+    "spec_id": 259,
+    "class_id": 4,
+    "role": 2,
+    "race": 8,
+    "talents": "CMQAAAAAAAAAAAAAAAAAAAAAAYmlxsNDGAAAAAYWGsNDAAAAAIbzMzMzMjxyMzMbzsMzMzYGzYMmZMMAbmlBGwSwywEYYxgZGgxYA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Rogue_Assassination.simc",
+    "sha256": "05777d82fa481ff69769754c3ae2a66b3b81f02b7b5feafbee4b54cce955c47e"
+  },
+  {
+    "spec_id": 260,
+    "class_id": 4,
+    "role": 2,
+    "race": 3,
+    "talents": "CQQAAAAAAAAAAAAAAAAAAAAAAAgx2MMzMmZmtZmZmZMmF4BmZbaZw2MAAAAAALLzMzwMzMziZmZbAAAAYmBAjZxwQGYWYhWYjBYmBDMA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Rogue_Outlaw.simc",
+    "sha256": "59d5e11a61afef6d958a73ae28fee8f7c157ee266c1858aef312d73b270c9543"
+  },
+  {
+    "spec_id": 261,
+    "class_id": 4,
+    "role": 2,
+    "race": 3,
+    "talents": "CUQAAAAAAAAAAAAAAAAAAAAAAAgx2MAAAAAwsMGLTMbbjxMDDzMzMzw8AbzYGbbzMzMzMjBjZ2GAAAAGMmFzyADYBsMMhMLYGmZAmxA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Rogue_Subtlety.simc",
+    "sha256": "7a9447df86826bee50a5ff1c84f69dd1fafd5ece50895574b661d45bfd42951f"
+  },
+  {
+    "spec_id": 262,
+    "class_id": 7,
+    "role": 2,
+    "race": 6,
+    "talents": "CYQAAAAAAAAAAAAAAAAAAAAAAAAAAAzMbbzMmZmZZbZMMjBAAAAsYmNYADY2YCZWAgZbmZGjtFTYmxYxMzMmZWsMjFzMMzyAAGGAzMGGGA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Shaman_Elemental.simc",
+    "sha256": "9388fa714ae131be32a2ac5654e55118c829ad5f327dcbe5327d7a2df917e4c3"
+  },
+  {
+    "spec_id": 263,
+    "class_id": 7,
+    "role": 2,
+    "race": 8,
+    "talents": "CcQAAAAAAAAAAAAAAAAAAAAAAMzMzgZmZmZmhZmZAAAAAAAAA2AsZGDLkFYGGawCAzyMmxYZZGYmZbsMzMzMGGzAAMDjZGGBmZwgxA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Shaman_Enhancement.simc",
+    "sha256": "732a7ab8e2494d2e2a87a4b6546119f9b5ed31e6d6547d121b7cc319cf9981cd"
+  },
+  {
+    "spec_id": 264,
+    "class_id": 7,
+    "role": 1,
+    "race": 3,
+    "talents": "CgQAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAzMzsstMmZmZMzYMMsAbwMW0YbAZGYDzMDzyMjRzyyMzmZMbsYMzYMmlZAAYAMzgZGAGDG",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "264.profile.json",
+    "sha256": "0c6c3d60b518f99039ee75dc5e956ce5748efcb83d33527d0227ecb004765f37"
+  },
+  {
+    "spec_id": 265,
+    "class_id": 9,
+    "role": 2,
+    "race": 8,
+    "talents": "CkQAAAAAAAAAAAAAAAAAAAAAAwMzMzoZhhZmZmlBAAYmZZWmZml5BGAwCMwsY0YGQmNwyAAAwMAAwMDYmZMYGmZMzMGMzMzAAmBG",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warlock_Affliction.simc",
+    "sha256": "1f79a533c65ff1b27f216e94705cce9d5a8dc76b684c3d493a1eaaed29b5a916"
+  },
+  {
+    "spec_id": 266,
+    "class_id": 9,
+    "role": 2,
+    "race": 2,
+    "talents": "CoQAAAAAAAAAAAAAAAAAAAAAAYmxMzoZjZ2mZGzyAAAAAAAAGzYYBGYb0CNsYMGLzyMzMmBAmZMzMzMDgZGzAAAYMzMjhhlZMgB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warlock_Demonology.simc",
+    "sha256": "252b50c82ee224e89395d56804deb9eeae560fd7d11999afac91a70ee0a9fd7a"
+  },
+  {
+    "spec_id": 267,
+    "class_id": 9,
+    "role": 2,
+    "race": 3,
+    "talents": "CsQAAAAAAAAAAAAAAAAAAAAAAwMmZGNLMzmZmZWmFzMzsYMWMDAAmZGzMziNYgZxoxMAmtYjBAAGDM2AAmZwYGzYDAAwMzMAAMGG",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Warlock_Destruction.simc",
+    "sha256": "2a04cb5712e126d83d7fe162a76f23eeef0b77ebd5889e728a9e11e14d6b3f23"
+  },
+  {
+    "spec_id": 268,
+    "class_id": 10,
+    "role": 0,
+    "race": 6,
+    "talents": "CwQAAAAAAAAAAAAAAAAAAAAAAAAAAgZbzYGzMWmxGmZMAAAAAAALLYmwMwMM2MDmZmZY2GzMmZBLb22GzYWAAglZZaZ2mZZAAgAMDbgZGw0YADAYA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Monk_Brewmaster.simc",
+    "sha256": "0aa7517a48159e7d48714cac082918c1690f82a8e5060d093db6db5b3416b1fb"
+  },
+  {
+    "spec_id": 269,
+    "class_id": 10,
+    "role": 2,
+    "race": 8,
+    "talents": "C0QAAAAAAAAAAAAAAAAAAAAAAMzYw2MmhlZGbzAAAAAAAAAAAAsMMaGzAGwMGmZmZY2GmhZZmAAWMz2MDzMzMAA2AQzys0MzMLAYgZGAGLDgB8B",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Monk_Windwalker.simc",
+    "sha256": "6fb1ecb7308ed996865fcd2eb9403afaf2b5113b07ac351eddb20d37f2d88c63"
+  },
+  {
+    "spec_id": 270,
+    "class_id": 10,
+    "role": 1,
+    "race": 4,
+    "talents": "C4QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBWmZZML2mxMz2mBmhZzMbLLzMWYmpZMDYMGAzMzMMbYGsMTAAAAAEgFbzsNbzMBAgBjBYGwAsIjZA",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "270.profile.json",
+    "sha256": "b277c0939273ba52e1a0ada6353468f74abe3f3f607658ffe3b309afa1e435c1"
+  },
+  {
+    "spec_id": 577,
+    "class_id": 12,
+    "role": 2,
+    "race": 10,
+    "talents": "CEkAAAAAAAAAAAAAAAAAAAAAAYAzMzmxMzMmZmMmZAAAAAAAzyDMmtZYmxyMzYZm5BmZWmZWGjBWmFzYY200wMjhNAAAAAAAAmZwAAAAwA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Demon_Hunter_Havoc.simc",
+    "sha256": "395a9458f5999a70b480151cc7ef70767720ce145dae27f9b200c38581f30452"
+  },
+  {
+    "spec_id": 581,
+    "class_id": 12,
+    "role": 0,
+    "race": 4,
+    "talents": "CUkAAAAAAAAAAAAAAAAAAAAAAAAYMzMjZmZkZmZY2MzMjBjZGzYmZGDzYmx2YmtxAAAAAAAABMzM2AAAAwgxMzMzSbzMzAgBAAAgB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Demon_Hunter_Vengeance.simc",
+    "sha256": "8ddf41b4b76aed17295c2dc8fd639e07fe0ef3e9d2e00ebd518ae69caf050ce2"
+  },
+  {
+    "spec_id": 1467,
+    "class_id": 13,
+    "role": 2,
+    "race": 52,
+    "talents": "CsbBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzMDMDzgBmZGjZaYmpZMWmxMzMz8AzMzAmxMGzMLzMDMwYwCsMGN2GQmBBbYGMzghB",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID1/MID1_Evoker_Devastation.simc",
+    "sha256": "6428e3e9bc1e69e992ff2f632a4416151cbf1c4b3e24ce865f244369854f5bb2"
+  },
+  {
+    "spec_id": 1468,
+    "class_id": 13,
+    "role": 1,
+    "race": 52,
+    "talents": "CwbBAAAAAAAAAAAAAAAAAAAAAAAAAAAmZmZ2WGzYYMPwsZGw2AAAYGzYmZMMTMzMAAAgZmZaGzMjZbMDAMmBWALgZYCZzM2MMDwMDD",
+    "race_source": "RACE_FROM_PARITY_PROFILE",
+    "source": "1468.profile.json",
+    "sha256": "3f9d3206d4c386a77f7e9fe9c33befd4158f0318dadbcaeefbdce448665dc77d"
+  },
+  {
+    "spec_id": 1480,
+    "class_id": 12,
+    "role": 2,
+    "race": 29,
+    "talents": "CgcBAAAAAAAAAAAAAAAAAAAAAAAWMzMzMzMzMwMAAAAAAALzYMYGAAAAAAAAmxMMmZmZYmZGzsNzYsptFAEwAMjZmZbmZa2mZbmZMjBA",
+    "race_source": "RACE_FROM_SIMC_PROFILE",
+    "source": "MID2/MID2_Demon_Hunter_Devourer.simc",
+    "sha256": "5a63c3c87467b6ab74924ff5eebf22747ab0df6b16836846fdf6336549be8a42"
+  }
+]
