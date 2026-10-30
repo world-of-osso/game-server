@@ -114,7 +114,7 @@ fn blade_flurry_declares_the_caster_centered_copy_radius() {
 }
 
 #[test]
-fn psychic_link_reports_unbounded_reach_for_owned_vampiric_touch_targets() {
+fn psychic_link_does_not_reach_unafflicted_enemies() {
     let data = crate::test_support::world_db().expect("native world data");
     let spell = data.spell_store().get(8092).expect("native Mind Blast");
     let mut world = World::new();
@@ -124,7 +124,8 @@ fn psychic_link_reports_unbounded_reach_for_owned_vampiric_touch_targets() {
         ]))
         .id();
     let reach = crate::registry().declared_reach(&world, caster, spell);
-    assert!(reach.target_radius.is_infinite());
+    assert_eq!(reach.target_radius, 0.0);
+    assert_eq!(reach.caster_radius, 0.0);
 }
 
 #[test]

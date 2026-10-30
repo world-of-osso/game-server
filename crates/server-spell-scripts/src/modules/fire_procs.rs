@@ -191,16 +191,18 @@ fn fire_blast_reach(
     _world: &World,
     _caster: Entity,
     spell: &SpellInfo,
-) -> combat::spell_cast::script_registry::DeclaredReach {
+) -> combat::spell_cast::script_registry::ScriptReach {
     if spell.id != 108853 {
         return Default::default();
     }
     // The Ignite spread implementation searches from the caster using the
     // Fire Blast SpellRange, not an effect radius (auras/ignite.rs).
-    combat::spell_cast::script_registry::DeclaredReach {
-        caster_radius: combat::spell_cast::targets::spell_range(spell, true).1,
-        target_radius: 0.0,
-    }
+    combat::spell_cast::script_registry::ScriptReach::Area(
+        combat::spell_cast::script_registry::DeclaredReach {
+            caster_radius: combat::spell_cast::targets::spell_range(spell, true).1,
+            target_radius: 0.0,
+        },
+    )
 }
 
 fn spread_fire_blast_ignite(world: &mut World, ctx: &EffectCtx, target: Entity) {

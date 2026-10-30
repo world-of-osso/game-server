@@ -51,7 +51,7 @@ fn declared_reach(
     world: &World,
     caster: Entity,
     spell: &combat::spell_info::SpellInfo,
-) -> combat::spell_cast::script_registry::DeclaredReach {
+) -> combat::spell_cast::script_registry::ScriptReach {
     let Some(policy) = POLICIES.iter().find(|policy| policy.parent == spell.id) else {
         return Default::default();
     };
@@ -70,10 +70,12 @@ fn declared_reach(
         .iter()
         .map(targets::effect_radius)
         .fold(0.0, f32::max);
-    combat::spell_cast::script_registry::DeclaredReach {
-        caster_radius: 0.0,
-        target_radius: jumps as f32 * jump_radius + payload_radius,
-    }
+    combat::spell_cast::script_registry::ScriptReach::Area(
+        combat::spell_cast::script_registry::DeclaredReach {
+            caster_radius: 0.0,
+            target_radius: jumps as f32 * jump_radius + payload_radius,
+        },
+    )
 }
 
 fn selected(world: &World, caster: Entity, policy: &BouncePolicy) -> bool {

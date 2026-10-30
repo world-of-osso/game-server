@@ -287,7 +287,16 @@ pub struct DeclaredReach {
     pub target_radius: f32,
 }
 
-pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> DeclaredReach;
+/// Effects restricted to already-afflicted enemies cannot acquire an idle pack.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ScriptReach {
+    #[default]
+    None,
+    Area(DeclaredReach),
+    EngagedOnly,
+}
+
+pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
 
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
@@ -486,8 +495,9 @@ impl SpellScriptRegistry {
     pub fn declared_reach(self, world: &World, caster: Entity, spell: &SpellInfo) -> DeclaredReach {
         self.hooks()
             .fold(DeclaredReach::default(), |mut reach, hook| {
-                if let SpellScriptHook::DeclaredReach(declare) = hook {
-                    let declared = declare(world, caster, spell);
+                if let SpellScriptHook::DeclaredReach(declare) = hook
+                    && let ScriptReach::Area(declared) = declare(world, caster, spell)
+                {
                     reach.caster_radius = reach.caster_radius.max(declared.caster_radius);
                     reach.target_radius = reach.target_radius.max(declared.target_radius);
                 }
