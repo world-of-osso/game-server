@@ -156,6 +156,11 @@ fn follower_dps_production_dummy() {
     let mut ready = 0u32;
     let mut sources = std::collections::BTreeSet::from([actor.to_bits()]);
     let mut checkpoints = Vec::new();
+    let mut flame_shock_frames = 0u32;
+    let mut lava_surge_frames = 0u32;
+    let mut storm_frames = 0u32;
+    let mut lava_during_storm = 0u32;
+    let mut seen_events = 0usize;
     for frame in 0..2400 {
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
         let mut health = app
@@ -197,6 +202,33 @@ fn follower_dps_production_dummy() {
                 "actor_position": format!("{:?}", world.get::<shared::components::Position>(actor)),
                 "owner_position": format!("{:?}", world.get::<shared::components::Position>(owner))}));
         }
+        flame_shock_frames += u32::from(crate::auras::has_aura(world, target, 188389));
+        lava_surge_frames += u32::from(crate::auras::has_aura(world, actor, 77762));
+        let mut storm_query = app.world_mut().query::<(
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>();
+        let storm = storm_query.iter(app.world()).any(|(summon, npc)| {
+            summon.owner == actor
+                && matches!(npc.template_id, 77936 | 77942)
+                && summon.expires_at.is_some_and(|expiry| expiry > now)
+        });
+        storm_frames += u32::from(storm);
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if storm {
+            lava_during_storm += events[seen_events..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(51505)
+                        && event.kind == CombatLogKind::CastStart
+                })
+                .count() as u32;
+        }
+        seen_events = events.len();
         let mut query = app.world_mut().query::<(Entity, &UnitSummonedBy)>();
         for (entity, owner) in query.iter(app.world()) {
             if sources.contains(&owner.0) {
@@ -212,6 +244,7 @@ fn follower_dps_production_dummy() {
     let mut hits = BTreeMap::<u32, usize>::new();
     let mut damage_sources = BTreeMap::<String, usize>::new();
     let mut casts = BTreeMap::<u32, usize>::new();
+    let mut aura_applications = BTreeMap::<u32, usize>::new();
     let incoming: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -232,6 +265,13 @@ fn follower_dps_production_dummy() {
         }
         if event.kind == CombatLogKind::CastSuccess && event.source == Some(actor.to_bits()) {
             *casts.entry(id).or_default() += 1;
+        }
+        if matches!(
+            event.kind,
+            CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+        ) && event.source == Some(actor.to_bits())
+        {
+            *aura_applications.entry(id).or_default() += 1;
         }
     }
     assert!(
@@ -285,7 +325,9 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"sources":damage_sources,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"sources":damage_sources,"casts":casts,"aura_applications":aura_applications,
+        "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
+        "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
