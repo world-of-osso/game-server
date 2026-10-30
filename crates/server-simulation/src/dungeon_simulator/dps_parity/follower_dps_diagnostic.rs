@@ -109,6 +109,13 @@ fn follower_dps_production_dummy() {
             .unwrap()
             .items
     );
+    let mut known_spells: Vec<_> = app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    known_spells.sort_unstable();
     let talents = format!(
         "{:?}",
         app.world()
@@ -133,6 +140,12 @@ fn follower_dps_production_dummy() {
     let mut sources = std::collections::BTreeSet::from([actor.to_bits()]);
     let mut checkpoints = Vec::new();
     for frame in 0..2400 {
+        // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
+        let mut health = app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current = health.max * (2400 - frame) as f32 / 2400.0;
         app.update();
         let world = app.world();
         let now = crate::spell_cast::history_now(world);
@@ -219,7 +232,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
