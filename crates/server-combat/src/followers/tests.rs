@@ -142,6 +142,19 @@ fn wrong_floor_hostile_is_dropped_instead_of_pursued() {
         Some(enemy),
         "a visible hostile in melee range remains selectable"
     );
+    h.app.world_mut().entity_mut(enemy).insert(lower);
+    let mut ranged = h.app.world_mut().get_mut::<Follower>(follower).unwrap();
+    ranged.profile.melee = false;
+    ranged.profile.attack_spell = 133;
+    let before = h.health(enemy);
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.health(enemy) < before,
+        "a ranged follower can shoot the visible wrong-floor hostile"
+    );
 }
 
 #[test]
