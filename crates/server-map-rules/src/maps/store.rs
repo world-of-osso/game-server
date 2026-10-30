@@ -330,6 +330,8 @@ pub struct MapStore {
     exit_destinations: HashMap<u32, Vec<WorldLocation>>,
     pub world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
+    /// First safe location named as an entrance for each map.
+    safe_entrances: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
     pub safe_loc_transports: HashMap<u32, u32>,
     /// `graveyard_zone`: ghost zone → WorldSafeLocs ids.
@@ -489,6 +491,11 @@ impl MapStore {
             })
     }
 
+    /// First imported entrance safe location, including follower entrance projections.
+    pub fn safe_entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
+        self.safe_entrances.get(&map_id).copied()
+    }
+
     /// `ObjectMgr::GetMapEntranceTrigger` (ObjectMgr.cpp:7295-7306): the target of the
     /// first trigger leading into `map_id` (lowest trigger id).
     pub fn entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
@@ -545,9 +552,27 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
         graveyard_zones: load_graveyard_zones(conn)?,
         instance_parents: load_instance_parents(conn)?,
         instance_scripts: load_instance_scripts(conn)?,
+        safe_entrances: load_safe_entrances(conn, &safe_locs)?,
         safe_locs,
         safe_loc_transports: load_safe_loc_transports(conn)?,
     })
+}
+
+fn load_safe_entrances(
+    conn: &Connection,
+    safe_locs: &HashMap<u32, WorldLocation>,
+) -> rusqlite::Result<HashMap<u32, WorldLocation>> {
+    let mut query = conn.prepare(
+        "SELECT ID, MapID FROM tdb_world_safe_locs WHERE Comment LIKE '%Entrance%' ORDER BY ID",
+    )?;
+    let mut entrances = HashMap::new();
+    for row in query.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))? {
+        let (id, map) = row?;
+        if let Some(location) = safe_locs.get(&id) {
+            entrances.entry(map).or_insert(*location);
+        }
+    }
+    Ok(entrances)
 }
 
 type StaticPortals = (

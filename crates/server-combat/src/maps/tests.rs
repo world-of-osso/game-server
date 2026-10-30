@@ -3294,6 +3294,77 @@ fn releasing_in_the_stockade_resurrects_the_player_at_the_stockade_graveyard() {
 }
 
 #[test]
+fn voidscar_release_uses_imported_entrance_when_graveyard_and_exit_are_missing() {
+    let store = map_store().expect("world database").clone();
+    let entrance = store
+        .safe_entrance_location(2923)
+        .expect("Voidscar entrance");
+    assert!(close(
+        entrance.position,
+        Vec3::new(4423.14, -451.9, -120.02087)
+    ));
+    assert!(store.entrance_exit_location(2923).is_none());
+    let mut h = harness_with(|app| {
+        app.add_plugins(crate::death::DeathPlugin);
+    })
+    .unwrap();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 2923, entrant_at(30, 205), at(0.0))
+        .unwrap()
+        .map;
+    let player = h.spawn_at_level(30, 90, copy, Vec3::new(4474.287, -402.92368, -120.05685));
+    h.app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .add_player(copy, player.player);
+    h.app
+        .world_mut()
+        .entity_mut(player.connection)
+        .insert(pair::<ReleaseSpirit>());
+    h.app.world_mut().entity_mut(player.player).insert((
+        Health {
+            current: 0.0,
+            max: 100.0,
+        },
+        PlayerDeathState {
+            state: DeathState::Dead,
+            corpse: Some(Corpse {
+                player: 30,
+                map_id: 2923,
+                x: 4474.287,
+                y: -402.92368,
+                z: -120.05685,
+                created_at: 0,
+            }),
+            graveyard: None,
+        },
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<ReleaseSpirit>>(player.connection)
+        .unwrap()
+        .send::<DeathChannel>(ReleaseSpirit);
+    h.advance(3);
+    assert_eq!(h.map_of(&player), Some(copy));
+    assert!(close(h.position(&player), entrance.position));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerDeathState>(player.player)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(player.player).unwrap().current,
+        50.0
+    );
+}
+
+#[test]
 fn ruby_dungeon_release_revives_at_the_linked_exterior_safe_location() {
     let mut h = harness().expect("world database");
     let copy = InMap {
