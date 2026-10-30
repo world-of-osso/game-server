@@ -54,6 +54,42 @@ const SECOND: &[SpellScriptHook] = &[
 ];
 
 #[test]
+fn native_fire_blast_declares_the_actual_spread_range() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data.spell_store().get(108853).expect("native Fire Blast");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(
+        reach.caster_radius,
+        combat::spell_cast::targets::spell_range(spell, true).1
+    );
+    assert_eq!(reach.caster_radius, 40.0);
+    assert_eq!(reach.target_radius, 0.0);
+}
+
+#[test]
+fn native_chain_lightning_uses_chain_count_and_jump_distance() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data
+        .spell_store()
+        .get(188443)
+        .expect("native Chain Lightning");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let (jumps, radius) =
+        combat::spell_cast::targets::chain_jump_parameters(&world, caster, spell, effect);
+    assert_eq!(jumps, 2);
+    assert_eq!(radius, 10.0);
+    assert_eq!(jumps as f32 * radius, 20.0);
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));

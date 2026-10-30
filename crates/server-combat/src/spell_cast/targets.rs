@@ -1239,6 +1239,34 @@ const SPELL_ATTR2_CHAIN_FROM_CASTER: u32 = 0x0000_1000;
 /// `SpellEffectAttributes::ChainFromInitialTarget` (DBCEnums.h:2425).
 const EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET: u32 = 0x0000_0080;
 
+/// Native chain count and jump distance, shared with reach forecasting.
+/// TrinityCore 15e0ed76 Spell.cpp:1825–1840,2210–2248.
+pub fn chain_jump_parameters(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> (usize, f32) {
+    let count = crate::auras::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::SpellModOp::ChainTargets,
+        effect.chain_targets as f32,
+    ) as i32;
+    let defense = spell
+        .categories
+        .as_ref()
+        .map_or(0, |value| value.defense_type);
+    let radius = match defense {
+        3 => 7.5,
+        2 => 5.0,
+        _ if effect.implicit_targets.contains(&45) => 12.5,
+        _ => 10.0,
+    };
+    (count.saturating_sub(1).max(0) as usize, radius)
+}
+
 /// `Spell::SelectImplicitChainTargets` / `SearchChainTargets` (Spell.cpp:1832-1864,
 /// 2216-2320): after `target`, up to `EffectChainTargets - 1` more units matching
 /// `relation`, each the living one nearest the chain source within the jump radius
@@ -1261,29 +1289,12 @@ pub fn chain_targets(
     }
     // TC a352b1fa Spell.cpp1834–1836 applies native ChainTargets modifiers
     // before deciding whether this effect chains at all.
-    let max_targets = crate::auras::spell_mods::modify(
-        world,
-        caster,
-        spell,
-        crate::auras::SpellModOp::ChainTargets,
-        effect.chain_targets as f32,
-    ) as i32;
-    if max_targets <= 1 {
+    let (jumps, jump_radius) = chain_jump_parameters(world, caster, spell, effect);
+    if jumps == 0 {
         return Vec::new();
     }
-    let jumps = (max_targets - 1) as usize;
     // TC Spell.cpp:1848,2233–2235: target45 uses the chain-heal search.
     let chain_heal = effect.implicit_targets.contains(&45);
-    let defense = spell
-        .categories
-        .as_ref()
-        .map_or(0, |categories| categories.defense_type);
-    let jump_radius = match defense {
-        3 => 7.5,
-        2 => 5.0,
-        _ if chain_heal => 12.5,
-        _ => 10.0,
-    };
     let from_caster = spell.misc.as_ref().map_or(0, |misc| misc.attributes[2])
         & SPELL_ATTR2_CHAIN_FROM_CASTER
         != 0;

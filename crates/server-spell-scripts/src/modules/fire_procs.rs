@@ -10,6 +10,7 @@ use combat::spell_cast::{self, effects::EffectCtx, queued_triggers};
 use combat::spell_info::{ChargedSpellModifier, SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(fire_blast_reach),
     SpellScriptHook::FireAuraRegistration(register),
     SpellScriptHook::BeforeProcLaunch(before_hot_streak_launch),
     SpellScriptHook::AfterFireDirectHit(fire_feedback_hit),
@@ -184,6 +185,22 @@ pub(crate) fn fire_meteorite_hit(world: &mut World, ctx: &EffectCtx, target: Ent
     }
     let count = script_effect_value(world, ctx.caster, GLORIOUS_TALENT, 0).max(0.0) as u32;
     schedule_meteorites(world, ctx, target, count);
+}
+
+fn fire_blast_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::DeclaredReach {
+    if spell.id != 108853 {
+        return Default::default();
+    }
+    // The Ignite spread implementation searches from the caster using the
+    // Fire Blast SpellRange, not an effect radius (auras/ignite.rs).
+    combat::spell_cast::script_registry::DeclaredReach {
+        caster_radius: combat::spell_cast::targets::spell_range(spell, true).1,
+        target_radius: 0.0,
+    }
 }
 
 fn spread_fire_blast_ignite(world: &mut World, ctx: &EffectCtx, target: Entity) {

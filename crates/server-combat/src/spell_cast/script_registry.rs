@@ -280,8 +280,18 @@ pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
 pub type BeforeMeleeComboDamageHook = fn(&mut World, &EffectCtx<'_>);
 pub type BeforePeriodicItemDamageHook = fn(&mut World, &EffectCtx<'_>, Entity);
 
+/// Maximum hostile secondary-target distance from the actor and its primary target.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DeclaredReach {
+    pub caster_radius: f32,
+    pub target_radius: f32,
+}
+
+pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> DeclaredReach;
+
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
+    DeclaredReach(DeclaredReachHook),
     Policies(&'static [Policy]),
     NativeAfterCast(AfterCastLookup),
     ScriptedChannel(ScriptedChannelHook),
@@ -471,6 +481,18 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn declared_reach(self, world: &World, caster: Entity, spell: &SpellInfo) -> DeclaredReach {
+        self.hooks()
+            .fold(DeclaredReach::default(), |mut reach, hook| {
+                if let SpellScriptHook::DeclaredReach(declare) = hook {
+                    let declared = declare(world, caster, spell);
+                    reach.caster_radius = reach.caster_radius.max(declared.caster_radius);
+                    reach.target_radius = reach.target_radius.max(declared.target_radius);
+                }
+                reach
+            })
     }
 
     pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
