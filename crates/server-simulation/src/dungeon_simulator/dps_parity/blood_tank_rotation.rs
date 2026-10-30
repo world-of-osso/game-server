@@ -3174,6 +3174,10 @@ mod tests {
             Some(actor),
             1
         ));
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1265968));
         let start = run
             .app
             .world()
@@ -3181,6 +3185,10 @@ mod tests {
             .0
             .len();
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 50842, None, false).unwrap();
+        for _ in 0..4 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1265982));
         assert!(crate::spell_cast::try_cast_triggered(
             run.app.world_mut(),
             actor,
