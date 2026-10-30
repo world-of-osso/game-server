@@ -5,6 +5,28 @@ use shared::components::{MovementSpeed, Rotation};
 use shared::protocol::{ChatType, PlayerInput};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+#[test]
+#[ignore = "requires Halls of Infusion extracted WMO assets"]
+fn halls_wmo_swim_bounds_use_floor_below_player() {
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+        });
+    let mut ground = GroundMap::new(&data, std::collections::HashMap::from([(2527, 4290690)]));
+    let (x, _, z) = crate::terrain_height::wow_to_bevy(-70.5, -145.0, -40.0);
+    let swim = movement::swim_bounds(
+        &mut ground,
+        InMap {
+            map_id: 2527,
+            instance_id: 1,
+        },
+        Vec3::new(x, -40.0, z),
+    )
+    .expect("lower floor must remain swimmable under the upper floor");
+    assert!((swim.floor - -44.083).abs() < 0.1, "{swim:?}");
+}
+
 #[derive(Component)]
 struct ReplicationTag;
 
