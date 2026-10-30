@@ -584,7 +584,16 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
     use shared::group::GroupRole;
     let (mut h, first) = create_native_follower_fixture_for(209072);
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::open_arena());
     let owner = h.caster;
+    crate::combat::combat_stop(h.app.world_mut(), owner);
     let profile = h
         .app
         .world()
@@ -668,7 +677,17 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             let point = leg[0].lerp(leg[1], step as f32 / steps as f32);
             h.app.world_mut().entity_mut(owner).insert(position(point));
             super::update_ai(h.app.world_mut());
+            crate::navigation::drain_fixture(&mut h.app);
             h.advance(1);
+            assert!(
+                !crate::creature_aggro::read_player_proximity_acquisition(
+                    h.app.world_mut(),
+                    watcher,
+                    owner
+                )
+                .unwrap(),
+                "owner path must not pull watcher"
+            );
         }
     }
     for &unit in &followers {
@@ -680,8 +699,18 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     }
     for _ in 0..800 {
         super::update_ai(h.app.world_mut());
+        crate::navigation::drain_fixture(&mut h.app);
         h.advance(1);
         for (&unit, &radius) in followers.iter().zip(&radii) {
+            assert!(
+                !crate::creature_sight::read_npc_proximity_acquisition(
+                    h.app.world_mut(),
+                    watcher,
+                    unit
+                )
+                .unwrap(),
+                "watcher must not acquire a follower"
+            );
             let feet = point(*h.app.world().get::<Position>(unit).unwrap());
             assert!(
                 feet.distance(Vec3::new(393.4, 87.07, -31.0)) >= radius,

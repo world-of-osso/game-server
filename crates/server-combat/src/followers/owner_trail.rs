@@ -16,6 +16,13 @@ struct OwnerTrail {
 }
 
 pub(super) fn record(world: &mut World, owner: Entity) {
+    if world
+        .get::<shared::components::CombatStatus>(owner)
+        .is_some_and(|status| status.0)
+    {
+        world.entity_mut(owner).remove::<OwnerTrail>();
+        return;
+    }
     let Some(map) = world.get::<InMap>(owner).copied() else {
         return;
     };
