@@ -72,7 +72,16 @@ fn tagged_trash_deaths_start_copy_local_edna_walk_and_release_immunity_on_arriva
         h.app.world().get::<UnitFlags>(boss).unwrap().0 & UnitFlags::IMMUNE_TO_PC,
         0
     );
-    h.advance(20.0);
+    for _ in 0..400 {
+        h.advance(0.05);
+        if h.app
+            .world()
+            .get::<crate::scripted_ai::movement::PointMovement>(boss)
+            .is_none()
+        {
+            break;
+        }
+    }
     let arrived = h.app.world().get::<Position>(boss).unwrap();
     assert!(
         (arrived.x - 1.94097).abs() < 0.01
@@ -80,6 +89,12 @@ fn tagged_trash_deaths_start_copy_local_edna_walk_and_release_immunity_on_arriva
             && (arrived.z + 0.512153).abs() < 0.01,
         "arrival {arrived:?}"
     );
+    h.advance(0.8);
+    assert_ne!(
+        h.app.world().get::<UnitFlags>(boss).unwrap().0 & UnitFlags::IMMUNE_TO_PC,
+        0
+    );
+    h.advance(0.3);
     assert_eq!(
         h.app.world().get::<UnitFlags>(boss).unwrap().0 & UnitFlags::IMMUNE_TO_PC,
         0
