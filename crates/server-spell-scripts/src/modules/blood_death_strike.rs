@@ -133,9 +133,24 @@ fn schedule_death_strike_heal(world: &mut World, ctx: &EffectCtx<'_>, target: En
     }
 }
 
-pub(super) fn finish_death_strike_heal(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
-    if spell.id == DEATH_STRIKE && world.entity_mut(caster).take::<PendingDeathStrikeHeal>().is_some() {
-        let ctx = EffectCtx { caster, spell, depth: 0, dest: None, chain_multiplier: 1.0 };
+pub(super) fn finish_death_strike_heal(
+    world: &mut World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) {
+    if spell.id == DEATH_STRIKE
+        && world
+            .entity_mut(caster)
+            .take::<PendingDeathStrikeHeal>()
+            .is_some()
+    {
+        let ctx = EffectCtx {
+            caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
         heal_death_strike(world, &ctx);
     }
 }
@@ -209,7 +224,11 @@ fn heal_death_strike(world: &mut World, ctx: &EffectCtx<'_>) {
 
 // SimC76f8118 sc_death_knight.cpp10125–10130 consumes the whole buff
 // after the Death Strike heal has used its stacks, including on a miss.
-pub(super) fn consume_hemostasis(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+pub(super) fn consume_hemostasis(
+    world: &mut World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) {
     if spell.id == DEATH_STRIKE && blood(world, caster) {
         combat::auras::remove_auras(
             world,
