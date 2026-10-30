@@ -505,6 +505,8 @@ pub(crate) struct AdminInstances<'w, 's> {
             Option<&'static crate::creature_ai::CreatureState>,
             Has<crate::grid_activity::GridDormant>,
         ),
+        // Creatures only: disjoint from the admin player query's `&mut Position`.
+        Without<crate::persistence::ClientId>,
     >,
 }
 
