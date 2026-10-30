@@ -1,6 +1,6 @@
 # Dungeon simulator
 
-**TRANSPORT_REGISTRY_DUPLICATED:** Simulator extraction repeats dispatch across production transport handlers. A new production edge requires an extraction registration and a test against its live handler until a shared registry replaces both.
+**TRANSPORT_REGISTRY_DUPLICATED:** Simulator extraction repeats dispatch across production transport handlers. A new production edge requires an extraction registration and a test against its live handler until a shared registry replaces both. The follower-map inventory covers Azure books, Ruby ferry, Darkflame cart and collision drop, Academy pads, Murder Row gateway, Nalorakk pyres and Voidscar portal. The world database has no same-map `areatrigger_teleport` among the 27 follower maps; cross-map entries, player spells, dungeon entry/release, PvP, housing and admin staging are not in-dungeon route edges. Azure book actions and the final endpoint retain the source limitations documented in [Azure translocation](azure-translocation.md).
 
 ## Completed encounter participants —2026-10-30
 

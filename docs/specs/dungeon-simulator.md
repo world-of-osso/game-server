@@ -37,6 +37,10 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 - [ ] Preserve pre-impact combat holds for valid native combat references, even before the first damage event. Unattackable-only references do not veto clear readiness.
 - [ ] Preserve actual damage/healing measurements, fatal-hit output and observed Death receipts while filtering clearable-opponent identity.
 
+## Follower transport extraction
+
+Extract each in-dungeon transport from its production registration and execute its production handler. Azure book routes must be available in generic extraction and in the frozen Azure graph; they must not use an implicit fallback dispatcher.
+
 ## Completed encounter participants
 
 Skip a living objective when its sourced encounter is complete. Include uniquely resolved journal participants without granting them boss credit. Ambiguous participant mappings are not inferred.

@@ -38,6 +38,34 @@ fn fixture() -> Harness {
 }
 
 #[test]
+fn azure_simulator_registrations_use_real_book_transport() {
+    let mut h = fixture();
+    let copy = *h.app.world().get::<InMap>(h.player).unwrap();
+    let registrations = crate::test_support::transport::read_registrations(2515, &h.conn).unwrap();
+    assert_eq!(registrations.len(), 9);
+    for registration in registrations {
+        let book = h.spawn_real_npc(registration.entry, 1.0);
+        h.app.world_mut().entity_mut(book).insert(copy);
+        let edge = crate::test_support::graph::TransportEdge {
+            from: 0,
+            to: 1,
+            source_guid: 0,
+            radius: registration.radius,
+            departure: None,
+            landing: registration.destination.to_array(),
+            action: registration.action,
+        };
+        crate::test_support::transport::activate(h.app.world_mut(), h.player, Some(book), &edge)
+            .unwrap();
+        let position = h.app.world().get::<Position>(h.player).unwrap();
+        assert_eq!(
+            Vec3::new(position.x, position.y, position.z),
+            registration.destination
+        );
+    }
+}
+
+#[test]
 fn azure_translocation_book_gossip_moves_to_four_authored_receiving_books() {
     let mut h = fixture();
     let copy = *h.app.world().get::<InMap>(h.player).unwrap();

@@ -2333,37 +2333,7 @@ impl Run {
             );
             return Ok(true);
         }
-        let book = *self
-            .actors
-            .get(&source)
-            .ok_or("translocation source actor absent")?;
-        let at = *self
-            .app
-            .world()
-            .get::<Position>(book)
-            .ok_or("translocation book lacks position")?;
-        if Vec3::new(from.x, from.y, from.z).distance(Vec3::new(at.x, at.y, at.z)) > 0.1 {
-            self.app
-                .world_mut()
-                .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::new(at.x, at.y, at.z)));
-            return Ok(true);
-        }
-        crate::npc_interaction::azure_translocation::traverse(
-            self.app.world_mut(),
-            self.party.owner,
-            book,
-        )?;
-        super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
-        self.app
-            .world_mut()
-            .entity_mut(self.party.owner)
-            .remove::<MoveIntent>();
-        self.record_pull(
-            source,
-            format!("AZURE_TRANSLOCATION_BOOK_ENDPOINTS {source}->{destination}"),
-        );
-        Ok(true)
+        Err(format!("unregistered transport {source}->{destination}"))
     }
 
     fn next_pack(&self) -> Option<(u32, Entity)> {
