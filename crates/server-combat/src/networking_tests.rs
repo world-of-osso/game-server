@@ -15,7 +15,7 @@ fn halls_wmo_swim_bounds_use_floor_below_player() {
         });
     let mut ground = GroundMap::new(&data, std::collections::HashMap::from([(2527, 4290690)]));
     let (x, _, z) = crate::terrain_height::wow_to_bevy(-70.5, -145.0, -40.0);
-    let swim = movement::swim_bounds(
+    let swim = swim_bounds(
         &mut ground,
         InMap {
             map_id: 2527,
