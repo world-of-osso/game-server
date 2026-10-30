@@ -116,8 +116,18 @@ fn nalorakk_six_avatar_deliveries_unlock_only_their_instance() {
 
 #[test]
 fn interaction_objective_unlocks_hoardmonger_through_six_native_deliveries() {
+    unlock_hoardmonger_through_objective(244941, "Berry Bush", 1239001);
+}
+
+/// Fishing is a channel: its native cast success, and therefore the carry, lands at channel start.
+#[test]
+fn interaction_objective_accepts_channelled_fishing_pickup() {
+    unlock_hoardmonger_through_objective(245698, "Fishing Spot", 1239227);
+}
+
+fn unlock_hoardmonger_through_objective(source: u32, name: &str, pickup: u32) {
     use crate::test_support::objectives::{self, InteractionStep};
-    let mut h = harness(Vec::new(), &[1239001, 1239428, 1249737], 2).unwrap();
+    let mut h = harness(Vec::new(), &[pickup, 1239428, 1249737], 2).unwrap();
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     objectives::install(&mut h.app, &conn).unwrap();
     let map = InMap {
@@ -129,8 +139,8 @@ fn interaction_objective_unlocks_hoardmonger_through_six_native_deliveries() {
     h.app.world_mut().entity_mut(h.npc).insert((
         map,
         Npc {
-            template_id: 244941,
-            name: "Berry Bush".into(),
+            template_id: source,
+            name: name.into(),
         },
     ));
     for index in 0..6 {

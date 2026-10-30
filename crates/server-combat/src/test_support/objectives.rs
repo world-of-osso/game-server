@@ -97,10 +97,14 @@ pub fn interact(world: &mut World, owner: Entity, target: Entity) -> Result<(), 
         .ok_or("interaction source lacks NPC")?
         .template_id;
     crate::npc_interaction::spellclick::cast_spellclick(world, owner, target, entry);
-    if world
+    // A channelled pickup reaches native cast success, and so the carry, at channel start.
+    let pending = world
         .get::<crate::npc_interaction::nalorakk_offerings::PendingOffering>(owner)
-        .is_none()
-    {
+        .is_some();
+    let carrying = world
+        .get::<crate::npc_interaction::nalorakk_offerings::CarryingOffering>(owner)
+        .is_some();
+    if !pending && !carrying {
         return Err(format!(
             "OBJECTIVE_INTERACTION_FAILED: npc{entry} did not start pickup"
         ));
