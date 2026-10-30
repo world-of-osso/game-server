@@ -375,30 +375,7 @@ fn discharge_void_shield(
     if spell != 1253593 || amount <= 0.0 || !auras::has_aura(world, caster, 1253827) {
         return;
     }
-    let is_enemy = |world: &World, target| {
-        combat::spell_cast::targets::is_alive(world, target)
-            && combat::spell_cast::targets::relation_matches(
-                world,
-                caster,
-                target,
-                combat::spell_cast::targets::Relation::Enemy,
-            )
-    };
-    let target = attacker
-        .filter(|&target| is_enemy(world, target))
-        .or_else(|| {
-            let enemies: Vec<_> = world
-                .query::<Entity>()
-                .iter(world)
-                .filter(|&target| is_enemy(world, target))
-                .collect();
-            if enemies.is_empty() {
-                None
-            } else {
-                Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize])
-            }
-        });
-    let Some(target) = target else {
+    let Some(target) = void_discharge_target(world, caster, attacker) else {
         return;
     };
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 1253827, 0);
@@ -411,6 +388,44 @@ fn discharge_void_shield(
         1,
         amount * percent / 100.0,
     );
+}
+
+fn void_discharge_target(
+    world: &mut World,
+    caster: Entity,
+    attacker: Option<Entity>,
+) -> Option<Entity> {
+    use combat::spell_cast::targets::{self, Relation};
+    use shared::components::CombatStatus;
+    let spell = world
+        .resource::<SpellStore>()
+        .get(1253828)
+        .expect("native Void Shield discharge");
+    let range = targets::spell_range(spell, true).1;
+    let origin = targets::position(world, caster)?;
+    let valid = |world: &World, target: Entity| {
+        targets::is_alive(world, target)
+            && targets::same_map(world, caster, target)
+            && targets::relation_matches(world, caster, target, Relation::Enemy)
+            && targets::position(world, target)
+                .is_some_and(|position| origin.distance(position) <= range)
+    };
+    if let Some(attacker) = attacker.filter(|&target| valid(world, target)) {
+        return Some(attacker);
+    }
+    // SimC76f8118 sc_priest.cpp:86-102 chooses only a non-sleeping enemy
+    // when the attacker is absent or invalid. CombatStatus represents that
+    // active-enemy boundary in the server; native1253828 supplies the range.
+    let enemies: Vec<_> = world
+        .query::<(Entity, &CombatStatus)>()
+        .iter(world)
+        .filter(|(target, status)| status.0 && valid(world, *target))
+        .map(|(target, _)| target)
+        .collect();
+    if enemies.is_empty() {
+        return None;
+    }
+    Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize])
 }
 
 fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {
