@@ -12,6 +12,17 @@ struct Door {
 }
 
 const DOORS: &[Door] = &[
+    // TC 15e0ed76 instance_the_stonevault.cpp doorData: both paths open when E.D.N.A. is Done.
+    Door {
+        map_id: 2652,
+        entry: 440235,
+        encounter: 2854,
+    },
+    Door {
+        map_id: 2652,
+        entry: 440239,
+        encounter: 2854,
+    },
     // NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED:
     // Retail WoWCombatLog-102026_223255.txt lines 65154, 65165, 65364
     // show encounter success and a player crossing the door plane 7.629s later.
