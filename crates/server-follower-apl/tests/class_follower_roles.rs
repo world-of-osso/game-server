@@ -83,6 +83,16 @@ fn dungeon_owner(h: &mut Harness) {
 
 /// Spawn `spec` through `spawn_class` and run the follower brain and its APL for `FRAMES`.
 fn pull(spec: u32) -> Pull {
+    let mut pull = spawn(spec);
+    for _ in 0..FRAMES {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    pull
+}
+
+fn spawn(spec: u32) -> Pull {
     let mut harness = harness_with_plugins(vec![], &[], 8, false, |app| {
         app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
         app.add_plugins(server_combat::stats::StatsPlugin);
@@ -111,11 +121,6 @@ fn pull(spec: u32) -> Pull {
     // The owner is injured so a healer has real work during the pull.
     let mut health = harness.app.world_mut().get_mut::<Health>(owner).unwrap();
     health.current = health.max * 0.5;
-    for _ in 0..FRAMES {
-        server_combat::followers::update_ai(harness.app.world_mut());
-        server_follower_apl::drive_followers(harness.app.world_mut());
-        harness.app.update();
-    }
     Pull { harness, follower }
 }
 
