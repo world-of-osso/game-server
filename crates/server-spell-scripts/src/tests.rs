@@ -190,11 +190,8 @@ fn native_area_reach_includes_destination_offsets() {
 fn ordered_native_area_reach_includes_running_offset() {
     let harness = crate::test_support::harness(Vec::new(), &[], 1).unwrap();
     let world = harness.app.world();
-    let spell = crate::test_support::world_db()
-        .unwrap()
-        .spell_store()
-        .get(97545)
-        .unwrap();
+    let store = crate::test_support::world_db().unwrap().spell_store();
+    let spell = store.get(97545).unwrap();
     let effect = spell
         .effects
         .iter()
