@@ -121,6 +121,73 @@ fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
 
 #[test]
 #[ignore = "requires Guardian Galactic Guardian profile and native world data"]
+fn lunar_beam_does_not_consume_galactic_guardian_charge() {
+    let mut run = prepare_registered_player(104, 1).unwrap();
+    let (actor, target) = (run.actor, run.targets[0]);
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let passive = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 203964)
+        .unwrap()
+        .instance_id;
+    assert!(auras::set_effect_amount(
+        run.app.world_mut(),
+        actor,
+        passive,
+        0,
+        0.0
+    ));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 213708, Some(actor), 1);
+    let before = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 414613, Some(target), 1);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..]
+            .iter()
+            .any(|event| event.spell_id == Some(414613) && event.kind == CombatLogKind::Damage)
+    );
+    assert!(
+        auras::has_aura(run.app.world(), actor, 213708),
+        "Lunar Beam must not consume the charge"
+    );
+    let rage = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Rage)
+        .unwrap()
+        .0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8921, Some(target), false)
+        .unwrap();
+    assert_eq!(
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Rage)
+            .unwrap()
+            .0
+            - rage,
+        80.0
+    );
+    assert!(
+        !auras::has_aura(run.app.world(), actor, 213708),
+        "foreground Moonfire consumes the charge"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian Galactic Guardian profile and native world data"]
 fn guardian_galactic_proc_casts_and_empowers_moonfire() {
     let mut run = prepare_registered_player(104, 1).unwrap();
     let actor = run.actor;
