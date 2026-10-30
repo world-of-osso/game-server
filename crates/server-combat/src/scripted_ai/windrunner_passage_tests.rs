@@ -3,7 +3,14 @@ use crate::maps::{DungeonDifficulty, InstanceManager};
 use shared::components::Health;
 
 #[test]
-fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
+fn windrunner_passages_require_previous_boss_and_fly_owner_followers_and_pets() {
+    for passage in PASSAGES {
+        check_passage(passage);
+    }
+}
+
+fn check_passage(passage: &Passage) {
+    let source = passage.source;
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 8).unwrap();
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -30,7 +37,7 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
         .unwrap()
         .map;
     let network = crate::taxi::load_taxi_network(&db).unwrap();
-    let expected = network.scripted_path(PATH).expect("native path");
+    let expected = network.scripted_path(passage.path).expect("native path");
     h.app.insert_resource(network);
     h.app.insert_resource(maps);
     h.app.insert_resource(instances);
@@ -46,16 +53,16 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
             z: 0.0,
         },
         Position {
-            x: SOURCE.x,
-            y: SOURCE.y,
-            z: SOURCE.z,
+            x: source.x,
+            y: source.y,
+            z: source.z,
         },
     ));
     let distant = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
     let distant_position = Position {
-        x: SOURCE.x + RADIUS + 1.0,
-        y: SOURCE.y,
-        z: SOURCE.z,
+        x: source.x + RADIUS + 1.0,
+        y: source.y,
+        z: source.z,
     };
     h.app
         .world_mut()
@@ -72,9 +79,9 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
                 z: 0.0,
             },
             Position {
-                x: SOURCE.x,
-                y: SOURCE.y,
-                z: SOURCE.z,
+                x: source.x,
+                y: source.y,
+                z: source.z,
             },
             Health {
                 current: 100.0,
@@ -109,9 +116,9 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
                 z: 0.0,
             },
             Position {
-                x: SOURCE.x,
-                y: SOURCE.y,
-                z: SOURCE.z,
+                x: source.x,
+                y: source.y,
+                z: source.z,
             },
             Health {
                 current: 100.0,
@@ -138,12 +145,13 @@ fn windrunner_passage_requires_kroluk_and_flies_owner_followers_and_pets() {
     assert_eq!(
         *h.app.world().get::<Position>(owner).unwrap(),
         Position {
-            x: SOURCE.x,
-            y: SOURCE.y,
-            z: SOURCE.z
+            x: source.x,
+            y: source.y,
+            z: source.z
         }
     );
-    let id = instance_script::boss_id_for_encounter(h.app.world_mut(), copy, KROLUK).unwrap();
+    let id =
+        instance_script::boss_id_for_encounter(h.app.world_mut(), copy, passage.encounter).unwrap();
     assert!(instance_script::set_boss_state(
         h.app.world_mut(),
         copy,

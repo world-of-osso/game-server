@@ -88,20 +88,27 @@ pub fn read_registrations(
     if map == crate::scripted_ai::windrunner_passage::MAP {
         let network =
             crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
-        let points = network
-            .scripted_path(crate::scripted_ai::windrunner_passage::PATH)
-            .ok_or("Windrunner TaxiPath 10308 unavailable")?;
-        let endpoint = *points.last().ok_or("Windrunner TaxiPath 10308 is empty")?;
-        registrations.push(Registration {
-            entry: crate::scripted_ai::windrunner_passage::PATH,
-            source_guid: None,
-            source: crate::scripted_ai::windrunner_passage::SOURCE,
-            destination: landing_floor(db, map, endpoint)?,
-            distance: points.windows(2).map(|pair| pair[0].distance(pair[1])).sum(),
-            radius: crate::scripted_ai::windrunner_passage::RADIUS,
-            departure: None,
-            action: Action::TaxiProximity,
-        });
+        for passage in crate::scripted_ai::windrunner_passage::PASSAGES {
+            let points = network
+                .scripted_path(passage.path)
+                .ok_or_else(|| format!("Windrunner TaxiPath {} unavailable", passage.path))?;
+            let endpoint = *points
+                .last()
+                .ok_or_else(|| format!("Windrunner TaxiPath {} is empty", passage.path))?;
+            registrations.push(Registration {
+                entry: passage.path,
+                source_guid: None,
+                source: passage.source,
+                destination: landing_floor(db, map, endpoint)?,
+                distance: points
+                    .windows(2)
+                    .map(|pair| pair[0].distance(pair[1]))
+                    .sum(),
+                radius: crate::scripted_ai::windrunner_passage::RADIUS,
+                departure: None,
+                action: Action::TaxiProximity,
+            });
+        }
     }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(

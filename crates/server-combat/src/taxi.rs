@@ -444,15 +444,13 @@ pub(crate) fn start_darkflame_cart(world: &mut World, player: Entity, npc: Entit
     start_scripted_party_flight(world, player, map, DARKFLAME_CART_PATH, CART_DISPLAY, false);
 }
 
-pub(crate) fn start_windrunner_flight(world: &mut World, player: Entity, map: crate::maps::InMap) {
-    start_scripted_party_flight(
-        world,
-        player,
-        map,
-        crate::scripted_ai::windrunner_passage::PATH,
-        0,
-        true,
-    );
+pub(crate) fn start_windrunner_flight(
+    world: &mut World,
+    player: Entity,
+    map: crate::maps::InMap,
+    path: u32,
+) {
+    start_scripted_party_flight(world, player, map, path, 0, true);
 }
 
 fn start_scripted_party_flight(
