@@ -58,6 +58,31 @@ pub fn read_registrations(
             action: Action::SpellClick,
         });
     }
+    if map == crate::taxi::DARKFLAME_CART_MAP {
+        let network =
+            crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
+        let mut points = network
+            .scripted_path(crate::taxi::DARKFLAME_CART_PATH)
+            .ok_or("registered Darkflame cart path unavailable")?;
+        let source = *points
+            .first()
+            .ok_or("registered Darkflame cart path empty")?;
+        let destination = crate::taxi::DARKFLAME_CART_LANDING;
+        points.push(destination);
+        registrations.push(Registration {
+            entry: crate::taxi::DARKFLAME_CART_ENTRY,
+            source_guid: None,
+            source,
+            destination,
+            distance: points
+                .windows(2)
+                .map(|pair| pair[0].distance(pair[1]))
+                .sum(),
+            radius: crate::npc_interaction::INTERACTION_DISTANCE,
+            departure: None,
+            action: Action::SpellClick,
+        });
+    }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
             |(entry, source, destination, radius)| Registration {

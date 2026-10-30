@@ -273,7 +273,19 @@ fn darkflame_cart_click_carries_owner_and_follower_on_native_path() {
         .unwrap()
         .bosses[0]
         .state = crate::scripted_ai::instance_script::EncounterState::Done;
-    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    let registrations = crate::test_support::transport::read_registrations(2651, &h.conn).unwrap();
+    let registration = registrations.iter().find(|r| r.entry == 209439).unwrap();
+    let edge = crate::test_support::graph::TransportEdge {
+        from: 1,
+        to: 2,
+        source_guid: 63651999,
+        radius: registration.radius,
+        departure: None,
+        landing: registration.destination.to_array(),
+        action: registration.action,
+    };
+    crate::test_support::transport::activate(h.app.world_mut(), h.player, Some(npc), &edge)
+        .unwrap();
     for entity in [h.player, follower] {
         assert_eq!(
             h.app
