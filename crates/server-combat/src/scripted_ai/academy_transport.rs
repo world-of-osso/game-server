@@ -9,9 +9,10 @@ use crate::maps::InMap;
 #[path = "academy_transport_tests.rs"]
 mod tests;
 
+pub(crate) const MAP: u32 = 2526;
 const PAD: Vec3 = Vec3::new(1440.6, 951.742, 2827.3);
 const LANDING: Vec3 = Vec3::new(1511.15, 900.57, 2926.35);
-const PADS: &[(u32, Vec3, Vec3, f32)] = &[
+pub(crate) const PADS: &[(u32, Vec3, Vec3, f32)] = &[
     (
         195564,
         PAD,
@@ -45,7 +46,7 @@ const PADS: &[(u32, Vec3, Vec3, f32)] = &[
 ];
 
 #[derive(Component)]
-pub(super) struct AcademyPadFlight {
+pub(crate) struct AcademyPadFlight {
     epoch: Option<u32>,
     target: Vec3,
 }
@@ -56,7 +57,7 @@ pub(super) fn launch_entrance_pad(world: &mut World) {
         .query::<(&Npc, &Position, &InMap)>()
         .iter(world)
         .filter_map(|(npc, pos, map)| {
-            if map.map_id != 2526 {
+            if map.map_id != MAP {
                 return None;
             }
             PADS.iter()

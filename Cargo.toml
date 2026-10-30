@@ -14,54 +14,55 @@ incremental = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Gameplay and generic Bevy code are instantiated in the server test crate.
-# Dependency optimization alone leaves these hot paths unoptimized.
-# Keep test assertions/overflow checks; limited debug info avoids full test DWARF.
-[profile.test.package.server]
+# Gameplay and generic Bevy code are instantiated in the server crates. Dependency
+# optimization alone leaves these hot paths unoptimized: dev-built private servers ran
+# 6-10 ticks/s (2026-10-29). The test profile inherits these. Keep assertions/overflow
+# checks; limited debug info avoids full test DWARF.
+[profile.dev.package.server]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-combat]
+[profile.dev.package.server-combat]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-core]
+[profile.dev.package.server-core]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-admin]
+[profile.dev.package.server-admin]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-follower-policy]
+[profile.dev.package.server-follower-policy]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-map-rules]
+[profile.dev.package.server-map-rules]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-pet-battle]
+[profile.dev.package.server-pet-battle]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-catalog]
+[profile.dev.package.server-catalog]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-simulation]
+[profile.dev.package.server-simulation]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-spell-scripts]
+[profile.dev.package.server-spell-scripts]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-combat-tests]
+[profile.dev.package.server-combat-tests]
 opt-level = 2
 debug = 1
 
-[profile.test.package.server-spell-tests]
+[profile.dev.package.server-spell-tests]
 opt-level = 2
 debug = 1
 

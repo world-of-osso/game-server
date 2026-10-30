@@ -134,10 +134,10 @@ class ImportTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             copy = Path(directory) / 'world-copy.sqlite'
             with sqlite3.connect(copy) as db:
-                for data in fixture.values():
+                for table, data in fixture.items():
                     db.execute(data['sql'])
                     for row in data['rows']:
-                        db.execute(f"INSERT INTO {data['sql'].split()[2]} VALUES ({','.join('?' for _ in row)})", row)
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
                 db.execute('INSERT INTO content_creature_template(entry) VALUES (234649)')
                 db.execute('INSERT INTO raid_encounter_creature VALUES (2813,234649,3102)')
                 db.execute('''INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,Comment)
@@ -270,6 +270,8 @@ class ImportTest(unittest.TestCase):
             copy = Path(directory) / 'world-copy.db'
             with sqlite3.connect(source) as db:
                 db.executescript('''
+                    CREATE TABLE map(ID INTEGER PRIMARY KEY, InstanceType INTEGER);
+                    INSERT INTO map VALUES(2521,1),(0,0);
                     CREATE TABLE keystone_affix(ID INTEGER, Name_lang TEXT);
                     CREATE TABLE raid_encounter_creature(map_id INTEGER, creature_entry INTEGER, encounter_id INTEGER);
                     CREATE TABLE spell_name(ID INTEGER, Name_lang TEXT);
@@ -280,9 +282,13 @@ class ImportTest(unittest.TestCase):
                     INSERT INTO tdb_creature VALUES(123,2521,10,20,30);
                     CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,
                         position_x REAL,position_y REAL,position_z REAL,orientation REAL,
-                        spawnDifficulties TEXT,Comment TEXT);
-                    INSERT INTO content_creature VALUES(5,123,2521,10,20,30,2,'1','authored');
+                        spawnDifficulties TEXT,Comment TEXT,spawntimesecs INTEGER DEFAULT 120);
+                    INSERT INTO content_creature VALUES(5,123,2521,10,20,30,2,'1','authored',120);
                 ''')
+                fixture = json.loads((Path(__file__).parent / 'tests/fixtures/log-population-tdb.json').read_text())
+                for table in ('keystone_affix', 'spell_name', 'spell_effect'):
+                    for row in fixture[table]['rows']:
+                        db.execute(f"INSERT INTO {table} VALUES ({','.join('?' for _ in row)})", row)
             shutil.copyfile(source, copy)
             with self.assertRaises(ValueError):
                 module.import_population(source, [record('x', 100)])
@@ -292,8 +298,8 @@ class ImportTest(unittest.TestCase):
             self.assertEqual((report['2521']['imported'], report['2521']['already_present']), (1, 1))
             with sqlite3.connect(copy) as db:
                 self.assertEqual(db.execute('SELECT Comment,position_x FROM content_creature WHERE guid=5').fetchone(), ('authored', 10))
-                self.assertEqual(db.execute('SELECT Comment,position_z,orientation FROM content_creature WHERE guid=6').fetchone(),
-                                 ('LOG_DERIVED_POPULATION', 30, 1.5))
+                self.assertEqual(db.execute('SELECT Comment,position_z,orientation,spawntimesecs FROM content_creature WHERE guid=6').fetchone(),
+                                 ('LOG_DERIVED_POPULATION', 30, 1.5, 7200))
                 self.assertEqual(db.execute('SELECT source_key,z_method,observed_level FROM log_derived_population').fetchone(),
                                  ('new', 'single_walkable_floor', 90))
                 self.assertEqual(json.loads(db.execute('SELECT observation_json FROM log_derived_population').fetchone()[0])['observation_event'], 'SPELL_DAMAGE')

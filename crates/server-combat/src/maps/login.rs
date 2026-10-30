@@ -213,17 +213,11 @@ impl LoginMaps<'_> {
     }
 
     fn reset_entrance(&self, map_id: u32) -> Option<WorldLocation> {
-        // TDB WorldSafeLoc 100032 is Uldaman's authored dungeon entrance;
-        // its world.db has no incoming AreaTriggerTeleport.
-        let entrance = if map_id == 2451 {
-            self.store.safe_locs.get(&100032).copied()
-        } else {
-            self.store.entrance_location(map_id)
-        };
+        let entrance = self.store.dungeon_entrance_location(map_id);
         match entrance.filter(|location| location.map_id == map_id) {
             Some(location) => Some(location),
             None => {
-                error!("Dungeon map {map_id} has no authored login entrance");
+                error!("Dungeon map {map_id} has no login entrance");
                 None
             }
         }

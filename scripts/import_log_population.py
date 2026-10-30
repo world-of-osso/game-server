@@ -15,6 +15,8 @@ import retail_content
 from log_population_census import minimum_assignment
 
 POLICY = 'LOG_DERIVED_POPULATION'
+# TDB's 1,266 existing spawns on the follower dungeon maps use 7,200 seconds.
+DUNGEON_RESPAWN_SECONDS = 7200
 
 
 def validate_copy(path):
@@ -294,9 +296,13 @@ def import_population(destination, records, radius=10.0, logs=LOG_ARCHIVE):
                 result['templates_from_tdb'].add(npc_id)
             elif db.execute('SELECT 1 FROM log_derived_templates WHERE entry=?', (npc_id,)).fetchone():
                 result['templates_from_tdb'].add(npc_id)
+            map_row = db.execute('SELECT InstanceType FROM map WHERE ID=?', (map_id,)).fetchone()
+            if map_row is None:
+                raise ValueError(f'map {map_id} missing from map catalog')
+            respawn = DUNGEON_RESPAWN_SECONDS if map_row[0] == 1 else 120
             db.execute('''INSERT INTO content_creature
-                (guid,id1,map,position_x,position_y,position_z,orientation,spawnDifficulties,Comment)
-                VALUES (?,?,?,?,?,?,?,?,?)''', (next_guid, npc_id, map_id, x, y, z, facing, '1', POLICY))
+                (guid,id1,map,position_x,position_y,position_z,orientation,spawntimesecs,spawnDifficulties,Comment)
+                VALUES (?,?,?,?,?,?,?,?,?,?)''', (next_guid, npc_id, map_id, x, y, z, facing, respawn, '1', POLICY))
             db.execute('INSERT INTO log_derived_population VALUES (?,?,?,?,?,?,?,?,?,?)',
                        (next_guid, source_key, map_id, npc_id, record['z_method'], record['observation_event'],
                         record['observation_time'], record.get('level'), POLICY,

@@ -10,6 +10,12 @@
 
 Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
+## Known gaps
+
+`WOWHEAD_PLACEMENT_INCLUDES_SUMMONS`: The one-time Wowhead placement import can classify spell-summoned actors as independent static spawns. Murder Row GUID63813226 is entry255050, the native Effect28 summon of spell1264098, and must not be statically placed. Audit other follower-map placements against native summon effects before publication; a match alone does not prove that every static placement is invalid.
+
+`FOLLOWER_RUN_RESTART_PERSISTENCE_GAP`: A server restart does not restore the follower party or its active run. Murder Row's owner logged back into difficulty 205 without a group; releasing spirit then created a difficulty-1 copy. A resumed clear and its encounter credit are not established. Run live clears without restarting the server until run persistence is implemented.
+
 ## Admin harness party staging
 
 `stage-follower-party <owner> <map> <x> <y> <z>` is admin-socket-only setup, not gameplay
@@ -334,6 +340,10 @@ Owned dungeon followers must remain active and follow their owner after the part
 
 The actual map2526 entrance Jump Pad NPC195564 at (1440.6,-2827.3,951.742) is the trigger; the existing NPC interaction reach supplies the proximity boundary, not a sourced pad volume. The owner and owned followers travel along a project-authored ballistic arc, not an authored flight path. Player movement ownership changes epoch at both launch and landing so stale in-flight input cannot rewind the landing. The destination XY (1511.15,-2926.35) is the first downstream positioned player cast in WCL `tjnzpa3Axg6QLHfJ` fight1 at +15.150s; Z900.57 comes from the native navmesh detail projection. This observation is not a logged landing. Other first downstream observations include `BVaP1FzZW9rbyTv6` fight7 at +18.208s (1546.5,-2964.5) and `gWkPyzwJ2mbxRtdr` fight3 at +21.132s (1590.31,-2943.85), consistent with later travel but not a common exact landing. Two more disconnected crossings use the same policy: NPC195564 at (1881.92,-3133.49,914.693) launches to the first downstream sample (2054.35,-3122.63,925.0429), and NPC192864 at (2116.46,-3105.17,928.646) launches to (2306.25,-3052.91,907.3357). For the return, NPC192864 at (2318.13,-3054.92,910.02) launches to (2126.83,-3102.39,925.12317). Its project-authored 2yd proximity radius avoids an unintended launch on the outbound landing-to-Eagles route while reaching the navmesh below the pad; it is not a sourced pad volume. NPC195564 at (2078.2,-3062.87,925.406) launches to (2028.9,-2931.39,896.8801). These four XY samples are from `gWkPyzwJ2mbxRtdr` fight3; Z values are native detail-mesh projections. The other two cited runs also show long crossings, not exact landings. Replace these approximations if the authored transports become available.
 
+### Voidscar follower clear evidence
+
+On 2026-10-29, an ordinary LFG run of map 2923 at difficulty 205 reached Done for Taz’Rah (4m51s), Atroxus (3m40s), and Charonus (4m01s) in instance 4. The owner and four followers were alive after each credited kill; no deaths were observed in this run. The private database used for this run predated the population deduplication and contained extra Atroxus and Charonus spawns, so this is not proof of a deduplicated-population run. Item-by-item follower equipment and dungeon achievement credit were not verified. Final Modern and Forever captures are in `/syncthing/AgentShared/2026-10-29/voidscar-walk/`.
+
 ### Voidscar Atroxus portal approximation
 
 `VOIDSCAR_ATROXUS_PORTAL_POSITION_LOG_CORRELATED` uses TDB portal template 630573 (display 99878), whose spell 1248113 is named for Voidscar Arena's Pit of Spite. The template has no authored spawn in TDB. The user identified a portal before Atroxus and approved placement at the last upstream player sample (4615.12,-430.05) in `WoWCombatLog-102126_222250.txt` at 22:41:28.581. Navmesh height -103.6306 connects to the previous sample at (4614.76,-403.0), which has one supporting surface at -109.9542. The first downstream sample is (4761.38,-451.23) at 22:41:38.823; its navmesh height -62.1763 connects to Atroxus. Using the portal moves the owner and owned followers along a project-authored arc. The samples do not establish the authored portal position, exact landing, flight path, or unlock condition. Replace this approximation when authored data are available.
@@ -343,6 +353,12 @@ Dungeon release uses a linked graveyard or reciprocal exit when available. If ne
 ### Nalorakk completion credit
 
 `NALORAKK_CREDIT_LETHAL_DAMAGE_LOG_CORRELATED` binds creature 246404 to encounter 3209, bit 2. The user approved death credit because two Retail logs show lethal damage immediately before successful encounter completion: `WoWCombatLog-101926_223417.txt` lines 151075–151076 (3,307 health, 7,348 damage), and `WoWCombatLog-102326_212253.txt` lines 534424–534425 (9,972 health, 10,105 damage). Neither record directly reports a death; the death trigger is inferred. Journal encounter 2778 and actor 5978 supply display 129989. Live credit remains unproved.
+
+### Hoardmonger offerings
+
+`HOARDMONGER_UNLOCK_LOG_CORRELATED` is an inferred bridge: successful TDB offering spellclicks grant the native Carrying Supplies aura 1239428 and retain the offering type; delivering within an inferred 5 yards of a distinct Avatar of Starvation removes that aura and its Feast of Misery aura 1249737. Six distinct fed avatars clear Hoardmonger's PC and NPC immunity in that map copy. Logs correlate aura removals with the pull; the pickup bridge, delivery radius, initial avatar aura, and immunity transition are not directly sourced. Failed or interrupted casts do not grant supplies.
+
+`APPLE_BARREL_OPEN_LOCK_TARGET_GAP`: TDB identifies NPC 245716 as the apple spellclick source, but native spell 1239300 has gameobject-targeted OPEN_LOCK and the current NPC-targeted cast fails validation. Four nearby Barrel of Apples gameobjects are each within 0.7 yards of an apple NPC; their association is not established. This remains a named source gap, not a claim that the native apple cast is functional.
 
 ## Known gaps (current cycle)
 - [ ] `NALORAKK_PYRE_TELEPORT`: The user identified the campfire as the transition to the alternate zone. TDB 66838 places Ethereal Pyres 616377 at (4480.69,-4912.04,13.37) and 613266 at (4339.45,-4942.68,103.931). Goober Data19 names gossip menus 40087/40088; each has option 0, “<Meditate on the sound of the flames.>”. Data24 is a vignette, not a spell. Both option SpellID fields are null and no matching SmartAI or map2825 spell target position is present. The pairing, immediate teleport and transport of owned followers are inferred. The first Oct19 downstream player sample (4339.33,-4947.34) is near the second pyre; it is not a recorded exact landing. The forward destination uses that logged downstream XY and facing with native navigation detail height 104.31152, near the upper pyre; it is an approximation, not an exact observed landing. The return destination uses the lower pyre XY and native detail height 13.435155. A native Detour probe connects the lower pyre to the entry and the upper pyre to Hoardmonger; this is not live traversal proof. Source: TC 15e0ed76 `GameObjectData.h`, TDB goober, gossip and spawn rows, and `game-engine/data/diagnostics/nalorakk-walk-2026-10-29/entrance-player-events.json`. Live traversal, boss credit, follower survival and both-skin clear remain unproved.
@@ -384,7 +400,7 @@ Idle follow and combat/heal approach choices for non-tank followers must not cro
 
 ## Log-derived population policy
 
-`MURDER_ROW_STALKER_HOSTILE_FACTION_UNSOURCED`: Stalker 234359 has source faction 0 and a HOSTILE combat-log reaction. Its observed spawn is near the follower entrance, but its role in the clear and a valid hostile faction remain unproved.
+`FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE`: Murder Row Stalker 234359 has source faction 0 and only HOSTILE log reactions. It uses faction 16 from nearby Row Hooligan 236073, which was fought on the follower route. The donor's nearby placement is Wowhead-derived, not a native TDB spawn. Mixed HOSTILE/NEUTRAL observations remain gaps.
 
 Known boss placements require the last positioned observation before their encounter starts. If none is observed, report `BOSS_PRE_PULL_POSITION_UNOBSERVED`; do not substitute a first cast or a post-pull position.
 

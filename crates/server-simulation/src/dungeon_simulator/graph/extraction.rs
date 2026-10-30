@@ -1,5 +1,5 @@
 //! Extract follower topology from the canonical population and baked navigation.
-use super::{Graph, source, topology};
+use super::{Edge, Graph, Pack, TransportEdge, source, topology};
 use bevy::prelude::Vec3;
 use navigation::{NavigationMap, NavigationPlan};
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,6 +15,9 @@ fn complete_route(
     let mut result = Vec::new();
     loop {
         let leg = nav.path_with_plan(start, end, &mut plan)?;
+        if leg.collision_drop.is_some() {
+            return Err("navigation path requires a registered collision drop".into());
+        }
         let endpoint = *leg.points.last().ok_or("empty navigation segment")?;
         result.extend(leg.points);
         if leg.complete {
@@ -69,6 +72,86 @@ fn boss_sources(
         .collect()
 }
 
+fn append_registered_transports(
+    map: u32,
+    packs: &mut Vec<Pack>,
+    registrations: &[server::test_support::transport::Registration],
+) -> Result<(Vec<Edge>, Vec<TransportEdge>), String> {
+    let mut next = packs
+        .iter()
+        .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
+        .chain(
+            registrations
+                .iter()
+                .filter_map(|registration| registration.source_guid),
+        )
+        .max()
+        .unwrap_or(0);
+    let mut edges = Vec::new();
+    let mut transports = Vec::new();
+    for registration in registrations {
+        let (from, source_guid) = if let Some(guid) = registration.source_guid {
+            next = next
+                .checked_add(1)
+                .ok_or("transport waypoint identifiers exhausted")?;
+            let point = registration.source;
+            packs.push(Pack {
+                id: next,
+                position: [point.x, point.z],
+                height: point.y,
+                spawns: Vec::new(),
+            });
+            (next, guid)
+        } else {
+            let candidates: Vec<_> = packs
+                .iter()
+                .flat_map(|pack| {
+                    pack.spawns
+                        .iter()
+                        .filter(move |spawn| {
+                            spawn.entry == registration.entry
+                                && pack.point().distance(registration.source) < 1.0
+                        })
+                        .map(move |spawn| (pack.id, spawn.guid))
+                })
+                .collect();
+            let [(from, guid)] = candidates.as_slice() else {
+                return Err(format!(
+                    "map{map} registered transport entry{} has {} matching source spawns",
+                    registration.entry,
+                    candidates.len()
+                ));
+            };
+            (*from, *guid)
+        };
+        next = next
+            .checked_add(1)
+            .ok_or("transport waypoint identifiers exhausted")?;
+        let destination = registration.destination;
+        packs.push(Pack {
+            id: next,
+            position: [destination.x, destination.z],
+            height: destination.y,
+            spawns: Vec::new(),
+        });
+        edges.push(Edge {
+            from,
+            to: next,
+            yards: registration.distance,
+        });
+        transports.push(TransportEdge {
+            from,
+            to: next,
+            source_guid,
+            radius: registration.radius,
+            departure: registration.departure.map(|point| point.to_array()),
+            landing: destination.to_array(),
+            action: registration.action,
+        });
+    }
+    Ok((edges, transports))
+}
+
 fn extract(
     map: u32,
     db: &rusqlite::Connection,
@@ -109,8 +192,22 @@ fn extract(
         .iter()
         .map(|(bit, entry)| (*entry, *bit))
         .collect();
+    let mut registrations = server::test_support::transport::read_registrations(map, db)?;
+    if let Some((source, drop)) = nav.registered_collision_drop() {
+        registrations.push(server::test_support::transport::Registration {
+            entry: 0,
+            source_guid: Some(0),
+            source,
+            destination: drop.landing,
+            distance: source.distance(drop.departure) + drop.departure.distance(drop.landing),
+            radius: navigation::AGENT_RADIUS,
+            departure: Some(drop.departure),
+            action: server::test_support::transport::Action::CollisionDrop,
+        });
+    }
+    let (teleports, transports) = append_registered_transports(map, &mut packs, &registrations)?;
     let edges = topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
-    let unreachable = topology::unreachable(&packs, &edges, opening);
+    let unreachable = topology::unreachable(&packs, &edges, &teleports, opening);
     let graph = Graph {
         map_id: map,
         entrance: [entrance.x, entrance.z],
@@ -118,7 +215,8 @@ fn extract(
         entrance_pack: opening,
         packs,
         edges,
-        teleports: Vec::new(),
+        teleports,
+        transports,
         unreachable,
         route: Vec::new(),
         follower_difficulty: source.difficulty,
@@ -127,6 +225,61 @@ fn extract(
         follower_boss_bits: bits,
     };
     Ok((graph, route_bosses))
+}
+
+#[test]
+fn registered_transport_creates_a_directed_edge_to_the_native_landing() {
+    use server::test_support::transport::{Action, Registration};
+    let mut packs = vec![Pack {
+        id: 11,
+        position: [1.0, 2.0],
+        height: 3.0,
+        spawns: vec![super::Spawn {
+            guid: 11,
+            entry: 194667,
+            position: [1.0, 2.0],
+        }],
+    }];
+    let registration = Registration {
+        entry: 194667,
+        source_guid: None,
+        source: Vec3::new(1.0, 3.0, 2.0),
+        destination: Vec3::new(4.0, 30.0, 5.0),
+        distance: 42.0,
+        radius: 7.0,
+        departure: None,
+        action: Action::SpellClick,
+    };
+    let (edges, transports) =
+        append_registered_transports(2521, &mut packs, &[registration]).unwrap();
+    assert_eq!(edges[0].from, 11);
+    assert_eq!(edges[0].to, 12);
+    assert_eq!(edges[0].yards, 42.0);
+    assert_eq!(packs[1].point(), Vec3::new(4.0, 30.0, 5.0));
+    assert_eq!(transports[0].source_guid, 11);
+    assert_eq!(transports[0].action, Action::SpellClick);
+    let object = Registration {
+        entry: 630573,
+        source_guid: Some(81002923),
+        source: Vec3::new(9.0, 3.0, 2.0),
+        destination: Vec3::new(10.0, 30.0, 5.0),
+        distance: 30.0,
+        radius: 5.0,
+        departure: None,
+        action: Action::ObjectScript,
+    };
+    let (edges, transports) = append_registered_transports(2923, &mut packs, &[object]).unwrap();
+    assert_eq!(transports[0].source_guid, 81002923);
+    assert_eq!(transports[0].action, Action::ObjectScript);
+    assert_eq!(edges[0].from, 81002924);
+    assert_eq!(
+        packs
+            .iter()
+            .find(|pack| pack.id == edges[0].from)
+            .unwrap()
+            .point(),
+        Vec3::new(9.0, 3.0, 2.0)
+    );
 }
 
 #[test]

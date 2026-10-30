@@ -295,6 +295,64 @@ fn place_follower_on_upper(h: &mut Harness, follower: Entity, entry: u32) {
 
 #[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn registered_drop_moves_player_follower_and_pet_to_the_native_landing() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut h, follower) = create_native_follower_fixture();
+    let owner = h.caster;
+    let pet = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::hunter_pet::HunterPet {
+                owner: follower,
+                slot: 0,
+            },
+            InMap::continent(MAP),
+            position(UPPER),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let edge = crate::test_support::graph::TransportEdge {
+        from: 1,
+        to: 2,
+        source_guid: 0,
+        radius: 1.0,
+        departure: Some(DEPARTURE.to_array()),
+        landing: LANDING.to_array(),
+        action: crate::test_support::transport::Action::CollisionDrop,
+    };
+    crate::test_support::transport::activate(h.app.world_mut(), owner, None, &edge).unwrap();
+    for _ in 0..150 {
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        crate::scripted_ai::movement::point_movement_system(h.app.world_mut());
+        crate::scripted_ai::fall_movement::advance_falls(h.app.world_mut());
+        h.app
+            .world_mut()
+            .run_system_once(crate::scripted_ai::fall_movement::release_finished_falls)
+            .unwrap();
+        crate::navigation::collision_drop::advance_collision_drops(h.app.world_mut());
+    }
+    for unit in [owner, follower, pet] {
+        let feet = point(*h.app.world().get::<Position>(unit).unwrap());
+        assert!(
+            feet.distance(LANDING) <= ::navigation::CELL_HEIGHT,
+            "unit {unit:?} landed at {feet:?}"
+        );
+        assert!(!crate::test_support::transport::in_progress(
+            h.app.world(),
+            unit
+        ));
+    }
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
 fn darkflame_drop_follower_sim_traverses_only_after_upper_route_stage() {
     let (mut h, follower) = create_native_follower_fixture();
     h.advance(8);
@@ -518,4 +576,59 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
         }
         assert_eq!(hold, Some(held), "watcher faction {faction}");
     }
+}
+
+#[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn candlelight_follower_walks_into_authored_box_and_receives_light() {
+    let (mut h, follower) = create_native_follower_fixture();
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&conn).unwrap());
+    let map = InMap::continent(MAP);
+    crate::world_area_triggers::spawn_map(h.app.world_mut(), map, 205);
+    let start = Vec3::new(153.0, 71.22188, 155.0);
+    let GroundProbe::Supported(height) = h
+        .app
+        .world_mut()
+        .resource_mut::<GroundMap>()
+        .ground_at(MAP, start)
+    else {
+        panic!("actual Candle King approach floor");
+    };
+    let at = position(Vec3::new(start.x, height, start.z));
+    h.app.world_mut().entity_mut(follower).insert((map, at));
+    h.app.world_mut().entity_mut(h.npc).insert((
+        map,
+        shared::components::Npc {
+            template_id: 208745,
+            name: "The Candle King".into(),
+        },
+        shared::components::CombatStatus(true),
+    ));
+    let mut entered = false;
+    for _ in 0..1000 {
+        let before = *h.app.world().get::<Position>(follower).unwrap();
+        let seeking = super::candlelight::seek(h.app.world_mut(), follower);
+        h.advance(1);
+        let after = *h.app.world().get::<Position>(follower).unwrap();
+        assert!(
+            point(after).distance(point(before)) < 2.0,
+            "ordinary movement, not teleport: {before:?} -> {after:?}"
+        );
+        if !seeking {
+            entered = true;
+            break;
+        }
+    }
+    assert!(
+        entered,
+        "follower reached the authored light via native navigation"
+    );
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(crate::auras::has_aura(h.app.world(), follower, 426125));
 }

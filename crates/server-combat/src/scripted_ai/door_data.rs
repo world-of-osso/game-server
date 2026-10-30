@@ -12,6 +12,27 @@ struct Door {
 }
 
 const DOORS: &[Door] = &[
+    // ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED: the TDB door blocks the only
+    // nav route from Talondras to Emberon; its exact Retail trigger is unsourced.
+    Door {
+        map_id: 2451,
+        entry: 376554,
+        encounter: 2557,
+    },
+    // ULDAMAN_EMBERON_VAULT_DOOR_PASSAGE_INFERRED: the vault entrance
+    // blocks the route after Talondras; its exact Retail trigger is unsourced.
+    Door {
+        map_id: 2451,
+        entry: 376191,
+        encounter: 2557,
+    },
+    // ULDAMAN_EMBERON_EXIT_DOOR_PASSAGE_INFERRED: the vault exit blocks the
+    // route to Deios after Emberon; its exact Retail trigger is unsourced.
+    Door {
+        map_id: 2451,
+        entry: 376640,
+        encounter: 2558,
+    },
     // TC a352b1fa instance_darkflame_cleft.cpp doorData: GO_CATACOMBS_GATE, The Candle King.
     Door {
         map_id: 2651,

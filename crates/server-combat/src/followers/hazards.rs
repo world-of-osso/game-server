@@ -517,7 +517,7 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
 }
 
 // Hazard escape retains master's terrain projection; admitted points use creature floors below.
-fn advance_escape(
+pub(super) fn advance_escape(
     world: &mut World,
     unit: Entity,
     map: u32,

@@ -9,7 +9,7 @@
 
 - TC a352b1fa `KhazAlgar/DarkflameCleft/boss_the_candle_king.cpp:85–222` governs actual208745/map2651/2787bit0 (Journal2560/5595/display114508). Preserve source `boss_the_candle_king`, flags64, spawn10002793, all actors/stats/addons/models/population and native70448 effects. Producer `--encounter candle-king` installs only its authenticated binding on independent copies. Follower205 tests explicitly project the native actor from the Normal placement; they do not publish unauthored205 spawn/stat rows.
 - Normal1/Follower205 engagement requests Darklight426152, then Molds420659 at6s, Mind426145 at10.5s, Pickaxe421274 at13.2s, Throw420696 at19.3s; repeats31.5/20.6/17/17s respectively. Before every lane request, follow TC `GetCooldownOfSpell`/`TryCastSpellIfReady`: wait actual remaining native spell/category cooldown, never reset or bypass category1152. Native cast occupancy and ordinary admission remain authoritative; TC repeats after DoCast even when it fails.
-- `CANDLE_KING_SELECTOR_CHILDREN_UNPORTED`: TC authors Molds summon420665, Throw marker421250→expire421145, and Pickaxe421277/422648→rect-selected421282. Those scripts are sourced but not yet ported; native parent dummy/aura effects are not certification of their children. `CANDLE_KING_WAX_AREA_CONTROLLER_UNPORTED` retains wax actors/clone, candlelight, cursed/molten wax and statue cleanup. `CANDLE_KING_EVADE_DESPAWN_UNPORTED` retains TC despawn/respawn rather than claiming generic native evade equals full TC lifecycle. Other difficulties and whole-fight/native-clear certification remain excluded. Require native Normal/projected205 RED→GREEN first/ongoing clocks, cooldown deferral, native fear, copy-local death credit/corpse silence and reset/rearm before enabling tests.
+- `CANDLE_KING_SELECTOR_CHILDREN_UNPORTED`: TC authors Molds summon420665, Throw marker421250→expire421145, and Pickaxe421277/422648→rect-selected421282. Those scripts are sourced but not yet ported; native parent dummy/aura effects are not certification of their children. `CANDLE_KING_WAX_AREA_CONTROLLER_UNPORTED` retains wax actors/clone, cursed/molten wax and statue cleanup. TC's authored candlelight world-static trigger spawn 285 uses custom properties 175 and box extents 32/50/5; on entry it casts Candlelight426125 and removes Darklight426127, and on exit removes Candlelight. Follower companions receive the same effects and seek the authored light during the encounter without bypassing navigation; they do not chase enemies outside it. Native Darklight426127 excludes targets with Candlelight426125; TC `Spell::AddUnitTarget` applies that restriction to each implicit area recipient, so a later Darklight pulse does not reapply it inside the light. `CANDLE_KING_EVADE_DESPAWN_UNPORTED` retains TC despawn/respawn rather than claiming generic native evade equals full TC lifecycle. Other difficulties and whole-fight/native-clear certification remain excluded. Require native Normal/projected205 RED→GREEN first/ongoing clocks, cooldown deferral, native fear, copy-local death credit/corpse silence and reset/rearm before enabling tests.
 
 ## Vehicle accessories and Ol' Waxbeard
 
@@ -85,6 +85,20 @@
 ## Uldaman Prehistoria door
 
 `ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.
+
+## Combat-stop threat cleanup
+
+TC a352b1fa `CombatReference::EndCombat` clears both units' threat for each ended reference before removing the bilateral combat reference. `CombatStop` must preserve unrelated combat references and their threat. This applies to Lost Dwarves surrender through ordinary evade/combat-stop; it is not a faction-change hook.
+
+## Uldaman Talondras passage
+
+`ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED`: GO376554 opens when Sentinel Talondras2557 is Done in its copy, using passage-door state. Its TDB position lies on the nav route to Emberon, and DungeonEncounter orders Talondras before Emberon. [Warcraft Wiki Hall of the Keepers](https://warcraft.wiki.gg/wiki/Hall_of_the_Keepers) corroborates onward progression after Talondras. No log or script sources this door's exact trigger or a possible post-RP delay.
+
+## Uldaman Emberon vault passages
+
+- `ULDAMAN_EMBERON_VAULT_DOOR_PASSAGE_INFERRED`: GO376191 opens when Talondras2557 is Done. The TDB door blocks the nav route into Emberon's vault; no log or script sources its exact trigger.
+- `ULDAMAN_EMBERON_EXIT_DOOR_PASSAGE_INFERRED`: GO376640 opens when Emberon2558 is Done. The TDB door lies on the nav route from the vault to Deios; no log or script sources its exact trigger. [Warcraft Wiki](https://warcraft.wiki.gg/wiki/Uldaman:_Legacy_of_Tyr) describes progression into the Earthworks and Vault after Emberon without identifying a door trigger.
+- The other route doors 376556, 376636 and 376637 have TDB initial state ACTIVE (open); no new state transition is inferred for them.
 
 ## Deios source ingress boundary
 

@@ -1422,6 +1422,7 @@ struct Run {
     graph: Graph,
     party: crate::followers::simulator::Party,
     actors: BTreeMap<u32, Entity>,
+    objects: BTreeMap<u32, Entity>,
     report: Report,
     current_pack: Option<u32>,
     last_progress: f64,
@@ -1579,6 +1580,28 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         },
     )?;
     let actors = runtime::spawn_population(&mut app, copy);
+    let object_guids: Vec<_> = graph
+        .transports
+        .iter()
+        .filter(|transport| {
+            matches!(
+                transport.action,
+                server::test_support::transport::Action::ObjectGossip
+                    | server::test_support::transport::Action::ObjectScript
+            )
+        })
+        .map(|transport| transport.source_guid)
+        .collect();
+    let objects = if object_guids.is_empty() {
+        BTreeMap::new()
+    } else {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .map_err(|error| format!("open transport objects: {error}"))?;
+        server::test_support::transport::spawn_objects(app.world_mut(), &db, copy, &object_guids)?
+    };
     let missing: Vec<_> = graph
         .packs
         .iter()
@@ -1599,6 +1622,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         graph,
         party,
         actors,
+        objects,
         current_pack: None,
         last_progress: 0.0,
         event_cursor: 0,
@@ -1837,6 +1861,9 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
+            return Ok(());
+        }
         if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
             self.app
                 .world_mut()
@@ -1960,6 +1987,72 @@ impl Run {
         let Some((source, destination)) = edge else {
             return Ok(false);
         };
+        if let Some(transport) = self
+            .graph
+            .transports
+            .iter()
+            .find(|edge| edge.from == source && edge.to == destination)
+            .cloned()
+        {
+            let source_objects = matches!(
+                transport.action,
+                server::test_support::transport::Action::ObjectGossip
+                    | server::test_support::transport::Action::ObjectScript
+            );
+            let drop = transport.action == server::test_support::transport::Action::CollisionDrop;
+            let actors = if source_objects {
+                &self.objects
+            } else {
+                &self.actors
+            };
+            let npc = if drop {
+                None
+            } else {
+                Some(
+                    *actors
+                        .get(&transport.source_guid)
+                        .ok_or("registered transport source actor absent")?,
+                )
+            };
+            let position = if let Some(npc) = npc {
+                let at = self
+                    .app
+                    .world()
+                    .get::<Position>(npc)
+                    .ok_or("registered transport source lacks position")?;
+                Vec3::new(at.x, at.y, at.z)
+            } else {
+                self.graph
+                    .packs
+                    .iter()
+                    .find(|pack| pack.id == source)
+                    .ok_or("registered transport source waypoint absent")?
+                    .point()
+            };
+            if Vec3::new(from.x, from.y, from.z).distance(position) > transport.radius {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(position));
+                return Ok(true);
+            }
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            server::test_support::transport::activate(
+                self.app.world_mut(),
+                self.party.owner,
+                npc,
+                &transport,
+            )?;
+            super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+            self.record_pull(
+                source,
+                format!("REGISTERED_TRANSPORT {source}->{destination}"),
+            );
+            return Ok(true);
+        }
         let book = *self
             .actors
             .get(&source)

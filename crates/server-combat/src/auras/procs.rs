@@ -316,9 +316,8 @@ fn handle_side(
     if unit == event.actor
         && event.spell_id.is_some_and(|id| {
             world
-                .resource::<super::scripts::AuraScripts>()
-                .0
-                .get(&id)
+                .get_resource::<super::scripts::AuraScripts>()
+                .and_then(|scripts| scripts.0.get(&id))
                 .is_some_and(|script| script.suppress_outgoing_procs)
         })
     {

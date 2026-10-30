@@ -586,6 +586,76 @@ fn uldaman_login_after_restart_uses_authored_entrance() {
 }
 
 #[test]
+fn murder_row_login_and_release_use_imported_entrance() {
+    let store = map_store().expect("world database").clone();
+    let entrance = store
+        .dungeon_entrance_location(2813)
+        .expect("Murder Row entrance");
+    assert!(close(
+        entrance.position,
+        Vec3::new(8687.87, -4927.05, 19.061333)
+    ));
+    let mut h = harness_with(|app| {
+        app.add_plugins(crate::death::DeathPlugin);
+    })
+    .unwrap();
+    let saved = bevy(Vec3::new(8845.12, -4843.28, -7.07));
+    let place = h
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                30,
+                205,
+                RaidDifficulty::default(),
+                2813,
+                saved,
+            )
+        })
+        .unwrap()
+        .expect("login after the dungeon copy reset");
+    assert!(close(wow(&place.position), entrance.position));
+    let player = h.spawn_at_level(30, 90, place.map, Vec3::new(8845.12, -4843.28, -7.07));
+    h.app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .add_player(place.map, player.player);
+    h.app
+        .world_mut()
+        .entity_mut(player.connection)
+        .insert(pair::<ReleaseSpirit>());
+    h.app.world_mut().entity_mut(player.player).insert((
+        DungeonDifficulty(205),
+        Health {
+            current: 0.0,
+            max: 100.0,
+        },
+        PlayerDeathState {
+            state: DeathState::Dead,
+            corpse: None,
+            graveyard: None,
+        },
+    ));
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<ReleaseSpirit>>(player.connection)
+        .unwrap()
+        .send::<DeathChannel>(ReleaseSpirit);
+    h.advance(3);
+    assert_eq!(h.map_of(&player), Some(place.map));
+    assert!(close(h.position(&player), entrance.position));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerDeathState>(player.player)
+            .unwrap()
+            .state,
+        DeathState::Alive
+    );
+}
+
+#[test]
 fn dungeon_login_without_authored_entrance_is_refused() {
     let mut h = harness().expect("world.db map data");
     h.app
@@ -602,7 +672,7 @@ fn dungeon_login_without_authored_entrance_is_refused() {
                 30,
                 1,
                 RaidDifficulty::default(),
-                34,
+                289,
                 bevy(Vec3::new(42.0, 1.0, 1.0)),
             )
         })
@@ -620,7 +690,7 @@ fn dungeon_login_without_authored_entrance_is_refused() {
                 30,
                 1,
                 RaidDifficulty::default(),
-                34,
+                289,
                 bevy(Vec3::new(42.0, 1.0, 1.0)),
             )
         })

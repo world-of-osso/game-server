@@ -19,6 +19,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from follower_placements import write_placements
 
 
+class FollowerPlacementRespawnTests(unittest.TestCase):
+    def test_new_placement_uses_tdb_dungeon_respawn(self):
+        with closing(sqlite3.connect(':memory:')) as db:
+            db.executescript('''CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,
+                position_x REAL,position_y REAL,position_z REAL,spawntimesecs INTEGER DEFAULT 120,
+                spawnDifficulties TEXT,Comment TEXT);
+                CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER,encounter_id INTEGER,
+                    bit INTEGER, journal INTEGER, encounter INTEGER, display INTEGER);''')
+            manifest = {'guid_base': 61000000, 'map_id': 2519, 'entries': [{'ordinal': 0, 'entry': 181861}]}
+            placement = {'wow_xyz': (-211.1, -932.7, 40), 'page': {'url': 'source'},
+                         'marker': {'floor': 1, 'percent': [20, 30]}}
+            write_placements(db, manifest, [placement], [(2519, 181861, 1, 0, 1, 1, 1)])
+            self.assertEqual(db.execute('SELECT id1,spawntimesecs FROM content_creature').fetchall(), [(181861, 7200)])
+
+
 @unittest.skipUnless('FOLLOWER_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
 class NeltharusPlacementAcceptance(unittest.TestCase):
     def test_all_four_primaries_keep_source_floor_templates_and_bindings(self):

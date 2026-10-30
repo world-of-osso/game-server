@@ -59,6 +59,7 @@ fn extract_azure_graph() {
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),
         follower_boss_bits: BTreeMap::new(),
+        transports: Vec::new(),
         entrance: [-5050.48, -1024.56],
         entrance_height: 594.216,
         entrance_pack: opening,

@@ -38,6 +38,31 @@ pub(crate) fn read_scenario(path: &Path) -> Result<Scenario, String> {
     parse_scenario(&trace)
 }
 
+pub(crate) fn read_touch_of_elune(path: &Path, player: &str) -> Result<Option<u32>, String> {
+    let trace = std::fs::read_to_string(path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    parse_touch_of_elune(&trace, player)
+}
+
+fn parse_touch_of_elune(trace: &str, player: &str) -> Result<Option<u32>, String> {
+    let marker = format!("modifying Player '{player}'");
+    let mut selected = None;
+    for line in trace.lines().filter(|line| line.contains(&marker)) {
+        let spell = if line.contains("Touch of Elune - Day (154796)") {
+            154796
+        } else if line.contains("Touch of Elune - Night (154797)") {
+            154797
+        } else {
+            continue;
+        };
+        if selected.is_some_and(|previous| previous != spell) {
+            return Err("SimC trace selects both Touch of Elune racial states".into());
+        }
+        selected = Some(spell);
+    }
+    Ok(selected)
+}
+
 fn parse_scenario(trace: &str) -> Result<Scenario, String> {
     let dummy = trace
         .lines()
@@ -488,6 +513,18 @@ fn reads_trace_declared_intellect_mortal_wounds_and_bleeding() {
     assert!(parse_dummy_bleeding(trace, "dummy").unwrap());
     assert!(!parse_dummy_bleeding("override.bleeding=0", "dummy").unwrap());
     assert!(parse_dummy_bleeding(trace, "other").is_err());
+}
+
+#[test]
+fn reads_touch_of_elune_state_for_the_named_player() {
+    let trace = "0.000 Touch of Elune - Night (154797) eff#1 modifying Player 'tank' all_haste by 1%\n0.000 Touch of Elune - Day (154796) eff#1 modifying Player 'other' crit by 1%";
+    assert_eq!(parse_touch_of_elune(trace, "tank").unwrap(), Some(154797));
+    assert_eq!(parse_touch_of_elune(trace, "other").unwrap(), Some(154796));
+    assert_eq!(parse_touch_of_elune(trace, "third").unwrap(), None);
+    let both = format!(
+        "{trace}\n0.000 Touch of Elune - Day (154796) eff#1 modifying Player 'tank' crit by 1%"
+    );
+    assert!(parse_touch_of_elune(&both, "tank").is_err());
 }
 
 #[test]

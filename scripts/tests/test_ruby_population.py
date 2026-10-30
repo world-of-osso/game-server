@@ -60,6 +60,7 @@ class RubyPopulationTests(unittest.TestCase):
                 import_population(db)
             self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone(), (*ERKHART_XY, ERKHART_Z))
             self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521001').fetchone(), (*KYRAKKA_XY, KYRAKKA_Z))
+            self.assertEqual(db.execute('SELECT spawntimesecs FROM content_creature WHERE guid IN (63521000,63521001) ORDER BY guid').fetchall(), [(7200,), (7200,)])
             comment = db.execute('SELECT Comment FROM content_creature WHERE guid=63521000').fetchone()[0]
             self.assertIn('LOG_DERIVED_POPULATION', comment)
             self.assertIn('FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP', comment)

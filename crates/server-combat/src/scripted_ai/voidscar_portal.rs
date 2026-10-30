@@ -9,13 +9,13 @@ use crate::maps::InMap;
 #[path = "voidscar_portal_tests.rs"]
 mod tests;
 
-pub(super) const SCRIPT: &str = "VOIDSCAR_ATROXUS_PORTAL_POSITION_LOG_CORRELATED";
-const MAP: u32 = 2923;
-const LANDING: Vec3 = Vec3::new(4761.38, -62.1763, 451.23);
+pub(crate) const SCRIPT: &str = "VOIDSCAR_ATROXUS_PORTAL_POSITION_LOG_CORRELATED";
+pub(crate) const MAP: u32 = 2923;
+pub(crate) const LANDING: Vec3 = Vec3::new(4761.38, -62.1763, 451.23);
 const FLIGHT_SPEED: f32 = 50.0;
 
 #[derive(Component)]
-pub(super) struct PortalFlight {
+pub(crate) struct PortalFlight {
     epoch: Option<u32>,
 }
 

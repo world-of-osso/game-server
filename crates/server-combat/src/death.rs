@@ -346,8 +346,7 @@ pub(crate) fn release_spirit_in_dungeon(
     let grave =
         crate::maps::graveyard::closest_graveyard_in_zone(maps, &location, map.area_table_id)
             .or_else(|| maps.entrance_exit_location(map.id))
-            .or_else(|| maps.entrance_location(map.id))
-            .or_else(|| maps.safe_entrance_location(map.id))
+            .or_else(|| maps.dungeon_entrance_location(map.id))
             .ok_or_else(|| {
                 "unable to release spirit: no dungeon graveyard, exit, or entrance".to_string()
             })?;

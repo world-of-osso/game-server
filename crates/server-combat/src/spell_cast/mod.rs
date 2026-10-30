@@ -825,6 +825,15 @@ impl SpellHistory {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    pub fn active_gcd_ready_at(&self, now: f64) -> Option<f64> {
+        self.gcd_ready_at
+            .values()
+            .copied()
+            .filter(|&deadline| deadline > now)
+            .max_by(f64::total_cmp)
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
     pub fn clear_fixture_precombat_gcd(&mut self) {
         self.gcd_ready_at.clear();
     }
@@ -2718,6 +2727,21 @@ fn preserve_cost_sign(initial: f32, modified: f32) -> f32 {
     }
 }
 
+/// TDB non-vehicle spellclicks use an ordinary cast, not a triggered cast.
+pub(crate) fn start_spellclick_cast(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Result<(), CastFailure> {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or(CastFailure::UnknownSpell)?;
+    start_cast(world, caster, &spell, Some(target))
+}
+
 fn start_cast(
     world: &mut World,
     caster: Entity,
@@ -3115,6 +3139,7 @@ fn execute_cast_with_primary(
         crate::combat::attack_stop(world, caster);
     }
     auto_repeat::on_cast(world, caster, spell, explicit);
+    crate::npc_interaction::nalorakk_offerings::finish_pickup(world, caster, spell.id, explicit);
     Ok(())
 }
 
@@ -3302,6 +3327,11 @@ fn plan_targets(
                     (units, destination)
                 }
             };
+        // TC Spell::AddUnitTarget calls SpellInfo::CheckTarget on each implicit
+        // area recipient, not only on the explicit cast target.
+        units.retain(|&unit| {
+            aura_spell_restrictions::check_target(world, caster, Some(unit), spell).is_ok()
+        });
         effects::retain_threat_level_targets(world, spell, effect, &mut units);
         scripts::filter_secondary_targets(world, caster, spell, effect.index, explicit, &mut units);
         if let Some(filter) = scripts::area_target_filter(world, spell.id, effect.index) {

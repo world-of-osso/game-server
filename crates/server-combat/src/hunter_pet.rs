@@ -337,6 +337,11 @@ fn check_summon_pet(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
+    if world.get::<TaxiPetSlot>(caster).is_some() {
+        return Err(CastFailure::Unsupported(
+            "pet cannot be summoned during taxi flight".into(),
+        ));
+    }
     if effect.misc_values[0] != 0 {
         let class = owner_class(world, caster);
         let demon = DEMON_SUMMONS.contains(&spell.id) && class == Some(CLASS_WARLOCK);
@@ -752,6 +757,10 @@ pub(crate) fn abandon_or_dismiss_pet(world: &mut World, pet: Entity) {
 }
 
 pub(crate) fn remove_pet(world: &mut World, pet: Entity) {
+    remove_pet_with_current(world, pet, false);
+}
+
+fn remove_pet_with_current(world: &mut World, pet: Entity, keep_current: bool) {
     let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
         return;
     };
@@ -760,11 +769,48 @@ pub(crate) fn remove_pet(world: &mut World, pet: Entity) {
     crate::combat::combat_stop(world, pet);
     world.entity_mut(pet).despawn();
     if let Some(mut stable) = world.get_mut::<PetStable>(owner) {
-        stable.stored.current = None;
+        if !keep_current {
+            stable.stored.current = None;
+        }
         stable.summoned = None;
     }
     save_stable(world, owner);
     crate::pet_control::clear_pet_spells(world, owner);
+}
+
+#[derive(Component)]
+struct TaxiPetSlot(u8);
+
+/// TC Player::UnsummonPetTemporaryIfAny: save the controlled pet as current during flight.
+pub(crate) fn unsummon_for_taxi(world: &mut World, owner: Entity) {
+    let Some(pet) = summoned_pet(world, owner) else {
+        return;
+    };
+    let Some(slot) = world.get::<HunterPet>(pet).map(|pet| pet.slot) else {
+        return;
+    };
+    remove_pet_with_current(world, pet, true);
+    world.entity_mut(owner).insert(TaxiPetSlot(slot));
+}
+
+/// TC Player::ResummonPetTemporaryUnSummonedIfAny restores that pet after landing.
+pub(crate) fn resummon_after_taxi(world: &mut World, owner: Entity) {
+    let Some(slot) = world.get::<TaxiPetSlot>(owner).map(|slot| slot.0) else {
+        return;
+    };
+    if summoned_pet(world, owner).is_some() {
+        return;
+    }
+    let Some((at, facing)) = close_point(world, owner) else {
+        error!(?owner, "Taxi pet cannot return: owner has no position");
+        return;
+    };
+    put_pet_out(world, owner, slot, at, facing);
+    if summoned_pet(world, owner).is_none() {
+        error!(?owner, slot, "Taxi pet could not be restored");
+        return;
+    }
+    world.entity_mut(owner).remove::<TaxiPetSlot>();
 }
 
 /// Summon the pet of `slot` at `at` as the owner's current pet and save the stable.
