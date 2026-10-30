@@ -403,6 +403,10 @@ Dungeon release uses a linked graveyard or reciprocal exit when available. If ne
 
 `NALORAKK_CREDIT_LETHAL_DAMAGE_LOG_CORRELATED` binds creature 246404 to encounter 3209, bit 2. The user approved death credit because two Retail logs show lethal damage immediately before successful encounter completion: `WoWCombatLog-101926_223417.txt` lines 151075–151076 (3,307 health, 7,348 damage), and `WoWCombatLog-102326_212253.txt` lines 534424–534425 (9,972 health, 10,105 damage). Neither record directly reports a death; the death trigger is inferred. Journal encounter 2778 and actor 5978 supply display 129989. Live credit remains unproved.
 
+### Nalorakk water door
+
+`NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED` opens Water Door 531150 (GO state 0, collision disabled) when encounter 3207 is Done in the same map copy. Retail `WoWCombatLog-102026_223255.txt` lines 65154, 65165 and 65364 show encounter success and the same player on opposite sides of the door 7.629 seconds later. The logs do not record the door state or its exact trigger; the encounter gate is inferred.
+
 ### Hoardmonger offerings
 
 `HOARDMONGER_UNLOCK_LOG_CORRELATED` is an inferred bridge: successful TDB offering spellclicks grant the native Carrying Supplies aura 1239428 and retain the offering type; delivering within an inferred 5 yards of a distinct Avatar of Starvation removes that aura and its Feast of Misery aura 1249737. Six distinct fed avatars clear Hoardmonger's PC and NPC immunity in that map copy. Logs correlate aura removals with the pull; the pickup bridge, delivery radius, initial avatar aura, and immunity transition are not directly sourced. Failed or interrupted casts do not grant supplies.

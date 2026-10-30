@@ -12,6 +12,15 @@ struct Door {
 }
 
 const DOORS: &[Door] = &[
+    // NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED:
+    // Retail WoWCombatLog-102026_223255.txt lines 65154, 65165, 65364
+    // show encounter success and a player crossing the door plane 7.629s later.
+    // The door state and exact trigger are not recorded.
+    Door {
+        map_id: 2825,
+        entry: 531150,
+        encounter: 3207,
+    },
     // ACADEMY_BRAMBLE_BARRIER_UNLOCK_LOG_CORRELATED: WCL gWkPyzwJ2mbxRtdr fight 3
     // and tjnzpa3Axg6QLHfJ fight 1 place players past this door after all three
     // encounters. The three-boss gate is project policy; Retail's trigger is unknown.
