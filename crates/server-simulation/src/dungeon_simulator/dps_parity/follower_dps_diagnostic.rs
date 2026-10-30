@@ -109,6 +109,12 @@ fn follower_dps_production_dummy() {
             .unwrap()
             .items
     );
+    let talents = format!(
+        "{:?}",
+        app.world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap()
+    );
     let modifiers = format!(
         "{:?}",
         app.world()
@@ -125,7 +131,8 @@ fn follower_dps_production_dummy() {
     let mut gcd_total = 0u32;
     let mut ready = 0u32;
     let mut sources = std::collections::BTreeSet::from([actor.to_bits()]);
-    for _ in 0..2400 {
+    let mut checkpoints = Vec::new();
+    for frame in 0..2400 {
         app.update();
         let world = app.world();
         let now = crate::spell_cast::history_now(world);
@@ -145,6 +152,14 @@ fn follower_dps_production_dummy() {
             gcd_only += 1;
         } else {
             ready += 1;
+        }
+        if frame % 200 == 199 {
+            let pools = format!(
+                "{:?}",
+                world.get::<crate::spell_cast::powers::PowerPools>(actor)
+            );
+            let health = world.get::<shared::components::Health>(target).unwrap();
+            checkpoints.push(json!({"at_s": (frame + 1) as f64 / 20.0, "pools": pools, "target_health": health.current}));
         }
         let mut query = app.world_mut().query::<(Entity, &UnitSummonedBy)>();
         for (entity, owner) in query.iter(app.world()) {
@@ -174,7 +189,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"checkpoints":checkpoints,"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
