@@ -9,7 +9,7 @@ from contextlib import closing
 from pathlib import Path
 import sqlite3
 
-from import_log_population import retire_encounter_duplicates
+from import_log_population import DUNGEON_RESPAWN_SECONDS, retire_encounter_duplicates
 from ruby_native_templates import import_templates
 
 KYRAKKA_XY = (1786.9, 27.945)
@@ -59,10 +59,10 @@ def import_population(db):
         db.execute("UPDATE content_creature_template SET ScriptName='boss_kyrakka_erkhart' WHERE entry=?", (entry,))
     if not applied:
         placeholder = db.execute('SELECT Comment,position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone()
-        db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,Comment=? WHERE guid=63521000',
-                   (*ERKHART_XY, ERKHART_Z, POLICY + f'; anchors={ERKHART_ANCHORS}; replaced xyz={placeholder[1:]}; ' + placeholder[0]))
-        db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
-                   (63521001, 190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, '1', POLICY + f'; anchors={KYRAKKA_ANCHORS}'))
+        db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,spawntimesecs=?,Comment=? WHERE guid=63521000',
+                   (*ERKHART_XY, ERKHART_Z, DUNGEON_RESPAWN_SECONDS, POLICY + f'; anchors={ERKHART_ANCHORS}; replaced xyz={placeholder[1:]}; ' + placeholder[0]))
+        db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawntimesecs,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?,?)',
+                   (63521001, 190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, DUNGEON_RESPAWN_SECONDS, '1', POLICY + f'; anchors={KYRAKKA_ANCHORS}'))
     binding = (2521, 190484, 2623, 2, 2503, 5393, 107137)
     existing = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone()
     if existing is not None and existing != binding:
