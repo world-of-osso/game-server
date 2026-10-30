@@ -65,34 +65,29 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
         unit,
         map.map_id,
         Goal::FollowerRelease,
-        Query::FollowPath {
+        Query::CompleteRoute {
             from: point(start),
             to: point(owner_position),
         },
     );
-    let path = match result {
+    let route = match result {
         None => return wait("route_pending"),
         Some(Err(error)) => return ("wait", "route_error", None, Some(error)),
         Some(Ok(None)) => return wait("navigation_unbaked"),
-        Some(Ok(Some(Output::Path(path)))) => path,
+        Some(Ok(Some(Output::CompleteRoute(route)))) => route,
         Some(Ok(Some(_))) => return wait("unexpected_route_result"),
     };
-    if !path.complete {
-        return wait("route_incomplete");
+    if !route.complete {
+        return ("wait", "route_incomplete", None, route.reason);
     }
     let speed = crate::creature_ai::BASE_RUN_SPEED
         * world
             .get::<crate::auras::AuraStatMods>(unit)
             .map_or(1.0, |mods| mods.movement_speed);
-    let distance: f32 = path
-        .points
-        .windows(2)
-        .map(|pair| pair[0].distance(pair[1]))
-        .sum();
     if speed <= 0.0 {
         return wait("run_speed_zero");
     }
-    let walk_seconds = distance / speed;
+    let walk_seconds = route.distance / speed;
     if walk_seconds > FOLLOWER_RELEASE_MAX_WALK_SECONDS {
         return ("wait", "route_too_long", Some(walk_seconds), None);
     }

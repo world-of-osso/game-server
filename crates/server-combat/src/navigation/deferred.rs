@@ -127,6 +127,7 @@ pub(super) fn query_from(query: &PendingQuery) -> Vec3 {
     match &query.query {
         WorkerQuery::Path { from, .. }
         | WorkerQuery::FollowPath { from, .. }
+        | WorkerQuery::CompleteRoute { from, .. }
         | WorkerQuery::FollowFormation { from, .. }
         | WorkerQuery::SmoothPath { from, .. }
         | WorkerQuery::Collision { from, .. }

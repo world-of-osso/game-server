@@ -1,3 +1,4 @@
+- 2026-10-30: Recorded [complete-route inspection](systems/navigation.md#complete-route-inspection) and the Brackenhide node-limit result.
 - 2026-10-29: Added the TDB spellclick projection to [content import](systems/content-import.md).
 - 2026-10-29: Recorded [Ruby affix summons imported as spawns](investigations/log-derived-population.md#ruby-affix-summons-imported-as-spawns--2026-10-29) and private-copy retirement.
 - 2026-10-29: Recorded [world-entry sight and paging measurements](investigations/server-tick-lag.md#world-entry-creature-sight-and-host-paging-2026-10-29) and login/ground worker changes.
