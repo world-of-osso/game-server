@@ -12,6 +12,10 @@ fn windrunner_ramp_formation_reaches_connected_ground() {
     let raw_offset = Vec3::new(5329.034, 100.521484, 3222.6953);
     // A player position on the same ramp, observed on the return route.
     let owner = Vec3::new(5325.944, 100.5208, 3225.244);
+    assert!(
+        map.path(follower, raw_offset).is_err(),
+        "the observed raw formation offset must reproduce the failed route"
+    );
     let path = map
         .follow_formation_path(follower, raw_offset, owner, &mut NavigationPlan::default())
         .expect("formation point must be walkable and connected");
