@@ -237,8 +237,9 @@ impl NativeProfileData {
                 .map_err(|error| read("item bonuses", error))?,
             stats: crate::item_stats::load_item_scaling_tables(world_db)
                 .map_err(|error| read("item scaling", error))?,
-            classes: crate::spell_info::load_class_spells(&db)
-                .map_err(|error| read("class spells", error))?,
+            classes: crate::spell_info::load_spell_data(&db)
+                .map_err(|error| read("class spells", error))?
+                .1,
             tracks: KeystoneTracks::read(db2, season_time_event, context)?,
         })
     }
