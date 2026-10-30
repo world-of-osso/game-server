@@ -681,11 +681,28 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
         "CURVE_TEST radii={radii:?} start={start:?} end={:?}",
         corners[3]
     );
+    let mut collision = los::LosMap::new(&assets().join(format!("los/{MAP}")));
     for leg in corners.windows(2) {
         let length = leg[0].distance(leg[1]);
         let steps = (length / 0.35).ceil() as usize;
         for step in 1..=steps {
             let point = leg[0].lerp(leg[1], step as f32 / steps as f32);
+            let previous = leg[0].lerp(leg[1], (step - 1) as f32 / steps as f32);
+            let floor = h
+                .app
+                .world_mut()
+                .resource_mut::<GroundMap>()
+                .ground_at(MAP, point);
+            assert!(
+                matches!(floor, GroundProbe::Supported(y) if (y - point.y).abs() < 1.0),
+                "owner path lacks ground at {point:?}: {floor:?}"
+            );
+            assert!(
+                collision
+                    .clear(previous + Vec3::Y, point + Vec3::Y)
+                    .unwrap(),
+                "owner path crosses collision at {point:?}"
+            );
             h.app.world_mut().entity_mut(owner).insert(position(point));
             super::update_ai(h.app.world_mut());
             crate::navigation::drain_fixture(&mut h.app);
