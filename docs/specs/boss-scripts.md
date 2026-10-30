@@ -37,6 +37,8 @@
 
 - TC 15e0ed76 `instance_the_stonevault.cpp:54,100–121` and `boss_edna.cpp:94,165–192`: after five deaths tagged `edna_intro_trash` in the same copy, wait 3 seconds, remove aura 447230 and walk E.D.N.A. 210108 to WoW (1.94097, 0.512153, 361.66537). One second after arrival, remove only PC immunity. Restore the unlocked state when the boss reappears in that copy. TDB tags template 210109; the five Stonevault spawns already inherit the tag. Intro conversation 25768 and Anchor Here 45313 remain unported.
 
+- TC 15e0ed76 `instance_the_stonevault.cpp` doorData opens GO 440235 (Skarmorak route) and GO 440239 (Machinists route) when E.D.N.A. encounter 2854 is Done. Each copy retains its own state, including when doors reload.
+
 ## TWW Skarmorak source admission
 
 - TC a352b1fa `KhazAlgar/TheStoneVault/boss_skarmorak.cpp` identifies primary210156/map2652/2880bit1, independently joined to native70448 Journal2579/actor5608/display118714. Producer `--encounter skarmorak` admits only that binding, keeping source `boss_skarmorak`, class4/flags64/flags2=0, spawn10002291, actual addons429974/422359 and every actor/stat/model/difficulty/population/native spell row unchanged. Follower205 fixtures explicitly project the authored Normal placement, not unauthored205 rows.

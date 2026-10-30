@@ -159,6 +159,8 @@ mod porung;
 mod ruby_final;
 #[path = "skarmorak.rs"]
 mod skarmorak;
+#[path = "stonevault_doors.rs"]
+mod stonevault_doors;
 #[path = "talondras.rs"]
 mod talondras;
 #[path = "the_maker.rs"]
