@@ -274,6 +274,35 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+fn relocated_attackable_objective_uses_live_position() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let boss = run.actors[&20375720];
+    let step = run
+        .graph
+        .route
+        .iter()
+        .find(|step| step.pack == 20375720)
+        .unwrap()
+        .clone();
+    run.graph.route = vec![step];
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let moved = Position {
+        x: at.x + 2.0,
+        ..at
+    };
+    run.app.world_mut().entity_mut(boss).insert(moved);
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        Vec3::new(moved.x, moved.y, moved.z)
+    );
+}
+
+#[test]
 #[ignore = "requires extracted Darkflame follower graph"]
 fn darkflame_withheld_darkness_does_not_abort_initialization() {
     let run = spawn_run(1, &mut None).unwrap();
@@ -2083,11 +2112,18 @@ impl Run {
         }
         self.waiting_objective = None;
         if from.distance(to) > range {
-            let approach = if self.actors.get(&pack_id) == Some(&target) {
-                Vec3::from_array(step.anchor)
-            } else {
-                to
-            };
+            let pack = self
+                .graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == pack_id)
+                .unwrap();
+            let approach =
+                if self.actors.get(&pack_id) == Some(&target) && pack.point().distance(to) <= 1.0 {
+                    Vec3::from_array(step.anchor)
+                } else {
+                    to
+                };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
