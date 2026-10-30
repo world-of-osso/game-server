@@ -197,6 +197,25 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
         .transports
         .iter()
         .any(|edge| edge.action == server::test_support::transport::Action::SpellClick);
+    let has_drop = app
+        .world()
+        .resource::<super::Space>()
+        .0
+        .transports
+        .iter()
+        .any(|edge| edge.action == server::test_support::transport::Action::CollisionDrop);
+    if has_drop {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .expect("open collision drop catalog");
+        let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
+        server::test_support::transport::install_drop_system(&mut app, &db, &nav)
+            .expect("install native collision drop system");
+    }
     if has_taxi {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),

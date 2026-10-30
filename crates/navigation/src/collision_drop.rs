@@ -18,6 +18,18 @@ pub struct CollisionDrop {
 }
 
 impl NavigationMap {
+    /// The native one-way collision transition registered for this baked map.
+    pub fn registered_collision_drop(&self) -> Option<(Vec3, CollisionDrop)> {
+        self.has_collision_drop().then_some((
+            APPROACH,
+            CollisionDrop {
+                after_corner: 0,
+                departure: DEPARTURE,
+                landing: LANDING,
+            },
+        ))
+    }
+
     pub(super) fn has_collision_drop(&self) -> bool {
         self.dir.file_name().and_then(|name| name.to_str()) == Some(MAP_DIRECTORY)
     }
