@@ -726,7 +726,7 @@ pub(crate) struct SpawnAddonAuras(pub Vec<u32>);
 pub(crate) struct SpawnPose(pub UnitPose);
 
 /// Link spawned followers to their spawned leader (FormationMgr::AddCreatureToGroup).
-fn insert_formation_members(
+pub(crate) fn insert_formation_members(
     commands: &mut Commands,
     world_data: &WorldData,
     entities: &HashMap<u32, Entity>,
@@ -738,6 +738,7 @@ fn insert_formation_members(
         let Some(&leader) = entities.get(&info.leader_guid) else {
             continue;
         };
+        let group_ai = info.group_ai;
         commands
             .entity(member)
             .queue(move |mut entity: EntityWorldMut| {
@@ -748,7 +749,11 @@ fn insert_formation_members(
                     .unwrap_or_default();
                 // With no live leader TC reads only authored spawn/template identity.
                 leader_ids.script = None;
-                entity.insert(CreatureGroupMember { leader, leader_ids });
+                entity.insert(CreatureGroupMember {
+                    leader,
+                    leader_ids,
+                    group_ai,
+                });
             });
         if member == leader || info.group_ai & GROUP_AI_FLAG_FOLLOW_LEADER == 0 {
             continue;
@@ -763,9 +768,10 @@ fn insert_formation_members(
 
 /// Group membership is independent of movement (`CreatureGroup::AddMember`).
 #[derive(Component, Clone)]
-struct CreatureGroupMember {
-    leader: Entity,
-    leader_ids: CreatureStringIds,
+pub(crate) struct CreatureGroupMember {
+    pub(crate) leader: Entity,
+    pub(crate) leader_ids: CreatureStringIds,
+    pub(crate) group_ai: u32,
 }
 
 /// `Creature::setDeathState`: notify the copy only after its last living group member dies.

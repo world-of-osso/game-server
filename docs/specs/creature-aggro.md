@@ -24,7 +24,7 @@ A dormant creature's threat membership publishes only after it actually survives
 - [x] Once a second, each creature that moved, spawned, woke or changed model/scale is offered to nearby creatures and they to it. NpcGrid uses45yd cells with per-copy conservative maximum combat reach to cover the post-clamp body extents; no per-tick all-pairs scan.
 - [x] An idle aggressive creature attacks the nearest creature within its aggro radius (each side's level against the other) whose FactionTemplate reaction is Hostile and that it can attack; both enter combat, chase and swing. Stormwind Infantry (2321) and a Blackrock Invader (14) fight; the Infantry and the Blackrock Worg (32) are neutral and never do (the Northshire "fight" is emote 333).
 - [x] Creatures immune to NPCs (`unit_flags` 0x200) neither attack nor are attacked; civilians never start a fight but fight back.
-- [ ] Line of sight, the Z attack range, `IsNeutralToAll`, `CallAssistance` and GuardAI.
+- [ ] The Z attack range, `IsNeutralToAll` and GuardAI.
 
 ### Aggro on being attacked
 
@@ -86,7 +86,7 @@ A dormant creature's threat membership publishes only after it actually survives
 
 ## Known gaps (current cycle)
 
-- [ ] Social/assist aggro: nearby creatures of the same pack do not join (`Creature::CallAssistance`, `CreatureGroup` assist flags).
+- [x] Social/assist aggro: formation members engage according to the initiating member's `groupAI` bits; `CallAssistance` recruits eligible same-faction idle creatures within 10 yd after 1500 ms, with caller-to-assistant LOS and eligibility rechecked on delivery. `CallForHelp` uses friendly faction and assistant-to-target LOS immediately. Defaults and behavior follow TC 15e0ed76 `World.cpp:801,915`, `Creature.cpp:2551–2652`, `CreatureGroups.cpp:224–260`, and `GridNotifiers.h:1419–1444,1561–1585`. In dungeons, pulling one creature can now engage its authored formation and nearby eligible creatures, including packs a follower tank did not directly attack.
 - [x] Dungeon maps (party/raid/scenario) skip the 40-yard spawn leash, matching pinned TC `Creature::CanCreatureAttack` (Creature.cpp:2731). Script-authored boundaries still apply. Slagmaw's East teleport119425 remains engaged ~48yd from spawn; the former Stockade39.9yd leash proof is superseded, not current behavior ([preserved evidence](../wiki/systems/navigation.md#stationary-arch-and-leash-acceptance)).
 - [x] Open-world maps retain the existing inclusive40yd spawn leash unchanged: continent map0 stays engaged at40yd and evades at40.1yd (`leash_open_world_map_keeps_forty_yard_boundary`).
 - [ ] Open-world spawn leash remains flat40yd rather than AzerothCore's30yd home-distance/timer policy; no open-world policy change is included in the dungeon exemption.
