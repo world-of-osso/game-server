@@ -86,6 +86,10 @@
 
 `ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.
 
+## Combat-stop threat cleanup
+
+TC a352b1fa `CombatReference::EndCombat` clears both units' threat for each ended reference before removing the bilateral combat reference. `CombatStop` must preserve unrelated combat references and their threat. This applies to Lost Dwarves surrender through ordinary evade/combat-stop; it is not a faction-change hook.
+
 ## Uldaman Talondras passage
 
 `ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED`: GO376554 opens when Sentinel Talondras2557 is Done in its copy, using passage-door state. Its TDB position lies on the nav route to Emberon, and DungeonEncounter orders Talondras before Emberon. [Warcraft Wiki Hall of the Keepers](https://warcraft.wiki.gg/wiki/Hall_of_the_Keepers) corroborates onward progression after Talondras. No log or script sources this door's exact trigger or a possible post-RP delay.
