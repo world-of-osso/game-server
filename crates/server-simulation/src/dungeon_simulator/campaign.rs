@@ -267,7 +267,7 @@ fn unattackable_objective_is_approached_using_its_live_position() {
     run.control().unwrap();
     run.app
         .world_mut()
-        .resource_mut::<Time>()
+        .resource_mut::<Time<Virtual>>()
         .advance_by(std::time::Duration::from_secs(61));
     assert!(run.stalled());
     assert!(run.report.detail.contains("OBJECTIVE_NOT_ATTACKABLE"));
