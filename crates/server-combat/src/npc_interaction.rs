@@ -33,10 +33,10 @@ use crate::networking::PlayerLink;
 
 pub mod azure_translocation;
 mod gossip;
-pub(crate) mod nalorakk_pyre;
 pub(crate) mod nalorakk_offerings;
 #[cfg(test)]
 mod nalorakk_offerings_tests;
+pub(crate) mod nalorakk_pyre;
 pub(crate) mod spellclick;
 #[cfg(test)]
 mod spellclick_tests;
