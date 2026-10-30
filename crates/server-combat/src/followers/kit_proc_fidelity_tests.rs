@@ -456,6 +456,18 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
     let target = h.npc;
     let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 10.0);
     let third = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 12.0);
+    for target in [second, third] {
+        let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
+        health.current = 1_000_000_000.0;
+        health.max = health.current;
+    }
+    // Feedback Loop independently adds extra overloads; isolate the guaranteed casts.
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1270064,
+    );
     complete_cast(&mut h, caster, 191634, caster);
     assert!(has_aura(h.app.world(), caster, 168534));
     assert!(has_aura(h.app.world(), caster, 191634));
@@ -480,8 +492,18 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
         .count();
     assert_eq!(
         child_casts, 3,
-        "TC HIT-phase native SK modifier guarantees one normal45297 cast per root hit, not one per parent cast"
+        "Stormkeeper guarantees one overload per target"
     );
+    for target in [target, second, third] {
+        assert!(
+            h.inbox.go[first_go..]
+                .iter()
+                .any(|event| event.caster == caster.to_bits()
+                    && event.spell_id == 45297
+                    && event.target == Some(target.to_bits())),
+            "each live Chain Lightning target must receive an overload cast"
+        );
+    }
     assert!(h.inbox.log[first_log..].iter().any(|event| {
         event.kind == CombatLogKind::Damage
             && event.spell_id == Some(45297)
