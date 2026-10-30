@@ -33,7 +33,7 @@ fn read_enabler(run: &Run) -> Option<Value> {
 }
 
 fn read_source_conditions(facts: &WwFacts<'_>) -> Vec<Value> {
-    include_str!("76f8118.simc")
+    server_follower_apl::windwalker_rotation::source::SOURCE
         .lines()
         .enumerate()
         .filter_map(|(index, line)| {

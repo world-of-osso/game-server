@@ -6752,6 +6752,7 @@ dependencies = [
  "bevy",
  "serde_json",
  "server-combat",
+ "server-spell-scripts",
  "shared",
 ]
 

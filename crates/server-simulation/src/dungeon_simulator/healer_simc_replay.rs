@@ -10,6 +10,12 @@ use std::path::Path;
 #[path = "healer_simc_replay_tests.rs"]
 mod tests;
 
+/// The fixture party tank's combat target: the healer's damage target.
+pub(super) fn tank_target(world: &World, party: &[Entity]) -> Option<Entity> {
+    let tank = server_follower_apl::party_tank(world, party)?;
+    world.get::<crate::networking::CombatTarget>(tank)?.0
+}
+
 pub(super) trait Policy {
     fn drive(&mut self, world: &mut World, healer: Entity, party: &[Entity]) -> Result<(), String>;
 }

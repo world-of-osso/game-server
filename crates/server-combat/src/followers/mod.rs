@@ -145,6 +145,8 @@ mod group_buff_tests;
 
 pub use ai::{AplControlled, FollowerReach, engaged_targets, party_units};
 pub use catalog::FollowerCatalog;
+pub use kit_ai::is_tank;
+pub use live_facts::{ObservedEvents, observe_unit};
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 pub use unintended_reach::{party_unintended_reach, spell_unintended_reach};
 

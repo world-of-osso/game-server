@@ -23,13 +23,7 @@ pub(super) fn prepare(
 
 impl Policy for HolyPaladin {
     fn drive(&mut self, world: &mut World, healer: Entity, party: &[Entity]) -> Result<(), String> {
-        // The fixture's damage target is the Protection Paladin tank's target.
-        let enemy = party.iter().find_map(|&unit| {
-            let spec = world.get::<shared::components::ActiveSpec>(unit)?;
-            (spec.0 == 66)
-                .then(|| world.get::<crate::networking::CombatTarget>(unit)?.0)
-                .flatten()
-        });
+        let enemy = super::healer_simc_replay::tank_target(world, party);
         HolyPaladin::drive(self, world, healer, party, enemy)
     }
 }

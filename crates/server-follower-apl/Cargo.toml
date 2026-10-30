@@ -7,6 +7,7 @@ rust-version.workspace = true
 # Production class-follower casting: the DPS parity harness's spec APL drivers.
 [dependencies]
 server-combat = { path = "../server-combat" }
+server-spell-scripts = { path = "../server-spell-scripts" }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "1660f5bf4a8a18b8a4d6d0c8cc0962fc62ba0024" }
 serde_json = "1"

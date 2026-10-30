@@ -1,4 +1,4 @@
-//! Exact pinned Ret Program over canonical fixture lifecycle and native dispatch.
+//! Exact pinned Ret Program over the shared literal lifecycle and native dispatch.
 use bevy::prelude::*;
 use serde_json::{Value, json};
 
@@ -60,16 +60,7 @@ impl Rotation {
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {
-        self.encounter = match self.encounter {
-            Encounter::Fixture {
-                duration, style, ..
-            } => Encounter::Fixture {
-                started_at,
-                duration,
-                style,
-            },
-            Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
-        };
+        self.encounter = crate::literal_rotation::encounter_starting_at(self.encounter, started_at);
     }
 
     pub fn drive(
@@ -100,7 +91,7 @@ impl Rotation {
         Ok(())
     }
 
-    fn read_prepared(
+    pub fn read_prepared(
         &self,
         world: &mut World,
         actor: Entity,

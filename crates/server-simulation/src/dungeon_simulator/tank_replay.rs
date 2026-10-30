@@ -1,11 +1,12 @@
 //! Isolated tank decisions under a frozen native incoming-damage recording.
-#[path = "protection_rotation.rs"]
-pub(super) mod protection_rotation;
 use super::healer_intake::{Capture, Hit, HitKind, Intake};
 use super::healer_replay::{PendingHits, deliver_hits, freeze_sources};
 use crate::simc_tank_timeline;
 use bevy::prelude::*;
 use serde_json::{Value, json};
+pub(super) use server_follower_apl::protection_paladin_rotation::{
+    context as protection_rotation, program as protection_program,
+};
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -523,26 +524,6 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
 }
 
 /// Parse every action row from the pinned MID2 Protection profile.
-pub(super) fn protection_program(actions: &Value) -> Result<server::simc_apl::Program, String> {
-    let lines = actions.as_array().ok_or("MID2_PROTECTION_ACTIONS_ABSENT")?;
-    let mut rows = Vec::with_capacity(lines.len());
-    for line in lines {
-        let line = line.as_str().ok_or("MID2_PROTECTION_ACTION_NOT_TEXT")?;
-        let (head, action) = line
-            .split_once("+=")
-            .or_else(|| line.split_once('='))
-            .ok_or_else(|| format!("invalid MID2 Protection action: {line}"))?;
-        let list = if head == "actions" {
-            "default"
-        } else {
-            head.strip_prefix("actions.")
-                .ok_or_else(|| format!("invalid MID2 Protection list: {head}"))?
-        };
-        rows.push((list, action.strip_prefix('/').unwrap_or(action)));
-    }
-    server::simc_apl::Program::parse(&rows)
-}
-
 /// Run SimC's pre-outcome dummy pressure against the actual MID2 parity player.
 pub(super) fn replay_simc(
     spec_id: u32,

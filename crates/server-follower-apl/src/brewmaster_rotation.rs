@@ -173,7 +173,7 @@ impl Rotation {
         Ok(true)
     }
 
-    fn read_prepared(
+    pub fn read_prepared(
         &self,
         world: &mut World,
         actor: Entity,

@@ -95,7 +95,7 @@ impl FollowerApl {
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
-    fn execute_plan(
+    pub fn execute_plan(
         &mut self,
         world: &mut World,
         actor: Entity,
@@ -167,6 +167,14 @@ pub fn party_of(world: &mut World, actor: Entity) -> Vec<Entity> {
         Some(owner) => server::followers::party_units(world, owner),
         None => Vec::new(),
     }
+}
+
+/// The first tank in `party`.
+pub fn party_tank(world: &World, party: &[Entity]) -> Option<Entity> {
+    party
+        .iter()
+        .copied()
+        .find(|&unit| server::followers::is_tank(world, unit))
 }
 
 /// Engaged enemies with the brain's current combat target first.
