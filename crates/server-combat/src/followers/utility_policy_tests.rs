@@ -164,7 +164,15 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
             .get::<shared::casting::CastState>(enemy)
             .is_some()
     );
-    super::kit_ai::update(h.app.world_mut(), unit, &follower, &[unit], Some(enemy));
+    let enemies = super::ai::engaged_enemies(h.app.world_mut(), &follower, unit, &[unit]);
+    super::kit_ai::update(
+        h.app.world_mut(),
+        unit,
+        &follower,
+        &[unit],
+        Some(enemy),
+        &enemies,
+    );
     h.advance(3);
     // Read actual engine events before owner routing: this actor is intentionally
     // outside the original fixture owner's party/delivery boundary.
@@ -245,7 +253,15 @@ fn follower_utility_policy_party_danger_precedes_primary_vs_secondary_kick_phase
     let near = add_follower(&mut h, 209059);
     let (damage, control) = start_separated_native_casts(&mut h, near, far);
     let context = h.app.world().get::<super::Follower>(far).unwrap().clone();
-    super::kit_ai::update(h.app.world_mut(), far, &context, &[near, far], Some(damage));
+    let enemies = super::ai::engaged_enemies(h.app.world_mut(), &context, far, &[near, far]);
+    super::kit_ai::update(
+        h.app.world_mut(),
+        far,
+        &context,
+        &[near, far],
+        Some(damage),
+        &enemies,
+    );
     h.advance(10);
     assert!(
         h.app

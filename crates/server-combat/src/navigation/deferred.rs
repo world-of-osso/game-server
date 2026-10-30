@@ -24,7 +24,7 @@ impl Navigation {
         if let Some(previous) = self.queries.get(&entity)
             && previous.map_id == map_id
             && previous.goal == goal
-            && same_query(&previous.query, &query)
+            && same_query(goal, &previous.query, &query)
         {
             return previous.result.clone();
         }
@@ -134,10 +134,26 @@ pub(super) fn query_from(query: &PendingQuery) -> Vec3 {
     }
 }
 
-fn same_query(previous: &WorkerQuery, next: &WorkerQuery) -> bool {
+fn same_query(goal: Goal, previous: &WorkerQuery, next: &WorkerQuery) -> bool {
     match (previous, next) {
         (WorkerQuery::Path { from: a, to: b }, WorkerQuery::Path { from: c, to: d }) => {
             horizontal(*a - *c) <= TELEPORT_DISTANCE && b.distance(*d) <= REPATH_DISTANCE
+        }
+        (
+            WorkerQuery::Candidates {
+                from: a,
+                targets: b,
+            },
+            WorkerQuery::Candidates {
+                from: c,
+                targets: d,
+            },
+        ) if goal == Goal::FollowerTargetSelection => {
+            a.distance(*c) <= TELEPORT_DISTANCE
+                && b.len() == d.len()
+                && b.iter()
+                    .zip(d)
+                    .all(|(previous, next)| previous.distance(*next) <= REPATH_DISTANCE)
         }
         (
             WorkerQuery::Candidates {

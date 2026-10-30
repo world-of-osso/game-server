@@ -49,18 +49,39 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
+    let mut enemies = engaged_enemies(world, follower, unit, &party);
+    let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
+    let lost_target = world
+        .get::<CombatTarget>(unit)
+        .and_then(|target| target.0)
+        .is_some_and(|target| !enemies.iter().any(|(enemy, _)| *enemy == target));
+    if lost_target {
+        if world.get::<CastState>(unit).is_some_and(|cast| {
+            Entity::try_from_bits(cast.target).is_some_and(|target| {
+                crate::spell_cast::targets::is_hostile(world, unit, target)
+                    && !enemies.iter().any(|(enemy, _)| *enemy == target)
+            })
+        }) {
+            crate::spell_cast::cancel_cast(world, unit);
+        }
+        crate::combat::attack_stop(world, unit);
+        hold_combat(world, unit);
+    }
+    if pending {
+        return;
+    }
     super::tank_frontal::update_goal(world, unit, follower, &party);
-    let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
-    let selection = collection_target.map_or_else(
-        || select_enemy(world, follower, unit, &party),
-        EnemySelection::Attack,
-    );
+    let collection_target =
+        super::tank_planner::update_caster_goal(world, unit, follower, &party, &enemies);
+    let selection = collection_target
+        .filter(|target| enemies.iter().any(|(enemy, _)| enemy == target))
+        .map_or_else(|| select_enemy(world, &enemies), EnemySelection::Attack);
     let enemy = match selection {
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
     };
     update_auto_shot(world, unit, follower, enemy);
-    if super::kit_ai::update(world, unit, follower, &party, enemy) {
+    if super::kit_ai::update(world, unit, follower, &party, enemy, &enemies) {
         return;
     }
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
@@ -285,13 +306,7 @@ enum EnemySelection {
     None,
 }
 
-fn select_enemy(
-    world: &mut World,
-    follower: &Follower,
-    unit: Entity,
-    party: &[Entity],
-) -> EnemySelection {
-    let enemies = engaged_enemies(world, follower, unit, party);
+fn select_enemy(world: &World, enemies: &[(Entity, Option<Entity>)]) -> EnemySelection {
     let attackable = enemies
         .iter()
         .find(|(enemy, _)| !crate::auras::has_breakable_by_damage_cc(world, *enemy));

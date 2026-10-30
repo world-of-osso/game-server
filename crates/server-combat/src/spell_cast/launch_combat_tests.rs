@@ -134,21 +134,41 @@ fn native_immune_hostile_spell_creates_launch_combat_reference() {
 
 #[test]
 fn native_evading_hostile_target_has_no_launch_combat_reference() {
-    let mut h = native_fixture(JUDGMENT, 2);
-    h.app
-        .world_mut()
-        .entity_mut(h.npc)
-        .insert(crate::creature_ai::CreatureState::Returning);
-    complete_native_cast(&mut h, JUDGMENT);
-    assert!(!crate::combat_refs::has_active_reference_to(
-        h.app.world(),
-        h.caster,
-        h.npc
-    ));
-    assert!(
-        !h.app
-            .world()
-            .get::<CombatStatus>(h.caster)
-            .is_some_and(|status| status.0)
-    );
+    for blocked in [false, true] {
+        let mut h = native_fixture(JUDGMENT, 2);
+        if blocked {
+            crate::creature_ai::mark_chase_blocked(h.app.world_mut(), h.npc, h.caster.to_bits());
+        } else {
+            h.app
+                .world_mut()
+                .entity_mut(h.npc)
+                .insert(crate::creature_ai::CreatureState::Returning);
+        }
+        let health = h.health(h.npc);
+        complete_native_cast(&mut h, JUDGMENT);
+        assert_eq!(
+            h.health(h.npc),
+            health,
+            "evading creature takes no spell damage; blocked={blocked}"
+        );
+        assert_miss(&h, JUDGMENT, MissKind::Evade);
+        assert!(!crate::combat_refs::has_active_reference_to(
+            h.app.world(),
+            h.caster,
+            h.npc
+        ));
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ThreatTable>(h.npc)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            !h.app
+                .world()
+                .get::<CombatStatus>(h.caster)
+                .is_some_and(|status| status.0)
+        );
+    }
 }

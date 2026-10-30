@@ -69,6 +69,46 @@ fn frostbolt_at_20_yards_lands_its_flight_time_after_the_launch() {
 }
 
 #[test]
+fn projectile_evades_if_target_starts_evading_in_flight() {
+    for blocked in [false, true] {
+        let mut h = mage().unwrap();
+        place_npc(&mut h, 20.0);
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert(shared::components::ThreatTable::default());
+        let health = h.health(h.npc);
+        h.cast(FROSTBOLT, Some(h.npc));
+        let damage = frames_from_launch_to_damage(&mut h, FROSTBOLT, FROSTBOLT_DAMAGE, 80, |h| {
+            if blocked {
+                crate::creature_ai::mark_chase_blocked(
+                    h.app.world_mut(),
+                    h.npc,
+                    h.caster.to_bits(),
+                );
+            } else {
+                h.app
+                    .world_mut()
+                    .entity_mut(h.npc)
+                    .insert(crate::creature_ai::CreatureState::Returning);
+            }
+        });
+        assert!(
+            damage.is_none(),
+            "projectile must miss after evade, blocked={blocked}"
+        );
+        assert_eq!(h.health(h.npc), health);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ThreatTable>(h.npc)
+                .unwrap()
+                .is_empty()
+        );
+    }
+}
+
+#[test]
 fn a_target_that_moves_in_flight_is_hit_at_the_launch_time_delay() {
     let Some(mut h) = mage() else {
         return;

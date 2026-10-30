@@ -35,6 +35,12 @@ pub struct CannotReachTarget {
     target: u64,
     elapsed: Duration,
 }
+/// TC 15e0ed76 Creature::IsEvadingAttacks includes both home return and a blocked chase.
+pub(crate) fn is_evading_attacks(world: &World, entity: Entity) -> bool {
+    world.get::<CreatureState>(entity) == Some(&CreatureState::Returning)
+        || world.get::<CannotReachTarget>(entity).is_some()
+}
+
 /// Record a continuously blocked chase without restarting its native evade clock.
 pub fn mark_chase_blocked(world: &mut World, entity: Entity, target: u64) {
     if world

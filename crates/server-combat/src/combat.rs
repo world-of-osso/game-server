@@ -273,6 +273,8 @@ struct AttackRules<'w, 's> {
         ),
     >,
     health: Query<'w, 's, &'static Health>,
+    creature_state: Query<'w, 's, &'static crate::creature_ai::CreatureState>,
+    cannot_reach: Query<'w, 's, Has<crate::creature_ai::CannotReachTarget>>,
     arenas: Query<'w, 's, &'static crate::pvp::PlayerPvpState>,
     maps: Query<'w, 's, &'static crate::maps::InMap>,
     summon_owners: Query<'w, 's, &'static shared::components::UnitSummonedBy>,
@@ -345,7 +347,18 @@ impl AttackRules<'_, '_> {
             }
         };
         let detected = crate::auras::stealth::query_can_detect(&self.stealth, attacker, victim);
-        attacker != victim && !self.dead(victim) && !blocked_by_flags && permitted && detected
+        let returning = |unit| {
+            self.creature_state.get(unit).ok()
+                == Some(&crate::creature_ai::CreatureState::Returning)
+        };
+        let evading = returning(victim) || self.cannot_reach.get(victim).unwrap_or(false);
+        attacker != victim
+            && !returning(attacker)
+            && !evading
+            && !self.dead(victim)
+            && !blocked_by_flags
+            && permitted
+            && detected
     }
 }
 
@@ -694,6 +707,14 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     known_spells: Query<'w, 's, &'static crate::class_progression::KnownSpells>,
     active_specs: Query<'w, 's, &'static shared::components::ActiveSpec>,
     impact_gates: Query<'w, 's, &'static WhiteImpactGate>,
+    evade_state: Query<
+        'w,
+        's,
+        (
+            Option<&'static crate::creature_ai::CreatureState>,
+            Has<crate::creature_ai::CannotReachTarget>,
+        ),
+    >,
     scaling: Query<'w, 's, ScalingItem<'static>>,
     spirit_wolves: Query<'w, 's, &'static crate::spell_cast::guardian::SpiritWolf>,
     guardians: Query<
@@ -929,6 +950,15 @@ fn auto_attack_unit(
         .unwrap_or_default();
     let mut impact_gate = initial_gate;
     let target_entity = repeat.map_or(snapshot.auto_attack.victim, |(_, target)| target);
+    if params
+        .evade_state
+        .get(target_entity)
+        .is_ok_and(|(state, blocked)| {
+            state == Some(&crate::creature_ai::CreatureState::Returning) || blocked
+        })
+    {
+        return;
+    }
     let observer = params
         .invisibility
         .get(attacker_entity)

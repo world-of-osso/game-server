@@ -27,6 +27,7 @@ pub(super) fn update(
     follower: &Follower,
     party: &[Entity],
     enemy: Option<Entity>,
+    enemies: &[(Entity, Option<Entity>)],
 ) -> bool {
     #[cfg(any(test, feature = "test-support"))]
     if world
@@ -63,11 +64,10 @@ pub(super) fn update(
         _ => 5,
     });
     super::tank_defense::sort_major_entries(world, unit, &mut entries);
-    let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
-    let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
+    let candidates = super::utility_interrupt::ordered_casts(world, enemies);
     for &candidate in &candidates {
         if super::utility_interrupt::try_party(
             world,
@@ -80,7 +80,7 @@ pub(super) fn update(
             return true;
         }
         // Existing emergency heals precede damage kicks, not enemy danger.
-        if try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries) {
+        if try_emergency_heal(world, unit, follower, party, enemy, enemies, &entries) {
             return true;
         }
         if super::utility_interrupt::try_party(
@@ -95,7 +95,7 @@ pub(super) fn update(
         }
     }
     if candidates.is_empty()
-        && try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries)
+        && try_emergency_heal(world, unit, follower, party, enemy, enemies, &entries)
     {
         return true;
     }
@@ -115,11 +115,11 @@ pub(super) fn update(
         } else {
             enemy
         };
-        if try_entry(world, unit, follower, party, target, &enemies, entry) {
+        if try_entry(world, unit, follower, party, target, enemies, entry) {
             return true;
         }
     }
-    if super::utility::try_support(world, unit, follower, party, &enemies) {
+    if super::utility::try_support(world, unit, follower, party, enemies) {
         return true;
     }
     for entry in entries
@@ -134,7 +134,7 @@ pub(super) fn update(
         if policy_owned {
             continue;
         }
-        if try_entry(world, unit, follower, party, enemy, &enemies, entry) {
+        if try_entry(world, unit, follower, party, enemy, enemies, entry) {
             return true;
         }
     }

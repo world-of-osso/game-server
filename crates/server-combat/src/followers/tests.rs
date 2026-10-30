@@ -68,6 +68,96 @@ fn spawn_follower(h: &mut crate::spell_cast::test_harness::Harness, profile: Pro
 }
 
 #[test]
+#[ignore = "requires Windrunner navmesh"]
+fn wrong_floor_hostile_is_dropped_instead_of_pursued() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[133], 8).unwrap();
+    let mut fighter = profile(209059, GroupRole::Dps, 0, 0);
+    fighter.melee = true;
+    let follower = spawn_follower(&mut h, fighter);
+    let enemy = h.npc;
+    let map = crate::maps::InMap::continent(2805);
+    let upper = shared::components::Position {
+        x: 5329.6,
+        y: 101.115,
+        z: 3215.3,
+    };
+    let lower = shared::components::Position {
+        x: 5326.72,
+        y: 97.38,
+        z: 3218.82,
+    };
+    for actor in [h.caster, follower] {
+        h.app.world_mut().entity_mut(actor).insert((upper, map));
+    }
+    h.app.world_mut().entity_mut(enemy).insert((lower, map));
+    h.app.insert_resource(crate::navigation::Navigation::new(
+        &crate::test_data::world_db_path()
+            .parent()
+            .unwrap()
+            .join("ground/navmesh"),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(crate::networking::CombatTarget(Some(enemy)));
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, enemy);
+    assert!(crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        h.caster,
+        enemy
+    ));
+    for _ in 0..3 {
+        update_ai(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+    }
+    assert_ne!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(follower)
+            .and_then(|target| target.0),
+        Some(enemy)
+    );
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(shared::components::Position {
+            x: upper.x + 1.0,
+            ..upper
+        });
+    for _ in 0..3 {
+        update_ai(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+    }
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(follower)
+            .and_then(|target| target.0),
+        Some(enemy),
+        "a visible hostile in melee range remains selectable"
+    );
+    h.app.world_mut().entity_mut(enemy).insert(lower);
+    let mut ranged = h.app.world_mut().get_mut::<Follower>(follower).unwrap();
+    ranged.profile.melee = false;
+    ranged.profile.attack_spell = 133;
+    let before = h.health(enemy);
+    for _ in 0..90 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.health(enemy) < before,
+        "a ranged follower can shoot the visible wrong-floor hostile"
+    );
+}
+
+#[test]
 fn damage_follower_casts_real_fireball_and_stops_after_enemy_death() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[133], 8).unwrap();
     let follower = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 133, 0));

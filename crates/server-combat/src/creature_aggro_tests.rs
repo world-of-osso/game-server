@@ -1032,6 +1032,61 @@ fn leashed_creature_evades_and_its_attackers_stop_swinging() {
     assert_eq!(state(&app, spider), Some(CreatureState::Returning));
 }
 
+#[test]
+fn evading_creature_ignores_attacks_until_it_returns_home() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let player = spawn_player(&mut app, at(30.0, 0.0), 5);
+    *app.world_mut().get_mut::<Position>(spider).unwrap() = at(30.0, 0.0);
+    enter_evade_mode(app.world_mut(), spider);
+    let before = health(&app, spider);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    assert_eq!(health(&app, spider), before);
+    assert_eq!(state(&app, spider), Some(CreatureState::Returning));
+    assert!(!in_combat(&app, spider));
+    run(&mut app, 150);
+    assert_eq!(state(&app, spider), Some(CreatureState::Idle));
+    *app.world_mut().get_mut::<Position>(player).unwrap() = at(1.0, 0.0);
+    attack(&mut app, player, spider);
+    run(&mut app, 2);
+    assert!(
+        health(&app, spider) < before,
+        "attacks work again after home reset"
+    );
+}
+
+#[test]
+fn blocked_chase_creature_evades_melee_without_threat() {
+    let mut app = aggro_app();
+    let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let player = spawn_player(&mut app, at(1.0, 0.0), 5);
+    crate::creature_ai::mark_chase_blocked(app.world_mut(), spider, player.to_bits());
+    attack(&mut app, player, spider);
+    let before = health(&app, spider);
+    crate::combat::repeat_melee_swing(app.world_mut(), player, spider, crate::melee::Hand::Main);
+    assert_eq!(health(&app, spider), before);
+    assert!(app.world().get::<ThreatTable>(spider).unwrap().is_empty());
+    app.world_mut()
+        .entity_mut(spider)
+        .remove::<crate::creature_ai::CannotReachTarget>();
+    for _ in 0..20 {
+        crate::combat::repeat_melee_swing(
+            app.world_mut(),
+            player,
+            spider,
+            crate::melee::Hand::Main,
+        );
+        if health(&app, spider) < before {
+            break;
+        }
+    }
+    assert!(
+        health(&app, spider) < before,
+        "melee works after reachability is restored"
+    );
+}
+
 fn in_combat(app: &App, unit: Entity) -> bool {
     app.world()
         .get::<CombatStatus>(unit)

@@ -117,7 +117,8 @@ fn assert_native_party_buff(entry: u32, spell: u32) {
     let follower = h.app.world().get::<Follower>(unit).unwrap().clone();
     let results = aura_results(&h, spell);
     for _ in 0..120 {
-        super::kit_ai::update(h.app.world_mut(), unit, &follower, &party, None);
+        let enemies = super::ai::engaged_enemies(h.app.world_mut(), &follower, unit, &party);
+        super::kit_ai::update(h.app.world_mut(), unit, &follower, &party, None, &enemies);
         h.advance(1);
     }
     for recipient in party {

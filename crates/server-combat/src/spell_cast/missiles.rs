@@ -287,10 +287,27 @@ fn land_now(
             plan,
             alive_at_launch,
         } => {
+            // TC 15e0ed76 Spell::PreprocessSpellHit rechecks evade at impact.
+            let evading: Vec<_> = super::hit_units(&plan)
+                .into_iter()
+                .filter(|&unit| crate::creature_ai::is_evading_attacks(world, unit))
+                .collect();
+            for &unit in &evading {
+                super::log_event(
+                    world,
+                    super::cast_event(
+                        caster,
+                        Some(unit),
+                        spell,
+                        shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Evade),
+                    ),
+                );
+            }
             let reachable: Vec<Entity> = alive_at_launch
                 .iter()
                 .filter(|&&(unit, alive)| {
                     reachable(world, unit, alive)
+                        && !evading.contains(&unit)
                         && !super::sanctuary::blocks_hit(world, unit, spell, launched)
                 })
                 .map(|&(unit, _)| unit)
