@@ -87,7 +87,7 @@ fn talent_lightforged_blessing_visible_to_holy_and_protection_not_retribution() 
 }
 
 #[test]
-fn logged_trait_entries_resolve_and_use_strict_player_validation() {
+fn class_follower_logged_trait_entries_resolve_and_use_strict_player_validation() {
     use std::collections::BTreeMap;
 
     let tree = paladin_tree().unwrap();

@@ -169,7 +169,7 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
 }
 
 #[test]
-fn native_target_context_movement_event_is_explicitly_absent() {
+fn class_follower_target_context_movement_event_is_explicitly_absent() {
     let (h, targets, b) = enemies();
     let facts = NativeFacts::new(
         h.app.world(),

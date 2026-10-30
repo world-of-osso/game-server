@@ -224,7 +224,7 @@ fn arms_native_apl_patchwerk_add_facts_use_simc_absent_event_values() {
 }
 
 #[test]
-fn arms_native_apl_dungeon_has_no_scheduled_add_event() {
+fn class_follower_dungeon_has_no_scheduled_add_event() {
     let h = warrior();
     let binding = Bindings::default();
     let facts = NativeFacts::new(

@@ -89,7 +89,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn observed_damage_changes_live_apl_execute_selection() {
+    fn class_follower_observed_damage_changes_live_apl_execute_selection() {
         use crate::simc_apl::Program;
         use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
         use std::time::Duration;

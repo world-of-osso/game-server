@@ -115,7 +115,7 @@ fn native_movement_remains_divides_remaining_configured_distance_by_live_speed()
 }
 
 #[test]
-fn native_movement_predicates_keep_missing_and_dungeon_configuration_explicit() {
+fn class_follower_movement_predicates_keep_missing_configuration_explicit() {
     let (world, actor, _) = fixture();
     let bindings = Bindings::default();
     for operand in ["movement.remains", "movement.speed"] {
@@ -144,7 +144,7 @@ fn native_movement_predicates_keep_missing_and_dungeon_configuration_explicit() 
 }
 
 #[test]
-fn native_movement_distance_dungeon_does_not_borrow_fixture_configuration() {
+fn class_follower_movement_distance_does_not_borrow_fixture_configuration() {
     let (mut world, actor, _) = fixture();
     world.entity_mut(actor).insert(FixtureMovement {
         distance_to_move: 12.5,

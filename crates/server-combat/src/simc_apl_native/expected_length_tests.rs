@@ -45,7 +45,7 @@ fn native_expected_combat_length_invalid_fixture_duration_has_no_default() {
 }
 
 #[test]
-fn native_expected_combat_length_dungeon_uses_observed_target_lifetime() {
+fn class_follower_expected_combat_length_uses_observed_target_lifetime() {
     let (mut world, actor) = fixture_world();
     let target = world
         .spawn(shared::components::Health {

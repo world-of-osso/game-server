@@ -68,7 +68,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn program_lookback_bounds_successful_cast_history() {
+    fn class_follower_program_lookback_bounds_successful_cast_history() {
         let program = crate::simc_apl::Program::parse(&[
             ("default", "strike,if=prev_gcd.1.judgment"),
             ("default", "channel,interrupt_if=prev_gcd.3.strike"),

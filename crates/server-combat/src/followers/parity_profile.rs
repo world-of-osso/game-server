@@ -154,7 +154,7 @@ mod tests {
     use shared::item_data::ItemDefinitionSource;
 
     #[test]
-    fn profile_equips_real_item_and_modifiers() {
+    fn class_follower_profile_equips_real_item_and_modifiers() {
         let profile: Profile = serde_json::from_str(
             r#"{
             "spec_id": 70, "level": "80", "race": "human",
