@@ -37,6 +37,10 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 - [ ] Preserve pre-impact combat holds for valid native combat references, even before the first damage event. Unattackable-only references do not veto clear readiness.
 - [ ] Preserve actual damage/healing measurements, fatal-hit output and observed Death receipts while filtering clearable-opponent identity.
 
+## Completed encounter participants
+
+Skip a living objective when its sourced encounter is complete. Include uniquely resolved journal participants without granting them boss credit. Ambiguous participant mappings are not inferred.
+
 ## Boss-path corridor authoring
 
 `FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` (user,2026-10-21): freeze a deterministic route per map. Visit Azure bosses in Leymor→Azureblade→Telash→Umbrelskul order and use the qualified books for translocation hops. Preserve Stockade's qualified Moloch→Hogger→Overheat encounter order and completion equivalence.

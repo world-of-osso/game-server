@@ -223,6 +223,7 @@ fn extract(
         follower_boss_entries: bosses,
         follower_boss_sources: sources,
         follower_boss_bits: bits,
+        follower_encounter_actor_bits: BTreeMap::new(),
     };
     Ok((graph, route_bosses))
 }

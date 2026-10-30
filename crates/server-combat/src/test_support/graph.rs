@@ -70,6 +70,8 @@ pub struct Graph {
     pub follower_boss_sources: BTreeMap<u32, u32>,
     #[serde(default)]
     pub follower_boss_bits: BTreeMap<u32, u32>,
+    #[serde(default)]
+    pub follower_encounter_actor_bits: BTreeMap<u32, u32>,
 }
 
 #[path = "walk_route.rs"]
@@ -415,6 +417,7 @@ fn stacked_fixture() -> Space {
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),
         follower_boss_bits: BTreeMap::new(),
+        follower_encounter_actor_bits: BTreeMap::new(),
         transports: Vec::new(),
         teleports: vec![Edge {
             from: 1,
@@ -579,6 +582,7 @@ fn extract_stockade_graph() {
         follower_boss_entries: Vec::new(),
         follower_boss_sources: BTreeMap::new(),
         follower_boss_bits: BTreeMap::new(),
+        follower_encounter_actor_bits: BTreeMap::new(),
         transports: Vec::new(),
         // Topology extraction is followed by native radius capture and the generic route author.
         route: Vec::new(),
