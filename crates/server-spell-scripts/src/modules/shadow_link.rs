@@ -30,7 +30,8 @@ fn declared_reach(
 ) -> combat::spell_cast::script_registry::DeclaredReach {
     let selected = world
         .get::<combat::class_progression::KnownSpells>(caster)
-        .is_some_and(|known| known.contains(TALENT));
+        .is_some_and(|known| known.contains(TALENT))
+        || combat::auras::has_aura(world, caster, TALENT);
     let target_radius = if selected && SOURCES.contains(&spell.id) {
         // The recipient query has no distance bound; it visits all owned live VT.
         f32::INFINITY
