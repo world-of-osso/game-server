@@ -6,6 +6,7 @@ import math
 import sqlite3
 import sys
 from contextlib import closing
+from datetime import datetime
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -135,44 +136,109 @@ def affix_summons(db):
     ''')}
 
 
-def retire_affix_spawns(db, summons, maps, report):
+def affix_actors(db):
+    """Validate log-cited affix casters against native spell and affix names."""
+    records = json.loads(Path(__file__).with_name('keystone_affix_actors.json').read_text())
+    actors = {}
+    for record in records:
+        spell = db.execute('SELECT Name_lang FROM spell_name WHERE ID=?', (record['spell_id'],)).fetchone()
+        if spell != (record['spell_name'],):
+            raise ValueError(f"keystone actor spell source missing or changed: {record['spell_id']}")
+        names = {row[0] for row in db.execute(
+            'SELECT Name_lang FROM keystone_affix WHERE Name_lang LIKE ?', (record['spell_name'] + ': %',))}
+        if names != set(record['affix_names']):
+            raise ValueError(f"keystone affix family missing or changed: {record['spell_name']}")
+        actors[record['creature_id']] = record
+    return actors
+
+
+def retire_affix_spawns(db, summons, actors, maps, report):
     rows = db.execute('''SELECT p.guid,p.map,p.npc_id,p.source_key
         FROM log_derived_population AS p
         JOIN content_creature AS c ON c.guid=p.guid
         WHERE p.policy=? AND c.Comment=?''', (POLICY, POLICY)).fetchall()
     for guid, map_id, npc_id, source_key in rows:
-        if map_id not in maps or npc_id not in summons:
+        if map_id not in maps or (npc_id not in summons and npc_id not in actors):
             continue
         db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
         db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
-        report[map_id]['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON_RETIRED'})
+        reason = actors[npc_id]['policy'] if npc_id in actors else 'AFFIX_SUMMON_RETIRED'
+        report[map_id]['gaps'].append({'source_key': source_key, 'reason': reason})
 
 
-def retire_encounter_duplicates(db, radius=10.0):
-    """Delete log-derived rows within `radius` of another spawn of the same encounter creature.
+# User-approved Darkness precedent: its first sighting at ENCOUNTER_START +975 ms
+# is an at-rest observation (2026-10-29).
+BOSS_START_OBSERVATION_WINDOW_SECONDS = 1.0
+JOURNAL_PLACEHOLDER = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
+LOG_ARCHIVE = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/combatlogs/desktop-archive')
 
-    A later placement can move an encounter actor next to the observation the importer
-    already added for it; that observation then duplicates the actor.
-    """
-    rows = db.execute('''SELECT p.guid,p.map,p.npc_id,c.position_x,c.position_y,c.position_z
-        FROM log_derived_population AS p JOIN content_creature AS c ON c.guid=p.guid
-        WHERE EXISTS (SELECT 1 FROM raid_encounter_creature AS r
-                      WHERE r.map_id=p.map AND r.creature_entry=p.npc_id)
-        ORDER BY p.guid''').fetchall()
+
+def observation_start_delta(record, encounter_id, logs):
+    filename = record['source_file']
+    if Path(filename).name != filename:
+        raise ValueError(f'invalid source log name: {filename}')
+    run_start = record['source_run_start']
+    observed = record['observation_time']
+    active = False
+    start = None
+    with (logs / filename).open(encoding='utf-8', errors='replace') as source:
+        for line in source:
+            if line.startswith(run_start + '  '):
+                active = True
+            elif active and '  CHALLENGE_MODE_START,' in line:
+                break
+            if active and f'  ENCOUNTER_START,{encounter_id},' in line:
+                start = line.split('  ', 1)[0]
+                break
+    if start is None:
+        raise ValueError(f'encounter {encounter_id} start missing in {filename} run {run_start}')
+    def parse(value):
+        return datetime.strptime(value.rsplit('-', 1)[0], '%m/%d/%Y %H:%M:%S.%f')
+    return (parse(observed) - parse(start)).total_seconds()
+
+
+def retire_encounter_duplicates(db, logs=LOG_ARCHIVE, maps=None):
+    """Keep one sourced boss spawn per encounter entry and map."""
+    groups = db.execute('''SELECT c.map,c.id1,r.encounter_id
+        FROM content_creature c JOIN raid_encounter_creature r
+        ON r.map_id=c.map AND r.creature_entry=c.id1
+        GROUP BY c.map,c.id1,r.encounter_id HAVING COUNT(*)>1
+        ORDER BY c.map,c.id1''').fetchall()
     retired = []
-    for guid, map_id, npc_id, *position in rows:
-        spawns = db.execute('''SELECT position_x,position_y,position_z FROM content_creature
-            WHERE map=? AND id1=? AND guid NOT IN (SELECT guid FROM log_derived_population)
-            UNION ALL SELECT position_x,position_y,position_z FROM tdb_creature WHERE map=? AND id=?''',
-                            (map_id, npc_id, map_id, npc_id)).fetchall()
-        if any(math.dist(position, spawn) <= radius for spawn in spawns):
+    for map_id, entry, encounter_id in groups:
+        if maps is not None and map_id not in maps:
+            continue
+        rows = db.execute('''SELECT c.guid,c.Comment,p.observation_json FROM content_creature c
+            LEFT JOIN log_derived_population p ON p.guid=c.guid
+            WHERE c.map=? AND c.id1=? ORDER BY c.guid''', (map_id, entry)).fetchall()
+        authored = [row for row in rows if row[2] is None and JOURNAL_PLACEHOLDER not in (row[1] or '')]
+        tdb = db.execute('SELECT 1 FROM tdb_creature WHERE map=? AND id=?', (map_id, entry)).fetchone()
+        if tdb or authored:
+            if len(authored) != 1:
+                raise ValueError(f'cannot identify unique authored boss spawn: map {map_id} entry {entry}')
+            winner = authored[0][0]
+        else:
+            ranked = []
+            for guid, comment, observation in rows:
+                if observation is None:
+                    if JOURNAL_PLACEHOLDER not in (comment or ''):
+                        raise ValueError(f'unknown boss spawn provenance: {guid}')
+                    ranked.append((2, 0, guid))
+                else:
+                    delta = observation_start_delta(json.loads(observation), encounter_id, logs)
+                    ranked.append((1 if delta <= BOSS_START_OBSERVATION_WINDOW_SECONDS else 3,
+                                   delta, guid))
+            winner = min(ranked)[2]
+        for guid, _, _ in rows:
+            if guid == winner:
+                continue
             db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
             db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
-            retired.append((map_id, npc_id, guid))
+            retired.append((map_id, entry, guid))
     return retired
 
 
-def import_population(destination, records, radius=10.0):
+def import_population(destination, records, radius=10.0, logs=LOG_ARCHIVE):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
     with closing(sqlite3.connect(destination)) as db, db:
@@ -187,7 +253,9 @@ def import_population(destination, records, radius=10.0):
             entry INTEGER NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL, policy TEXT NOT NULL,
             PRIMARY KEY (table_name,row_key))''')
         summons = affix_summons(db)
-        retire_affix_spawns(db, summons, {int(record['map']) for record in records}, report)
+        actors = affix_actors(db)
+        bosses = set(db.execute('SELECT map_id,creature_entry FROM raid_encounter_creature'))
+        retire_affix_spawns(db, summons, actors, {int(record['map']) for record in records}, report)
         next_guid = db.execute('SELECT COALESCE(MAX(guid), 0) + 1 FROM content_creature').fetchone()[0]
         matched, existing_positions = match_existing(db, records, radius)
         for record in records:
@@ -196,8 +264,9 @@ def import_population(destination, records, radius=10.0):
             source_key = record['source_key']
             if not source_key or not record.get('z_method') or not record.get('observation_event') or not record.get('observation_time'):
                 raise ValueError(f'incomplete provenance for {source_key!r}')
-            if npc_id in summons:
-                result['gaps'].append({'source_key': source_key, 'reason': 'AFFIX_SUMMON'})
+            if npc_id in summons or npc_id in actors:
+                reason = actors[npc_id]['policy'] if npc_id in actors else 'AFFIX_SUMMON'
+                result['gaps'].append({'source_key': source_key, 'reason': reason})
                 continue
             existing = db.execute('SELECT guid FROM log_derived_population WHERE source_key=?', (source_key,)).fetchone()
             if existing:
@@ -208,10 +277,11 @@ def import_population(destination, records, radius=10.0):
                 result['gaps'].append({'source_key': source_key, 'reason': reason})
                 continue
             x, y, z, facing = values
-            if source_key in matched:
+            boss = (map_id, npc_id) in bosses
+            if not boss and source_key in matched:
                 result['already_present'] += 1
                 continue
-            if any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
+            if not boss and any(math.dist((x, y, z), position) <= 3.0 for position in existing_positions.get((map_id, npc_id), ())):
                 result['gaps'].append({'source_key': source_key, 'reason': 'AUTHORED_SPAWN_NEARBY_AMBIGUOUS'})
                 continue
             if not db.execute('SELECT 1 FROM content_creature_template WHERE entry=?', (npc_id,)).fetchone():
@@ -234,6 +304,7 @@ def import_population(destination, records, radius=10.0):
             result['imported'] += 1
             result['gaps'].append({'source_key': source_key, 'reason': 'PATROL_UNOBSERVED'})
             next_guid += 1
+        retire_encounter_duplicates(db, logs, maps={int(record['map']) for record in records})
     for value in report.values():
         value['templates_from_tdb'] = sorted(value['templates_from_tdb'])
         value['templates_absent'] = sorted(value['templates_absent'])

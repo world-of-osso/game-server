@@ -44,6 +44,7 @@ from contextlib import closing
 from pathlib import Path
 
 import derived_merchants
+import import_spellclicks
 import zephras_content
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -450,6 +451,7 @@ def apply_policy(
     import import_instance_population
 
     import_instance_population.apply_population(conn, report)
+    import_spellclicks.import_spellclicks(conn)
 
 
 def main():

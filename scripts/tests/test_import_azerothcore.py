@@ -330,6 +330,16 @@ class CreatureEventImportTests(unittest.TestCase):
         self.tdb.mkdir(parents=True)
         for name in tdb_tables():
             (self.tdb / f"{name}.sql").write_text("-- empty fixture\n")
+        (self.tdb / "TDB_full_world_1210.26091_2026_09_09.sql").write_text('''
+CREATE TABLE `npc_spellclick_spells` (
+  `npc_entry` int unsigned NOT NULL,
+  `spell_id` int unsigned NOT NULL,
+  `cast_flags` tinyint unsigned NOT NULL,
+  `user_type` smallint unsigned NOT NULL,
+  PRIMARY KEY (`npc_entry`,`spell_id`)
+) ENGINE=InnoDB;
+INSERT INTO `npc_spellclick_spells` VALUES (244941,1239001,1,0),(245716,1239300,1,0);
+''')
 
     def run_import(self, crafting_source=None):
         env = {**os.environ, "DB2_CSV_ROOT": str(self.csv), "TDB_DIR": str(self.tdb)}
@@ -348,6 +358,15 @@ class CreatureEventImportTests(unittest.TestCase):
         except subprocess.TimeoutExpired as error:
             self.fail(
                 f"Importer timed out: stdout={error.stdout!r}; stderr={error.stderr!r}"
+            )
+
+    def test_full_rebuild_imports_tdb_spellclick_rows(self):
+        result = self.run_import()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with closing(sqlite3.connect(self.db)) as db:
+            self.assertEqual(
+                db.execute("SELECT * FROM content_npc_spellclick_spells ORDER BY npc_entry").fetchall(),
+                [(244941, 1239001, 1, 0), (245716, 1239300, 1, 0)],
             )
 
     def test_zephras_overlay_survives_two_full_rebuilds(self):
@@ -1842,6 +1861,9 @@ class AzerothCoreContentTests(unittest.TestCase):
             + [f"{name}={AZEROTHCORE_SQL / (name + '.sql')}" for name in cls.TABLES],
             [sys.executable, str(SCRIPTS / "mysql_dump.py"), "--db", str(cls.db), "--schema", str(SCRIPTS / "tdb_schema.sql"),
              "--prefix", "tdb_"] + [f"{name}={TDB_DIR / (name + '.sql')}" for name in tdb_tables()],
+            [sys.executable, str(SCRIPTS / "import-battlegrounds.py"), "--dump",
+             str(TDB_DIR / "TDB_full_world_1210.26091_2026_09_09.sql"), "--db", str(cls.db),
+             "--table", "npc_spellclick_spells"],
             [sys.executable, str(SCRIPTS / "db2.py"), "import", "--source-dir", str(FOREVER_SOURCE), "--csv-root", str(PINNED_CSV_ROOT), "--db", str(cls.db)],
             [sys.executable, str(SCRIPTS / "crafting_data.py"), "--db", str(cls.db),
              "--source-dir", str(CRAFTING_SOURCE)],

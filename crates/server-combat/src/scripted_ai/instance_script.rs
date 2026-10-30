@@ -420,10 +420,12 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         }
         EncounterState::NotStarted | EncounterState::Fail => {}
     }
+    super::encounter_doors::update_doors(world, map);
     super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
     super::hellfire_ramparts::on_boss_state_changed(world, map, encounter_id, state);
     super::darkness::on_boss_state_changed(world, map, encounter_id, state);
     super::door_data::update_doors(world, map);
+    super::uldaman::on_boss_state_changed(world, map, encounter_id, state);
     true
 }
 

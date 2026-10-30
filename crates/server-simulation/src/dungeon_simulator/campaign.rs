@@ -50,6 +50,9 @@ pub(super) struct Report {
     pub status: String,
     pub failed_pack: Option<u32>,
     pub bosses_killed: Vec<u32>,
+    pub encounters_killed: usize,
+    pub encounters_total: usize,
+    pub deaths: usize,
     pub simulated_seconds: f64,
     pub wall_seconds: f64,
     pub detail: String,
@@ -965,6 +968,35 @@ fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
 }
 
 #[test]
+fn generated_multi_actor_encounter_counts_native_completion_once() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    run.graph.map_id = 2451;
+    run.graph.follower_boss_entries = vec![184580, 184581, 184582, 184018];
+    run.graph.follower_boss_bits = [(184580, 0), (184581, 0), (184582, 0), (184018, 1)].into();
+    assert!(!run.finished());
+    assert_eq!(run.report.encounters_total, 2);
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.party.owner)
+        .unwrap();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(copy, &[], 1, Some(0), 0);
+    assert!(!run.finished());
+    assert_eq!(run.report.encounters_killed, 1);
+    assert_eq!(run.report.bosses_killed, [184580, 184581, 184582]);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .update_instance_lock(copy, &[], 3, Some(1), 0);
+    assert!(run.finished());
+    assert_eq!(run.report.encounters_killed, 2);
+    assert_eq!(run.report.status, "cleared");
+}
+
+#[test]
 fn absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold() {
     let _rng_scope = crate::random::seed_scope(2);
     let mut run = spawn_isolated_moloch(2);
@@ -1475,13 +1507,21 @@ fn run_prepared(
     run.report.performance["tank_movement_admission"] = serde_json::json!(
         crate::followers::simulator::inspect_tank_movement(run.app.world_mut(), run.party.tank)
     );
-    run.report.performance["combat_events"] = serde_json::to_value(
-        &run.app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0,
-    )
-    .map_err(|error| format!("serialize native combat trace: {error}"))?;
+    let members: std::collections::BTreeSet<_> = run.members().map(Entity::to_bits).collect();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    run.report.deaths = events
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target.is_some_and(|target| members.contains(&target))
+        })
+        .count();
+    run.report.performance["combat_events"] = serde_json::to_value(events)
+        .map_err(|error| format!("serialize native combat trace: {error}"))?;
     run.report.terminal_units = run.inspect_units();
     run.report.simulated_seconds = run.now();
     run.report.wall_seconds = started.elapsed().as_secs_f64();
@@ -1512,6 +1552,9 @@ fn aborted_initialization(seed: u64, started: std::time::Instant, reason: String
         status: "aborted".into(),
         failed_pack: None,
         bosses_killed: Vec::new(),
+        encounters_killed: 0,
+        encounters_total: 0,
+        deaths: 0,
         simulated_seconds: 0.0,
         wall_seconds: started.elapsed().as_secs_f64(),
         detail: format!("gameplay initialization aborted: {reason}"),
@@ -1568,6 +1611,9 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             status: "running".into(),
             failed_pack: None,
             bosses_killed: Vec::new(),
+            encounters_killed: 0,
+            encounters_total: 0,
+            deaths: 0,
             simulated_seconds: 0.0,
             wall_seconds: 0.0,
             detail: String::new(),
@@ -1720,6 +1766,16 @@ impl Run {
             .iter()
             .copied()
             .filter(|entry| {
+                if let Some(bit) = self.graph.follower_boss_bits.get(entry) {
+                    let Some(copy) = world.get::<crate::maps::InMap>(self.party.owner) else {
+                        return false;
+                    };
+                    return world
+                        .resource::<crate::maps::InstanceManager>()
+                        .completed_encounters(*copy)
+                        & (1 << bit)
+                        != 0;
+                }
                 self.graph
                     .packs
                     .iter()
@@ -1737,12 +1793,36 @@ impl Run {
                     })
             })
             .collect();
-        if self.report.bosses_killed.len() == self.graph.boss_entries().len() {
+        if self.graph.follower_boss_bits.is_empty() {
+            self.report.encounters_killed = self.report.bosses_killed.len();
+            self.report.encounters_total = self.graph.boss_entries().len();
+        } else {
+            let all: std::collections::BTreeSet<_> =
+                self.graph.follower_boss_bits.values().collect();
+            let killed: std::collections::BTreeSet<_> = self
+                .report
+                .bosses_killed
+                .iter()
+                .filter_map(|entry| self.graph.follower_boss_bits.get(entry))
+                .collect();
+            self.report.encounters_killed = killed.len();
+            self.report.encounters_total = all.len();
+        }
+        if self.report.encounters_total > 0
+            && self.report.encounters_killed == self.report.encounters_total
+        {
             self.report.status = "cleared".into();
-            self.report.detail = format!(
-                "all{} source boss actors died",
-                self.graph.boss_entries().len()
-            );
+            self.report.detail = if self.graph.follower_boss_bits.is_empty() {
+                format!(
+                    "all{} source boss actors died",
+                    self.graph.boss_entries().len()
+                )
+            } else {
+                format!(
+                    "all{} source encounters completed",
+                    self.report.encounters_total
+                )
+            };
             return true;
         }
         if self

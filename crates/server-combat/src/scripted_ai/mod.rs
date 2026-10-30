@@ -34,6 +34,7 @@ pub(crate) mod darkness;
 pub(crate) mod door_data;
 mod doragosa;
 mod emberon;
+pub(crate) mod encounter_doors;
 pub mod event_map;
 mod gorek;
 mod granyth;
@@ -70,6 +71,7 @@ mod talondras;
 pub mod the_stockade;
 mod treemouth;
 pub(crate) mod tww_rookery;
+mod uldaman;
 mod umbrelskul;
 mod vexamus;
 mod voidscar_portal;
@@ -150,6 +152,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
+            .add_systems(FixedPostUpdate, uldaman::update_door)
             .add_systems(
                 FixedPreUpdate,
                 (

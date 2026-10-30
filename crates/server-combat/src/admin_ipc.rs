@@ -100,6 +100,14 @@ struct AdminQueries<'w, 's> {
         With<MessageSender<LoginResponse>>,
     >,
     roster_senders: Query<'w, 's, &'static mut MessageSender<CharacterListUpdate>>,
+    achievements: Query<
+        'w,
+        's,
+        (
+            &'static shared::components::Player,
+            &'static crate::achievement::PlayerAchievementState,
+        ),
+    >,
 }
 
 /// Poll IPC commands each frame and dispatch them.
@@ -599,6 +607,24 @@ fn dispatch(
             handle_list_characters(db, username.as_deref())
         }
         AdminRequest::FindCharacter { name } => handle_find_character(db, &name),
+        AdminRequest::ListAchievements { character_name } => {
+            match queries
+                .achievements
+                .iter()
+                .find(|(player, _)| player.name.eq_ignore_ascii_case(&character_name))
+            {
+                Some((player, state)) => AdminResponse::AchievementsListed {
+                    character_name: player.name.clone(),
+                    character: serde_json::to_value(state).expect("serialize achievement state"),
+                    account: state.account.as_ref().map(|account| {
+                        serde_json::to_value(account).expect("serialize account achievements")
+                    }),
+                },
+                None => AdminResponse::Error(
+                    "Character not online or achievement state not loaded".into(),
+                ),
+            }
+        }
         AdminRequest::MoveCharacters {
             from_username,
             to_username,

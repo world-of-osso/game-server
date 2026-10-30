@@ -183,6 +183,26 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     if !reused {
         load_gameplay_data(&mut app);
     }
+    let has_accessory_boss = app
+        .world()
+        .resource::<super::Space>()
+        .0
+        .follower_boss_sources
+        .iter()
+        .any(|(boss, source)| boss != source);
+    if has_accessory_boss {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .expect("open vehicle accessory catalog");
+        server::test_support::install_vehicle_accessories(
+            &mut app,
+            &super::graph::extraction::asset_root(),
+            &db,
+        )
+        .expect("install native simulator vehicle accessories");
+    }
     app
 }
 

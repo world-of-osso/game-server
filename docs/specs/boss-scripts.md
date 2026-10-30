@@ -23,6 +23,7 @@
 - TC a352b1fa `LoadDoorData`/`UpdateDoorState` (`OpenWhenDone`): a listed door is READY (closed, collision on) until its encounter is DONE, then ACTIVE. Applied at copy fill (saved DONE included) and on every boss state change.
 - GO_CATACOMBS_GATE 430177 follows The Candle King (2787), per TC `instance_darkflame_cleft.cpp` doorData.
 - `WAXBEARD_GATE_UNLOCK_LOG_CORRELATED`: 11DU_CATACOMBS_GATE01 420154 (TDB state 1, no TC door data) follows Ol' Waxbeard (2829). WCL WBYDm1N6JTZzCFnd fight 3 has no player position past WoW y=-11.4 before the kill and pull 5 at y=-123 beyond the gate. The exact retail trigger is unsourced.
+- `BLAZIKON_DOOR_UNLOCK_LOG_CORRELATED`: 11DU_Foundry_Door01_Large 430175 (TDB state 1, no TC door data) follows Blazikon (2826). WCL WBYDm1N6JTZzCFnd fight 3 pulls 5-8 (through the kill) have no player west of WoW x=371.5; pull 9 reaches x=224 beyond the door at x=336.8. The exact retail trigger is unsourced.
 
 ## TWW The Darkness logged actor and 55% end
 
@@ -81,6 +82,10 @@
 - `ANUBZEKT_IMPALE_DUMMY_CHILD_UNSOURCED`, `ANUBZEKT_BURROW_SELECTOR_MOVEMENT_CHILD_UNSOURCED`, `ANUBZEKT_EYE_CENTER_AREA_PHASE_EXIT_UNSOURCED` and `ANUBZEKT_WEBMAGE_CONTROLLER_UNSOURCED` retain missing dummy forwarding, charge destinations, center movement, Eye area/aura434408 ingress/exit and add controller. Never manufacture those actions or infer25s phase exit from the warning duration. Lua outgoing countdown updates are a declared partial, not certification of the absent controller or whole fight.
 - Ignored native RED must be pushed/executed before combat implementation. Require native Normal/Follower ongoing request/effect/reset/rearm/copy-credit/corpse proof and producer preservation/idempotence/conflict tests before gate packet. Final integration/publication remains lead-owned.
 
+## Uldaman Prehistoria door
+
+`ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
@@ -109,8 +114,8 @@
 ## Lost Dwarves Lua surrender policy
 
 - Current LittleWigs2777a9d `TheLostDwarves.lua` authenticates map2451/2555 and Baelog184581, Eric184582, Olaf184580. Outgoing requests use native70448 and current listed repeat durations in source order. `LOST_DWARVES_TIMELINE_PHASE_CONTEXT` retains unavailable per-phase counts/boat/energy context; no old alternate schedule.
-- Explicit parent policy `LOST_DWARVES_SURRENDER_AT_10PCT_LUA`: each actor reaching10% stops clocks and exits combat through native evade/stop. Precommit incoming loss is capped at floor(10% max health), preventing lethal crossing; all three remain alive. Suppress re-engagement by dropping the surrendered actor's threat list, not by inventing faction/flags. Only all three surrendered actors in the same copy mark2555 Done/bit0 credit; never credit a single death. A partial wipe resets surrender progress but restores threat only after actual native home/regen crosses10%, preventing immediate re-surrender; never fabricate healing or reset delays.
-- Real source stats/models/difficulties/population stay unchanged. `encounter_summons.py --encounter lost-dwarves` only installs all three authenticated bindings and explicitly local Lua script. `LOST_DWARVES_FRIENDLY_FACTION_GAP`, `LOST_DWARVES_BOAT_SCRIPT_GAP`, `LOST_DWARVES_SURRENDER_VISUAL_GAP` and `LOST_DWARVES_SKULLCRACKER_DEST_SELECTOR_GAP` remain explicit; no guessed faction, boat actors or targeted jump destinations. Native implicit ground target138 remains the caster-ground default.
+- Explicit parent policy `LOST_DWARVES_SURRENDER_AT_10PCT_LUA`: each actor reaching10% stops clocks and exits combat through native evade/stop. Precommit incoming loss is capped at floor(10% max health), preventing lethal crossing; all three remain alive. `LOST_DWARVES_FRIENDLY_FACTION_INFERRED`: at surrender use faction35, inferred from LittleWigs `VerifyEnable` (friendly and `UnitCanAttack`) and same-name/display TDB templates191912–191914; the exact Retail transition is not logged. Restore each actor's original faction on reset. Drop its threat list and use general faction attackability, not invented unit flags. Only all three surrendered actors in the same copy mark2555 Done/bit0 credit; never credit a single death. A partial wipe resets surrender progress but restores threat only after actual native home/regen crosses10%, preventing immediate re-surrender; never fabricate healing or reset delays.
+- Real source stats/models/difficulties/population stay unchanged. `encounter_summons.py --encounter lost-dwarves` only installs all three authenticated bindings and explicitly local Lua script. `LOST_DWARVES_BOAT_SCRIPT_GAP`, `LOST_DWARVES_SURRENDER_VISUAL_GAP` and `LOST_DWARVES_SKULLCRACKER_DEST_SELECTOR_GAP` remain explicit; no guessed faction, boat actors or targeted jump destinations. Native implicit ground target138 remains the caster-ground default.
 
 ## Gulping Goliath current Lua partial
 

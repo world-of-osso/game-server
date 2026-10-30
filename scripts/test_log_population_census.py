@@ -2,6 +2,8 @@ import importlib.util
 import io
 import json
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -101,6 +103,53 @@ class CensusTest(unittest.TestCase):
         summary = module.summarize_encounters(runs)[0]
         self.assertEqual(summary['spells'][0]['first_cast_seconds'], [1.5])
         self.assertEqual(summary['spells'][0]['interval_range_seconds'], [5.0, 5.0])
+
+    def test_position_outputs_require_boss_identity_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / 'combat.txt'
+            log.write_text('')
+            result = subprocess.run([sys.executable, str(Path(__file__).with_name('log_population_census.py')),
+                '--map', '2813', '--output', str(root/'census.json'), '--clusters', str(root/'clusters.json'), str(log)],
+                capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('population position outputs require --world-db', result.stderr)
+            self.assertFalse((root/'clusters.json').exists())
+
+    def test_boss_population_uses_last_position_before_its_encounter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'combat.txt'
+            boss = 'Creature-0-1-2813-42-237415-ABCD'
+            missing = 'Creature-0-1-2813-42-234647-DCBA'
+            def cast(guid, stamp, x, y):
+                block = f'{guid},0,100,100,0,0,0,0,0,0,0,0,0,0,{x},{y},2434,5.2962,92'
+                return f'{stamp}  SPELL_CAST_SUCCESS,{guid},"Boss",0xa48,0,0000000000000000,nil,0,0,1,"Spell",1,{block}\n'
+            path.write_text(
+                '10/7/2026 22:39:36.441-5  CHALLENGE_MODE_START,"Murder Row",2813,1,8,[]\n'
+                + cast(boss, '10/7/2026 22:53:01.147-5', 8873.37, -4848.47)
+                + cast(boss, '10/7/2026 22:53:36.202-5', 8631.47, -5037.34)
+                + cast(boss, '10/7/2026 23:06:53.269-5', 9151.12, -4944.43)
+                + '10/7/2026 23:07:05.037-5  ENCOUNTER_START,3105,"Lithiel",8,5,2813\n'
+                + cast(boss, '10/7/2026 23:07:06.000-5', 9160, -4950)
+                + '10/7/2026 23:08:00.000-5  ENCOUNTER_END,3105,"Lithiel",8,5,1,55000\n'
+                + '10/7/2026 23:09:00.000-5  ENCOUNTER_START,3103,"Xathuux",8,5,2813\n'
+                + cast(missing, '10/7/2026 23:09:01.000-5', 8628.92, -5039)
+            )
+            db = Path(directory) / 'world.db'
+            with sqlite3.connect(db) as conn:
+                conn.execute('CREATE TABLE raid_encounter_creature (map_id, encounter_id, creature_entry)')
+                conn.executemany('INSERT INTO raid_encounter_creature VALUES (?,?,?)', [(2813, 3105, 237415), (2813, 3103, 234647)])
+            runs = census([path], {2813}, bosses=module.load_bosses(db))
+            module.annotate_bosses(runs, db)
+            unit = runs[0]['creatures'][boss]
+            self.assertEqual((unit['first_position']['x'], unit['first_position']['y'], unit['first_position']['facing']), (9151.12, -4944.43, 5.2962))
+            self.assertEqual(unit['position_method'], 'last_pre_encounter_start')
+            self.assertEqual(runs[0]['creatures'][missing]['position_gap'], 'BOSS_PRE_PULL_POSITION_UNOBSERVED')
+            self.assertNotIn('first_position', runs[0]['creatures'][missing])
+            requests = module.floor_requests(runs)
+            self.assertEqual([(row['guid'], row['x'], row['y']) for row in requests], [(boss, 9151.12, -4944.43)])
+            clusters = module.cluster_population(runs)
+            self.assertEqual(clusters[0]['observations'][0]['position_method'], 'last_pre_encounter_start')
 
     def test_addon_timers_are_matched_by_challenge_and_npc(self):
         with tempfile.TemporaryDirectory() as directory:

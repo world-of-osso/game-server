@@ -5,7 +5,7 @@ use super::combat;
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellStore;
-use combat::stats::CharacterStats;
+use combat::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeOnCast(on_cast),
@@ -32,7 +32,11 @@ fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
     let stats = world
         .get::<CharacterStats>(caster)
         .expect("Matted Fur caster stats");
-    let attack_power = stats.attack_power;
+    // SimC76f8118 sc_druid.cpp2998–3001 uses total attack power, including the weapon.
+    let attack_power = stats.total_attack_power(
+        WeaponAttackType::MainHand,
+        world.get::<StatModifiers>(caster),
+    );
     let versatility = 1.0 + stats.versatility_pct / 100.0;
     let store = world.resource::<SpellStore>();
     let coefficient = spell_cast::scripts::script_effect_value(world, caster, TALENT, 0) / 100.0;

@@ -19,6 +19,7 @@ fn actors(h: &mut Harness, map: InMap, entry: u32) -> Vec<Entity> {
 
 const WAXBEARD_GATE: u32 = 420154;
 const CATACOMBS_GATE: u32 = 430177;
+const BLAZIKON_DOOR: u32 = 430175;
 
 /// Replicated collision of the copy's one `entry` door.
 fn door_blocks(h: &mut Harness, map: InMap, entry: u32) -> bool {
@@ -125,9 +126,80 @@ fn waxbeard_gate_opens_when_the_encounter_is_done() {
 }
 
 #[test]
+fn blazikon_door_opens_when_its_encounter_is_done() {
+    let (mut h, _, map) =
+        encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::NotStarted, true);
+    h.advance(0.1);
+    assert!(
+        door_blocks(&mut h, map, BLAZIKON_DOOR),
+        "closed before Blazikon"
+    );
+    let world = h.app.world_mut();
+    let blazikon = instance_script::boss_id_for_encounter(world, map, 2826).unwrap();
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        blazikon,
+        EncounterState::Done
+    ));
+    assert!(
+        !door_blocks(&mut h, map, BLAZIKON_DOOR),
+        "open after 2826 DONE"
+    );
+    assert!(door_blocks(&mut h, map, CATACOMBS_GATE));
+}
+
+#[test]
 fn waxbeard_gate_fills_open_in_a_copy_saved_past_waxbeard() {
     let (mut h, _, map) = encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::Done, true);
     h.advance(0.1);
     assert!(!door_blocks(&mut h, map, WAXBEARD_GATE));
     assert!(door_blocks(&mut h, map, CATACOMBS_GATE));
+}
+
+/// HEALTH_SCALING_EXPANSION_FROM_CONTENT_TUNING: Royal Wicklighter 210812 takes
+/// ContentTuning 2718's ExpansionID 10 (max level 80) for TC GetAttackDistance. A
+/// level-80 player is a candidate inside 15 - reach + both reaches = 16.5yd; TDB's
+/// placeholder 0 (max level 30) clamped it to 6.5yd, below the owner route's 6.52yd pass.
+#[test]
+fn royal_wicklighter_aggro_radius_uses_its_content_tuning_expansion() {
+    const WICKLIGHTER: u32 = 210812;
+    let (mut h, _, map) =
+        encounter_fixture(RIDER, MAP, BIT, 205, None, EncounterState::NotStarted, true);
+    let [wicklighter] = actors(&mut h, map, WICKLIGHTER)
+        .into_iter()
+        .filter(|&actor| position(&h, actor).distance(Vec3::new(355.39, 86.62, -26.3)) < 1.0)
+        .collect::<Vec<_>>()[..]
+    else {
+        panic!("one Royal Wicklighter at the trackyard watcher spawn");
+    };
+    let player = h.player();
+    let at = position(&h, wicklighter);
+    let place = |h: &mut Harness, distance: f32| {
+        let world = h.app.world_mut();
+        world.entity_mut(player).insert((
+            map,
+            UnitLevel(80),
+            shared::components::Level(80),
+            Position {
+                x: at.x + distance,
+                y: at.y,
+                z: at.z,
+            },
+        ));
+    };
+    place(&mut h, 16.6);
+    // The player's grid wakes the dormant watcher.
+    h.advance(0.1);
+    let candidate = |h: &mut Harness, distance: f32| {
+        place(h, distance);
+        crate::creature_aggro::read_player_proximity_candidate(
+            h.app.world_mut(),
+            wicklighter,
+            player,
+        )
+    };
+    assert!(!candidate(&mut h, 16.6), "outside 16.5yd");
+    assert!(candidate(&mut h, 16.4), "inside 16.5yd");
+    assert!(candidate(&mut h, 6.52), "the owner route's pass distance");
 }

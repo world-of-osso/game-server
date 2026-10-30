@@ -25,6 +25,7 @@ DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
 # playercreateinfo_action/_item for the new-character kit.
 # pool_template/pool_members/game_event_pool: PoolMgr spawn pools of the Retail spawns (content_pool_*).
 TDB_DIR="${TDB_DIR:-$PROJECT_DIR/data/reference/tdb1210}"
+TDB_FULL_DUMP="${TDB_FULL_DUMP:-$TDB_DIR/TDB_full_world_1210.26091_2026_09_09.sql}"
 # Seven hash/layout/count-pinned Midnight crafting reference files.
 CRAFTING_SOURCE_DIR="${CRAFTING_SOURCE_DIR:-$PROJECT_DIR/data/reference/crafting/12.1.0.69933}"
 
@@ -84,6 +85,11 @@ for table in spell_area guild_rewards guild_rewards_req_achievements; do
     fi
 done
 
+if [[ ! -f "$TDB_FULL_DUMP" ]]; then
+    echo "ERROR: Missing pinned TDB full dump: $TDB_FULL_DUMP" >&2
+    exit 1
+fi
+
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 python3 "$SCRIPT_DIR/crafting_data.py" --check --source-dir "$CRAFTING_SOURCE_DIR"
 python3 "$SCRIPT_DIR/content_policy.py" --source-dir "$FOREVER_DB2_SOURCE" --check --csv-root "$DB2_CSV_ROOT"
@@ -106,6 +112,7 @@ python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/tdb_sc
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/spell_area_schema.sql" --prefix tdb_ "spell_area=$TDB_DIR/spell_area.sql"
 python3 "$SCRIPT_DIR/mysql_dump.py" --db "$DB_PATH" --schema "$SCRIPT_DIR/guild_rewards_schema.sql" --prefix tdb_ \
     "guild_rewards=$TDB_DIR/guild_rewards.sql" "guild_rewards_req_achievements=$TDB_DIR/guild_rewards_req_achievements.sql"
+python3 "$SCRIPT_DIR/import-battlegrounds.py" --dump "$TDB_FULL_DUMP" --db "$DB_PATH" --table npc_spellclick_spells
 python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---

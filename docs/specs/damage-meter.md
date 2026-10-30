@@ -16,6 +16,7 @@ Retail's UI reads only aggregated sessions (`C_DamageMeter.GetCombatSessionFromT
 - [x] Sources rank by damage (ties by name), spells by damage; `total_amount` is the session sum; `is_local_player` marks the recipient.
 - [x] The owner gets `DamageMeterSnapshot { current, overall }` on `CombatChannel` when a session starts or ends, and at most every 1 s while one runs or has new damage; nothing while idle.
 - Hunter pet actions redirect to their owner. Guardians, damage taken totals and other `DamageMeterType`s remain outside this change.
+- [ ] `FOLLOWER_DAMAGE_METER_EXCLUDED`: follower NPC damage is omitted because sources must be players. Retail includes follower NPCs in the group meter.
 - [ ] Only the current and overall sessions are kept; Retail lists past sessions (`GetAvailableCombatSessions`) and can reset them (`ResetAllCombatSessions`).
 - [ ] A session against a training dummy includes the 5 s after the last hit before the dummy's combat ends (as in TC). Combat starts when a harmful spell launches (Spell.cpp:8538-8541), and a missile lands after its flight, so a one-shot kill lasts the flight (0.57 s for Frostbolt at 20 yd).
 - [ ] Retail's session boundaries for a group (who must be in combat, whether a far-away member's combat counts) are not documented in the files; here any online member in combat keeps the session running.

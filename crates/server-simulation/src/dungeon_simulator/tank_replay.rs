@@ -772,6 +772,7 @@ fn replay_registered_run_with_healing(
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
+    let mut outgoing_damage_hits_by_spell = BTreeMap::<u32, u64>::new();
     let mut energize_by_spell = BTreeMap::<u32, (i64, i64)>::new();
     let mut energize_timeline = Vec::new();
     let mut cast_timeline = Vec::new();
@@ -1107,9 +1108,10 @@ fn replay_registered_run_with_healing(
                                 .is_some_and(|summon| summon.owner == tank)
                     })
             {
-                *outgoing_damage_by_spell
-                    .entry(event.spell_id.unwrap_or(0))
-                    .or_default() += i64::from((event.amount - event.overflow.max(0)).max(0));
+                let spell_id = event.spell_id.unwrap_or(0);
+                *outgoing_damage_by_spell.entry(spell_id).or_default() +=
+                    i64::from((event.amount - event.overflow.max(0)).max(0));
+                *outgoing_damage_hits_by_spell.entry(spell_id).or_default() += 1;
             }
             if event.source == Some(tank.to_bits())
                 && event.kind == CombatLogKind::Damage
@@ -1294,6 +1296,7 @@ fn replay_registered_run_with_healing(
     report["cast_timeline"] = json!(cast_timeline);
     report["precombat_casts"] = json!(precombat_casts);
     report["outgoing_damage_by_spell"] = json!(outgoing_damage_by_spell);
+    report["outgoing_damage_hits_by_spell"] = json!(outgoing_damage_hits_by_spell);
     report["resource_spent_by_spell"] = json!(resource_spent_by_spell);
     report["melee_rage"] = json!(
         capture

@@ -17,6 +17,10 @@ pub(super) fn print_response(response: &AdminResponse) {
 
 fn print_listing_response(response: &AdminResponse) -> bool {
     match response {
+        AdminResponse::AchievementsListed { .. } => println!(
+            "{}",
+            serde_json::to_string_pretty(response).expect("serialize achievement readback")
+        ),
         AdminResponse::Pong => println!("pong"),
         AdminResponse::AccountsListed { accounts } => print_accounts(accounts),
         AdminResponse::CharactersListed { characters } => print_characters(characters),

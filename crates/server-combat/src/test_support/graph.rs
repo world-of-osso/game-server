@@ -47,6 +47,14 @@ pub struct Graph {
     pub teleports: Vec<Edge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
+    #[serde(default)]
+    pub follower_difficulty: u32,
+    #[serde(default)]
+    pub follower_boss_entries: Vec<u32>,
+    #[serde(default)]
+    pub follower_boss_sources: BTreeMap<u32, u32>,
+    #[serde(default)]
+    pub follower_boss_bits: BTreeMap<u32, u32>,
 }
 
 #[path = "walk_route.rs"]
@@ -160,20 +168,23 @@ impl Graph {
         match self.map_id {
             34 => 1,
             2515 => 205,
-            other => panic!("unsupported simulator map{other}"),
+            _ => self.follower_difficulty,
         }
     }
 
-    pub fn boss_entries(&self) -> &'static [u32] {
+    pub fn boss_entries(&self) -> &[u32] {
         match self.map_id {
             34 => &[46383, 46264, 46254],
             2515 => &[186644, 186739, 186737, 186738],
-            other => panic!("unsupported simulator map{other}"),
+            _ => &self.follower_boss_entries,
         }
     }
 }
 
 pub fn graph_path() -> PathBuf {
+    if let Some(path) = std::env::var_os("DUNGEON_SIMULATOR_GRAPH") {
+        return PathBuf::from(path);
+    }
     let map = std::env::var_os("DUNGEON_SIMULATOR_MAP")
         .map(|value| {
             value
@@ -182,9 +193,9 @@ pub fn graph_path() -> PathBuf {
         })
         .unwrap_or_else(|| "34".into());
     let file = match map.as_str() {
-        "34" => "stockade-34.json",
-        "2515" => "azure-vault-2515.json",
-        _ => panic!("unsupported DUNGEON_SIMULATOR_MAP={map}"),
+        "34" => "stockade-34.json".to_owned(),
+        "2515" => "azure-vault-2515.json".to_owned(),
+        _ => format!("map-{map}.json"),
     };
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons")
@@ -353,6 +364,10 @@ fn stacked_fixture() -> Space {
             to: 3,
             yards: 10.0,
         }],
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
         teleports: vec![Edge {
             from: 1,
             to: 2,
@@ -361,6 +376,21 @@ fn stacked_fixture() -> Space {
         unreachable: Vec::new(),
         route: Vec::new(),
     })
+}
+
+#[test]
+fn generated_graph_uses_sourced_follower_difficulty_and_bosses() {
+    let mut graph = stacked_fixture().0;
+    graph.map_id = 2451;
+    graph.follower_difficulty = 205;
+    graph.follower_boss_entries = vec![184580, 184581, 184582, 184018];
+    let bytes = serde_json::to_vec(&graph).unwrap();
+    let loaded: Graph = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(loaded.difficulty_id(), 205);
+    assert_eq!(loaded.boss_entries(), &[184580, 184581, 184582, 184018]);
+    let legacy = stacked_fixture().0;
+    assert_eq!(legacy.difficulty_id(), 1);
+    assert_eq!(legacy.boss_entries(), &[46383, 46264, 46254]);
 }
 
 #[test]
@@ -497,6 +527,10 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
+        follower_difficulty: 0,
+        follower_boss_entries: Vec::new(),
+        follower_boss_sources: BTreeMap::new(),
+        follower_boss_bits: BTreeMap::new(),
         // Topology extraction is followed by native radius capture and the generic route author.
         route: Vec::new(),
         teleports: Vec::new(),

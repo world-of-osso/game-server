@@ -121,17 +121,168 @@ fn academy_pad_moves_owner_and_follower_then_releases_control() {
         );
         assert!(app.world().get::<JumpMovement>(rider).is_none());
     }
+    let control = app.world().get::<MovementControl>(owner).unwrap();
+    assert!(!control.controlled);
+    assert_eq!(control.epoch, 2, "landing invalidates in-flight input");
+}
+
+#[test]
+fn academy_pad_crawth_approach_does_not_launch_return_flight() {
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    let map = InMap {
+        map_id: 2526,
+        instance_id: 7,
+    };
+    let (_, pad, landing, _) = PADS[3];
+    world.spawn((
+        Npc {
+            template_id: 192864,
+            name: "Jump Pad".into(),
+        },
+        map,
+        Position {
+            x: pad.x,
+            y: pad.y,
+            z: pad.z,
+        },
+    ));
+    // The live outbound landing-to-Eagles route passes the return NPC here.
+    let approach = Vec3::new(2318.13, 908.47, 3051.64);
+    let owner = player(&mut world, map, approach);
+    launch_entrance_pad(&mut world);
+    assert!(world.get::<JumpMovement>(owner).is_none());
+    *world.get_mut::<Position>(owner).unwrap() = Position {
+        x: pad.x,
+        y: 908.47784,
+        z: pad.z,
+    };
+    launch_entrance_pad(&mut world);
     assert!(
-        !app.world()
-            .get::<MovementControl>(owner)
+        world.get::<JumpMovement>(owner).is_some(),
+        "entering the return pad must launch toward {landing:?}"
+    );
+}
+
+#[test]
+fn academy_pad_landing_rejects_in_flight_network_input() {
+    use lightyear::prelude::{MessageReceiver, MessageSender};
+    use shared::components::{MovementSpeed, PlayerMotion};
+    use shared::protocol::{InputChannel, PlayerInput};
+    let mut h =
+        crate::spell_cast::test_harness::harness_with_plugins(Vec::new(), &[], 1, false, |app| {
+            app.init_resource::<crate::friends::AutoAfkScheduler>();
+            app.add_systems(
+                FixedPreUpdate,
+                (
+                    super::super::jump_movement::release_finished_jumps,
+                    finish_entrance_pad,
+                )
+                    .chain(),
+            );
+            app.add_systems(
+                FixedUpdate,
+                (
+                    super::super::jump_movement::advance_jumps,
+                    crate::networking::process_player_inputs,
+                )
+                    .chain(),
+            );
+        })
+        .expect("world database");
+    h.app
+        .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+            33.0, 33.0, 0.0,
+        ));
+    let map = InMap {
+        map_id: 2526,
+        instance_id: 7,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        map,
+        Position {
+            x: PAD.x,
+            y: PAD.y,
+            z: PAD.z,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        MovementSpeed(0.0),
+        PlayerMotion::default(),
+        crate::networking::FallTracker::grounded(PAD.y),
+    ));
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<PlayerInput>::default(),
+        MessageReceiver::<PlayerInput>::default(),
+    ));
+    h.app.world_mut().spawn((
+        Npc {
+            template_id: 195564,
+            name: "Jump Pad".into(),
+        },
+        map,
+        Position {
+            x: PAD.x,
+            y: PAD.y,
+            z: PAD.z,
+        },
+    ));
+    launch_entrance_pad(h.app.world_mut());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<MovementControl>(h.caster)
             .unwrap()
-            .controlled
+            .epoch,
+        1
+    );
+    h.advance(100);
+    let landed = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert_eq!(
+        landed,
+        Position {
+            x: LANDING.x,
+            y: LANDING.y,
+            z: LANDING.z
+        }
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<MovementControl>(h.caster)
+            .unwrap()
+            .epoch,
+        2
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<PlayerInput>>(h.connection)
+        .unwrap()
+        .send::<InputChannel>(PlayerInput {
+            transport: None,
+            direction: [1.0, 0.0, 0.0],
+            facing_yaw: 0.0,
+            jumping: false,
+            running: true,
+            swimming: false,
+            flying: false,
+            position: [1506.359, 900.0051, 2919.531],
+            epoch: 1,
+        });
+    h.advance(2);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        landed,
+        "in-flight input cannot rewind the landing"
     );
 }
 
 #[test]
 fn academy_pad_other_real_npcs_reach_their_logged_destinations() {
-    for &(entry, pad, landing) in &PADS[1..] {
+    for &(entry, pad, landing, _) in &PADS[1..] {
         let mut world = World::new();
         world.insert_resource(Time::<()>::default());
         let map = InMap {
@@ -175,7 +326,7 @@ fn academy_pad_arc_clears_real_academy_geometry() {
         std::env::var_os("GAME_SERVER_GROUND_DIR").expect("ground assets"),
     );
     let mut map = los::LosMap::new(&root.join("los/2526"));
-    for &(entry, pad, landing) in PADS {
+    for &(entry, pad, landing, _) in PADS {
         let duration = pad.distance(landing) / 50.0;
         let height = shared::skyriding::GRAVITY * duration * duration / 8.0;
         let at = |t: f32| pad.lerp(landing, t) + Vec3::Y * (height * 4.0 * t * (1.0 - t) + 1.0);

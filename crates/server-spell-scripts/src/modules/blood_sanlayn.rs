@@ -95,6 +95,16 @@ fn initialize_blood_beast(world: &mut World, beast: Entity) {
         BloodBeastDamage::default(),
         combat::combat::CreatureAttackTime(1.0),
     ));
+    // SimC76f8118 sc_death_knight.cpp4754–4758 starts Corrupted Blood on cooldown.
+    let cooldown = world
+        .resource::<SpellStore>()
+        .get(434574)
+        .and_then(|spell| spell.cooldowns.as_ref())
+        .expect("Corrupted Blood native cooldown")
+        .recovery_ms;
+    spell_cast::guardian::initialize_action_delays(world, beast, || {
+        vec![(434574, f64::from(cooldown) / 1000.0)]
+    });
     let Some(target) = world
         .get::<combat::networking::CombatTarget>(owner)
         .and_then(|target| target.0)

@@ -84,6 +84,7 @@ pub fn after_blade_flurry_copy(world: &mut World, caster: Entity, target: Entity
     let event = procs::AuraEvent {
         actor: caster,
         target: Some(target),
+        action_target: None,
         actor_mask: [procs::PROC_DEAL_MELEE_ABILITY, 0],
         target_mask: [procs::PROC_TAKE_MELEE_ABILITY, 0],
         spell_id: Some(22482),
