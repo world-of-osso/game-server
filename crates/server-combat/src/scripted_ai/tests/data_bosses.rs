@@ -67,6 +67,8 @@ mod deios;
 mod doragosa;
 #[path = "edna_intro.rs"]
 mod edna_intro;
+#[path = "avanoxx_intro.rs"]
+mod avanoxx_intro;
 #[path = "emberon.rs"]
 mod emberon;
 #[path = "fangs_warmup.rs"]
