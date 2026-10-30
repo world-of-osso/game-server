@@ -49,6 +49,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Unholy Outnumber
 
 - Each actual lesser ghoul contributes one owner Lesser Ghoul counter stack from arrival to dismissal. Selected Outnumber supplies the counter's native per-stack controlled-pet damage bonus, including temporary Putrefy ghouls (SimC76f8118 `sc_death_knight.cpp3673–3689`).
+### Fire Scald
+
+- Selected Scald guarantees Fireball and Fire-specialization Frostfire Bolt critically hit targets at or below its native effect3 health threshold; it does not guarantee Pyroblast (SimC76f8118 `sc_mage.cpp:2299–2305,3850–3857,5769–5772`).
+
 ### Fire Burnout
 
 - When Combustion ends, selected Burnout damages each target with the native talent fraction of that caster's remaining Ignite bank (SimC76f8118 `sc_mage.cpp:1458–1465`).
