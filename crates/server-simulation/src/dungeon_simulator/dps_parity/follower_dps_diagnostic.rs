@@ -117,6 +117,7 @@ fn follower_dps_production_dummy() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap();
     let sheet = json!({"primary": stats.primary, "spell_power": stats.spell_power, "attack_power": stats.attack_power,
+        "ranged_attack_power":stats.ranged_attack_power,"weapon_attack_power":format!("{:?}", stats.weapon_attack_power), "weapon":format!("{:?}", stats.main_hand),
         "crit_pct": stats.crit_pct, "haste_pct": stats.haste_pct, "mastery_pct": stats.mastery_pct,
         "versatility_pct": stats.versatility_pct});
     let items = format!(
