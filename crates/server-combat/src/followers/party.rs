@@ -893,6 +893,69 @@ mod copy_tests {
     }
 
     #[test]
+    fn killed_follower_waits_for_the_pull_to_end_then_releases() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let copy = run.copy.unwrap();
+        let entrance = run.dungeon.entrance.bevy_position();
+        let (mut h, caster) = super::super::kit_tests::at_level_unengaged(209072, 32, |_| {});
+        let target = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        run.members = vec![caster, target];
+        h.app.insert_resource(store);
+        h.app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            run,
+            copy,
+            Position {
+                x: 1403.56,
+                y: 128.0,
+                z: 173.39,
+            },
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert((copy, entrance));
+        h.app.world_mut().entity_mut(target).insert((
+            copy,
+            entrance,
+            crate::combat::CorpseDelay(60.0),
+        ));
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
+        assert!(h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        super::super::release::update(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        super::super::release::update(h.app.world_mut());
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::FollowOwner>(target)
+                .unwrap()
+                .owner,
+            h.caster
+        );
+    }
+
+    #[test]
     fn unreachable_follower_corpse_accepts_a_real_resurrection_in_place() {
         use shared::components::{Health, Position};
         let (fixture_app, _, mut run) = fixture();
