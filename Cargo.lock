@@ -6750,6 +6750,7 @@ name = "server-follower-apl"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "rusqlite",
  "serde_json",
  "server-combat",
  "server-spell-scripts",
