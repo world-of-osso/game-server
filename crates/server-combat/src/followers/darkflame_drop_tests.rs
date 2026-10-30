@@ -632,3 +632,18 @@ fn candlelight_follower_walks_into_authored_box_and_receives_light() {
     crate::world_area_triggers::update_candlelight(h.app.world_mut());
     assert!(crate::auras::has_aura(h.app.world(), follower, 426125));
 }
+
+#[test]
+#[ignore = "requires actual2651 navigation assets"]
+fn darkflame_cart_post_gap_landing_walks_to_darkness() {
+    let mut nav =
+        ::navigation::NavigationMap::open(&navigation_root().join(MAP.to_string())).unwrap();
+    // WCL WBYDm1N6JTZzCFnd fight3 actor2 t=6746889, projected onto native navmesh.
+    let landing = Vec3::new(543.72, 87.4, 69.77);
+    let darkness = Vec3::new(391.93, 87.26754, -27.99);
+    let route = nav
+        .complete_path(landing, darkness)
+        .expect("post-gap landing connects to Darkness");
+    assert!(route.first().unwrap().distance(landing) < 0.5);
+    assert!(route.last().unwrap().distance(darkness) < 0.5);
+}

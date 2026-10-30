@@ -316,12 +316,26 @@ fn darkflame_cart_click_carries_owner_and_follower_on_native_path() {
             "flight missed source path node {point:?}"
         );
     }
-    let endpoint = path.last().unwrap();
+    // WCL actor2's post-gap XY, projected to the real navmesh. The straight
+    // continuation uses the logged 36.7 yd/s, not the default 32 yd/s taxi speed.
+    let endpoint = Vec3::new(543.72, 87.4, 69.77);
+    let segment = observed
+        .windows(2)
+        .find(|pair| pair[0].z < 180.0 && pair[0].z > 80.0 && pair[1].z < pair[0].z)
+        .expect("observed the continuation between native endpoint and landing");
+    assert!((segment[0].distance(segment[1]) - 36.7 * 0.05).abs() < 0.05);
+    let native_end = *path.last().unwrap();
+    let fraction = (native_end.z - segment[0].z) / (native_end.z - endpoint.z);
+    let expected = native_end.lerp(endpoint, fraction);
+    assert!(
+        segment[0].distance(expected) < 0.01,
+        "continuation interpolates between sourced endpoints"
+    );
     for entity in [h.player, follower] {
         assert!(h.app.world().get::<TaxiFlight>(entity).is_none());
         assert!(h.app.world().get::<Mounted>(entity).is_none());
         let p = h.app.world().get::<Position>(entity).unwrap();
-        assert!(Vec3::new(p.x, p.y, p.z).distance(*endpoint) < 0.001);
+        assert!(Vec3::new(p.x, p.y, p.z).distance(endpoint) < 0.001);
     }
 }
 
