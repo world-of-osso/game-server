@@ -19,12 +19,33 @@ fn assert_native_proc(h: &Harness, passive: u32, chance: u32, mask: u32) {
 
 #[test]
 fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
-    // Native Recurring Power34749 guarantees harmful-spell proc34747.
-    // MOTE is not a generic proc: its selected-Elemental policy owns acquisition.
-    // Native Lava Burst51505 launches its actual damage child285452.
-    let mut h = harness(Vec::new(), &[34749, 34747, 51505, 285452], 7).unwrap();
+    // TDB 39440 permits normal, critical and absorbed hits; 34749 requires
+    // full resist. Lava Burst 51505 launches its damage child 285452.
+    let mut h = harness(Vec::new(), &[39440, 39441, 34749, 34747, 51505, 285452], 7).unwrap();
     h.advance(3);
+    assert_native_proc(&h, 39440, 100, 0x10000);
     assert_native_proc(&h, 34749, 100, 0x10000);
+    let store = h.app.world().resource::<SpellStore>();
+    assert_eq!(
+        store
+            .get(39440)
+            .unwrap()
+            .aura_options
+            .as_ref()
+            .unwrap()
+            .proc_hit_mask,
+        0x403
+    );
+    assert_eq!(
+        store
+            .get(34749)
+            .unwrap()
+            .aura_options
+            .as_ref()
+            .unwrap()
+            .proc_hit_mask,
+        0x8
+    );
     // FactionTemplate7 "Creature", native Northshire neutral creature faction.
     h.app
         .world_mut()
@@ -38,6 +59,7 @@ fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
         super::targets::Relation::Enemy,
     ));
     eprintln!("HIT_POSITIVITY_NATIVE target_faction=7 hostile=false attackable=true");
+    assert!(!has_aura(h.app.world(), h.caster, 39441));
     assert!(!has_aura(h.app.world(), h.caster, 34747));
     let before = h.health(h.npc);
     h.cast_and_deliver(51505, Some(h.npc));
@@ -50,8 +72,12 @@ fn hit_positivity_native_harmful_proc_on_neutral_attackable_target() {
             && event.target == Some(h.npc.to_bits())
     }));
     assert!(
-        has_aura(h.app.world(), h.caster, 34747),
+        has_aura(h.app.world(), h.caster, 39441),
         "native harmful proc must fire on a neutral attackable target"
+    );
+    assert!(
+        !has_aura(h.app.world(), h.caster, 34747),
+        "full-resist proc must not fire on a successful hit"
     );
 }
 
