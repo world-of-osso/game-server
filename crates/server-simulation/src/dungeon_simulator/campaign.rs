@@ -2048,13 +2048,17 @@ impl Run {
                 server::test_support::transport::Action::ObjectGossip
                     | server::test_support::transport::Action::ObjectScript
             );
-            let drop = transport.action == server::test_support::transport::Action::CollisionDrop;
+            let sourceless = matches!(
+                transport.action,
+                server::test_support::transport::Action::CollisionDrop
+                    | server::test_support::transport::Action::GatewayProximity
+            );
             let actors = if source_objects {
                 &self.objects
             } else {
                 &self.actors
             };
-            let npc = if drop {
+            let npc = if sourceless {
                 None
             } else {
                 Some(

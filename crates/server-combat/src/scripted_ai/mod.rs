@@ -56,7 +56,7 @@ mod melidrussa;
 pub mod model_reach;
 pub mod movement;
 pub mod murder_row;
-mod murder_row_gateway;
+pub(crate) mod murder_row_gateway;
 mod neltharus_initial;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;

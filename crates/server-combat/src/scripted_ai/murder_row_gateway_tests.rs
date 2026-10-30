@@ -122,7 +122,21 @@ fn murder_row_gateway_requires_zaen_and_moves_owner_followers_and_pets() {
         id,
         EncounterState::Done
     ));
-    update(h.app.world_mut());
+    let registrations = crate::test_support::transport::read_registrations(MAP, &db).unwrap();
+    let registration = registrations
+        .iter()
+        .find(|r| r.action == crate::test_support::transport::Action::GatewayProximity)
+        .unwrap();
+    let edge = crate::test_support::graph::TransportEdge {
+        from: 1,
+        to: 2,
+        source_guid: 0,
+        radius: registration.radius,
+        departure: None,
+        landing: registration.destination.to_array(),
+        action: registration.action,
+    };
+    crate::test_support::transport::activate(h.app.world_mut(), owner, None, &edge).unwrap();
     assert_eq!(
         *h.app.world().get::<Position>(distant).unwrap(),
         distant_position
