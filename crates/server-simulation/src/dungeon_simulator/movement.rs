@@ -165,6 +165,14 @@ fn handle_unreachable_movement(
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
+    if matches!(
+        world.get::<crate::creature_ai::PetMotion>(unit),
+        Some(crate::creature_ai::PetMotion::Chase(_))
+    ) {
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
     Err(format!(
         "{error}; source={:?} from={from:?} to={to:?} state={:?}",
         world
