@@ -75,6 +75,7 @@ pub(crate) struct HullCache {
     displays: Option<HashMap<u32, u32>>,
     models: HashMap<u32, Result<Vec<[Vec3; 3]>, String>>,
     placed: HashMap<Entity, (Placement, Arc<LosTile>)>,
+    errors: HashMap<Entity, String>,
 }
 
 #[cfg(any(test, feature = "test-support"))]
@@ -218,6 +219,7 @@ pub(crate) fn sync_live_objects(
     };
     let mut active = LiveHulls::new();
     cache.placed.retain(|entity, _| objects.contains(*entity));
+    cache.errors.retain(|entity, _| objects.contains(*entity));
     for (entity, map, position, rotation, info, collision, visible) in &objects {
         let enabled = collision.0 && visible.is_none_or(|v| v.0);
         if !enabled {
@@ -231,11 +233,19 @@ pub(crate) fn sync_live_objects(
             scale: info.scale,
         };
         match cache.load_placed_hull(ground.data_dir(), entity, placement) {
-            Ok(hull) => active.entry(*map).or_default().push(hull),
-            Err(error) => panic!(
-                "Live GO {} (entity {entity}, map {map:?}) collision unavailable: {error}",
-                info.entry
-            ),
+            Ok(hull) => {
+                cache.errors.remove(&entity);
+                active.entry(*map).or_default().push(hull);
+            }
+            Err(error) => {
+                if cache.errors.get(&entity) != Some(&error) {
+                    error!(
+                        "Live GO {} (entity {entity}, map {map:?}) collision unavailable: {error}",
+                        info.entry
+                    );
+                    cache.errors.insert(entity, error);
+                }
+            }
         }
     }
     ground.set_live_hulls(active.clone());

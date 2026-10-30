@@ -2,6 +2,48 @@ use super::*;
 use std::{collections::HashMap, path::PathBuf, time::Instant};
 
 #[test]
+fn missing_transport_collision_does_not_stop_updates() {
+    let data = tempfile::tempdir().unwrap();
+    let db2 = data.path().join("db2/active");
+    std::fs::create_dir_all(&db2).unwrap();
+    std::fs::write(
+        db2.join("GameObjectDisplayInfo.csv"),
+        "ID,FileDataID\n1,123\n",
+    )
+    .unwrap();
+    let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
+    app.insert_resource(GroundMap::new(data.path(), HashMap::new()));
+    app.add_systems(FixedUpdate, sync_live_objects);
+    app.world_mut().spawn((
+        InMap {
+            map_id: 2662,
+            instance_id: 1,
+        },
+        GameObjectInfo {
+            entry: 409273,
+            go_type: 15,
+            display_id: 1,
+            name: "ship".into(),
+            scale: 1.0,
+        },
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        GameObjectCollision(true),
+    ));
+    app.world_mut().run_schedule(FixedUpdate);
+    app.world_mut().run_schedule(FixedUpdate);
+}
+
+#[test]
 fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
     let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
     let catalog = crate::transport_catalog::fixture_catalog();
