@@ -266,6 +266,11 @@ const TARGET_UNIT_DEST_AREA_ENEMY: u32 = 16;
 const TARGET_DEST_TARGET_ENEMY: u32 = 53;
 const SPELL_EFFECT_APPLY_AURA: u32 = 6;
 
+#[cfg(any(test, feature = "test-support"))]
+pub fn fixture_ai_spell_target(world: &World, spell_id: u32) -> AiTarget {
+    ai_spell_target(world, spell_id)
+}
+
 pub(crate) fn ai_spell_target(world: &World, spell_id: u32) -> AiTarget {
     let Some(spell) = world
         .get_resource::<SpellStore>()

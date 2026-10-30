@@ -17,6 +17,8 @@ mod elemental_rod_tests;
 #[cfg(test)]
 mod follower_dps_diagnostic;
 #[cfg(test)]
+mod follower_tank_precombat;
+#[cfg(test)]
 mod follower_tank_scenario;
 #[cfg(test)]
 mod refining_fire_tests;
