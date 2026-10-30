@@ -88,7 +88,7 @@ def prepare(runs, clusters, requests, resolved, packs=(), centroid_requests=(), 
         source_key = hashlib.sha256(json.dumps([map_id, npc_id, identity], separators=(',', ':')).encode()).hexdigest()
         records.append({'source_key': source_key, 'map': map_id, 'npc_id': npc_id,
             'x': x, 'y': y, 'z': result['z'],
-            'position_method': 'candidate_centroid' if cluster['ambiguous_match'] else 'first_resolved_observation',
+            'position_method': 'candidate_centroid' if cluster['ambiguous_match'] else observation.get('position_method', 'first_resolved_observation'),
             'observed_x': observation['x'], 'observed_y': observation['y'],
             'candidate_spread_yards': cluster.get('candidate_spread_yards'),
             'candidate_observations': cluster.get('candidate_observations') if cluster['ambiguous_match'] else None,
