@@ -159,7 +159,13 @@ fn follower_dps_production_dummy() {
                 world.get::<crate::spell_cast::powers::PowerPools>(actor)
             );
             let health = world.get::<shared::components::Health>(target).unwrap();
-            checkpoints.push(json!({"at_s": (frame + 1) as f64 / 20.0, "pools": pools, "target_health": health.current}));
+            checkpoints.push(json!({"at_s": (frame + 1) as f64 / 20.0, "pools": pools, "target_health": health.current,
+                "actor_health": world.get::<shared::components::Health>(actor).map(|h| (h.current, h.max)),
+                "owner_health": world.get::<shared::components::Health>(owner).map(|h| (h.current, h.max)),
+                "actor_combat": world.get::<shared::components::CombatStatus>(actor).map(|s| s.0),
+                "owner_combat": world.get::<shared::components::CombatStatus>(owner).map(|s| s.0),
+                "actor_position": format!("{:?}", world.get::<shared::components::Position>(actor)),
+                "owner_position": format!("{:?}", world.get::<shared::components::Position>(owner))}));
         }
         let mut query = app.world_mut().query::<(Entity, &UnitSummonedBy)>();
         for (entity, owner) in query.iter(app.world()) {
