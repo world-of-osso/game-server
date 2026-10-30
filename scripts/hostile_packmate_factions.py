@@ -10,7 +10,9 @@ from import_log_population import validate_copy
 POLICY = 'FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE'
 # Murder Row Stalker: logged HOSTILE, pulled near Row Hooligan in the follower walk.
 # Charonus: logged only HOSTILE; Voidscar's other encounter boss Atroxus supplies faction 16.
-PACKMATES = {234359: 236073, 239167: 239008}
+# Den of Nalorakk: Sentinel and Frigid Mauler are logged only HOSTILE;
+# Hoardmonger's TDB faction supplies the same-map donor.
+PACKMATES = {234359: 236073, 239167: 239008, 241872: 241812, 244100: 241812}
 
 
 def prepare(db, audit):

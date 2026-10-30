@@ -416,7 +416,7 @@ Idle follow and combat/heal approach choices for non-tank followers must not cro
 
 ## Log-derived population policy
 
-`FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE`: Murder Row Stalker 234359 has source faction 0 and only HOSTILE log reactions. It uses faction 16 from nearby Row Hooligan 236073, which was fought on the follower route. The donor's nearby placement is Wowhead-derived, not a native TDB spawn. Mixed HOSTILE/NEUTRAL observations remain gaps.
+`FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE`: Murder Row Stalker 234359 has source faction 0 and only HOSTILE log reactions. It uses faction 16 from nearby Row Hooligan 236073, which was fought on the follower route. The donor's nearby placement is Wowhead-derived, not a native TDB spawn. Den of Nalorakk's Frigid Mauler 241872 and Sentinel of Winter 244100 use faction 16 from the same-map Hoardmonger 241812; `WoWCombatLog-102026_223255.txt` lines 85111 and 122819 show hostile reactions. Four other faction-0 map2825 entries have mixed HOSTILE/NEUTRAL observations and remain gaps. Mixed HOSTILE/NEUTRAL observations remain gaps.
 
 Known boss placements require the last positioned observation before their encounter starts. If none is observed, report `BOSS_PRE_PULL_POSITION_UNOBSERVED`; do not substitute a first cast or a post-pull position.
 
