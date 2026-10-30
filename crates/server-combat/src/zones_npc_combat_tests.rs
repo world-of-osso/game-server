@@ -652,6 +652,7 @@ fn unblocked_passive_spawn_enters_combat_and_stops_regenerating_when_attacked() 
         8,
         false,
         |app| {
+            app.insert_resource(load_world_data(&crate::test_data::world_db_path()));
             app.add_plugins((
                 crate::creature_ai::CreatureAiPlugin,
                 crate::creature_aggro::CreatureAggroPlugin,
