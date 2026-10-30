@@ -23,23 +23,51 @@ fn follower(entry: u32, class: u8) -> (crate::test_support::Harness, Entity) {
 #[test]
 fn fire_follower_includes_fire_blast_ignite_spread() {
     let (mut harness, unit) = follower(209059, 8);
+    let store = harness
+        .app
+        .world()
+        .resource::<combat::spell_info::SpellStore>();
+    let fire_blast = store.get(108853).unwrap();
+    let native_range = combat::spell_cast::targets::spell_range(fire_blast, true).1;
+    assert_eq!(native_range, 40.0);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);
     assert_eq!(reaches[0].0, unit);
-    assert!(reaches[0].1 >= 40.0, "{reaches:?}");
+    assert!(reaches[0].1 >= native_range, "{reaches:?}");
 }
 
 #[test]
 fn protection_warrior_follower_includes_melee_cleave() {
     let (mut harness, unit) = follower(215517, 1);
+    let store = harness
+        .app
+        .world()
+        .resource::<combat::spell_info::SpellStore>();
+    let clap = store.get(6343).unwrap();
+    let native_radius = combat::spell_cast::targets::radius(&clap.effects[0], 1);
+    assert_eq!(native_radius, 8.0);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);
-    assert!(reaches[0].1 > 0.0, "{reaches:?}");
+    assert!(reaches[0].1 >= native_radius, "{reaches:?}");
 }
 
 #[test]
 fn elemental_follower_includes_accumulated_chain_lightning_jumps() {
     let (mut harness, unit) = follower(209053, 7);
+    let world = harness.app.world();
+    let chain = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(188443)
+        .unwrap();
+    let effect = chain
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let (jumps, jump_radius) =
+        combat::spell_cast::targets::chain_jump_parameters(world, unit, chain, effect);
+    let native_reach = jumps as f32 * jump_radius;
+    assert!(native_reach >= 20.0);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);
-    assert!(reaches[0].2 >= 20.0, "{reaches:?}");
+    assert!(reaches[0].2 >= native_reach, "{reaches:?}");
 }
 
 #[test]
