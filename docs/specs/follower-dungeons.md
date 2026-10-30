@@ -47,7 +47,7 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 TDB's Jabbing Flyer 216341 spawns 30003831, 30003832, 30003838, 30003846, 30003848, 30003853 and 30003854 carry both PC and NPC immunity and the `[DNT] Cosmetic Spawn State Dead` aura 387851. Treat these authored spawns as ambient; do not infer an unlock from combat logs. Other Flyer spawns have no such immunity override. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 show attackable Flyers near unflagged placements, but do not identify their TDB spawn GUIDs.
 
-Crawler Eggs 218183 are sessile and not selectable. Neither source no-melee static flag is set, and the two WCL reports contain no Egg actor. Whether Retail Eggs melee remains unknown; do not infer a no-melee rule from these observations.
+`CRAWLER_EGG_NO_MELEE_LOG_CORRELATED`: Crawler Eggs 218183 use passive react. WCL Ara-Kara reports `XCmNaPcWdFA4kJ8D`/9, `qLNnp4x613mv2Ctz`/28, `9Z4kx6rBVgmzyJDK`/15, `YzhNqtDA3LJFTvRg`/3, `3LCtBv1mzwAaW4Yx`/7, `z2t94cVZQfGFPBYr`/1 and `qGvQ8dPw7C4hNptk`/61 contain no 218183 actor. The `[DNT] Detection Aura` 436402 suggests a hatch, but its trigger and summon remain unsourced and unimplemented. TC 15e0ed76 `ChaseMovementGenerator` returns for rooted owners without setting the no-path flag; moving out of melee range alone does not establish an evade or end combat.
 
 ## Windrunner Spire passage
 

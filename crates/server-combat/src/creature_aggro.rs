@@ -112,6 +112,10 @@ impl AggroMode {
     }
 }
 
+/// CRAWLER_EGG_NO_MELEE_LOG_CORRELATED: none of seven Ara-Kara WCL reports
+/// contain entry 218183 as an actor; the Detection Aura hatch is not implemented.
+pub(crate) const CRAWLER_EGG: u32 = 218183;
+
 /// An aggressive creature participates in proximity acquisition. Distance comes
 /// from TC GetAttackDistance, not the legacy template detection_range column.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
