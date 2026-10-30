@@ -54,10 +54,12 @@ def project_difficulty(connection, entry, difficulty):
     connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
         (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
          LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
-         DamageModifier,lootid,mingold,maxgold)
+         DamageModifier,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+         StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8)
         SELECT d.Entry,d.DifficultyID,l.minlevel,l.maxlevel,health_expansion(d.HealthScalingExpansion),
             d.ContentTuningID,d.HealthScalingExpansion,d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,
-            d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax
+            d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax,
+            d.StaticFlags1,d.StaticFlags2,d.StaticFlags3,d.StaticFlags4,d.StaticFlags5,d.StaticFlags6,d.StaticFlags7,d.StaticFlags8
         FROM tdb_creature_template_difficulty d JOIN content_tuning_level l ON l.ID=d.ContentTuningID
         WHERE d.Entry=? AND d.DifficultyID=?''',(entry,difficulty))
     if connection.execute('SELECT count(*) FROM content_creature_template_difficulty WHERE entry=? AND DifficultyID=?',(entry,difficulty)).fetchone()[0] != 1:
@@ -275,10 +277,12 @@ def write_nazan_heroic(connection):
     written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
         (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
          LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
-         DamageModifier,lootid,mingold,maxgold)
+         DamageModifier,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+         StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8)
         SELECT d.Entry,d.DifficultyID,1,1,health_expansion(d.HealthScalingExpansion),
             d.ContentTuningID,d.HealthScalingExpansion,d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,
-            d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax
+            d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax,
+            d.StaticFlags1,d.StaticFlags2,d.StaticFlags3,d.StaticFlags4,d.StaticFlags5,d.StaticFlags6,d.StaticFlags7,d.StaticFlags8
         FROM tdb_creature_template_difficulty d
         WHERE d.Entry=17536 AND d.DifficultyID=2 AND d.ContentTuningID=0''').rowcount
     if written != 1:
@@ -322,10 +326,12 @@ def import_nethekurse_fissures(connection):
     written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
         (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
          LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
-         DamageModifier,lootid,mingold,maxgold)
+         DamageModifier,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+         StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8)
         SELECT Entry,DifficultyID,1,1,health_expansion(HealthScalingExpansion),ContentTuningID,
             HealthScalingExpansion,LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,
-            ManaModifier,ArmorModifier,DamageModifier,LootID,GoldMin,GoldMax
+            ManaModifier,ArmorModifier,DamageModifier,LootID,GoldMin,GoldMax,
+            StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8
         FROM tdb_creature_template_difficulty WHERE Entry=18370 AND DifficultyID=2 AND ContentTuningID=0''').rowcount
     if written != 1:
         raise ValueError('Wild Shadow Fissure18370 missing source Heroic2 CT0 row')

@@ -53,11 +53,13 @@ def prepare_tdb_template(db, npc_id):
     db.execute('''INSERT OR IGNORE INTO content_creature_template_difficulty
         (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
          LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
-         DamageModifier,lootid,mingold,maxgold)
+         DamageModifier,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+         StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8)
         SELECT d.Entry,d.DifficultyID,COALESCE(l.minlevel,1),COALESCE(l.maxlevel,1),
          health_expansion(d.HealthScalingExpansion),d.ContentTuningID,d.HealthScalingExpansion,
          d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,d.HealthModifier,d.ManaModifier,d.ArmorModifier,
-         d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax
+         d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax,
+         d.StaticFlags1,d.StaticFlags2,d.StaticFlags3,d.StaticFlags4,d.StaticFlags5,d.StaticFlags6,d.StaticFlags7,d.StaticFlags8
         FROM tdb_creature_template_difficulty d LEFT JOIN content_tuning_level l ON l.ID=d.ContentTuningID
         WHERE d.Entry=? AND d.DifficultyID>0''', (npc_id,))
     db.execute('INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID=?', (npc_id,))
