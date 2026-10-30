@@ -431,6 +431,9 @@ pub(crate) fn queue_map_content(
     let difficulty_id = content.difficulty_id;
     commands.queue(move |world: &mut World| {
         crate::world_area_triggers::spawn_map(world, map, difficulty_id);
+        if world.contains_resource::<crate::transport_catalog::TransportCatalog>() {
+            crate::transport::spawn_ships(world, map);
+        }
     });
     if let Some(world_data) = world_data {
         crate::zones::spawn_map_creatures(commands, world_data, content, true, ground);

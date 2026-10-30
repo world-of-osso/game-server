@@ -52,6 +52,12 @@ pub(crate) fn spawn_ships(world: &mut World, map: InMap) {
         .collect();
     for source in sources {
         let pose = source.route.pose_at(0);
+        for event in source.route.initial_events() {
+            warn!(
+                "Transport {} in {map:?} has unhandled route event {} at {}ms",
+                source.spawn_id, event.id, event.elapsed_ms
+            );
+        }
         let (position, rotation) = engine_pose(pose);
         world.spawn((
             position,
@@ -173,10 +179,22 @@ pub(crate) fn advance_ships(world: &mut World) {
         .iter(world)
         .map(|(entity, route, state)| {
             let elapsed = state.elapsed_ms + delta_ms;
-            (entity, elapsed, route.0.pose_at(elapsed))
+            (
+                entity,
+                state.spawn_id,
+                elapsed,
+                route.0.pose_at(elapsed),
+                route.0.events_between(state.elapsed_ms, elapsed),
+            )
         })
         .collect();
-    for (entity, elapsed, pose) in updates {
+    for (entity, spawn_id, elapsed, pose, events) in updates {
+        for event in events {
+            warn!(
+                "Transport {spawn_id} has unhandled route event {} at {}ms",
+                event.id, event.elapsed_ms
+            );
+        }
         world.get_mut::<TransportState>(entity).unwrap().elapsed_ms = elapsed;
         let (position, rotation) = engine_pose(pose);
         world.entity_mut(entity).insert((position, rotation));
@@ -275,6 +293,68 @@ pub(crate) fn disembark(world: &mut World, player: Entity) {
     // TC transport_seething_shore::OnRemovePassenger, both triggered on the player.
     crate::spell_cast::cast_triggered(world, player, 250917, Some(player), 0);
     crate::spell_cast::cast_triggered(world, player, 262359, Some(player), 0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::ecs::world::CommandQueue;
+    use std::time::Duration;
+
+    #[test]
+    fn dungeon_copies_spawn_and_advance_independent_ships() {
+        let mut world = World::new();
+        world.insert_resource(crate::maps::MapStore::default());
+        world.insert_resource(crate::transport_catalog::fixture_catalog());
+        world.insert_resource(Time::<Fixed>::default());
+        let copies = [
+            InMap {
+                map_id: 2662,
+                instance_id: 1,
+            },
+            InMap {
+                map_id: 2662,
+                instance_id: 2,
+            },
+        ];
+        for map in copies {
+            let mut queue = CommandQueue::default();
+            let mut commands = Commands::new(&mut queue, &world);
+            crate::maps::transfer::queue_map_content(
+                &mut commands,
+                None,
+                None,
+                crate::zones::MapContent {
+                    map,
+                    difficulty_id: 1,
+                    dead_bosses: vec![],
+                },
+                None,
+            );
+            queue.apply(&mut world);
+        }
+        let mut ships = world.query::<(Entity, &InMap, &TransportState, &Position)>();
+        let initial: Vec<_> = ships
+            .iter(&world)
+            .map(|(entity, map, state, position)| (entity, *map, state.spawn_id, *position))
+            .collect();
+        assert_eq!(initial.len(), 2);
+        assert!(copies.iter().all(|copy| {
+            initial
+                .iter()
+                .any(|(_, map, id, _)| map == copy && *id == 409273)
+        }));
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs(6));
+        advance_ships(&mut world);
+        for (entity, _, _, initial_position) in initial {
+            let state = world.get::<TransportState>(entity).unwrap();
+            assert_eq!(state.elapsed_ms, 6000);
+            assert_ne!(*world.get::<Position>(entity).unwrap(), initial_position);
+            assert_eq!(state.path_id, 9456);
+        }
+    }
 }
 
 fn mark_replication(world: &World, entity: Entity) {
