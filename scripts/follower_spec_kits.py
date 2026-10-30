@@ -135,6 +135,10 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('attack', 110, required_aura=264173,
                       resources=[dict(power='SoulShards', below=4)])
 
+    # SimC76f8118 apl_paladin.cpp106/110: Hammer replaces Judgment while wings are active.
+    if spec == 66 and spell == 1241288:
+        return policy('attack', 110, required_self_aura=1241410)
+
     # SimC apl_shaman79/103: after native Shock actions84, before spenders85.
     if spec == 262 and spell == 1219480:
         return policy('buff', 84, 'self', combat=True, missing_aura=1219480,
@@ -321,6 +325,10 @@ SIMC_TALENT_CAST_ACTIONS = {
 
 def project_loadout_actions(loadout):
     known = dict(loadout['known'])
+    # Native passive1241288 projects to the castable Protection action1241413.
+    # Keep the learned passive; this flag classifies only its controller row.
+    if loadout['spec_id'] == 66 and '1241288' in known:
+        known['1241288'] = False
     for parent, action, replacements in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
         if str(parent) in known and not any(str(spell) in known for spell in replacements):
             known.setdefault(str(action), False)

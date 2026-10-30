@@ -24,6 +24,16 @@ const POLICIES: &[Policy] = &[
             payload: 1241410,
         },
     },
+    // SimC76f8118 sc_paladin.cpp5319: Sentinel is Protection's wings replacement.
+    Policy {
+        name: "PALADIN_SENTINEL_HAMMER_OVERRIDE",
+        spec: 66,
+        talent: 1241288,
+        relationship: Relationship::LinkedAura {
+            parent: 389539,
+            payload: 1241410,
+        },
+    },
     Policy {
         name: "PALADIN_RETRIBUTION_WRATH_HAMMER_OVERRIDE",
         spec: 70,
