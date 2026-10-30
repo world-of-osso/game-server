@@ -63,7 +63,9 @@ pub(super) fn update(
         _ => 5,
     });
     super::tank_defense::sort_major_entries(world, unit, &mut entries);
-    let enemies = ai::engaged_enemies(world, follower, unit, party);
+    let mut enemies = ai::engaged_enemies(world, follower, unit, party);
+    super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
+    let enemy = enemy.filter(|target| enemies.iter().any(|(candidate, _)| candidate == target));
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }

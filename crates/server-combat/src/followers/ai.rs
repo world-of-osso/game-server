@@ -51,10 +51,15 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     let party = party_units(world, follower.owner);
     super::tank_frontal::update_goal(world, unit, follower, &party);
     let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
-    let selection = collection_target.map_or_else(
-        || select_enemy(world, follower, unit, &party),
-        EnemySelection::Attack,
-    );
+    let mut enemies = engaged_enemies(world, follower, unit, &party);
+    if super::target_reach::retain_reachable(world, unit, follower, &mut enemies) {
+        crate::combat::attack_stop(world, unit);
+        hold_combat(world, unit);
+        return;
+    }
+    let selection = collection_target
+        .filter(|target| enemies.iter().any(|(enemy, _)| enemy == target))
+        .map_or_else(|| select_enemy(world, &enemies), EnemySelection::Attack);
     let enemy = match selection {
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
@@ -285,13 +290,7 @@ enum EnemySelection {
     None,
 }
 
-fn select_enemy(
-    world: &mut World,
-    follower: &Follower,
-    unit: Entity,
-    party: &[Entity],
-) -> EnemySelection {
-    let enemies = engaged_enemies(world, follower, unit, party);
+fn select_enemy(world: &World, enemies: &[(Entity, Option<Entity>)]) -> EnemySelection {
     let attackable = enemies
         .iter()
         .find(|(enemy, _)| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
