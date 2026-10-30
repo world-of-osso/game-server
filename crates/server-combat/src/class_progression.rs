@@ -609,6 +609,27 @@ fn build_trait_loadout(
     }
 }
 
+/// Build a follower's real class book from validated native or logged talents.
+/// The caller applies returned passive spells through the ordinary aura pipeline.
+pub fn evaluate_follower_progression(
+    classes: &ClassSpells,
+    class_id: u8,
+    race: u8,
+    spec_id: u32,
+    level: u8,
+    logged: &[(u32, u32)],
+) -> Result<(Vec<KnownSpell>, TraitLoadout, &'static str), String> {
+    let class = class_info(classes, class_id).ok_or("follower class absent")?;
+    let spec = resolve_spec(class, level, spec_id)
+        .filter(|spec| spec.spec_id == spec_id)
+        .ok_or("follower specialization is not available to this class and level")?;
+    let ctx = TraitContext { spec_id, level };
+    let (source, entries) = crate::trait_config::build_follower_config(&class.traits, ctx, logged)?;
+    let traits = build_trait_loadout(class, Some(spec), ctx, entries);
+    let spells = compute_known_spells(class, race, level, Some(spec), &traits);
+    Ok((spells, traits, source))
+}
+
 /// Literal native kit-exporter starter book: requested NPC spec at every level,
 /// race-neutral class/default skills, spec spells and validated starter talents.
 /// No player-spec fallback, controller aliases or additional mastery grants.

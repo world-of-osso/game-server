@@ -87,6 +87,64 @@ fn talent_lightforged_blessing_visible_to_holy_and_protection_not_retribution() 
 }
 
 #[test]
+fn class_follower_uses_authored_starter_below_cap_and_strict_logged_build_at_cap() {
+    let classes = classes().unwrap();
+    let tree = paladin_tree().unwrap();
+    let lower = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 70,
+    };
+    let (spells, traits, source) = crate::class_progression::evaluate_follower_progression(
+        classes,
+        PALADIN,
+        1,
+        SPEC_RETRIBUTION,
+        70,
+        &[(u32::MAX, 1)],
+    )
+    .unwrap();
+    assert_eq!(source, TALENTS_FROM_NATIVE_STARTER_LOADOUT);
+    assert_eq!(
+        traits.source_config().0,
+        build_config(tree, lower, &starter_purchases(tree, lower).unwrap()).unwrap()
+    );
+    assert!(spells.iter().any(|spell| spell.spell_id == 184575));
+
+    let cap = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 90,
+    };
+    let starter = build_config(tree, cap, &starter_purchases(tree, cap).unwrap()).unwrap();
+    let logged: Vec<_> = starter
+        .iter()
+        .filter(|entry| entry.total() > 0)
+        .map(|entry| (entry.entry_id, entry.total()))
+        .collect();
+    let (_, cap_traits, source) = crate::class_progression::evaluate_follower_progression(
+        classes,
+        PALADIN,
+        1,
+        SPEC_RETRIBUTION,
+        90,
+        &logged,
+    )
+    .unwrap();
+    assert_eq!(source, TALENTS_FROM_WCL);
+    assert_eq!(cap_traits.source_config().0, starter);
+    assert!(
+        crate::class_progression::evaluate_follower_progression(
+            classes,
+            PALADIN,
+            1,
+            SPEC_RETRIBUTION,
+            90,
+            &[(u32::MAX, 1)],
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn class_follower_logged_trait_entries_resolve_and_use_strict_player_validation() {
     use std::collections::BTreeMap;
 

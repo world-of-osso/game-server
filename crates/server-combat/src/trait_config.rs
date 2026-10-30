@@ -127,6 +127,33 @@ pub fn build_config(
     Ok(entries)
 }
 
+pub const TALENTS_FROM_NATIVE_STARTER_LOADOUT: &str = "TALENTS_FROM_NATIVE_STARTER_LOADOUT";
+pub const TALENTS_FROM_WCL: &str = "TALENTS_FROM_WCL";
+
+/// Select authored level-appropriate starter talents below the level cap and
+/// validated logged talents at the cap; never truncate a logged build.
+pub fn build_follower_config(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    logged: &[(u32, u32)],
+) -> Result<(&'static str, Vec<ConfigEntry>), String> {
+    let max_level = crate::spell_info::MAX_LEVEL;
+    if ctx.level == 0 || u32::from(ctx.level) > max_level {
+        return Err(format!("invalid follower talent level {}", ctx.level));
+    }
+    if u32::from(ctx.level) < max_level {
+        let purchases = starter_purchases(tree, ctx)?;
+        return Ok((
+            TALENTS_FROM_NATIVE_STARTER_LOADOUT,
+            build_config(tree, ctx, &purchases)?,
+        ));
+    }
+    if logged.is_empty() {
+        return Err("max-level follower has no logged talent build".into());
+    }
+    Ok((TALENTS_FROM_WCL, build_logged_config(tree, ctx, logged)?))
+}
+
 /// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
 /// Logged ranks include any native granted ranks; only the remainder is purchased.
 pub fn build_logged_config(
