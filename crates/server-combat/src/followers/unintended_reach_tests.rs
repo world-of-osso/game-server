@@ -25,6 +25,32 @@ fn native_consecration_pulse_radius_is_included() {
 }
 
 #[test]
+fn feral_kit_reach_includes_the_selected_cat_form_action() {
+    let (mut harness, actor) = kit_tests::at_level_unengaged(232800, 32, |_| {});
+    harness.advance(40);
+    harness
+        .app
+        .world_mut()
+        .resource_mut::<FollowerCatalog>()
+        .kits = vec![kit::Entry {
+        spec_id: 103,
+        spell_id: 213764,
+        min_level: 32,
+        max_level: 32,
+        slot: kit::Slot::Aoe,
+        conditions: kit::Conditions::default(),
+    }]
+    .into();
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(harness.app.world(), actor, 213764)
+            .unwrap(),
+        106785
+    );
+    let reaches = party_unintended_reach(harness.app.world_mut(), &[actor]);
+    assert!(reaches[0].1 >= 8.0);
+}
+
+#[test]
 fn active_hostile_field_remains_bounded_from_its_owner_after_movement() {
     let (mut harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
     let world = harness.app.world_mut();

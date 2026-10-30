@@ -113,7 +113,10 @@ fn unit_spells(world: &World, unit: Entity) -> Vec<u32> {
             .map(|entry| entry.spell_id)
             .collect();
         if !spells.is_empty() {
-            return spells;
+            let resolved = spells.iter().filter_map(|&spell| {
+                crate::spell_cast::knowledge::resolve_actor_action(world, unit, spell).ok()
+            });
+            return spells.iter().copied().chain(resolved).collect();
         }
         return [
             follower.profile.attack_spell,
