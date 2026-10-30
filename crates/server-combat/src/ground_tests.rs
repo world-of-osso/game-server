@@ -34,6 +34,22 @@ fn halls_wmo_liquid_has_surface_and_collision_depth() {
     assert!(liquid.level - liquid.depth_level > shared::movement::SWIM_DEPTH);
 }
 
+#[test]
+#[ignore = "requires Operation Floodgate extracted WMO assets"]
+fn floodgate_wmo_liquid_covers_drop_landing() {
+    let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(2773, 5839271)]));
+    let feet = Vec3::new(1524.25, 275.314, 2746.25);
+    let liquid = ground.liquid_at(2773, feet).expect("landing WMO water");
+    assert!((liquid.level - 278.16714).abs() < 0.05, "{liquid:?}");
+    assert_eq!(liquid.liquid_type, 941);
+    assert!((liquid.depth_level - feet.y).abs() < 0.1, "{liquid:?}");
+    assert!(shared::movement::is_swimming(
+        feet.y,
+        liquid.depth_level,
+        Some(liquid.level)
+    ));
+}
+
 /// `world/maps/azeroth/azeroth.wdt`.
 const AZEROTH_WDT_FDID: u32 = 775_971;
 
