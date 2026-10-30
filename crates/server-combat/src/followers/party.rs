@@ -1047,6 +1047,21 @@ mod copy_tests {
         }
     }
 
+    fn capture_release_update(app: &mut App) -> String {
+        let buffer = ReleaseLogBuffer::default();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(buffer.clone())
+            .without_time()
+            .with_ansi(false)
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            super::super::release::update(app.world_mut());
+        });
+        let output = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+        output
+    }
+
     #[test]
     fn follower_release_logs_combat_pending_and_reachable_decisions() {
         use shared::components::{CombatStatus, Health, Position};
@@ -1363,8 +1378,117 @@ mod copy_tests {
     }
 
     #[test]
+    fn follower_release_long_brackenhide_route_waits_for_resurrection() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        run.dungeon = super::super::catalog::load_catalog(&db).unwrap().dungeons[&2439].clone();
+        let copy = InMap {
+            map_id: 2520,
+            instance_id: 1,
+        };
+        run.copy = Some(copy);
+        let entrance = run.dungeon.entrance.bevy_position();
+        let destination = crate::death::dungeon_release_location(
+            &run.dungeon.entrance,
+            store.map(copy.map_id).unwrap(),
+            &store,
+        )
+        .unwrap()
+        .bevy_position();
+        let (mut h, caster) = super::super::kit_tests::level32(209072);
+        let target = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        run.members = vec![caster, target];
+        h.app.insert_resource(store);
+        h.app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        let owner_position = Position {
+            x: -3344.54,
+            y: 111.17662,
+            z: -3663.96,
+        };
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((run, copy, owner_position));
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert((copy, entrance));
+        h.app.world_mut().entity_mut(target).insert((
+            copy,
+            entrance,
+            crate::combat::CorpseDelay(60.0),
+        ));
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        crate::combat::combat_stop(h.app.world_mut(), h.caster);
+        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        let point = |position: Position| Vec3::new(position.x, position.y, position.z);
+        let query = ::navigation::worker::Query::FollowPath {
+            from: point(destination),
+            to: point(owner_position),
+        };
+        let mut nav = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>();
+        nav.query_deferred(
+            target,
+            copy.map_id,
+            crate::navigation::Goal::FollowerRelease,
+            query.clone(),
+        );
+        nav.drain_until_idle();
+        let result = nav.query_deferred(
+            target,
+            copy.map_id,
+            crate::navigation::Goal::FollowerRelease,
+            query,
+        );
+        drop(nav);
+        let Some(Ok(Some(::navigation::worker::Output::Path(path)))) = result else {
+            panic!("Brackenhide needs a complete entrance-to-boss route: {result:?}");
+        };
+        assert!(
+            path.complete,
+            "Brackenhide entrance-to-boss route is incomplete"
+        );
+        let distance: f32 = path
+            .points
+            .windows(2)
+            .map(|pair| pair[0].distance(pair[1]))
+            .sum();
+        let speed = crate::creature_ai::BASE_RUN_SPEED
+            * h.app
+                .world()
+                .get::<crate::auras::AuraStatMods>(target)
+                .map_or(1.0, |mods| mods.movement_speed);
+        assert!(distance > speed * 120.0, "{distance} yards at {speed} yd/s");
+        let log = capture_release_update(&mut h.app);
+        assert!(log.contains("route_too_long"), "{log}");
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
+    }
+
+    #[test]
     fn follower_release_distant_walkable_corpse_waits_for_real_resurrection() {
-        use shared::components::{Health, Position};
+        use shared::components::{CombatStatus, Health, Position};
         let (fixture_app, _, mut run) = fixture();
         let entrance = run.dungeon.entrance.bevy_position();
         let store = fixture_app
@@ -1405,7 +1529,11 @@ mod copy_tests {
             corpse,
             crate::combat::CorpseDelay(60.0),
         ));
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
         crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        crate::combat::combat_stop(h.app.world_mut(), h.caster);
+        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
         let mods = crate::auras::AuraStatMods {
             movement_speed: 0.01,
             ..Default::default()
@@ -1446,7 +1574,8 @@ mod copy_tests {
                 .sum();
             assert!(distance > 7.0 * 0.01 * 120.0);
         }
-        super::super::release::update(h.app.world_mut());
+        let log = capture_release_update(&mut h.app);
+        assert!(log.contains("route_too_long"), "{log}");
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
         crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
             .unwrap();
