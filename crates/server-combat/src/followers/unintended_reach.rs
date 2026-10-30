@@ -29,11 +29,11 @@ fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
     let owners: HashSet<_> = party.iter().copied().collect();
     let mut units = party.to_vec();
     let pets: Vec<_> = world
-        .query::<(
+        .query_filtered::<(
             Entity,
             Option<&crate::hunter_pet::HunterPet>,
             Option<&SummonedCreature>,
-        )>()
+        ), Or<(With<crate::hunter_pet::HunterPet>, With<SummonedCreature>)>>()
         .iter(world)
         .filter(|(_, pet, summon)| {
             pet.is_some_and(|pet| owners.contains(&pet.owner))
