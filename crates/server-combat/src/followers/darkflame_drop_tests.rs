@@ -157,6 +157,73 @@ fn darkflame_drop_native_move_fall_lands_continuously_on_target_polygon() {
     );
 }
 
+#[test]
+#[ignore = "requires actual2526 navigation/ground and imported follower profile"]
+fn academy_pad_follower_regroups_after_crawth_flight() {
+    use crate::scripted_ai::jump_movement;
+    let root = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |app| {
+        install_native_follow_movement(app);
+        app.add_systems(
+            Update,
+            (
+                jump_movement::release_finished_jumps,
+                jump_movement::advance_jumps,
+            )
+                .chain(),
+        );
+    });
+    h.app
+        .insert_resource(GroundMap::new(&root, HashMap::from([(2526, 4_290_605)])));
+    crate::navigation::install_fixture(
+        &mut h.app,
+        crate::navigation::Navigation::new(&root.join("navmesh")),
+    );
+    let departure = Vec3::new(2116.46, 928.646, 3105.17);
+    let landing = Vec3::new(2306.25, 907.3357, 3052.91);
+    let owner = Vec3::new(2331.7, 909.5034, 3050.197);
+    let template = &h.app.world().resource::<crate::world_data::WorldData>().templates[&209057];
+    let (speed_walk, speed_run) = (template.speed_walk, template.speed_run);
+    h.app.world_mut().entity_mut(follower).insert((
+        position(departure),
+        InMap::continent(2526),
+        crate::creature_ai::PartyFollowSlot::new(0, 4),
+        crate::creature_ai::SpawnPoint {
+            x: departure.x,
+            y: departure.y,
+            z: departure.z,
+            wander_distance: 0.0,
+            speed_walk,
+            speed_run,
+        },
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position(departure), InMap::continent(2526)));
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    jump_movement::move_jump(h.app.world_mut(), follower, 0, position(landing), 50.0, 0.0);
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(landing);
+    h.advance(120);
+    assert!(
+        h.app
+            .world()
+            .get::<jump_movement::JumpMovement>(follower)
+            .is_none()
+    );
+    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position(owner);
+    h.advance(400);
+    let feet = point(*h.app.world().get::<Position>(follower).unwrap());
+    assert!(
+        feet.distance(owner) < 18.0,
+        "follower did not regroup: feet={feet:?}, owner={owner:?}"
+    );
+}
+
 fn install_native_follow_movement(app: &mut App) {
     crate::creature_ai::install_follow_fixture(app);
     app.add_systems(
