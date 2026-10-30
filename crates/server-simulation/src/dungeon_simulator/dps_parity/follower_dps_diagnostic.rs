@@ -331,6 +331,20 @@ fn follower_dps_production_dummy() {
     );
     if entry == 209053 && level == 90 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(
+            !known_spells.contains(&117014),
+            "Shuja's profile does not select Elemental Blast"
+        );
+        assert!(
+            hits.get(&117014).is_some_and(|count| *count > 0),
+            "Fusion must produce actual Elemental Blast hits"
+        );
+        assert!(
+            [118522, 173183, 173184]
+                .iter()
+                .any(|id| aura_applications.get(id).is_some_and(|count| *count > 0)),
+            "Fusion Blast must grant an Elemental Blast stat buff without the separate talent"
+        );
+        assert!(
             storm_frames > 0,
             "Storm Elemental must actually be summoned"
         );

@@ -17,7 +17,6 @@ use bevy::prelude::*;
 
 const MASTER_OF_ELEMENTS: u32 = 16166;
 const MOTE: u32 = 260734;
-const ELEMENTAL_BLAST: u32 = 117014;
 const MOTE_PRODUCERS: &[u32] = &[51505];
 const BLAST_BUFFS: &[u32] = &[118522, 173183, 173184];
 
@@ -274,7 +273,11 @@ pub(super) fn grant_blast_buff(
     before: bool,
     depth: u8,
 ) {
-    if !BUFF_RULES.contains(&(spell, before)) || !selected(world, caster, ELEMENTAL_BLAST) {
+    // Fusion and Ancestors can execute Blast without the separately selected
+    // Elemental Blast talent; SimC grants the buff from the actual execution.
+    if !BUFF_RULES.contains(&(spell, before))
+        || !world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 262)
+    {
         return;
     }
     let missing = missing_buffs(world, caster);
