@@ -2,6 +2,7 @@
 #[cfg(test)]
 #[path = "gear/equip_tests.rs"]
 mod equip_tests;
+pub mod keystone;
 pub mod levels;
 pub mod select;
 use std::collections::{BTreeSet, HashMap};
