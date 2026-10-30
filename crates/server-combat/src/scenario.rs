@@ -92,6 +92,12 @@ impl ScenarioRun {
 #[derive(Resource, Default)]
 pub(super) struct ScenarioRuns(HashMap<InMap, (u32, ScenarioRun)>);
 
+pub(crate) fn unload_scenario_runs(world: &mut World, maps: &[InMap]) {
+    if let Some(mut runs) = world.get_resource_mut::<ScenarioRuns>() {
+        runs.0.retain(|map, _| !maps.contains(map));
+    }
+}
+
 #[derive(Component)]
 struct LastScenarioMap(InMap);
 

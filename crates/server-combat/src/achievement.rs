@@ -31,7 +31,7 @@ mod dungeon;
 mod kills;
 #[path = "scenario.rs"]
 mod scenario;
-pub(crate) use scenario::load_scenarios;
+pub(crate) use scenario::{load_scenarios, unload_scenario_runs};
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct PlayerAchievementState {
