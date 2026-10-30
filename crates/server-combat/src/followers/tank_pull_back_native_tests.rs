@@ -34,6 +34,15 @@ fn run_native_pull_back(production: bool) {
             crate::creature_aggro::CreatureAggroPlugin,
         ));
     });
+    if production {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(super::catalog::load_catalog(&db).unwrap());
+    }
     let owner = h.caster;
     let map = InMap {
         map_id: 2805,
