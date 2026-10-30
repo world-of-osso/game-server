@@ -88,6 +88,9 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     update_auto_shot(world, unit, follower, enemy);
+    if enemy.is_some() {
+        use_freightrunners_flask(world, unit);
+    }
     if super::kit_ai::update(world, unit, follower, &party, enemy, &enemies) {
         return;
     }
@@ -115,6 +118,60 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+/// The pinned Elemental APL uses this equipped on-use trinket in combat.
+fn use_freightrunners_flask(world: &mut World, unit: Entity) {
+    const FLASK: u32 = 250215;
+    if world.get::<CastState>(unit).is_some() {
+        return;
+    }
+    let Some((slot, source, item)) = world
+        .get::<crate::stats::EquippedItems>(unit)
+        .and_then(|items| items.items.iter().find(|(_, _, item)| *item == FLASK))
+        .copied()
+    else {
+        return;
+    };
+    let Some(template) = world
+        .get_resource::<crate::item_templates::ItemTemplates>()
+        .and_then(|templates| templates.get(source, item))
+    else {
+        return;
+    };
+    let Some(on_use) = template.on_use else {
+        return;
+    };
+    let Some(item_level) = world
+        .get::<crate::stats::EquippedItemModifiers>(unit)
+        .and_then(|mods| mods.items.iter().find(|(key, _)| *key == slot))
+        .and_then(|(_, mods)| mods.item_level_override)
+    else {
+        return;
+    };
+    let Some(spell) = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(on_use.spell_id)
+    else {
+        return;
+    };
+    if world
+        .get::<crate::spell_cast::SpellHistory>(unit)
+        .is_some_and(|history| history.on_cooldown(spell, crate::spell_cast::history_now(world)))
+    {
+        return;
+    }
+    if let Err(failure) = crate::spell_cast::cast_item_spell(
+        world,
+        unit,
+        on_use.spell_id,
+        Some(unit),
+        on_use.cooldown,
+        item_level,
+        Some(item),
+    ) {
+        debug!(?unit, ?failure, "Follower on-use trinket unavailable");
+    }
 }
 
 /// BM_AUTO_SHOT_STARTS_ON_ENGAGE_SIMC_APL: pinned Hunter APL's auto_shot
