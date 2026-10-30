@@ -79,9 +79,16 @@ fn follower_dps_production_dummy() {
     );
     crate::followers::gear::equip(app.world_mut(), actor, &profile).unwrap();
     let target = spawn_dummy(&mut app, actor, 0).unwrap();
-    app.world_mut()
-        .entity_mut(target)
-        .insert((Level(level), UnitLevel(level)));
+    let armor = app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .creature_armor_at(DUMMY_ENTRY, 205, level)
+        .expect("native dummy armor at target level");
+    app.world_mut().entity_mut(target).insert((
+        Level(level),
+        UnitLevel(level),
+        crate::level_scaling::CreatureArmor(armor),
+    ));
     app.world_mut()
         .entity_mut(target)
         .remove::<shared::level_scaling::LevelScaling>();
@@ -249,7 +256,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
