@@ -7,7 +7,7 @@ use shared::components::MovementControl;
 fn nalorakk_pyre_landings_connect_to_entrance_and_hoardmonger() {
     let root = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     let mut nav = ::navigation::NavigationMap::open(&root.join("2825")).unwrap();
-    let lower = Vec3::new(4480.69, 13.435155, 4912.04);
+    let lower = Vec3::new(4484.93, 13.4853, 4906.93);
     let upper = Vec3::new(4339.33, 104.31152, 4947.34);
     for point in [lower, upper] {
         let projected = nav.complete_walk_path(point, point).unwrap();
@@ -19,6 +19,7 @@ fn nalorakk_pyre_landings_connect_to_entrance_and_hoardmonger() {
     for (start, goal) in [
         (Vec3::new(4410.67, 21.4535, 4919.94), lower),
         (upper, Vec3::new(4242.39, 109.04, 5250.65)),
+        (lower, Vec3::new(5015.96, -23.4112, 4846.0)),
     ] {
         let mut cursor = start;
         let mut plan = ::navigation::NavigationPlan::default();
@@ -156,7 +157,7 @@ fn nalorakk_pyre_gossip_moves_owner_and_owned_follower_in_both_directions() {
     }
     for (entry, menu, target) in [
         (616377, 40087, (4339.33, 104.31152, 4947.34)),
-        (613266, 40088, (4480.69, 13.435155, 4912.04)),
+        (613266, 40088, (4484.93, 13.4853, 4906.93)),
     ] {
         let (go_type, display_id, name, scale, x, y, z): (u8, u32, String, f32, f32, f32, f32) = h.conn.query_row(
             "SELECT t.type,t.displayId,t.name,t.size,g.position_x,g.position_y,g.position_z FROM tdb_gameobject_template t JOIN tdb_gameobject g ON g.id=t.entry WHERE t.entry=?1 AND g.map=2825", [entry],
