@@ -31,6 +31,21 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [Guardian Druid (104)](healer-tank-replay/104.md)
 
+## GCD-ready timing comparison (2026-10-29)
+
+Healed native replays of each tank's 300-second dummy trace used seeds 70448–70457 on `2341210d2` (50 ms APL checks) and `be3867541` (additional exact GCD-ready checks). The latter still checks non-GCD state on the 50 ms cadence; it is not a fully event-driven APL. The SimC column uses ten independent measured iterations; Guardian uses the corrected single-application Matted Fur and Ursoc's Fury reference. Damage is the mean per fight; all native runs survived.
+
+| Spec | Before | GCD-ready checks | SimC |
+|---:|---:|---:|---:|
+| 66 | 3,304,981 | 3,311,661 | 3,341,843 |
+| 73 | 2,893,245 | 2,893,206 | 2,783,862 |
+| 104 | 1,766,524 | 1,735,614 | 1,850,456 |
+| 250 | 47,621 | 56,541 | 88,144 |
+| 268 | 3,429,579 | 3,199,642 | 3,318,109 |
+| 581 | 5,837,808 | 5,783,904 | 5,949,784 |
+
+The paired change in damage has standard error 217,665 / 38,987 / 86,436 / 14,251 / 56,211 / 55,522 respectively. Native reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-gcd-events-ten-seeds/`. These samples do not establish full parity.
+
 ## Scaled tank pressure
 
 `--pressure-scale X` multiplies the raw amounts of all SimC tank-dummy swings, strikes and bleed ticks before native combat; timestamps, attack tables and other trace fields remain unchanged. The report records `pressure_scale` and `incoming_outcome_sequence` (outcome, parry, dodge and block chance per attack). The scale must be positive and finite.
