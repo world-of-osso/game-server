@@ -181,12 +181,17 @@ fn advance_owned_flight(world: &mut World, target: Entity, delta: f32) {
     let current = *world.get::<Position>(target).expect("moving unit");
     flight.elapsed += delta;
     let predicted = flight.at(flight.elapsed);
-    let next = crate::spell_cast::teleport::clamp_to_wall(
+    let mut next = crate::spell_cast::teleport::clamp_to_wall(
         world.resource::<crate::line_of_sight::LineOfSight>(),
         flight.map,
         Vec3::new(current.x, current.y, current.z),
         predicted,
     );
+    // The LOS ray also intersects floors. A wall clamp must not stop the downward
+    // motion that the ground probe uses to detect landing.
+    if flight.vertical_speed() <= 0.0 {
+        next.y = predicted.y;
+    }
     flight.peak = flight.peak.max(next.y);
     advance_over_ground(world, target, flight, current, next);
 }
@@ -302,4 +307,80 @@ pub(crate) fn cancel(world: &mut World, target: Entity) {
         target,
     );
     crate::spell_cast::mark_dirty(world, target);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn knockback_follower_lands_on_uldaman_wmo_floor_after_los_floor_contact() {
+        let mut app = App::new();
+        app.insert_resource(crate::test_data::ground_map());
+        let los_dir = crate::ground::ground_data_dir().join("los");
+        app.insert_resource(crate::line_of_sight::LineOfSight::load(&los_dir).unwrap());
+        let map = InMap {
+            map_id: 2451,
+            instance_id: 12,
+        };
+        let start = Vec3::new(68.36197, 218.99126, 682.55066);
+        let floor = app
+            .world_mut()
+            .resource_mut::<GroundMap>()
+            .ground_in(map, start);
+        let GroundProbe::Supported(height) = floor else {
+            panic!("expected real Uldaman WMO floor under follower: {floor:?}");
+        };
+        assert!(height < start.y, "fixture must start above the floor");
+        let owner = app.world_mut().spawn_empty().id();
+        let follower = app
+            .world_mut()
+            .spawn((
+                Position {
+                    x: start.x,
+                    y: start.y,
+                    z: start.z,
+                },
+                map,
+                MovementControl {
+                    epoch: 1,
+                    controlled: true,
+                },
+                crate::creature_ai::FollowOwner::new(owner),
+                KnockbackFlight {
+                    origin: start,
+                    velocity: Vec3::new(0.0, -1.0, 0.0),
+                    elapsed: 0.0,
+                    peak: start.y,
+                    map,
+                    epoch: 1,
+                },
+            ))
+            .id();
+        for _ in 0..100 {
+            if app.world().get::<KnockbackFlight>(follower).is_none() {
+                break;
+            }
+            advance_owned_flight(app.world_mut(), follower, 0.05);
+        }
+        let position = app.world().get::<Position>(follower).unwrap();
+        assert!(
+            (position.y - height).abs() < 0.01,
+            "landing at {position:?}, floor {height}"
+        );
+        assert!(app.world().get::<KnockbackFlight>(follower).is_none());
+        assert!(
+            !app.world()
+                .get::<MovementControl>(follower)
+                .unwrap()
+                .controlled
+        );
+        assert_eq!(
+            app.world()
+                .get::<crate::creature_ai::FollowOwner>(follower)
+                .unwrap()
+                .owner,
+            owner
+        );
+    }
 }
