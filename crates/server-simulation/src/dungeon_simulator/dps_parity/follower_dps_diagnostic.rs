@@ -17,6 +17,11 @@ fn follower_dps_production_dummy() {
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(1);
     let mut app = super::super::runtime::build_app();
+    if let Some(path) = std::env::var_os("FOLLOWER_DPS_WORLD_DB") {
+        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
+        app.insert_resource(data.armor_constants.clone());
+        app.insert_resource(data);
+    }
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -219,6 +224,18 @@ fn follower_dps_production_dummy() {
             > 0.0,
         "follower died before completing the dummy measurement"
     );
+    if entry == 209053 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
+        assert!(known_spells.contains(&378255) && known_spells.contains(&191717));
+        assert!(!known_spells.contains(&117013));
+        assert!(
+            damage.get(&57984).is_some_and(|amount| *amount > 0),
+            "Greater Fire must damage the dummy"
+        );
+        assert!(
+            damage.get(&157331).is_some_and(|amount| *amount > 0),
+            "Greater Storm must damage the dummy"
+        );
+    }
     if entry == 209065 {
         assert!(
             incoming.iter().all(|event| event.spell_id != Some(321538)),

@@ -20,6 +20,8 @@ const STORMKEEPER: u32 = 191634;
 const CALL_OF_FIRE: u32 = 378255;
 const FURY_OF_THE_STORMS: u32 = 191717;
 const PRIMAL_ELEMENTALIST: u32 = 117013;
+const GREATER_FIRE: (u32, u32) = (188592, 95061);
+const GREATER_STORM: (u32, u32) = (157299, 77936);
 const PRIMAL_FIRE: (u32, u32) = (118291, 61029);
 const PRIMAL_STORM: (u32, u32) = (157319, 77942);
 const STORMFURY: u32 = 157375;
@@ -41,14 +43,17 @@ fn selected(world: &World, owner: Entity, talent: u32) -> bool {
 fn summon_after_launch(world: &mut World, owner: Entity, spell: &SpellInfo, _foreground: bool) {
     // SimC76f8118 sc_shaman.cpp8638–8640: every Ascendance execution, background
     // variants included; 8752–8755: Stormkeeper. Primal variants need 117013.
+    let primal = selected(world, owner, PRIMAL_ELEMENTALIST);
     let elemental = match spell.id {
-        ASCENDANCE if selected(world, owner, CALL_OF_FIRE) => PRIMAL_FIRE,
-        STORMKEEPER if selected(world, owner, FURY_OF_THE_STORMS) => PRIMAL_STORM,
+        ASCENDANCE if selected(world, owner, CALL_OF_FIRE) => {
+            if primal { PRIMAL_FIRE } else { GREATER_FIRE }
+        }
+        STORMKEEPER if selected(world, owner, FURY_OF_THE_STORMS) => {
+            if primal { PRIMAL_STORM } else { GREATER_STORM }
+        }
         _ => return,
     };
-    if selected(world, owner, PRIMAL_ELEMENTALIST) {
-        summon_elemental(world, owner, elemental);
-    }
+    summon_elemental(world, owner, elemental);
 }
 
 fn active_elemental(world: &mut World, owner: Entity, (root, entry): (u32, u32)) -> Option<Entity> {
