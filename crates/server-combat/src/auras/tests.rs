@@ -841,9 +841,11 @@ fn purify_dispels_a_magic_debuff_combat_log_metadata() {
 
 #[test]
 fn passive_proc_trigger_fires_on_melee_swing() {
-    let Some(mut h) =
-        harness_with_native_enemy_dodge_reduction(Vec::new(), &[DEVASTATOR, DEVASTATOR_DAMAGE], 1)
-    else {
+    let Some(mut h) = harness_with_native_enemy_dodge_reduction(
+        Vec::new(),
+        &[DEVASTATOR, DEVASTATOR_DAMAGE, 23922],
+        1,
+    ) else {
         return;
     };
     h.advance(1);
