@@ -32,7 +32,7 @@ class MelidrussaSourceTests(unittest.TestCase):
                            "SELECT * FROM raid_encounter_creature WHERE creature_entry!=188252 ORDER BY map_id,creature_entry"]
                 before = [db.execute(query).fetchall() for query in queries]
                 self.assertEqual(import_melidrussa(db), [188252])
-                self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=188252').fetchone(),
+                self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=188252').fetchone(),
                                  (2521,188252,2609,1,2488,5358,106891))
                 self.assertEqual(dict(zip(columns, db.execute('SELECT * FROM content_creature_template WHERE entry=188252').fetchone())),
                                  dict(boss, ScriptName='boss_melidrussa_chillworn'))

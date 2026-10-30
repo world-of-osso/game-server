@@ -32,7 +32,7 @@ class KokiaSourceTests(unittest.TestCase):
                            'SELECT * FROM raid_encounter_creature WHERE creature_entry!=189232 ORDER BY map_id,creature_entry']
                 before = [db.execute(query).fetchall() for query in queries]
                 self.assertEqual(import_kokia(db), [189232])
-                self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=189232').fetchone(),
+                self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=189232').fetchone(),
                                  (2521,189232,2606,0,2485,5354,106851))
                 self.assertEqual(dict(zip(columns, db.execute('SELECT * FROM content_creature_template WHERE entry=189232').fetchone())),
                                  dict(boss, ScriptName='boss_kokia_blazehoof'))

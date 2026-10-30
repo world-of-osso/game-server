@@ -38,7 +38,7 @@ class DailcryBindingTests(unittest.TestCase):
                         self.assertEqual(encounter_summons.import_dailcry(db), [ENTRY])
                         self.assertEqual(db.execute('SELECT AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=207946').fetchone(),
                                          ('', 'littlewigs_dailcry', 64))
-                        self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE creature_entry=207946').fetchall(),
+                        self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE creature_entry=207946').fetchall(),
                                          [(2649, 207946, 2847, 1, 2571, 5714, 118879)])
                         for query, expected in snapshots.items():
                             self.assertEqual(db.execute(query).fetchall(), expected, query)

@@ -25,7 +25,7 @@ class AzureEncounterBindingsTests(unittest.TestCase):
                 with db:
                     self.assertEqual(prepare_azure_bindings(db, DB2), expected)
                     self.assertEqual(prepare_azure_bindings(db, DB2), expected)
-                self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2515 ORDER BY creature_entry').fetchall(), sorted(expected, key=lambda row: row[1]))
+                self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2515 ORDER BY creature_entry').fetchall(), sorted(expected, key=lambda row: row[1]))
                 self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE map_id != 2515 ORDER BY map_id,creature_entry').fetchall(), before)
                 db.execute('UPDATE raid_encounter_creature SET bit=9 WHERE map_id=2515 AND creature_entry=186737')
                 with self.assertRaisesRegex(ValueError, 'existing encounter binding conflicts'):

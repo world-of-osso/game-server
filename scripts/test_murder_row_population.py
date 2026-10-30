@@ -19,7 +19,7 @@ class MurderRowPopulationTest(unittest.TestCase):
             prepare(target)
             with sqlite3.connect(target) as db:
                 self.assertEqual(db.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=81002813').fetchone(), ENTRANCE)
-                bindings = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2813 AND creature_entry IN (234647,234763,237415) ORDER BY creature_entry').fetchall()
+                bindings = db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2813 AND creature_entry IN (234647,234763,237415) ORDER BY creature_entry').fetchall()
                 self.assertEqual(bindings, BINDINGS)
                 spawn = db.execute('SELECT position_x,position_y,position_z,orientation,spawnDifficulties FROM content_creature WHERE map=2813 AND id1=234647').fetchall()
                 self.assertEqual(spawn, [(8628.92, -5039.0, 126.20164, 0.823, '1')])

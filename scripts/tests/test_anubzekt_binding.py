@@ -42,7 +42,7 @@ class AnubzektBindingTests(unittest.TestCase):
                         self.assertEqual(encounter_summons.import_anubzekt(db), [ENTRY])
                         self.assertEqual(db.execute('SELECT AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215405').fetchone(),
                                          ('', 'littlewigs_anubzekt', 64))
-                        self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE creature_entry=215405').fetchall(),
+                        self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE creature_entry=215405').fetchall(),
                                          [(2660,215405,2906,1,2584,5726,115723)])
                         for query, expected in snapshots.items():
                             self.assertEqual(db.execute(query).fetchall(), expected, query)
