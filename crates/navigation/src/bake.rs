@@ -60,11 +60,9 @@ pub fn bake_collected_on_grid(
                 (63 - tile.1) * subdivisions + col,
                 tile.0 * subdivisions + row,
             );
-            let packet = bake_subtile(triangles, &obstacles, water, min, coords, subdivisions)
+            let layers = bake_subtile(triangles, &obstacles, water, min, coords, subdivisions)
                 .map_err(|error| format!("tile {tile:?}, Detour subtile {coords:?}: {error}"))?;
-            if !packet.is_empty() {
-                packets.push(packet);
-            }
+            packets.extend(layers);
         }
     }
     if packets.is_empty() {
@@ -138,6 +136,130 @@ impl RasterInput {
         input.max = max.to_array();
         input
     }
+
+    /// Split over-height input around its walkable surfaces. Each layer also
+    /// receives the nearby portions of walls and ceilings.
+    fn vertical_bands(self) -> Result<Vec<Self>, String> {
+        const SPAN_LIMIT: f32 = 8190.0 * CELL_HEIGHT;
+        const MAX_LAYERS: usize = 32; // Detour's MAX_NEIS during tile linking.
+        if self.max[1] - self.min[1] <= SPAN_LIMIT {
+            return Ok(vec![self]);
+        }
+        let input = self.clip_to_bounds(self.min, self.max);
+        let mut intervals: Vec<_> = input
+            .vertices
+            .chunks_exact(9)
+            .zip(&input.areas)
+            .filter(|(_, area)| **area == RC_WALKABLE_AREA)
+            .map(|(tri, _)| {
+                (
+                    tri[1].min(tri[4]).min(tri[7]),
+                    tri[1].max(tri[4]).max(tri[7]),
+                )
+            })
+            .collect();
+        intervals.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let padding = AGENT_HEIGHT + AGENT_CLIMB + 2.0 * CELL_HEIGHT;
+        let mut components: Vec<(f32, f32)> = Vec::new();
+        for (min, max) in intervals {
+            if let Some(last) = components.last_mut()
+                && min <= last.1 + padding
+            {
+                last.1 = last.1.max(max);
+            } else {
+                components.push((min, max));
+            }
+        }
+        let mut groups: Vec<(f32, f32)> = Vec::new();
+        for (min, max) in components {
+            if max - min + 2.0 * padding > SPAN_LIMIT {
+                return Err(format!(
+                    "walkable geometry has no safe split within Recast span limit: {min}..{max}"
+                ));
+            }
+            if let Some(last) = groups.last_mut()
+                && max - last.0 + 2.0 * padding <= SPAN_LIMIT
+            {
+                last.1 = max;
+            } else {
+                groups.push((min, max));
+            }
+        }
+        if groups.len() > MAX_LAYERS {
+            return Err(format!(
+                "vertical geometry requires {} Detour layers (maximum {MAX_LAYERS})",
+                groups.len()
+            ));
+        }
+        Ok(groups
+            .into_iter()
+            .map(|(min, max)| {
+                let mut lower = input.min;
+                let mut upper = input.max;
+                lower[1] = min - padding;
+                upper[1] = max + padding;
+                input.clip_to_bounds(lower, upper)
+            })
+            .collect())
+    }
+
+    fn clip_to_bounds(&self, min: [f32; 3], max: [f32; 3]) -> Self {
+        let mut result = Self {
+            cells: self.cells,
+            vertices: Vec::new(),
+            indices: Vec::new(),
+            areas: Vec::new(),
+            min,
+            max,
+        };
+        for (tri, &area) in self.vertices.chunks_exact(9).zip(&self.areas) {
+            let mut polygon = vec![
+                Vec3::from_slice(&tri[0..3]),
+                Vec3::from_slice(&tri[3..6]),
+                Vec3::from_slice(&tri[6..9]),
+            ];
+            for axis in 0..3 {
+                polygon = clip_polygon(polygon, axis, min[axis], true);
+                polygon = clip_polygon(polygon, axis, max[axis], false);
+            }
+            for i in 1..polygon.len().saturating_sub(1) {
+                let base = result.vertices.len() / 3;
+                for point in [polygon[0], polygon[i], polygon[i + 1]] {
+                    result.vertices.extend_from_slice(&point.to_array());
+                }
+                result
+                    .indices
+                    .extend([base as i32, base as i32 + 1, base as i32 + 2]);
+                result.areas.push(area);
+            }
+        }
+        result
+    }
+}
+
+fn clip_polygon(polygon: Vec<Vec3>, axis: usize, plane: f32, keep_above: bool) -> Vec<Vec3> {
+    let mut result = Vec::new();
+    let Some(mut previous) = polygon.last().copied() else {
+        return result;
+    };
+    let inside = |p: Vec3| {
+        if keep_above {
+            p[axis] >= plane
+        } else {
+            p[axis] <= plane
+        }
+    };
+    for current in polygon {
+        if inside(current) != inside(previous) {
+            let t = (plane - previous[axis]) / (current[axis] - previous[axis]);
+            result.push(previous.lerp(current, t));
+        }
+        if inside(current) {
+            result.push(current);
+        }
+        previous = current;
+    }
+    result
 }
 
 /// Owns every Recast allocation, including on a failed pipeline step.
@@ -321,7 +443,7 @@ impl RecastBuild {
         )
     }
 
-    fn encode_detour(&self, coords: (u32, u32)) -> Result<Vec<u8>, String> {
+    fn encode_detour(&self, coords: (u32, u32), layer: usize) -> Result<Vec<u8>, String> {
         // SAFETY: polygonization completed; slices use upstream's allocation counts.
         let (mesh, detail) = unsafe { (&*self.mesh, &*self.detail) };
         if mesh.npolys == 0 {
@@ -343,6 +465,7 @@ impl RecastBuild {
         params.detailTriCount = detail.ntris;
         params.tileX = coords.0 as i32;
         params.tileY = coords.1 as i32;
+        params.tileLayer = layer as i32;
         params.bmin = mesh.bmin;
         params.bmax = mesh.bmax;
         params.walkableHeight = AGENT_HEIGHT;
@@ -423,20 +546,133 @@ fn bake_subtile(
     origin: Vec3,
     coords: (u32, u32),
     subdivisions: u32,
-) -> Result<Vec<u8>, String> {
+) -> Result<Vec<Vec<u8>>, String> {
     let input = RasterInput::clipped(triangles, obstacles, origin, subdivisions);
     if input.areas.is_empty() {
         return Ok(Vec::new());
     }
-    let build = RecastBuild::allocate()?;
-    build.rasterize(&input)?;
-    build.polygonize(water)?;
-    build.encode_detour(coords)
+    let mut packets = Vec::new();
+    for (layer, input) in input.vertical_bands()?.into_iter().enumerate() {
+        let build = RecastBuild::allocate()?;
+        build.rasterize(&input)?;
+        build.polygonize(water)?;
+        let packet = build.encode_detour(coords, layer)?;
+        if !packet.is_empty() {
+            packets.push(packet);
+        }
+    }
+    Ok(packets)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn floor(x0: f32, x1: f32, y: f32) -> [[Vec3; 3]; 2] {
+        let a = Vec3::new(x0, y, 10.0);
+        let b = Vec3::new(x0, y, 30.0);
+        let c = Vec3::new(x1, y, 30.0);
+        let d = Vec3::new(x1, y, 10.0);
+        [[a, b, c], [a, c, d]]
+    }
+
+    #[test]
+    fn vertical_bands_preserve_floors_and_connect_across_layer_indices() {
+        let triangles: Vec<_> = floor(10.0, 120.0, -3000.0)
+            .into_iter()
+            .chain(floor(10.0, 160.0, 97.0))
+            .collect();
+        let bytes = bake_tile(&triangles, (32, 31)).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("32_31.nav"), bytes).unwrap();
+        let mut map = crate::NavigationMap::open(dir.path()).unwrap();
+        for point in [Vec3::new(20.0, -3000.0, 20.0), Vec3::new(20.0, 97.0, 20.0)] {
+            let floor = map
+                .floor_polygon(point)
+                .unwrap()
+                .expect("floor must survive");
+            assert!((floor.y - point.y).abs() < 0.5, "{floor:?}");
+        }
+        let route = map
+            .complete_path(Vec3::new(130.0, 97.0, 20.0), Vec3::new(136.0, 97.0, 20.0))
+            .unwrap();
+        assert!(route.last().unwrap().distance(Vec3::new(136.0, 97.0, 20.0)) < 1.0);
+    }
+
+    #[test]
+    fn tall_wall_blocks_both_vertical_bands() {
+        let a = Vec3::new(40.0, -3001.0, 0.0);
+        let b = Vec3::new(40.0, 105.0, 0.0);
+        let c = Vec3::new(40.0, 105.0, 40.0);
+        let d = Vec3::new(40.0, -3001.0, 40.0);
+        let triangles: Vec<_> = floor(10.0, 70.0, -3000.0)
+            .into_iter()
+            .chain(floor(10.0, 70.0, 97.0))
+            .chain([[a, b, c], [a, c, d]])
+            .collect();
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("32_31.nav"),
+            bake_tile(&triangles, (32, 31)).unwrap(),
+        )
+        .unwrap();
+        let mut map = crate::NavigationMap::open(dir.path()).unwrap();
+        for height in [-3000.0, 97.0] {
+            let left = Vec3::new(20.0, height, 20.0);
+            let right = Vec3::new(60.0, height, 20.0);
+            assert!(map.floor_polygon(left).unwrap().is_some());
+            assert!(map.floor_polygon(right).unwrap().is_some());
+            assert!(
+                map.complete_path(left, right).is_err(),
+                "wall must block at {height}"
+            );
+        }
+    }
+
+    #[test]
+    #[ignore = "requires FOLLOWER_NAV_DATA local assets"]
+    fn arakara_kikatal_floor_survives_vertical_bake() {
+        let data = std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_DATA").unwrap());
+        let mut baker = los::bake::Baker::for_navigation(&data);
+        let tiles = baker.map_tiles(5_280_631).unwrap();
+        let tile = (29, 32);
+        let (geometry, _) = baker.collect_tile(&tiles, tile).unwrap().unwrap();
+        assert!(baker.problems.is_empty(), "{:?}", baker.problems);
+        let point = Vec3::new(-485.951, 97.26646, -1168.05);
+        let grid = 8;
+        let size = TILE_SIZE / grid as f32;
+        let (x, z) = tile_bounds(tile);
+        let col = ((point.x - x) / size).floor() as u32;
+        let row = ((point.z - z) / size).floor() as u32;
+        let origin = Vec3::new(x + col as f32 * size, 0.0, z + row as f32 * size);
+        let obstacles = geometry.obstacles.iter().map(triangle_key).collect();
+        let water = baker
+            .collect_water(tiles[(tile.1 * 64 + tile.0) as usize])
+            .unwrap();
+        let packets = bake_subtile(
+            &geometry.triangles,
+            &obstacles,
+            &water,
+            origin,
+            ((63 - tile.1) * grid + col, tile.0 * grid + row),
+            grid,
+        )
+        .unwrap();
+        let mut bytes = MAGIC.to_vec();
+        bytes.extend_from_slice(&(packets.len() as u32).to_le_bytes());
+        for packet in packets {
+            bytes.extend_from_slice(&(packet.len() as u32).to_le_bytes());
+            bytes.extend_from_slice(&packet);
+        }
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("29_32.nav"), bytes).unwrap();
+        let mut map = crate::NavigationMap::open(dir.path()).unwrap();
+        let floor = map
+            .floor_polygon(point)
+            .unwrap()
+            .expect("Ki'katal floor must survive");
+        assert!((floor.y - point.y).abs() < 0.5, "{floor:?}");
+    }
 
     #[test]
     fn floor_bakes_deterministically_and_steep_surface_is_excluded() {
