@@ -61,6 +61,14 @@ fn approach_enters_unpulled_sight(
         if path.windows(2).any(|leg| {
             pull_route::segment_distance_squared(center, leg[0], leg[1]) < radius * radius
         }) {
+            debug!(
+                ?unit,
+                ?target,
+                ?watcher,
+                ?center,
+                radius,
+                "Follower approach held by unpulled watcher"
+            );
             return Ok(Some(true));
         }
     }
