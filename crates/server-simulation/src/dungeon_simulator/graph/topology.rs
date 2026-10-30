@@ -242,7 +242,8 @@ pub(super) fn unreachable(
 
 #[test]
 fn entrance_route_preserves_native_corners_past_disconnected_nearest_pack() {
-    use super::super::{Graph, Space};
+    use super::super::Space;
+    use super::Graph;
     let pack = |id, x, z| Pack {
         id,
         position: [x, z],
