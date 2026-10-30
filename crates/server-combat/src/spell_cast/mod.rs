@@ -3169,6 +3169,8 @@ pub struct PlannedEffect {
     pub chain_multipliers: Vec<(Entity, f32)>,
     /// Native block hit result, retained across flight for these unit targets.
     pub blocked_units: Vec<Entity>,
+    /// Defended spell targets retained until the hit event is delivered.
+    pub missed_units: Vec<(Entity, shared::protocol::MissKind)>,
     /// Source per-cast continuation state; retain hit receipts when the hook is suppressed.
     pub prevent_hit_script: bool,
 }
@@ -3238,6 +3240,7 @@ fn plan_targets(
                 chain_multipliers: Vec::new(),
                 selected_units: Vec::new(),
                 blocked_units: Vec::new(),
+                missed_units: Vec::new(),
                 prevent_hit_script: false,
             })
             .collect());
@@ -3256,6 +3259,7 @@ fn plan_targets(
                 chain_multipliers: Vec::new(),
                 selected_units: Vec::new(),
                 blocked_units: Vec::new(),
+                missed_units: Vec::new(),
                 prevent_hit_script: false,
             })
             .collect());
@@ -3303,6 +3307,7 @@ fn plan_targets(
                 chain_multipliers: Vec::new(),
                 selected_units: Vec::new(),
                 blocked_units: Vec::new(),
+                missed_units: Vec::new(),
                 prevent_hit_script: false,
             });
             continue;
@@ -3397,6 +3402,7 @@ fn plan_targets(
             chain_multipliers,
             selected_units: Vec::new(),
             blocked_units: Vec::new(),
+            missed_units: Vec::new(),
             prevent_hit_script,
         });
     }
@@ -3496,6 +3502,7 @@ fn resolve_effects(
             selected,
             damage: Vec::new(),
             healing: Vec::new(),
+            hit_masks: Vec::new(),
             blocked: plan
                 .iter()
                 .flat_map(|effect| effect.blocked_units.iter().copied())
@@ -3641,14 +3648,16 @@ fn resolve_effects(
     };
     scripts::after_enhancement_chain(world, &ctx);
     scripts::after_resolved_hits(world, &ctx);
-    let (damage, healing) = world
+    let (damage, healing, hit_masks) = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
         .map_or_else(
-            || (Vec::new(), Vec::new()),
-            |frame| (frame.damage, frame.healing),
+            || (Vec::new(), Vec::new(), Vec::new()),
+            |frame| (frame.damage, frame.healing, frame.hit_masks),
         );
-    push_hit_events(world, caster, spell, plan, depth, &damage, &healing);
+    push_hit_events(
+        world, caster, spell, plan, depth, &damage, &healing, &hit_masks,
+    );
 }
 
 /// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
@@ -3838,6 +3847,7 @@ struct HitFrame {
     selected: Vec<Entity>,
     damage: Vec<(Entity, f32)>,
     healing: Vec<(Entity, f32)>,
+    hit_masks: Vec<(Entity, u32)>,
     blocked: HashSet<Entity>,
 }
 
@@ -3890,6 +3900,7 @@ pub(crate) fn record_hit_damage(
     spell_id: u32,
     target: Entity,
     amount: f32,
+    hit_mask: u32,
 ) -> bool {
     let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
         return false;
@@ -3901,6 +3912,7 @@ pub(crate) fn record_hit_damage(
     else {
         return false;
     };
+    record_hit_mask(frame, target, hit_mask);
     match frame.damage.iter_mut().find(|(unit, _)| *unit == target) {
         Some((_, total)) => *total += amount,
         None => frame.damage.push((target, amount)),
@@ -3916,6 +3928,7 @@ pub(crate) fn record_hit_heal(
     spell_id: u32,
     target: Entity,
     amount: f32,
+    hit_mask: u32,
 ) -> bool {
     let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
         return false;
@@ -3927,11 +3940,19 @@ pub(crate) fn record_hit_heal(
     else {
         return false;
     };
+    record_hit_mask(frame, target, hit_mask);
     match frame.healing.iter_mut().find(|(unit, _)| *unit == target) {
         Some((_, total)) => *total += amount,
         None => frame.healing.push((target, amount)),
     }
     true
+}
+
+fn record_hit_mask(frame: &mut HitFrame, target: Entity, hit_mask: u32) {
+    match frame.hit_masks.iter_mut().find(|(unit, _)| *unit == target) {
+        Some((_, mask)) => *mask |= hit_mask,
+        None => frame.hit_masks.push((target, hit_mask)),
+    }
 }
 
 /// TC a352b1fa Spell.cpp:2854–2867 checks only effects that landed on this unit.
@@ -3958,6 +3979,7 @@ fn push_hit_events(
     depth: u8,
     damage: &[(Entity, f32)],
     healing: &[(Entity, f32)],
+    hit_masks: &[(Entity, u32)],
 ) {
     let hit = hit_units(plan);
     let damage_to = |unit: Entity| {
@@ -3981,7 +4003,31 @@ fn push_hit_events(
                 periodic: false,
                 damage: amount,
                 heal: None,
-                hit_mask: 0,
+                hit_mask: hit_masks
+                    .iter()
+                    .find(|(unit, _)| *unit == target)
+                    .map_or(procs::PROC_HIT_NORMAL, |(_, mask)| *mask),
+                reflected: false,
+            },
+        );
+    }
+    for (target, kind) in plan.iter().flat_map(|effect| &effect.missed_units).copied() {
+        let (actor_mask, target_mask) = procs::spell_hit_masks(spell, true);
+        procs::push_event(
+            world,
+            AuraEvent {
+                actor: caster,
+                target: Some(target),
+                action_target: spell.cast_primary_target,
+                actor_mask: [actor_mask, 0],
+                target_mask: [target_mask, 0],
+                spell_id: Some(spell.id),
+                can_proc: depth == 0,
+                cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
+                periodic: false,
+                damage: 0.0,
+                heal: None,
+                hit_mask: procs::miss_hit_mask(kind),
                 reflected: false,
             },
         );
@@ -4028,7 +4074,10 @@ fn push_hit_events(
                 periodic: false,
                 damage,
                 heal,
-                hit_mask: 0,
+                hit_mask: hit_masks
+                    .iter()
+                    .find(|(unit, _)| *unit == target)
+                    .map_or(procs::PROC_HIT_NORMAL, |(_, mask)| *mask),
                 reflected: false,
             },
         );

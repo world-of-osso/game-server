@@ -150,6 +150,7 @@ fn build_seed_effects(spell: &SpellInfo, units: Vec<Entity>) -> TargetPlan {
             chain_multipliers: Vec::new(),
             selected_units: Vec::new(),
             blocked_units: Vec::new(),
+missed_units: Vec::new(),
             prevent_hit_script: false,
         })
         .collect()

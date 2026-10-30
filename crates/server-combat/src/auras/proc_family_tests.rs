@@ -3,7 +3,7 @@ use crate::auras::procs::{self, AuraEvent, PROC_DEAL_MELEE_ABILITY};
 use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
 use shared::{components::PowerType, protocol::CombatLogKind};
 
-fn festering_wound_grants(spell: u32) -> usize {
+fn festering_wound_grants(spell: u32, hit_mask: u32) -> usize {
     let mut h = harness(vec![], &[197147, 195757, spell], 6).unwrap();
     // Finish ordinary KnownSpell passive installation before pinning event candidates.
     // A manual Cast aura would be replaced before the deferred event is processed.
@@ -23,9 +23,13 @@ fn festering_wound_grants(spell: u32) -> usize {
             can_proc: true,
             cast_used_proc_modifier: false,
             periodic: false,
-            damage: 1.0,
+            damage: if hit_mask == procs::PROC_HIT_ABSORB {
+                0.0
+            } else {
+                1.0
+            },
             heal: None,
-            hit_mask: 0,
+            hit_mask,
             reflected: false,
         },
     );
@@ -45,15 +49,22 @@ fn festering_wound_grants(spell: u32) -> usize {
 
 #[test]
 fn explicit_proc_family_rejects_frost_strike_without_festering_mask() {
-    assert_eq!(festering_wound_grants(49143), 0);
+    assert_eq!(festering_wound_grants(49143, procs::PROC_HIT_NORMAL), 0);
 }
 
 #[test]
 fn explicit_proc_family_rejects_another_melee_spell_family() {
-    assert_eq!(festering_wound_grants(1464), 0);
+    assert_eq!(festering_wound_grants(1464, procs::PROC_HIT_NORMAL), 0);
 }
 
 #[test]
 fn explicit_proc_family_accepts_native_festering_strike_third_mask_word() {
-    assert_eq!(festering_wound_grants(85948), 1);
+    assert_eq!(festering_wound_grants(85948, procs::PROC_HIT_NORMAL), 1);
+}
+
+#[test]
+fn explicit_landed_proc_accepts_crit_and_absorb_but_not_parry() {
+    assert_eq!(festering_wound_grants(85948, procs::PROC_HIT_CRITICAL), 1);
+    assert_eq!(festering_wound_grants(85948, procs::PROC_HIT_ABSORB), 1);
+    assert_eq!(festering_wound_grants(85948, procs::PROC_HIT_PARRY), 0);
 }

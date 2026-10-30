@@ -146,6 +146,7 @@ fn plan_wrath_effect(
         dest: targets::effect_dest(world, caster, Some(primary), effect, None),
         chain_multipliers: Vec::new(),
         blocked_units: Vec::new(),
+missed_units: Vec::new(),
         prevent_hit_script: false,
     }
 }

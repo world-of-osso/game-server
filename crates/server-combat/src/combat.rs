@@ -1367,12 +1367,16 @@ fn record_swing(
     };
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     let landed = !outcome.immune && !outcome.kind.avoided();
-    if !outcome.immune {
-        let hit_mask = match outcome.kind {
-            MeleeOutcome::Miss => procs::PROC_HIT_MISS,
-            MeleeOutcome::Dodge => procs::PROC_HIT_DODGE,
-            MeleeOutcome::Parry => procs::PROC_HIT_PARRY,
-            _ => 0,
+    {
+        let hit_mask = if outcome.immune {
+            procs::PROC_HIT_IMMUNE
+        } else {
+            match outcome.kind {
+                MeleeOutcome::Miss => procs::PROC_HIT_MISS,
+                MeleeOutcome::Dodge => procs::PROC_HIT_DODGE,
+                MeleeOutcome::Parry => procs::PROC_HIT_PARRY,
+                _ => 0,
+            }
         };
         if hit_mask != 0 {
             procs::push_event(
@@ -1381,7 +1385,14 @@ fn record_swing(
                     actor: attacker_entity,
                     target: Some(target_entity),
                     action_target: None,
-                    actor_mask: [0; 2],
+                    actor_mask: [
+                        procs::PROC_DEAL_MELEE_SWING
+                            | match outcome.hand {
+                                Hand::Main => procs::PROC_MAIN_HAND_WEAPON_SWING,
+                                Hand::Off => procs::PROC_OFF_HAND_WEAPON_SWING,
+                            },
+                        0,
+                    ],
                     target_mask: [procs::PROC_TAKE_MELEE_SWING, 0],
                     spell_id: None,
                     can_proc: true,
@@ -1412,8 +1423,6 @@ fn record_swing(
     // SimC76f8118 hunter2974–3010 runs stable-pet impact producers on
     // every result, independently of the landed-hit and generic proc stages.
     crate::spell_cast::script_registry::after_white_impact(world, attacker_entity);
-    // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
-    // HitMask 0); dodge- and parry-triggered procs are not modelled.
     if landed {
         for event in swing_aura_events(attacker_entity, target_entity, &outcome) {
             procs::push_event(world, event);
@@ -1464,7 +1473,12 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         periodic: false,
         damage: outcome.scaled_loss,
         heal: None,
-        hit_mask: 0,
+        hit_mask: procs::landed_hit_mask(
+            matches!(outcome.kind, MeleeOutcome::Crit | MeleeOutcome::CritBlock),
+            outcome.blocked,
+            outcome.absorbed,
+            outcome.damage,
+        ),
         reflected: false,
     }];
     if outcome.npc_died || outcome.player_died {

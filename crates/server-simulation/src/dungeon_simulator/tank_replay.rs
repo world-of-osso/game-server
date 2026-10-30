@@ -998,6 +998,8 @@ fn replay_registered_run_with_healing(
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut healing_by_spell = BTreeMap::<u32, f64>::new();
     let mut raw_healing_by_spell = BTreeMap::<u32, f64>::new();
+    let mut healing_events_by_spell = BTreeMap::<u32, usize>::new();
+    let mut raw_heal_health_fraction_by_spell = BTreeMap::<u32, f64>::new();
     let mut periodic_ticks_by_spell = BTreeMap::<u32, usize>::new();
     let mut outgoing_damage_by_spell = BTreeMap::<u32, i64>::new();
     let mut outgoing_damage_hits_by_spell = BTreeMap::<u32, u64>::new();
@@ -1398,6 +1400,10 @@ fn replay_registered_run_with_healing(
                     *healing_by_spell.entry(spell).or_default() += effective;
                     *raw_healing_by_spell.entry(spell).or_default() +=
                         f64::from(event.amount.max(0));
+                    *healing_events_by_spell.entry(spell).or_default() += 1;
+                    let max_health = world.get::<Health>(tank).expect("tank health").max;
+                    *raw_heal_health_fraction_by_spell.entry(spell).or_default() +=
+                        f64::from(event.amount.max(0)) / f64::from(max_health);
                 }
             }
         }
@@ -1496,6 +1502,8 @@ fn replay_registered_run_with_healing(
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
+    report["self_healing_events_by_spell"] = json!(healing_events_by_spell);
+    report["raw_heal_health_fraction_by_spell"] = json!(raw_heal_health_fraction_by_spell);
     let world = run.app.world();
     let attacker = crate::level_scaling::UnitScaling::of(world, source);
     let defender = crate::level_scaling::UnitScaling::of(world, tank);

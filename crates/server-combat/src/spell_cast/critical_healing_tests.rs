@@ -79,6 +79,7 @@ fn heal(h: &mut Harness, spell_id: u32) -> (i32, bool) {
         chain_multipliers: Vec::new(),
         selected_units: Vec::new(),
         blocked_units: Vec::new(),
+        missed_units: Vec::new(),
         prevent_hit_script: false,
     }];
     let caster = h.caster;

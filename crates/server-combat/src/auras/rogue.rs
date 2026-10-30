@@ -93,7 +93,7 @@ pub fn after_blade_flurry_copy(world: &mut World, caster: Entity, target: Entity
         periodic: false,
         damage,
         heal: None,
-        hit_mask: 0,
+        hit_mask: procs::PROC_HIT_NORMAL,
         reflected: false,
     };
     for id in ids {

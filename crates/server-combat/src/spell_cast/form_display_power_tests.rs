@@ -76,6 +76,7 @@ fn native_npc_cat_real_bite_power_burn_spends_energy() {
         chain_multipliers: Vec::new(),
         selected_units: Vec::new(),
         blocked_units: Vec::new(),
+        missed_units: Vec::new(),
         prevent_hit_script: false,
     }];
     super::resolve_effects(h.app.world_mut(), actor, &spell, &plan, 0);

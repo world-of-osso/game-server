@@ -53,11 +53,23 @@ use crate::spell_info::{SpellInfo, SpellStore};
 pub const PROC_KILL: u32 = 0x2;
 pub const PROC_DEAL_MELEE_SWING: u32 = 0x4;
 pub const PROC_TAKE_MELEE_SWING: u32 = 0x8;
+pub const PROC_HIT_NORMAL: u32 = 0x01;
+pub const PROC_HIT_CRITICAL: u32 = 0x02;
 pub const PROC_HIT_MISS: u32 = 0x04;
+pub const PROC_HIT_FULL_RESIST: u32 = 0x08;
 pub const PROC_HIT_DODGE: u32 = 0x10;
 pub const PROC_HIT_PARRY: u32 = 0x20;
+pub const PROC_HIT_BLOCK: u32 = 0x40;
+pub const PROC_HIT_EVADE: u32 = 0x80;
+pub const PROC_HIT_IMMUNE: u32 = 0x100;
+pub const PROC_HIT_DEFLECT: u32 = 0x200;
+pub const PROC_HIT_ABSORB: u32 = 0x400;
+pub const PROC_HIT_REFLECT: u32 = 0x800;
+pub const PROC_HIT_FULL_BLOCK: u32 = 0x2000;
 pub const PROC_DEAL_MELEE_ABILITY: u32 = 0x10;
 pub const PROC_TAKE_MELEE_ABILITY: u32 = 0x20;
+pub const PROC_DEAL_RANGED_ATTACK: u32 = 0x40;
+pub const PROC_TAKE_RANGED_ATTACK: u32 = 0x80;
 pub const PROC_DEAL_RANGED_ABILITY: u32 = 0x100;
 pub const PROC_TAKE_RANGED_ABILITY: u32 = 0x200;
 pub const PROC_DEAL_HELPFUL_ABILITY: u32 = 0x400;
@@ -116,6 +128,45 @@ const PROC_TRIGGER_DEPTH: u8 = 1;
 /// RPPM caps the time since the last attempt (TrinityCore: 10 s).
 const PPM_MAX_ATTEMPT_GAP: f64 = 10.0;
 
+/// TC Unit.cpp10473: map a defended spell outcome to its proc hit mask.
+pub fn miss_hit_mask(kind: shared::protocol::MissKind) -> u32 {
+    use shared::protocol::MissKind;
+    match kind {
+        MissKind::Miss => PROC_HIT_MISS,
+        MissKind::Dodge => PROC_HIT_DODGE,
+        MissKind::Parry => PROC_HIT_PARRY,
+        MissKind::Block => PROC_HIT_BLOCK | PROC_HIT_FULL_BLOCK,
+        MissKind::Resist => PROC_HIT_FULL_RESIST,
+        MissKind::Immune => PROC_HIT_IMMUNE,
+        MissKind::Evade => PROC_HIT_EVADE,
+        MissKind::Absorb => PROC_HIT_ABSORB,
+        MissKind::Deflect => PROC_HIT_DEFLECT,
+        MissKind::Reflect => PROC_HIT_REFLECT,
+    }
+}
+
+/// TC Unit.cpp10473: preserve block and absorb alongside landed hit outcomes.
+pub fn landed_hit_mask(critical: bool, blocked: f32, absorbed: f32, damage: f32) -> u32 {
+    let mut mask = 0;
+    if blocked > 0.0 {
+        mask |= PROC_HIT_BLOCK;
+        if damage <= 0.0 && absorbed <= 0.0 {
+            mask |= PROC_HIT_FULL_BLOCK;
+        }
+    }
+    if absorbed > 0.0 {
+        mask |= PROC_HIT_ABSORB;
+    }
+    if damage > 0.0 || (blocked <= 0.0 && absorbed <= 0.0) {
+        mask |= if critical {
+            PROC_HIT_CRITICAL
+        } else {
+            PROC_HIT_NORMAL
+        };
+    }
+    mask
+}
+
 /// One combat event.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuraEvent {
@@ -137,7 +188,7 @@ pub struct AuraEvent {
     pub damage: f32,
     /// Resolved healing before overheal, or None when this hit did not heal.
     pub heal: Option<f32>,
-    /// Native avoidance outcome bits; zero denotes an ordinary landed event.
+    /// Native hit outcome bits; non-hit events have no outcome.
     pub hit_mask: u32,
     /// `PROC_HIT_REFLECT`: `target` reflected the actor's spell (`ProcReflectDelayed`,
     /// Spell.cpp:2412-2436). Only reflect auras proc off it, and only off it.
@@ -428,6 +479,63 @@ fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
     scripted_proc_mask(aura.spell_id).unwrap_or(options.proc_type_mask)
 }
 
+/// TC SpellMgr.cpp575–588: explicit hit masks replace the side-specific default.
+fn matches_hit_mask(world: &World, aura: &AuraInstance, mask: [u32; 2], event: &AuraEvent) -> bool {
+    const TAKEN: u32 = PROC_TAKE_MELEE_SWING
+        | PROC_TAKE_RANGED_ATTACK
+        | PROC_TAKE_MELEE_ABILITY
+        | PROC_TAKE_RANGED_ABILITY
+        | PROC_TAKE_HELPFUL_ABILITY
+        | PROC_TAKE_HARMFUL_ABILITY
+        | PROC_TAKE_HELPFUL_SPELL
+        | PROC_TAKE_HARMFUL_SPELL
+        | PROC_TAKE_HARMFUL_PERIODIC
+        | PROC_TAKE_HELPFUL_PERIODIC
+        | PROC_TAKE_ANY_DAMAGE;
+    const DONE: u32 = PROC_DEAL_MELEE_SWING
+        | PROC_DEAL_RANGED_ATTACK
+        | PROC_DEAL_MELEE_ABILITY
+        | PROC_DEAL_RANGED_ABILITY
+        | PROC_DEAL_HELPFUL_ABILITY
+        | PROC_DEAL_HARMFUL_ABILITY
+        | PROC_DEAL_HELPFUL_SPELL
+        | PROC_DEAL_HARMFUL_SPELL
+        | PROC_DEAL_HARMFUL_PERIODIC
+        | PROC_DEAL_HELPFUL_PERIODIC
+        | PROC_MAIN_HAND_WEAPON_SWING
+        | PROC_OFF_HAND_WEAPON_SWING;
+    if mask[0] & (TAKEN | DONE) == 0 {
+        return true;
+    }
+    let native = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(aura.spell_id))
+        .and_then(|spell| spell.aura_options.as_ref())
+        .map_or(0, |options| options.proc_hit_mask);
+    let default = PROC_HIT_NORMAL
+        | PROC_HIT_CRITICAL
+        | if mask[0] & TAKEN == 0 {
+            PROC_HIT_ABSORB
+        } else {
+            0
+        };
+    let reflect = aura
+        .effects
+        .iter()
+        .any(|effect| handlers::reflects(effect.aura_type));
+    let required = if native != 0 {
+        native
+    } else if reflect {
+        PROC_HIT_REFLECT
+    } else {
+        default
+    };
+    let additional =
+        crate::spell_cast::script_registry::avoidance_proc_hit_mask(world, aura.spell_id)
+            .unwrap_or(0);
+    (required | additional) & event.hit_mask != 0
+}
+
 fn proc_matches(
     world: &World,
     aura: &AuraInstance,
@@ -440,17 +548,8 @@ fn proc_matches(
     if aura.spell_id == 195181 && mask[0] & PROC_TAKE_MELEE_SWING == 0 {
         return false;
     }
-    if event.hit_mask != 0 {
-        let scripted =
-            crate::spell_cast::script_registry::avoidance_proc_hit_mask(world, aura.spell_id);
-        let native = world
-            .get_resource::<SpellStore>()
-            .and_then(|store| store.get(aura.spell_id))
-            .and_then(|spell| spell.aura_options.as_ref())
-            .map_or(0, |options| options.proc_hit_mask);
-        if scripted.unwrap_or(native) & event.hit_mask == 0 {
-            return false;
-        }
+    if !matches_hit_mask(world, aura, mask, event) {
+        return false;
     }
     //102351's tooltip requires damage taken, not a heal or fully absorbed hit.
     if aura.spell_id == crate::spell_cast::scripts::CENARION_WARD && event.damage <= 0.0 {

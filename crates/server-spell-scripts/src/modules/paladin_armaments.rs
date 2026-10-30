@@ -525,7 +525,9 @@ fn grand_crusader_is_avoidance(
     _: &AuraInstance,
     event: &combat::auras::procs::AuraEvent,
 ) -> bool {
-    event.hit_mask != 0
+    event.hit_mask & (combat::auras::procs::PROC_HIT_MISS
+        | combat::auras::procs::PROC_HIT_DODGE
+        | combat::auras::procs::PROC_HIT_PARRY) != 0
 }
 
 fn grand_crusader_from_avoidance(

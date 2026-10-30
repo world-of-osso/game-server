@@ -27,6 +27,7 @@ fn hit_native(h: &mut Harness, spell_id: u32, effect_index: u8, target: Entity) 
         chain_multipliers: Vec::new(),
         selected_units: Vec::new(),
         blocked_units: Vec::new(),
+        missed_units: Vec::new(),
         prevent_hit_script: false,
     }];
     super::resolve_effects(h.app.world_mut(), h.caster, spell, &plan, 0);

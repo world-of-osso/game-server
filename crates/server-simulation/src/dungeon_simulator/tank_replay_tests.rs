@@ -33,6 +33,58 @@ fn live_by_the_glaive_ignores_healing_modifiers_on_real_heal() {
 }
 
 #[test]
+#[ignore = "requires Vengeance MID2 profile and world database"]
+fn live_by_the_glaive_procs_on_parry_not_normal_hits() {
+    use crate::auras::procs::{self, AuraEvent};
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::dps_parity::prepare_registered_player(581, 70448).unwrap();
+    let (tank, attacker) = (run.actor, run.targets[0]);
+    assert!(crate::auras::has_aura(run.app.world(), tank, 428607));
+    let send_hit = |run: &mut super::dps_parity::Run, hit_mask| {
+        procs::push_event(
+            run.app.world_mut(),
+            AuraEvent {
+                actor: attacker,
+                target: Some(tank),
+                action_target: None,
+                actor_mask: [procs::PROC_DEAL_MELEE_SWING, 0],
+                target_mask: [procs::PROC_TAKE_MELEE_SWING, 0],
+                spell_id: None,
+                can_proc: true,
+                cast_used_proc_modifier: false,
+                periodic: false,
+                damage: 0.0,
+                heal: None,
+                hit_mask,
+                reflected: false,
+            },
+        );
+        for _ in 0..4 {
+            run.app.update();
+        }
+    };
+    let heals = |run: &super::dps_parity::Run| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(428608) && event.kind == CombatLogKind::Heal)
+            .count()
+    };
+    send_hit(&mut run, procs::PROC_HIT_NORMAL);
+    send_hit(&mut run, procs::PROC_HIT_CRITICAL);
+    assert_eq!(
+        heals(&run),
+        0,
+        "landed attacks do not trigger the parry-only aura"
+    );
+    send_hit(&mut run, procs::PROC_HIT_PARRY);
+    assert_eq!(heals(&run), 1, "a parried attack triggers the native heal");
+}
+
+#[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn training_of_niuzao_tracks_live_stagger_levels() {
     use crate::auras::{self, ActiveAuras, RemoveReason};
@@ -2591,6 +2643,18 @@ fn protection_paladin_simc_apl_uses_shield_of_the_righteous() {
     assert!(
         report["self_healing_by_spell"]["85673"].as_f64().unwrap() > 0.0,
         "{report}"
+    );
+    assert!(
+        report["self_healing_events_by_spell"]["85673"]
+            .as_u64()
+            .unwrap()
+            > 0
+    );
+    assert!(
+        report["raw_heal_health_fraction_by_spell"]["85673"]
+            .as_f64()
+            .unwrap()
+            > 0.0
     );
     println!("SIMC_TANK_REPLAY {report}");
 }
