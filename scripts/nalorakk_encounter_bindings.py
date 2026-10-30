@@ -38,11 +38,11 @@ def prepare_bindings(db, db2):
         if not db.execute('SELECT 1 FROM content_creature WHERE map=2825 AND id1=?', (entry,)).fetchone():
             raise ValueError(f'normal population missing: {entry}')
         binding = (2825, entry, encounter, bit, journal, actor, display)
-        existing = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2825 AND creature_entry=?', (entry,)).fetchone()
+        existing = db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2825 AND creature_entry=?', (entry,)).fetchone()
         if existing is not None and existing != binding:
             raise ValueError(f'encounter binding conflicts: {entry}')
         rows.append(binding)
-    db.executemany('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', rows)
+    db.executemany('INSERT OR IGNORE INTO raid_encounter_creature(map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id) VALUES(?,?,?,?,?,?,?)', rows)
     return rows
 
 

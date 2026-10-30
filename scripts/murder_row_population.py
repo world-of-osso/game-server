@@ -54,10 +54,10 @@ def prepare(path):
             raise ValueError(f'conflicting entrance: {existing}')
         db.execute('INSERT OR IGNORE INTO tdb_world_safe_locs VALUES (?,?,?,?,?,?,?,?)', ENTRANCE)
         for row in BINDINGS:
-            existing = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', row[:2]).fetchone()
+            existing = db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', row[:2]).fetchone()
             if existing is not None and existing != row:
                 raise ValueError(f'conflicting encounter binding: {existing}')
-            db.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES (?,?,?,?,?,?,?)', row)
+            db.execute('INSERT OR IGNORE INTO raid_encounter_creature(map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id) VALUES (?,?,?,?,?,?,?)', row)
     return report
 
 
