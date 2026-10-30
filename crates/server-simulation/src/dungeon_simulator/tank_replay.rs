@@ -13,6 +13,93 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 const TICK_SECONDS: f64 = 0.05;
 const SPIKE_WINDOW_SECONDS: f64 = 5.0;
 
+#[derive(Clone, Copy)]
+enum DecisionKind {
+    Foreground,
+    OffGcd,
+}
+
+struct DecisionSchedule {
+    at: std::time::Duration,
+    kind: DecisionKind,
+    gaussian_pair: Option<f64>,
+}
+
+impl DecisionSchedule {
+    fn new(at: std::time::Duration) -> Self {
+        Self { at, kind: DecisionKind::Foreground, gaussian_pair: None }
+    }
+
+    fn poll_delay(&mut self) -> std::time::Duration {
+        use crate::random::Rng;
+        // SimC76f8118 rng.hpp:295–326 uses the polar Box–Muller pair.
+        let normal = if let Some(value) = self.gaussian_pair.take() { value } else {
+            let mut rng = crate::random::thread_rng();
+            loop {
+                let x = 2.0 * rng.gen::<f64>() - 1.0;
+                let y = 2.0 * rng.gen::<f64>() - 1.0;
+                let w = x * x + y * y;
+                if w > 0.0 && w < 1.0 {
+                    let factor = (-2.0 * w.ln() / w).sqrt();
+                    self.gaussian_pair = Some(y * factor);
+                    break x * factor;
+                }
+            }
+        };
+        std::time::Duration::from_secs_f64((0.1 + 0.01 * normal).max(0.000_000_001))
+    }
+
+    fn decide(&mut self, run: &mut super::dps_parity::Run) -> Result<(), String> {
+        let off_gcd_acted = match self.kind {
+            DecisionKind::Foreground => { super::dps_parity::drive_literal_tick(run)?; false },
+            DecisionKind::OffGcd => super::dps_parity::drive_literal_off_gcd(run)?,
+        };
+        let world = run.app.world();
+        let now = world.resource::<Time>().elapsed();
+        let clock = crate::spell_cast::history_now(world);
+        let gcd = world.get::<crate::spell_cast::SpellHistory>(run.actor)
+            .and_then(|history| history.active_gcd_ready_at(clock));
+        let cast = world.get::<shared::casting::CastState>(run.actor)
+            .map(|cast| (cast.duration - cast.elapsed).max(0.0));
+        if gcd.is_some() && cast.is_none()
+            && (matches!(self.kind, DecisionKind::Foreground) || off_gcd_acted)
+        {
+            // SimC76f8118 action.cpp303–306 schedules the first off-GCD check immediately.
+            self.at = now;
+            self.kind = DecisionKind::OffGcd;
+            return Ok(());
+        }
+        let poll = now + self.poll_delay();
+        if gcd.is_some() || cast.is_some() {
+            let gcd_at = next_gcd_decision_boundary(run, std::time::Duration::MAX);
+            let cast_at = cast.map_or(now, |remaining| now + std::time::Duration::from_secs_f32(remaining) + std::time::Duration::from_micros(1));
+            let ready = if gcd.is_some() { gcd_at.max(cast_at) } else { cast_at };
+            if ready <= poll {
+                self.at = ready;
+                self.kind = DecisionKind::Foreground;
+            } else {
+                self.at = poll;
+                self.kind = DecisionKind::OffGcd;
+            }
+        } else {
+            // SimC76f8118 player.cpp343–351,7130–7133: no ready action retries at 100±10 ms.
+            self.at = poll;
+            self.kind = DecisionKind::Foreground;
+        }
+        Ok(())
+    }
+
+    fn run_due(&mut self, run: &mut super::dps_parity::Run) -> Result<(), String> {
+        for _ in 0..128 {
+            if self.at > run.app.world().resource::<Time>().elapsed() {
+                return Ok(());
+            }
+            self.decide(run)?;
+        }
+        Err("tank replay exceeded 128 simultaneous decision events".into())
+    }
+}
+
 pub(super) fn next_gcd_decision_boundary(
     run: &super::dps_parity::Run,
     boundary: std::time::Duration,
@@ -28,6 +115,26 @@ pub(super) fn next_gcd_decision_boundary(
     let delay =
         std::time::Duration::from_secs_f64(ready - now) + std::time::Duration::from_nanos(1);
     boundary.min(world.resource::<Time>().elapsed() + delay)
+}
+
+#[cfg(test)]
+mod decision_schedule_tests {
+    use super::*;
+
+    #[test]
+    fn poll_intervals_follow_seeded_gaussian() {
+        let sample = || {
+            let _seed = crate::random::seed_scope(70448);
+            let mut schedule = DecisionSchedule::new(std::time::Duration::ZERO);
+            (0..10_000).map(|_| schedule.poll_delay().as_secs_f64() * 1000.0).collect::<Vec<_>>()
+        };
+        let values = sample();
+        assert_eq!(values, sample());
+        let mean = values.iter().sum::<f64>() / values.len() as f64;
+        let deviation = (values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64).sqrt();
+        assert!((99.5..100.5).contains(&mean), "mean poll interval {mean}");
+        assert!((9.5..10.5).contains(&deviation), "poll interval deviation {deviation}");
+    }
 }
 
 pub(super) fn sampled_blocked_pct(
@@ -810,6 +917,7 @@ fn replay_registered_run_with_healing(
     let mut engagement_samples = vec![super::dps_parity::capture_engagement(&run)];
     let mut retired = Vec::new();
     let mut bloodlust_applied = false;
+    let mut decisions = DecisionSchedule::new(started_at);
     for tick in 1..=duration_seconds * 20 {
         elapsed = f64::from(tick) * TICK_SECONDS;
         if !bloodlust_applied && bloodlust_ms.is_some_and(|time| time <= u64::from(tick - 1) * 50) {
@@ -1061,17 +1169,13 @@ fn replay_registered_run_with_healing(
             death = Some(elapsed);
             break;
         }
-        super::dps_parity::drive_literal_tick(&mut run)
-            .map_err(|error| format!("native APL tick {tick}: {error}"))?;
+        decisions.run_due(&mut run).map_err(|error| format!("native APL tick {tick}: {error}"))?;
         let boundary = started_at + std::time::Duration::from_millis(u64::from(tick) * 50);
         while run.app.world().resource::<Time>().elapsed() < boundary {
-            let next = super::dps_parity::next_fixture_boundary(&run, boundary);
-            let next = next_gcd_decision_boundary(&run, next);
+            let next = super::dps_parity::next_fixture_boundary(&run, boundary.min(decisions.at));
             super::dps_parity::advance_fixture_step(&mut run, next)?;
             super::dps_parity::apply_fixture_add_events(&mut run, &mut retired, started_at)?;
-            if next < boundary {
-                super::dps_parity::drive_literal_tick(&mut run)?;
-            }
+            decisions.run_due(&mut run)?;
         }
         if matches!(tick, 1 | 20 | 5400 | 6000) {
             engagement_samples.push(super::dps_parity::capture_engagement(&run));
