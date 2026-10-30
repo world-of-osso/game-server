@@ -1430,6 +1430,12 @@ fn record_swing(
         );
     }
     record_swing_events(world, attacker_entity, target_entity, outcome);
+    crate::scripted_ai::health_threshold::complete_crossing(
+        world,
+        target_entity,
+        outcome.health_before,
+        outcome.incoming_loss,
+    );
     if caused_damage {
         // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
         crate::auras::damage_shield::retaliate(world, target_entity, attacker_entity);
@@ -2121,6 +2127,7 @@ struct SwingOutcome {
     scaled_loss: f32,
     /// Training-dummy adjusted loss; health-sensitive limits run at commit time.
     incoming_loss: f32,
+    health_before: f32,
     blocked: f32,
     /// Damage beyond the target's health before the swing.
     overkill: f32,
@@ -2542,6 +2549,7 @@ fn resolve_swing(
         damage,
         scaled_loss,
         incoming_loss,
+        health_before: 0.0,
         blocked,
         overkill: 0.0,
         weapon_speed: attacker.weapon_round_time(&weapon),
@@ -2832,6 +2840,7 @@ fn commit_melee_loss(
         return false;
     }
     let before = health.current;
+    outcome.health_before = before;
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
     crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let health = world.get::<Health>(victim).expect("living melee victim");
@@ -2843,6 +2852,8 @@ fn commit_melee_loss(
         health,
         outcome.incoming_loss,
     );
+    let scripted_loss =
+        crate::scripted_ai::health_threshold::limit_loss(world, victim, health, scripted_loss);
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
     let (loss, defeated) = crate::duel::duel_health_loss(
         world.get::<crate::duel::DuelOpponent>(victim),
@@ -2914,6 +2925,8 @@ pub(crate) fn deal_health_damage(
         health,
         incoming_loss,
     );
+    let scripted_loss =
+        crate::scripted_ai::health_threshold::limit_loss(world, victim, health, scripted_loss);
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
     let loss = limit_unkillable_loss(before, scripted_loss, protected);
     if incoming_loss > 0.0 {
@@ -2954,6 +2967,7 @@ pub(crate) fn deal_health_damage(
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
+    crate::scripted_ai::health_threshold::complete_crossing(world, victim, before, incoming_loss);
     if !commit.lethal {
         return;
     }
@@ -3195,6 +3209,7 @@ pub fn replay_healer_hit(
         damage,
         scaled_loss,
         incoming_loss: health_loss(world.get::<TrainingDummy>(victim).is_some(), scaled_loss),
+        health_before: 0.0,
         blocked,
         overkill: 0.0,
         weapon_speed,

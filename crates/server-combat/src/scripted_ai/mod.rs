@@ -40,6 +40,7 @@ mod gorek;
 mod granyth;
 mod gulping_goliath;
 mod gutshot;
+pub(crate) mod health_threshold;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 mod irideus;

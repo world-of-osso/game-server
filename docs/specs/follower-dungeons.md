@@ -43,6 +43,19 @@ The party walked from the entrance through Kystia and Zaen, took the inferred ga
 
 Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` contains the four encounter transitions; `instance7-achievements.json` contains the owner readback; `lithiel-resume.log` records the blocked approach and `lithiel-resume2.log` records the kill and final approach; `obstacle-exact.log` and `obstacle-engine-master-exact-trace.json` record the engine-master retest. `instance7-lithiel-forever.webp` and `instance7-lithiel-modern.webp` are post-kill captures, not kill-frame captures; the Modern image was taken after a client reconnect, with the same server still running.
 
+## Living encounter completion
+
+`raid_encounter_creature.complete_at_health_pct` is an optional sourced completion boundary. Damage crossing that percentage leaves the bound creature alive, completes the active encounter and applies the existing living-surrender combat exit. A zero threshold intercepts lethal damage at one health. An unset threshold preserves ordinary death completion. The completion is not a creature death or a new loot-corpse policy. `content/encounter-thresholds.json` is the source for these values and identities; `scripts/raid_encounters.py` validates the journal and TDB model and preserves them when it rebuilds the binding table.
+
+`ENCOUNTER_END_AT_HEALTH_THRESHOLD_LOG_CORRELATED`: Rasha'nan 213937 / encounter 2839 completes at 59.5%, as LittleWigs `WarWithin/TheDawnbreaker/Rashanan.lua` records. WCL x3HzDRn6yVjqCbt8/7 and NW7zAgkTDbyqKZBf/1 show the living actor near 60% immediately before successful encounter end; they do not independently establish 59.5% exactly.
+
+`ENCOUNTER_END_ON_LETHAL_DAMAGE_LOG_CORRELATED`: Zul'jan 259447 / encounter 3458 completes on lethal damage while alive at one health. WCL JpHdnbhYD8ZFWvma/1, z1C2HFkf6VpGqWZD/1 and MzD8pFb9YaW6fA1K/15 show successful endings with final sampled health below 0.03% and no observed boss death. The lethal trigger is inferred; no death credit is claimed.
+
+## Dawnbreaker flight traversal
+
+`DAWNBREAKER_FLIGHT_TRAVERSAL` (planned, not implemented): native AreaTable 14971 on map 2662 has MountFlags 15, including the flying-mount bit 0x2. Subareas 15544–15547 have MountFlags 13, without that bit. TC 15e0ed76 `DBCEnums.h:162–170` defines these flags; `Unit.cpp:8405–8442` also permits mount-restriction auras to override them. Native spell 449208 carries aura 336 with mount flags 15, but its application in the sampled Shadowcrown-to-Anub'ikkaj transition is not established.
+
+Where flying is allowed, an airborne leader on a flying mount leads followers that mount and fly-follow in three dimensions without the walking navmesh. Followers land on the navmesh floor connected to the leader's landing point. The simulator leader uses this rule for the Shadowcrown-to-Anub'ikkaj leg. This is an approved design, not evidence that follower flight works today.
 ## Uldaman live clear
 
 On 2026-10-30, Uldawalk entered map 2451, difficulty 205, through ordinary LFG 2465 with Garrick, Crenna, Shuja and Meredy. Instance 13 completed Lost Dwarves 2555, Bromach 2556, Sentinel Talondras 2557, Emberon 2558 and Chrono-Lord Deios 2559 without a server restart. All five were alive after Deios. The client reconnected during host load; the same server and copy continued. `list-achievements` shows character achievement 16278, Uldaman: Legacy of Tyr, earned after the genuine Deios kill.

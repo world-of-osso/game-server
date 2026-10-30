@@ -26,12 +26,16 @@ class FollowerPlacementRespawnTests(unittest.TestCase):
                 position_x REAL,position_y REAL,position_z REAL,spawntimesecs INTEGER DEFAULT 120,
                 spawnDifficulties TEXT,Comment TEXT);
                 CREATE TABLE raid_encounter_creature(map_id INTEGER,creature_entry INTEGER,encounter_id INTEGER,
-                    bit INTEGER, journal INTEGER, encounter INTEGER, display INTEGER);''')
+                    bit INTEGER, journal_encounter_id INTEGER, journal_creature_id INTEGER, display_id INTEGER,
+                    complete_at_health_pct REAL);''')
             manifest = {'guid_base': 61000000, 'map_id': 2519, 'entries': [{'ordinal': 0, 'entry': 181861}]}
             placement = {'wow_xyz': (-211.1, -932.7, 40), 'page': {'url': 'source'},
                          'marker': {'floor': 1, 'percent': [20, 30]}}
             write_placements(db, manifest, [placement], [(2519, 181861, 1, 0, 1, 1, 1)])
             self.assertEqual(db.execute('SELECT id1,spawntimesecs FROM content_creature').fetchall(), [(181861, 7200)])
+            db.execute('UPDATE raid_encounter_creature SET complete_at_health_pct=59.5')
+            write_placements(db, manifest, [placement], [(2519, 181861, 1, 0, 1, 1, 1)])
+            self.assertEqual(db.execute('SELECT complete_at_health_pct FROM raid_encounter_creature').fetchone(), (59.5,))
 
 
 @unittest.skipUnless('FOLLOWER_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')

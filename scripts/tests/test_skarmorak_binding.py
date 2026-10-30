@@ -37,7 +37,7 @@ class SkarmorakBindingTests(unittest.TestCase):
                     db.execute('DELETE FROM raid_encounter_creature WHERE creature_entry=?', (ENTRY,))
                     for _ in range(2):
                         self.assertEqual(encounter_summons.import_skarmorak(db), [ENTRY])
-                        self.assertEqual(db.execute('SELECT * FROM raid_encounter_creature WHERE creature_entry=?', (ENTRY,)).fetchall(), [BINDING])
+                        self.assertEqual(db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE creature_entry=?', (ENTRY,)).fetchall(), [BINDING])
                         for query, expected in snapshots.items():
                             self.assertEqual(db.execute(query).fetchall(), expected, query)
                     db.execute("UPDATE content_creature_template SET ScriptName='conflicting_script' WHERE entry=?", (ENTRY,))

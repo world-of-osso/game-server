@@ -64,10 +64,10 @@ def import_population(db):
         db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawntimesecs,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?,?)',
                    (63521001, 190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, DUNGEON_RESPAWN_SECONDS, '1', POLICY + f'; anchors={KYRAKKA_ANCHORS}'))
     binding = (2521, 190484, 2623, 2, 2503, 5393, 107137)
-    existing = db.execute('SELECT * FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone()
+    existing = db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone()
     if existing is not None and existing != binding:
         raise ValueError('Kyrakka encounter binding conflicts')
-    db.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+    db.execute('INSERT OR IGNORE INTO raid_encounter_creature(map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id) VALUES(?,?,?,?,?,?,?)', binding)
     # The log importer added the observed Erkhart while the placeholder was 12 yards away.
     retire_encounter_duplicates(db, maps={2521})
 

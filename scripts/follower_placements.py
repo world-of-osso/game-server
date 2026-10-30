@@ -141,10 +141,10 @@ def write_placements(target, manifest, placements, bindings):
             raise ValueError(f'reserved placement GUID collision at{guid}')
         target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawntimesecs,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?,?)',
                        (guid, record['entry'], manifest['map_id'], x, y, z, DUNGEON_RESPAWN_SECONDS, '1', comment))
-        existing_binding = target.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', binding[:2]).fetchone()
+        existing_binding = target.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', binding[:2]).fetchone()
         if existing_binding is not None and tuple(existing_binding) != binding:
             raise ValueError(f'primary binding conflicts for{binding[:2]}')
-        target.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+        target.execute('INSERT OR IGNORE INTO raid_encounter_creature(map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id) VALUES(?,?,?,?,?,?,?)', binding)
         placement['guid'] = guid
         placement['binding'] = binding
         placement['orientation_policy'] = 'unsourced schema-default orientation; stationary project placement, not Retail facing'

@@ -2366,6 +2366,8 @@ fn deal_source_damage_and_report(
         health,
         incoming_loss,
     );
+    let scripted_loss =
+        crate::scripted_ai::health_threshold::limit_loss(world, target, health, scripted_loss);
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel.as_ref(),
         ctx.caster,
@@ -2470,6 +2472,7 @@ fn deal_source_damage_and_report(
     if amount > 0.0 && !recorded_hit {
         push_damage_event(world, ctx, target, periodic, scaled_loss);
     }
+    crate::scripted_ai::health_threshold::complete_crossing(world, target, before, incoming_loss);
     if commit.lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
