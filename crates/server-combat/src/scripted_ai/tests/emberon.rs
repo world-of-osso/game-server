@@ -17,6 +17,71 @@ fn emberon_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
+#[test]
+fn encounter_coverage_emberon_exit_opens_only_after_done_in_its_copy() {
+    let (mut h, boss, map) = emberon_copy(205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 376640)
+        .unwrap();
+    assert_eq!(source.map_id, MAP);
+    let door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let other_door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), other_map))
+        .id();
+    h.engage(boss);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::Done)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(door),
+        Some(&shared::protocol::GameObjectCollision(false))
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(other_door),
+        Some(&shared::protocol::GameObjectCollision(true))
+    );
+    let recreated = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    crate::scripted_ai::door_data::update_doors(h.app.world_mut(), map);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::protocol::GameObjectCollision>(recreated),
+        Some(&shared::protocol::GameObjectCollision(false))
+    );
+}
+
 fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
     h.inbox(0)
         .spell_gos

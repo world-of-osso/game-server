@@ -90,6 +90,12 @@
 
 `ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED`: GO376554 opens when Sentinel Talondras2557 is Done in its copy, using passage-door state. Its TDB position lies on the nav route to Emberon, and DungeonEncounter orders Talondras before Emberon. [Warcraft Wiki Hall of the Keepers](https://warcraft.wiki.gg/wiki/Hall_of_the_Keepers) corroborates onward progression after Talondras. No log or script sources this door's exact trigger or a possible post-RP delay.
 
+## Uldaman Emberon vault passages
+
+- `ULDAMAN_EMBERON_VAULT_DOOR_PASSAGE_INFERRED`: GO376191 opens when Talondras2557 is Done. The TDB door blocks the nav route into Emberon's vault; no log or script sources its exact trigger.
+- `ULDAMAN_EMBERON_EXIT_DOOR_PASSAGE_INFERRED`: GO376640 opens when Emberon2558 is Done. The TDB door lies on the nav route from the vault to Deios; no log or script sources its exact trigger. [Warcraft Wiki](https://warcraft.wiki.gg/wiki/Uldaman:_Legacy_of_Tyr) describes progression into the Earthworks and Vault after Emberon without identifying a door trigger.
+- The other route doors 376556, 376636 and 376637 have TDB initial state ACTIVE (open); no new state transition is inferred for them.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
