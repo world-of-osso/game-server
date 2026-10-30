@@ -265,8 +265,8 @@ impl RecastBuild {
             if !rcBuildPolyMesh(self.context, self.contours, 6, self.mesh) {
                 return Err(self.polygon_mesh_failure());
             }
-            // Recast reserves the high bit of polygon neighbours for border markers.
-            if (*self.mesh).npolys > 0x8000 {
+            // Detour adds one to neighbour indices and reserves the high bit for portals.
+            if (*self.mesh).npolys >= 0x8000 {
                 return Err(format!(
                     "{POLYGON_CAPACITY_ERROR}: {} polygons",
                     (*self.mesh).npolys
