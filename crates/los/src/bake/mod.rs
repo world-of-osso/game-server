@@ -127,6 +127,7 @@ pub struct Baker {
     m2_solids: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
     wmos: HashMap<u32, Option<Rc<WmoModel>>>,
+    wmo_liquids: HashMap<u32, Rc<Vec<crate::wmo_liquid::LiquidTriangle>>>,
     /// Dropped thin doodads by model, counted once per (placement unique id, model): the
     /// doodads of one placed WMO count once.
     dropped: HashMap<u32, DroppedDoodad>,
@@ -152,6 +153,7 @@ impl Baker {
             m2_solids: false,
             m2s: HashMap::new(),
             wmos: HashMap::new(),
+            wmo_liquids: HashMap::new(),
             dropped: HashMap::new(),
             dropped_placements: HashSet::new(),
             problems: Vec::new(),
@@ -308,6 +310,66 @@ impl Baker {
             }
         }
         Ok(bounds)
+    }
+
+    /// Transformed WMO liquid surfaces for a terrain tile and its source neighbours.
+    pub fn collect_wmo_water(
+        &mut self,
+        tiles: &[TileFiles],
+        tile: (u32, u32),
+    ) -> Result<Vec<crate::wmo_liquid::LiquidTriangle>> {
+        let (_, placements) = self.neighbourhood_placements(tiles, tile)?;
+        let mut result = Vec::new();
+        for placement in placements {
+            let ModelRef::Fdid(fdid) = &placement.model else {
+                continue;
+            };
+            let world = placement.world_from_local();
+            result.extend(
+                self.wmo_liquid_model(*fdid)?
+                    .iter()
+                    .map(|triangle| triangle.transformed(world)),
+            );
+        }
+        Ok(result)
+    }
+
+    /// Liquid surfaces of the WDT's global WMO, when present.
+    pub fn collect_global_wmo_water(
+        &mut self,
+        wdt_fdid: u32,
+    ) -> Result<Vec<crate::wmo_liquid::LiquidTriangle>> {
+        let wdt = self
+            .read("terrain", &format!("{wdt_fdid}.wdt"))
+            .map_err(|error| error.to_string())?;
+        let Some(placement) = adt::global_wmo(&wdt)? else {
+            return Ok(Vec::new());
+        };
+        let ModelRef::Fdid(fdid) = self.resolve(&placement.model) else {
+            return Err("global WMO has no FileDataID".into());
+        };
+        let world = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(placement.scale),
+            adt::placement_rotation(placement.rotation),
+            shared::ground::global_wmo_placement_position(placement.position),
+        );
+        Ok(self
+            .wmo_liquid_model(fdid)?
+            .iter()
+            .map(|triangle| triangle.transformed(world))
+            .collect())
+    }
+
+    fn wmo_liquid_model(
+        &mut self,
+        fdid: u32,
+    ) -> Result<Rc<Vec<crate::wmo_liquid::LiquidTriangle>>> {
+        if let Some(model) = self.wmo_liquids.get(&fdid) {
+            return Ok(model.clone());
+        }
+        let model = Rc::new(crate::wmo_liquid::load_model(&self.data, fdid)?);
+        self.wmo_liquids.insert(fdid, model.clone());
+        Ok(model)
     }
 
     /// Thin doodads dropped so far, thinnest first.

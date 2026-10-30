@@ -5,6 +5,24 @@ use recastnavigation_sys::*;
 
 pub const VERTEX_CAPACITY_ERROR: &str = "RECAST_VERTEX_CAPACITY_EXCEEDED";
 pub const POLYGON_CAPACITY_ERROR: &str = "RECAST_POLYGON_NEIGHBOUR_CAPACITY_EXCEEDED";
+
+/// Add WMO liquid as swim-height geometry, not solid collision. A swimmer's feet
+/// float SWIM_DEPTH below the authored liquid surface.
+pub fn add_wmo_swim_surfaces(
+    geometry: &mut los::bake::CollectedGeometry,
+    water: &mut Vec<(Vec3, Vec3)>,
+    surfaces: &[los::wmo_liquid::LiquidTriangle],
+) {
+    for surface in surfaces {
+        let triangle = surface
+            .vertices
+            .map(|point| point - Vec3::Y * shared::movement::SWIM_DEPTH);
+        let min = triangle[0].min(triangle[1]).min(triangle[2]);
+        let max = triangle[0].max(triangle[1]).max(triangle[2]);
+        water.push((min - Vec3::Y * CELL_HEIGHT, max + Vec3::Y * CELL_HEIGHT));
+        geometry.triangles.push(triangle);
+    }
+}
 const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
 const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
 const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
@@ -574,6 +592,43 @@ mod tests {
         let c = Vec3::new(x1, y, 30.0);
         let d = Vec3::new(x1, y, 10.0);
         [[a, b, c], [a, c, d]]
+    }
+
+    #[test]
+    fn wmo_swim_surface_connects_disjoint_shores() {
+        let mut geometry = los::bake::CollectedGeometry {
+            triangles: floor(10.0, 22.0, 0.0)
+                .into_iter()
+                .chain(floor(38.0, 50.0, 0.0))
+                .collect(),
+            obstacles: Vec::new(),
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("32_31.nav");
+        std::fs::write(&path, bake_collected(&geometry, &[], (32, 31)).unwrap()).unwrap();
+        let start = Vec3::new(16.0, 0.0, 20.0);
+        let end = Vec3::new(44.0, 0.0, 20.0);
+        assert!(
+            crate::NavigationMap::open(dir.path())
+                .unwrap()
+                .complete_path(start, end)
+                .is_err()
+        );
+        let surfaces: Vec<_> = floor(21.0, 39.0, shared::movement::SWIM_DEPTH)
+            .into_iter()
+            .map(|vertices| los::wmo_liquid::LiquidTriangle {
+                vertices,
+                liquid_type: 13,
+            })
+            .collect();
+        let mut water = Vec::new();
+        add_wmo_swim_surfaces(&mut geometry, &mut water, &surfaces);
+        std::fs::write(&path, bake_collected(&geometry, &water, (32, 31)).unwrap()).unwrap();
+        let route = crate::NavigationMap::open(dir.path())
+            .unwrap()
+            .complete_path(start, end)
+            .expect("swim surface connects shores");
+        assert!(route.last().unwrap().distance(end) < 1.0);
     }
 
     #[test]
