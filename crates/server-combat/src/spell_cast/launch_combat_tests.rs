@@ -139,7 +139,14 @@ fn native_evading_hostile_target_has_no_launch_combat_reference() {
         .world_mut()
         .entity_mut(h.npc)
         .insert(crate::creature_ai::CreatureState::Returning);
+    let health = h.health(h.npc);
     complete_native_cast(&mut h, JUDGMENT);
+    assert_eq!(
+        h.health(h.npc),
+        health,
+        "an evading creature takes no spell damage"
+    );
+    assert_miss(&h, JUDGMENT, MissKind::Evade);
     assert!(!crate::combat_refs::has_active_reference_to(
         h.app.world(),
         h.caster,

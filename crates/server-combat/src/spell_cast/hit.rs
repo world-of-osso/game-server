@@ -135,6 +135,9 @@ fn roll_defense(
     unit: Entity,
     negative: u32,
 ) -> Option<MissKind> {
+    if crate::creature_ai::is_evading_attacks(world, unit) {
+        return Some(MissKind::Evade);
+    }
     if negative == 0 {
         return None;
     }
