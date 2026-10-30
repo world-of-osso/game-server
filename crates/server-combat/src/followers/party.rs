@@ -432,6 +432,9 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
         if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(member) {
             follow.owner = player;
         }
+        if let Some(mut summoned_by) = world.get_mut::<shared::components::UnitSummonedBy>(member) {
+            summoned_by.0 = player.to_bits();
+        }
     }
     world
         .entity_mut(player)
@@ -873,6 +876,49 @@ mod copy_tests {
                 .owner,
             reconnected
         );
+    }
+
+    #[test]
+    fn follower_reconnect_restores_owner_target_healing() {
+        let (fixture_app, _, mut run) = fixture();
+        let map = run.copy.unwrap();
+        drop(fixture_app);
+        let (mut h, healer) = super::super::kit_tests::level32(209072);
+        run.members = vec![healer];
+        let old_owner = h.caster;
+        h.app.init_resource::<GroupRegistry>();
+        h.app.world_mut().entity_mut(old_owner).insert((
+            ClientId(30),
+            map,
+            run,
+            crate::lfg::PlayerLfgState::default(),
+        ));
+        h.app.world_mut().entity_mut(healer).insert(map);
+        crate::networking::install_disconnect_fixture(&mut h.app);
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .insert(lightyear::prelude::server::ClientOf)
+            .remove::<Connected>();
+        h.app.world_mut().flush();
+        h.app.update();
+        assert!(h.app.world().get_entity(old_owner).is_err());
+
+        let owner = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
+        h.app.world_mut().entity_mut(owner).insert((
+            ClientId(30),
+            map,
+            shared::components::Health {
+                current: 300.0,
+                max: 1000.0,
+            },
+        ));
+        reconnect(h.app.world_mut(), owner, 30);
+        assert!(!crate::auras::has_aura(h.app.world(), owner, 774));
+        crate::spell_cast::creature_cast(h.app.world_mut(), healer, 18562, Some(owner), false)
+            .expect("Swiftmend must recognize the reconnected owner without a heal-over-time aura");
+        h.advance(3);
+        assert!(h.health(owner) > 300.0);
     }
 
     #[test]
