@@ -1762,6 +1762,44 @@ fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
 }
 
 #[test]
+#[ignore = "uses real Protection Hammer of Wrath and Sacred Weapon procs"]
+fn sacred_weapon_strikes_on_hammer_of_wrath_without_healing_from_energize() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = engaged_protection_paladin();
+    let (actor, target) = (run.actor, run.targets[0]);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 386730,
+    );
+    apply_self_aura(&mut run, 432502);
+    for _ in 0..10 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1241413, Some(target), 1);
+        for _ in 0..20 {
+            run.app.update();
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let strikes = events
+        .iter()
+        .filter(|event| event.spell_id == Some(432616) && event.kind == CombatLogKind::Damage)
+        .count();
+    let heals = events
+        .iter()
+        .filter(|event| event.spell_id == Some(441590) && event.kind == CombatLogKind::Heal)
+        .count();
+    assert!(strikes > 0, "the hostile hits must proc Sacred Weapon");
+    assert_eq!(
+        heals, 0,
+        "caster-only Holy Power gains are not helpful hits"
+    );
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and precombat APL"]
 fn protection_default_precombat_casts_holy_bulwark() {
     let run = super::dps_parity::prepare_registered_player(66, 1).unwrap();
