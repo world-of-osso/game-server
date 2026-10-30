@@ -12,5 +12,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectEnabled(ef
 fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     !(spell == 194879
         && index == 1
-        && world.get::<ActiveSpec>(caster).is_some_and(|spec| matches!(spec.0, 250 | 251 | 252)))
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| matches!(spec.0, 250 | 251 | 252)))
 }
