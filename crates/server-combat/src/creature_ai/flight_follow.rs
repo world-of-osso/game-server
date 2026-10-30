@@ -7,7 +7,7 @@ use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 
 #[derive(Component)]
-pub(super) struct FlightFollow;
+pub(crate) struct FlightFollow;
 
 pub(super) fn update(world: &mut World) {
     let followers: Vec<_> = world
