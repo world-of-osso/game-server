@@ -3325,6 +3325,7 @@ fn voidscar_release_uses_imported_entrance_when_graveyard_and_exit_are_missing()
         .entity_mut(player.connection)
         .insert(pair::<ReleaseSpirit>());
     h.app.world_mut().entity_mut(player.player).insert((
+        DungeonDifficulty(205),
         Health {
             current: 0.0,
             max: 100.0,
