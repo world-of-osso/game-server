@@ -1686,6 +1686,15 @@ mod tests {
                     "Blood Beast damage {spell:?}"
                 );
             }
+            let casts = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(beast.to_bits())
+                        && event.spell_id == Some(434574)
+                        && event.kind == CombatLogKind::CastSuccess
+                })
+                .count();
+            assert_eq!(casts, 3, "Corrupted Blood begins on cooldown");
             let swings = events
                 .iter()
                 .filter(|event| {
