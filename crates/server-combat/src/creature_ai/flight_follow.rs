@@ -11,7 +11,10 @@ pub(super) struct FlightFollow;
 
 pub(super) fn update(world: &mut World) {
     let followers: Vec<_> = world
-        .query::<(Entity, &Follower, &Position, &InMap, &Health)>()
+        .query_filtered::<
+            (Entity, &Follower, &Position, &InMap, &Health),
+            Without<crate::taxi::TaxiFlight>,
+        >()
         .iter(world)
         .filter(|(_, _, _, _, health)| health.current > 0.0)
         .map(|(unit, follower, position, map, _)| (unit, follower.owner, *position, *map))
