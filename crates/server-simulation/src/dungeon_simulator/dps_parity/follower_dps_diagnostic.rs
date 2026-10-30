@@ -173,7 +173,8 @@ fn follower_dps_production_dummy() {
     let mut lava_during_stable_storm = 0u32;
     let mut seen_events = 0usize;
     let mut cast_trace = Vec::new();
-    let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
+    let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some()
+        || std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some();
     let mut stat_sums = [0.0f64; 6];
     for frame in 0..2400 {
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
@@ -393,6 +394,29 @@ fn follower_dps_production_dummy() {
             casts.get(&51505).is_some_and(|count| *count > 0),
             "Lava Burst resumes outside Storm Elemental"
         );
+    }
+    if entry == 209057 && std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some() {
+        let wings: Vec<f64> = cast_trace
+            .iter()
+            .filter(|action| action["spell"] == 389539)
+            .map(|action| action["at_s"].as_f64().unwrap())
+            .collect();
+        let tolls: Vec<f64> = cast_trace
+            .iter()
+            .filter(|action| action["spell"] == 375576)
+            .map(|action| action["at_s"].as_f64().unwrap())
+            .collect();
+        assert_eq!(
+            (wings.len(), tolls.len()),
+            (2, 2),
+            "both cooldown windows must occur"
+        );
+        for (&wing, &toll) in wings.iter().zip(&tolls) {
+            assert!(
+                wing < toll && toll - wing < 2.0,
+                "Sentinel {wing}s must precede Toll {toll}s"
+            );
+        }
     }
     if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(

@@ -71,6 +71,14 @@ class FollowerKitProducerTests(unittest.TestCase):
         self.assertEqual(active(103, 106951, 90), [], 'Incarnation replaces Berserk')
         self.assertEqual(active(103, 102543, 90)[0][4], 'buff')
 
+    def test_protection_sentinel_precedes_divine_toll(self):
+        source = json.loads(SOURCE.read_text())
+        with closing(sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
+            rows, _, _ = kit_rows(db, source)
+        def priority(spell):
+            return next(row[5] for row in rows if row[0] == 66 and row[1] == spell and row[2] <= 90 <= row[3])
+        self.assertLess(priority(389539), priority(375576))
+
     def command(self, output, receipt, diff, world_db=None, source=None):
         return [sys.executable, str(ROOT / 'scripts/follower_spec_kits.py'),
                 '--world-db', str(world_db or ROOT / 'data/world.db'), '--db2-root', str(DB2),
