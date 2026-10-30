@@ -743,7 +743,10 @@ impl Default for SpellScriptRegistry {
         // Unit tests compile the exact downstream module sources against this test
         // crate's types. Production and external fixtures install the host registry.
         #[cfg(test)]
-        return Self::new(fixtures::MODULES);
+        {
+            debug_assert_eq!(fixtures::NAMED_MODULES.len(), fixtures::MODULES.len());
+            return Self::new(fixtures::MODULES);
+        }
         #[cfg(not(test))]
         Self::new(&[])
     }

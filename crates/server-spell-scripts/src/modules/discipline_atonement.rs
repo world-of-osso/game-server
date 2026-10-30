@@ -58,7 +58,7 @@ fn declared_reach(
 #[test]
 fn void_shield_reach_uses_native_discharge_range_and_only_engaged_targets() {
     use combat::spell_cast::script_registry::{DeclaredReach, ScriptReach};
-    let store = crate::test_support::world_db()
+    let store = combat::spell_cast::test_harness::world_db()
         .unwrap()
         .spell_store()
         .clone();
