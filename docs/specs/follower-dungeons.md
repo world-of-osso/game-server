@@ -35,6 +35,10 @@ Dungeon spirit release uses one location policy for players and followers: a zon
 
 For an in-memory follower run, disconnect and logout retain the same instance and party until the empty copy unloads. TC 15e0ed76 `WorldSession.cpp:633-645,671-682` saves the player and removes them from the map; `Map.cpp:3013-3027` starts the unload timer when the last player leaves, and `World.cpp:764` sets its default to 30 minutes. An expired instance lock uses the immediate minimum delay. The same followers, including corpses, and copy-scoped progress remain in the surviving copy; on reconnect the player returns to the saved position. The existing server-restart persistence gap below is separate.
 
+## Floodgate drop
+
+`FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. WMO liquid at the landing is untested. NPC fall damage remains unmodeled.
+
 ## Windrunner Spire passage
 
 `WINDRUNNER_TAXIPATH_PASSAGE_LOG_CORRELATED` (including `WINDRUNNER_TAXIPATH_10308_PASSAGE_LOG_CORRELATED`): A living owner within 20 yards of native TaxiPath node 0 automatically boards with living followers and their pets after the preceding encounter is Done: 10301 after Emberdawn (3056), 10303 after the Derelict Duo (3057), and 10308 after Commander Kroluk (3058). WCL `X4tT9P73BvRrGxyM` fight 1 correlates 10301 and 10303 with player movement; `jpfFa36xhQkZqr4d` fight 6 correlates 10308. The 20-yard proximity activation is a project inference; the authored trigger and mount identities are unsourced. The shared taxi mover uses its existing flight speed; the observed Retail segments are faster.
