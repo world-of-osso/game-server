@@ -36,8 +36,6 @@ fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
             .entity_mut(unit)
             .remove::<crate::creature_ai::FollowOwner>()
             .insert(crate::creature_ai::CreatureState::Idle);
-    } else if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-        nav.cancel_query(unit, Goal::Approach(target.to_bits()));
     }
     hold
 }

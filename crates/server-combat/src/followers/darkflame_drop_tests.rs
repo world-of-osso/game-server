@@ -579,6 +579,60 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 }
 
 #[test]
+#[ignore = "requires actual2651 navigation/ground and imported follower profile"]
+fn follower_approach_query_completes_after_hold_timeout() {
+    let from = Vec3::new(365.0142, 87.06531, -32.37358);
+    let to = Vec3::new(421.7417, 87.0782, -29.7178);
+    let (mut h, follower) = create_native_follower_fixture_for(209072);
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(position(from));
+    h.app.world_mut().entity_mut(h.caster).insert(position(to));
+    let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(watcher).insert((
+        position(Vec3::new(393.4, 87.07, -31.0)),
+        InMap::continent(MAP),
+        shared::components::UnitFactionTemplate(16),
+        shared::components::UnitLevel(80),
+        crate::creature_aggro::AggroRange,
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    h.advance(1);
+    assert!(super::positioning::hold_unsafe_approach(
+        h.app.world_mut(),
+        follower,
+        h.caster
+    ));
+    h.app
+        .world_mut()
+        .resource_mut::<bevy::prelude::Time>()
+        .advance_by(std::time::Duration::from_secs(6));
+    for _ in 0..3 {
+        assert!(!super::positioning::hold_unsafe_approach(
+            h.app.world_mut(),
+            follower,
+            h.caster
+        ));
+    }
+    crate::navigation::drain_fixture(&mut h.app);
+    let result = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>()
+        .query_deferred(
+            follower,
+            MAP,
+            crate::navigation::Goal::Approach(h.caster.to_bits()),
+            ::navigation::worker::Query::Path { from, to },
+        );
+    assert!(
+        matches!(result, Some(Ok(Some(::navigation::worker::Output::Path(path)))) if path.complete),
+        "delayed path result must remain available"
+    );
+}
+
+#[test]
 #[ignore = "requires Windrunner navigation/ground and imported follower profile"]
 fn followers_arrive_on_curved_windrunner_route() {
     use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
