@@ -501,6 +501,9 @@ pub(crate) struct AdminInstances<'w, 's> {
             Option<&'static crate::level_scaling::CreatureArmor>,
             Option<&'static crate::networking::CombatTarget>,
             Option<&'static shared::components::ThreatTable>,
+            Option<&'static shared::components::Position>,
+            Option<&'static crate::creature_ai::CreatureState>,
+            Has<crate::grid_activity::GridDormant>,
         ),
     >,
 }
@@ -609,15 +612,21 @@ impl AdminInstances<'_, '_> {
                             armor,
                             target,
                             threat,
+                            position,
+                            state,
+                            dormant,
                         )| {
                             format!(
-                                "{} (entity {}) level {} health {}/{} difficulty {} combat={}",
+                                "{} (entity {}) level {} health {}/{} difficulty {} at {:?} state {:?} dormant {} combat={}",
                                 npc.name,
                                 entity.to_bits(),
                                 level.map_or(0, |level| level.0),
                                 health.current,
                                 health.max,
                                 difficulty.map_or(0, |difficulty| difficulty.0),
+                                position.map(|p| [p.x, p.y, p.z]),
+                                state,
+                                dormant,
                                 npc_combat_metrics(stats, armor, target, threat)
                             )
                         },
@@ -793,6 +802,44 @@ mod admin_npc_combat_tests {
             450.0
         );
         assert_eq!(world.get::<Health>(npc).unwrap().current, 7500.0);
+    }
+
+    #[test]
+    fn npc_info_reports_live_position_state_and_dormancy() {
+        let mut world = World::new();
+        let npc = spawn_npc(&mut world);
+        world.entity_mut(npc).insert((
+            shared::components::Position {
+                x: 355.5,
+                y: 86.5,
+                z: -26.25,
+            },
+            crate::creature_ai::CreatureState::Idle,
+            crate::grid_activity::GridDormant,
+        ));
+        let db = GameDatabase::new(crate::persistence::temp_database());
+        let mut state = SystemState::<AdminInstances>::new(&mut world);
+        let response = state
+            .get_mut(&mut world)
+            .unwrap()
+            .dispatch(
+                &crate::admin_types::AdminRequest::NpcInfo {
+                    map_id: 34,
+                    instance_id: 1,
+                    entry: 209057,
+                },
+                &db,
+            )
+            .unwrap();
+        let crate::admin_types::AdminResponse::NpcInfoList { lines } = response else {
+            panic!("npc-info did not return its live rows");
+        };
+        assert!(
+            lines[0]
+                .contains(" at Some([355.5, 86.5, -26.25]) state Some(Idle) dormant true combat="),
+            "{}",
+            lines[0]
+        );
     }
 
     #[test]
