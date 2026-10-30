@@ -40,29 +40,29 @@ Recipient rolls (avoidance, block, critical block) for each replayed attack draw
 
 ### Pressure grid results
 
-Measured on game-server master `fc2dbbabb625af18e587a10ae861569e64b79c7a`, with separate recipient rolls, Paladin Valiance and Paladin Afterimage. Each tank uses its 300-second SimC trace, no healer, native seeds 70448–70457 (1,020 replays). Cells are survivors/10 and mean time, counting survivors as 300 s. Per-seed reports and `summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-fc2dbbabb6/`. Later master commits 353d2b797c (Lightsmith armament rules for Protection) and 4fe801a1a4 (Master Shapeshifter Ironfur gate) change Paladin and Guardian; these results do not include them.
+Protection Paladin (66) and Guardian Druid (104) were rerun on master `731ff1b3dc` after the Matted Fur total-AP fix. Warrior (73), Blood (250), Brewmaster (268) and Vengeance (581) retain master `fc2dbbabb6` results. Each uses its 300-second SimC trace, no healer, seeds 70448–70457, and 17 pressure scales. Cells show survivors/10 and mean time, counting survivors as 300 s. New reports and `merged-summary.json` are in `game-engine/data/diagnostics/healer-tank-replay/pressure-sweep-731ff1b3dc-66-104/`; the four older rows are in `pressure-sweep-fc2dbbabb6/`. The two master trees differ, so the combined ranking is not a same-tree comparison. The newer grid predates the subsequent Guardian two-piece and Sacred Weapon RPPM-clock fixes.
 
 | Scale | 66 | 73 | 104 | 250 | 268 | 581 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1.00 | 9/10, 294 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.25 | 1/10, 245 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.50 | 0/10, 145 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 1.75 | 0/10, 108 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.00 | 0/10, 81 s | 10/10, 300 s | 9/10, 290 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.25 | 0/10, 68 s | 10/10, 300 s | 0/10, 203 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.50 | 0/10, 58 s | 10/10, 300 s | 0/10, 144 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
-| 2.75 | 0/10, 56 s | 10/10, 300 s | 0/10, 119 s | 10/10, 300 s | 9/10, 281 s | 10/10, 300 s |
-| 3.00 | 0/10, 44 s | 10/10, 300 s | 0/10, 100 s | 10/10, 300 s | 8/10, 272 s | 10/10, 300 s |
-| 3.25 | 0/10, 42 s | 10/10, 300 s | 0/10, 92 s | 9/10, 296 s | 5/10, 246 s | 10/10, 300 s |
-| 3.50 | 0/10, 39 s | 10/10, 300 s | 0/10, 79 s | 8/10, 283 s | 2/10, 221 s | 10/10, 300 s |
-| 3.75 | 0/10, 37 s | 10/10, 300 s | 0/10, 72 s | 2/10, 218 s | 5/10, 246 s | 9/10, 296 s |
-| 4.00 | 0/10, 35 s | 10/10, 300 s | 0/10, 68 s | 0/10, 167 s | 1/10, 171 s | 8/10, 287 s |
-| 4.25 | 0/10, 33 s | 10/10, 300 s | 0/10, 64 s | 3/10, 164 s | 0/10, 130 s | 7/10, 280 s |
-| 4.50 | 0/10, 32 s | 9/10, 297 s | 0/10, 61 s | 0/10, 134 s | 0/10, 137 s | 6/10, 266 s |
-| 4.75 | 0/10, 30 s | 6/10, 261 s | 0/10, 59 s | 0/10, 90 s | 0/10, 120 s | 4/10, 225 s |
-| 5.00 | 0/10, 29 s | 2/10, 218 s | 0/10, 57 s | 0/10, 56 s | 0/10, 87 s | 3/10, 214 s |
+| 1.00 | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.25 | 8/10, 287 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.50 | 1/10, 171 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 1.75 | 0/10, 128 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.00 | 0/10, 95 s | 10/10, 300 s | 8/10, 288 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.25 | 0/10, 73 s | 10/10, 300 s | 0/10, 176 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.50 | 0/10, 59 s | 10/10, 300 s | 0/10, 145 s | 10/10, 300 s | 10/10, 300 s | 10/10, 300 s |
+| 2.75 | 0/10, 50 s | 10/10, 300 s | 0/10, 108 s | 10/10, 300 s | 9/10, 281 s | 10/10, 300 s |
+| 3.00 | 0/10, 44 s | 10/10, 300 s | 0/10, 98 s | 10/10, 300 s | 8/10, 272 s | 10/10, 300 s |
+| 3.25 | 0/10, 39 s | 10/10, 300 s | 0/10, 89 s | 9/10, 296 s | 5/10, 246 s | 10/10, 300 s |
+| 3.50 | 0/10, 39 s | 10/10, 300 s | 0/10, 80 s | 8/10, 283 s | 2/10, 221 s | 10/10, 300 s |
+| 3.75 | 0/10, 38 s | 10/10, 300 s | 0/10, 75 s | 2/10, 218 s | 5/10, 246 s | 9/10, 296 s |
+| 4.00 | 0/10, 38 s | 10/10, 300 s | 0/10, 72 s | 0/10, 167 s | 1/10, 171 s | 8/10, 287 s |
+| 4.25 | 0/10, 37 s | 10/10, 300 s | 0/10, 69 s | 3/10, 164 s | 0/10, 130 s | 7/10, 280 s |
+| 4.50 | 0/10, 35 s | 9/10, 297 s | 0/10, 65 s | 0/10, 134 s | 0/10, 137 s | 6/10, 266 s |
+| 4.75 | 0/10, 34 s | 6/10, 261 s | 0/10, 63 s | 0/10, 90 s | 0/10, 120 s | 4/10, 225 s |
+| 5.00 | 0/10, 33 s | 2/10, 218 s | 0/10, 61 s | 0/10, 56 s | 0/10, 87 s | 3/10, 214 s |
 
-Paladin, Warrior, Guardian and Vengeance survivor counts now fall monotonically with scale. Blood (0/10 at 4.00, 3/10 at 4.25) and Brewmaster (2/10 at 3.50, 5/10 at 3.75) still recover. Their own procs change their avoidance chances, so their per-seed outcomes differ across scales, as described above. The previous grid on `897f408cc7` shared one stream between recipient rolls and tank decisions. Since then, Warrior rose from 3.75 to 4.75, Vengeance from 3.75 to 4.50, Blood from 3.25 to 3.50 and Paladin from 6/10 to 9/10 survivors at 1.0×. The new outcome sequence and other master changes between the two commits both contribute; this grid does not separate them.
+Paladin, Warrior, Guardian and Vengeance survivor counts fall monotonically with scale. Blood (0/10 at 4.00, 3/10 at 4.25) and Brewmaster (2/10 at 3.50, 5/10 at 3.75) recover; their own procs change avoidance chances across scales. Against the earlier `fc2dbbabb6` grid, Paladin's survival scale rises from 1.00 to 1.25 and Guardian remains at 2.00. The trees contain multiple changes, so this comparison does not isolate individual fixes.
 
 Ranking: the highest scale before the first scale with fewer than five survivors (0.25 resolution).
 
@@ -72,8 +72,8 @@ Ranking: the highest scale before the first scale with fewer than five survivors
 | 2 | Vengeance Demon Hunter (581) | 4.50 | −58 |
 | 3 | Blood Death Knight (250) | 3.50 | 0 |
 | 4 | Brewmaster Monk (268) | 3.25 | 72 |
-| 5 | Guardian Druid (104) | 2.00 | −153 |
-| 6 | Protection Paladin (66) | 1.00 | 1,829 |
+| 5 | Guardian Druid (104) | 2.00 | −433 |
+| 6 | Protection Paladin (66) | 1.25 | 483 |
 
 Ten seeds give a survivor-count standard deviation of about 1.6 near 50%, so adjacent ranks one grid step apart (Warrior and Vengeance; Blood and Brewmaster) are not reliably separated. Brewmaster's 3.25 depends on 5/10 at that scale exactly. Effective healing cannot exceed missing health, so a tank that stays at full health shows zero net damage; that column does not rank surviving tanks.
 
