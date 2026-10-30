@@ -19,10 +19,14 @@ struct PullBack {
 }
 
 #[derive(Component)]
-pub(super) struct WaitingForPullBack;
+pub(super) struct WaitingForPullBack(pub Entity);
 
 pub(super) fn party_should_wait(world: &World, owner: Entity) -> bool {
-    world.get::<WaitingForPullBack>(owner).is_some()
+    world
+        .get::<WaitingForPullBack>(owner)
+        .is_some_and(|waiting| {
+            targets::is_alive(world, waiting.0) && targets::same_map(world, owner, waiting.0)
+        })
 }
 
 pub(super) fn active(world: &World, tank: Entity) -> bool {
@@ -163,7 +167,9 @@ pub(super) fn update(
         Ok(exclusions) => exclusions,
         Err(error) => {
             warn!(?tank, %error, "Pull-back safety geometry unavailable");
-            world.entity_mut(follower.owner).insert(WaitingForPullBack);
+            world
+                .entity_mut(follower.owner)
+                .insert(WaitingForPullBack(tank));
             if world.get::<PullBack>(tank).is_none() {
                 world.entity_mut(tank).insert(PullBack {
                     target,
@@ -201,7 +207,9 @@ pub(super) fn update(
             goal: None,
             owns_position: false,
         });
-        world.entity_mut(follower.owner).insert(WaitingForPullBack);
+        world
+            .entity_mut(follower.owner)
+            .insert(WaitingForPullBack(tank));
     }
     let Some(here) = targets::position(world, tank) else {
         return;

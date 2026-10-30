@@ -129,6 +129,35 @@ mod tests {
     }
 
     #[test]
+    fn party_wait_ends_when_the_tank_dies() {
+        let mut world = World::new();
+        let map = crate::maps::InMap::continent(2805);
+        let owner = world.spawn(map).id();
+        let tank = world
+            .spawn((
+                map,
+                shared::components::Health {
+                    current: 1.0,
+                    max: 1.0,
+                },
+            ))
+            .id();
+        world
+            .entity_mut(owner)
+            .insert(super::super::tank_pull_back::WaitingForPullBack(tank));
+        assert!(super::super::tank_pull_back::party_should_wait(
+            &world, owner
+        ));
+        world
+            .get_mut::<shared::components::Health>(tank)
+            .unwrap()
+            .current = 0.0;
+        assert!(!super::super::tank_pull_back::party_should_wait(
+            &world, owner
+        ));
+    }
+
+    #[test]
     fn healer_keeps_healing_and_combat_reference_while_party_waits() {
         let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
         let owner = h.caster;
@@ -150,7 +179,7 @@ mod tests {
         h.app
             .world_mut()
             .entity_mut(owner)
-            .insert(super::super::tank_pull_back::WaitingForPullBack);
+            .insert(super::super::tank_pull_back::WaitingForPullBack(owner));
         let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
         for _ in 0..240 {
             super::super::ai::update_follower(h.app.world_mut(), healer, &follower);
