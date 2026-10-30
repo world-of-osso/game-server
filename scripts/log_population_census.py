@@ -7,6 +7,7 @@ import math
 import re
 import sqlite3
 from collections import defaultdict
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -192,7 +193,7 @@ def census(paths, maps, samples=None, zones_only=False, bosses=None):
 
 def load_bosses(database):
     bosses = {}
-    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as conn:
+    with closing(sqlite3.connect(f'file:{database}?mode=ro', uri=True)) as conn:
         for map_id, encounter_id, creature_entry in conn.execute(
                 'SELECT map_id, encounter_id, creature_entry FROM raid_encounter_creature'):
             bosses.setdefault((map_id, encounter_id), set()).add(creature_entry)
