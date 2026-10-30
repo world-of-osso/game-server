@@ -20,6 +20,124 @@ fn deios_copy(difficulty: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
+fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
+    let (mut h, boss, map) = deios_copy(205);
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[191220]);
+    {
+        let mut data = h.app.world_mut().resource_mut::<WorldData>();
+        data.templates.extend(native.templates);
+        data.difficulty_templates
+            .extend(native.difficulty_templates);
+    }
+    let (rp, _) = spawn_authored_actor(&mut h.app, &conn, 191220, map, 205);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(rp).insert(visibility);
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (other_boss, _) = spawn_authored_actor(&mut h.app, &conn, DEIOS, other_map, 205);
+    let (other_rp, _) = spawn_authored_actor(&mut h.app, &conn, 191220, other_map, 205);
+    h.advance(1.0);
+    assert!(
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .all(|event| event.spell_id != Some(382264))
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(boss).unwrap().0,
+        SOURCE_FLAGS
+    );
+    let emberon = instance_script::boss_id_for_encounter(h.app.world_mut(), map, 2558).unwrap();
+    assert!(instance_script::set_boss_state(
+        h.app.world_mut(),
+        map,
+        emberon,
+        EncounterState::Done
+    ));
+    h.advance(0.2);
+    let cast = h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(rp.to_bits())
+                && event.spell_id == Some(382264)
+        })
+        .count();
+    let cast_at = h
+        .app
+        .world()
+        .get::<crate::spell_cast::SpellHistory>(rp)
+        .and_then(|history| history.last_successful_cast_at(382264));
+    assert_eq!(
+        cast, 1,
+        "authored RP actor casts Temporal Theft: history={cast_at:?}"
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(boss).unwrap().0,
+        SOURCE_FLAGS
+    );
+    h.advance(16.7);
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(boss).unwrap().0,
+        SOURCE_FLAGS,
+        "boss stays immune before the timer ends"
+    );
+    h.advance(0.3);
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(boss).unwrap().0,
+        SOURCE_FLAGS & !0x100
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(other_boss).unwrap().0,
+        SOURCE_FLAGS
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::SpellHistory>(other_rp)
+            .is_none()
+    );
+    h.engage(boss);
+    h.advance(0.2);
+    assert!(crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        boss,
+        h.player()
+    ));
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::InProgress)
+    );
+    h.advance(1.0);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(rp.to_bits())
+                && event.spell_id == Some(382264))
+            .count(),
+        1,
+        "warmup starts once per instance"
+    );
+}
+
+#[test]
 fn encounter_coverage_deios_native_wing_damage_qualifies_without_unlock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = deios_copy(difficulty);

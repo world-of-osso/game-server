@@ -153,7 +153,10 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
-            .add_systems(FixedPostUpdate, uldaman::update_door)
+            .add_systems(
+                FixedPostUpdate,
+                (uldaman::update_door, uldaman::update_deios_warmup),
+            )
             .add_systems(
                 FixedPreUpdate,
                 (
