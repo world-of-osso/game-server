@@ -845,7 +845,9 @@ pub(crate) fn drive_literal_off_gcd(run: &mut Run) -> Result<bool, String> {
     let world = run.app.world_mut();
     world.init_resource::<LiteralTickProgress>();
     world.resource_mut::<LiteralTickProgress>().0 = false;
-    run.spec_driver.as_mut().expect("literal driver is present")
+    run.spec_driver
+        .as_mut()
+        .expect("literal driver is present")
         .drive(world, run.actor, &run.targets)?;
     Ok(world.resource::<LiteralTickProgress>().0)
 }
