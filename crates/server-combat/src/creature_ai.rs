@@ -1130,7 +1130,7 @@ fn read_chase_targets(
         .p0()
         .iter()
         .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _, _)| {
-            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0.min(CHASE_REACH));
+            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0);
             match *state {
                 CreatureState::Pursuing { target } => {
                     Some((entity, Entity::try_from_bits(target)?, stop_reach))
