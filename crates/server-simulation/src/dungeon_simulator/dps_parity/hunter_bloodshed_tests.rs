@@ -11,19 +11,45 @@ fn hunter_pet_kill_command_uses_owner_default_attack_power_not_ranged_only_bonus
     let target = run.targets[0];
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).expect("native hunter pet");
     let hit = |run: &mut Run| {
-        run.app.world_mut().resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.clear();
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
         let _hit_seed = crate::random::seed_scope(401);
-        assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), pet, 83381, Some(target), 1));
-        let event = run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.iter()
-            .find(|event| event.source == Some(pet.to_bits()) && event.target == Some(target.to_bits())
-                && event.spell_id == Some(83381) && event.kind == CombatLogKind::Damage)
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            pet,
+            83381,
+            Some(target),
+            1
+        ));
+        let event = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(83381)
+                    && event.kind == CombatLogKind::Damage
+            })
             .expect("native Kill Command hit");
         event.amount
     };
     let before = hit(&mut run);
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(owner).unwrap().ranged_attack_power += 100.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .ranged_attack_power += 100.0;
     let after = hit(&mut run);
-    assert_eq!(before, after, "ranged-only AP must not change pet damage when owner default AP is unchanged");
+    assert_eq!(
+        before, after,
+        "ranged-only AP must not change pet damage when owner default AP is unchanged"
+    );
 }
 
 #[test]
