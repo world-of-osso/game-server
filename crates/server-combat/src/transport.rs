@@ -66,6 +66,8 @@ pub(crate) fn spawn_ships(world: &mut World, map: InMap) {
                 interior_map: source.interior_map,
                 knots: source.knots,
                 speed: source.speed,
+                acceleration: source.acceleration,
+                nodes: source.nodes,
                 elapsed_ms: 0,
             },
             ShipRoute(source.route),

@@ -1,7 +1,10 @@
-//! Authored Seething airship templates and constant-speed TaxiPath routes.
+//! Authored transport templates and TaxiPath route timing.
 use bevy::prelude::Resource;
 use rusqlite::Connection;
-use shared::{protocol::GameObjectInfo, transport_route::TransportRoute};
+use shared::{
+    protocol::GameObjectInfo,
+    transport_route::{TransportNodeEvents, TransportRoute},
+};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
@@ -11,7 +14,9 @@ pub(crate) struct ShipSpec {
     pub interior_map: u32,
     pub path_id: u32,
     pub speed: f32,
+    pub acceleration: f32,
     pub knots: Vec<[f32; 3]>,
+    pub nodes: Vec<TransportNodeEvents>,
     pub info: GameObjectInfo,
     pub route: TransportRoute,
 }
@@ -38,25 +43,43 @@ impl TransportCatalog {
         if ships.is_empty() {
             return Err("no authored Seething transports; import TDB transport metadata".into());
         }
+        let instances: Vec<InstanceTransport> =
+            serde_json::from_str(include_str!("../../../content/instance-transports.json"))
+                .map_err(|error| format!("instance transport definitions: {error}"))?;
+        for instance in instances {
+            let ship = load_ship(conn, instance.spawn_id, instance.entry)?;
+            if ships.insert(instance.spawn_id, ship).is_some() {
+                return Err(format!(
+                    "duplicate transport identity {}",
+                    instance.spawn_id
+                ));
+            }
+        }
         Ok(Self(ships))
     }
 }
 
+#[derive(serde::Deserialize)]
+struct InstanceTransport {
+    spawn_id: u32,
+    entry: u32,
+}
+
 fn load_ship(conn: &Connection, spawn_id: u32, entry: u32) -> Result<ShipSpec, String> {
-    let (info, path_id, speed, interior_map) = conn.query_row(
-        "SELECT type,displayId,name,size,Data0,Data1,Data6 FROM tdb_gameobject_template WHERE entry=?",
+    let (info, path_id, speed, acceleration, interior_map) = conn.query_row(
+        "SELECT type,displayId,name,size,Data0,Data1,Data2,Data6 FROM tdb_gameobject_template WHERE entry=?",
         [entry],
         |row| Ok((GameObjectInfo {
             entry, go_type: row.get(0)?, display_id: row.get(1)?, name: row.get(2)?, scale: row.get(3)?,
-        }, row.get::<_,u32>(4)?, row.get::<_,f32>(5)?, row.get::<_,u32>(6)?)),
+        }, row.get::<_,u32>(4)?, row.get::<_,f32>(5)?, row.get::<_,f32>(6)?, row.get::<_,u32>(7)?)),
     ).map_err(|error| format!("transport {spawn_id} template {entry}: {error}"))?;
     if info.go_type != 15 {
         return Err(format!(
             "transport {spawn_id} template {entry} is not a map-object transport"
         ));
     }
-    let (map_id, knots) = load_route_knots(conn, path_id)?;
-    let route = TransportRoute::new(knots.clone(), speed)
+    let (map_id, knots, nodes) = load_route_knots(conn, path_id)?;
+    let route = TransportRoute::with_nodes(knots.clone(), speed, acceleration, nodes.clone())
         .map_err(|error| format!("transport {spawn_id} path {path_id}: {error:?}"))?;
     Ok(ShipSpec {
         spawn_id,
@@ -64,13 +87,18 @@ fn load_ship(conn: &Connection, spawn_id: u32, entry: u32) -> Result<ShipSpec, S
         interior_map,
         path_id,
         speed,
+        acceleration,
         knots,
+        nodes,
         info,
         route,
     })
 }
 
-fn load_route_knots(conn: &Connection, path_id: u32) -> Result<(u32, Vec<[f32; 3]>), String> {
+fn load_route_knots(
+    conn: &Connection,
+    path_id: u32,
+) -> Result<(u32, Vec<[f32; 3]>, Vec<TransportNodeEvents>), String> {
     let mut statement = conn.prepare(
         "SELECT ContinentID,Loc_0,Loc_1,Loc_2,Flags,Delay,ArrivalEventID,DepartureEventID FROM taxi_path_node WHERE PathID=? ORDER BY NodeIndex",
     ).map_err(|error| format!("transport path {path_id}: {error}"))?;
@@ -85,11 +113,13 @@ fn load_route_knots(conn: &Connection, path_id: u32) -> Result<(u32, Vec<[f32; 3
         .map_err(|error| format!("transport path {path_id}: {error}"))?;
     let mut map = None;
     let mut knots = Vec::new();
+    let mut nodes = Vec::new();
     for row in rows {
         let (map_id, position, behavior) = row.map_err(|error| error.to_string())?;
-        if behavior != [0; 4] {
+        if behavior[0] & !2 != 0 {
             return Err(format!(
-                "transport path {path_id} has unsupported flags/delay/events {behavior:?}"
+                "transport path {path_id} has unsupported flags {:#x}",
+                behavior[0]
             ));
         }
         if map.is_some_and(|previous| previous != map_id) {
@@ -97,9 +127,17 @@ fn load_route_knots(conn: &Connection, path_id: u32) -> Result<(u32, Vec<[f32; 3
         }
         map = Some(map_id);
         knots.push(position);
+        nodes.push(TransportNodeEvents {
+            stop: behavior[0] & 2 != 0,
+            delay_ms: behavior[1]
+                .checked_mul(1000)
+                .ok_or_else(|| format!("transport path {path_id} delay overflow"))?,
+            arrival_event: behavior[2],
+            departure_event: behavior[3],
+        });
     }
     let map = map.ok_or_else(|| format!("transport path {path_id} has no nodes"))?;
-    Ok((map, knots))
+    Ok((map, knots, nodes))
 }
 
 #[cfg(test)]
@@ -115,17 +153,17 @@ mod tests {
     pub(super) fn source_fixture() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE tdb_transports(guid INTEGER,entry INTEGER,name TEXT,ScriptName TEXT);
-            CREATE TABLE tdb_gameobject_template(entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data6 INTEGER);
+            CREATE TABLE tdb_gameobject_template(entry INTEGER,type INTEGER,displayId INTEGER,name TEXT,size REAL,Data0 INTEGER,Data1 INTEGER,Data2 INTEGER,Data6 INTEGER);
             CREATE TABLE taxi_path_node(PathID INTEGER,NodeIndex INTEGER,ContinentID INTEGER,Loc_0 REAL,Loc_1 REAL,Loc_2 REAL,Flags INTEGER,Delay INTEGER,ArrivalEventID INTEGER,DepartureEventID INTEGER);
             INSERT INTO tdb_transports VALUES (35,278407,'Sword of Dawn','transport_seething_shore'),(36,279254,'The warbringer','transport_seething_shore');
-            INSERT INTO tdb_gameobject_template VALUES (278407,15,9002,'Sword of Dawn',1,6519,4,1856),(279254,15,9001,'The Warbringer',1,6520,4,1857);")
+            INSERT INTO tdb_gameobject_template VALUES (278407,15,9002,'Sword of Dawn',1,6519,4,1,1856),(279254,15,9001,'The Warbringer',1,6520,4,1,1857),(409273,15,96809,'The Dawnbreaker',1,9456,20,5,2671);")
             .unwrap();
         let source = Connection::open_with_flags(
             crate::test_data::world_db_path(),
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        let mut statement = source.prepare("SELECT PathID,NodeIndex,ContinentID,Loc_0,Loc_1,Loc_2,Flags,Delay,ArrivalEventID,DepartureEventID FROM taxi_path_node WHERE PathID IN (6519,6520) ORDER BY PathID,NodeIndex").unwrap();
+        let mut statement = source.prepare("SELECT PathID,NodeIndex,ContinentID,Loc_0,Loc_1,Loc_2,Flags,Delay,ArrivalEventID,DepartureEventID FROM taxi_path_node WHERE PathID IN (6519,6520,9456) ORDER BY PathID,NodeIndex").unwrap();
         let rows = statement
             .query_map([], |r| {
                 Ok((
@@ -157,7 +195,7 @@ mod tests {
     fn source_ships_use_real_speed_routes_and_transport_interior_maps() {
         let conn = source_fixture();
         let catalog = TransportCatalog::load(&conn).unwrap();
-        assert_eq!(catalog.0.len(), 2);
+        assert_eq!(catalog.0.len(), 3);
         for (id, entry, display, path, interior) in [
             (35, 278407, 9002, 6519, 1856),
             (36, 279254, 9001, 6520, 1857),
@@ -181,6 +219,26 @@ mod tests {
                 ship.route.pose_at(0)
             );
         }
+    }
+
+    #[test]
+    fn dawnbreaker_source_route_retains_taxi_stops_and_events() {
+        let catalog = TransportCatalog::load(&source_fixture()).unwrap();
+        let ship = &catalog.0[&409273];
+        assert_eq!(
+            (ship.map_id, ship.interior_map, ship.path_id),
+            (2662, 2671, 9456)
+        );
+        assert_eq!((ship.speed, ship.acceleration), (20.0, 5.0));
+        assert_eq!(ship.route.pose_at(0).position, ship.knots[1]);
+        assert_eq!(ship.nodes[2].delay_ms, 10_000);
+        let events = ship
+            .route
+            .events_between(0, u64::from(ship.route.period_ms()));
+        assert_eq!(
+            events.iter().map(|event| event.id).collect::<Vec<_>>(),
+            vec![87451, 87452, 91446]
+        );
     }
 
     #[test]
