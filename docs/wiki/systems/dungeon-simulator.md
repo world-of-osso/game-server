@@ -2,6 +2,10 @@
 
 **TRANSPORT_REGISTRY_DUPLICATED:** Simulator extraction repeats dispatch across production transport handlers. A new production edge requires an extraction registration and a test against its live handler until a shared registry replaces both.
 
+## Completed encounter participants —2026-10-30
+
+Follower route extraction joins the active `JournalEncounterCreature` display IDs to unique TDB creature entries on the map. The simulator skips these participants when their encounter bit is complete, without adding boss-credit bindings. Ambiguous joins are excluded. Murder Row's Kystia encounter includes living Nibbles (234660), which otherwise causes a return across the gateway after Kystia is done.
+
 ## Frontal parity pack —2026-10-24
 
 The [shared parity constructor](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/mod.rs) uses symmetric half-yard lateral steps for all classes and replacement waves. The primary remains1.5yd away; the first two adds are at±0.5yd, within±18.435°. Old `[1.5,index,0]` placement put the third at53.13°/2.5yd, correctly outside native FoF's60° cone and TC's2yd close boundary. Correct the harness, never the gameplay cone. Real FoF recipient and Mage/Monk fixture regressions reach genuine two-RED12.83s before the change, then two-GREEN13.92s at26c83dd27; actual FoF now reaches all three identities, compile18.84s/zero warnings. Once-only controlled3T remeasurement and lead integration remain pending. [Contract](../../specs/dps-parity.md), [source/proof ledger](../../handoffs/parity-frontal-pack-proof-ledger.md).
