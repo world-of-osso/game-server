@@ -1722,6 +1722,16 @@ fn windrunner_native_social_assistance_replays_groundskeeper_pull() {
             break;
         }
     }
+    println!(
+        "ASSIST_TARGET_FINAL health={:?} player_death={:?} combat={}",
+        app.world()
+            .get::<Health>(target)
+            .map(|health| health.current),
+        app.world()
+            .get::<crate::death::PlayerDeathState>(target)
+            .map(|state| state.state),
+        crate::combat_refs::has_active_reference_to(app.world(), caller, target)
+    );
     for (&helper, distance) in helpers.iter().zip(distances) {
         println!(
             "NATIVE_ASSIST caller={} helper={} distance={distance:.3} delay={:?}",
