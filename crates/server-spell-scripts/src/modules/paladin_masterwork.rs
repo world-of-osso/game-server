@@ -2,7 +2,7 @@
 //! 448–462, 636–658: Masterwork forges Lesser Weapon charges.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{AuraApplication, AuraInstance, AuraSource, scripts::AuraScripts};
+use combat::auras::{AuraApplication, AuraInstance, AuraSource, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::targets::{Relation, relation_matches};
@@ -24,7 +24,7 @@ const LESSER_WEAPON_HEAL: u32 = 1239276;
 const LESSER_WEAPON_CHARGES: u8 = 5;
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.entry(LESSER_WEAPON).or_default().on_proc = Some(strike_with_lesser_weapon);
+    scripts.0.entry(LESSER_WEAPON).or_default().on_damage_proc = Some(strike_with_lesser_weapon);
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
@@ -62,9 +62,14 @@ fn strike_with_lesser_weapon(
     world: &mut World,
     unit: Entity,
     aura: &AuraInstance,
-    other: Option<Entity>,
+    event: &AuraEvent,
 ) {
-    let target = other.unwrap_or(unit);
+    let other = if event.actor == unit {
+        event.target
+    } else {
+        Some(event.actor)
+    };
+    let target = other.or(event.action_target).unwrap_or(unit);
     let spell = if relation_matches(world, unit, target, Relation::Enemy) {
         LESSER_WEAPON_DAMAGE
     } else {
