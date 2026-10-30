@@ -488,7 +488,11 @@ pub(crate) fn max_power_percent_changes(
     stats: &crate::stats::StatModifiers,
     mods: &crate::auras::AuraStatMods,
 ) -> Vec<(PowerType, f32)> {
-    if world.get::<Player>(unit).is_none() {
+    if world.get::<Player>(unit).is_none()
+        && world
+            .get::<shared::components::CharacterVisual>(unit)
+            .is_none()
+    {
         return Vec::new();
     }
     mana_percent_change(world, unit, stats)

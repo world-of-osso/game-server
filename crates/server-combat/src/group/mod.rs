@@ -104,7 +104,9 @@ fn process_group_commands(
         Entity,
         &crate::followers::Follower,
         &UnitLevel,
-        &shared::components::ModelDisplay,
+        Option<&shared::components::ModelDisplay>,
+        Option<&shared::components::CharacterVisual>,
+        Option<&EquipmentAppearance>,
     )>,
     mut registry: ResMut<GroupRegistry>,
     suspended: Option<Res<crate::followers::DisconnectedRuns>>,
@@ -113,20 +115,20 @@ fn process_group_commands(
     mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
 ) {
     let mut online = build_online_view(&players);
-    online.extend(
-        followers
-            .iter()
-            .filter_map(|(entity, follower, level, display)| {
-                let difficulty = match players.get(follower.owner) {
-                    Ok((_, _, _, _, Some(difficulty), _, _)) => difficulty.0,
-                    _ => suspended.as_ref()?.member_difficulty(entity)?,
-                };
-                Some((
-                    crate::followers::Follower::member_id(entity),
-                    follower.online(entity, level.0, difficulty, display.display_id),
-                ))
-            }),
-    );
+    online.extend(followers.iter().filter_map(
+        |(entity, follower, level, display, visual, equipment)| {
+            let difficulty = match players.get(follower.owner) {
+                Ok((_, _, _, _, Some(difficulty), _, _)) => difficulty.0,
+                _ => suspended.as_ref()?.member_difficulty(entity)?,
+            };
+            let member = if let Some(visual) = visual {
+                follower.online_character(entity, level.0, difficulty, visual, equipment)
+            } else {
+                follower.online(entity, level.0, difficulty, display?.display_id)
+            };
+            Some((crate::followers::Follower::member_id(entity), member))
+        },
+    ));
     let mut effects = registry.sync_presence(&online);
     effects.extend(registry.tick(time.delta_secs()));
     effects.extend(apply_commands(

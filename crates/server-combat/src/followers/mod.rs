@@ -5,6 +5,7 @@ mod ai;
 mod candlelight;
 mod catalog;
 pub mod class_profiles;
+pub mod class_spawn;
 #[cfg(test)]
 mod darkflame_drop_tests;
 mod empower_policy;
@@ -162,6 +163,38 @@ impl Follower {
     /// they are not persisted characters and never enter auth/character storage.
     pub fn member_id(entity: Entity) -> u64 {
         entity.to_bits() | (1 << 63)
+    }
+
+    pub fn online_character(
+        &self,
+        entity: Entity,
+        level: u8,
+        dungeon_difficulty: u32,
+        visual: &shared::components::CharacterVisual,
+        equipment: Option<&shared::components::EquipmentAppearance>,
+    ) -> crate::group::OnlineMember {
+        let head = equipment
+            .and_then(|equipment| {
+                equipment
+                    .entries
+                    .iter()
+                    .find(|entry| entry.slot == shared::components::EquipmentVisualSlot::Head)
+            })
+            .cloned();
+        crate::group::OnlineMember {
+            entity: entity.to_bits(),
+            name: self.profile.name.clone(),
+            class: self.profile.class_id,
+            level,
+            portrait: shared::protocol::GroupPortraitAppearance {
+                creature_display_id: None,
+                race: visual.race,
+                appearance: visual.appearance.clone(),
+                head,
+            },
+            dungeon_difficulty,
+            raid_difficulty: Default::default(),
+        }
     }
 
     pub fn online(

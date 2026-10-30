@@ -1,4 +1,5 @@
 - [Follower flight](systems/follower-flight.md) — area-gated 3D follow, follower identities, and navmesh landing.
+- [Player-class follower profile inputs](investigations/follower-data.md#player-class-profile-inputs--2026-10-30) — 39 sourced profiles, native talent decoding and rejection boundary; no Keystone qualification.
 - [Stockade both-skin walks](investigations/follower-data.md#stockade-both-skin-physical-walks--2026-10-28) — Normal diagnostic parties walked and cleared all three encounters in both skins; not Retail admission.
 - [Log-derived follower population](investigations/log-derived-population.md) — approved Retail logs, per-map census, copy-only source policy and unresolved floor/patrol boundaries.
 

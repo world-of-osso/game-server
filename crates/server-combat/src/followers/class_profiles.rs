@@ -49,6 +49,7 @@ pub fn read_profiles() -> Result<Vec<ClassProfile>, String> {
 pub(super) fn validate_profiles(
     profiles: &[ClassProfile],
     classes: &crate::spell_info::ClassSpells,
+    spells: &crate::spell_info::SpellStore,
     level: u8,
 ) -> Vec<ClassProfile> {
     profiles
@@ -62,7 +63,7 @@ pub(super) fn validate_profiles(
                         .ok_or("decoded talents are missing".to_owned())?;
                     let source = profile.talent_source()?;
                     crate::race_class::validate_race_class(profile.race, profile.class_id)?;
-                    crate::class_progression::evaluate_follower_progression(
+                    let (known, _, _) = crate::class_progression::evaluate_follower_progression(
                         classes,
                         profile.class_id,
                         profile.race,
@@ -70,8 +71,8 @@ pub(super) fn validate_profiles(
                         level,
                         source,
                         entries,
-                    )
-                    .map(|_| ())
+                    )?;
+                    super::class_spawn::attack_spell(classes, spells, profile, &known).map(|_| ())
                 },
                 |error| Err(error.clone()),
             );
@@ -127,13 +128,14 @@ mod tests {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
-        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, 90);
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, &spells, 90);
         for role in [GroupRole::Tank, GroupRole::Healer, GroupRole::Dps] {
             let count = profiles
                 .iter()
                 .filter(|profile| profile.group_role().unwrap() == role)
                 .count();
+            println!("{role:?}: {count} qualified profiles");
             assert!(
                 count >= 2,
                 "{role:?}: only {count} profiles passed server validation"

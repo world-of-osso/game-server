@@ -137,15 +137,29 @@ pub fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Result<(), S
         .iter()
         .filter_map(|item| item.stat_redirect(world).transpose())
         .collect::<Result<Vec<_>, _>>()?;
-    world.entity_mut(unit).insert((
-        crate::stats::EquippedItems { items },
+    equip_instances(
+        world,
+        unit,
+        items,
         crate::stats::EquippedItemModifiers {
             items: modifiers,
             base_stat_redirects,
             ..Default::default()
         },
-    ));
+    );
     Ok(())
+}
+
+/// Install physical item identities and instance modifiers through the common stat path.
+pub fn equip_instances(
+    world: &mut World,
+    unit: Entity,
+    items: Vec<(EquipmentSlot, shared::item_data::ItemDefinitionSource, u32)>,
+    modifiers: crate::stats::EquippedItemModifiers,
+) {
+    world
+        .entity_mut(unit)
+        .insert((crate::stats::EquippedItems { items }, modifiers));
 }
 
 #[cfg(test)]

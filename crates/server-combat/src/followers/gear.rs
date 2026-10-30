@@ -272,15 +272,30 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
             )
         })
         .collect();
-    world.entity_mut(actor).insert((
-        crate::stats::EquippedItems {
-            items: selection.items,
-        },
+    super::parity_profile::equip_instances(
+        world,
+        actor,
+        selection.items,
         crate::stats::EquippedItemModifiers {
             items: modifiers,
             ..Default::default()
         },
-    ));
+    );
+    Ok(())
+}
+
+/// Publish the native appearance of the follower's equipped Journal items.
+pub(super) fn publish_appearance(world: &mut World, actor: Entity) -> Result<(), String> {
+    let source = world
+        .get_resource::<FollowerGearSource>()
+        .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;
+    let db = Connection::open_with_flags(&source.database, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|error| format!("open follower appearance database: {error}"))?;
+    let items = world
+        .get::<crate::stats::EquippedItems>(actor)
+        .ok_or("follower equipment unavailable")?;
+    let appearance = super::visual::read_equipment_appearance(&db, items)?;
+    world.entity_mut(actor).insert(appearance);
     Ok(())
 }
 

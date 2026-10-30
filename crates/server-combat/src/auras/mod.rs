@@ -2298,7 +2298,12 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         if !player_controlled_npc || world.get::<crate::followers::Follower>(unit).is_none() {
             combat.armor_penetration_pct = 0.0;
         }
-        stats.max_mana_pct = 0.0;
+        if world
+            .get::<shared::components::CharacterVisual>(unit)
+            .is_none()
+        {
+            stats.max_mana_pct = 0.0;
+        }
         stats.rating_from_rating.clear();
         combat.max_power_mult.clear();
     }

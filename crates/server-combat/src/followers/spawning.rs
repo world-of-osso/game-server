@@ -30,28 +30,6 @@ pub(super) fn spawn_members(
     Ok(members)
 }
 
-/// Dungeon runs equip each member from its copy's follower dungeon tier.
-/// Reference replays and unit fixtures choose their own gear source.
-pub(super) fn spawn_equipped_members(
-    world: &mut World,
-    owner: Entity,
-    profiles: &[Profile],
-) -> Result<Vec<Entity>, String> {
-    let members = spawn_members(world, owner, profiles)?;
-    for &unit in &members {
-        let profile = world
-            .get::<Follower>(unit)
-            .expect("spawned follower")
-            .profile
-            .clone();
-        if let Err(error) = super::gear::equip(world, unit, &profile) {
-            unsummon_members(world, &members);
-            return Err(error);
-        }
-    }
-    Ok(members)
-}
-
 pub(super) fn unsummon_members(world: &mut World, members: &[Entity]) {
     for &unit in members {
         crate::zones::unsummon(world, unit);
@@ -173,6 +151,15 @@ pub(super) fn class_stats(
     profile: &Profile,
     level: u8,
 ) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
+    class_stats_for_race(world, profile, level, 0)
+}
+
+pub(super) fn class_stats_for_race(
+    world: &World,
+    profile: &Profile,
+    level: u8,
+    race: u8,
+) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
     let classes = world.resource::<crate::spell_info::ClassSpells>();
     let class = classes
         .classes
@@ -186,7 +173,7 @@ pub(super) fn class_stats(
         .ok_or_else(|| format!("follower specialization {} absent", profile.spec_id))?;
     let input = crate::stats::StatInputs {
         class: profile.class_id,
-        race: 0,
+        race,
         level,
         primary_stat: Some(crate::stats::PrimaryStat::from_priority(
             spec.primary_stat_priority,

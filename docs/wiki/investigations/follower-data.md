@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Player-class profile inputs — 2026-10-30
+
+The [class-follower contract](../../specs/follower-dungeons.md#player-class-follower-design-2026-10-30) uses 39 tracked SimC/parity source profiles, not story-NPC identities. Their source hashes and decoded talent entries are in `scripts/reference/class-follower-profiles.json`; 31 passed offline decoding and eight retain explicit rejection reasons. Server admission must also validate each selected build against its native trait tree. Keystone/WCL band profiles remain separate and are not qualified by this roster.
+
+SimC Hunter exports can contain trailing zero bits after the native tree nodes. Retail import reads current tree nodes without rejecting trailing bits. Hunter nodes 94991 and 94976 belong to group 10531, whose condition 26696 grants one rank at level 71; the offline profile decoder subtracts those native grants when converting total ranks to purchases. The ordinary player import retains its purchased-rank convention.
+
 ## Devastation Giantkiller policy — 2026-10-22
 
 The legal1467 reference omits native-Augmentation-only98931/122279 from both inputs and SimC (`hero_talents=122279:0`); all other allocated/effective ranks match. Fresh1000-iteration references remain113727.53ST/182444.53three-target. Frozen54c07f2b5 native300s measurements after Giantkiller and master6b42c997e are19264.58ST/25151.66three-target (−83.06%/−86.21%), both outside parity bands. Strict native fixtures2PASS36.86s/53.38s. Disintegrate alone accounts for44125.53/58030.20missing DPS; next channels are Azure Sweep12945.28/22732.08 and combined same-ID Scintillation/Eternity Surge8211.41/18805.01. Full attribution: evidence`native-master-54c07f2b5/channel-attribution.json`; these are diagnosis, not parity acceptance. The obsolete pet-only constructor's duplicate-plugin crash was independently replaced on master by478afccc0.
