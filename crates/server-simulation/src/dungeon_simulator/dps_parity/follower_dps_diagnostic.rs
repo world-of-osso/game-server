@@ -21,6 +21,10 @@ fn follower_dps_production_dummy() {
         let data = crate::world_data::load_world_data(std::path::Path::new(&path));
         app.insert_resource(data.armor_constants.clone());
         app.insert_resource(data);
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .unwrap();
+        app.insert_resource(crate::followers::simulator::load_parity_catalog(&db).unwrap());
     }
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -79,9 +83,16 @@ fn follower_dps_production_dummy() {
     );
     crate::followers::gear::equip(app.world_mut(), actor, &profile).unwrap();
     let target = spawn_dummy(&mut app, actor, 0).unwrap();
-    app.world_mut()
-        .entity_mut(target)
-        .insert((Level(level), UnitLevel(level)));
+    let armor = app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .creature_armor_at(DUMMY_ENTRY, 205, level)
+        .expect("native dummy armor at target level");
+    app.world_mut().entity_mut(target).insert((
+        Level(level),
+        UnitLevel(level),
+        crate::level_scaling::CreatureArmor(armor),
+    ));
     app.world_mut()
         .entity_mut(target)
         .remove::<shared::level_scaling::LevelScaling>();
@@ -224,6 +235,20 @@ fn follower_dps_production_dummy() {
             > 0.0,
         "follower died before completing the dummy measurement"
     );
+    if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
+        assert!(
+            casts.get(&389539).is_some_and(|count| *count > 0),
+            "Sentinel must start"
+        );
+        assert!(
+            casts.get(&1241413).is_some_and(|count| *count > 0),
+            "Sentinel must enable the actual Hammer of Wrath action"
+        );
+        assert!(
+            damage.get(&1241413).is_some_and(|amount| *amount > 0),
+            "Hammer of Wrath must damage the dummy"
+        );
+    }
     if entry == 209053 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(known_spells.contains(&378255) && known_spells.contains(&191717));
         assert!(!known_spells.contains(&117013));
@@ -249,7 +274,7 @@ fn follower_dps_production_dummy() {
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
-        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
+        "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"casts":casts,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }
