@@ -80,6 +80,12 @@ fn register(scripts: &mut AuraScripts) {
     let script = scripts.0.entry(TALENT).or_default();
     script.check_proc = Some(roll_galactic);
     script.on_damage_proc = Some(trigger_galactic);
+    scripts.0.entry(BUFF).or_default().check_proc = Some(accept_moonfire_charge);
+}
+
+// SimC76f8118 sc_druid.cpp7947: only foreground Moonfire consumes this charge.
+fn accept_moonfire_charge(_: &World, _: &AuraInstance, event: &AuraEvent) -> bool {
+    event.spell_id == Some(MOONFIRE) && event.can_proc
 }
 
 fn roll_galactic(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
