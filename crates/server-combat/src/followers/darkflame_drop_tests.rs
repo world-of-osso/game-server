@@ -182,7 +182,11 @@ fn academy_pad_follower_regroups_after_crawth_flight() {
     let departure = Vec3::new(2116.46, 928.646, 3105.17);
     let landing = Vec3::new(2306.25, 907.3357, 3052.91);
     let owner = Vec3::new(2331.7, 909.5034, 3050.197);
-    let template = &h.app.world().resource::<crate::world_data::WorldData>().templates[&209057];
+    let template = &h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .templates[&209057];
     let (speed_walk, speed_run) = (template.speed_walk, template.speed_run);
     h.app.world_mut().entity_mut(follower).insert((
         position(departure),
