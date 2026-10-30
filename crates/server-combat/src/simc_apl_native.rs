@@ -1077,8 +1077,10 @@ impl NativeFacts<'_> {
             crate::spell_cast::knowledge::resolve_action(self.world, self.actor, requested)?;
         let previous = self
             .world
-            .get::<crate::spell_cast::SpellHistory>(self.actor)
-            .and_then(|history| history.previous_gcd_cast(index));
+            .get::<crate::simc_apl::gcd_history::GcdHistory>(self.actor)
+            .map(|history| history.previous(index))
+            .transpose()?
+            .flatten();
         let previous = previous
             .map(|spell| {
                 // Compare alias endpoints: a selected native override and its base

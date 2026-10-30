@@ -48,6 +48,22 @@ pub fn initialize(world: &mut World, actor: Entity, program: &crate::simc_apl::P
         .insert(GcdHistory::new(program.gcd_history_limit()));
 }
 
+/// Preserve observed casts when a controller resumes with the same program.
+pub fn ensure_initialized(
+    world: &mut World,
+    actor: Entity,
+    program: &crate::simc_apl::Program,
+) -> Result<(), String> {
+    if let Some(history) = world.get::<GcdHistory>(actor) {
+        if history.limit < program.gcd_history_limit() {
+            return Err("APL history was initialized with a shorter lookback".into());
+        }
+    } else {
+        initialize(world, actor, program);
+    }
+    Ok(())
+}
+
 /// Find the greatest prev_gcd index in every literal row, including action
 /// options such as channel interruption expressions.
 pub fn required_lookback<'a>(rows: impl IntoIterator<Item = &'a str>) -> Result<usize, String> {

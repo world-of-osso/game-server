@@ -55,6 +55,10 @@ fn enhancement_stormflurry_earns_delayed_weapon_repeats_without_extra_button_cas
     // schedule a200±25ms background Strike; both equipped weapons execute again.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(263, 1).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(server::simc_apl::gcd_history::GcdHistory::new(1));
     assert!(
         run.app
             .world()
@@ -80,9 +84,10 @@ fn enhancement_stormflurry_earns_delayed_weapon_repeats_without_extra_button_cas
     assert_eq!(
         run.app
             .world()
-            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .get::<server::simc_apl::gcd_history::GcdHistory>(run.actor)
             .unwrap()
-            .previous_gcd_cast(1),
+            .previous(1)
+            .unwrap(),
         Some(17364),
         "the last foreground action remains its real Strike button"
     );

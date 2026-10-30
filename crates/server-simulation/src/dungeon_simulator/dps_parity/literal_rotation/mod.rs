@@ -100,7 +100,12 @@ impl Driver {
     }
 
     pub fn precombat_exhausted(&self) -> bool {
-        self.precombat_cursor >= self.program.actions().filter(|(list, _)| *list == "precombat").count()
+        self.precombat_cursor
+            >= self
+                .program
+                .actions()
+                .filter(|(list, _)| *list == "precombat")
+                .count()
     }
 
     /// The caller advances native frames and resamples without consuming busy rows.
@@ -213,8 +218,13 @@ impl Driver {
         action: Action,
         execution: Execution,
     ) -> Result<(), String> {
+        server::simc_apl::gcd_history::ensure_initialized(world, actor, &self.program)?;
         if let Execution::Queue(execution, delay) = execution {
-            self.queued = Some((action, *execution, crate::spell_cast::history_now(world) + delay));
+            self.queued = Some((
+                action,
+                *execution,
+                crate::spell_cast::history_now(world) + delay,
+            ));
             return Ok(());
         }
         let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;

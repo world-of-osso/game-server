@@ -682,8 +682,6 @@ const WINDWALKER_RUSHING_WIND_KICK: u32 = 467307;
 pub struct SpellHistory {
     /// Successful foreground actions; triggered children and failed requests do not advance it.
     successful_casts: HashMap<SuccessKey, SuccessfulCast>,
-    #[cfg(any(test, feature = "test-support"))]
-    gcd_casts: Vec<u32>,
     cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
     /// Actual timer starts survive deadline reductions and rate changes.
@@ -729,14 +727,6 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
-    pub fn previous_gcd_cast(&self, index: usize) -> Option<u32> {
-        self.gcd_casts
-            .len()
-            .checked_sub(index)
-            .and_then(|offset| self.gcd_casts.get(offset).copied())
-    }
-
     /// Simulation-clock completion of an ordinary successful cast, never its request.
     pub fn last_successful_cast_at(&self, spell: u32) -> Option<f64> {
         self.successful_casts
@@ -771,17 +761,6 @@ impl SpellHistory {
                 at,
             },
         );
-        // SimC76f8118 action.cpp67–80: successful foreground actions with
-        // trigger_gcd > 0 append; failed, triggered and off-GCD requests do not.
-        #[cfg(any(test, feature = "test-support"))]
-        if gcd_category(spell) != 0
-            && spell
-                .cooldowns
-                .as_ref()
-                .is_some_and(|cd| cd.start_recovery_ms > 0)
-        {
-            self.gcd_casts.push(spell.id);
-        }
     }
 
     fn school_locked(&self, school_mask: u32, now: f64) -> bool {
@@ -3070,6 +3049,16 @@ fn execute_cast_with_primary(
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
         .record_successful_cast(spell, completed_at);
+    // SimC76f8118 action.cpp67–80: only successful foreground GCD actions enter history.
+    if gcd_category(spell) != 0
+        && spell
+            .cooldowns
+            .as_ref()
+            .is_some_and(|cd| cd.start_recovery_ms > 0)
+        && let Some(mut history) = world.get_mut::<crate::simc_apl::gcd_history::GcdHistory>(caster)
+    {
+        history.record(spell.id);
+    }
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
