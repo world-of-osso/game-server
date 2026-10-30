@@ -72,6 +72,7 @@ mod treemouth;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
 mod vexamus;
+mod voidscar_portal;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 mod wratheye;
@@ -105,7 +106,9 @@ pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
 pub(crate) fn is_game_object_script(script_name: &str) -> bool {
     matches!(
         script_name,
-        kings_rest::SERPENTINE_SEAL_SCRIPT | nethekurse_intro::DOOR_SCRIPT
+        kings_rest::SERPENTINE_SEAL_SCRIPT
+            | nethekurse_intro::DOOR_SCRIPT
+            | voidscar_portal::SCRIPT
     )
 }
 
@@ -118,6 +121,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
         kings_rest::serpentine_seal_gossip_hello(world, player, object);
     } else if script.0 == nethekurse_intro::DOOR_SCRIPT {
         nethekurse_intro::door_gossip_hello(world, object);
+    } else if script.0 == voidscar_portal::SCRIPT {
+        voidscar_portal::use_portal(world, player, object);
     }
 }
 
@@ -151,6 +156,7 @@ impl Plugin for ScriptedAiPlugin {
                     jump_movement::release_finished_jumps,
                     algethar_academy::finish_crawth_descent,
                     academy_transport::finish_entrance_pad,
+                    voidscar_portal::finish_portal_flight,
                 )
                     .chain(),
             )
