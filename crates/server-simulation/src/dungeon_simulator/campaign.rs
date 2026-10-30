@@ -2141,6 +2141,46 @@ impl Run {
                 crate::spell_cast::targets::Relation::Enemy,
             );
         if !attackable {
+            if let Some(step) = server::test_support::objectives::next(
+                self.app.world_mut(),
+                self.party.owner,
+                target,
+            )? {
+                self.waiting_objective = None;
+                match step {
+                    server::test_support::objectives::InteractionStep::Approach {
+                        target, ..
+                    } => {
+                        let at = *self
+                            .app
+                            .world()
+                            .get::<Position>(target)
+                            .ok_or("interaction target lacks position")?;
+                        self.app
+                            .world_mut()
+                            .entity_mut(self.party.owner)
+                            .insert(MoveIntent(Vec3::new(at.x, at.y, at.z)));
+                    }
+                    server::test_support::objectives::InteractionStep::Interact { target } => {
+                        self.app
+                            .world_mut()
+                            .entity_mut(self.party.owner)
+                            .remove::<MoveIntent>();
+                        server::test_support::objectives::interact(
+                            self.app.world_mut(),
+                            self.party.owner,
+                            target,
+                        )?;
+                    }
+                    server::test_support::objectives::InteractionStep::Wait => {
+                        self.app
+                            .world_mut()
+                            .entity_mut(self.party.owner)
+                            .remove::<MoveIntent>();
+                    }
+                }
+                return Ok(());
+            }
             let owner = *self
                 .app
                 .world()
