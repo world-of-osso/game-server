@@ -48,13 +48,20 @@ impl AuraFieldCatalog {
 impl FieldDefinition {
     /// Linear interpolation cannot exceed the largest authored scale point.
     pub(super) fn maximum_radius(&self) -> f32 {
-        let scale = self.scale_curve.as_ref().map_or(1.0, |points| {
+        let Some(points) = &self.scale_curve else {
+            return self.radius;
+        };
+        let first = clamped_linear(points, 0.0);
+        let maximum = if self.time_to_scale_ms == 0 {
+            first
+        } else {
             points
                 .iter()
+                .filter(|(progress, _)| (0.0..=1.0).contains(progress))
                 .map(|(_, scale)| *scale)
-                .fold(0.000001, f32::max)
-        });
-        self.radius * scale
+                .fold(first.max(clamped_linear(points, 1.0)), f32::max)
+        };
+        self.radius * maximum.max(0.000001)
     }
 
     pub(super) fn radius_at(&self, elapsed_seconds: f64) -> f32 {
@@ -313,6 +320,11 @@ mod tests {
         };
         assert_eq!(field.maximum_radius(), 8.0);
         assert!(field.maximum_radius() > field.radius_at(0.0));
+        let unscaled = FieldDefinition {
+            time_to_scale_ms: 0,
+            ..field
+        };
+        assert_eq!(unscaled.maximum_radius(), 2.0);
         for missing in [121405, 121406] {
             assert!(
                 load_curve(&connection, missing).is_err(),
