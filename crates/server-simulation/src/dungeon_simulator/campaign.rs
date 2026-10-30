@@ -968,6 +968,26 @@ fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
 }
 
 #[test]
+fn transport_progress_does_not_return_to_a_live_pack_behind_the_crossing() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let first = run.next_pack().expect("initial pullable pack").0;
+    let index = run
+        .graph
+        .route
+        .iter()
+        .position(|step| step.pack == first)
+        .unwrap();
+    let next = run.graph.route[index + 1].pack;
+    run.advance_route_to(next).unwrap();
+    assert_ne!(
+        run.next_pack().unwrap().0,
+        first,
+        "respawned earlier pack remains behind transport"
+    );
+    assert_eq!(run.route_start_index, index + 1);
+}
+
+#[test]
 fn generated_multi_actor_encounter_counts_native_completion_once() {
     let mut run = spawn_run(1, &mut None).unwrap();
     run.graph.map_id = 2451;
@@ -1425,6 +1445,7 @@ struct Run {
     objects: BTreeMap<u32, Entity>,
     report: Report,
     current_pack: Option<u32>,
+    route_start_index: usize,
     last_progress: f64,
     event_cursor: usize,
     last_owner_position: Vec3,
@@ -1624,6 +1645,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         actors,
         objects,
         current_pack: None,
+        route_start_index: 0,
         last_progress: 0.0,
         event_cursor: 0,
         last_owner_position,
@@ -1885,7 +1907,7 @@ impl Run {
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
-        if self.approach_translocation(target_position)? {
+        if self.approach_translocation(pack_id, target_position)? {
             return Ok(());
         }
         let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
@@ -1967,7 +1989,11 @@ impl Run {
         }
     }
 
-    fn approach_translocation(&mut self, target: Position) -> Result<bool, String> {
+    fn approach_translocation(
+        &mut self,
+        target_pack: u32,
+        target: Position,
+    ) -> Result<bool, String> {
         if self.graph.teleports.is_empty() {
             return Ok(false);
         }
@@ -2030,6 +2056,7 @@ impl Run {
                 npc,
                 transport.action,
             )?;
+            self.advance_route_to(target_pack)?;
             super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
             self.record_pull(
                 source,
@@ -2070,28 +2097,43 @@ impl Run {
         Ok(true)
     }
 
+    fn advance_route_to(&mut self, target_pack: u32) -> Result<(), String> {
+        let index = self
+            .graph
+            .route
+            .iter()
+            .position(|step| step.pack == target_pack)
+            .ok_or_else(|| format!("transport target pack{target_pack} missing from route"))?;
+        self.route_start_index = self.route_start_index.max(index);
+        Ok(())
+    }
+
     fn next_pack(&self) -> Option<(u32, Entity)> {
         let world = self.app.world();
-        self.graph.route.iter().find_map(|step| {
-            let pack = self.graph.packs.iter().find(|pack| pack.id == step.pack)?;
-            let target = pack
-                .spawns
-                .iter()
-                .map(|spawn| self.actors[&spawn.guid])
-                .find(|actor| {
-                    crate::spell_cast::targets::is_alive(world, *actor)
-                        && world
-                            .get::<crate::creature_aggro::AggroRange>(*actor)
-                            .is_some()
-                        && crate::spell_cast::targets::relation_matches(
-                            world,
-                            self.party.owner,
-                            *actor,
-                            crate::spell_cast::targets::Relation::Enemy,
-                        )
-                })?;
-            Some((pack.id, target))
-        })
+        self.graph
+            .route
+            .iter()
+            .skip(self.route_start_index)
+            .find_map(|step| {
+                let pack = self.graph.packs.iter().find(|pack| pack.id == step.pack)?;
+                let target = pack
+                    .spawns
+                    .iter()
+                    .map(|spawn| self.actors[&spawn.guid])
+                    .find(|actor| {
+                        crate::spell_cast::targets::is_alive(world, *actor)
+                            && world
+                                .get::<crate::creature_aggro::AggroRange>(*actor)
+                                .is_some()
+                            && crate::spell_cast::targets::relation_matches(
+                                world,
+                                self.party.owner,
+                                *actor,
+                                crate::spell_cast::targets::Relation::Enemy,
+                            )
+                    })?;
+                Some((pack.id, target))
+            })
     }
 
     fn has_living_required_boss(&self) -> bool {
