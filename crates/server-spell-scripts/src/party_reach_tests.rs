@@ -69,6 +69,30 @@ fn pet_reach_is_reported_at_the_pet_not_its_owner() {
 }
 
 #[test]
+fn demonology_felguard_autonomous_felstorm_contributes_pet_reach() {
+    let (mut harness, owner) = follower(230861, 9);
+    let pet = harness
+        .app
+        .world_mut()
+        .spawn((
+            combat::hunter_pet::HunterPet { owner, slot: 0 },
+            shared::components::Npc {
+                template_id: 17252,
+                name: "Felguard".into(),
+            },
+            shared::components::Position {
+                x: 30.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let reaches = party_unintended_reach(harness.app.world_mut(), &[owner]);
+    let pet_reach = reaches.iter().find(|(unit, _, _)| *unit == pet).unwrap();
+    assert_eq!(pet_reach.1, 8.0);
+}
+
+#[test]
 fn beast_mastery_follower_without_area_actions_has_no_secondary_reach() {
     let (mut harness, unit) = follower(209065, 3);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);

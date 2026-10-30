@@ -18,10 +18,28 @@ const BLIGHTED_DAMAGE: u32 = 1276960;
 const FELSTORM: u32 = 89751;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
     SpellScriptHook::TargetPlan(target_plan),
     SpellScriptHook::ResolvedDamage(blighted_maw),
     SpellScriptHook::AfterQueuedTriggers(felstorm),
 ];
+
+fn autonomous_actions(world: &World, unit: Entity) -> Vec<u32> {
+    let Some(pet) = world.get::<HunterPet>(unit) else {
+        return Vec::new();
+    };
+    let felguard = world
+        .get::<Npc>(unit)
+        .is_some_and(|npc| npc.template_id == 17252);
+    let demonology = world
+        .get::<ActiveSpec>(pet.owner)
+        .is_some_and(|spec| spec.0 == 266);
+    if felguard && demonology {
+        vec![FELSTORM]
+    } else {
+        Vec::new()
+    }
+}
 
 fn target_plan(spell: u32) -> Option<(Relation, TargetPlanHook)> {
     (spell == DREADBITE).then_some((Relation::Enemy, plan_dreadbite))

@@ -18,9 +18,33 @@ struct Extension {
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterResolvedHits(after_cast),
     SpellScriptHook::EarlyAuraRegistration(register),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, TWO_PIECE | SET | 1310213 | 102558 | 50334)
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, TWO_PIECE)
+    {
+        return Default::default();
+    }
+    let thorn = world
+        .resource::<SpellStore>()
+        .get(1301157)
+        .expect("Rampant Thorn native spell");
+    let range = thorn
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.range)
+        .expect("Rampant Thorn range")
+        .max_hostile;
+    combat::spell_cast::script_registry::ScriptReach::caster(range)
+}
 
 fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(1310213).or_default().on_periodic = Some(tick);

@@ -16,8 +16,30 @@ const ROARING_BLAZE: u32 = 1244310;
 const CONFLAGRATE: u32 = 17962;
 const WITHER: u32 = 445474;
 const IMMOLATE: u32 = 157736;
+// The existing Roaring Blaze recipient query models an 8-yard circle.
+const SPREAD_RADIUS: f32 = 8.0;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(spread_dot)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::ResolvedDamage(spread_dot),
+];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let selected = world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == ROARING_BLAZE)
+    });
+    if spell.id == CONFLAGRATE && selected {
+        combat::spell_cast::script_registry::ScriptReach::target(SPREAD_RADIUS)
+    } else {
+        Default::default()
+    }
+}
 
 fn spread_dot(
     world: &mut World,
@@ -91,7 +113,7 @@ fn nearby_enemies(world: &mut World, caster: Entity, primary: Entity) -> Vec<Ent
                 && targets::same_map(world, caster, candidate)
                 && targets::relation_matches(world, caster, candidate, Relation::Enemy)
                 && targets::position(world, candidate)
-                    .is_some_and(|position| position.distance(origin) <= 8.0))
+                    .is_some_and(|position| position.distance(origin) <= SPREAD_RADIUS))
             .then_some(candidate)
         })
         .collect()

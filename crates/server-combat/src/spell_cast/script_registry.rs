@@ -294,6 +294,8 @@ pub enum ScriptReach {
     None,
     Area(DeclaredReach),
     EngagedOnly,
+    /// A bounded selection that can only reach enemies already in combat.
+    EngagedArea(DeclaredReach),
 }
 
 impl ScriptReach {
@@ -332,6 +334,8 @@ pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
     DeclaredReach(DeclaredReachHook),
+    /// Autonomous actions used by this unit outside its ordinary spellbook.
+    AdditionalReachActions(fn(&World, Entity) -> Vec<u32>),
     Policies(&'static [Policy]),
     NativeAfterCast(AfterCastLookup),
     ScriptedChannel(ScriptedChannelHook),
@@ -534,6 +538,16 @@ impl SpellScriptRegistry {
                 }
                 reach
             })
+    }
+
+    pub fn additional_reach_actions(self, world: &World, unit: Entity) -> Vec<u32> {
+        self.hooks()
+            .filter_map(|hook| match hook {
+                SpellScriptHook::AdditionalReachActions(actions) => Some(actions(world, unit)),
+                _ => None,
+            })
+            .flatten()
+            .collect()
     }
 
     pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {

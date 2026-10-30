@@ -53,7 +53,10 @@ fn unit_reach(world: &World, unit: Entity) -> DeclaredReach {
     let store = world.resource::<SpellStore>();
     let registry = *world.resource::<SpellScriptRegistry>();
     let mut reach = DeclaredReach::default();
-    for spell in unit_spells(world, unit) {
+    for spell in unit_spells(world, unit)
+        .into_iter()
+        .chain(registry.additional_reach_actions(world, unit))
+    {
         let Some(spell) = store.get(spell) else {
             continue;
         };
