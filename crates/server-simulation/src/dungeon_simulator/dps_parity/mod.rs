@@ -17,6 +17,8 @@ mod elemental_rod_tests;
 #[cfg(test)]
 mod follower_dps_diagnostic;
 #[cfg(test)]
+mod refining_fire_tests;
+#[cfg(test)]
 mod tank_fixture_tests;
 #[cfg(test)]
 mod vengeance_consume_soul_tests;
