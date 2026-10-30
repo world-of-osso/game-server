@@ -96,7 +96,9 @@ def validate_sources(graph, profile):
         raise ValueError("native radius profile belongs to another map")
     expected = {spawn["guid"] for pack in graph["packs"] for spawn in pack["spawns"]}
     sources = {source["guid"]: source for source in profile["sources"]}
-    if expected != set(sources) or len(sources) != len(profile["sources"]):
+    deferred = set(profile.get("deferred", []))
+    if (expected != set(sources) | deferred or set(sources) & deferred
+            or len(sources) != len(profile["sources"]) or len(deferred) != len(profile.get("deferred", []))):
         raise ValueError("recapture native corridor inputs after source population changes")
     for source in sources.values():
         radius = source["radius"]
@@ -137,8 +139,8 @@ def corridor_pulls(packs, sources, segments, excluded):
             if pack["id"] in excluded:
                 continue
             for spawn in pack["spawns"]:
-                source = sources[spawn["guid"]]
-                if not source["eligible"]:
+                source = sources.get(spawn["guid"])
+                if source is None or not source["eligible"]:
                     continue
                 contact = sphere_intersection(source["position"], source["radius"], start, end)
                 if contact is None:

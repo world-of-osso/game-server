@@ -293,6 +293,16 @@ pub struct CreatureDifficulty(pub u32);
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CreatureFlagsExtra(pub u32);
 
+/// The same script-owned copy-fill exclusions used by the live spawn path.
+pub fn script_withholds_spawn(
+    withheld: &HashSet<u32>,
+    content: &MapContent,
+    spawn: &crate::world_data::CreatureSpawn,
+) -> bool {
+    withheld.contains(&spawn.guid)
+        || crate::scripted_ai::darkness::withheld_at_fill(content, spawn.template_entry)
+}
+
 /// Spawn every creature of the copy's map spawned at its difficulty,
 /// with the template of that difficulty, except the bosses
 /// kept dead. When `replicate` is true, adds `Replicate` (requires lightyear plugins).
@@ -325,8 +335,7 @@ pub fn spawn_map_creatures(
                 && !world_data.spawn_groups.is_member(spawn.guid)
                 && spawn.spawns_at(content.difficulty_id)
                 && !content.dead_bosses.contains(&spawn.template_entry)
-                && !withheld.contains(&spawn.guid)
-                && !crate::scripted_ai::darkness::withheld_at_fill(&content, spawn.template_entry)
+                && !script_withholds_spawn(&withheld, &content, spawn)
         });
     let entities = spawn_creatures(
         commands,
