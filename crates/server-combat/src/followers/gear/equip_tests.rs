@@ -10,6 +10,8 @@ fn equipped_follower(entry: u32, level: u8, map: u32, difficulty: u32) -> (f32, 
     });
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::item_proc_data::load(&db).unwrap());
     let source = load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap();
     h.app.insert_resource(source);
     h.app
