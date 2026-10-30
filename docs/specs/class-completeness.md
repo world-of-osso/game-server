@@ -29,6 +29,12 @@ Pinned SimC76f8118 `sc_druid.cpp:2513–2533` reschedules the main-hand swing to
 - An App may retain native PowerPools while SpellCastPlugin/PowerTypeTable is absent. Unrelated aura application/removal, including native44521 preparation at world-port ACK, must not panic, replace the catalog with an empty table, or invent maximum/current power. Native178 capacity recalculation warns and leaves existing non-Mana pools unchanged when the native catalog is unavailable.
 - The same missing catalog must explicitly refuse pet spawning, follower initialization and follower resource conditions before mutating their existing state: warn and return None, an error or false respectively. With a real catalog, keep native definitions, display divisors and existing capacity/regen rules. [Regression proof and caller audit](../diagnostics/census-tail-70448.md).
 
+## Ignored healing modifiers
+
+Healing spells with attr6 `IGNORE_HEALING_MODIFIERS` bypass healing-done bonuses and positive healing-taken bonuses. If attr13 `ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS` is present, negative healing-taken effects remain applicable (TC a352b1fa `Unit.cpp:7464–7470,7512–7517`). Spell-specific modifiers remain separate.
+
+A `world.db` attr6/heal-effect intersection with test-file numeric references identified these candidate affected player spells: 633 Lay on Hands; 19236 Desperate Prayer; 48153 Guardian Spirit; 53365 Unholy Strength; 70691 Rejuvenation; 108359 Dark Regeneration; 109304 Exhilaration; 117313 Bloodthirst Heal; 145109/145110 Ysera's Gift; 187827 Metamorphosis; 202166 Impending Victory; 213011 Charred Warblades; 216521 Celestial Fortune; 326808 Rune of Sanguination; 363534 Rewind; 371441 Life-Giver's Flame; 373268 Lifebind; 378412 Light of the Titans; 382311 Ancestral Awakening; 383701 Gai Plin's Imperial Brew; 385174 Invigorating Fury; 431483 Chrono Flame; 443126 Piety; 445495 Consume Flame; 1266301 Consume Soul. This is a search-based blast-radius inventory, not proof each referenced test executes its healing effect. Non-player/ambiguous ID matches are excluded.
+
 ## Periodic-healing taken slice — 2026-10-22
 
 - Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.
