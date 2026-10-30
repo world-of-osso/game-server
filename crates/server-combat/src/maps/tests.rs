@@ -603,7 +603,7 @@ fn murder_row_login_and_release_use_imported_entrance() {
     let place = h
         .app
         .world_mut()
-        .run_system_once(|mut commands: Commands, mut maps: LoginMaps| {
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
             maps.resolve(
                 &mut commands,
                 30,
