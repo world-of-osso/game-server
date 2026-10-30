@@ -123,6 +123,7 @@ fn append_registered_transports(
             from: *from,
             to: next,
             source_guid: *source_guid,
+            radius: registration.radius,
             action: registration.action,
         });
     }
@@ -210,6 +211,7 @@ fn registered_transport_creates_a_directed_edge_to_the_native_landing() {
         source: Vec3::new(1.0, 3.0, 2.0),
         destination: Vec3::new(4.0, 30.0, 5.0),
         distance: 42.0,
+        radius: 7.0,
         action: Action::SpellClick,
     };
     let (edges, transports) =

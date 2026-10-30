@@ -12,27 +12,36 @@ mod tests;
 pub(crate) const MAP: u32 = 2526;
 const PAD: Vec3 = Vec3::new(1440.6, 951.742, 2827.3);
 const LANDING: Vec3 = Vec3::new(1511.15, 900.57, 2926.35);
-pub(crate) const PADS: &[(u32, Vec3, Vec3)] = &[
-    (195564, PAD, LANDING),
+pub(crate) const PADS: &[(u32, Vec3, Vec3, f32)] = &[
+    (
+        195564,
+        PAD,
+        LANDING,
+        crate::npc_interaction::INTERACTION_DISTANCE,
+    ),
     (
         195564,
         Vec3::new(1881.92, 914.693, 3133.49),
         Vec3::new(2054.35, 925.0429, 3122.63),
+        crate::npc_interaction::INTERACTION_DISTANCE,
     ),
     (
         192864,
         Vec3::new(2116.46, 928.646, 3105.17),
         Vec3::new(2306.25, 907.3357, 3052.91),
+        crate::npc_interaction::INTERACTION_DISTANCE,
     ),
     (
         192864,
         Vec3::new(2318.13, 910.02, 3054.92),
         Vec3::new(2126.83, 925.12317, 3102.39),
+        2.0,
     ),
     (
         195564,
         Vec3::new(2078.2, 925.406, 3062.87),
         Vec3::new(2028.9, 896.8801, 2931.39),
+        crate::npc_interaction::INTERACTION_DISTANCE,
     ),
 ];
 
@@ -42,7 +51,7 @@ pub(crate) struct AcademyPadFlight {
     target: Vec3,
 }
 
-/// Use each real pad NPC and the existing NPC interaction reach as the trigger.
+/// Use each real pad NPC and its project-authored proximity boundary as the trigger.
 pub(super) fn launch_entrance_pad(world: &mut World) {
     let pads: Vec<_> = world
         .query::<(&Npc, &Position, &InMap)>()
@@ -52,19 +61,19 @@ pub(super) fn launch_entrance_pad(world: &mut World) {
                 return None;
             }
             PADS.iter()
-                .find(|(entry, start, _)| {
+                .find(|(entry, start, _, _)| {
                     npc.template_id == *entry
                         && Vec3::new(pos.x, pos.y, pos.z).distance(*start) < 1.0
                 })
-                .map(|(_, _, target)| (*pos, *map, *target))
+                .map(|(_, _, target, radius)| (*pos, *map, *target, *radius))
         })
         .collect();
     let mut owners = Vec::new();
-    for (pad, map, target) in pads {
+    for (pad, map, target, radius) in pads {
         owners.extend(world.query_filtered::<(Entity, &Position, &InMap, &MovementControl), (With<Player>, Without<AcademyPadFlight>)>()
             .iter(world).filter_map(|(entity, pos, current, control)| {
                 (*current == map && !control.controlled
-                    && Vec3::new(pos.x, pos.y, pos.z).distance(Vec3::new(pad.x, pad.y, pad.z)) <= crate::npc_interaction::INTERACTION_DISTANCE)
+                    && Vec3::new(pos.x, pos.y, pos.z).distance(Vec3::new(pad.x, pad.y, pad.z)) <= radius)
                     .then_some((entity, map, target))
             }));
     }

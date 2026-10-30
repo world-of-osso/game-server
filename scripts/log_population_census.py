@@ -7,6 +7,7 @@ import math
 import re
 import sqlite3
 from collections import defaultdict
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -57,13 +58,15 @@ def engagement_guids(fields):
     return tuple(guid for guid in (fields[1], fields[5]) if guid.startswith('Creature-'))
 
 
-def census(paths, maps, samples=None, zones_only=False):
+def census(paths, maps, samples=None, zones_only=False, bosses=None):
     runs = []
+    bosses = bosses or {}
     for path in sorted(paths):
         current = None
         encounter = None
         engaged = set()
         activity = {}
+        last_positions = {}
         in_key = False
         with path.open(encoding="utf-8", errors="replace") as source:
             for line in source:
@@ -80,6 +83,7 @@ def census(paths, maps, samples=None, zones_only=False):
                     encounter = None
                     engaged = set()
                     activity = {}
+                    last_positions = {}
                     if len(fields) > 3 and fields[2].isdigit() and int(fields[2]) in maps:
                         current = {"file": path.name, "map": int(fields[2]), "start": timestamp,
                                    "name": fields[1], "challenge_id": int(fields[3]), "creatures": {},
@@ -97,6 +101,7 @@ def census(paths, maps, samples=None, zones_only=False):
                     encounter = None
                     engaged = set()
                     activity = {}
+                    last_positions = {}
                     if len(fields) > 2 and fields[1].isdigit() and int(fields[1]) in maps:
                         current = {'file': path.name, 'map': int(fields[1]), 'start': timestamp,
                                    'name': fields[2], 'challenge_id': None, 'session_kind': 'zone',
@@ -107,8 +112,13 @@ def census(paths, maps, samples=None, zones_only=False):
                     continue
                 if event == 'ENCOUNTER_START':
                     fields = next(csv.reader([payload]))
-                    encounter = {'id': int(fields[1]), 'name': fields[2], 'start': timestamp,
-                                 'units': {}, 'casts': [], 'phase_markers': []}
+                    encounter_id = int(fields[1])
+                    known = bosses.get((current['map'], encounter_id), set())
+                    pre_pull = {guid: position for guid, position in last_positions.items()
+                                if current['creatures'][guid]['npc_id'] in known}
+                    encounter = {'id': encounter_id, 'name': fields[2], 'start': timestamp,
+                                 'units': {}, 'casts': [], 'phase_markers': [],
+                                 'pre_pull_positions': pre_pull}
                     current['encounters'].append(encounter)
                     continue
                 if event == 'ENCOUNTER_END':
@@ -162,6 +172,7 @@ def census(paths, maps, samples=None, zones_only=False):
                 if position and position['guid'] in current['creatures']:
                     item = current['creatures'][position['guid']]
                     observation = {**position, 'time': timestamp, 'event': event}
+                    last_positions[position['guid']] = observation
                     if samples is not None and position['guid'] not in engaged:
                         elapsed = (timestamp_value(timestamp) - timestamp_value(current['start'])).total_seconds()
                         sample = {**observation, 'map': current['map'], 'file': current['file'],
@@ -180,13 +191,33 @@ def census(paths, maps, samples=None, zones_only=False):
     return runs
 
 
-def annotate_bosses(runs, database):
-    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as conn:
-        rows = conn.execute('SELECT map_id, encounter_id, creature_entry FROM raid_encounter_creature')
-        bosses = {}
-        for map_id, encounter_id, creature_entry in rows:
+def load_bosses(database):
+    bosses = {}
+    with closing(sqlite3.connect(f'file:{database}?mode=ro', uri=True)) as conn:
+        for map_id, encounter_id, creature_entry in conn.execute(
+                'SELECT map_id, encounter_id, creature_entry FROM raid_encounter_creature'):
             bosses.setdefault((map_id, encounter_id), set()).add(creature_entry)
+    return bosses
+
+
+def annotate_bosses(runs, database):
+    bosses = load_bosses(database)
     for run in runs:
+        boss_ids = {npc for (map_id, _), entries in bosses.items() if map_id == run['map'] for npc in entries}
+        for guid, unit in run['creatures'].items():
+            if unit['npc_id'] not in boss_ids:
+                continue
+            snapshots = [encounter.get('pre_pull_positions', {}).get(guid)
+                         for encounter in run['encounters']
+                         if unit['npc_id'] in bosses.get((run['map'], encounter['id']), set())]
+            position = next((snapshot for snapshot in snapshots if snapshot is not None), None)
+            if position is None:
+                unit.pop('first_position', None)
+                unit['position_gap'] = 'BOSS_PRE_PULL_POSITION_UNOBSERVED'
+            else:
+                unit['first_position'] = position
+                unit['position_neighbors'] = []
+                unit['position_method'] = 'last_pre_encounter_start'
         for encounter in run['encounters']:
             known = bosses.get((run['map'], encounter['id']), set())
             encounter['known_boss_npc_ids'] = sorted(known)
@@ -201,6 +232,8 @@ def filter_safe_samples(runs, source, output, margin_seconds=3.0):
     for line in source:
         sample = json.loads(line)
         unit = activity[(sample['file'], sample['run_start'], sample['guid'])]
+        if unit.get('position_method') == 'last_pre_encounter_start' or unit.get('position_gap') == 'BOSS_PRE_PULL_POSITION_UNOBSERVED':
+            continue
         boundaries = [timestamp_value(unit[key]) for key in ('first_hostile_time', 'first_cast_time') if key in unit]
         if boundaries and (min(boundaries) - timestamp_value(sample['time'])).total_seconds() < margin_seconds:
             continue
@@ -328,7 +361,8 @@ def cluster_population(runs, radius=10.0, margin_threshold=1.0):
             key = (run['map'], unit['npc_id'], pos['ui_map_id'])
             groups[key].append({'file': run['file'], 'run_start': unit.get('position_source_run_start', run['start']),
                 'episode_start': run['start'], 'guid': guid, 'spawn_uid': unit['spawn_uid'], 'x': pos['x'], 'y': pos['y'], 'time': pos['time'], 'event': pos['event'],
-                'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned']})
+                'facing': pos['facing'], 'level': pos['level'], 'summoned': unit['summoned'],
+                'position_method': unit.get('position_method', 'first_resolved_observation')})
     clusters = []
     for key, observations in sorted(groups.items()):
         for component in connected_observations(observations, radius):
@@ -530,13 +564,18 @@ def main():
     parser.add_argument("--centroid-requests", type=Path)
     parser.add_argument("logs", type=Path, nargs="+")
     args = parser.parse_args()
+    if (args.floor_requests or args.safe_clusters or args.clusters or args.centroid_requests) and not args.world_db:
+        parser.error('population position outputs require --world-db for boss identity')
     paths = [f for p in args.logs for f in (sorted(p.glob("*.txt")) if p.is_dir() else [p])]
+    bosses = load_bosses(args.world_db) if args.world_db else {}
     if args.precombat_samples:
         args.precombat_samples.parent.mkdir(parents=True, exist_ok=True)
         with args.precombat_samples.open('w', encoding='utf-8') as samples:
-            runs = census(paths, set(args.map), samples, args.zone_only)
+            runs = census(paths, set(args.map), samples, args.zone_only, bosses)
     else:
-        runs = census(paths, set(args.map), zones_only=args.zone_only)
+        runs = census(paths, set(args.map), zones_only=args.zone_only, bosses=bosses)
+    if args.world_db:
+        annotate_bosses(runs, args.world_db)
     if args.safe_samples:
         if not args.precombat_samples:
             parser.error('--safe-samples requires --precombat-samples')
@@ -552,8 +591,6 @@ def main():
         args.safe_clusters.write_text(json.dumps(safe_clusters, indent=2) + '\n', encoding='utf-8')
     if args.trash_data:
         annotate_trash(runs, read_trash_timers(args.trash_data))
-    if args.world_db:
-        annotate_bosses(runs, args.world_db)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"runs": runs}, indent=2) + "\n", encoding="utf-8")
     if args.floor_requests:

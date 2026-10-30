@@ -1686,6 +1686,15 @@ mod tests {
                     "Blood Beast damage {spell:?}"
                 );
             }
+            let casts = events
+                .iter()
+                .filter(|event| {
+                    event.source == Some(beast.to_bits())
+                        && event.spell_id == Some(434574)
+                        && event.kind == CombatLogKind::CastSuccess
+                })
+                .count();
+            assert_eq!(casts, 3, "Corrupted Blood begins on cooldown");
             let swings = events
                 .iter()
                 .filter(|event| {
@@ -2392,6 +2401,180 @@ mod tests {
         assert!(
             (boosted as f32 / unboosted as f32 - 1.1).abs() < 0.01,
             "one stack: {boosted} vs {unboosted}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn rune_weapon_death_strike_copies_before_new_blood_shield() {
+        use shared::components::{Health, Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        fn damage(shield_before: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+                .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            world
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = 0.0;
+            let weapon = world
+                .query::<(
+                    bevy::prelude::Entity,
+                    &Npc,
+                    &UnitSummonedBy,
+                    &crate::spell_cast::summon::SummonedCreature,
+                )>()
+                .iter(world)
+                .find(|(_, npc, owner, summon)| {
+                    npc.template_id == 27893
+                        && owner.0 == actor.to_bits()
+                        && summon.spell_id == 49028
+                })
+                .unwrap()
+                .0;
+            world.get_mut::<Health>(actor).unwrap().current *= 0.5;
+            if shield_before {
+                crate::auras::apply_aura(
+                    world,
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 77535,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            crate::spell_cast::powers::change_power(
+                world,
+                actor,
+                shared::components::PowerType::RunicPower,
+                1000.0,
+            );
+            let before = world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let _seed = crate::random::seed_scope(70448);
+            crate::spell_cast::creature_cast(world, actor, 49998, Some(target), false).unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            assert!(
+                crate::auras::has_aura(run.app.world(), actor, 77535),
+                "Death Strike must create Blood Shield after the weapon copy"
+            );
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .find(|event| {
+                    event.source == Some(weapon.to_bits())
+                        && event.spell_id == Some(49998)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        let no_shield = damage(false);
+        let existing_shield = damage(true);
+        assert!(
+            (existing_shield as f32 / no_shield as f32 - 1.08).abs() < 0.01,
+            "only an existing Blood Shield increases weapon damage: {no_shield} -> {existing_shield}"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn rune_weapon_death_strike_copies_before_hemostasis_is_consumed() {
+        use shared::components::{Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+        fn damage(empowered: bool) -> i32 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::super::prepare_registered_player(250, 1).unwrap();
+            let actor = run.actor;
+            let target = run.targets[0];
+            super::super::engage(&mut run);
+            crate::spell_cast::creature_cast(run.app.world_mut(), actor, 49028, Some(actor), false)
+                .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+            let world = run.app.world_mut();
+            world
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = 0.0;
+            let weapon = world
+                .query::<(
+                    bevy::prelude::Entity,
+                    &Npc,
+                    &UnitSummonedBy,
+                    &crate::spell_cast::summon::SummonedCreature,
+                )>()
+                .iter(world)
+                .find(|(_, npc, owner, summon)| {
+                    npc.template_id == 27893
+                        && owner.0 == actor.to_bits()
+                        && summon.spell_id == 49028
+                })
+                .unwrap()
+                .0;
+            if empowered {
+                crate::auras::apply_aura(
+                    world,
+                    &crate::auras::AuraApplication {
+                        caster: actor,
+                        target: actor,
+                        spell_id: 273947,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            crate::spell_cast::powers::change_power(
+                world,
+                actor,
+                shared::components::PowerType::RunicPower,
+                1000.0,
+            );
+            let before = world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            let _seed = crate::random::seed_scope(70448);
+            crate::spell_cast::creature_cast(world, actor, 49998, Some(target), false).unwrap();
+            for _ in 0..4 {
+                run.app.update();
+            }
+            assert!(!crate::auras::has_aura(run.app.world(), actor, 273947));
+            run.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .find(|event| {
+                    event.source == Some(weapon.to_bits())
+                        && event.spell_id == Some(49998)
+                        && event.kind == CombatLogKind::Damage
+                })
+                .unwrap()
+                .amount
+        }
+        let normal = damage(false);
+        let empowered = damage(true);
+        assert!(
+            (empowered as f32 / normal as f32 - 1.08).abs() < 0.01,
+            "weapon copy must receive one Hemostasis stack: {normal} -> {empowered}"
         );
     }
 

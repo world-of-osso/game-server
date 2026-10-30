@@ -43,6 +43,7 @@ pub struct TransportEdge {
     pub from: u32,
     pub to: u32,
     pub source_guid: u32,
+    pub radius: f32,
     pub action: super::transport::Action,
 }
 

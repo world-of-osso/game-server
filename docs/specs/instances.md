@@ -58,7 +58,7 @@ Dungeons phases 1 and 4: several maps in one world, far teleports between them, 
 - [x] Continent deaths keep the spirit-healer graveyards on the player's own map (Kalimdor deaths release to Kalimdor healers).
 
 ### Login (`Player::LoadFromDB`, Player.cpp:18480-18545)
-- [x] A character enters its saved map's copy (`CreateMap`); a dungeon copy that refuses it, or cannot be created, sends it to the go-back trigger target (`GetGoBackTrigger`); a newly created dungeon copy puts it at the entrance (`GetMapEntranceTrigger`). `LoadTerrain` names the map's directory.
+- [x] A character enters its saved map's copy (`CreateMap`); a dungeon copy that refuses it, or cannot be created, sends it to the go-back trigger target (`GetGoBackTrigger`); a newly created dungeon copy puts it at the entrance (`GetMapEntranceTrigger`). Uldaman map 2451 has no incoming trigger in the imported data; use its authored TDB WorldSafeLoc 100032 entrance. If an entrance trigger or assigned safe location is missing, refuse login rather than reuse a stale position; retries must not reuse an empty copy created by the failed login. `LoadTerrain` names the map's directory.
 
 ### Meeting stones across maps
 - [x] An accepted summon teleports the target to the summoner's map and position (`TeleportTo(m_summon_location)`), with a map transfer when they differ.

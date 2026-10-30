@@ -1,10 +1,11 @@
+import json
 import os
 from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
 
-from murder_row_population import BINDINGS, ENTRANCE, prepare
+from murder_row_population import BINDINGS, ENTRANCE, LITHIEL_PRE_PULL, prepare
 
 
 class MurderRowPopulationTest(unittest.TestCase):
@@ -25,6 +26,12 @@ class MurderRowPopulationTest(unittest.TestCase):
                 self.assertEqual(spawn, [(8628.92, -5039.0, 126.20164, 0.823, '1')])
                 self.assertEqual(db.execute('SELECT name FROM content_creature_template WHERE entry=234647').fetchone(), ('Xathuux the Annihilator',))
                 self.assertEqual(db.execute('SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=234647').fetchone(), (140268,))
+                lithiel = db.execute('SELECT guid,position_x,position_y,position_z,orientation FROM content_creature WHERE map=2813 AND id1=237415').fetchall()
+                self.assertEqual(len(lithiel), 1)
+                self.assertEqual(lithiel[0][1:], LITHIEL_PRE_PULL)
+                provenance = json.loads(db.execute('SELECT observation_json FROM log_derived_population WHERE guid=?', (lithiel[0][0],)).fetchone()[0])
+                self.assertEqual(provenance['position_method'], 'last_pre_encounter_start')
+                self.assertEqual(provenance['observation_time'], '10/7/2026 23:06:53.269-5')
                 self.assertEqual(db.execute('PRAGMA integrity_check').fetchone(), ('ok',))
 
 

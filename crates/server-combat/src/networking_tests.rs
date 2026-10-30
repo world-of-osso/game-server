@@ -86,6 +86,7 @@ fn setup_app_with_time() -> App {
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins);
     app.add_message::<crate::death::PlayerDeathTransition>();
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     app.update();
     app.update();
     app

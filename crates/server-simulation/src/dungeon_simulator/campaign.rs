@@ -1980,9 +1980,7 @@ impl Run {
                 .get::<Position>(npc)
                 .ok_or("registered transport source lacks position")?;
             let position = Vec3::new(at.x, at.y, at.z);
-            if Vec3::new(from.x, from.y, from.z).distance(position)
-                > server::test_support::transport::interaction_distance()
-            {
+            if Vec3::new(from.x, from.y, from.z).distance(position) > transport.radius {
                 self.app
                     .world_mut()
                     .entity_mut(self.party.owner)

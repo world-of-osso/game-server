@@ -127,6 +127,44 @@ fn academy_pad_moves_owner_and_follower_then_releases_control() {
 }
 
 #[test]
+fn academy_pad_crawth_approach_does_not_launch_return_flight() {
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    let map = InMap {
+        map_id: 2526,
+        instance_id: 7,
+    };
+    let (_, pad, landing, _) = PADS[3];
+    world.spawn((
+        Npc {
+            template_id: 192864,
+            name: "Jump Pad".into(),
+        },
+        map,
+        Position {
+            x: pad.x,
+            y: pad.y,
+            z: pad.z,
+        },
+    ));
+    // The live outbound landing-to-Eagles route passes the return NPC here.
+    let approach = Vec3::new(2318.13, 908.47, 3051.64);
+    let owner = player(&mut world, map, approach);
+    launch_entrance_pad(&mut world);
+    assert!(world.get::<JumpMovement>(owner).is_none());
+    *world.get_mut::<Position>(owner).unwrap() = Position {
+        x: pad.x,
+        y: 908.47784,
+        z: pad.z,
+    };
+    launch_entrance_pad(&mut world);
+    assert!(
+        world.get::<JumpMovement>(owner).is_some(),
+        "entering the return pad must launch toward {landing:?}"
+    );
+}
+
+#[test]
 fn academy_pad_landing_rejects_in_flight_network_input() {
     use lightyear::prelude::{MessageReceiver, MessageSender};
     use shared::components::{MovementSpeed, PlayerMotion};
@@ -244,7 +282,7 @@ fn academy_pad_landing_rejects_in_flight_network_input() {
 
 #[test]
 fn academy_pad_other_real_npcs_reach_their_logged_destinations() {
-    for &(entry, pad, landing) in &PADS[1..] {
+    for &(entry, pad, landing, _) in &PADS[1..] {
         let mut world = World::new();
         world.insert_resource(Time::<()>::default());
         let map = InMap {
@@ -288,7 +326,7 @@ fn academy_pad_arc_clears_real_academy_geometry() {
         std::env::var_os("GAME_SERVER_GROUND_DIR").expect("ground assets"),
     );
     let mut map = los::LosMap::new(&root.join("los/2526"));
-    for &(entry, pad, landing) in PADS {
+    for &(entry, pad, landing, _) in PADS {
         let duration = pad.distance(landing) / 50.0;
         let height = shared::skyriding::GRAVITY * duration * duration / 8.0;
         let at = |t: f32| pad.lerp(landing, t) + Vec3::Y * (height * 4.0 * t * (1.0 - t) + 1.0);

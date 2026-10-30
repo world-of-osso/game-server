@@ -14,6 +14,7 @@ pub struct Registration {
     pub source: Vec3,
     pub destination: Vec3,
     pub distance: f32,
+    pub radius: f32,
     pub action: Action,
 }
 
@@ -45,16 +46,18 @@ pub fn read_registrations(
             source: crate::taxi::RUBY_FERRY_SOURCE,
             destination,
             distance,
+            radius: crate::npc_interaction::INTERACTION_DISTANCE,
             action: Action::SpellClick,
         });
     }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
-            |(entry, source, destination)| Registration {
+            |(entry, source, destination, radius)| Registration {
                 entry: *entry,
                 source: *source,
                 destination: *destination,
                 distance: source.distance(*destination),
+                radius: *radius,
                 action: Action::Proximity,
             },
         ));
@@ -112,10 +115,6 @@ pub fn install_taxi_system(app: &mut App, db: &rusqlite::Connection) -> Result<(
         (crate::taxi::fly_taxis, start_player_landing).chain(),
     );
     Ok(())
-}
-
-pub fn interaction_distance() -> f32 {
-    crate::npc_interaction::INTERACTION_DISTANCE
 }
 
 pub fn in_progress(world: &World, unit: Entity) -> bool {

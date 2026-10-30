@@ -4,6 +4,9 @@ Protocol/server phases 1–2: ordered dungeon objectives, DB2-driven character a
 
 ## What it must do
 
+- [ ] `LFG_FINISHED_DUNGEON_STATE_UNPORTED`: completing the final encounter does not yet mark the LFG group finished or implement LFG reward handling.
+- [x] Admin `list-achievements <online-character>` returns the live character and account achievement IDs and criterion progress separately; it reports an error when the character is not online.
+
 - [x] Preserve authored CriteriaTree.Flags on every criterion catalog/continuation/scenario line independently of current/required progress and support. ProgressBar0x1 is a presentation fact, not `required > 1`: actual1017/tree22151 is flag1/amount1,155/tree4716 is flag0/amount100. Do not change counters, thresholds, completion, eligibility, cursor order or unavailable-progress semantics; gate matching protocol/client consumers together. Mainline Constants.lua127 and AchievementUI.lua2009–2070 define the client presentation.
 
 - [x] Read DungeonEncounter map/difficulty/order/bit rows, including negative order indices; isolate defeated encounters per copy.

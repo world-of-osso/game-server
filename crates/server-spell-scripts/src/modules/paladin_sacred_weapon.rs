@@ -7,6 +7,7 @@ use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
 use combat::spell_cast::targets::{self, Relation};
 use combat::spell_cast::{PlannedEffect, TargetPlan};
 use combat::spell_info::SpellInfo;
+use std::collections::HashMap;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
@@ -19,17 +20,93 @@ const HEAL: u32 = 441590;
 // sc_paladin.hpp779: default solo Reflection of Radiance chance per strike.
 const REFLECTION_CHANCE: f32 = 0.1;
 
+#[derive(Component, Default)]
+struct SacredWeaponClocks(HashMap<Entity, combat::auras::ProcTimers>);
+
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.entry(SACRED_WEAPON).or_default().on_proc = Some(wield_sacred_weapon);
+    let script = scripts.0.entry(SACRED_WEAPON).or_default();
+    script.on_apply = Some(restore_weapon_clock);
+    script.before_remove_reactions = Some(save_weapon_clock);
+    script.check_proc = Some(accept_weapon_event);
+    script.on_damage_proc = Some(wield_sacred_weapon);
+    // SimC76f8118 sc_paladin.cpp2403–2408,2444–2449,2462–2467,2490–2496:
+    // Sacred and Lesser Weapon child actions disable proc callbacks.
+    for spell in [432616, 441590, 1239282, 1239276] {
+        scripts.0.entry(spell).or_default().suppress_outgoing_procs = true;
+    }
+}
+
+// SimC76f8118 sc_paladin.cpp2813–2822,3313–3314 keeps one callback
+// across armament activations; its RPPM clock is not reset on expiry.
+fn restore_weapon_clock(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let timers = world
+        .get::<SacredWeaponClocks>(unit)
+        .and_then(|clocks| clocks.0.get(&aura.caster))
+        .copied();
+    if let Some(timers) = timers {
+        combat::auras::procs::restore_proc_timers(world, unit, aura.instance_id, timers);
+    }
+}
+
+fn save_weapon_clock(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    _: combat::auras::RemoveReason,
+) {
+    let timers = combat::auras::procs::snapshot_proc_timers(aura);
+    world
+        .entity_mut(unit)
+        .entry::<SacredWeaponClocks>()
+        .or_default()
+        .get_mut()
+        .0
+        .insert(aura.caster, timers);
+}
+
+fn accept_weapon_event(
+    world: &World,
+    _: &AuraInstance,
+    event: &combat::auras::procs::AuraEvent,
+) -> bool {
+    if event.target != Some(event.actor) || event.damage > 0.0 || event.heal.is_some() {
+        return true;
+    }
+    let Some(spell) = event
+        .spell_id
+        .and_then(|id| world.resource::<combat::spell_info::SpellStore>().get(id))
+    else {
+        return true;
+    };
+    // SimC76f8118 sc_paladin.cpp2509–2519 procs on the action's target.
+    // A separate caster-only energize hit is not another helpful action.
+    let self_effects = spell
+        .effects
+        .iter()
+        .filter(|effect| effect.implicit_targets[0] == 1);
+    let self_effects: Vec<_> = self_effects.collect();
+    !(spell.effects.iter().any(|effect| effect.effect == 2)
+        && !self_effects.is_empty()
+        && self_effects.iter().all(|effect| effect.effect == 30))
 }
 
 fn wield_sacred_weapon(
     world: &mut World,
     unit: Entity,
     _aura: &AuraInstance,
-    other: Option<Entity>,
+    event: &combat::auras::procs::AuraEvent,
 ) {
-    let target = other.unwrap_or(unit);
+    // SimC76f8118 sc_paladin_protection.cpp448–469: Blessed Hammer's
+    // foreground action targets the enemy even though it energizes its caster.
+    let target = if event.spell_id == Some(204019) {
+        event.action_target
+    } else {
+        event.target
+    };
+    let Some(target) = target else {
+        error!(?unit, spell = ?event.spell_id, "Sacred Weapon proc has no action target");
+        return;
+    };
     if targets::relation_matches(world, unit, target, Relation::Enemy) {
         combat::spell_cast::cast_triggered(world, unit, STRIKE, Some(target), 1);
         super::paladin_armaments::roll_reflection_of_radiance(world, unit, REFLECTION_CHANCE);

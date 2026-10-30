@@ -34,8 +34,11 @@ def prepare(runs, clusters, requests, resolved, packs=(), centroid_requests=(), 
         centroid_floor[index] = (request, result)
     outside = set()
     bosses = set()
+    gaps = defaultdict(Counter)
     for run in runs:
         for unit in run['creatures'].values():
+            if unit.get('position_gap'):
+                gaps[run['map']][unit['position_gap']] += 1
             if unit['seen_outside_encounter']:
                 outside.add((run['map'], unit['npc_id']))
         for encounter in run['encounters']:
@@ -46,9 +49,11 @@ def prepare(runs, clusters, requests, resolved, packs=(), centroid_requests=(), 
             key = (pack['file'], pack['run_start'], member['guid'])
             pack_by_unit[key] = pack['npc_ids']
     records = []
-    gaps = defaultdict(Counter)
     for index, cluster in enumerate(clusters):
         map_id, npc_id = cluster['map'], cluster['npc_id']
+        if cluster['ambiguous_match'] and (map_id, npc_id) in bosses:
+            gaps[map_id]['BOSS_PRE_PULL_IDENTITY_AMBIGUOUS'] += 1
+            continue
         if cluster['ambiguous_match'] and 'candidate_centroid' not in cluster:
             gaps[map_id]['AMBIGUOUS_SPAWN_IDENTITY'] += 1
             continue
@@ -88,7 +93,7 @@ def prepare(runs, clusters, requests, resolved, packs=(), centroid_requests=(), 
         source_key = hashlib.sha256(json.dumps([map_id, npc_id, identity], separators=(',', ':')).encode()).hexdigest()
         records.append({'source_key': source_key, 'map': map_id, 'npc_id': npc_id,
             'x': x, 'y': y, 'z': result['z'],
-            'position_method': 'candidate_centroid' if cluster['ambiguous_match'] else 'first_resolved_observation',
+            'position_method': 'candidate_centroid' if cluster['ambiguous_match'] else observation.get('position_method', 'first_resolved_observation'),
             'observed_x': observation['x'], 'observed_y': observation['y'],
             'candidate_spread_yards': cluster.get('candidate_spread_yards'),
             'candidate_observations': cluster.get('candidate_observations') if cluster['ambiguous_match'] else None,
