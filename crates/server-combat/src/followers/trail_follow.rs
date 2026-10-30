@@ -58,7 +58,7 @@ pub(super) fn advance(
         .any(|&watcher| positioning::is_unpulled_hostile(world, unit, watcher));
     if !blocked {
         clear(world, unit);
-        return false;
+        return true;
     }
     let (since, destination) = {
         let state = world.get::<TrailFollow>(unit).expect("trail state");
