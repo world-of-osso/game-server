@@ -1263,21 +1263,7 @@ fn parse_modf_entry(entry: &[u8]) -> Result<WmoPlacement, String> {
 }
 
 fn load_wmo_liquids(data_dir: &Path, root_fdid: u32) -> Result<Vec<LiquidTriangle>, String> {
-    let root = read_client_file(data_dir, "models", root_fdid, "wmo")?;
-    let parsed = wow_wmo::parser::load_wmo_root(&root)?;
-    let mut triangles = Vec::new();
-    for fdid in parsed
-        .group_file_data_ids
-        .into_iter()
-        .take(parsed.n_groups as usize)
-    {
-        let group = read_client_file(data_dir, "models", fdid, "wmo")?;
-        triangles.extend(
-            los::wmo_liquid::group_triangles(parsed.flags, &group)
-                .map_err(|error| format!("group {fdid}: {error}"))?,
-        );
-    }
-    Ok(triangles)
+    los::wmo_liquid::load_model(data_dir, root_fdid)
 }
 
 fn sample_wmo_liquid(triangles: &[LiquidTriangle], feet: Vec3) -> Option<LiquidSample> {
@@ -1304,10 +1290,23 @@ fn with_liquid_floor(
     terrain: Option<f32>,
     wmos: &[WmoCollision],
 ) -> LiquidSample {
-    let surface = Vec3::new(feet.x, liquid.level, feet.z);
-    if let GroundProbe::Supported(height) = probe_fall_height(surface, terrain, wmos) {
-        liquid.depth_level = height;
+    let ceiling = feet.y.min(liquid.level) + 0.05;
+    let mut floors = Vec::new();
+    for wmo in wmos {
+        wmo.collision_heights(
+            feet.x,
+            feet.z,
+            ceiling,
+            ceiling - MAX_FALL_DISTANCE,
+            &mut floors,
+        );
     }
+    liquid.depth_level = floors
+        .into_iter()
+        .chain(terrain)
+        .filter(|height| *height <= ceiling)
+        .max_by(f32::total_cmp)
+        .unwrap_or(f32::NEG_INFINITY);
     liquid
 }
 

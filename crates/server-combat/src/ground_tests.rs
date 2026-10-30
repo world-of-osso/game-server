@@ -32,6 +32,17 @@ fn halls_wmo_liquid_has_surface_and_collision_depth() {
     assert!((liquid.level - -38.516).abs() < 0.05, "{liquid:?}");
     assert!((liquid.depth_level - -44.083).abs() < 0.1, "{liquid:?}");
     assert!(liquid.level - liquid.depth_level > shared::movement::SWIM_DEPTH);
+    let swimming_feet = Vec3::new(x, -40.0, z);
+    let swim = crate::networking_movement::swim_bounds(
+        &mut ground,
+        crate::maps::InMap {
+            map_id: 2527,
+            instance_id: 1,
+        },
+        swimming_feet,
+    )
+    .expect("lower floor must remain swimmable under the upper floor");
+    assert!((swim.floor - -44.083).abs() < 0.1, "{swim:?}");
 }
 
 /// `world/maps/azeroth/azeroth.wdt`.

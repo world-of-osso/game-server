@@ -367,7 +367,7 @@ pub(super) struct SwimBounds {
 pub(super) fn swim_bounds(ground: &mut GroundMap, map_id: InMap, feet: Vec3) -> Option<SwimBounds> {
     let liquid = ground.liquid_at(map_id.map_id, feet)?;
     let floor = match ground.ground_in(map_id, feet) {
-        GroundProbe::Supported(height) => height,
+        GroundProbe::Supported(height) if height <= feet.y + 0.05 => height,
         _ => liquid.depth_level,
     };
     let top = shared::movement::swim_top(liquid.level);

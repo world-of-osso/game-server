@@ -5,6 +5,29 @@ use wow_wmo::parser::{self, WmoGroupHeader, WmoLiquid, WmoRootFlags};
 const UNIT_SIZE: f32 = 100.0 / 3.0 / 8.0;
 const MOGP_HEADER_SIZE: usize = 0x44;
 
+/// Read every group named by a WMO root from the extracted model cache.
+pub fn load_model(data: &std::path::Path, root_fdid: u32) -> Result<Vec<LiquidTriangle>, String> {
+    let read = |fdid| {
+        let path = data.join("models").join(format!("{fdid}.wmo"));
+        std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))
+    };
+    let root = read(root_fdid)?;
+    let parsed = parser::load_wmo_root(&root)?;
+    let mut triangles = Vec::new();
+    for fdid in parsed
+        .group_file_data_ids
+        .into_iter()
+        .take(parsed.n_groups as usize)
+    {
+        let group = read(fdid)?;
+        triangles.extend(
+            group_triangles(parsed.flags, &group)
+                .map_err(|error| format!("group {fdid}: {error}"))?,
+        );
+    }
+    Ok(triangles)
+}
+
 #[derive(Clone, Debug)]
 pub struct LiquidTriangle {
     pub vertices: [Vec3; 3],
