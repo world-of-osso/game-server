@@ -209,6 +209,19 @@ fn modifier_amount(
     aura: &AuraInstance,
     effect: &AuraEffectState,
 ) -> f32 {
+    // Fury of Nature's rank is resolved after the passive is applied; read the
+    // selected talent live rather than snapshotting its not-yet-scaled value.
+    if aura.spell_id == 370701 {
+        return world
+            .get::<ActiveAuras>(aura.caster)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|a| a.spell_id == 370695 && a.caster == aura.caster)
+            })
+            .and_then(|talent| talent.effects.iter().find(|e| e.index == 0))
+            .map_or(0.0, |effect| effect.amount);
+    }
     if super::summon_damage::ownership(world, caster).map(|(owner, _)| owner) != Some(aura.caster) {
         return stacked_amount(world, aura, effect);
     }

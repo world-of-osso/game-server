@@ -1,9 +1,10 @@
-//! SimC76f8118 sc_druid.cpp10806–10820: the selected talent supplies its passive's value.
+//! SimC76f8118 sc_druid.cpp10806–10820: selected talent enables its passive effects.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason, scripts::AuraScripts};
+use combat::auras::{
+    self, AuraApplication, AuraInstance, AuraSource, RemoveReason, scripts::AuraScripts,
+};
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_info::SpellStore;
 
 const TALENT: u32 = 370695;
 const PASSIVE: u32 = 370701;
@@ -25,17 +26,25 @@ fn remove_update(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveRea
     sync(world, unit);
 }
 fn sync(world: &mut World, unit: Entity) {
-    let amount = world.get::<ActiveAuras>(unit).and_then(|auras| {
-        auras.iter().find(|a| a.spell_id == TALENT && a.caster == unit)
-            .and_then(|a| a.effects.iter().find(|e| e.index == 0)).map(|e| e.amount)
+    auras::remove_auras(world, unit, RemoveReason::Cancelled, |a| {
+        a.spell_id == PASSIVE && a.caster == unit
     });
-    auras::remove_auras(world, unit, RemoveReason::Cancelled, |a| a.spell_id == PASSIVE && a.caster == unit);
-    let Some(amount) = amount else { return };
-    let lunar = auras::has_aura(world, unit, LUNAR_CALLING);
-    let mut passive = world.resource::<SpellStore>().get(PASSIVE).expect("Fury of Nature passive").clone();
-    for effect in &mut passive.effects {
-        effect.base_points = amount;
+    if !auras::has_aura(world, unit, TALENT) {
+        return;
     }
-    let effect_mask = if lunar { 0b1111 } else { 0b1001 };
-    auras::apply_aura_with_spell(world, &AuraApplication { caster: unit, target: unit, spell_id: PASSIVE, effect_mask, source: AuraSource::Cast }, &passive);
+    let effect_mask = if auras::has_aura(world, unit, LUNAR_CALLING) {
+        0b1111
+    } else {
+        0b1001
+    };
+    auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: PASSIVE,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
 }
