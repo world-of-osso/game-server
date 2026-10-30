@@ -5,6 +5,55 @@ pub mod transport;
 pub use crate::navigation::within_reach;
 pub use graph::Space;
 
+/// Install the same player death transitions and release handling as the server.
+pub fn install_player_death(app: &mut bevy::prelude::App) {
+    app.add_plugins(crate::death::DeathPlugin);
+}
+
+pub fn player_death_recorded(world: &bevy::prelude::World, player: bevy::prelude::Entity) -> bool {
+    world
+        .get::<crate::death::PlayerDeathState>(player)
+        .is_some_and(|state| state.state == shared::death::DeathState::Dead)
+}
+
+/// Submit the native dungeon release for a dead headless player.
+pub fn release_dungeon_player(
+    world: &mut bevy::prelude::World,
+    player: bevy::prelude::Entity,
+) -> Result<(), String> {
+    use bevy::prelude::*;
+    let position = *world
+        .get::<shared::components::Position>(player)
+        .ok_or("release player lacks position")?;
+    let map = *world
+        .get::<crate::maps::InMap>(player)
+        .ok_or("release player lacks map")?;
+    let mut death = world
+        .get::<crate::death::PlayerDeathState>(player)
+        .cloned()
+        .ok_or("release player lacks death state")?;
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    world.resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
+        let entry = maps
+            .map(map.map_id)
+            .filter(|entry| entry.is_dungeon())
+            .ok_or("release map is not a dungeon")?;
+        let mut commands = Commands::new(&mut queue, world);
+        crate::death::release_spirit_in_dungeon(
+            player,
+            &position,
+            &mut death,
+            entry,
+            &maps,
+            &mut commands,
+        )?;
+        Ok::<(), String>(())
+    })?;
+    world.entity_mut(player).insert(death);
+    queue.apply(world);
+    Ok(())
+}
+
 /// Load the same vehicle accessory catalog used by the live server.
 pub fn read_vehicle_accessories(
     root: &std::path::Path,

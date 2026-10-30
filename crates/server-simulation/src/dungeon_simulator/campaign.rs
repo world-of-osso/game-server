@@ -231,6 +231,45 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
     );
 }
 
+#[test]
+#[ignore = "requires extracted Neltharus follower graph"]
+fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let owner = run.party.owner;
+    assert_eq!(run.graph.map_id, 2519);
+    let corpse = Position {
+        x: -257.5076,
+        y: 124.9674,
+        z: 488.93933,
+    };
+    run.app.world_mut().entity_mut(owner).insert(corpse);
+    let attacker = *run.actors.values().next().unwrap();
+    crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert!(server::test_support::player_death_recorded(
+        run.app.world(),
+        owner
+    ));
+    run.control().unwrap();
+    assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    let released = *run.app.world().get::<Position>(owner).unwrap();
+    assert_ne!(
+        released, corpse,
+        "native release must not teleport to the corpse"
+    );
+    for _ in 0..30 {
+        run.control().unwrap();
+        run.app.update();
+    }
+    let after = *run.app.world().get::<Position>(owner).unwrap();
+    assert_ne!(
+        after, released,
+        "the driver must resume walking after release"
+    );
+}
+
 fn spawn_azure_gate_after_first_member_death() -> Run {
     let mut run = spawn_run(3, &mut None).unwrap();
     let first = run.actors[&29001816];
@@ -1869,6 +1908,16 @@ impl Run {
                 .world_mut()
                 .entity_mut(self.party.owner)
                 .remove::<MoveIntent>();
+            return Ok(());
+        }
+        if !crate::spell_cast::targets::is_alive(self.app.world(), self.party.owner) {
+            if server::test_support::player_death_recorded(self.app.world(), self.party.owner) {
+                server::test_support::release_dungeon_player(
+                    self.app.world_mut(),
+                    self.party.owner,
+                )?;
+                super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+            }
             return Ok(());
         }
         let Some((pack_id, target)) = self.next_pack() else {
