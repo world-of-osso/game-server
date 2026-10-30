@@ -18,7 +18,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealthChangeObserved(record_incoming_damage),
     SpellScriptHook::EnemyContextHit(death_strike_hit),
     SpellScriptHook::RawHeal(blood_shield_from_heal),
-    SpellScriptHook::AfterForegroundSpecial(consume_hemostasis),
     SpellScriptHook::TargetContextDamageMultiplier(sanguination_damage),
 ];
 const DEATH_STRIKE: u32 = 49998;
@@ -192,7 +191,7 @@ fn heal_death_strike(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 
 // SimC76f8118 sc_death_knight.cpp10125–10130 consumes the whole buff
 // after the Death Strike heal has used its stacks, including on a miss.
-fn consume_hemostasis(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+pub(super) fn consume_hemostasis(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
     if spell.id == DEATH_STRIKE && blood(world, caster) {
         combat::auras::remove_auras(
             world,
