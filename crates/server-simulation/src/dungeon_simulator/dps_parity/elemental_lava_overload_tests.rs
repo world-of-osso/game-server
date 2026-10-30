@@ -3,7 +3,7 @@ use super::elemental_mechanics_tests::{cast, fixture, settle};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn sample(with_crit_buff: bool) -> (f64, f64) {
+fn sample(with_crit_buff: bool, spell: u32) -> (f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
     cast(&mut run, 188389);
@@ -32,7 +32,7 @@ fn sample(with_crit_buff: bool) -> (f64, f64) {
     assert!(crate::spell_cast::try_cast_triggered(
         run.app.world_mut(),
         run.actor,
-        285466,
+        spell,
         Some(run.targets[0]),
         1
     ));
@@ -47,19 +47,19 @@ fn sample(with_crit_buff: bool) -> (f64, f64) {
         .iter()
         .find(|event| {
             event.source == Some(run.actor.to_bits())
-                && event.spell_id == Some(285466)
+                && event.spell_id == Some(spell)
                 && event.kind == CombatLogKind::Damage
         })
-        .expect("native Lava Burst Overload impact");
-    assert!(hit.crit, "actual Flame Shock makes the overload critical");
+        .expect("native Lava Burst impact");
+    assert!(hit.crit, "actual Flame Shock makes the hit critical");
     (hit.amount as f64, crit)
 }
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_lava_overload_native_crit_buff_increases_critical_damage() {
-    let (base, base_crit) = sample(false);
-    let (buffed, buffed_crit) = sample(true);
+    let (base, base_crit) = sample(false, 285466);
+    let (buffed, buffed_crit) = sample(true, 285466);
     assert!(
         buffed_crit > base_crit,
         "actual native Elemental Blast crit buff changed caster crit"
@@ -70,4 +70,15 @@ fn elemental_lava_overload_native_crit_buff_increases_critical_damage() {
         (ratio - expected).abs() < 0.02,
         "crit scaling: {buffed}/{base} = {ratio}, expected {expected}"
     );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_lava_burst_native_crit_buff_increases_critical_damage() {
+    let (base, base_crit) = sample(false, 285452);
+    let (buffed, buffed_crit) = sample(true, 285452);
+    assert!(buffed_crit > base_crit);
+    let expected = (1.0 + buffed_crit / 100.0) / (1.0 + base_crit / 100.0);
+    let ratio = buffed / base;
+    assert!((ratio - expected).abs() < 0.02, "crit scaling: {buffed}/{base} = {ratio}, expected {expected}");
 }
