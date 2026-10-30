@@ -1487,8 +1487,6 @@ fn replay_registered_run_with_healing(
         "dummy_debuffs":dummy_debuffs.iter().map(|buff| json!({"name":buff.name,"spell_id":buff.spell_id})).collect::<Vec<_>>(),
         "dummy_bleeding":dummy_bleeding,
         "self_healing_by_spell":healing_by_spell,"raw_self_healing_by_spell":raw_healing_by_spell,
-        "self_healing_events_by_spell":healing_events_by_spell,
-        "raw_heal_health_fraction_by_spell":raw_heal_health_fraction_by_spell,
         "periodic_damage_ticks_by_spell":periodic_ticks_by_spell,
         "energize_by_spell":energize_by_spell.iter().map(|(spell, (attempted, effective))| (spell, json!({"attempted": attempted, "effective": effective}))).collect::<BTreeMap<_, _>>(),
         "absorbs_by_spell":absorbs_by_spell,"aura_uptime":aura_uptime,
@@ -1504,6 +1502,8 @@ fn replay_registered_run_with_healing(
         "absorb_per_second":(elapsed>0.0).then(||absorbed/elapsed),"time_to_death":death,
         "active_mitigation_auras":mitigation_auras,"active_mitigation_uptime":(elapsed>0.0).then(||active_seconds/elapsed),
         "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike});
+    report["self_healing_events_by_spell"] = json!(healing_events_by_spell);
+    report["raw_heal_health_fraction_by_spell"] = json!(raw_heal_health_fraction_by_spell);
     let world = run.app.world();
     let attacker = crate::level_scaling::UnitScaling::of(world, source);
     let defender = crate::level_scaling::UnitScaling::of(world, tank);
