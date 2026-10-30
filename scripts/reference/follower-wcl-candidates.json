@@ -56425,6 +56425,5717 @@
       ],
       "talents_source": "TALENTS_FROM_WCL"
     },
+    "evoker-augmentation/10-14": {
+      "actual_key": 11,
+      "character": "Andivoker",
+      "class_id": 13,
+      "gear": [
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13696",
+            "13692",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_helm_mail_raidevokerulatek_d_01.jpg",
+          "id": 271501,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Magmashapers",
+          "permanentEnchant": "8017",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "13696",
+            "13692",
+            "13698",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "41",
+            "13668",
+            "13334",
+            "13987",
+            "13696",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240983",
+              "itemLevel": "295"
+            },
+            {
+              "id": "240890",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_neck03_green.jpg",
+          "id": 268265,
+          "itemLevel": 344,
+          "name": "Aqirbane Reliquary",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "41",
+            "13668",
+            "13334",
+            "13987",
+            "13696",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13694",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_shoulder_mail_raidevokerulatek_d_01.jpg",
+          "id": 271499,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Sundered Peaks",
+          "permanentEnchant": "8001",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "13848",
+            "13694",
+            "13697",
+            "1597"
+          ],
+          "sourceItemLevel": "344",
+          "sourceNativeItemLevel": 344
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13846",
+            "13696",
+            "13690",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_chest_mail_raidevokerulatek_d_01.jpg",
+          "id": 271504,
+          "itemLevel": 344,
+          "name": "Searing Caldera of Calamity",
+          "permanentEnchant": "7987",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "6652",
+            "13846",
+            "12854",
+            "13696",
+            "13690",
+            "13698",
+            "1587"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_belt_mail_questbloodelf_b_01.jpg",
+          "id": 244581,
+          "itemLevel": 344,
+          "name": "Farstrider's Trophy Belt",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13836",
+            "13696"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "13335",
+            "13693",
+            "42",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_pant_mail_raidevokerulatek_d_01.jpg",
+          "id": 271500,
+          "itemLevel": 344,
+          "name": "Earthen Pillars of Calamity",
+          "permanentEnchant": "7935",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12854",
+            "13335",
+            "13693",
+            "42",
+            "13698"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13848"
+          ],
+          "icon": "inv_boot_mail_raidevokerulatek_d_01.jpg",
+          "id": 271503,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Volcanic Stompers",
+          "permanentEnchant": "7963",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12854",
+            "1587"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_bracer_mail_questbloodelf_b_01.jpg",
+          "id": 244584,
+          "itemLevel": 344,
+          "name": "Farstrider's Plated Bracers",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13836",
+            "13696"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "42",
+            "14049",
+            "13691",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_glove_mail_raidevokerulatek_d_01.jpg",
+          "id": 271502,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Ebon Greathorns",
+          "permanentEnchant": "8727",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "42",
+            "14049",
+            "13691",
+            "13697",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240890",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_ring03_red.jpg",
+          "id": 268252,
+          "itemLevel": 344,
+          "name": "Apex Brute's Claw Ring",
+          "permanentEnchant": "7967",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240890",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_ring01_purple.jpg",
+          "id": 268249,
+          "itemLevel": 344,
+          "name": "Vile Alchemist's Band",
+          "permanentEnchant": "7967",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13848"
+          ],
+          "icon": "8268563.jpg",
+          "id": 281215,
+          "itemLevel": 344,
+          "name": "Twisted Horror's Tendril",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12856"
+          ],
+          "sourceItemLevel": "340",
+          "sourceNativeItemLevel": 340
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13848"
+          ],
+          "icon": "inv_121_trinket_raid_ulatek_fang_purple.jpg",
+          "id": 270161,
+          "itemLevel": 344,
+          "name": "Fang of Umbral Malignance",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "12715",
+            "8790",
+            "13848"
+          ],
+          "icon": "inv_cape_cloth_questbloodelf_b_01.jpg",
+          "id": 239656,
+          "itemLevel": 344,
+          "name": "Adherent's Silken Shroud",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "12715",
+            "8790",
+            "13836"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13848"
+          ],
+          "icon": "inv_knife_1h_ulatekfang_d_01_spirit.jpg",
+          "id": 271092,
+          "itemLevel": 344,
+          "name": "Jan'thrazet, the Soul Fang",
+          "permanentEnchant": "8689",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12856"
+          ],
+          "sourceItemLevel": "340",
+          "sourceNativeItemLevel": 340,
+          "temporaryEnchant": "8052"
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13848"
+          ],
+          "icon": "inv_offhand_1h_ulatek_d_01.jpg",
+          "id": 268263,
+          "itemLevel": 344,
+          "name": "Frostscale's Mystic Frond",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12856"
+          ],
+          "sourceItemLevel": "340",
+          "sourceNativeItemLevel": 340
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        }
+      ],
+      "gear_source": "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK",
+      "key_band": "10-14",
+      "median_item_level": 344.0,
+      "race": {
+        "id": 70,
+        "source": "RACE_FROM_WCL_CHARACTER"
+      },
+      "report": {
+        "code": "kzvd1XpNrZYAQftP",
+        "fightID": 5,
+        "startTime": 1792632715557
+      },
+      "server": {
+        "id": 219,
+        "name": "Thrall",
+        "region": "US"
+      },
+      "source_median_item_level": 334.0,
+      "spec": "evoker-augmentation",
+      "spec_id": 1473,
+      "talent_purchases": [
+        [
+          93195,
+          115493,
+          1
+        ],
+        [
+          93198,
+          115496,
+          1
+        ],
+        [
+          93200,
+          115498,
+          1
+        ],
+        [
+          93202,
+          115500,
+          1
+        ],
+        [
+          93203,
+          115502,
+          1
+        ],
+        [
+          93205,
+          115504,
+          1
+        ],
+        [
+          93206,
+          115505,
+          1
+        ],
+        [
+          93207,
+          115506,
+          1
+        ],
+        [
+          93208,
+          115507,
+          1
+        ],
+        [
+          93209,
+          115508,
+          1
+        ],
+        [
+          93210,
+          115509,
+          1
+        ],
+        [
+          93211,
+          115511,
+          1
+        ],
+        [
+          93212,
+          115512,
+          1
+        ],
+        [
+          93213,
+          115513,
+          1
+        ],
+        [
+          93219,
+          115519,
+          1
+        ],
+        [
+          93220,
+          115520,
+          1
+        ],
+        [
+          93221,
+          115521,
+          1
+        ],
+        [
+          93222,
+          115522,
+          1
+        ],
+        [
+          93223,
+          115523,
+          1
+        ],
+        [
+          93227,
+          115528,
+          1
+        ],
+        [
+          93229,
+          115530,
+          1
+        ],
+        [
+          93230,
+          115531,
+          1
+        ],
+        [
+          93232,
+          115533,
+          1
+        ],
+        [
+          93234,
+          115536,
+          1
+        ],
+        [
+          93288,
+          115596,
+          1
+        ],
+        [
+          93289,
+          115597,
+          1
+        ],
+        [
+          93292,
+          115600,
+          2
+        ],
+        [
+          93294,
+          115602,
+          1
+        ],
+        [
+          93295,
+          115603,
+          1
+        ],
+        [
+          93297,
+          115606,
+          1
+        ],
+        [
+          93298,
+          115607,
+          1
+        ],
+        [
+          93300,
+          115609,
+          1
+        ],
+        [
+          93302,
+          115611,
+          2
+        ],
+        [
+          93306,
+          115615,
+          1
+        ],
+        [
+          93308,
+          115617,
+          1
+        ],
+        [
+          93309,
+          115618,
+          1
+        ],
+        [
+          93310,
+          115619,
+          2
+        ],
+        [
+          93311,
+          115620,
+          1
+        ],
+        [
+          93312,
+          115621,
+          1
+        ],
+        [
+          93340,
+          115654,
+          1
+        ],
+        [
+          93341,
+          115655,
+          1
+        ],
+        [
+          93343,
+          115657,
+          1
+        ],
+        [
+          93344,
+          115658,
+          1
+        ],
+        [
+          93346,
+          115661,
+          1
+        ],
+        [
+          93348,
+          115663,
+          1
+        ],
+        [
+          93349,
+          115664,
+          2
+        ],
+        [
+          93350,
+          115665,
+          1
+        ],
+        [
+          93351,
+          115666,
+          1
+        ],
+        [
+          93352,
+          115667,
+          1
+        ],
+        [
+          93354,
+          115669,
+          1
+        ],
+        [
+          93355,
+          115670,
+          2
+        ],
+        [
+          93358,
+          115675,
+          1
+        ],
+        [
+          93367,
+          115685,
+          1
+        ],
+        [
+          93369,
+          115686,
+          1
+        ],
+        [
+          93368,
+          115688,
+          1
+        ],
+        [
+          93199,
+          115690,
+          1
+        ],
+        [
+          93235,
+          115706,
+          1
+        ],
+        [
+          93715,
+          116103,
+          1
+        ],
+        [
+          94925,
+          117522,
+          1
+        ],
+        [
+          94929,
+          117526,
+          1
+        ],
+        [
+          94932,
+          117529,
+          1
+        ],
+        [
+          94935,
+          117532,
+          1
+        ],
+        [
+          94942,
+          117539,
+          1
+        ],
+        [
+          94947,
+          117544,
+          1
+        ],
+        [
+          94948,
+          117545,
+          1
+        ],
+        [
+          94951,
+          117548,
+          1
+        ],
+        [
+          94955,
+          117552,
+          1
+        ],
+        [
+          99825,
+          123334,
+          1
+        ],
+        [
+          94930,
+          126310,
+          1
+        ],
+        [
+          103843,
+          128216,
+          1
+        ],
+        [
+          109508,
+          135741,
+          1
+        ],
+        [
+          109509,
+          135742,
+          1
+        ],
+        [
+          109510,
+          135743,
+          1
+        ],
+        [
+          110415,
+          137011,
+          1
+        ],
+        [
+          110415,
+          137012,
+          2
+        ],
+        [
+          110415,
+          137013,
+          1
+        ]
+      ],
+      "talents": [
+        {
+          "points": 1,
+          "talentID": 115493
+        },
+        {
+          "points": 1,
+          "talentID": 115496
+        },
+        {
+          "points": 1,
+          "talentID": 115498
+        },
+        {
+          "points": 1,
+          "talentID": 115500
+        },
+        {
+          "points": 1,
+          "talentID": 115502
+        },
+        {
+          "points": 1,
+          "talentID": 115504
+        },
+        {
+          "points": 1,
+          "talentID": 115505
+        },
+        {
+          "points": 1,
+          "talentID": 115506
+        },
+        {
+          "points": 1,
+          "talentID": 115507
+        },
+        {
+          "points": 1,
+          "talentID": 115508
+        },
+        {
+          "points": 1,
+          "talentID": 115509
+        },
+        {
+          "points": 1,
+          "talentID": 115511
+        },
+        {
+          "points": 1,
+          "talentID": 115512
+        },
+        {
+          "points": 1,
+          "talentID": 115513
+        },
+        {
+          "points": 1,
+          "talentID": 115519
+        },
+        {
+          "points": 1,
+          "talentID": 115520
+        },
+        {
+          "points": 1,
+          "talentID": 115521
+        },
+        {
+          "points": 1,
+          "talentID": 115522
+        },
+        {
+          "points": 1,
+          "talentID": 115523
+        },
+        {
+          "points": 1,
+          "talentID": 115528
+        },
+        {
+          "points": 1,
+          "talentID": 115530
+        },
+        {
+          "points": 1,
+          "talentID": 115531
+        },
+        {
+          "points": 1,
+          "talentID": 115533
+        },
+        {
+          "points": 1,
+          "talentID": 115536
+        },
+        {
+          "points": 1,
+          "talentID": 115596
+        },
+        {
+          "points": 1,
+          "talentID": 115597
+        },
+        {
+          "points": 2,
+          "talentID": 115600
+        },
+        {
+          "points": 1,
+          "talentID": 115602
+        },
+        {
+          "points": 1,
+          "talentID": 115603
+        },
+        {
+          "points": 1,
+          "talentID": 115606
+        },
+        {
+          "points": 1,
+          "talentID": 115607
+        },
+        {
+          "points": 1,
+          "talentID": 115609
+        },
+        {
+          "points": 2,
+          "talentID": 115611
+        },
+        {
+          "points": 1,
+          "talentID": 115613
+        },
+        {
+          "points": 1,
+          "talentID": 115614
+        },
+        {
+          "points": 1,
+          "talentID": 115615
+        },
+        {
+          "points": 1,
+          "talentID": 115617
+        },
+        {
+          "points": 1,
+          "talentID": 115618
+        },
+        {
+          "points": 2,
+          "talentID": 115619
+        },
+        {
+          "points": 1,
+          "talentID": 115620
+        },
+        {
+          "points": 1,
+          "talentID": 115621
+        },
+        {
+          "points": 1,
+          "talentID": 115654
+        },
+        {
+          "points": 1,
+          "talentID": 115655
+        },
+        {
+          "points": 1,
+          "talentID": 115657
+        },
+        {
+          "points": 1,
+          "talentID": 115658
+        },
+        {
+          "points": 1,
+          "talentID": 115661
+        },
+        {
+          "points": 1,
+          "talentID": 115663
+        },
+        {
+          "points": 2,
+          "talentID": 115664
+        },
+        {
+          "points": 1,
+          "talentID": 115665
+        },
+        {
+          "points": 1,
+          "talentID": 115666
+        },
+        {
+          "points": 1,
+          "talentID": 115667
+        },
+        {
+          "points": 1,
+          "talentID": 115669
+        },
+        {
+          "points": 2,
+          "talentID": 115670
+        },
+        {
+          "points": 1,
+          "talentID": 115675
+        },
+        {
+          "points": 1,
+          "talentID": 115685
+        },
+        {
+          "points": 1,
+          "talentID": 115686
+        },
+        {
+          "points": 1,
+          "talentID": 115688
+        },
+        {
+          "points": 1,
+          "talentID": 115690
+        },
+        {
+          "points": 1,
+          "talentID": 115706
+        },
+        {
+          "points": 1,
+          "talentID": 116103
+        },
+        {
+          "points": 1,
+          "talentID": 117522
+        },
+        {
+          "points": 1,
+          "talentID": 117526
+        },
+        {
+          "points": 1,
+          "talentID": 117529
+        },
+        {
+          "points": 1,
+          "talentID": 117532
+        },
+        {
+          "points": 1,
+          "talentID": 117539
+        },
+        {
+          "points": 1,
+          "talentID": 117544
+        },
+        {
+          "points": 1,
+          "talentID": 117545
+        },
+        {
+          "points": 1,
+          "talentID": 117548
+        },
+        {
+          "points": 1,
+          "talentID": 117551
+        },
+        {
+          "points": 1,
+          "talentID": 117552
+        },
+        {
+          "points": 1,
+          "talentID": 123334
+        },
+        {
+          "points": 1,
+          "talentID": 126310
+        },
+        {
+          "points": 1,
+          "talentID": 128216
+        },
+        {
+          "points": 1,
+          "talentID": 135741
+        },
+        {
+          "points": 1,
+          "talentID": 135742
+        },
+        {
+          "points": 1,
+          "talentID": 135743
+        },
+        {
+          "points": 1,
+          "talentID": 137011
+        },
+        {
+          "points": 2,
+          "talentID": 137012
+        },
+        {
+          "points": 1,
+          "talentID": 137013
+        }
+      ],
+      "talents_source": "TALENTS_FROM_WCL"
+    },
+    "evoker-augmentation/15-19": {
+      "actual_key": 16,
+      "character": "Deltairlines",
+      "class_id": 13,
+      "gear": [
+        {
+          "bonusIDs": [
+            "6652",
+            "13440",
+            "13695",
+            "13692",
+            "13698",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_helm_mail_raidevokerulatek_d_01.jpg",
+          "id": 271501,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Magmashapers",
+          "permanentEnchant": "7961",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13440",
+            "13695",
+            "13692",
+            "13698",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240983",
+              "itemLevel": "295"
+            },
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_neck03_green.jpg",
+          "id": 268265,
+          "itemLevel": 344,
+          "name": "Aqirbane Reliquary",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13694",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_shoulder_mail_raidevokerulatek_d_01.jpg",
+          "id": 271499,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Sundered Peaks",
+          "permanentEnchant": "8031",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12846",
+            "13334",
+            "6652",
+            "13694",
+            "13697",
+            "1574"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13846",
+            "13690",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_chest_mail_raidevokerulatek_d_01.jpg",
+          "id": 271504,
+          "itemLevel": 344,
+          "name": "Searing Caldera of Calamity",
+          "permanentEnchant": "7987",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12846",
+            "13334",
+            "6652",
+            "13846",
+            "13690",
+            "13698",
+            "1574"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13695",
+            "13662",
+            "12699",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_belt_mail_dungeonharronir_c_01.jpg",
+          "id": 251228,
+          "itemLevel": 344,
+          "name": "Behemoth Waistband",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13695",
+            "13662",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "13848"
+          ],
+          "icon": "inv_pant_mail_zandalardungeon_c_01.jpg",
+          "id": 159375,
+          "itemLevel": 344,
+          "name": "Legguards of the Awakening Brood",
+          "permanentEnchant": "7935",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13662",
+            "13335",
+            "13848"
+          ],
+          "icon": "inv_boot_mail_raidevokerulatek_d_01.jpg",
+          "id": 268258,
+          "itemLevel": 344,
+          "name": "Boots of the Reckless Wayfarer",
+          "permanentEnchant": "7963",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13662",
+            "13335",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_bracer_mail_questbloodelf_b_01.jpg",
+          "id": 244584,
+          "itemLevel": 344,
+          "name": "Farstrider's Plated Bracers",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13836",
+            "13696"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13440",
+            "13691",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_glove_mail_raidevokerulatek_d_01.jpg",
+          "id": 271502,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Ebon Greathorns",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12846",
+            "6652",
+            "13440",
+            "13691",
+            "13697",
+            "1574"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_ring_80_03d.jpg",
+          "id": 158366,
+          "itemLevel": 344,
+          "name": "Charged Sandstone Band",
+          "permanentEnchant": "7969",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_ring01_purple.jpg",
+          "id": 268249,
+          "itemLevel": 344,
+          "name": "Vile Alchemist's Band",
+          "permanentEnchant": "7969",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13335",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_10_dungeonjewelry_dragon_trinket_3djardintrophy_green.jpg",
+          "id": 270168,
+          "itemLevel": 344,
+          "name": "Font of Venomous Rage",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "13696",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_tradeskillitem_sorcererswater.jpg",
+          "id": 270167,
+          "itemLevel": 344,
+          "name": "Wavecaller's Seastone",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12854",
+            "13696"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "13848"
+          ],
+          "icon": "inv_cape_leather_dungeonharronir_c_01.jpg",
+          "id": 251132,
+          "itemLevel": 344,
+          "name": "Speakeasy Shroud",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14004",
+            "13771",
+            "8960",
+            "8791",
+            "13848"
+          ],
+          "icon": "inv_staff_2h_dungeonharronir_c_02.jpg",
+          "id": 245770,
+          "itemLevel": 344,
+          "name": "Aln'hara Cane",
+          "permanentEnchant": "8689",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14004",
+            "13771",
+            "8960",
+            "8791",
+            "13836"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331,
+          "temporaryEnchant": "8052"
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        }
+      ],
+      "gear_source": "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK",
+      "key_band": "15-19",
+      "median_item_level": 344,
+      "race": {
+        "id": 70,
+        "source": "RACE_FROM_WCL_CHARACTER"
+      },
+      "report": {
+        "code": "1Fr6vhkTMaYB9NX8",
+        "fightID": 7,
+        "startTime": 1790123734471
+      },
+      "server": {
+        "id": 232,
+        "name": "Uther",
+        "region": "US"
+      },
+      "source_median_item_level": 321,
+      "spec": "evoker-augmentation",
+      "spec_id": 1473,
+      "talent_purchases": [
+        [
+          93198,
+          115496,
+          1
+        ],
+        [
+          93200,
+          115498,
+          1
+        ],
+        [
+          93201,
+          115499,
+          1
+        ],
+        [
+          93202,
+          115500,
+          1
+        ],
+        [
+          93203,
+          115502,
+          1
+        ],
+        [
+          93206,
+          115505,
+          1
+        ],
+        [
+          93207,
+          115506,
+          1
+        ],
+        [
+          93208,
+          115507,
+          1
+        ],
+        [
+          93209,
+          115508,
+          1
+        ],
+        [
+          93210,
+          115509,
+          1
+        ],
+        [
+          93211,
+          115511,
+          1
+        ],
+        [
+          93212,
+          115512,
+          1
+        ],
+        [
+          93219,
+          115519,
+          1
+        ],
+        [
+          93220,
+          115520,
+          1
+        ],
+        [
+          93221,
+          115521,
+          1
+        ],
+        [
+          93222,
+          115522,
+          1
+        ],
+        [
+          93223,
+          115523,
+          1
+        ],
+        [
+          93226,
+          115527,
+          1
+        ],
+        [
+          93227,
+          115528,
+          1
+        ],
+        [
+          93229,
+          115530,
+          1
+        ],
+        [
+          93230,
+          115531,
+          1
+        ],
+        [
+          93232,
+          115533,
+          1
+        ],
+        [
+          93382,
+          115534,
+          1
+        ],
+        [
+          93234,
+          115536,
+          1
+        ],
+        [
+          93288,
+          115596,
+          1
+        ],
+        [
+          93289,
+          115597,
+          1
+        ],
+        [
+          93292,
+          115600,
+          1
+        ],
+        [
+          93293,
+          115601,
+          1
+        ],
+        [
+          93294,
+          115602,
+          1
+        ],
+        [
+          93297,
+          115606,
+          1
+        ],
+        [
+          93298,
+          115607,
+          1
+        ],
+        [
+          93300,
+          115609,
+          1
+        ],
+        [
+          93302,
+          115611,
+          2
+        ],
+        [
+          93306,
+          115615,
+          1
+        ],
+        [
+          93308,
+          115617,
+          1
+        ],
+        [
+          93309,
+          115618,
+          1
+        ],
+        [
+          93310,
+          115619,
+          2
+        ],
+        [
+          93311,
+          115620,
+          1
+        ],
+        [
+          93312,
+          115621,
+          1
+        ],
+        [
+          93341,
+          115655,
+          1
+        ],
+        [
+          93342,
+          115656,
+          1
+        ],
+        [
+          93343,
+          115657,
+          1
+        ],
+        [
+          93344,
+          115658,
+          1
+        ],
+        [
+          93346,
+          115661,
+          1
+        ],
+        [
+          93348,
+          115663,
+          1
+        ],
+        [
+          93349,
+          115664,
+          2
+        ],
+        [
+          93350,
+          115665,
+          1
+        ],
+        [
+          93351,
+          115666,
+          1
+        ],
+        [
+          93352,
+          115667,
+          1
+        ],
+        [
+          93354,
+          115669,
+          1
+        ],
+        [
+          93355,
+          115670,
+          2
+        ],
+        [
+          93358,
+          115675,
+          1
+        ],
+        [
+          93367,
+          115685,
+          1
+        ],
+        [
+          93369,
+          115686,
+          1
+        ],
+        [
+          93368,
+          115688,
+          1
+        ],
+        [
+          93199,
+          115690,
+          1
+        ],
+        [
+          93715,
+          116103,
+          1
+        ],
+        [
+          94925,
+          117522,
+          1
+        ],
+        [
+          94929,
+          117526,
+          1
+        ],
+        [
+          94932,
+          117529,
+          1
+        ],
+        [
+          94935,
+          117532,
+          1
+        ],
+        [
+          94942,
+          117539,
+          1
+        ],
+        [
+          94947,
+          117544,
+          1
+        ],
+        [
+          94948,
+          117545,
+          1
+        ],
+        [
+          94951,
+          117548,
+          1
+        ],
+        [
+          94955,
+          117552,
+          1
+        ],
+        [
+          99825,
+          123334,
+          1
+        ],
+        [
+          102248,
+          126304,
+          1
+        ],
+        [
+          94930,
+          126310,
+          1
+        ],
+        [
+          103843,
+          128216,
+          1
+        ],
+        [
+          103844,
+          128217,
+          1
+        ],
+        [
+          109508,
+          135741,
+          1
+        ],
+        [
+          109509,
+          135742,
+          1
+        ],
+        [
+          109510,
+          135743,
+          1
+        ],
+        [
+          110415,
+          137011,
+          1
+        ],
+        [
+          110415,
+          137012,
+          2
+        ],
+        [
+          110415,
+          137013,
+          1
+        ]
+      ],
+      "talents": [
+        {
+          "points": 1,
+          "talentID": 115496
+        },
+        {
+          "points": 1,
+          "talentID": 115498
+        },
+        {
+          "points": 1,
+          "talentID": 115499
+        },
+        {
+          "points": 1,
+          "talentID": 115500
+        },
+        {
+          "points": 1,
+          "talentID": 115502
+        },
+        {
+          "points": 1,
+          "talentID": 115505
+        },
+        {
+          "points": 1,
+          "talentID": 115506
+        },
+        {
+          "points": 1,
+          "talentID": 115507
+        },
+        {
+          "points": 1,
+          "talentID": 115508
+        },
+        {
+          "points": 1,
+          "talentID": 115509
+        },
+        {
+          "points": 1,
+          "talentID": 115511
+        },
+        {
+          "points": 1,
+          "talentID": 115512
+        },
+        {
+          "points": 1,
+          "talentID": 115519
+        },
+        {
+          "points": 1,
+          "talentID": 115520
+        },
+        {
+          "points": 1,
+          "talentID": 115521
+        },
+        {
+          "points": 1,
+          "talentID": 115522
+        },
+        {
+          "points": 1,
+          "talentID": 115523
+        },
+        {
+          "points": 1,
+          "talentID": 115527
+        },
+        {
+          "points": 1,
+          "talentID": 115528
+        },
+        {
+          "points": 1,
+          "talentID": 115530
+        },
+        {
+          "points": 1,
+          "talentID": 115531
+        },
+        {
+          "points": 1,
+          "talentID": 115533
+        },
+        {
+          "points": 1,
+          "talentID": 115534
+        },
+        {
+          "points": 1,
+          "talentID": 115536
+        },
+        {
+          "points": 1,
+          "talentID": 115596
+        },
+        {
+          "points": 1,
+          "talentID": 115597
+        },
+        {
+          "points": 1,
+          "talentID": 115600
+        },
+        {
+          "points": 1,
+          "talentID": 115601
+        },
+        {
+          "points": 1,
+          "talentID": 115602
+        },
+        {
+          "points": 1,
+          "talentID": 115606
+        },
+        {
+          "points": 1,
+          "talentID": 115607
+        },
+        {
+          "points": 1,
+          "talentID": 115609
+        },
+        {
+          "points": 2,
+          "talentID": 115611
+        },
+        {
+          "points": 1,
+          "talentID": 115613
+        },
+        {
+          "points": 1,
+          "talentID": 115614
+        },
+        {
+          "points": 1,
+          "talentID": 115615
+        },
+        {
+          "points": 1,
+          "talentID": 115617
+        },
+        {
+          "points": 1,
+          "talentID": 115618
+        },
+        {
+          "points": 2,
+          "talentID": 115619
+        },
+        {
+          "points": 1,
+          "talentID": 115620
+        },
+        {
+          "points": 1,
+          "talentID": 115621
+        },
+        {
+          "points": 1,
+          "talentID": 115655
+        },
+        {
+          "points": 1,
+          "talentID": 115656
+        },
+        {
+          "points": 1,
+          "talentID": 115657
+        },
+        {
+          "points": 1,
+          "talentID": 115658
+        },
+        {
+          "points": 1,
+          "talentID": 115661
+        },
+        {
+          "points": 1,
+          "talentID": 115663
+        },
+        {
+          "points": 2,
+          "talentID": 115664
+        },
+        {
+          "points": 1,
+          "talentID": 115665
+        },
+        {
+          "points": 1,
+          "talentID": 115666
+        },
+        {
+          "points": 1,
+          "talentID": 115667
+        },
+        {
+          "points": 1,
+          "talentID": 115669
+        },
+        {
+          "points": 2,
+          "talentID": 115670
+        },
+        {
+          "points": 1,
+          "talentID": 115675
+        },
+        {
+          "points": 1,
+          "talentID": 115685
+        },
+        {
+          "points": 1,
+          "talentID": 115686
+        },
+        {
+          "points": 1,
+          "talentID": 115688
+        },
+        {
+          "points": 1,
+          "talentID": 115690
+        },
+        {
+          "points": 1,
+          "talentID": 116103
+        },
+        {
+          "points": 1,
+          "talentID": 117522
+        },
+        {
+          "points": 1,
+          "talentID": 117526
+        },
+        {
+          "points": 1,
+          "talentID": 117529
+        },
+        {
+          "points": 1,
+          "talentID": 117532
+        },
+        {
+          "points": 1,
+          "talentID": 117539
+        },
+        {
+          "points": 1,
+          "talentID": 117544
+        },
+        {
+          "points": 1,
+          "talentID": 117545
+        },
+        {
+          "points": 1,
+          "talentID": 117548
+        },
+        {
+          "points": 1,
+          "talentID": 117551
+        },
+        {
+          "points": 1,
+          "talentID": 117552
+        },
+        {
+          "points": 1,
+          "talentID": 123334
+        },
+        {
+          "points": 1,
+          "talentID": 126304
+        },
+        {
+          "points": 1,
+          "talentID": 126310
+        },
+        {
+          "points": 1,
+          "talentID": 128216
+        },
+        {
+          "points": 1,
+          "talentID": 128217
+        },
+        {
+          "points": 1,
+          "talentID": 135741
+        },
+        {
+          "points": 1,
+          "talentID": 135742
+        },
+        {
+          "points": 1,
+          "talentID": 135743
+        },
+        {
+          "points": 1,
+          "talentID": 137011
+        },
+        {
+          "points": 2,
+          "talentID": 137012
+        },
+        {
+          "points": 1,
+          "talentID": 137013
+        }
+      ],
+      "talents_source": "TALENTS_FROM_WCL"
+    },
+    "evoker-augmentation/2-5": {
+      "actual_key": 3,
+      "character": "V\u00edridian",
+      "class_id": 13,
+      "gear": [
+        {
+          "bonusIDs": [
+            "6652",
+            "12667",
+            "13577",
+            "13335",
+            "12848"
+          ],
+          "icon": "inv_helm_mail_raidevokermidnight_d_01.jpg",
+          "id": 249317,
+          "itemLevel": 328,
+          "name": "Frenzy's Rebuke",
+          "permanentEnchant": "8017",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "12667",
+            "13577",
+            "13335",
+            "12803"
+          ],
+          "sourceItemLevel": "279",
+          "sourceNativeItemLevel": 279
+        },
+        {
+          "bonusIDs": [
+            "13439",
+            "40",
+            "13668",
+            "12699",
+            "12848"
+          ],
+          "icon": "inv_121_jewelry_neck03_teal.jpg",
+          "id": 273781,
+          "itemLevel": 328,
+          "name": "Strand of Warding Fangs",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12836",
+            "13439",
+            "40",
+            "13668",
+            "12699"
+          ],
+          "sourceItemLevel": "302",
+          "sourceNativeItemLevel": 302
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "13340",
+            "13574",
+            "12848"
+          ],
+          "icon": "inv_shoulder_mail_raidevokermidnight_d_01.jpg",
+          "id": 249995,
+          "itemLevel": 328,
+          "name": "Beacons of the Black Talon",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "13340",
+            "13574",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13336",
+            "13575",
+            "12848"
+          ],
+          "icon": "inv_chest_mail_raidevokermidnight_d_01.jpg",
+          "id": 250000,
+          "itemLevel": 328,
+          "name": "Frenzyward of the Black Talon",
+          "permanentEnchant": "7987",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "6652",
+            "13336",
+            "13575",
+            "12798"
+          ],
+          "sourceItemLevel": "276",
+          "sourceNativeItemLevel": 276
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13696",
+            "13662",
+            "12848"
+          ],
+          "icon": "inv_belt_mail_outdooramaniloa_c_01.jpg",
+          "id": 272253,
+          "itemLevel": 328,
+          "name": "Galerider's Mail Skirt",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12841",
+            "6652",
+            "13696",
+            "13662"
+          ],
+          "sourceItemLevel": "305",
+          "sourceNativeItemLevel": 305
+        },
+        {
+          "bonusIDs": [
+            "13339",
+            "13440",
+            "6652",
+            "13575",
+            "12848"
+          ],
+          "icon": "inv_pant_mail_raidevokermidnight_d_01.jpg",
+          "id": 249996,
+          "itemLevel": 328,
+          "name": "Greaves of the Black Talon",
+          "permanentEnchant": "7935",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13339",
+            "13440",
+            "6652",
+            "13575",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "12848"
+          ],
+          "icon": "inv_boot_mail_raidevokermidnight_d_01.jpg",
+          "id": 249999,
+          "itemLevel": 328,
+          "name": "Spelltreads of the Black Talon",
+          "permanentEnchant": "7963",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "8960",
+            "12384",
+            "8790",
+            "12667",
+            "12848"
+          ],
+          "icon": "inv_bracer_mail_questbloodelf_b_01.jpg",
+          "id": 244584,
+          "itemLevel": 328,
+          "name": "Farstrider's Plated Bracers",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "12066",
+            "8960",
+            "12384",
+            "8790",
+            "13622",
+            "12667"
+          ],
+          "sourceItemLevel": "285",
+          "sourceNativeItemLevel": 285
+        },
+        {
+          "bonusIDs": [
+            "13337",
+            "13440",
+            "6652",
+            "13574",
+            "12848"
+          ],
+          "icon": "inv_glove_mail_raidevokermidnight_d_01.jpg",
+          "id": 249998,
+          "itemLevel": 328,
+          "name": "Enforcer's Grips of the Black Talon",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13337",
+            "13440",
+            "6652",
+            "13574",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240983",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_12_trinket_devouring_host_currency2_void.jpg",
+          "id": 251115,
+          "itemLevel": 328,
+          "name": "Bifurcation Band",
+          "permanentEnchant": "7996",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12795",
+            "13440",
+            "6652",
+            "13668",
+            "12699"
+          ],
+          "sourceItemLevel": "266",
+          "sourceNativeItemLevel": 266
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240906",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_jewelry_ring_42.jpg",
+          "id": 49812,
+          "itemLevel": 328,
+          "name": "Purloined Wedding Ring",
+          "permanentEnchant": "7997",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "12699",
+            "12848"
+          ],
+          "icon": "inv_10_jewelcrafting3_soulcage_air.jpg",
+          "id": 250256,
+          "itemLevel": 328,
+          "name": "Heart of Wind",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "12699",
+            "12798"
+          ],
+          "sourceItemLevel": "276",
+          "sourceNativeItemLevel": 276
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "12848"
+          ],
+          "icon": "inv_12_trinket_raid_darkwell_intdps2.jpg?cachebust",
+          "id": 249810,
+          "itemLevel": 328,
+          "name": "Shadow of the Empyrean Requiem",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "13653"
+          ],
+          "sourceItemLevel": "285",
+          "sourceNativeItemLevel": 285
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "12848"
+          ],
+          "icon": "inv_cape_mail_raidevokermidnight_d_01.jpg",
+          "id": 249992,
+          "itemLevel": 328,
+          "name": "Shroud of the Black Talon",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12806"
+          ],
+          "sourceItemLevel": "289",
+          "sourceNativeItemLevel": 289
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "40",
+            "12701",
+            "12848"
+          ],
+          "icon": "inv_staff_2h_battledungeon_c_04.jpg",
+          "id": 159636,
+          "itemLevel": 328,
+          "name": "Staff of the Lightning Serpent",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12842",
+            "13440",
+            "40",
+            "12701"
+          ],
+          "sourceItemLevel": "308",
+          "sourceNativeItemLevel": 308
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        }
+      ],
+      "gear_source": "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK",
+      "key_band": "2-5",
+      "median_item_level": 328,
+      "race": {
+        "id": 70,
+        "source": "RACE_FROM_WCL_CHARACTER"
+      },
+      "report": {
+        "code": "gcWZq1dBTAfH3VQn",
+        "fightID": 9,
+        "startTime": 1787466520943
+      },
+      "server": {
+        "id": 406,
+        "name": "Blackhand",
+        "region": "EU"
+      },
+      "source_median_item_level": 289,
+      "spec": "evoker-augmentation",
+      "spec_id": 1473,
+      "talent_purchases": [
+        [
+          93195,
+          115493,
+          1
+        ],
+        [
+          93197,
+          115495,
+          1
+        ],
+        [
+          93198,
+          115496,
+          1
+        ],
+        [
+          93200,
+          115498,
+          1
+        ],
+        [
+          93201,
+          115499,
+          1
+        ],
+        [
+          93202,
+          115500,
+          1
+        ],
+        [
+          93203,
+          115502,
+          1
+        ],
+        [
+          93205,
+          115504,
+          1
+        ],
+        [
+          93206,
+          115505,
+          1
+        ],
+        [
+          93207,
+          115506,
+          1
+        ],
+        [
+          93208,
+          115507,
+          1
+        ],
+        [
+          93209,
+          115508,
+          1
+        ],
+        [
+          93211,
+          115511,
+          1
+        ],
+        [
+          93212,
+          115512,
+          1
+        ],
+        [
+          93219,
+          115519,
+          1
+        ],
+        [
+          93220,
+          115520,
+          1
+        ],
+        [
+          93221,
+          115521,
+          1
+        ],
+        [
+          93222,
+          115522,
+          1
+        ],
+        [
+          93223,
+          115523,
+          1
+        ],
+        [
+          93226,
+          115527,
+          1
+        ],
+        [
+          93229,
+          115530,
+          1
+        ],
+        [
+          93232,
+          115533,
+          1
+        ],
+        [
+          93234,
+          115536,
+          1
+        ],
+        [
+          93288,
+          115596,
+          1
+        ],
+        [
+          93289,
+          115597,
+          1
+        ],
+        [
+          93294,
+          115602,
+          1
+        ],
+        [
+          93295,
+          115603,
+          2
+        ],
+        [
+          93297,
+          115606,
+          1
+        ],
+        [
+          93298,
+          115607,
+          1
+        ],
+        [
+          93300,
+          115609,
+          1
+        ],
+        [
+          93302,
+          115611,
+          1
+        ],
+        [
+          93306,
+          115615,
+          1
+        ],
+        [
+          93308,
+          115617,
+          1
+        ],
+        [
+          93309,
+          115618,
+          1
+        ],
+        [
+          93310,
+          115619,
+          2
+        ],
+        [
+          93311,
+          115620,
+          1
+        ],
+        [
+          93312,
+          115621,
+          1
+        ],
+        [
+          93340,
+          115654,
+          1
+        ],
+        [
+          93341,
+          115655,
+          1
+        ],
+        [
+          93342,
+          115656,
+          1
+        ],
+        [
+          93343,
+          115657,
+          1
+        ],
+        [
+          93344,
+          115658,
+          1
+        ],
+        [
+          93345,
+          115660,
+          1
+        ],
+        [
+          93348,
+          115663,
+          1
+        ],
+        [
+          93349,
+          115664,
+          2
+        ],
+        [
+          93350,
+          115665,
+          1
+        ],
+        [
+          93352,
+          115667,
+          1
+        ],
+        [
+          93354,
+          115669,
+          1
+        ],
+        [
+          93355,
+          115670,
+          2
+        ],
+        [
+          93358,
+          115675,
+          1
+        ],
+        [
+          93367,
+          115685,
+          1
+        ],
+        [
+          93369,
+          115686,
+          1
+        ],
+        [
+          93368,
+          115688,
+          1
+        ],
+        [
+          93199,
+          115690,
+          1
+        ],
+        [
+          93715,
+          116103,
+          1
+        ],
+        [
+          94921,
+          117518,
+          1
+        ],
+        [
+          94928,
+          117525,
+          1
+        ],
+        [
+          94933,
+          117530,
+          1
+        ],
+        [
+          94934,
+          117531,
+          1
+        ],
+        [
+          94936,
+          117533,
+          1
+        ],
+        [
+          94941,
+          117538,
+          1
+        ],
+        [
+          94944,
+          117541,
+          1
+        ],
+        [
+          94952,
+          117549,
+          1
+        ],
+        [
+          94953,
+          117550,
+          1
+        ],
+        [
+          94943,
+          120123,
+          1
+        ],
+        [
+          99825,
+          123331,
+          1
+        ],
+        [
+          93351,
+          125610,
+          1
+        ],
+        [
+          102248,
+          126304,
+          1
+        ],
+        [
+          102249,
+          126305,
+          1
+        ],
+        [
+          103843,
+          128216,
+          1
+        ],
+        [
+          103844,
+          128217,
+          1
+        ],
+        [
+          109793,
+          136051,
+          1
+        ],
+        [
+          109794,
+          136052,
+          1
+        ],
+        [
+          109795,
+          136053,
+          1
+        ],
+        [
+          110415,
+          137011,
+          1
+        ],
+        [
+          110415,
+          137012,
+          2
+        ],
+        [
+          110415,
+          137013,
+          1
+        ]
+      ],
+      "talents": [
+        {
+          "points": 1,
+          "talentID": 115493
+        },
+        {
+          "points": 1,
+          "talentID": 115495
+        },
+        {
+          "points": 1,
+          "talentID": 115496
+        },
+        {
+          "points": 1,
+          "talentID": 115498
+        },
+        {
+          "points": 1,
+          "talentID": 115499
+        },
+        {
+          "points": 1,
+          "talentID": 115500
+        },
+        {
+          "points": 1,
+          "talentID": 115502
+        },
+        {
+          "points": 1,
+          "talentID": 115504
+        },
+        {
+          "points": 1,
+          "talentID": 115505
+        },
+        {
+          "points": 1,
+          "talentID": 115506
+        },
+        {
+          "points": 1,
+          "talentID": 115507
+        },
+        {
+          "points": 1,
+          "talentID": 115508
+        },
+        {
+          "points": 1,
+          "talentID": 115511
+        },
+        {
+          "points": 1,
+          "talentID": 115512
+        },
+        {
+          "points": 1,
+          "talentID": 115519
+        },
+        {
+          "points": 1,
+          "talentID": 115520
+        },
+        {
+          "points": 1,
+          "talentID": 115521
+        },
+        {
+          "points": 1,
+          "talentID": 115522
+        },
+        {
+          "points": 1,
+          "talentID": 115523
+        },
+        {
+          "points": 1,
+          "talentID": 115527
+        },
+        {
+          "points": 1,
+          "talentID": 115530
+        },
+        {
+          "points": 1,
+          "talentID": 115533
+        },
+        {
+          "points": 1,
+          "talentID": 115536
+        },
+        {
+          "points": 1,
+          "talentID": 115596
+        },
+        {
+          "points": 1,
+          "talentID": 115597
+        },
+        {
+          "points": 1,
+          "talentID": 115602
+        },
+        {
+          "points": 2,
+          "talentID": 115603
+        },
+        {
+          "points": 1,
+          "talentID": 115606
+        },
+        {
+          "points": 1,
+          "talentID": 115607
+        },
+        {
+          "points": 1,
+          "talentID": 115609
+        },
+        {
+          "points": 1,
+          "talentID": 115611
+        },
+        {
+          "points": 1,
+          "talentID": 115613
+        },
+        {
+          "points": 1,
+          "talentID": 115614
+        },
+        {
+          "points": 1,
+          "talentID": 115615
+        },
+        {
+          "points": 1,
+          "talentID": 115617
+        },
+        {
+          "points": 1,
+          "talentID": 115618
+        },
+        {
+          "points": 2,
+          "talentID": 115619
+        },
+        {
+          "points": 1,
+          "talentID": 115620
+        },
+        {
+          "points": 1,
+          "talentID": 115621
+        },
+        {
+          "points": 1,
+          "talentID": 115654
+        },
+        {
+          "points": 1,
+          "talentID": 115655
+        },
+        {
+          "points": 1,
+          "talentID": 115656
+        },
+        {
+          "points": 1,
+          "talentID": 115657
+        },
+        {
+          "points": 1,
+          "talentID": 115658
+        },
+        {
+          "points": 1,
+          "talentID": 115660
+        },
+        {
+          "points": 1,
+          "talentID": 115663
+        },
+        {
+          "points": 2,
+          "talentID": 115664
+        },
+        {
+          "points": 1,
+          "talentID": 115665
+        },
+        {
+          "points": 1,
+          "talentID": 115667
+        },
+        {
+          "points": 1,
+          "talentID": 115669
+        },
+        {
+          "points": 2,
+          "talentID": 115670
+        },
+        {
+          "points": 1,
+          "talentID": 115675
+        },
+        {
+          "points": 1,
+          "talentID": 115685
+        },
+        {
+          "points": 1,
+          "talentID": 115686
+        },
+        {
+          "points": 1,
+          "talentID": 115688
+        },
+        {
+          "points": 1,
+          "talentID": 115690
+        },
+        {
+          "points": 1,
+          "talentID": 116103
+        },
+        {
+          "points": 1,
+          "talentID": 117518
+        },
+        {
+          "points": 1,
+          "talentID": 117525
+        },
+        {
+          "points": 1,
+          "talentID": 117530
+        },
+        {
+          "points": 1,
+          "talentID": 117531
+        },
+        {
+          "points": 1,
+          "talentID": 117533
+        },
+        {
+          "points": 1,
+          "talentID": 117538
+        },
+        {
+          "points": 1,
+          "talentID": 117541
+        },
+        {
+          "points": 1,
+          "talentID": 117549
+        },
+        {
+          "points": 1,
+          "talentID": 117550
+        },
+        {
+          "points": 1,
+          "talentID": 120123
+        },
+        {
+          "points": 1,
+          "talentID": 122279
+        },
+        {
+          "points": 1,
+          "talentID": 123331
+        },
+        {
+          "points": 1,
+          "talentID": 125610
+        },
+        {
+          "points": 1,
+          "talentID": 126304
+        },
+        {
+          "points": 1,
+          "talentID": 126305
+        },
+        {
+          "points": 1,
+          "talentID": 128216
+        },
+        {
+          "points": 1,
+          "talentID": 128217
+        },
+        {
+          "points": 1,
+          "talentID": 136051
+        },
+        {
+          "points": 1,
+          "talentID": 136052
+        },
+        {
+          "points": 1,
+          "talentID": 136053
+        },
+        {
+          "points": 1,
+          "talentID": 137011
+        },
+        {
+          "points": 2,
+          "talentID": 137012
+        },
+        {
+          "points": 1,
+          "talentID": 137013
+        }
+      ],
+      "talents_source": "TALENTS_FROM_WCL"
+    },
+    "evoker-augmentation/20+": {
+      "actual_key": 21,
+      "character": "Drahous",
+      "class_id": 13,
+      "gear": [
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13696",
+            "13692",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_helm_mail_raidevokerulatek_d_01.jpg",
+          "id": 271501,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Magmashapers",
+          "permanentEnchant": "8017",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12846",
+            "13334",
+            "6652",
+            "13696",
+            "13692",
+            "13698",
+            "1574"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240983",
+              "itemLevel": "295"
+            },
+            {
+              "id": "240908",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_neck03_green.jpg",
+          "id": 268265,
+          "itemLevel": 344,
+          "name": "Aqirbane Reliquary",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13694",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_shoulder_mail_raidevokerulatek_d_01.jpg",
+          "id": 271499,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Sundered Peaks",
+          "permanentEnchant": "8001",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "6652",
+            "13694",
+            "13697",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "6652",
+            "13846",
+            "13690",
+            "13698",
+            "13848"
+          ],
+          "icon": "inv_chest_mail_raidevokerulatek_d_01.jpg",
+          "id": 271504,
+          "itemLevel": 344,
+          "name": "Searing Caldera of Calamity",
+          "permanentEnchant": "7987",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "6652",
+            "13846",
+            "12854",
+            "13690",
+            "13698",
+            "1587"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13696",
+            "13662",
+            "13334",
+            "13848"
+          ],
+          "icon": "inv_belt_mail_raidshamanulatek_d_01.jpg",
+          "id": 268254,
+          "itemLevel": 344,
+          "name": "Serpentine Mixing Belt",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13696",
+            "13662",
+            "13334",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13848"
+          ],
+          "icon": "inv_pant_mail_questbloodelf_b_01.jpg",
+          "id": 244582,
+          "itemLevel": 344,
+          "name": "Farstrider's Reinforced Faulds",
+          "permanentEnchant": "7935",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13836"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13662",
+            "13334",
+            "13848"
+          ],
+          "icon": "inv_boot_mail_raidevokerulatek_d_01.jpg",
+          "id": 268258,
+          "itemLevel": 344,
+          "name": "Boots of the Reckless Wayfarer",
+          "permanentEnchant": "7963",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13662",
+            "13334",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13696",
+            "13848"
+          ],
+          "icon": "inv_bracer_mail_questbloodelf_b_01.jpg",
+          "id": 244584,
+          "itemLevel": 344,
+          "name": "Farstrider's Plated Bracers",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8791",
+            "13836",
+            "13696"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13440",
+            "13691",
+            "13697",
+            "13848"
+          ],
+          "icon": "inv_glove_mail_raidevokerulatek_d_01.jpg",
+          "id": 271502,
+          "itemLevel": 344,
+          "name": "Calamitous Echo's Ebon Greathorns",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13440",
+            "13691",
+            "13697",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_ring01_purple.jpg",
+          "id": 268249,
+          "itemLevel": 344,
+          "name": "Vile Alchemist's Band",
+          "permanentEnchant": "7969",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13848"
+          ],
+          "gems": [
+            {
+              "id": "240898",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "8268560.jpg",
+          "id": 281029,
+          "itemLevel": 344,
+          "name": "Band of the Swarmcaller",
+          "permanentEnchant": "7969",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13848"
+          ],
+          "icon": "inv_10_dungeonjewelry_dragon_trinket_3djardintrophy_green.jpg",
+          "id": 270168,
+          "itemLevel": 344,
+          "name": "Font of Venomous Rage",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13848"
+          ],
+          "icon": "8268563.jpg",
+          "id": 281215,
+          "itemLevel": 344,
+          "name": "Twisted Horror's Tendril",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "13848"
+          ],
+          "icon": "inv_cape_leather_dungeonharronir_c_01.jpg",
+          "id": 251132,
+          "itemLevel": 344,
+          "name": "Speakeasy Shroud",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13334",
+            "13848"
+          ],
+          "icon": "inv_knife_1h_ulatekfang_d_01_spirit.jpg",
+          "id": 271092,
+          "itemLevel": 344,
+          "name": "Jan'thrazet, the Soul Fang",
+          "permanentEnchant": "8039",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13334",
+            "12856"
+          ],
+          "sourceItemLevel": "341",
+          "sourceNativeItemLevel": 340,
+          "temporaryEnchant": "8052"
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "40",
+            "12699",
+            "13848"
+          ],
+          "icon": "inv_offhand_1h_dungeonharronir_c_01.jpg",
+          "id": 271681,
+          "itemLevel": 344,
+          "name": "Perennial Frostbound Charm",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "40",
+            "12699",
+            "12856"
+          ],
+          "sourceItemLevel": "341",
+          "sourceNativeItemLevel": 340
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        }
+      ],
+      "gear_source": "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK",
+      "key_band": "20+",
+      "median_item_level": 344.0,
+      "race": {
+        "id": 70,
+        "source": "RACE_FROM_WCL_CHARACTER"
+      },
+      "report": {
+        "code": "cmyrBvpPDJTfjHNt",
+        "fightID": 15,
+        "startTime": 1793264635345
+      },
+      "server": {
+        "id": 358,
+        "name": "Archimonde",
+        "region": "EU"
+      },
+      "source_median_item_level": 334.0,
+      "spec": "evoker-augmentation",
+      "spec_id": 1473,
+      "talent_purchases": [
+        [
+          93195,
+          115493,
+          1
+        ],
+        [
+          93198,
+          115496,
+          1
+        ],
+        [
+          93200,
+          115498,
+          1
+        ],
+        [
+          93201,
+          115499,
+          1
+        ],
+        [
+          93202,
+          115500,
+          1
+        ],
+        [
+          93203,
+          115502,
+          1
+        ],
+        [
+          93205,
+          115504,
+          1
+        ],
+        [
+          93206,
+          115505,
+          1
+        ],
+        [
+          93207,
+          115506,
+          1
+        ],
+        [
+          93208,
+          115507,
+          1
+        ],
+        [
+          93209,
+          115508,
+          1
+        ],
+        [
+          93210,
+          115509,
+          1
+        ],
+        [
+          93211,
+          115511,
+          1
+        ],
+        [
+          93212,
+          115512,
+          1
+        ],
+        [
+          93213,
+          115513,
+          1
+        ],
+        [
+          93219,
+          115519,
+          1
+        ],
+        [
+          93220,
+          115520,
+          1
+        ],
+        [
+          93221,
+          115521,
+          1
+        ],
+        [
+          93222,
+          115522,
+          1
+        ],
+        [
+          93223,
+          115523,
+          1
+        ],
+        [
+          93227,
+          115528,
+          1
+        ],
+        [
+          93229,
+          115530,
+          1
+        ],
+        [
+          93230,
+          115531,
+          1
+        ],
+        [
+          93232,
+          115533,
+          1
+        ],
+        [
+          93234,
+          115536,
+          1
+        ],
+        [
+          93288,
+          115596,
+          1
+        ],
+        [
+          93289,
+          115597,
+          1
+        ],
+        [
+          93294,
+          115602,
+          1
+        ],
+        [
+          93295,
+          115603,
+          2
+        ],
+        [
+          93297,
+          115606,
+          1
+        ],
+        [
+          93298,
+          115607,
+          1
+        ],
+        [
+          93300,
+          115609,
+          1
+        ],
+        [
+          93302,
+          115611,
+          2
+        ],
+        [
+          93306,
+          115615,
+          1
+        ],
+        [
+          93308,
+          115617,
+          1
+        ],
+        [
+          93309,
+          115618,
+          1
+        ],
+        [
+          93310,
+          115619,
+          2
+        ],
+        [
+          93311,
+          115620,
+          1
+        ],
+        [
+          93312,
+          115621,
+          1
+        ],
+        [
+          93341,
+          115655,
+          1
+        ],
+        [
+          93343,
+          115657,
+          1
+        ],
+        [
+          93344,
+          115658,
+          1
+        ],
+        [
+          93345,
+          115660,
+          1
+        ],
+        [
+          93346,
+          115661,
+          1
+        ],
+        [
+          93348,
+          115663,
+          1
+        ],
+        [
+          93349,
+          115664,
+          2
+        ],
+        [
+          93350,
+          115665,
+          1
+        ],
+        [
+          93351,
+          115666,
+          1
+        ],
+        [
+          93352,
+          115667,
+          1
+        ],
+        [
+          93354,
+          115669,
+          1
+        ],
+        [
+          93355,
+          115670,
+          2
+        ],
+        [
+          93358,
+          115675,
+          1
+        ],
+        [
+          93367,
+          115685,
+          1
+        ],
+        [
+          93369,
+          115686,
+          1
+        ],
+        [
+          93368,
+          115688,
+          1
+        ],
+        [
+          93199,
+          115690,
+          1
+        ],
+        [
+          93715,
+          116103,
+          1
+        ],
+        [
+          94925,
+          117522,
+          1
+        ],
+        [
+          94929,
+          117526,
+          1
+        ],
+        [
+          94932,
+          117529,
+          1
+        ],
+        [
+          94935,
+          117532,
+          1
+        ],
+        [
+          94942,
+          117539,
+          1
+        ],
+        [
+          94947,
+          117544,
+          1
+        ],
+        [
+          94948,
+          117545,
+          1
+        ],
+        [
+          94951,
+          117548,
+          1
+        ],
+        [
+          94955,
+          117552,
+          1
+        ],
+        [
+          99825,
+          123334,
+          1
+        ],
+        [
+          94930,
+          126310,
+          1
+        ],
+        [
+          103843,
+          128216,
+          1
+        ],
+        [
+          103844,
+          128217,
+          1
+        ],
+        [
+          109508,
+          135741,
+          1
+        ],
+        [
+          109509,
+          135742,
+          1
+        ],
+        [
+          109510,
+          135743,
+          1
+        ],
+        [
+          110415,
+          137011,
+          1
+        ],
+        [
+          110415,
+          137012,
+          2
+        ],
+        [
+          110415,
+          137013,
+          1
+        ]
+      ],
+      "talents": [
+        {
+          "points": 1,
+          "talentID": 115493
+        },
+        {
+          "points": 1,
+          "talentID": 115496
+        },
+        {
+          "points": 1,
+          "talentID": 115498
+        },
+        {
+          "points": 1,
+          "talentID": 115499
+        },
+        {
+          "points": 1,
+          "talentID": 115500
+        },
+        {
+          "points": 1,
+          "talentID": 115502
+        },
+        {
+          "points": 1,
+          "talentID": 115504
+        },
+        {
+          "points": 1,
+          "talentID": 115505
+        },
+        {
+          "points": 1,
+          "talentID": 115506
+        },
+        {
+          "points": 1,
+          "talentID": 115507
+        },
+        {
+          "points": 1,
+          "talentID": 115508
+        },
+        {
+          "points": 1,
+          "talentID": 115509
+        },
+        {
+          "points": 1,
+          "talentID": 115511
+        },
+        {
+          "points": 1,
+          "talentID": 115512
+        },
+        {
+          "points": 1,
+          "talentID": 115513
+        },
+        {
+          "points": 1,
+          "talentID": 115519
+        },
+        {
+          "points": 1,
+          "talentID": 115520
+        },
+        {
+          "points": 1,
+          "talentID": 115521
+        },
+        {
+          "points": 1,
+          "talentID": 115522
+        },
+        {
+          "points": 1,
+          "talentID": 115523
+        },
+        {
+          "points": 1,
+          "talentID": 115528
+        },
+        {
+          "points": 1,
+          "talentID": 115530
+        },
+        {
+          "points": 1,
+          "talentID": 115531
+        },
+        {
+          "points": 1,
+          "talentID": 115533
+        },
+        {
+          "points": 1,
+          "talentID": 115536
+        },
+        {
+          "points": 1,
+          "talentID": 115596
+        },
+        {
+          "points": 1,
+          "talentID": 115597
+        },
+        {
+          "points": 1,
+          "talentID": 115602
+        },
+        {
+          "points": 2,
+          "talentID": 115603
+        },
+        {
+          "points": 1,
+          "talentID": 115606
+        },
+        {
+          "points": 1,
+          "talentID": 115607
+        },
+        {
+          "points": 1,
+          "talentID": 115609
+        },
+        {
+          "points": 2,
+          "talentID": 115611
+        },
+        {
+          "points": 1,
+          "talentID": 115613
+        },
+        {
+          "points": 1,
+          "talentID": 115614
+        },
+        {
+          "points": 1,
+          "talentID": 115615
+        },
+        {
+          "points": 1,
+          "talentID": 115617
+        },
+        {
+          "points": 1,
+          "talentID": 115618
+        },
+        {
+          "points": 2,
+          "talentID": 115619
+        },
+        {
+          "points": 1,
+          "talentID": 115620
+        },
+        {
+          "points": 1,
+          "talentID": 115621
+        },
+        {
+          "points": 1,
+          "talentID": 115655
+        },
+        {
+          "points": 1,
+          "talentID": 115657
+        },
+        {
+          "points": 1,
+          "talentID": 115658
+        },
+        {
+          "points": 1,
+          "talentID": 115660
+        },
+        {
+          "points": 1,
+          "talentID": 115661
+        },
+        {
+          "points": 1,
+          "talentID": 115663
+        },
+        {
+          "points": 2,
+          "talentID": 115664
+        },
+        {
+          "points": 1,
+          "talentID": 115665
+        },
+        {
+          "points": 1,
+          "talentID": 115666
+        },
+        {
+          "points": 1,
+          "talentID": 115667
+        },
+        {
+          "points": 1,
+          "talentID": 115669
+        },
+        {
+          "points": 2,
+          "talentID": 115670
+        },
+        {
+          "points": 1,
+          "talentID": 115675
+        },
+        {
+          "points": 1,
+          "talentID": 115685
+        },
+        {
+          "points": 1,
+          "talentID": 115686
+        },
+        {
+          "points": 1,
+          "talentID": 115688
+        },
+        {
+          "points": 1,
+          "talentID": 115690
+        },
+        {
+          "points": 1,
+          "talentID": 116103
+        },
+        {
+          "points": 1,
+          "talentID": 117522
+        },
+        {
+          "points": 1,
+          "talentID": 117526
+        },
+        {
+          "points": 1,
+          "talentID": 117529
+        },
+        {
+          "points": 1,
+          "talentID": 117532
+        },
+        {
+          "points": 1,
+          "talentID": 117539
+        },
+        {
+          "points": 1,
+          "talentID": 117544
+        },
+        {
+          "points": 1,
+          "talentID": 117545
+        },
+        {
+          "points": 1,
+          "talentID": 117548
+        },
+        {
+          "points": 1,
+          "talentID": 117551
+        },
+        {
+          "points": 1,
+          "talentID": 117552
+        },
+        {
+          "points": 1,
+          "talentID": 123334
+        },
+        {
+          "points": 1,
+          "talentID": 126310
+        },
+        {
+          "points": 1,
+          "talentID": 128216
+        },
+        {
+          "points": 1,
+          "talentID": 128217
+        },
+        {
+          "points": 1,
+          "talentID": 135741
+        },
+        {
+          "points": 1,
+          "talentID": 135742
+        },
+        {
+          "points": 1,
+          "talentID": 135743
+        },
+        {
+          "points": 1,
+          "talentID": 137011
+        },
+        {
+          "points": 2,
+          "talentID": 137012
+        },
+        {
+          "points": 1,
+          "talentID": 137013
+        }
+      ],
+      "talents_source": "TALENTS_FROM_WCL"
+    },
+    "evoker-augmentation/6-9": {
+      "actual_key": 7,
+      "character": "Senestrasza",
+      "class_id": 13,
+      "gear": [
+        {
+          "bonusIDs": [
+            "40",
+            "13696",
+            "13440",
+            "13692",
+            "13698",
+            "12848"
+          ],
+          "icon": "inv_helm_mail_raidevokerulatek_d_01.jpg",
+          "id": 271501,
+          "itemLevel": 328,
+          "name": "Calamitous Echo's Magmashapers",
+          "permanentEnchant": "8017",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "40",
+            "13696",
+            "13440",
+            "13692",
+            "13698",
+            "12845"
+          ],
+          "sourceItemLevel": "318",
+          "sourceNativeItemLevel": 318
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "13696",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240908",
+              "itemLevel": "295"
+            },
+            {
+              "id": "240983",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_121_jewelry_neck03_green.jpg",
+          "id": 268265,
+          "itemLevel": 328,
+          "name": "Aqirbane Reliquary",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13668",
+            "13334",
+            "13987",
+            "13696",
+            "12850"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13440",
+            "13694",
+            "13697",
+            "12848"
+          ],
+          "icon": "inv_shoulder_mail_raidevokerulatek_d_01.jpg",
+          "id": 271499,
+          "itemLevel": 328,
+          "name": "Calamitous Echo's Sundered Peaks",
+          "permanentEnchant": "8001",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "12843",
+            "13440",
+            "13694",
+            "13697",
+            "1564"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "icon": "inv_axe_02.jpg",
+          "id": 0,
+          "itemLevel": "0",
+          "name": "Unknown Item",
+          "quality": "common"
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13662",
+            "13334",
+            "13846",
+            "13696",
+            "12848"
+          ],
+          "icon": "inv_chest_mail_raidevokerulatek_d_01.jpg",
+          "id": 271876,
+          "itemLevel": 328,
+          "name": "Awoken Dreadfang Cuirass",
+          "permanentEnchant": "7987",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13662",
+            "13334",
+            "13846",
+            "13696",
+            "12854"
+          ],
+          "sourceItemLevel": "334",
+          "sourceNativeItemLevel": 334
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "42",
+            "13695",
+            "13662",
+            "12699",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240908",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_belt_mail_dungeonharronir_c_01.jpg",
+          "id": 251228,
+          "itemLevel": 328,
+          "name": "Behemoth Waistband",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12843",
+            "13440",
+            "42",
+            "13695",
+            "13662",
+            "12699"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "13334",
+            "13693",
+            "6652",
+            "13698",
+            "12848"
+          ],
+          "icon": "inv_pant_mail_raidevokerulatek_d_01.jpg",
+          "id": 271500,
+          "itemLevel": 328,
+          "name": "Earthen Pillars of Calamity",
+          "permanentEnchant": "7935",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "13334",
+            "13693",
+            "6652",
+            "13698",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13662",
+            "12699",
+            "12848"
+          ],
+          "icon": "inv_boot_mail_zandalardungeon_c_01.jpg",
+          "id": 159388,
+          "itemLevel": 328,
+          "name": "Sabatons of Coruscating Energy",
+          "permanentEnchant": "7963",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12843",
+            "13440",
+            "6652",
+            "13662",
+            "12699"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "13667",
+            "14001",
+            "8960",
+            "12384",
+            "8790",
+            "13696",
+            "12848"
+          ],
+          "icon": "inv_bracer_mail_questbloodelf_b_01.jpg",
+          "id": 244584,
+          "itemLevel": 328,
+          "name": "Farstrider's Plated Bracers",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "13667",
+            "12497",
+            "13751",
+            "14001",
+            "8960",
+            "12384",
+            "8790",
+            "13836",
+            "13696"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13440",
+            "13691",
+            "13697",
+            "12848"
+          ],
+          "icon": "inv_glove_mail_raidevokerulatek_d_01.jpg",
+          "id": 271502,
+          "itemLevel": 328,
+          "name": "Calamitous Echo's Ebon Greathorns",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "12843",
+            "13440",
+            "13691",
+            "13697",
+            "1564"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240908",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_12_jewelry_voidelf_ring_teal.jpg",
+          "id": 251136,
+          "itemLevel": 328,
+          "name": "Signet of Snarling Servitude",
+          "permanentEnchant": "7967",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12843",
+            "13440",
+            "6652",
+            "13668",
+            "12699"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "13668",
+            "12699",
+            "12848"
+          ],
+          "gems": [
+            {
+              "id": "240908",
+              "itemLevel": "295"
+            }
+          ],
+          "icon": "inv_ring_80_03d.jpg",
+          "id": 158366,
+          "itemLevel": 328,
+          "name": "Charged Sandstone Band",
+          "permanentEnchant": "7967",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "12843",
+            "13440",
+            "6652",
+            "13668",
+            "12699"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "6652",
+            "13335",
+            "12848"
+          ],
+          "icon": "inv_121_trinket_raid_ulatek_fang_purple.jpg",
+          "id": 270161,
+          "itemLevel": 328,
+          "name": "Fang of Umbral Malignance",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "6652",
+            "13335",
+            "12851"
+          ],
+          "sourceItemLevel": "324",
+          "sourceNativeItemLevel": 324
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "12699",
+            "12848"
+          ],
+          "icon": "inv_icon_shadowcouncilorb_purple.jpg",
+          "id": 250224,
+          "itemLevel": 328,
+          "name": "Mindpiercer's Sigil",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "12699",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321
+        },
+        {
+          "bonusIDs": [
+            "42",
+            "13662",
+            "13334",
+            "12848"
+          ],
+          "icon": "inv_cape_leather_raidmonkulatek_d_01.jpg",
+          "id": 268248,
+          "itemLevel": 328,
+          "name": "Amani Summoning Shawl",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "42",
+            "13662",
+            "13334",
+            "12843"
+          ],
+          "sourceItemLevel": "311",
+          "sourceNativeItemLevel": 311
+        },
+        {
+          "bonusIDs": [
+            "13440",
+            "6652",
+            "12701",
+            "12848"
+          ],
+          "icon": "inv_knife_1h_zuljin_d_01.jpg",
+          "id": 273778,
+          "itemLevel": 328,
+          "name": "Polished Lightwood Channeler",
+          "permanentEnchant": "8039",
+          "quality": "rare",
+          "sourceBonusIDs": [
+            "13440",
+            "6652",
+            "12701",
+            "12846"
+          ],
+          "sourceItemLevel": "321",
+          "sourceNativeItemLevel": 321,
+          "temporaryEnchant": "8051"
+        },
+        {
+          "bonusIDs": [
+            "14001",
+            "13771",
+            "8960",
+            "8791",
+            "12848"
+          ],
+          "icon": "inv_offhand_1h_dungeonharronir_c_01.jpg",
+          "id": 245769,
+          "itemLevel": 328,
+          "name": "Aln'hara Lantern",
+          "quality": "epic",
+          "sourceBonusIDs": [
+            "12214",
+            "12497",
+            "13751",
+            "14001",
+            "13771",
+            "8960",
+            "8791",
+            "13836"
+          ],
+          "sourceItemLevel": "331",
+          "sourceNativeItemLevel": 331
+        },
+        {
+          "icon": "inv_tabard_dracthyr_b_01.jpg",
+          "id": 194675,
+          "itemLevel": "1",
+          "name": "Gilded Dracthyr's Tabard",
+          "quality": "uncommon"
+        }
+      ],
+      "gear_source": "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK",
+      "key_band": "6-9",
+      "median_item_level": 328.0,
+      "race": {
+        "id": 52,
+        "source": "RACE_FROM_WCL_CHARACTER"
+      },
+      "report": {
+        "code": "hgGA9xvnjpM2QK3N",
+        "fightID": 3,
+        "startTime": 1788609182164
+      },
+      "server": {
+        "id": 255,
+        "name": "Argent Dawn",
+        "region": "EU"
+      },
+      "source_median_item_level": 319.5,
+      "spec": "evoker-augmentation",
+      "spec_id": 1473,
+      "talent_purchases": [
+        [
+          93195,
+          115493,
+          1
+        ],
+        [
+          93198,
+          115496,
+          1
+        ],
+        [
+          93200,
+          115498,
+          1
+        ],
+        [
+          93201,
+          115499,
+          1
+        ],
+        [
+          93202,
+          115500,
+          1
+        ],
+        [
+          93203,
+          115502,
+          1
+        ],
+        [
+          93205,
+          115504,
+          1
+        ],
+        [
+          93206,
+          115505,
+          1
+        ],
+        [
+          93207,
+          115506,
+          1
+        ],
+        [
+          93208,
+          115507,
+          1
+        ],
+        [
+          93212,
+          115512,
+          1
+        ],
+        [
+          93213,
+          115513,
+          1
+        ],
+        [
+          93218,
+          115518,
+          1
+        ],
+        [
+          93219,
+          115519,
+          1
+        ],
+        [
+          93220,
+          115520,
+          1
+        ],
+        [
+          93221,
+          115521,
+          1
+        ],
+        [
+          93222,
+          115522,
+          1
+        ],
+        [
+          93223,
+          115523,
+          1
+        ],
+        [
+          93226,
+          115527,
+          1
+        ],
+        [
+          93227,
+          115528,
+          1
+        ],
+        [
+          93229,
+          115530,
+          1
+        ],
+        [
+          93230,
+          115531,
+          1
+        ],
+        [
+          93232,
+          115533,
+          1
+        ],
+        [
+          93234,
+          115536,
+          1
+        ],
+        [
+          93271,
+          115577,
+          1
+        ],
+        [
+          93287,
+          115595,
+          1
+        ],
+        [
+          93288,
+          115596,
+          1
+        ],
+        [
+          93289,
+          115597,
+          1
+        ],
+        [
+          93292,
+          115600,
+          2
+        ],
+        [
+          93294,
+          115602,
+          1
+        ],
+        [
+          93300,
+          115609,
+          1
+        ],
+        [
+          93302,
+          115611,
+          2
+        ],
+        [
+          93306,
+          115615,
+          1
+        ],
+        [
+          93308,
+          115617,
+          1
+        ],
+        [
+          93309,
+          115618,
+          1
+        ],
+        [
+          93310,
+          115619,
+          2
+        ],
+        [
+          93311,
+          115620,
+          1
+        ],
+        [
+          93312,
+          115621,
+          1
+        ],
+        [
+          93340,
+          115654,
+          1
+        ],
+        [
+          93341,
+          115655,
+          1
+        ],
+        [
+          93342,
+          115656,
+          1
+        ],
+        [
+          93343,
+          115657,
+          1
+        ],
+        [
+          93344,
+          115658,
+          1
+        ],
+        [
+          93346,
+          115661,
+          1
+        ],
+        [
+          93348,
+          115663,
+          1
+        ],
+        [
+          93349,
+          115664,
+          2
+        ],
+        [
+          93350,
+          115665,
+          1
+        ],
+        [
+          93352,
+          115667,
+          1
+        ],
+        [
+          93354,
+          115669,
+          1
+        ],
+        [
+          93355,
+          115670,
+          2
+        ],
+        [
+          93358,
+          115675,
+          1
+        ],
+        [
+          93367,
+          115685,
+          1
+        ],
+        [
+          93368,
+          115688,
+          1
+        ],
+        [
+          93199,
+          115690,
+          1
+        ],
+        [
+          93235,
+          115706,
+          1
+        ],
+        [
+          93715,
+          116103,
+          1
+        ],
+        [
+          94925,
+          117522,
+          1
+        ],
+        [
+          94929,
+          117526,
+          1
+        ],
+        [
+          94932,
+          117529,
+          1
+        ],
+        [
+          94935,
+          117532,
+          1
+        ],
+        [
+          94942,
+          117539,
+          1
+        ],
+        [
+          94947,
+          117544,
+          1
+        ],
+        [
+          94948,
+          117545,
+          1
+        ],
+        [
+          94951,
+          117548,
+          1
+        ],
+        [
+          94955,
+          117552,
+          1
+        ],
+        [
+          99825,
+          123334,
+          1
+        ],
+        [
+          93351,
+          125610,
+          1
+        ],
+        [
+          102248,
+          126304,
+          1
+        ],
+        [
+          94930,
+          126310,
+          1
+        ],
+        [
+          103843,
+          128216,
+          1
+        ],
+        [
+          109508,
+          135741,
+          1
+        ],
+        [
+          109509,
+          135742,
+          1
+        ],
+        [
+          109510,
+          135743,
+          1
+        ],
+        [
+          110415,
+          137011,
+          1
+        ],
+        [
+          110415,
+          137012,
+          2
+        ],
+        [
+          110415,
+          137013,
+          1
+        ]
+      ],
+      "talents": [
+        {
+          "points": 1,
+          "talentID": 115493
+        },
+        {
+          "points": 1,
+          "talentID": 115496
+        },
+        {
+          "points": 1,
+          "talentID": 115498
+        },
+        {
+          "points": 1,
+          "talentID": 115499
+        },
+        {
+          "points": 1,
+          "talentID": 115500
+        },
+        {
+          "points": 1,
+          "talentID": 115502
+        },
+        {
+          "points": 1,
+          "talentID": 115504
+        },
+        {
+          "points": 1,
+          "talentID": 115505
+        },
+        {
+          "points": 1,
+          "talentID": 115506
+        },
+        {
+          "points": 1,
+          "talentID": 115507
+        },
+        {
+          "points": 1,
+          "talentID": 115512
+        },
+        {
+          "points": 1,
+          "talentID": 115513
+        },
+        {
+          "points": 1,
+          "talentID": 115518
+        },
+        {
+          "points": 1,
+          "talentID": 115519
+        },
+        {
+          "points": 1,
+          "talentID": 115520
+        },
+        {
+          "points": 1,
+          "talentID": 115521
+        },
+        {
+          "points": 1,
+          "talentID": 115522
+        },
+        {
+          "points": 1,
+          "talentID": 115523
+        },
+        {
+          "points": 1,
+          "talentID": 115527
+        },
+        {
+          "points": 1,
+          "talentID": 115528
+        },
+        {
+          "points": 1,
+          "talentID": 115530
+        },
+        {
+          "points": 1,
+          "talentID": 115531
+        },
+        {
+          "points": 1,
+          "talentID": 115533
+        },
+        {
+          "points": 1,
+          "talentID": 115536
+        },
+        {
+          "points": 1,
+          "talentID": 115577
+        },
+        {
+          "points": 1,
+          "talentID": 115595
+        },
+        {
+          "points": 1,
+          "talentID": 115596
+        },
+        {
+          "points": 1,
+          "talentID": 115597
+        },
+        {
+          "points": 2,
+          "talentID": 115600
+        },
+        {
+          "points": 1,
+          "talentID": 115602
+        },
+        {
+          "points": 1,
+          "talentID": 115609
+        },
+        {
+          "points": 2,
+          "talentID": 115611
+        },
+        {
+          "points": 1,
+          "talentID": 115613
+        },
+        {
+          "points": 1,
+          "talentID": 115614
+        },
+        {
+          "points": 1,
+          "talentID": 115615
+        },
+        {
+          "points": 1,
+          "talentID": 115617
+        },
+        {
+          "points": 1,
+          "talentID": 115618
+        },
+        {
+          "points": 2,
+          "talentID": 115619
+        },
+        {
+          "points": 1,
+          "talentID": 115620
+        },
+        {
+          "points": 1,
+          "talentID": 115621
+        },
+        {
+          "points": 1,
+          "talentID": 115654
+        },
+        {
+          "points": 1,
+          "talentID": 115655
+        },
+        {
+          "points": 1,
+          "talentID": 115656
+        },
+        {
+          "points": 1,
+          "talentID": 115657
+        },
+        {
+          "points": 1,
+          "talentID": 115658
+        },
+        {
+          "points": 1,
+          "talentID": 115661
+        },
+        {
+          "points": 1,
+          "talentID": 115663
+        },
+        {
+          "points": 2,
+          "talentID": 115664
+        },
+        {
+          "points": 1,
+          "talentID": 115665
+        },
+        {
+          "points": 1,
+          "talentID": 115667
+        },
+        {
+          "points": 1,
+          "talentID": 115669
+        },
+        {
+          "points": 2,
+          "talentID": 115670
+        },
+        {
+          "points": 1,
+          "talentID": 115675
+        },
+        {
+          "points": 1,
+          "talentID": 115685
+        },
+        {
+          "points": 1,
+          "talentID": 115688
+        },
+        {
+          "points": 1,
+          "talentID": 115690
+        },
+        {
+          "points": 1,
+          "talentID": 115706
+        },
+        {
+          "points": 1,
+          "talentID": 116103
+        },
+        {
+          "points": 1,
+          "talentID": 117522
+        },
+        {
+          "points": 1,
+          "talentID": 117526
+        },
+        {
+          "points": 1,
+          "talentID": 117529
+        },
+        {
+          "points": 1,
+          "talentID": 117532
+        },
+        {
+          "points": 1,
+          "talentID": 117539
+        },
+        {
+          "points": 1,
+          "talentID": 117544
+        },
+        {
+          "points": 1,
+          "talentID": 117545
+        },
+        {
+          "points": 1,
+          "talentID": 117548
+        },
+        {
+          "points": 1,
+          "talentID": 117551
+        },
+        {
+          "points": 1,
+          "talentID": 117552
+        },
+        {
+          "points": 1,
+          "talentID": 123334
+        },
+        {
+          "points": 1,
+          "talentID": 125610
+        },
+        {
+          "points": 1,
+          "talentID": 126304
+        },
+        {
+          "points": 1,
+          "talentID": 126310
+        },
+        {
+          "points": 1,
+          "talentID": 128216
+        },
+        {
+          "points": 1,
+          "talentID": 135741
+        },
+        {
+          "points": 1,
+          "talentID": 135742
+        },
+        {
+          "points": 1,
+          "talentID": 135743
+        },
+        {
+          "points": 1,
+          "talentID": 137011
+        },
+        {
+          "points": 2,
+          "talentID": 137012
+        },
+        {
+          "points": 1,
+          "talentID": 137013
+        }
+      ],
+      "talents_source": "TALENTS_FROM_WCL"
+    },
     "evoker-devastation/10-14": {
       "actual_key": 11,
       "character": "Furiouslly",
@@ -220224,26 +225935,9 @@
     "evoker-augmentation/10-14": [
       {
         "actual_key": 11,
-        "character": "Andivoker",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "kzvd1XpNrZYAQftP",
-          "fightID": 5,
-          "startTime": 1792632715557
-        },
-        "server": {
-          "id": 219,
-          "name": "Thrall",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 11,
         "character": "\u55b7\u706b\u7684\u6728\u6728",
         "reasons": [
-          "race: unavailable in SimC and parity profiles"
+          "race: unavailable in SimC, parity profiles and WCL character data"
         ],
         "report": {
           "code": "JF1WxAMfKrZPpcqH",
@@ -220260,7 +225954,7 @@
         "actual_key": 11,
         "character": "Lips",
         "reasons": [
-          "race: unavailable in SimC and parity profiles"
+          "race: unavailable in SimC, parity profiles and WCL character data"
         ],
         "report": {
           "code": "3yDxHRjr6vKgtfCZ",
@@ -220272,127 +225966,6 @@
           "name": "\u65e0\u5c3d\u4e4b\u6d77",
           "region": "CN"
         }
-      },
-      {
-        "actual_key": 11,
-        "character": "Julliin",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "mZzy8XG2BhYDtRAF",
-          "fightID": 2,
-          "startTime": 1793295293623
-        },
-        "server": {
-          "id": 427,
-          "name": "Eredar",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 11,
-        "character": "Knottyclaw",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "hVFtgQ84XW1dR2A9",
-          "fightID": 69,
-          "startTime": 1792520873029
-        },
-        "server": {
-          "id": 222,
-          "name": "Tichondrius",
-          "region": "US"
-        }
-      }
-    ],
-    "evoker-augmentation/15-19": [
-      {
-        "actual_key": 16,
-        "character": "Deltairlines",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "1Fr6vhkTMaYB9NX8",
-          "fightID": 7,
-          "startTime": 1790123734471
-        },
-        "server": {
-          "id": 232,
-          "name": "Uther",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 16,
-        "character": "Scalybussy",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "d1PZMhaAbyBT9RDj",
-          "fightID": 1,
-          "startTime": 1790381657984
-        },
-        "server": {
-          "id": 182,
-          "name": "Sargeras",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 16,
-        "character": "Beekro",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "xNLMdX7B91mYfQtA",
-          "fightID": 19,
-          "startTime": 1793138185705
-        },
-        "server": {
-          "id": 99,
-          "name": "Frostmourne",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 16,
-        "character": "Trinvoker",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "FBmvd6z2Wct9fxZk",
-          "fightID": 1,
-          "startTime": 1792098937008
-        },
-        "server": {
-          "id": 348,
-          "name": "Turalyon",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 16,
-        "character": "Lennos",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "DvcNWHq4ZAQm2k8j",
-          "fightID": 108,
-          "startTime": 1792321759996
-        },
-        "server": {
-          "id": 320,
-          "name": "Ragnaros",
-          "region": "EU"
-        }
       }
     ],
     "evoker-augmentation/2-5": [
@@ -220400,7 +225973,7 @@
         "actual_key": 3,
         "character": "Torcky",
         "reasons": [
-          "race: unavailable in SimC and parity profiles"
+          "race: unavailable in SimC, parity profiles and WCL character data"
         ],
         "report": {
           "code": "6cWQjJp798trP4hm",
@@ -220412,186 +225985,14 @@
           "name": "Dalaran",
           "region": "EU"
         }
-      },
-      {
-        "actual_key": 3,
-        "character": "V\u00edridian",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "gcWZq1dBTAfH3VQn",
-          "fightID": 9,
-          "startTime": 1787466520943
-        },
-        "server": {
-          "id": 406,
-          "name": "Blackhand",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 3,
-        "character": "Zoryana",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "DgfxQzhWcYjd7Z6F",
-          "fightID": 1,
-          "startTime": 1787232878937
-        },
-        "server": {
-          "id": 399,
-          "name": "Antonidas",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 3,
-        "character": "Granndach",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "Fgqn9jrBAZDHx6cP",
-          "fightID": 2,
-          "startTime": 1787653558257
-        },
-        "server": {
-          "id": 321,
-          "name": "Ravencrest",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 3,
-        "character": "Thanathria",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "2mTMwHkb63zAPWyX",
-          "fightID": 40,
-          "startTime": 1787161251798
-        },
-        "server": {
-          "id": 448,
-          "name": "Malygos",
-          "region": "EU"
-        }
-      }
-    ],
-    "evoker-augmentation/20+": [
-      {
-        "actual_key": 21,
-        "character": "Drahous",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "cmyrBvpPDJTfjHNt",
-          "fightID": 15,
-          "startTime": 1793264635345
-        },
-        "server": {
-          "id": 358,
-          "name": "Archimonde",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 21,
-        "character": "Kackaluga",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "Htm4aP6BGLQCMhc8",
-          "fightID": 65,
-          "startTime": 1793179985996
-        },
-        "server": {
-          "id": 406,
-          "name": "Blackhand",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 21,
-        "character": "Lizzimcguire",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "tbQ7wHqkA6XY43Ga",
-          "fightID": 30,
-          "startTime": 1792882884790
-        },
-        "server": {
-          "id": 245,
-          "name": "Zul'jin",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 21,
-        "character": "Bambuevo",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "DkVPxqMjyJCvNd7H",
-          "fightID": 12,
-          "startTime": 1793131484361
-        },
-        "server": {
-          "id": 329,
-          "name": "Silvermoon",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 21,
-        "character": "Eschlom",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "BJHw8tqaRkZmhACy",
-          "fightID": 1,
-          "startTime": 1793270419905
-        },
-        "server": {
-          "id": 321,
-          "name": "Ravencrest",
-          "region": "EU"
-        }
       }
     ],
     "evoker-augmentation/6-9": [
       {
         "actual_key": 7,
-        "character": "Senestrasza",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "hgGA9xvnjpM2QK3N",
-          "fightID": 3,
-          "startTime": 1788609182164
-        },
-        "server": {
-          "id": 255,
-          "name": "Argent Dawn",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 7,
         "character": "\u51cf\u8f89",
         "reasons": [
-          "race: unavailable in SimC and parity profiles"
+          "race: unavailable in SimC, parity profiles and WCL character data"
         ],
         "report": {
           "code": "Ca4z9Q8dMPVy12mN",
@@ -220602,57 +226003,6 @@
           "id": 605,
           "name": "\u53e4\u62c9\u5df4\u4ec0",
           "region": "CN"
-        }
-      },
-      {
-        "actual_key": 7,
-        "character": "Evofoxx",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "P8HmN6QLxByn2ftR",
-          "fightID": 1,
-          "startTime": 1787087388865
-        },
-        "server": {
-          "id": 123,
-          "name": "Illidan",
-          "region": "US"
-        }
-      },
-      {
-        "actual_key": 7,
-        "character": "Trieka",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "3vgpL7TMzxBKVC24",
-          "fightID": 14,
-          "startTime": 1787131694773
-        },
-        "server": {
-          "id": 256,
-          "name": "Aszune",
-          "region": "EU"
-        }
-      },
-      {
-        "actual_key": 7,
-        "character": "\uc815\ub2ec\uc7ac",
-        "reasons": [
-          "race: unavailable in SimC and parity profiles"
-        ],
-        "report": {
-          "code": "RmHjTt1F8zJMDKdx",
-          "fightID": 1,
-          "startTime": 1790966229533
-        },
-        "server": {
-          "id": 526,
-          "name": "\uc544\uc988\uc0e4\ub77c",
-          "region": "KR"
         }
       }
     ],
@@ -220732,5 +226082,5 @@
     ]
   },
   "source": "Warcraft Logs characterRankings, Midnight Season 2, Ruby Life Pools encounter 112521",
-  "source_sha256": "3fd42afb6e65389e3123b25687ccf494fd31c872a14be0b7678cf223fdad7fb0"
+  "source_sha256": "57fabb0aab652d638740f73ebdca10c0120a99b768a16b7599f70ab259d9490c"
 }
