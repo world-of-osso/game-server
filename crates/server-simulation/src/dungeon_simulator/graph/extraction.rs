@@ -172,9 +172,7 @@ fn extract(
     let registrations = server::test_support::transport::read_registrations(map, db)?;
     let (teleports, transports) = append_registered_transports(map, &mut packs, &registrations)?;
     let edges = topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
-    let mut all_edges = edges.clone();
-    all_edges.extend(teleports.iter().cloned());
-    let unreachable = topology::unreachable(&packs, &all_edges, opening);
+    let unreachable = topology::unreachable(&packs, &edges, &teleports, opening);
     let graph = Graph {
         map_id: map,
         entrance: [entrance.x, entrance.z],
