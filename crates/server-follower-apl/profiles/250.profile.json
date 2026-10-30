@@ -1,0 +1,275 @@
+{
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271474,
+      "bonus_list": [
+        13750
+      ],
+      "item_level_override": 334,
+      "enchant": 7991,
+      "gems": [
+        240983
+      ],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268229"
+      }
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        13668
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240894,
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271472,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7973,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271477,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268222"
+      }
+    },
+    {
+      "slot": "wrists",
+      "item_id": 237834,
+      "bonus_list": [
+        8960,
+        13454,
+        13750
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [
+        32,
+        36
+      ],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271475,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "251214"
+      }
+    },
+    {
+      "slot": "waist",
+      "item_id": 268259,
+      "bonus_list": [
+        13750
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271473,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 8159,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "271878"
+      }
+    },
+    {
+      "slot": "feet",
+      "item_id": 268260,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 8019,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 273792,
+      "bonus_list": [
+        13668
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 240949,
+      "bonus_list": [
+        8960,
+        13453
+      ],
+      "item_level_override": 331,
+      "enchant": 7967,
+      "gems": [
+        240894
+      ],
+      "crafted_stats": [
+        32,
+        36
+      ],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270175,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270173,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 268213,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 6241,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "actions": [
+    "actions.precombat=snapshot_stats",
+    "actions.precombat+=/deaths_caress",
+    "actions=auto_attack",
+    "actions+=/use_items",
+    "actions+=/use_item,name=light_company_guidon,use_off_gcd=1,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<15",
+    "actions+=/use_item,name=algethar_puzzle_box,if=fight_remains>122|cooldown.dancing_rune_weapon.remains>78|fight_remains<25",
+    "actions+=/use_item,name=voracious_heart_of_ulatek,use_off_gcd=1,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<20",
+    "actions+=/use_item,name=blazebinders_hoof,use_off_gcd=1,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<20|fight_remains>120",
+    "actions+=/use_item,name=vile_vial_of_volatile_venom,use_off_gcd=1,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<20|fight_remains>120",
+    "actions+=/fireblood,if=fight_remains>120|cooldown.dancing_rune_weapon.remains>78|fight_remains<8",
+    "actions+=/blood_fury,if=fight_remains>120|cooldown.dancing_rune_weapon.remains>78|fight_remains<12",
+    "actions+=/berserking,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<=15",
+    "actions+=/ancestral_call,if=fight_remains>120|cooldown.dancing_rune_weapon.remains>78|fight_remains<15",
+    "actions+=/potion,if=cooldown.dancing_rune_weapon.remains>78|fight_remains<=30",
+    "actions+=/vampiric_blood,if=!buff.vampiric_blood.up",
+    "actions+=/call_action_list,name=high_prio_actions",
+    "actions+=/run_action_list,name=deathbringer,if=hero_tree.deathbringer",
+    "actions+=/run_action_list,name=san_gift,if=hero_tree.sanlayn&buff.gift_of_the_sanlayn.up",
+    "actions+=/run_action_list,name=sanlayn,if=hero_tree.sanlayn",
+    "actions.deathbringer=death_strike,if=(runic_power.deficit<20|(runic_power.deficit<26&buff.dancing_rune_weapon.up))",
+    "actions.deathbringer+=/death_and_decay,if=!buff.death_and_decay.up",
+    "actions.deathbringer+=/reapers_mark",
+    "actions.deathbringer+=/marrowrend,if=buff.exterminate.up",
+    "actions.deathbringer+=/deaths_caress,if=(!buff.bone_shield.up|buff.bone_shield.remains<3|buff.bone_shield.stack<6)&rune<4",
+    "actions.deathbringer+=/marrowrend,if=!buff.bone_shield.up|buff.bone_shield.remains<3|buff.bone_shield.stack<6",
+    "actions.deathbringer+=/death_strike",
+    "actions.deathbringer+=/blood_boil",
+    "actions.deathbringer+=/consumption,empower_to=1,if=!buff.dancing_rune_weapon.up",
+    "actions.deathbringer+=/heart_strike",
+    "actions.deathbringer+=/consumption,empower_to=1",
+    "actions.deathbringer+=/arcane_torrent,if=runic_power.deficit>20",
+    "actions.high_prio_actions=raise_dead,use_off_gcd=1",
+    "actions.high_prio_actions+=/dancing_rune_weapon,if=!buff.exterminate.up&!debuff.reapers_mark_debuff.up&(fight_remains>95|fight_remains<25|time>300)",
+    "actions.san_gift=heart_strike,if=buff.essence_of_the_blood_queen.remains<1.5&buff.essence_of_the_blood_queen.remains",
+    "actions.san_gift+=/death_strike,if=runic_power.deficit<36",
+    "actions.san_gift+=/any_dnd,if=buff.crimson_scourge.remains&!buff.visceral_strength.remains",
+    "actions.san_gift+=/heart_strike,if=buff.essence_of_the_blood_queen.stack<7",
+    "actions.san_gift+=/death_strike",
+    "actions.san_gift+=/blood_boil,if=buff.boiling_point.up",
+    "actions.san_gift+=/heart_strike",
+    "actions.san_gift+=/blood_boil",
+    "actions.sanlayn=deaths_caress,if=!buff.bone_shield.up|buff.bone_shield.remains<1.5|buff.bone_shield.stack<=1",
+    "actions.sanlayn+=/heart_strike,if=(buff.essence_of_the_blood_queen.remains<1.5&buff.essence_of_the_blood_queen.remains&buff.vampiric_strike.remains&fight_remains>buff.essence_of_the_blood_queen.remains+10)",
+    "actions.sanlayn+=/death_strike,if=runic_power.deficit<20",
+    "actions.sanlayn+=/deaths_caress,if=buff.bone_shield.stack<6",
+    "actions.sanlayn+=/marrowrend,if=buff.bone_shield.stack<6",
+    "actions.sanlayn+=/any_dnd,if=buff.crimson_scourge.remains",
+    "actions.sanlayn+=/blood_boil,if=buff.boiling_point.up",
+    "actions.sanlayn+=/marrowrend,if=buff.blood_debt.stack=10",
+    "actions.sanlayn+=/heart_strike,if=buff.vampiric_strike.up",
+    "actions.sanlayn+=/death_strike,if=runic_power.deficit<40|fight_remains<10|(buff.essence_of_the_blood_queen.remains&buff.essence_of_the_blood_queen.remains<8)",
+    "actions.sanlayn+=/consumption,empower_to=1",
+    "actions.sanlayn+=/heart_strike,if=rune>=2",
+    "actions.sanlayn+=/blood_boil",
+    "actions.sanlayn+=/heart_strike",
+    "actions.sanlayn+=/death_strike"
+  ],
+  "consumables": {
+    "potion": "draught_of_rampant_abandon_2",
+    "flask": "flask_of_thalassian_resistance_2",
+    "food": "silvermoon_parade",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "class": "deathknight",
+  "name": "MID2_Death_Knight_Blood_San'layn",
+  "source": "default",
+  "spec": "blood",
+  "level": "90",
+  "race": "mechagnome",
+  "role": "tank",
+  "position": "front",
+  "talents": "CoPAAAAAAAAAAAAAAAAAAAAAAwYWmZmxMmZmhZZmZmmZxMjxMAAAAAmZmZGmZGzMjZAgZmZGAAADMwMW0YZDklBsBYGzAAAmZwgB",
+  "omnium_talents": "rune_of_unleashed_fire/rune_of_selfmending/rune_of_lingering/rune_of_masterful_cunning/rune_of_overload",
+  "spec_id": 250,
+  "profile": "profiles/MID2/MID2_Death_Knight_Blood.simc",
+  "profile_sha256": "467a6c8d240875803809dc1eb080e220d071904edb522a23d3ddca7b6e1a5019",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc"
+}

@@ -1,0 +1,323 @@
+{
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271510,
+      "bonus_list": [
+        13692,
+        13698,
+        13750,
+        13847,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 8017,
+      "gems": [
+        240983
+      ],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "271875"
+      }
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        13534,
+        13668,
+        13708
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240900,
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271508,
+      "bonus_list": [
+        40,
+        12854,
+        13335,
+        13694,
+        13697
+      ],
+      "item_level_override": 334,
+      "enchant": 8001,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "back",
+      "item_id": 239656,
+      "bonus_list": [
+        8791,
+        8960,
+        12214,
+        12384,
+        13667,
+        13751,
+        13836,
+        12497
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 251159,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "wrists",
+      "item_id": 271506,
+      "bonus_list": [
+        13534
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271511,
+      "bonus_list": [
+        40,
+        12854,
+        13335,
+        13691,
+        13697
+      ],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 268256,
+      "bonus_list": [
+        13534
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271509,
+      "bonus_list": [
+        13693,
+        13698,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 8159,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268225"
+      }
+    },
+    {
+      "slot": "feet",
+      "item_id": 159304,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 251194,
+      "bonus_list": [
+        13534,
+        13668
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 252258,
+      "bonus_list": [
+        13534,
+        13668
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240900
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270175,
+      "bonus_list": [
+        40,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270173,
+      "bonus_list": [
+        40,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 271093,
+      "bonus_list": [
+        40,
+        13335,
+        13848
+      ],
+      "item_level_override": 344,
+      "enchant": 8011,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 237837,
+      "bonus_list": [
+        8793,
+        8960,
+        12214,
+        13667,
+        13751,
+        13771,
+        13836,
+        12497
+      ],
+      "item_level_override": 331,
+      "enchant": 8011,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "actions": [
+    "actions.precombat=apply_poison",
+    "actions.precombat+=/snapshot_stats",
+    "actions.precombat+=/variable,name=priority_rotation,value=priority_rotation",
+    "actions.precombat+=/variable,name=trinket_sync_slot,value=1,if=trinket.1.has_use_buff&(!trinket.2.has_use_buff|trinket.1.cooldown.duration>=trinket.2.cooldown.duration)",
+    "actions.precombat+=/variable,name=trinket_sync_slot,value=2,if=trinket.2.has_use_buff&(!trinket.1.has_use_buff|trinket.2.cooldown.duration>trinket.1.cooldown.duration)",
+    "actions.precombat+=/stealth",
+    "actions=variable,name=stealth,value=buff.shadow_dance.up|buff.stealth.up|buff.vanish.up",
+    "actions+=/variable,name=targets,value=spell_targets.shuriken_storm",
+    "actions+=/variable,name=racial_sync,value=(buff.shadow_blades.up&buff.shadow_dance.up)|fight_remains<20",
+    "actions+=/variable,name=dance_condition,value=!variable.stealth&energy>=30&buff.slice_and_dice.up&(combo_points<=2&talent.deathstalkers_mark|combo_points>=6)",
+    "actions+=/variable,name=build_at_max_for_apex,value=talent.ancient_arts_3&!buff.ancient_arts.up&buff.shadow_techniques.stack>=5",
+    "actions+=/stealth",
+    "actions+=/call_action_list,name=race",
+    "actions+=/call_action_list,name=item",
+    "actions+=/call_action_list,name=cds",
+    "actions+=/shuriken_storm,if=variable.build_at_max_for_apex&variable.targets>=3&(buff.supercharge_1.up|cooldown.secret_technique.ready)",
+    "actions+=/gloomblade,if=variable.build_at_max_for_apex&variable.targets<=2&(buff.darkest_night.up|(talent.unseen_blade&buff.supercharge_1.up)|cooldown.secret_technique.ready)&buff.lingering_shadow.stack>=35",
+    "actions+=/shadowstrike,if=variable.build_at_max_for_apex&variable.targets<=2&(buff.darkest_night.up|(talent.unseen_blade&buff.supercharge_1.up)|cooldown.secret_technique.ready)",
+    "actions+=/call_action_list,name=finish,if=combo_points>=cp_max_spend-!buff.darkest_night.up",
+    "actions+=/call_action_list,name=build,if=variable.stealth|energy>60",
+    "actions+=/call_action_list,name=fill,if=!variable.stealth",
+    "actions.build=shuriken_storm,if=buff.shadow_dance.up&buff.premeditation.up&(debuff.deathstalkers_mark.up|buff.darkest_night.up|!talent.deathstalkers_mark)",
+    "actions.build+=/shadowstrike,if=!debuff.deathstalkers_mark.up&talent.deathstalkers_mark&!buff.darkest_night.up|variable.targets<=2-set_bonus.midnight_season_2_2pc|variable.priority_rotation",
+    "actions.build+=/shuriken_storm,if=variable.targets>1",
+    "actions.build+=/gloomblade,if=variable.targets<2&!variable.stealth",
+    "actions.build+=/backstab,if=variable.targets<2&!variable.stealth",
+    "actions.cds=goremaws_bite,if=buff.shadow_dance.up&!buff.ancient_arts.up|fight_remains<=14",
+    "actions.cds+=/shadow_blades,if=variable.dance_condition&cooldown.shadow_dance.charges_fractional>=1+0.8*talent.deathstalkers_mark&(buff.ancient_arts.up|!talent.unseen_blade)|(fight_remains<=20|target.time_to_die.remains<=20)",
+    "actions.cds+=/shadow_dance,if=variable.dance_condition&talent.deathstalkers_mark&(variable.targets<=3&(buff.darkest_night.up|cooldown.secret_technique.ready&debuff.deathstalkers_mark.stack<=1)|variable.targets>3&debuff.deathstalkers_mark.stack>=2)&(cooldown.shadow_blades.remains>=35-cooldown.secret_technique.duration)|(fight_remains<=10|target.time_to_die-remains<=9)",
+    "actions.cds+=/shadow_dance,if=variable.dance_condition&talent.unseen_blade&(cooldown.secret_technique.ready&(cooldown.shadow_blades.remains>=25-cooldown.secret_technique.duration))|(fight_remains<=10|target.time_to_die-remains<=9)",
+    "actions.cds+=/shadow_dance,if=buff.shadow_blades.up&(talent.unseen_blade|variable.targets>=3)",
+    "actions.cds+=/vanish,if=!variable.stealth&energy>=50&!buff.subterfuge.up&combo_points<=2",
+    "actions.cds+=/shadowmeld,if=energy>=50&!variable.stealth&combo_points.deficit>=2",
+    "actions.fill=arcane_torrent,if=energy.deficit>=15+energy.regen",
+    "actions.fill+=/arcane_pulse",
+    "actions.fill+=/lights_judgment",
+    "actions.fill+=/bag_of_tricks",
+    "actions.finish=eviscerate,if=buff.darkest_night.up|!buff.slice_and_dice.up",
+    "actions.finish+=/secret_technique,if=buff.shadow_dance.up",
+    "actions.finish+=/secret_technique,if=talent.unseen_blade&cooldown.secret_technique.duration<18&!cooldown.shadow_dance.ready",
+    "actions.finish+=/coup_de_grace,if=cooldown.secret_technique.remains>=3|buff.shadow_dance.up",
+    "actions.finish+=/black_powder,if=talent.unseen_blade&variable.targets>=(3-talent.potent_powder)&(cooldown.secret_technique.remains>=3|buff.shadow_dance.up|buff.shadow_blades.up)",
+    "actions.finish+=/black_powder,if=talent.deathstalkers_mark&variable.targets>=2",
+    "actions.finish+=/eviscerate,if=cooldown.secret_technique.remains>=3&talent.unseen_blade|buff.shadow_dance.up|buff.shadow_blades.up|debuff.deathstalkers_mark.stack>1|debuff.deathstalkers_mark.stack=1&buff.shadow_techniques.stack>=5",
+    "actions.item=potion,if=buff.shadow_blades.up|fight_remains<30",
+    "actions.item+=/use_item,name=algethar_puzzle_box,if=cooldown.shadow_blades.ready&cooldown.secret_technique.remains<=2&combo_points>=6",
+    "actions.item+=/use_items,slots=trinket1,if=(variable.trinket_sync_slot=1&(buff.shadow_blades.up|fight_remains<=20)|(variable.trinket_sync_slot=2&(!trinket.2.cooldown.ready&cooldown.shadow_blades.remains>20))|!variable.trinket_sync_slot)",
+    "actions.item+=/use_items,slots=trinket2,if=(variable.trinket_sync_slot=2&(buff.shadow_blades.up|fight_remains<=20)|(variable.trinket_sync_slot=1&(!trinket.1.cooldown.ready&cooldown.shadow_blades.remains>20))|!variable.trinket_sync_slot)",
+    "actions.race=blood_fury,if=variable.racial_sync",
+    "actions.race+=/berserking,if=variable.racial_sync",
+    "actions.race+=/fireblood,if=variable.racial_sync",
+    "actions.race+=/ancestral_call,if=buff.shadow_blades.up",
+    "actions.race+=/invoke_external_buff,name=power_infusion,if=variable.racial_sync"
+  ],
+  "consumables": {
+    "potion": "lights_potential_2",
+    "flask": "flask_of_the_shattered_sun_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2/off_hand:thalassian_phoenix_oil_2"
+  },
+  "class": "rogue",
+  "name": "MID2_Rogue_Subtlety",
+  "source": "default",
+  "spec": "subtlety",
+  "level": "90",
+  "race": "dwarf",
+  "role": "attack",
+  "position": "back",
+  "talents": "CUQAAAAAAAAAAAAAAAAAAAAAAAgx2MAAAAAwsMGLTMbbjxMDDzMzMzw8AbzYGbbzMzMzMjBjZ2GAAAAGMmFzyADYBsMMhMLYGmZAmxA",
+  "omnium_talents": "136822:1/136816:1/136817:1/136818:1/136814:1",
+  "spec_id": 261,
+  "profile": "profiles/MID2/MID2_Rogue_Subtlety.simc",
+  "profile_sha256": "7a9447df86826bee50a5ff1c84f69dd1fafd5ece50895574b661d45bfd42951f",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc"
+}

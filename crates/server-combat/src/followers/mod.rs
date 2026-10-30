@@ -132,7 +132,7 @@ use shared::group::GroupRole;
 #[cfg(test)]
 mod group_buff_tests;
 
-pub use ai::FollowerReach;
+pub use ai::{AplControlled, FollowerReach, engaged_targets, party_units};
 pub use catalog::FollowerCatalog;
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 
