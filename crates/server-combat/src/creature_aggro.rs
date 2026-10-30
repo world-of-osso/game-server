@@ -272,6 +272,19 @@ pub(crate) fn read_player_proximity_acquisition(
     Ok(params.candidate_distance(creature, player).is_some() && params.sees(creature, player))
 }
 
+/// Read the production range, hostility and victim predicate, before the LOS test.
+#[cfg(test)]
+pub(crate) fn read_player_proximity_candidate(
+    world: &mut World,
+    creature: Entity,
+    player: Entity,
+) -> bool {
+    let mut state = bevy::ecs::system::SystemState::<PlayerSight>::new(world);
+    state
+        .get(world)
+        .is_ok_and(|params| params.candidate_distance(creature, player).is_some())
+}
+
 fn aggro_on_sight_system(params: PlayerSight, time: Res<Time>, mut commands: Commands) {
     let players: Vec<(Entity, Position, InMap)> = params
         .players
