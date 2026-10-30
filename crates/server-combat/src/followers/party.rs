@@ -893,6 +893,64 @@ mod copy_tests {
     }
 
     #[test]
+    fn unreachable_follower_corpse_accepts_a_real_resurrection_in_place() {
+        use shared::components::{Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let copy = run.copy.unwrap();
+        let (mut h, caster) = super::super::kit_tests::level32(209072);
+        let target = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        let corpse = Position {
+            x: 1390.0,
+            y: 131.0,
+            z: 170.0,
+        };
+        run.members = vec![caster, target];
+        h.app.insert_resource(store);
+        h.app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            run,
+            copy,
+            Position {
+                x: 1403.56,
+                y: 10000.0,
+                z: 173.39,
+            },
+        ));
+        h.app.world_mut().entity_mut(caster).insert((
+            copy,
+            Position {
+                x: 1391.0,
+                ..corpse
+            },
+        ));
+        h.app.world_mut().entity_mut(target).insert((
+            copy,
+            corpse,
+            crate::combat::CorpseDelay(60.0),
+        ));
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        super::super::release::update(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        super::super::release::update(h.app.world_mut());
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
     fn active_follower_corpse_survives_decay_and_disconnect() {
         use bevy::ecs::system::RunSystemOnce;
         let (mut app, owner, run) = fixture();
