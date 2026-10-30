@@ -160,6 +160,9 @@ fn follower_dps_production_dummy() {
     let mut lava_surge_frames = 0u32;
     let mut storm_frames = 0u32;
     let mut lava_during_storm = 0u32;
+    let mut bolt_during_storm = 0u32;
+    let mut stable_storm_frames = 0u32;
+    let mut lava_during_stable_storm = 0u32;
     let mut seen_events = 0usize;
     for frame in 0..2400 {
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
@@ -214,6 +217,7 @@ fn follower_dps_production_dummy() {
                 && summon.expires_at.is_some_and(|expiry| expiry > now)
         });
         storm_frames += u32::from(storm);
+        stable_storm_frames = if storm { stable_storm_frames + 1 } else { 0 };
         let events = &app
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -224,6 +228,24 @@ fn follower_dps_production_dummy() {
                 .filter(|event| {
                     event.source == Some(actor.to_bits())
                         && event.spell_id == Some(51505)
+                        && event.kind == CombatLogKind::CastStart
+                })
+                .count() as u32;
+            if stable_storm_frames > 60 {
+                lava_during_stable_storm += events[seen_events..]
+                    .iter()
+                    .filter(|event| {
+                        event.source == Some(actor.to_bits())
+                            && event.spell_id == Some(51505)
+                            && event.kind == CombatLogKind::CastSuccess
+                    })
+                    .count() as u32;
+            }
+            bolt_during_storm += events[seen_events..]
+                .iter()
+                .filter(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(188196)
                         && event.kind == CombatLogKind::CastStart
                 })
                 .count() as u32;
@@ -282,6 +304,28 @@ fn follower_dps_production_dummy() {
             > 0.0,
         "follower died before completing the dummy measurement"
     );
+    if entry == 209053 && level == 90 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
+        assert!(
+            storm_frames > 0,
+            "Storm Elemental must actually be summoned"
+        );
+        assert_eq!(
+            lava_during_storm, 0,
+            "Shuja must hold Lava Burst during her non-Primal Storm Elemental"
+        );
+        assert_eq!(
+            lava_during_stable_storm, 0,
+            "instant Lava Surge casts must also wait during Storm Elemental"
+        );
+        assert!(
+            bolt_during_storm > 0,
+            "Shuja must use Lightning Bolt during Storm Elemental"
+        );
+        assert!(
+            casts.get(&51505).is_some_and(|count| *count > 0),
+            "Lava Burst resumes outside Storm Elemental"
+        );
+    }
     if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(
             !hits.contains_key(&1269224),
@@ -327,7 +371,8 @@ fn follower_dps_production_dummy() {
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"sources":damage_sources,"casts":casts,"aura_applications":aura_applications,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
-        "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,"casting_s":casting as f64 / 20.0,
+        "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
+        "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
         "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
     );
 }

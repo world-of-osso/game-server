@@ -219,6 +219,13 @@ fn try_entry(
     if !conditions_met(world, unit, target, party, enemies, &entry) {
         return false;
     }
+    if follower.profile.spec_id == 262
+        && entry.spell_id == 51505
+        && enemies.len() == 1
+        && !elemental_lava_burst_ready(world, unit)
+    {
+        return false;
+    }
     if follower.profile.spec_id == 577 && entry.spell_id == 198793 {
         let Some(enemy) = enemy else { return false };
         let Some(spell) = world
@@ -246,6 +253,46 @@ fn try_entry(
         }
     }
     attempt_cast(world, unit, target, enemy, follower, &entry, enemies.len())
+}
+
+/// SimC76f8118 apl_shaman.cpp111–112: the Molten Wrath single-target
+/// branch holds Lava Burst during a Storm Elemental or near Maelstrom cap.
+fn elemental_lava_burst_ready(world: &mut World, unit: Entity) -> bool {
+    use shared::components::{Npc, PowerType};
+    let Some(known) = world.get::<crate::class_progression::KnownSpells>(unit) else {
+        return true;
+    };
+    if known.contains(16166)
+        || !known.contains(1258843)
+        || known.contains(443450)
+        || known.contains(1259471)
+        || crate::auras::has_aura(world, unit, 1300219)
+    {
+        return true;
+    }
+    let (current, max) = crate::spell_cast::powers::power_value(world, unit, PowerType::Maelstrom)
+        .expect("Elemental follower has a Maelstrom pool");
+    if max - current <= 15.0 {
+        return false;
+    }
+    let gust = world
+        .get::<crate::auras::ActiveAuras>(unit)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 263806 && aura.caster == unit)
+        })
+        .map_or(0, |aura| aura.stacks);
+    let now = crate::spell_cast::now(world);
+    let storm = world
+        .query::<(&crate::spell_cast::summon::SummonedCreature, &Npc)>()
+        .iter(world)
+        .any(|(summon, npc)| {
+            summon.owner == unit
+                && matches!(npc.template_id, 77936 | 77942)
+                && summon.expires_at.is_some_and(|expiry| expiry > now)
+        });
+    !storm || gust >= 4
 }
 
 fn select_min_own_aura_enemy(
