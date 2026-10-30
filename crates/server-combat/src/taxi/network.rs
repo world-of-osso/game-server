@@ -267,9 +267,12 @@ pub(crate) fn load_taxi_network(conn: &Connection) -> rusqlite::Result<TaxiNetwo
     let scripted_paths = points
         .into_iter()
         .filter_map(|(id, points)| {
-            ([9458, 11715].contains(&id))
-                .then_some(points.map(|points| (id, points)))
-                .flatten()
+            ([9458, 11715].contains(&id)
+                || crate::scripted_ai::windrunner_passage::PASSAGES
+                    .iter()
+                    .any(|passage| passage.path == id))
+            .then_some(points.map(|points| (id, points)))
+            .flatten()
         })
         .collect();
     Ok(TaxiNetwork {

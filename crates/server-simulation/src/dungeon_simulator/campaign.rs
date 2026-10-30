@@ -1271,6 +1271,24 @@ fn leader_waits_on_native_walk_graph_until_tank_catches_up() {
     for actor in actors {
         run.app.world_mut().despawn(actor);
     }
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let original_owner = *run.app.world().get::<Position>(owner).unwrap();
+    let original_tank = *run.app.world().get::<Position>(tank).unwrap();
+    let off_graph = Position {
+        x: 100000.0,
+        y: 100000.0,
+        z: 100000.0,
+    };
+    run.app.world_mut().entity_mut(owner).insert(off_graph);
+    run.app.world_mut().entity_mut(tank).insert(off_graph);
+    assert!(
+        !run.wait_for_tank().unwrap(),
+        "colocated party must not require a graph route"
+    );
+    run.app.world_mut().entity_mut(owner).insert(original_owner);
+    run.app.world_mut().entity_mut(tank).insert(original_tank);
+    run.next_cohesion_check = 0.0;
     let target = run
         .graph
         .packs
@@ -1278,8 +1296,6 @@ fn leader_waits_on_native_walk_graph_until_tank_catches_up() {
         .find(|pack| pack.id == 20375706)
         .unwrap()
         .point();
-    let owner = run.party.owner;
-    let tank = run.party.tank;
     run.app.world_mut().entity_mut(owner).insert(Position {
         x: target.x,
         y: target.y,
@@ -2238,14 +2254,20 @@ impl Run {
                 .ok_or("cohesion tank absent")?;
             let from = Vec3::new(tank.x, tank.y, tank.z);
             let to = Vec3::new(owner.x, owner.y, owner.z);
-            let route = world
-                .resource::<super::Space>()
-                .walk_legs(from, to)
-                .map_err(|error| format!("tank cannot follow leader: {error}"))?;
-            let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
             let (_, opening_range) =
                 crate::followers::simulator::opening_spell(world, self.party.tank);
-            self.waiting_for_tank = yards > opening_range;
+            let nearby =
+                from.distance(to) <= opening_range && (from.y - to.y).abs() <= opening_range;
+            self.waiting_for_tank = if nearby {
+                false
+            } else {
+                let route = world
+                    .resource::<super::Space>()
+                    .walk_legs(from, to)
+                    .map_err(|error| format!("tank cannot follow leader: {error}"))?;
+                let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+                yards > opening_range
+            };
             self.next_cohesion_check = self.now() + COHESION_CHECK_SECONDS;
         }
         if self.waiting_for_tank {
@@ -2502,6 +2524,7 @@ impl Run {
                 transport.action,
                 server::test_support::transport::Action::CollisionDrop
                     | server::test_support::transport::Action::GatewayProximity
+                    | server::test_support::transport::Action::TaxiProximity
             );
             let actors = if source_objects {
                 &self.objects

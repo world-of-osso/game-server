@@ -90,40 +90,53 @@ fn append_registered_transports(
     let mut edges = Vec::new();
     let mut transports = Vec::new();
     for registration in registrations {
-        let (from, source_guid) = if let Some(guid) = registration.source_guid {
-            next = next
-                .checked_add(1)
-                .ok_or("transport waypoint identifiers exhausted")?;
-            let point = registration.source;
-            packs.push(Pack {
-                id: next,
-                position: [point.x, point.z],
-                height: point.y,
-                spawns: Vec::new(),
-            });
-            (next, guid)
-        } else {
-            let candidates: Vec<_> = packs
-                .iter()
-                .flat_map(|pack| {
-                    pack.spawns
-                        .iter()
-                        .filter(move |spawn| {
-                            spawn.entry == registration.entry
-                                && pack.point().distance(registration.source) < 1.0
-                        })
-                        .map(move |spawn| (pack.id, spawn.guid))
-                })
-                .collect();
-            let [(from, guid)] = candidates.as_slice() else {
-                return Err(format!(
-                    "map{map} registered transport entry{} has {} matching source spawns",
-                    registration.entry,
-                    candidates.len()
-                ));
+        let (from, source_guid) =
+            if registration.action == server::test_support::transport::Action::TaxiProximity {
+                next = next
+                    .checked_add(1)
+                    .ok_or("transport waypoint identifiers exhausted")?;
+                let point = registration.source;
+                packs.push(Pack {
+                    id: next,
+                    position: [point.x, point.z],
+                    height: point.y,
+                    spawns: Vec::new(),
+                });
+                (next, 0)
+            } else if let Some(guid) = registration.source_guid {
+                next = next
+                    .checked_add(1)
+                    .ok_or("transport waypoint identifiers exhausted")?;
+                let point = registration.source;
+                packs.push(Pack {
+                    id: next,
+                    position: [point.x, point.z],
+                    height: point.y,
+                    spawns: Vec::new(),
+                });
+                (next, guid)
+            } else {
+                let candidates: Vec<_> = packs
+                    .iter()
+                    .flat_map(|pack| {
+                        pack.spawns
+                            .iter()
+                            .filter(move |spawn| {
+                                spawn.entry == registration.entry
+                                    && pack.point().distance(registration.source) < 1.0
+                            })
+                            .map(move |spawn| (pack.id, spawn.guid))
+                    })
+                    .collect();
+                let [(from, guid)] = candidates.as_slice() else {
+                    return Err(format!(
+                        "map{map} registered transport entry{} has {} matching source spawns",
+                        registration.entry,
+                        candidates.len()
+                    ));
+                };
+                (*from, *guid)
             };
-            (*from, *guid)
-        };
         next = next
             .checked_add(1)
             .ok_or("transport waypoint identifiers exhausted")?;
@@ -178,9 +191,13 @@ fn extract(
         })
         .collect();
     nearest.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
-    let opening = nearest
+    let (opening, entrance_route) = nearest
         .into_iter()
-        .find_map(|(_, id, point)| complete_route(&mut nav, entrance, point).ok().map(|_| id))
+        .find_map(|(_, id, point)| {
+            complete_route(&mut nav, entrance, point)
+                .ok()
+                .map(|route| (id, route))
+        })
         .ok_or_else(|| format!("map{map} entrance cannot reach the population on navmesh"))?;
     let bosses: Vec<_> = source.bosses.iter().map(|(_, entry)| *entry).collect();
     let accessories = server::test_support::read_vehicle_accessories(&asset_root(), db)
@@ -206,13 +223,16 @@ fn extract(
         });
     }
     let (teleports, transports) = append_registered_transports(map, &mut packs, &registrations)?;
-    let edges = topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
-    let unreachable = topology::unreachable(&packs, &edges, &teleports, opening);
+    let mut edges =
+        topology::connect_packs(&mut packs, |from, to| complete_route(&mut nav, from, to))?;
+    let entrance_pack =
+        topology::append_entrance_route(&mut packs, &mut edges, entrance, opening, entrance_route)?;
+    let unreachable = topology::unreachable(&packs, &edges, &teleports, entrance_pack);
     let graph = Graph {
         map_id: map,
         entrance: [entrance.x, entrance.z],
         entrance_height: entrance.y,
-        entrance_pack: opening,
+        entrance_pack,
         packs,
         edges,
         teleports,
@@ -281,6 +301,28 @@ fn registered_transport_creates_a_directed_edge_to_the_native_landing() {
             .point(),
         Vec3::new(9.0, 3.0, 2.0)
     );
+}
+
+#[test]
+fn windrunner_taxi_proximity_extracts_an_actor_free_passage() {
+    use server::test_support::transport::{Action, Registration};
+    let mut packs = Vec::new();
+    let registration = Registration {
+        entry: 10308,
+        source_guid: None,
+        source: Vec3::new(5214.278, 100.709, 3126.375),
+        destination: Vec3::new(5215.815, 302.012, 3079.736),
+        distance: 500.0,
+        radius: 20.0,
+        departure: None,
+        action: Action::TaxiProximity,
+    };
+    let (edges, transports) =
+        append_registered_transports(2805, &mut packs, &[registration]).unwrap();
+    assert_eq!(packs[0].point(), Vec3::new(5214.278, 100.709, 3126.375));
+    assert_eq!(packs[1].point(), Vec3::new(5215.815, 302.012, 3079.736));
+    assert_eq!((edges[0].from, edges[0].to), (packs[0].id, packs[1].id));
+    assert_eq!(transports[0].action, Action::TaxiProximity);
 }
 
 #[test]

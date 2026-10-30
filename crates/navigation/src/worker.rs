@@ -19,6 +19,12 @@ pub enum Query {
         from: Vec3,
         to: Vec3,
     },
+    /// Follow a formation point projected onto the owner's connected surface.
+    FollowFormation {
+        from: Vec3,
+        to: Vec3,
+        owner: Vec3,
+    },
     SmoothPath {
         from: Vec3,
         to: Vec3,
@@ -530,6 +536,9 @@ fn run_query(
     let output = match query {
         Query::Path { from, to } => Output::Path(map.path_with_plan(from, to, plan)?),
         Query::FollowPath { from, to } => Output::Path(map.follow_path(from, to, plan)?),
+        Query::FollowFormation { from, to, owner } => {
+            Output::Path(map.follow_formation_path(from, to, owner, plan)?)
+        }
         Query::SmoothPath { from, to } => Output::Path(NavigationPath {
             points: map.smooth_waypoint_path(from, to)?,
             complete: true,
