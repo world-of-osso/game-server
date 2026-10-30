@@ -2133,6 +2133,9 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             z: graph.entrance[1],
         },
     )?;
+    if !graph.flights.is_empty() {
+        server::test_support::flight::configure_leader(app.world_mut(), party.owner)?;
+    }
     let actors = runtime::spawn_population(&mut app, copy);
     let object_guids: Vec<_> = graph
         .transports
@@ -2508,6 +2511,9 @@ impl Run {
             }
             return Ok(());
         }
+        if super::movement::flight_in_progress(self.app.world(), self.party.owner) {
+            return Ok(());
+        }
         if self.wait_for_tank()? {
             return Ok(());
         }
@@ -2754,6 +2760,26 @@ impl Run {
         let Some((source, destination)) = edge else {
             return Ok(false);
         };
+        if let Some(flight) = self
+            .graph
+            .flights
+            .iter()
+            .find(|edge| edge.from == source && edge.to == destination)
+            .cloned()
+        {
+            let start = Vec3::from_array(*flight.points.first().ok_or("empty registered flight")?);
+            if Vec3::new(from.x, from.y, from.z).distance(start) > 0.001 {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(start));
+                return Ok(true);
+            }
+            super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+            super::movement::begin_flight(self.app.world_mut(), self.party.owner, &flight.points)?;
+            self.record_pull(source, format!("REGISTERED_FLIGHT {source}->{destination}"));
+            return Ok(true);
+        }
         if let Some(transport) = self
             .graph
             .transports

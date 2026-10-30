@@ -48,6 +48,66 @@ fn spawn_druid(h: &mut crate::spell_cast::test_harness::Harness, position: Posit
 }
 
 #[test]
+fn simulator_leader_uses_native_mount_and_area_flight_permission() {
+    let mut h =
+        crate::auras::mount_tests::rider(225, true, &[]).expect("native Golden Gryphon catalog");
+    let owner = h.caster;
+    let at = Position {
+        x: 103.0,
+        y: -34.85623,
+        z: -76.0,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((at, crate::maps::InMap::continent(34)));
+    h.app.insert_resource(GroundMap::with_area_samples(&[(
+        34,
+        Vec3::new(at.x, at.y, at.z),
+        9001,
+    )]));
+    h.app.insert_resource(areas(2));
+    crate::test_support::flight::configure_leader(h.app.world_mut(), owner).unwrap();
+    crate::test_support::flight::request_mount(h.app.world_mut(), owner).unwrap();
+    h.advance(32);
+    assert_eq!(h.app.world().get::<Mounted>(owner).unwrap().mount_id, 129);
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerMotion>(owner)
+            .unwrap()
+            .contains(PlayerMotion::CAN_FLY)
+    );
+    h.app.insert_resource(areas(0));
+    assert!(crate::test_support::flight::enter_flight(h.app.world_mut(), owner).is_err());
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerMotion>(owner)
+            .unwrap()
+            .contains(PlayerMotion::FLYING)
+    );
+    h.app.insert_resource(areas(2));
+    crate::test_support::flight::enter_flight(h.app.world_mut(), owner).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerMotion>(owner)
+            .unwrap()
+            .contains(PlayerMotion::FLYING)
+    );
+    crate::test_support::flight::land(h.app.world_mut(), owner).unwrap();
+    assert!(h.app.world().get::<Mounted>(owner).is_none());
+    assert!(
+        !h.app
+            .world()
+            .get::<PlayerMotion>(owner)
+            .unwrap()
+            .contains(PlayerMotion::FLYING)
+    );
+}
+
+#[test]
 fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
     let from = Position {
         x: 150.557,

@@ -199,6 +199,21 @@ fn build_runtime_app(
     if !reused {
         load_gameplay_data(&mut app, path);
     }
+    if !app.world().resource::<super::Space>().0.flights.is_empty() {
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open flight catalogs");
+        let root = super::graph::extraction::asset_root();
+        let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| root.join("navmesh"));
+        server::test_support::flight::install(&mut app, &db, &nav, &root)
+            .expect("install native simulator flight");
+        app.add_systems(
+            FixedUpdate,
+            server::test_support::flight::update.after(super::movement::update),
+        );
+    }
     let has_accessory_boss = app
         .world()
         .resource::<super::Space>()

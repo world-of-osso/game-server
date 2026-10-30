@@ -2,9 +2,21 @@
 use bevy::prelude::*;
 use std::path::Path;
 
-pub fn install(app: &mut App, db: &rusqlite::Connection, nav_root: &Path) -> Result<(), String> {
+pub fn install(
+    app: &mut App,
+    db: &rusqlite::Connection,
+    nav_root: &Path,
+    data_root: &Path,
+) -> Result<(), String> {
     if !app.world().contains_resource::<crate::ground::GroundMap>() {
-        app.insert_resource(super::transport::open_ground(db)?);
+        let maps = crate::maps::store::load_map_store(db)
+            .map_err(|error| format!("flight maps: {error}"))?;
+        let wdts = maps
+            .maps
+            .values()
+            .map(|entry| (entry.id, entry.wdt_file_data_id))
+            .collect();
+        app.insert_resource(crate::ground::GroundMap::new(data_root, wdts));
     }
     if !app
         .world()
