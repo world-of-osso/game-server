@@ -2,6 +2,37 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
+#[ignore = "requires Vengeance MID2 profile and world database"]
+fn live_by_the_glaive_ignores_healing_modifiers_on_real_heal() {
+    use shared::{components::Health, protocol::CombatLogKind};
+    let mut run = super::dps_parity::prepare_registered_player(581, 70448).unwrap();
+    let tank = run.actor;
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let max = run.app.world().get::<Health>(tank).unwrap().max;
+    run.app.world_mut().get_mut::<Health>(tank).unwrap().current = max * 0.5;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), tank, 428608, Some(tank), 1);
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let heal = events
+        .iter()
+        .find(|e| e.spell_id == Some(428608) && e.kind == CombatLogKind::Heal)
+        .expect("real Live by the Glaive heal");
+    assert!(
+        (heal.amount as f32 - max * 0.02).abs() <= 1.0,
+        "heal={} max={max}",
+        heal.amount
+    );
+}
+
+#[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn training_of_niuzao_tracks_live_stagger_levels() {
     use crate::auras::{self, ActiveAuras, RemoveReason};
