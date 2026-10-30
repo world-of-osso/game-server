@@ -177,6 +177,23 @@ fn matching<'a>(
 const STACKED_NEXT_SPELL_USES: &[u32] = &include!("stacked_next_spell_uses.in");
 
 fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
+    // SimC76f8118 sc_shaman.cpp2819–2823: Lightning Capacitor's dummy
+    // effect supplies its masked direct/periodic modifiers only with the shield.
+    if aura.spell_id == 462862 && matches!(effect.index, 0 | 1) {
+        let shield = world.get::<ActiveAuras>(aura.caster).is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|active| active.spell_id == 192106 && active.caster == aura.caster)
+        });
+        return if shield {
+            aura.effects
+                .iter()
+                .find(|state| state.index == 2)
+                .map_or(0.0, |state| state.amount)
+        } else {
+            0.0
+        };
+    }
     effect.amount * stack_multiplier(world, aura, effect)
 }
 
