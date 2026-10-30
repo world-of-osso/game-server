@@ -264,6 +264,7 @@ register_modules! {
     guardian_flashing_claws: (1048, "modules/guardian_flashing_claws.rs"),
     guardian_gore: (1049, "modules/guardian_gore.rs"),
     guardian_galactic: (1050, "modules/guardian_galactic.rs"),
+    guardian_fury_of_nature: (1055, "modules/guardian_fury_of_nature.rs"),
     druid_gift_of_wild: (1051, "modules/druid_gift_of_wild.rs"),
     druid_fluid_form: (1047, "modules/druid_fluid_form.rs"),
     guardian_rampant_thorn: (1044, "modules/guardian_rampant_thorn.rs"),

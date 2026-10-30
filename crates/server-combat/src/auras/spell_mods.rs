@@ -397,6 +397,20 @@ fn live_modifiers<'a>(
         .get::<ActiveAuras>(caster)
         .into_iter()
         .flat_map(move |auras| matching(auras, spell, op))
+        // SimC76f8118 sc_druid.cpp10755–10759 selects the restoration
+        // Circle effects only for Restoration, and 14254–14256 excludes
+        // Berserk/Incarnation effects 6 and 7 from action modifiers.
+        .filter(move |(aura, effect)| {
+            let spec = world
+                .get::<shared::components::ActiveSpec>(caster)
+                .map(|s| s.0);
+            !(aura.spell_id == 474530
+                && matches!(
+                    (spec, effect.index),
+                    (Some(105), 0 | 1) | (Some(102 | 103 | 104), 2 | 3)
+                ))
+                && !(matches!(aura.spell_id, 50334 | 102558) && matches!(effect.index, 5 | 6))
+        })
         // SimC76f8118 sc_monk.cpp6037–6040 disables Efficient Training effect5
         // specifically for Windwalker; its other specialization retains it.
         .filter(move |(aura, effect)| {
