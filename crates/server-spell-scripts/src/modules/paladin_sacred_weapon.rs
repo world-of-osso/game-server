@@ -33,12 +33,18 @@ fn accept_weapon_event(
     if event.target != Some(event.actor) || event.damage > 0.0 || event.heal.is_some() {
         return true;
     }
-    let Some(spell) = event.spell_id.and_then(|id| world.resource::<combat::spell_info::SpellStore>().get(id)) else {
+    let Some(spell) = event
+        .spell_id
+        .and_then(|id| world.resource::<combat::spell_info::SpellStore>().get(id))
+    else {
         return true;
     };
     // SimC76f8118 sc_paladin.cpp2509–2519 procs on the action's target.
     // A separate caster-only energize hit is not another helpful action.
-    let self_effects = spell.effects.iter().filter(|effect| effect.implicit_targets[0] == 1);
+    let self_effects = spell
+        .effects
+        .iter()
+        .filter(|effect| effect.implicit_targets[0] == 1);
     let self_effects: Vec<_> = self_effects.collect();
     !(spell.effects.iter().any(|effect| effect.effect == 2)
         && !self_effects.is_empty()
