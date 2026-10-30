@@ -340,23 +340,27 @@ pub(super) fn copy_weapon_actions(world: &mut World, caster: Entity, spell: &Spe
             );
         }
         match spell.id {
-            49998 | 50842 => {
-                let (copy, mask) = match spell.id {
-                    49998 => (49998, 1),
-                    50842 => (50842, 1),
-                    _ => unreachable!(),
-                };
+            49998 => {
                 spell_cast::cast_triggered_with_overrides(
                     world,
                     weapon,
-                    copy,
+                    49998,
                     target,
                     1,
                     TriggeredSpellOverrides {
-                        effect_mask: Some(mask),
+                        effect_mask: Some(1),
                         ..Default::default()
                     },
                 );
+            }
+            50842 => {
+                let Some(mut copy) = spell_cast::load_triggered_spell(world, 50842, 1) else {
+                    continue;
+                };
+                copy.effects.retain(|effect| effect.index == 0);
+                copy.cast_charge_mods = spell.cast_charge_mods.clone();
+                copy.cast_damage_multiplier = spell.cast_damage_multiplier;
+                spell_cast::launch_triggered_spell(world, weapon, &copy, target, 1);
             }
             206930 => {
                 let Some(mut copy) = spell_cast::load_triggered_spell(world, 228645, 1) else {
