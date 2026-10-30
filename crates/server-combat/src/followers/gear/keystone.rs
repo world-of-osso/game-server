@@ -1,7 +1,8 @@
-//! Check Mythic+ follower profile candidates against native key-level upgrade tracks.
+//! Build Mythic+ follower profile gear on native key-level upgrade tracks.
 //! A season's ChallengeModeItemBonusOverride trees gate ItemBonusListGroups (upgrade
-//! tracks) by key level; the exact rank inside a track comes from IblGroupPointsModSet,
-//! which is not exported, so a key accepts every rank of each track it reaches.
+//! tracks) by key level. GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK (user decision
+//! 2026-10-30): keep each logged item, but replace its item-level bonuses with the cap
+//! rank of the highest track the key reaches.
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
@@ -25,6 +26,8 @@ const PROFILE_LEVEL: u8 = 90;
 const MYTHIC_KEYSTONE_DIFFICULTY: u32 = 8;
 const INVENTORY_TYPE_SHIRT: u8 = 4;
 const INVENTORY_TYPE_TABARD: u8 = 19;
+/// ItemBonus kinds that set an item level (`apply_item_bonuses`).
+const ITEM_LEVEL_BONUS_KINDS: [u32; 5] = [1, 42, 49, 51, 52];
 
 #[derive(Deserialize)]
 struct Override {
@@ -135,30 +138,48 @@ impl KeystoneTracks {
             .collect()
     }
 
-    /// Lowest and highest native item level the key's tracks give `item`.
-    fn item_level_range(
+    /// The bonus list and native item level of the highest rank the key's tracks give `item`.
+    fn cap(
         &self,
         key: i32,
         item: &ItemTemplate,
         bonuses: &ItemBonusTables,
         stats: &ItemScalingTables,
-    ) -> Result<(u16, u16), String> {
-        let mut levels = Vec::new();
+    ) -> Result<(u32, u16), String> {
+        let mut best: Option<(u32, u16)> = None;
         for group in self.groups(key) {
             for &list in self.lists.get(&group).into_iter().flatten() {
-                levels.push(resolve_item_level(item, &[list], bonuses, stats)?);
+                let level = resolve_item_level(item, &[list], bonuses, stats)?;
+                if best.is_none_or(|(_, highest)| level > highest) {
+                    best = Some((list, level));
+                }
             }
         }
-        let low = levels
-            .iter()
-            .min()
-            .ok_or(format!("+{key} reaches no track"))?;
-        let high = levels
-            .iter()
-            .max()
-            .ok_or(format!("+{key} reaches no track"))?;
-        Ok((*low, *high))
+        best.ok_or(format!("+{key} reaches no track"))
     }
+}
+
+/// `bonus_list` without its item-level bonus lists, with `cap` appended.
+fn rebase_on_track(
+    bonus_list: &[u32],
+    cap: u32,
+    bonuses: &ItemBonusTables,
+) -> Result<Vec<u32>, String> {
+    let mut rebased = Vec::new();
+    for &id in bonus_list {
+        let rows = bonuses
+            .entries
+            .get(&id)
+            .ok_or(format!("ItemBonusList {id} has no native rows"))?;
+        let sets_level = rows
+            .iter()
+            .any(|row| ITEM_LEVEL_BONUS_KINDS.contains(&row.kind));
+        if !sets_level {
+            rebased.push(id);
+        }
+    }
+    rebased.push(cap);
+    Ok(rebased)
 }
 
 /// Native item level of `item` with `bonus_list` applied.
@@ -193,11 +214,21 @@ pub struct Candidate {
     pub purchases: Vec<(u32, u32, u32)>,
 }
 
+/// An equipped item rebased on the band track; enchants and gems are untouched.
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub struct BandItem {
+    pub id: u32,
+    pub bonus_ids: Vec<u32>,
+    pub item_level: u16,
+    /// The logged bonus lists' native item level.
+    pub source_item_level: u16,
+}
+
 #[derive(Debug, Serialize)]
 pub struct Verdict {
     pub key: String,
-    /// `(item, native item level)` for every resolved equipped item.
-    pub item_levels: Vec<(u32, u16)>,
+    /// Every equipped item except shirt and tabard.
+    pub items: Vec<BandItem>,
     /// Empty when the candidate qualifies.
     pub rejections: Vec<String>,
 }
@@ -247,12 +278,12 @@ impl NativeProfileData {
     pub fn validate(&self, candidate: &Candidate) -> Verdict {
         let mut verdict = Verdict {
             key: candidate.key.clone(),
-            item_levels: Vec::new(),
+            items: Vec::new(),
             rejections: Vec::new(),
         };
         for item in candidate.gear.iter().filter(|item| item.id != 0) {
-            match self.check_item(candidate.actual_key, item) {
-                Ok(Some(level)) => verdict.item_levels.push((item.id, level)),
+            match self.rebase_item(candidate.actual_key, item) {
+                Ok(Some(band_item)) => verdict.items.push(band_item),
                 Ok(None) => {}
                 Err(reason) => verdict
                     .rejections
@@ -265,8 +296,9 @@ impl NativeProfileData {
         verdict
     }
 
-    /// The item's native level, or `None` for shirt and tabard slots.
-    fn check_item(&self, key: i32, item: &SourceItem) -> Result<Option<u16>, String> {
+    /// The item on the key's track cap, or `None` for shirt and tabard slots. An item
+    /// whose rebased bonuses do not resolve to the cap level cannot take the track.
+    fn rebase_item(&self, key: i32, item: &SourceItem) -> Result<Option<BandItem>, String> {
         let template = self
             .templates
             .get(ItemDefinitionSource::Retail, item.id)
@@ -285,16 +317,23 @@ impl NativeProfileData {
                     .map_err(|_| format!("bonus ID {id:?} is not a number"))
             })
             .collect::<Result<Vec<u32>, _>>()?;
-        let level = resolve_item_level(template, &bonus_list, &self.bonuses, &self.stats)?;
-        let (low, high) =
-            self.tracks
-                .item_level_range(key, template, &self.bonuses, &self.stats)?;
-        if !(low..=high).contains(&level) {
+        let source_item_level =
+            resolve_item_level(template, &bonus_list, &self.bonuses, &self.stats)?;
+        let (cap, cap_level) = self.tracks.cap(key, template, &self.bonuses, &self.stats)?;
+        let bonus_ids = rebase_on_track(&bonus_list, cap, &self.bonuses)?;
+        let item_level = resolve_item_level(template, &bonus_ids, &self.bonuses, &self.stats)?;
+        if item_level != cap_level {
             return Err(format!(
-                "native item level {level} outside +{key} track range {low}-{high}"
+                "cannot take +{key} track cap list{cap}: native item level {item_level}, \
+                 cap {cap_level}"
             ));
         }
-        Ok(Some(level))
+        Ok(Some(BandItem {
+            id: item.id,
+            bonus_ids,
+            item_level,
+            source_item_level,
+        }))
     }
 
     fn check_talents(&self, candidate: &Candidate) -> Result<(), String> {
@@ -353,12 +392,20 @@ mod tests {
     }
 
     #[test]
-    fn wcl_candidate_items_resolve_natively_and_outliers_are_rejected() {
+    fn wcl_items_keep_their_bonuses_on_the_band_track_cap() {
         let data = native();
-        // Warcraft Logs Vayrados, +11 Ruby Life Pools: Hero6 (12854) and Champion6 (12846).
+        // Warcraft Logs Vayrados, +11 Ruby Life Pools: Hero6 (12854), Champion6 (12846)
+        // and crafted Spellbreaker's Cover, whose level comes from scaling lists
+        // 12214/13751/13836 and crafting delta 12497.
         let gear = vec![
             item(268265, &["6652", "13668", "13334", "13987", "12854"]),
             item(271463, &["6652", "13440", "13694", "13697", "12846"]),
+            item(
+                237832,
+                &[
+                    "12214", "13667", "12497", "13751", "14001", "8793", "13836", "13696",
+                ],
+            ),
             item(52019, &[]),
         ];
         let candidate = |actual_key| Candidate {
@@ -375,13 +422,33 @@ mod tests {
                 .collect(),
             purchases: Vec::new(),
         };
-        let verdict = data.validate(&candidate(11));
-        assert_eq!(verdict.item_levels, [(268265, 334), (271463, 321)]);
-        assert!(verdict.rejections.is_empty(), "{verdict:?}");
+        let band_item = |id, bonus_ids: &[u32], item_level, source_item_level| BandItem {
+            id,
+            bonus_ids: bonus_ids.to_vec(),
+            item_level,
+            source_item_level,
+        };
+        // +6-9 reaches Champion only: its cap rank 12848 (Champion 8/8).
         let verdict = data.validate(&candidate(7));
+        assert!(verdict.rejections.is_empty(), "{verdict:?}");
         assert_eq!(
-            verdict.rejections[0],
-            "item268265: native item level 334 outside +7 track range 305-328"
+            verdict.items,
+            [
+                band_item(268265, &[6652, 13668, 13334, 13987, 12848], 328, 334),
+                band_item(271463, &[6652, 13440, 13694, 13697, 12848], 328, 321),
+                band_item(237832, &[13667, 14001, 8793, 13696, 12848], 328, 331),
+            ]
+        );
+        // +10 and up reaches Hero: its cap rank 13848 (Hero 9).
+        let verdict = data.validate(&candidate(11));
+        assert!(verdict.rejections.is_empty(), "{verdict:?}");
+        let levels: Vec<_> = verdict.items.iter().map(|item| item.item_level).collect();
+        assert_eq!(levels, [344, 344, 344]);
+        assert!(
+            verdict
+                .items
+                .iter()
+                .all(|item| item.bonus_ids.ends_with(&[13848]))
         );
     }
 

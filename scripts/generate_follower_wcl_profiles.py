@@ -2,10 +2,12 @@
 """Generate Mythic+ follower profiles from selected WCL rankings.
 
 Each spec and key band tries its ranked characters in order and keeps the first
-qualified one. A character qualifies when every equipped item resolves through
-native ItemBonus inside the native upgrade tracks its actual key reaches, and its
-WCL talents pass the engine decoder (granted ranks subtracted) and strict native
-validation. Rejected characters are recorded with their reasons; nothing is patched.
+qualified one. Every logged item keeps its slot, enchant, gems and other bonuses,
+but its item-level bonuses are replaced by the cap rank of the highest native
+upgrade track its actual key reaches (GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK);
+original levels are recorded. A character qualifies when every item takes that
+track and its WCL talents pass the engine decoder (granted ranks subtracted) and
+strict native validation. Rejected characters are recorded with their reasons.
 """
 import argparse
 import hashlib
@@ -29,6 +31,7 @@ SEASON_TIME_EVENT = 1552
 # Ruby Life Pools, the ranked encounter 112521.
 RUBY_LIFE_POOLS_MAP = 2521
 TALENTS_SOURCE = "TALENTS_FROM_WCL"
+GEAR_SOURCE = "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK"
 
 
 def normalize(value):
@@ -111,8 +114,31 @@ def judge(candidates, races, decode, validate):
             reasons.append(f"talents: engine decode: {result['error']}")
         if spec_id not in races:
             reasons.append("race: unavailable in SimC and parity profiles")
-        judged.append((reasons, result["purchases"], verdict["item_levels"]))
+        judged.append((reasons, result["purchases"], verdict["items"]))
     return judged
+
+
+def band_gear(gear, band_items):
+    """Logged gear with each validated item's bonuses and level replaced; shirt, tabard
+    and empty slots, which the validator skips, stay as logged."""
+    pending = list(band_items)
+    rebased = []
+    for item in gear:
+        if not pending or item["id"] != pending[0]["id"]:
+            rebased.append(item)
+            continue
+        band_item = pending.pop(0)
+        rebased.append({
+            **item,
+            "bonusIDs": [str(bonus) for bonus in band_item["bonus_ids"]],
+            "itemLevel": band_item["item_level"],
+            "sourceBonusIDs": item.get("bonusIDs", []),
+            "sourceItemLevel": item.get("itemLevel"),
+            "sourceNativeItemLevel": band_item["source_item_level"],
+        })
+    if pending:
+        raise ValueError(f"validated item {pending[0]['id']} is not in the logged gear")
+    return rebased
 
 
 def describe(character):
@@ -129,7 +155,7 @@ def generate(source_bytes, catalog, races, decode, validate):
     candidates = collect_candidates(selected, catalog)
     judged = judge(candidates, races, decode, validate) if candidates else []
     profiles, rejected = {}, {}
-    for candidate, (reasons, purchases, item_levels) in zip(candidates, judged):
+    for candidate, (reasons, purchases, band_items) in zip(candidates, judged):
         key, spec, band, class_id, spec_id, character = candidate
         if reasons:
             rejected.setdefault(key, []).append({**describe(character), "reasons": reasons})
@@ -143,9 +169,12 @@ def generate(source_bytes, catalog, races, decode, validate):
             "key_band": band,
             **describe(character),
             "race": races[spec_id],
-            "gear": character["gear"],
-            "item_levels": item_levels,
-            "median_item_level": statistics.median(level for _, level in item_levels),
+            "gear": band_gear(character["gear"], band_items),
+            "gear_source": GEAR_SOURCE,
+            "median_item_level": statistics.median(item["item_level"] for item in band_items),
+            "source_median_item_level": statistics.median(
+                item["source_item_level"] for item in band_items
+            ),
             "talents": character["talents"],
             "talents_source": TALENTS_SOURCE,
             "talent_purchases": purchases,
@@ -161,9 +190,10 @@ def generate(source_bytes, catalog, races, decode, validate):
         "native_spec_catalog_sha256": hashlib.sha256(catalog_bytes).hexdigest(),
         "source": "Warcraft Logs characterRankings, Midnight Season 2, Ruby Life Pools encounter 112521",
         "qualification": (
-            f"items resolved through native ItemBonus inside the upgrade tracks of time event"
-            f"{SEASON_TIME_EVENT} for each actual key; {TALENTS_SOURCE} decoded by the engine"
-            " and validated strictly at level 90"
+            f"{GEAR_SOURCE}: item-level bonuses replaced by the cap rank of the highest"
+            f" time-event-{SEASON_TIME_EVENT} upgrade track each actual key reaches, resolved"
+            f" through native ItemBonus; {TALENTS_SOURCE} decoded by the engine and validated"
+            " strictly at level 90"
         ),
         "profiles": profiles,
         "rejected": rejected,

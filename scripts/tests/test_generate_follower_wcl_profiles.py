@@ -11,8 +11,11 @@ spec = importlib.util.spec_from_file_location("follower_profiles", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
+SHIRT = {"id": 52019, "itemLevel": "1", "name": "Precious's Ribbon"}
+CAPS = {7: (12848, 328), 11: (13848, 344), 12: (13848, 344)}
 
-def character(name, level, item_bonus):
+
+def character(name, level, track_bonus):
     return {
         "name": name,
         "class": "Paladin",
@@ -20,7 +23,17 @@ def character(name, level, item_bonus):
         "server": {"name": "Stormrage", "region": "US"},
         "hardModeLevel": level,
         "report": {"code": f"report-{name}", "fightID": 3},
-        "gear": [{"id": 268213, "bonusIDs": [item_bonus], "permanentEnchant": "8689"}],
+        "gear": [
+            {
+                "id": 268213,
+                "itemLevel": "341",
+                "bonusIDs": ["6652", track_bonus],
+                "permanentEnchant": "8689",
+                "gems": [{"id": "240892", "itemLevel": "295"}],
+            },
+            SHIRT,
+            {"id": 0, "itemLevel": "0", "name": "Unknown Item"},
+        ],
         "talents": [{"talentID": 102476, "points": 1}],
     }
 
@@ -31,8 +44,8 @@ class GenerateFollowerProfilesTest(unittest.TestCase):
             "paladin-retribution/10-14": {
                 "race": {},
                 "characters": [
-                    character("Overgeared", 11, "12856"),
-                    character("Example", 12, "12854"),
+                    character("Untrackable", 11, "99999"),
+                    character("Overgeared", 12, "12856"),
                 ],
             },
             "paladin-retribution/6-9": {
@@ -52,17 +65,19 @@ class GenerateFollowerProfilesTest(unittest.TestCase):
         ]
 
     def validate(self, candidates):
+        """Stands in for follower-profile-validate: bonus 99999 cannot take a track."""
         self.validated.extend(candidates)
         verdicts = []
         for candidate in candidates:
-            bonus = candidate["gear"][0]["bonusIDs"][0]
-            level = {"12856": 341, "12854": 334}[bonus]
-            high = 328 if candidate["actual_key"] <= 9 else 340
-            verdicts.append({
-                "key": candidate["key"],
-                "item_levels": [[268213, level]],
-                "rejections": [] if level <= high else [f"item268213: native item level {level}"],
-            })
+            cap, level = CAPS[candidate["actual_key"]]
+            bonus = candidate["gear"][0]["bonusIDs"][1]
+            if bonus == "99999":
+                verdict = {"items": [], "rejections": [f"item268213: cannot take track cap list{cap}"]}
+            else:
+                items = [{"id": 268213, "bonus_ids": [6652, cap], "item_level": level,
+                          "source_item_level": 341}]
+                verdict = {"items": items, "rejections": []}
+            verdicts.append({"key": candidate["key"], **verdict})
         return verdicts
 
     def generate(self):
@@ -74,23 +89,37 @@ class GenerateFollowerProfilesTest(unittest.TestCase):
             self.validate,
         )
 
-    def test_keeps_first_qualified_character_and_records_rejections(self):
+    def test_keeps_logged_items_on_the_band_track_cap(self):
         output = self.generate()
-        self.assertEqual(list(output["profiles"]), ["paladin-retribution/10-14"])
         profile = output["profiles"]["paladin-retribution/10-14"]
-        self.assertEqual(profile["character"], "Example")
+        self.assertEqual(profile["character"], "Overgeared")
         self.assertEqual((profile["class_id"], profile["spec_id"], profile["actual_key"]), (2, 70, 12))
-        self.assertEqual(profile["gear"][0]["permanentEnchant"], "8689")
-        self.assertEqual(profile["item_levels"], [[268213, 334]])
-        self.assertEqual(profile["median_item_level"], 334)
+        self.assertEqual(profile["gear_source"], "GEAR_ITEMS_FROM_WCL_ILVL_FROM_BAND_TRACK")
+        self.assertEqual(profile["gear"][0], {
+            "id": 268213,
+            "itemLevel": 344,
+            "bonusIDs": ["6652", "13848"],
+            "permanentEnchant": "8689",
+            "gems": [{"id": "240892", "itemLevel": "295"}],
+            "sourceBonusIDs": ["6652", "12856"],
+            "sourceItemLevel": "341",
+            "sourceNativeItemLevel": 341,
+        })
+        self.assertEqual(profile["gear"][1:], [SHIRT, {"id": 0, "itemLevel": "0", "name": "Unknown Item"}])
+        self.assertEqual((profile["median_item_level"], profile["source_median_item_level"]), (344, 341))
         self.assertEqual(profile["talents_source"], "TALENTS_FROM_WCL")
         self.assertEqual(profile["talent_purchases"], [[1, 102476, 1]])
         self.assertEqual(profile["race"], {"id": 3, "source": "RACE_FROM_SIMC_PROFILE"})
+        hero = output["profiles"]["paladin-retribution/6-9"]
+        self.assertEqual((hero["gear"][0]["itemLevel"], hero["gear"][0]["bonusIDs"]), (328, ["6652", "12848"]))
+
+    def test_records_characters_whose_items_cannot_take_the_track(self):
+        output = self.generate()
+        rejected = output["rejected"]["paladin-retribution/10-14"]
         self.assertEqual(
-            output["rejected"]["paladin-retribution/10-14"][0]["reasons"],
-            ["item268213: native item level 341"],
+            [(entry["character"], entry["reasons"]) for entry in rejected],
+            [("Untrackable", ["item268213: cannot take track cap list13848"])],
         )
-        self.assertEqual(output["rejected"]["paladin-retribution/6-9"][0]["character"], "Hero")
 
     def test_sends_wcl_entry_ranks_to_decoder_and_purchases_to_validator(self):
         self.generate()
