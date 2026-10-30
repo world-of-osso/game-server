@@ -636,12 +636,9 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     }
     // Positions from the physical instance10 route through the Windrunner courtyard.
     let start = Vec3::new(5358.188, 101.434, 3146.1702);
-    let corners = [
-        start,
-        Vec3::new(5365.77, 101.272, 3187.69),
-        Vec3::new(5331.647, 101.156, 3213.7322),
-    ];
-    let watcher_at = Vec3::new(5345.0, 101.115, 3180.0);
+    let end = Vec3::new(5331.647, 101.156, 3213.7322);
+    // `content_creature` GUID63805106, not an invented unsupported position.
+    let watcher_at = Vec3::new(5348.56, 101.28394, 3200.82);
     let watcher_floor = h
         .app
         .world_mut()
@@ -692,16 +689,13 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 .unwrap()
         })
         .collect();
-    eprintln!(
-        "CURVE_TEST radii={radii:?} start={start:?} end={:?}",
-        corners[2]
-    );
+    eprintln!("CURVE_TEST radii={radii:?} start={start:?} end={:?}", end);
     let mut collision = los::LosMap::new(&assets().join(format!("los/{map_id}")));
     let mut nav =
         ::navigation::NavigationMap::open(&navigation_root().join(map_id.to_string())).unwrap();
     let mut direct = vec![start];
     direct.extend(
-        nav.complete_walk_path(start, corners[2])
+        nav.complete_walk_path(start, end)
             .expect("direct corridor must exist"),
     );
     assert!(
@@ -711,16 +705,53 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
                 |leg| super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
                     < radii[0] * radii[0]
             ),
-        "direct follower corridor must cross the watcher radius"
+        "direct follower corridor must cross the watcher radius: {direct:?}"
     );
-    let mut owner_route = vec![start];
-    for leg in corners.windows(2) {
-        let points = nav
-            .complete_walk_path(leg[0], leg[1])
-            .expect("owner's curved route must be walkable");
-        assert!(points.last().is_some_and(|end| end.distance(leg[1]) < 1.0));
-        owner_route.extend(points);
+    let mut owner_route = None;
+    'search: for radius in [20.0_f32, 25.0, 30.0, 35.0] {
+        for index in 0..16 {
+            let angle = index as f32 * std::f32::consts::TAU / 16.0;
+            let mut waypoint =
+                watcher_at + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
+            let GroundProbe::Supported(height) = h
+                .app
+                .world_mut()
+                .resource_mut::<GroundMap>()
+                .ground_at(map_id, waypoint)
+            else {
+                continue;
+            };
+            if (height - watcher_at.y).abs() >= 1.0 {
+                continue;
+            }
+            waypoint.y = height;
+            let Ok(first) = nav.complete_walk_path(start, waypoint) else {
+                continue;
+            };
+            let Ok(second) = nav.complete_walk_path(waypoint, end) else {
+                continue;
+            };
+            if first.last().is_none_or(|p| p.distance(waypoint) >= 1.0)
+                || second.last().is_none_or(|p| p.distance(end) >= 1.0)
+            {
+                continue;
+            }
+            let mut route = vec![start];
+            route.extend(first);
+            route.extend(second);
+            let safe = route.windows(2).all(|leg| {
+                super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
+                    >= (radii[0] + 1.0).powi(2)
+                    && collision.clear(leg[0] + Vec3::Y, leg[1] + Vec3::Y).unwrap()
+            });
+            if safe {
+                owner_route = Some(route);
+                break 'search;
+            }
+        }
     }
+    let owner_route = owner_route.expect("a grounded curved owner route must avoid the watcher");
+    eprintln!("CURVE_TEST safe owner route: {owner_route:?}");
     let mut owner_steps = 0;
     let mut observed_unsafe_corridor = false;
     for leg in owner_route.windows(2) {
@@ -823,7 +854,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     for unit in followers {
         let feet = point(*h.app.world().get::<Position>(unit).unwrap());
         assert!(
-            feet.distance(corners[2]) < 8.0,
+            feet.distance(end) < 8.0,
             "follower did not arrive: {feet:?}"
         );
     }
