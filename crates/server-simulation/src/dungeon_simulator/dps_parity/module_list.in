@@ -259,6 +259,7 @@ mod guardian_berserk_form_tests;
 mod guardian_flashing_claws_tests;
 mod guardian_galactic_tests;
 mod guardian_gore_tests;
+mod guardian_item_haste_tests;
 mod guardian_lunar_beam_tests;
 mod guardian_lycaras_tests;
 mod guardian_matted_rank_tests;
