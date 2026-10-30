@@ -1755,7 +1755,7 @@ struct Run {
     waiting_objective: Option<(u32, f64)>,
     last_progress: f64,
     event_cursor: usize,
-    best_routes: BTreeMap<Entity, (Vec3, f32)>,
+    best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
     next_cohesion_check: f64,
     waiting_for_tank: bool,
     last_resources: Vec<(Option<f32>, Option<f32>)>,

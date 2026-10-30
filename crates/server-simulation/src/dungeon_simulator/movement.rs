@@ -32,12 +32,32 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     }
 }
 
-pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(Vec3, f32)> {
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum RouteGoal {
+    Point(Vec3),
+    Unit(Entity),
+}
+
+pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal, f32)> {
     let travel = world.get::<Travel>(unit)?;
-    Some((
-        travel.destination,
-        travel.legs.iter().map(|(_, yards)| yards).sum(),
-    ))
+    let goal = if world.get::<MoveIntent>(unit).is_some()
+        || world.get::<crate::creature_ai::CreatureState>(unit)
+            == Some(&crate::creature_ai::CreatureState::Returning)
+    {
+        RouteGoal::Point(travel.destination)
+    } else if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
+        world.get::<crate::creature_ai::CreatureState>(unit)
+    {
+        RouteGoal::Unit(Entity::try_from_bits(*target)?)
+    } else if let Some(follow) = world
+        .get::<crate::creature_ai::FollowOwner>(unit)
+        .filter(|follow| follow.owner != unit)
+    {
+        RouteGoal::Unit(follow.owner)
+    } else {
+        RouteGoal::Point(travel.destination)
+    };
+    Some((goal, travel.legs.iter().map(|(_, yards)| yards).sum()))
 }
 
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
