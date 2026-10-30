@@ -198,6 +198,24 @@ fn follower_dps_production_dummy() {
             *casts.entry(id).or_default() += 1;
         }
     }
+    assert!(
+        app.world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current
+            > 0.0,
+        "follower died before completing the dummy measurement"
+    );
+    if entry == 209065 {
+        assert!(
+            incoming.iter().all(|event| event.spell_id != Some(321538)),
+            "owned pets must not apply Bloodshed to the follower"
+        );
+        assert!(
+            damage.get(&321538).is_some_and(|amount| *amount > 0),
+            "owned pets must damage the selected enemy with Bloodshed"
+        );
+    }
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seconds":120,"sheet":sheet,
