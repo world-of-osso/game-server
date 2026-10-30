@@ -429,6 +429,67 @@ fn encounter_coverage_lost_dwarves_surrender_stops_garrick_and_player_attacks() 
 }
 
 #[test]
+fn encounter_coverage_lost_dwarves_surrender_removes_garrick_threat_and_preserves_other_combat() {
+    let (mut h, boss, map) = dwarf_copy(DWARVES[0], 205);
+    let owner = h.player();
+    let garrick = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209057)
+        .expect("authored Garrick follower");
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (other, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[1], map, 205);
+    crate::creature_aggro::add_threat(h.app.world_mut(), garrick, boss, 100.0);
+    crate::creature_aggro::add_threat(h.app.world_mut(), garrick, other, 80.0);
+    assert!(crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        garrick,
+        boss
+    ));
+    assert!(
+        h.app
+            .world()
+            .get::<ThreatTable>(garrick)
+            .unwrap()
+            .entries()
+            .iter()
+            .any(|entry| entry.entity == boss.to_bits())
+    );
+    h.engage(boss);
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert!(!crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        garrick,
+        boss
+    ));
+    assert!(
+        !h.app
+            .world()
+            .get::<ThreatTable>(garrick)
+            .unwrap()
+            .entries()
+            .iter()
+            .any(|entry| entry.entity == boss.to_bits())
+    );
+    assert!(crate::combat_refs::has_active_reference_to(
+        h.app.world(),
+        garrick,
+        other
+    ));
+    assert!(
+        h.app
+            .world()
+            .get::<ThreatTable>(garrick)
+            .unwrap()
+            .entries()
+            .iter()
+            .any(|entry| entry.entity == other.to_bits())
+    );
+    assert!(h.app.world().get::<CombatStatus>(garrick).unwrap().0);
+    crate::combat::combat_stop(h.app.world_mut(), other);
+    assert!(!h.app.world().get::<CombatStatus>(garrick).unwrap().0);
+}
+
+#[test]
 fn encounter_coverage_lost_dwarves_evade_restores_partial_surrender_progress() {
     let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
     let conn =
