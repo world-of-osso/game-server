@@ -62,6 +62,41 @@ fn freeze_native_corridor_inputs() {
             "position":[position.x,position.y,position.z]}),
         );
     }
+    let present: std::collections::BTreeSet<u32> = sources
+        .iter()
+        .filter_map(|source| source["guid"].as_u64().map(|guid| guid as u32))
+        .collect();
+    let data = app.world().resource::<crate::world_data::WorldData>();
+    let withheld = data
+        .script_spawn_groups
+        .values()
+        .flatten()
+        .copied()
+        .collect();
+    let content = crate::zones::MapContent {
+        map: copy,
+        difficulty_id: graph.difficulty_id(),
+        dead_bosses: Vec::new(),
+    };
+    let mut deferred = Vec::new();
+    for spawn in graph
+        .packs
+        .iter()
+        .flat_map(|pack| &pack.spawns)
+        .filter(|spawn| !present.contains(&spawn.guid))
+    {
+        let actual = data
+            .spawns
+            .iter()
+            .find(|row| row.guid == spawn.guid)
+            .expect("graph source missing from native catalog");
+        assert!(
+            crate::zones::script_withholds_spawn(&withheld, &content, actual),
+            "missing source{} is not script-withheld",
+            spawn.guid
+        );
+        deferred.push(spawn.guid);
+    }
     let levels: Vec<_> = members
         .iter()
         .map(|member| {
@@ -73,7 +108,7 @@ fn freeze_native_corridor_inputs() {
         .collect();
     let value = serde_json::json!({"map_id":graph.map_id,"boss_entries":graph.boss_entries(),
         "party_levels":levels,"qualification_seed":0,"radius_source":"native AggroDistance::center_radius; maximum over default party",
-        "sources":sources});
+        "sources":sources,"deferred":deferred});
     let path = graph_path().with_file_name(format!(
         "{}-corridor-inputs.json",
         graph_path().file_stem().unwrap().to_string_lossy()

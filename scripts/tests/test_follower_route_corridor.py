@@ -75,6 +75,15 @@ class CorridorPlanning(unittest.TestCase):
         result = plan_route(graph, profile, requirements)
         self.assertEqual([step["pack"] for step in result["route"]], [2, 3])
 
+    def test_script_withheld_source_has_no_invented_aggro_radius(self):
+        graph, profile, requirements = fixture()
+        profile['sources'] = [source for source in profile['sources'] if source['guid'] != 4]
+        profile['deferred'] = [4]
+        self.assertEqual([step['pack'] for step in plan_route(graph, profile, requirements)['route']], [2, 3])
+        profile['deferred'] = []
+        with self.assertRaisesRegex(ValueError, 'recapture native corridor inputs'):
+            plan_route(graph, profile, requirements)
+
     def test_directed_translocation_does_not_expose_the_in_between_space(self):
         graph, profile, requirements = fixture()
         graph["packs"] = [
