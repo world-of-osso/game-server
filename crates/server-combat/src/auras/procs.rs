@@ -121,6 +121,8 @@ const PPM_MAX_ATTEMPT_GAP: f64 = 10.0;
 pub struct AuraEvent {
     pub actor: Entity,
     pub target: Option<Entity>,
+    /// The cast's selected primary, distinct from an effect's recipient.
+    pub action_target: Option<Entity>,
     pub actor_mask: [u32; 2],
     pub target_mask: [u32; 2],
     pub spell_id: Option<u32>,

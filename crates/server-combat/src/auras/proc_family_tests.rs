@@ -16,6 +16,7 @@ fn festering_wound_grants(spell: u32) -> usize {
         AuraEvent {
             actor: h.caster,
             target: Some(h.npc),
+            action_target: None,
             actor_mask: [PROC_DEAL_MELEE_ABILITY, 0],
             target_mask: [0; 2],
             spell_id: Some(spell),

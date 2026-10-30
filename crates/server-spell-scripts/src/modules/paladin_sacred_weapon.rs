@@ -28,7 +28,7 @@ fn register(scripts: &mut AuraScripts) {
     script.on_apply = Some(restore_weapon_clock);
     script.before_remove_reactions = Some(save_weapon_clock);
     script.check_proc = Some(accept_weapon_event);
-    script.on_proc = Some(wield_sacred_weapon);
+    script.on_damage_proc = Some(wield_sacred_weapon);
 }
 
 // SimC76f8118 sc_paladin.cpp2813–2822,3313–3314 keeps one callback
@@ -75,9 +75,19 @@ fn wield_sacred_weapon(
     world: &mut World,
     unit: Entity,
     _aura: &AuraInstance,
-    other: Option<Entity>,
+    event: &combat::auras::procs::AuraEvent,
 ) {
-    let target = other.unwrap_or(unit);
+    // SimC76f8118 sc_paladin_protection.cpp636–658: Blessed Hammer's
+    // foreground action targets the enemy even though it energizes its caster.
+    let target = if event.spell_id == Some(204019) {
+        event.action_target
+    } else {
+        event.target
+    };
+    let Some(target) = target else {
+        error!(?unit, spell = ?event.spell_id, "Sacred Weapon proc has no action target");
+        return;
+    };
     if targets::relation_matches(world, unit, target, Relation::Enemy) {
         combat::spell_cast::cast_triggered(world, unit, STRIKE, Some(target), 1);
         super::paladin_armaments::roll_reflection_of_radiance(world, unit, REFLECTION_CHANCE);
