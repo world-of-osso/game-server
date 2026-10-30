@@ -7,6 +7,8 @@ use crate::maps::{InMap, MapStore, WorldLocation};
 use crate::navigation::{Goal, Navigation};
 use ::navigation::worker::{Output, Query};
 
+const FOLLOWER_RELEASE_MAX_WALK_SECONDS: f32 = 120.0;
+
 pub(super) fn update(world: &mut World) {
     let dead: Vec<_> = world
         .query::<(Entity, &Follower, &crate::combat::Corpse)>()
@@ -61,10 +63,27 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) {
             to: point(owner_position),
         },
     );
-    if !matches!(result, Some(Ok(Some(Output::Path(path)))) if path.complete) {
+    let Some(Ok(Some(Output::Path(path)))) = result else {
+        return;
+    };
+    if !path.complete {
         return;
     }
-    nav.cancel_query(unit, Goal::FollowerRelease);
+    let speed = crate::creature_ai::BASE_RUN_SPEED
+        * world
+            .get::<crate::auras::AuraStatMods>(unit)
+            .map_or(1.0, |mods| mods.movement_speed);
+    let distance: f32 = path
+        .points
+        .windows(2)
+        .map(|pair| pair[0].distance(pair[1]))
+        .sum();
+    if speed <= 0.0 || distance > speed * FOLLOWER_RELEASE_MAX_WALK_SECONDS {
+        return;
+    }
+    world
+        .resource_mut::<Navigation>()
+        .cancel_query(unit, Goal::FollowerRelease);
     revive_at_release(world, unit, owner, &destination);
 }
 

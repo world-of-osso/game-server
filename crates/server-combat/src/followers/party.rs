@@ -987,9 +987,10 @@ mod copy_tests {
     }
 
     #[test]
-    fn unreachable_follower_corpse_accepts_a_real_resurrection_in_place() {
+    fn follower_release_distant_walkable_corpse_waits_for_real_resurrection() {
         use shared::components::{Health, Position};
         let (fixture_app, _, mut run) = fixture();
+        let entrance = run.dungeon.entrance.bevy_position();
         let store = fixture_app
             .world()
             .resource::<crate::maps::MapStore>()
@@ -1012,7 +1013,7 @@ mod copy_tests {
             copy,
             Position {
                 x: 1403.56,
-                y: 10000.0,
+                y: 128.0,
                 z: 173.39,
             },
         ));
@@ -1029,11 +1030,46 @@ mod copy_tests {
             crate::combat::CorpseDelay(60.0),
         ));
         crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
-        super::super::release::update(h.app.world_mut());
-        h.app
-            .world_mut()
-            .resource_mut::<crate::navigation::Navigation>()
-            .drain_until_idle();
+        let mods = crate::auras::AuraStatMods {
+            movement_speed: 0.01,
+            ..Default::default()
+        };
+        h.app.world_mut().entity_mut(target).insert(mods);
+        let start = Vec3::new(entrance.x, entrance.y, entrance.z);
+        let end = Vec3::new(1403.56, 128.0, 173.39);
+        let query = ::navigation::worker::Query::FollowPath {
+            from: start,
+            to: end,
+        };
+        {
+            let mut nav = h
+                .app
+                .world_mut()
+                .resource_mut::<crate::navigation::Navigation>();
+            nav.query_deferred(
+                target,
+                copy.map_id,
+                crate::navigation::Goal::FollowerRelease,
+                query.clone(),
+            );
+            nav.drain_until_idle();
+            let result = nav.query_deferred(
+                target,
+                copy.map_id,
+                crate::navigation::Goal::FollowerRelease,
+                query,
+            );
+            let Some(Ok(Some(::navigation::worker::Output::Path(path)))) = result else {
+                panic!("expected a complete walkable path");
+            };
+            assert!(path.complete);
+            let distance: f32 = path
+                .points
+                .windows(2)
+                .map(|pair| pair[0].distance(pair[1]))
+                .sum();
+            assert!(distance > 7.0 * 0.01 * 120.0);
+        }
         super::super::release::update(h.app.world_mut());
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
         crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
