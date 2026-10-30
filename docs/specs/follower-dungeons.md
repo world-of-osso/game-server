@@ -384,7 +384,7 @@ Idle follow and combat/heal approach choices for non-tank followers must not cro
 
 ## Log-derived population policy
 
-`MURDER_ROW_STALKER_HOSTILE_FACTION_UNSOURCED`: Stalker 234359 has source faction 0 and a HOSTILE combat-log reaction. Its observed spawn is near the follower entrance, but its role in the clear and a valid hostile faction remain unproved.
+`FACTION_FROM_COMBATLOG_HOSTILE_PACKMATE`: Murder Row Stalker 234359 has source faction 0 and only HOSTILE log reactions. It uses faction 16 from nearby Row Hooligan 236073, which was fought on the follower route. The donor's nearby placement is Wowhead-derived, not a native TDB spawn. Mixed HOSTILE/NEUTRAL observations remain gaps.
 
 Known boss placements require the last positioned observation before their encounter starts. If none is observed, report `BOSS_PRE_PULL_POSITION_UNOBSERVED`; do not substitute a first cast or a post-pull position.
 
