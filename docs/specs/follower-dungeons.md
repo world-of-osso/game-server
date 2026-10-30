@@ -342,6 +342,10 @@ After encounter 2609 is Done, interaction with the lower Radiant Drake 194667 ca
 
 Source: https://gist.github.com/aquadeus/073cdfe1f5f64d275c002bd26f69d642 ; captured Wowhead NPC 194654 ability list; local 70448 `taxi_path_node` and `spell_effect`; `/home/osso/.worktrees/ruby-walk/upper-floor-samples.json`.
 
+### Academy follower clear evidence
+
+On October 30, 2026, an ordinary follower-LFG run on map 2526, difficulty 205, instance 13 cleared Vexamus (2562), Overgrown Ancient (2563), Crawth (2564) and Echo of Doragosa (2565). An Arcane Mage owner walked with Protection Paladin, Restoration Druid, Elemental Shaman and Fire Mage followers. All five were alive at the end. After the first three credits, bramble GO 382475 reported state 0 and collision disabled, and the party passed it on foot. The client reconnected during Doragosa after the driver lost cast range; followers completed the encounter during regroup. The tracker showed all four checks and `list-achievements` reported character achievement 16269. `LFG_FINISHED_DUNGEON_STATE_UNPORTED` remains a gap; this is not proof of that state. Evidence: `/home/osso/.worktrees/academy-walk-evidence/full-clear-v29{,-resume}.log`. Both-skin captures for each boss: `/syncthing/AgentShared/2026-10-29/academy-walk/<entry>-{forever,modern}.webp`.
+
 ### Academy Eagle population
 
 `EAGLE_SPAWNS_SINGLE_RUN` uses the three first observed Alpha Eagle192333 positions in WCL `gWkPyzwJ2mbxRtdr` fight3, with navmesh detail heights. The existing multi-run matcher cannot identify individual eagles across runs: candidate spreads are 12–14yd. The user approved this one-run population because all three runs contain three eagles in the same area; `tjnzpa3Axg6QLHfJ` fight1 and `BVaP1FzZW9rbyTv6` fight7 corroborate the group. First combat observations are not authored spawn points; patrols remain unknown. TDB records faction0 for both Alpha and Territorial Eagles; WCL identifies the Alpha Eagles as hostile. The project uses Crawth's TDB faction16 for the Alpha Eagle runtime template until the authored eagle faction is available.
