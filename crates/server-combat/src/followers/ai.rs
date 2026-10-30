@@ -552,9 +552,11 @@ pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
         return;
     }
     let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, owner) else {
+        debug!(?unit, ?owner, "Follower regroup waiting for a hazard route");
         return;
     };
     if unsafe_approach {
+        debug!(?unit, ?owner, "Follower regroup held by hostile hazard");
         world
             .entity_mut(unit)
             .remove::<FollowOwner>()
