@@ -232,6 +232,48 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
 }
 
 #[test]
+fn unattackable_objective_is_approached_using_its_live_position() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let boss = run.actors[&20375720];
+    let pack = run
+        .graph
+        .route
+        .iter()
+        .find(|step| step.pack == 20375720)
+        .unwrap()
+        .clone();
+    run.graph.route = vec![pack];
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let moved = Position {
+        x: at.x + 2.0,
+        ..at
+    };
+    run.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(moved)
+        .remove::<crate::creature_aggro::AggroRange>();
+    run.control().unwrap();
+    let target = run
+        .app
+        .world()
+        .get::<MoveIntent>(run.party.owner)
+        .expect("walk toward gated objective");
+    assert_eq!(target.0, Vec3::new(moved.x, moved.y, moved.z));
+    run.app
+        .world_mut()
+        .entity_mut(run.party.owner)
+        .insert(moved);
+    run.control().unwrap();
+    run.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .advance_by(std::time::Duration::from_secs(61));
+    assert!(run.stalled());
+    assert!(run.report.detail.contains("OBJECTIVE_NOT_ATTACKABLE"));
+}
+
+#[test]
 #[ignore = "requires extracted Neltharus follower graph"]
 fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -1464,6 +1506,7 @@ struct Run {
     objects: BTreeMap<u32, Entity>,
     report: Report,
     current_pack: Option<u32>,
+    waiting_objective: Option<(u32, f64)>,
     last_progress: f64,
     event_cursor: usize,
     last_owner_position: Vec3,
@@ -1663,6 +1706,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         actors,
         objects,
         current_pack: None,
+        waiting_objective: None,
         last_progress: 0.0,
         event_cursor: 0,
         last_owner_position,
@@ -1900,6 +1944,15 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if let Some(copy) = self
+            .app
+            .world()
+            .get::<crate::maps::InMap>(self.party.owner)
+            .copied()
+        {
+            self.actors
+                .extend(runtime::live_population(self.app.world_mut(), copy));
+        }
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
@@ -1950,6 +2003,45 @@ impl Run {
             .unwrap();
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        let attackable = self
+            .app
+            .world()
+            .get::<crate::creature_aggro::AggroRange>(target)
+            .is_some()
+            && crate::spell_cast::targets::relation_matches(
+                self.app.world(),
+                self.party.owner,
+                target,
+                crate::spell_cast::targets::Relation::Enemy,
+            );
+        if !attackable {
+            let owner = *self
+                .app
+                .world()
+                .get::<Position>(self.party.owner)
+                .ok_or("objective owner absent")?;
+            let owner_position = Vec3::new(owner.x, owner.y, owner.z);
+            if owner_position.distance(to) > 1.0 {
+                self.waiting_objective = None;
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(to));
+            } else {
+                if self
+                    .waiting_objective
+                    .is_none_or(|(pack, _)| pack != pack_id)
+                {
+                    self.waiting_objective = Some((pack_id, self.now()));
+                }
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
+            }
+            return Ok(());
+        }
+        self.waiting_objective = None;
         if from.distance(to) > range {
             let approach = if self.actors.get(&pack_id) == Some(&target) {
                 Vec3::from_array(step.anchor)
@@ -1975,7 +2067,9 @@ impl Run {
             .spawns
             .iter()
             .filter(|spawn| {
-                crate::spell_cast::targets::is_alive(self.app.world(), self.actors[&spawn.guid])
+                self.actors.get(&spawn.guid).is_some_and(|actor| {
+                    crate::spell_cast::targets::is_alive(self.app.world(), *actor)
+                })
             })
             .map(|spawn| spawn.guid)
             .collect();
@@ -2146,19 +2240,27 @@ impl Run {
             let target = pack
                 .spawns
                 .iter()
-                .map(|spawn| self.actors[&spawn.guid])
-                .find(|actor| {
+                .filter_map(|spawn| {
+                    self.actors
+                        .get(&spawn.guid)
+                        .copied()
+                        .map(|actor| (spawn, actor))
+                })
+                .find(|(spawn, actor)| {
                     crate::spell_cast::targets::is_alive(world, *actor)
-                        && world
-                            .get::<crate::creature_aggro::AggroRange>(*actor)
-                            .is_some()
-                        && crate::spell_cast::targets::relation_matches(
-                            world,
-                            self.party.owner,
-                            *actor,
-                            crate::spell_cast::targets::Relation::Enemy,
-                        )
-                })?;
+                        && (self.graph.boss_entries().contains(&spawn.entry)
+                            || self
+                                .graph
+                                .follower_boss_sources
+                                .values()
+                                .any(|entry| *entry == spawn.entry)
+                            || crate::spell_cast::targets::is_hostile(
+                                world,
+                                self.party.owner,
+                                *actor,
+                            ))
+                })?
+                .1;
             Some((pack.id, target))
         })
     }
@@ -2215,6 +2317,14 @@ impl Run {
     }
 
     fn stalled(&mut self) -> bool {
+        if let Some((pack, since)) = self.waiting_objective
+            && self.now() - since >= STALL_SECONDS
+        {
+            self.report.status = "stalled".into();
+            self.report.detail =
+                format!("OBJECTIVE_NOT_ATTACKABLE: pack{pack} remained gated for 60s");
+            return true;
+        }
         let resource_gain = self.observe_resource_gain();
         let world = self.app.world();
         let events = &world

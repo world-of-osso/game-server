@@ -329,7 +329,13 @@ pub(super) fn spawn_population(
             );
         });
     queue.apply(app.world_mut());
-    let world = app.world_mut();
+    live_population(app.world_mut(), copy)
+}
+
+pub(super) fn live_population(
+    world: &mut World,
+    copy: crate::maps::InMap,
+) -> std::collections::BTreeMap<u32, Entity> {
     world
         .query::<(Entity, &crate::zones::CreatureOrigin, &crate::maps::InMap)>()
         .iter(world)
