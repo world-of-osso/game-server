@@ -866,7 +866,7 @@ pub(super) fn apply_simc_dummy_debuffs(
     Ok(())
 }
 
-fn configure_trace_attacker(
+pub(super) fn configure_trace_attacker(
     world: &mut World,
     source: Entity,
     player_level: u8,

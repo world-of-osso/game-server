@@ -62,20 +62,11 @@ fn follower_dps_loads_spell_and_item_catalogs_from_selected_database() {
     );
 }
 
-#[test]
-#[ignore = "production follower single-target throughput diagnostic"]
-fn follower_dps_production_dummy() {
-    let entry: u32 = std::env::var("FOLLOWER_DPS_ENTRY")
-        .unwrap()
-        .parse()
-        .unwrap();
-    let level: u8 = std::env::var("FOLLOWER_DPS_LEVEL")
-        .unwrap()
-        .parse()
-        .unwrap();
-    let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
-    let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
-    let _seed = crate::random::seed_scope(seed);
+fn prepare_follower(
+    entry: u32,
+    level: u8,
+    map: u32,
+) -> (App, Entity, Entity, crate::followers::Profile) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB")
         .expect("FOLLOWER_DPS_WORLD_DB must name the measurement snapshot");
     let mut app = build_follower_app(std::path::Path::new(&path));
@@ -142,6 +133,113 @@ fn follower_dps_production_dummy() {
     app.world_mut()
         .entity_mut(target)
         .remove::<shared::level_scaling::LevelScaling>();
+    (app, actor, target, profile)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
+fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    use shared::components::Health;
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, source, _) = prepare_follower(209057, 90, 2813);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::LiteralParityFixture);
+    for _ in 0..5 {
+        app.update();
+    }
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("tank trace");
+    let mut scenario = super::follower_tank_scenario::TankScenario::read(
+        std::path::Path::new(&trace),
+        app.world_mut(),
+        source,
+        actor,
+        90,
+    )
+    .unwrap();
+    scenario.advance(app.world_mut(), 2000).unwrap();
+    let hit = |outcome: &str| Hit {
+        tick: 40,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 10_000_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: outcome.into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(app.world_mut(), source, actor, &hit("Hit")).unwrap();
+    assert_eq!(app.world().get::<Health>(actor).unwrap().current, 1.0);
+    assert!(
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(source.to_bits())
+                && event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert!(crate::auras::has_aura(app.world(), actor, 85043));
+    let shield = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 31935, Some(source), false).unwrap();
+    let remaining = |app: &App| {
+        app.world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(&shield, crate::spell_cast::now(app.world()))
+    };
+    assert!(remaining(&app) > 0);
+    let mut reset = false;
+    for _ in 0..40 {
+        crate::combat::replay_healer_hit(app.world_mut(), source, actor, &hit("Dodge")).unwrap();
+        if remaining(&app) == 0 {
+            reset = true;
+            break;
+        }
+        for _ in 0..21 {
+            app.update();
+        }
+    }
+    assert!(
+        reset,
+        "avoidance after lethal damage must still trigger Grand Crusader"
+    );
+    assert!(app.world().get::<Health>(actor).unwrap().current > 0.0);
+}
+
+#[test]
+#[ignore = "production follower single-target throughput diagnostic"]
+fn follower_dps_production_dummy() {
+    let entry: u32 = std::env::var("FOLLOWER_DPS_ENTRY")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let level: u8 = std::env::var("FOLLOWER_DPS_LEVEL")
+        .unwrap()
+        .parse()
+        .unwrap();
+    let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
+    let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
+    let _seed = crate::random::seed_scope(seed);
+    let (mut app, actor, target, profile) = prepare_follower(entry, level, map);
+    let armor = app
+        .world()
+        .get::<crate::level_scaling::CreatureArmor>(target)
+        .unwrap()
+        .0;
     let owner = app
         .world()
         .get::<crate::followers::Follower>(actor)
@@ -150,6 +248,22 @@ fn follower_dps_production_dummy() {
     for _ in 0..5 {
         app.update();
     }
+    let mut tank_scenario = if profile.role == shared::group::GroupRole::Tank {
+        let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE")
+            .expect("tank measurements require a SimC tank dummy trace");
+        Some(
+            super::follower_tank_scenario::TankScenario::read(
+                std::path::Path::new(&trace),
+                app.world_mut(),
+                target,
+                actor,
+                level,
+            )
+            .expect("load SimC tank dummy trace"),
+        )
+    } else {
+        None
+    };
     app.world_mut()
         .entity_mut(owner)
         .insert(crate::networking::CombatTarget(Some(target)));
@@ -226,6 +340,11 @@ fn follower_dps_production_dummy() {
         || std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some();
     let mut stat_sums = [0.0f64; 6];
     for frame in 0..2400 {
+        if let Some(scenario) = &mut tank_scenario {
+            scenario
+                .advance(app.world_mut(), (frame + 1) * 50)
+                .expect("replay SimC tank pressure");
+        }
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
         let mut health = app
             .world_mut()
