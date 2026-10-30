@@ -491,6 +491,12 @@ impl MapStore {
             })
     }
 
+    /// Dungeon entry: use the authored incoming portal, then the imported entrance safe location.
+    pub fn dungeon_entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
+        self.entrance_location(map_id)
+            .or_else(|| self.safe_entrance_location(map_id))
+    }
+
     /// First imported entrance safe location, including follower entrance projections.
     pub fn safe_entrance_location(&self, map_id: u32) -> Option<WorldLocation> {
         self.safe_entrances.get(&map_id).copied()
@@ -533,6 +539,17 @@ impl MapStore {
             ..Default::default()
         }
     }
+}
+
+/// Load the same dungeon entrance sources used by the full map store.
+pub fn load_entrance_store(conn: &Connection) -> rusqlite::Result<MapStore> {
+    let safe_locs = load_safe_locs(conn)?;
+    Ok(MapStore {
+        area_triggers: load_area_triggers(conn, &safe_locs)?,
+        safe_entrances: load_safe_entrances(conn, &safe_locs)?,
+        safe_locs,
+        ..Default::default()
+    })
 }
 
 pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {

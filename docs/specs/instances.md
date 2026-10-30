@@ -20,6 +20,8 @@ Dungeons phases 1 and 4: several maps in one world, far teleports between them, 
 - [x] A player in a transfer does not move, fall or fight.
 
 ### Dungeon copies (`MapManager::CreateMap` MapManager.cpp:154-235, `FindInstanceIdForPlayer` :278-319)
+
+- Dungeon login after a copy resets, dungeon release when no graveyard or exit exists, and the follower catalog use the same entrance: the incoming authored portal target first, then the map's imported entrance safe location. A missing entrance fails explicitly.
 - [x] Five-player dungeons (`InstanceType` 1): a copy is created at the entrant's dungeon difficulty (the group's in a group), downscaled to one the map's `MapDifficulty.db2` offers (`GetDownscaledMapDifficultyData`: the difficulty, else its `Difficulty.db2` `FallbackDifficultyID` chain Mythic → Heroic → Normal, else the map's default). The Stockade (Normal only) opens a Normal copy at Heroic and Mythic; a map offering none answers `TRANSFER_ABORT_DIFFICULTY` ("Heroic difficulty mode is not available for %s."). Scenarios and battlegrounds are refused (`MapNotAllowed`); [raid entry](raid-entry.md) extends the same manager for raids.
 - [x] Without a reset schedule (`ResetInterval` 0: Normal) a group enters its most recent copy of the map (`Group::GetRecentInstanceId`), a player without a group its own (`Player::GetRecentInstanceId`); without one a copy is created and remembered. Deviation: a remembered copy at another difficulty is not re-entered (TrinityCore would enter it when a difficulty change could not reset it).
 - [x] With a reset schedule the instance owner's lock names the copy (see Instance locks); the owner is the player, or the group's recent instance owner, else its leader (`Group::GetRecentInstanceOwner`).
