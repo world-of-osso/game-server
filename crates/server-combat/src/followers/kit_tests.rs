@@ -134,6 +134,63 @@ fn follower_kit_henry32_serenity() {
 }
 
 #[test]
+fn follower_uses_equipped_freightrunners_flask_in_combat() {
+    use crate::stats::{EquippedItemModifiers, EquippedItems};
+    use shared::item_data::ItemDefinitionSource;
+    use shared::protocol::EquipmentSlot;
+    let (mut h, unit) = at_level_unengaged(209053, 90, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    let path = crate::test_data::world_db_path();
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    let db =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app.insert_resource(crate::stats::NativeItemInstances {
+        bonuses: crate::item_instance::load::load_bonus_tables(&db).unwrap(),
+        enchants: crate::item_instance::load::load_enchantment_tables(&db).unwrap(),
+        effects: crate::item_instance::load::load_item_effect_tables(&db).unwrap(),
+    });
+    h.app.world_mut().entity_mut(unit).insert((
+        EquippedItems {
+            items: vec![(
+                EquipmentSlot::Trinket1,
+                ItemDefinitionSource::Retail,
+                250215,
+            )],
+        },
+        EquippedItemModifiers {
+            items: vec![(
+                EquipmentSlot::Trinket1,
+                crate::item_instance::ItemInstanceModifiers {
+                    item_level_override: Some(214),
+                    ..default()
+                },
+            )],
+            ..default()
+        },
+    ));
+    h.attack(h.npc);
+    h.advance(3);
+    uses_spell(&mut h, unit, 1250533);
+    assert!(crate::auras::has_aura(h.app.world(), unit, 1250533));
+    for _ in 0..50 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    let casts = h
+        .inbox
+        .go
+        .iter()
+        .filter(|go| go.caster == unit.to_bits() && go.spell_id == 1250533)
+        .count();
+    assert_eq!(casts, 1, "on-use trinket must respect its native cooldown");
+}
+
+#[test]
 fn follower_kit_shuja32_damage_over_time() {
     let (mut h, unit) = level32(209053);
     uses_spell(&mut h, unit, 470411);
