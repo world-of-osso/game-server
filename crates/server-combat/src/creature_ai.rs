@@ -941,6 +941,7 @@ pub(crate) fn chase_system(
         }
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
         if speed <= 0.0
+            || static_flags.is_some_and(|flags| flags.sessile())
             || combat_move_disabled.is_some()
             || cast.is_some_and(|cast| !cast.cast_while_moving)
         {

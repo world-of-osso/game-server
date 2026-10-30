@@ -1259,13 +1259,14 @@ fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
     }
 }
 
-fn ensure_aura_components(world: &mut World, unit: Entity) {
+pub(crate) fn ensure_aura_components(world: &mut World, unit: Entity) {
     if world.get::<ActiveAuras>(unit).is_none() {
-        world.entity_mut(unit).insert((
-            ActiveAuras::default(),
-            UnitAuras::default(),
-            AuraStatMods::default(),
-        ));
+        world
+            .entity_mut(unit)
+            .insert((ActiveAuras::default(), UnitAuras::default()));
+        if world.get::<AuraStatMods>(unit).is_none() {
+            world.entity_mut(unit).insert(AuraStatMods::default());
+        }
     }
 }
 
