@@ -174,6 +174,78 @@ fn mountains_earth_shock_launches_native_overload_with_sourced_effectiveness() {
     );
 }
 
+#[test]
+#[ignore = "requires native Elemental262 profile and world data"]
+fn lightning_capacitor_increases_actual_bolt_only_with_lightning_shield() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+    let mut run = fixture();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(own_aura(&run, 462862).is_some());
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192106, Some(actor), true)
+        .unwrap();
+    let shield = own_aura(&run, 192106).unwrap().instance_id;
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 188196, "bolt", 4));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        188196,
+        Some(target),
+        0
+    ));
+    for _ in 0..40 {
+        run.app.update();
+    }
+    crate::auras::remove_instance(
+        run.app.world_mut(),
+        actor,
+        shield,
+        crate::auras::RemoveReason::Consumed,
+    );
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        188196,
+        Some(target),
+        0
+    ));
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let capture = run.app.world().resource::<FactorCapture>().export();
+    let multipliers: Vec<_> = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["event"] == "direct_amount" && event["spell_id"] == 188196)
+        .map(|event| {
+            event["applied_multipliers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|factor| factor["factor"] == "spell_mod_amount")
+                .unwrap()["value"]
+                .as_f64()
+                .unwrap()
+        })
+        .collect();
+    let percent = f64::from(
+        own_aura(&run, 462862)
+            .unwrap()
+            .effects
+            .iter()
+            .find(|e| e.index == 2)
+            .unwrap()
+            .amount,
+    );
+    assert_eq!(multipliers.len(), 2);
+    assert!(
+        (multipliers[0] / multipliers[1] - (1.0 + percent / 100.0)).abs() < 0.001,
+        "actual Bolt modifier with/without shield: {multipliers:?}"
+    );
+}
+
 fn overload_damage(multiplier: f32, mote: bool) -> (u64, f32) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
