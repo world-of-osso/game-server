@@ -71,6 +71,9 @@ enum AdminRequest {
     ListEquipment {
         character_name: String,
     },
+    ListAchievements {
+        character_name: String,
+    },
     ListAccounts,
     ListCharacters {
         username: Option<String>,
@@ -325,6 +328,11 @@ struct CombatLogSummary {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum AdminResponse {
+    AchievementsListed {
+        character_name: String,
+        character: serde_json::Value,
+        account: Option<serde_json::Value>,
+    },
     EconomyStatus {
         status: serde_json::Value,
     },
@@ -630,6 +638,7 @@ fn print_usage() {
     eprintln!("  game-server-admin clear-equipment-appearance <character_name> <slot>");
     eprintln!("  game-server-admin grant-equipment <character> <manifest.json>");
     eprintln!("  game-server-admin list-equipment <character>");
+    eprintln!("  game-server-admin list-achievements <online-character>");
     eprintln!("  game-server-admin taxi-learn <character_name> <taxi_node_id>");
     eprintln!("  game-server-admin learn-spell <character_name> <spell_id>");
     eprintln!("  game-server-admin flight-style <character_name> <steady|skyriding>");
@@ -646,6 +655,12 @@ fn parse_request(args: &[String]) -> AdminRequest {
             eprintln!("{error}");
             std::process::exit(1);
         }),
+        "list-achievements" => {
+            require_args(args, 3, "list-achievements <online-character>");
+            AdminRequest::ListAchievements {
+                character_name: args[2].clone(),
+            }
+        }
         "list-equipment" => {
             require_args(args, 3, "list-equipment <character>");
             AdminRequest::ListEquipment {
