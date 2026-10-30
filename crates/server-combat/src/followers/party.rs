@@ -1027,6 +1027,165 @@ mod copy_tests {
         );
     }
 
+    #[derive(Clone, Default)]
+    struct ReleaseLogBuffer(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for ReleaseLogBuffer {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> bevy::log::tracing_subscriber::fmt::MakeWriter<'a> for ReleaseLogBuffer {
+        type Writer = Self;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    #[test]
+    fn follower_release_logs_combat_pending_and_reachable_decisions() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            CombatStatus(true),
+            Position {
+                x: 1403.56,
+                y: 128.0,
+                z: 173.39,
+            },
+        ));
+        app.world_mut().entity_mut(member).insert((
+            Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+        ));
+        let buffer = ReleaseLogBuffer::default();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(buffer.clone())
+            .without_time()
+            .with_ansi(false)
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            super::super::release::update(app.world_mut());
+            app.world_mut().get_mut::<CombatStatus>(owner).unwrap().0 = false;
+            super::super::release::update(app.world_mut());
+            app.world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .drain_until_idle();
+            super::super::release::update(app.world_mut());
+        });
+        let output = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+        let events: Vec<_> = output
+            .lines()
+            .filter(|line| line.contains("Follower release evaluation"))
+            .collect();
+        assert_eq!(events.len(), 3, "{output}");
+        assert!(
+            events.iter().all(|line| line.contains("decision=")),
+            "{output}"
+        );
+        assert!(
+            events[0].contains("party_in_combat") && events[0].contains("walk_seconds=None"),
+            "{output}"
+        );
+        assert!(
+            events[1].contains("route_pending") && events[1].contains("walk_seconds=None"),
+            "{output}"
+        );
+        assert!(
+            events[2].contains("route_reachable") && events[2].contains("walk_seconds=Some("),
+            "{output}"
+        );
+        assert!(
+            events
+                .iter()
+                .all(|line| line.contains(&format!("{member:?}"))),
+            "{output}"
+        );
+    }
+
+    #[test]
+    fn follower_release_staggered_deaths_survive_navigation_pruning() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        run.dungeon = super::super::catalog::load_catalog(&db).unwrap().dungeons[&2745].clone();
+        let copy = InMap {
+            map_id: 2805,
+            instance_id: 1,
+        };
+        run.copy = Some(copy);
+        let (mut h, healer) = super::super::kit_tests::at_level_unengaged(209072, 32, |_| {});
+        let first = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        let second = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        run.members = vec![healer, first, second];
+        h.app.insert_resource(store);
+        crate::navigation::install_fixture(
+            &mut h.app,
+            crate::navigation::Navigation::new(
+                &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/ground/navmesh"),
+            ),
+        );
+        h.app
+            .add_systems(FixedUpdate, super::super::release::update);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            run,
+            copy,
+            Position {
+                x: 5316.5,
+                y: 127.4,
+                z: 3125.3,
+            },
+        ));
+        h.app.world_mut().entity_mut(healer).insert(copy);
+        // The two corpse positions and owner position are from the Windrunner live snapshot.
+        for (member, x, z) in [(first, 5254.49, 3158.06), (second, 5257.81, 3158.04)] {
+            h.app.world_mut().entity_mut(member).insert((
+                copy,
+                Position { x, y: 126.30, z },
+                crate::combat::CorpseDelay(60.0),
+            ));
+        }
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, first);
+        h.advance(3);
+        assert!(h.app.world().get::<crate::combat::Corpse>(first).is_some());
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, second);
+        assert!(h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        h.advance(30);
+        for member in [first, second] {
+            assert!(
+                h.app.world().get::<crate::combat::Corpse>(member).is_none(),
+                "member {member:?} did not release"
+            );
+            assert!(h.app.world().get::<Health>(member).unwrap().current > 0.0);
+        }
+    }
+
     #[test]
     fn follower_release_waits_for_combat_and_requires_a_complete_follow_path() {
         use shared::components::{CombatStatus, Health, Position};

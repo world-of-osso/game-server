@@ -182,8 +182,11 @@ pub(super) fn prune_queries(
                 return Some((*entity, query.goal));
             };
             let wrong_map = map.is_none_or(|map| map.map_id != query.map_id);
-            let moved =
-                at.is_none_or(|at| horizontal(point(*at) - query_from(query)) > TELEPORT_DISTANCE);
+            // A release query starts at the resurrection point, not the corpse.
+            let moved = at.is_none_or(|at| {
+                query.goal != Goal::FollowerRelease
+                    && horizontal(point(*at) - query_from(query)) > TELEPORT_DISTANCE
+            });
             (wrong_map || moved).then_some((*entity, query.goal))
         })
         .collect();

@@ -16,16 +16,23 @@ pub(super) fn update(world: &mut World) {
         .map(|(unit, follower, _)| (unit, follower.owner))
         .collect();
     for (unit, owner) in dead {
-        release_if_reachable(world, unit, owner);
+        let (decision, reason, walk_seconds, error) = release_if_reachable(world, unit, owner);
+        info!(follower = ?unit, owner = ?owner, decision, reason, walk_seconds = ?walk_seconds, error = ?error, "Follower release evaluation");
     }
 }
 
-fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) {
+type Evaluation = (&'static str, &'static str, Option<f32>, Option<String>);
+
+fn wait(reason: &'static str) -> Evaluation {
+    ("wait", reason, None, None)
+}
+
+fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evaluation {
     let Some((map, members, _)) = party::read_admission(world, owner) else {
-        return;
+        return wait("no_admitted_party");
     };
     if !members.contains(&unit) || world.get::<InMap>(unit) != Some(&map) {
-        return;
+        return wait("not_in_admitted_copy");
     }
     let in_combat = std::iter::once(owner)
         .chain(members.iter().copied())
@@ -38,21 +45,21 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) {
         if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
             nav.cancel_query(unit, Goal::FollowerRelease);
         }
-        return;
+        return wait("party_in_combat");
     }
     let Some(destination) = release_location(world, unit, map) else {
-        return;
+        return wait("no_release_location");
     };
     if destination.map_id != map.map_id {
-        return;
+        return wait("release_outside_instance");
     }
     let Some(owner_position) = world.get::<Position>(owner).copied() else {
-        return;
+        return wait("owner_position_missing");
     };
     let start = destination.bevy_position();
     let point = |position: Position| Vec3::new(position.x, position.y, position.z);
     let Some(mut nav) = world.get_resource_mut::<Navigation>() else {
-        return;
+        return wait("navigation_unavailable");
     };
     let result = nav.query_deferred(
         unit,
@@ -63,11 +70,15 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) {
             to: point(owner_position),
         },
     );
-    let Some(Ok(Some(Output::Path(path)))) = result else {
-        return;
+    let path = match result {
+        None => return wait("route_pending"),
+        Some(Err(error)) => return ("wait", "route_error", None, Some(error)),
+        Some(Ok(None)) => return wait("navigation_unbaked"),
+        Some(Ok(Some(Output::Path(path)))) => path,
+        Some(Ok(Some(_))) => return wait("unexpected_route_result"),
     };
     if !path.complete {
-        return;
+        return wait("route_incomplete");
     }
     let speed = crate::creature_ai::BASE_RUN_SPEED
         * world
@@ -78,13 +89,18 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) {
         .windows(2)
         .map(|pair| pair[0].distance(pair[1]))
         .sum();
-    if speed <= 0.0 || distance > speed * FOLLOWER_RELEASE_MAX_WALK_SECONDS {
-        return;
+    if speed <= 0.0 {
+        return wait("run_speed_zero");
+    }
+    let walk_seconds = distance / speed;
+    if walk_seconds > FOLLOWER_RELEASE_MAX_WALK_SECONDS {
+        return ("wait", "route_too_long", Some(walk_seconds), None);
     }
     world
         .resource_mut::<Navigation>()
         .cancel_query(unit, Goal::FollowerRelease);
     revive_at_release(world, unit, owner, &destination);
+    ("release", "route_reachable", Some(walk_seconds), None)
 }
 
 fn release_location(world: &World, unit: Entity, map: InMap) -> Option<WorldLocation> {
