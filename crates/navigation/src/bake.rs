@@ -16,7 +16,7 @@ pub fn add_wmo_swim_surfaces(
     for surface in surfaces {
         let triangle = surface
             .vertices
-            .map(|point| point - Vec3::Y * shared::movement::SWIM_DEPTH);
+            .map(|point| point - Vec3::Y * los::wmo_liquid::SWIM_DEPTH);
         let min = triangle[0].min(triangle[1]).min(triangle[2]);
         let max = triangle[0].max(triangle[1]).max(triangle[2]);
         water.push((min - Vec3::Y * CELL_HEIGHT, max + Vec3::Y * CELL_HEIGHT));
@@ -614,7 +614,7 @@ mod tests {
                 .complete_path(start, end)
                 .is_err()
         );
-        let surfaces: Vec<_> = floor(21.0, 39.0, shared::movement::SWIM_DEPTH)
+        let surfaces: Vec<_> = floor(21.0, 39.0, los::wmo_liquid::SWIM_DEPTH)
             .into_iter()
             .map(|vertices| los::wmo_liquid::LiquidTriangle {
                 vertices,

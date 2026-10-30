@@ -1,5 +1,6 @@
 //! Authored WMO group liquids, shared by runtime queries and navigation baking.
 use glam::{Affine3A, Vec3};
+pub use shared::movement::SWIM_DEPTH;
 use wow_wmo::parser::{self, WmoGroupHeader, WmoLiquid, WmoRootFlags};
 
 const UNIT_SIZE: f32 = 100.0 / 3.0 / 8.0;
