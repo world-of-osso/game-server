@@ -39,7 +39,8 @@ fn damage(h: &mut Harness, target: Entity, fraction: f32) {
 
 fn decide(h: &mut Harness, healer: Entity, party: &[Entity]) {
     let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
-    update(h.app.world_mut(), healer, &follower, party, None);
+    let enemies = super::ai::engaged_enemies(h.app.world_mut(), &follower, healer, party);
+    update(h.app.world_mut(), healer, &follower, party, None, &enemies);
 }
 
 #[test]

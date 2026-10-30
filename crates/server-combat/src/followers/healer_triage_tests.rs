@@ -3,6 +3,17 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use shared::components::Health;
 
+fn update(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemy: Option<Entity>,
+) -> bool {
+    let enemies = super::ai::engaged_enemies(world, follower, unit, party);
+    super::update(world, unit, follower, party, enemy, &enemies)
+}
+
 fn fixture() -> (Harness, Entity) {
     super::super::kit_tests::level32(209072)
 }
