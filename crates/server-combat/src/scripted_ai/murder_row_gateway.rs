@@ -9,15 +9,15 @@ use crate::maps::{InMap, TeleportOptions, WorldLocation};
 #[path = "murder_row_gateway_tests.rs"]
 mod tests;
 
-const MAP: u32 = 2813;
+pub(crate) const MAP: u32 = 2813;
 const ZAEN_ENCOUNTER: u32 = 3102;
-const SOURCE: Vec3 = Vec3::new(8878.12, 61.60762, 4777.14);
+pub(crate) const SOURCE: Vec3 = Vec3::new(8878.12, 61.60762, 4777.14);
 // The 20 yd activation radius is inferred, using the Uldaman/Deios proximity precedent.
-const RADIUS: f32 = 20.0;
+pub(crate) const RADIUS: f32 = 20.0;
 
 // Endpoints LOG_CORRELATED; flight duration unsourced (≤3.70 s, Thalecgos);
 // TC no-ops without JumpChargeParams 1272. The approved edge is a near teleport.
-fn landing() -> WorldLocation {
+pub(crate) fn landing() -> WorldLocation {
     WorldLocation {
         map_id: MAP,
         position: Vec3::new(8872.60, -4857.73, 100.26132),
@@ -25,7 +25,7 @@ fn landing() -> WorldLocation {
     }
 }
 
-pub(super) fn update(world: &mut World) {
+pub(crate) fn update(world: &mut World) {
     let candidates: Vec<_> = world
         .query_filtered::<(Entity, &Position, &InMap, Option<&MovementControl>), With<Player>>()
         .iter(world)

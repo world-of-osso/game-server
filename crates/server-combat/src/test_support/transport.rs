@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum Action {
     SpellClick,
     Proximity,
+    GatewayProximity,
     ObjectGossip,
     ObjectScript,
     CollisionDrop,
@@ -70,6 +71,21 @@ pub fn read_registrations(
                 action: Action::Proximity,
             },
         ));
+    }
+    if map == crate::scripted_ai::murder_row_gateway::MAP {
+        let source = crate::scripted_ai::murder_row_gateway::SOURCE;
+        let point = crate::scripted_ai::murder_row_gateway::landing().bevy_position();
+        let destination = Vec3::new(point.x, point.y, point.z);
+        registrations.push(Registration {
+            entry: 0,
+            source_guid: Some(0),
+            source,
+            destination,
+            distance: source.distance(destination),
+            radius: crate::scripted_ai::murder_row_gateway::RADIUS,
+            departure: None,
+            action: Action::GatewayProximity,
+        });
     }
     registrations.extend(read_object_registrations(map, db)?);
     Ok(registrations)
@@ -281,6 +297,14 @@ pub fn activate(
     if edge.action == Action::CollisionDrop {
         return start_collision_drop(world, owner, edge);
     }
+    if edge.action == Action::GatewayProximity {
+        let before = world.get::<shared::components::Position>(owner).copied();
+        crate::scripted_ai::murder_row_gateway::update(world);
+        if world.get::<shared::components::Position>(owner).copied() == before {
+            return Err("registered Murder Row gateway did not activate".into());
+        }
+        return Ok(());
+    }
     let npc = npc.ok_or("registered transport source actor absent")?;
     match edge.action {
         Action::SpellClick => {
@@ -304,7 +328,7 @@ pub fn activate(
                 return Err("registered game object script did not start transport".into());
             }
         }
-        Action::CollisionDrop => unreachable!(),
+        Action::CollisionDrop | Action::GatewayProximity => unreachable!(),
     }
     Ok(())
 }
