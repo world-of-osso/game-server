@@ -488,6 +488,19 @@ fn module_hooks(path: &str) -> Option<&'static [SpellScriptHook]> {
         .map(|(_, hooks)| *hooks)
 }
 
+fn has_reach_declaration(hooks: &[SpellScriptHook]) -> bool {
+    hooks.iter().any(|hook| {
+        matches!(
+            hook,
+            SpellScriptHook::DeclaredReach(_) | SpellScriptHook::AdditionalReachActions(_)
+        )
+    })
+}
+
+fn inventory_matches(actual: &Sites, expected: &Sites) -> bool {
+    actual == expected
+}
+
 #[test]
 fn all_scanned_target_selection_sites_have_declarations_or_explanations() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/modules");
@@ -497,10 +510,7 @@ fn all_scanned_target_selection_sites_have_declarations_or_explanations() {
     for &(file, function, kind, count) in DECLARED {
         let hooks = module_hooks(file).unwrap_or_else(|| panic!("no registered module for {file}"));
         assert!(
-            hooks.iter().any(|hook| matches!(
-                hook,
-                SpellScriptHook::DeclaredReach(_) | SpellScriptHook::AdditionalReachActions(_)
-            )),
+            has_reach_declaration(hooks),
             "{file}::{function} lacks a registered reach declaration"
         );
         assert!(
@@ -541,5 +551,13 @@ fn scanner_detects_new_sites_in_existing_functions() {
     assert_eq!(
         sites.get(&("sample.rs".into(), "cast".into(), "query".into())),
         Some(&1)
+    );
+    assert!(
+        !inventory_matches(&sites, &Sites::new()),
+        "an unreviewed selection must fail the audit"
+    );
+    assert!(
+        !has_reach_declaration(&[]),
+        "a selector with no declaration must fail the audit"
     );
 }
