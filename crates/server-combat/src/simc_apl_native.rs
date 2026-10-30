@@ -1,6 +1,7 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
 mod periodic;
 pub mod reaction;
+use crate::followers::live_facts;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
@@ -9,6 +10,7 @@ use std::time::Duration;
 
 /// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
 /// map-data fallback. Production worlds do not call this fixture setup.
+#[cfg(any(test, feature = "test-support"))]
 pub fn install_open_arena(world: &mut World) {
     world.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
     world.insert_resource(crate::ground::GroundMap::flat_arena(0.0));
@@ -237,10 +239,9 @@ impl<'a> NativeFacts<'a> {
             Encounter::Fixture { duration, .. } => Err(format!(
                 "EXPECTED_COMBAT_LENGTH_UNAVAILABLE: fixture duration must be positive and finite, got {duration}"
             )),
-            Encounter::Dungeon { .. } => Err(
-                "EXPECTED_COMBAT_LENGTH_UNAVAILABLE: dungeon has no configured fight duration"
-                    .into(),
-            ),
+            Encounter::Dungeon { .. } => {
+                Ok(self.elapsed() + self.remaining("expected_combat_length")?)
+            }
         }
     }
 
@@ -248,7 +249,13 @@ impl<'a> NativeFacts<'a> {
         match self.encounter {
             Encounter::Fixture { duration, .. } => Ok((duration - self.elapsed()).max(0.0)),
             Encounter::Dungeon { .. } => {
-                Err(format!("DUNGEON_TTD_UNAVAILABLE: {operand} unavailable"))
+                let now = crate::spell_cast::now(self.world);
+                let targets = self.ordered_targets()?;
+                targets
+                    .iter()
+                    .map(|&target| live_facts::target_time_to_die(self.world, target, now))
+                    .try_fold(0.0_f64, |longest, ttd| Ok(longest.max(ttd?)))
+                    .map_err(|error: String| format!("{operand}: {error}"))
             }
         }
     }
@@ -266,10 +273,14 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn target_fact(&self, property: &str, action: Option<&Action>) -> Result<f64, String> {
-        if property == "time_to_die" && matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return Err("DUNGEON_TTD_UNAVAILABLE: target.time_to_die unavailable".into());
-        }
         let target = self.selected_target(action)?;
+        if property == "time_to_die" && matches!(self.encounter, Encounter::Dungeon { .. }) {
+            return live_facts::target_time_to_die(
+                self.world,
+                target,
+                crate::spell_cast::now(self.world),
+            );
+        }
         match property {
             // SimC76f8118 action.cpp4030–4032 exposes target.distance.
             // Native evaluation uses the selected entities' actual geometry,
@@ -489,9 +500,7 @@ impl<'a> NativeFacts<'a> {
 
     fn adds(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return Err(format!(
-                "DUNGEON_TTD_UNAVAILABLE: raid_event.adds.{property} unavailable"
-            ));
+            return fixture_add_value(None, property, self.world.resource::<Time>().elapsed());
         }
         fixture_add_value(
             self.world.get::<FixtureAdds>(self.actor),
@@ -502,7 +511,25 @@ impl<'a> NativeFacts<'a> {
 
     fn movement_distance(&self) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return Err("DUNGEON_MOVEMENT_DISTANCE_UNAVAILABLE: movement.distance".into());
+            let moving = self
+                .world
+                .get::<shared::components::CreatureMotion>(self.actor)
+                .is_some_and(|motion| *motion != shared::components::CreatureMotion::Still)
+                || self
+                    .world
+                    .get::<crate::networking::Moving>(self.actor)
+                    .is_some_and(|moving| moving.0);
+            if !moving {
+                return Ok(0.0);
+            }
+            let position = crate::spell_cast::targets::position(self.world, self.actor)
+                .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
+            let destination = self
+                .world
+                .get_resource::<crate::navigation::Navigation>()
+                .and_then(|navigation| navigation.current_destination(self.actor))
+                .ok_or("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")?;
+            return Ok(f64::from(position.distance(destination)));
         }
         self.world
             .get::<FixtureMovement>(self.actor)
@@ -533,11 +560,6 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn movement_event(&self, property: &str) -> Result<f64, String> {
-        if matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return Err(format!(
-                "DUNGEON_TTD_UNAVAILABLE: raid_event.movement.{property} unavailable"
-            ));
-        }
         if !matches!(
             property,
             "exists" | "remains" | "in" | "cooldown" | "duration" | "distance"
@@ -1082,10 +1104,6 @@ impl Facts for NativeFacts<'_> {
         }
         if let Some(property) = name.strip_prefix("raid_event.pull.") {
             // SimC76f8118 raid_event.cpp3068–3141: no configured event.
-            // Patchwerk fixtures have no pull events; dungeon schedules stay explicit.
-            if matches!(self.encounter, Encounter::Dungeon { .. }) {
-                return Err(format!("DUNGEON_PULL_EVENT_UNAVAILABLE: {name}"));
-            }
             return fixture_add_value(None, property, self.world.resource::<Time>().elapsed());
         }
         if let Some(property) = name.strip_prefix("raid_event.adds.") {

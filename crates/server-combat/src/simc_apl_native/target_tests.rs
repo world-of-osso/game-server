@@ -224,7 +224,7 @@ fn arms_native_apl_patchwerk_add_facts_use_simc_absent_event_values() {
 }
 
 #[test]
-fn arms_native_apl_dungeon_add_timing_is_a_named_missing_fact() {
+fn arms_native_apl_dungeon_has_no_scheduled_add_event() {
     let h = warrior();
     let binding = Bindings::default();
     let facts = NativeFacts::new(
@@ -234,6 +234,9 @@ fn arms_native_apl_dungeon_add_timing_is_a_named_missing_fact() {
         Encounter::Dungeon { started_at: 0.0 },
         1,
     );
-    let error = facts.value("raid_event.adds.in").unwrap_err();
-    assert!(error.starts_with("DUNGEON_TTD_UNAVAILABLE:"), "{error}");
+    assert_eq!(facts.value("raid_event.adds.exists").unwrap(), 0.0);
+    assert_eq!(
+        facts.value("raid_event.adds.in").unwrap(),
+        i64::MAX as f64 / 1000.0
+    );
 }

@@ -94,6 +94,10 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     trace_target_selection(world, unit, follower.owner, &party, enemy);
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(target) = enemy {
+        super::live_facts::track_target(world, target);
+    }
     update_auto_shot(world, unit, follower, enemy);
     if enemy.is_some() {
         use_freightrunners_flask(world, unit);

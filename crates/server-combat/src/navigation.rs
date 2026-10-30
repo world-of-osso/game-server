@@ -127,6 +127,11 @@ impl Navigation {
         }
     }
 
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn current_destination(&self, entity: Entity) -> Option<Vec3> {
+        self.routes.get(&entity).map(|route| route.destination)
+    }
+
     pub(crate) fn route_destination(&self, entity: Entity, goal: Goal) -> Option<Vec3> {
         self.routes
             .get(&entity)
