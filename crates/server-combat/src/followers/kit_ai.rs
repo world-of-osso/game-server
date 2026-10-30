@@ -245,7 +245,7 @@ fn try_entry(
             }
         }
     }
-    attempt_cast(world, unit, target, follower, &entry, enemies.len())
+    attempt_cast(world, unit, target, enemy, follower, &entry, enemies.len())
 }
 
 fn select_min_own_aura_enemy(
@@ -772,6 +772,7 @@ fn attempt_cast(
     world: &mut World,
     unit: Entity,
     target: Entity,
+    enemy: Option<Entity>,
     follower: &Follower,
     entry: &Entry,
     enemies: usize,
@@ -826,6 +827,19 @@ fn attempt_cast(
             unit,
             entry.spell_id,
             Some(target),
+        )
+    } else if entry.spell_id == 19574 {
+        // SimC76f8118 sc_hunter.cpp6746–6750: self-cast Bestial Wrath
+        // sends its pets' Bloodshed to the selected enemy, not the caster.
+        crate::spell_cast::creature_cast_with_targets(
+            world,
+            unit,
+            entry.spell_id,
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: enemy,
+                destination: None,
+            },
         )
     } else if let Some(stage) =
         super::empower_policy::selected_stage(world, unit, entry.spell_id, enemies)
