@@ -143,6 +143,125 @@ fn spawn_creature(app: &mut App, fixture: &CreatureFixture, position: Position) 
     id
 }
 
+#[test]
+fn symmetric_immunity_creature_does_not_aggro_or_swing_at_a_player() {
+    let mut app = aggro_app();
+    let player = spawn_player(&mut app, at(0.0, 0.0), 5);
+    let creature = spawn_creature(&mut app, &FOREST_SPIDER, at(1.0, 0.0));
+    assert!(read_player_proximity_candidate(
+        app.world_mut(),
+        creature,
+        player
+    ));
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(UnitFlags(UnitFlags::IMMUNE_TO_PC));
+    assert!(!read_player_proximity_candidate(
+        app.world_mut(),
+        creature,
+        player
+    ));
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(CombatTarget(Some(player)));
+    run(&mut app, 10);
+    assert!(app.world().get::<AutoAttack>(creature).is_none());
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+}
+
+#[test]
+fn symmetric_immunity_stops_existing_melee_damage() {
+    let mut app = aggro_app();
+    let player = spawn_player(&mut app, at(0.0, 0.0), 5);
+    let creature = spawn_creature(&mut app, &FOREST_SPIDER, at(1.0, 0.0));
+    attack_start(app.world_mut(), creature, player);
+    run(&mut app, 5);
+    assert!(app.world().get::<AutoAttack>(creature).is_some());
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(UnitFlags(UnitFlags::IMMUNE_TO_PC));
+    let health = app.world().get::<Health>(player).unwrap().current;
+    for _ in 0..80 {
+        crate::combat::auto_attack_system(app.world_mut());
+        app.update();
+    }
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, health);
+}
+
+#[test]
+fn symmetric_immunity_native_flyer_requires_unlock_before_combat() {
+    let mut h = crate::spell_cast::test_harness::harness(vec![], &[30451], 8).unwrap();
+    let data = crate::test_data::world_data();
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 30003854)
+        .unwrap();
+    assert_eq!(spawn.template_entry, 216341);
+    let map = crate::maps::InMap {
+        map_id: 2660,
+        instance_id: 15,
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    let flyer = crate::zones::spawn_creature(
+        &mut commands,
+        data,
+        data.template_for(216341, 205).unwrap(),
+        &mut crate::zones::CreatureSpawnContext {
+            map,
+            difficulty_id: 205,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rand::thread_rng(),
+    )
+    .expect("native Flyer spawn");
+    commands
+        .entity(flyer)
+        .insert(crate::zones::CreatureDifficulty(205));
+    queue.apply(h.app.world_mut());
+    let position = *h.app.world().get::<Position>(flyer).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((map, position));
+    let flags = *h.app.world().get::<UnitFlags>(flyer).unwrap();
+    assert_ne!(flags.0 & UnitFlags::IMMUNE_TO_PC, 0);
+    assert_ne!(flags.0 & UnitFlags::IMMUNE_TO_NPC, 0);
+    h.cast_and_deliver(30451, Some(flyer));
+    assert!(
+        h.inbox
+            .failed
+            .iter()
+            .any(|failure| failure.reason == shared::spell_data::CastFailReason::InvalidTarget)
+    );
+    attack_start(h.app.world_mut(), flyer, h.caster);
+    assert!(
+        h.app
+            .world()
+            .get::<ThreatTable>(flyer)
+            .unwrap()
+            .entries()
+            .is_empty()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CombatTarget>(flyer)
+            .is_none_or(|target| target.0.is_none())
+    );
+    h.app.world_mut().get_mut::<UnitFlags>(flyer).unwrap().0 &=
+        !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+    attack_start(h.app.world_mut(), flyer, h.caster);
+    assert_eq!(
+        h.app.world().get::<CombatTarget>(flyer).unwrap().0,
+        Some(h.caster)
+    );
+}
+
 fn run(app: &mut App, updates: usize) {
     for _ in 0..updates {
         app.update();

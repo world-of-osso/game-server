@@ -511,6 +511,13 @@ type NpcMotionResult<'a> = (
     bool,
 );
 
+type NpcProtection<'a> = (
+    Option<&'a shared::components::UnitFlags>,
+    Option<&'a shared::components::UnitFlags2>,
+    Option<&'a shared::components::UnitFlags3>,
+    Option<&'a crate::auras::ActiveAuras>,
+);
+
 /// Admin commands on the server clock and instance locks.
 #[derive(bevy::ecs::system::SystemParam)]
 pub(crate) struct AdminInstances<'w, 's> {
@@ -532,6 +539,7 @@ pub(crate) struct AdminInstances<'w, 's> {
         Without<crate::persistence::ClientId>,
     >,
     follower_motion: Query<'w, 's, NpcMotion<'static>>,
+    npc_protection: Query<'w, 's, NpcProtection<'static>>,
     creatures: Query<
         'w,
         's,
@@ -674,7 +682,7 @@ impl AdminInstances<'_, '_> {
                                 position.map(|p| [p.x, p.y, p.z]),
                                 state,
                                 dormant,
-                                npc_combat_metrics(stats, armor, target, threat, self.follower_motion.get(entity).ok())
+                                npc_combat_metrics(stats, armor, target, threat, self.follower_motion.get(entity).ok(), self.npc_protection.get(entity).ok())
                             )
                         },
                     )
@@ -733,6 +741,7 @@ fn npc_combat_metrics(
     target: Option<&crate::networking::CombatTarget>,
     threat: Option<&shared::components::ThreatTable>,
     movement: Option<NpcMotionResult<'_>>,
+    protection: Option<NpcProtection<'_>>,
 ) -> serde_json::Value {
     let stats = stats.map(|stats| {
         serde_json::json!({
@@ -756,6 +765,20 @@ fn npc_combat_metrics(
     serde_json::json!({
         "stats": stats,
         "creature_armor": armor.map(|armor| armor.0),
+        "protection": protection.map(|(flags, flags2, flags3, auras)| serde_json::json!({
+            "unit_flags": flags.map(|flags| flags.0),
+            "unit_flags2": flags2.map(|flags| flags.0),
+            "unit_flags3": flags3.map(|flags| flags.0),
+            "immunities": auras.map(|auras| auras.iter().flat_map(|aura| {
+                aura.effects.iter().filter_map(move |effect| {
+                    use crate::auras::handlers::{EFFECT_IMMUNITY, MECHANIC_IMMUNITY, MECHANIC_IMMUNITY_MASK, SCHOOL_IMMUNITY};
+                    matches!(effect.aura_type, EFFECT_IMMUNITY | MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK | SCHOOL_IMMUNITY).then(|| serde_json::json!({
+                        "spell": aura.spell_id, "aura_type": effect.aura_type,
+                        "misc_values": effect.misc_values, "definition": effect.immunity
+                    }))
+                })
+            }).collect::<Vec<_>>())
+        })),
         "victim": target.and_then(|target| target.0).map(Entity::to_bits),
         "threat": threat,
         "movement": movement.map(|(follow, cast, mods, jump, fall, knockback, confused, feared)| serde_json::json!({
@@ -863,6 +886,45 @@ mod admin_npc_combat_tests {
             450.0
         );
         assert_eq!(world.get::<Health>(npc).unwrap().current, 7500.0);
+    }
+
+    #[test]
+    fn npc_info_reports_live_unit_flags() {
+        let mut world = World::new();
+        let npc = spawn_npc(&mut world);
+        world.entity_mut(npc).insert((
+            shared::components::UnitFlags(0x102),
+            shared::components::UnitFlags2(0x40),
+            shared::components::UnitFlags3(0x200),
+        ));
+        let metrics = inspect(&mut world);
+        assert_eq!(metrics["protection"]["unit_flags"], 0x102);
+        assert_eq!(metrics["protection"]["unit_flags2"], 0x40);
+        assert_eq!(metrics["protection"]["unit_flags3"], 0x200);
+        assert!(metrics["protection"]["immunities"].is_null());
+    }
+
+    #[test]
+    fn npc_info_reports_active_immunity_aura() {
+        let mut h = crate::spell_cast::test_harness::harness(vec![], &[45438], 8).unwrap();
+        let npc = spawn_npc(h.app.world_mut());
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: npc,
+                target: npc,
+                spell_id: 45438,
+                effect_mask: 1 << 2,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        let metrics = inspect(h.app.world_mut());
+        assert_eq!(metrics["protection"]["immunities"][0]["spell"], 45438);
+        assert_eq!(metrics["protection"]["immunities"][0]["aura_type"], 39);
+        assert_eq!(
+            metrics["protection"]["immunities"][0]["misc_values"][0],
+            127
+        );
     }
 
     #[test]

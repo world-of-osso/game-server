@@ -43,6 +43,12 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 `FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. The landing lies under WMO liquid type 941 at Y 278.167; a live-party water crossing remains untested. NPC fall damage remains unmodeled.
 
+## Ara-Kara ambient flyers and eggs
+
+TDB's Jabbing Flyer 216341 spawns 30003831, 30003832, 30003838, 30003846, 30003848, 30003853 and 30003854 carry both PC and NPC immunity and the `[DNT] Cosmetic Spawn State Dead` aura 387851. Treat these authored spawns as ambient; do not infer an unlock from combat logs. Other Flyer spawns have no such immunity override. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 show attackable Flyers near unflagged placements, but do not identify their TDB spawn GUIDs.
+
+Crawler Eggs 218183 are sessile and not selectable. Neither source no-melee static flag is set, and the two WCL reports contain no Egg actor. Whether Retail Eggs melee remains unknown; do not infer a no-melee rule from these observations.
+
 ## Windrunner Spire passage
 
 `WINDRUNNER_TAXIPATH_PASSAGE_LOG_CORRELATED` (including `WINDRUNNER_TAXIPATH_10308_PASSAGE_LOG_CORRELATED`): A living owner within 20 yards of native TaxiPath node 0 automatically boards with living followers and their pets after the preceding encounter is Done: 10301 after Emberdawn (3056), 10303 after the Derelict Duo (3057), and 10308 after Commander Kroluk (3058). WCL `X4tT9P73BvRrGxyM` fight 1 correlates 10301 and 10303 with player movement; `jpfFa36xhQkZqr4d` fight 6 correlates 10308. The 20-yard proximity activation is a project inference; the authored trigger and mount identities are unsourced. The shared taxi mover uses its existing flight speed; the observed Retail segments are faster.

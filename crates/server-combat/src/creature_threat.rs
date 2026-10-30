@@ -200,8 +200,18 @@ pub(super) fn available(world: &World, creature: Entity, unit: Entity) -> bool {
     {
         return false;
     }
+    let attacker = unit_faction(world, creature);
+    let target = unit_faction(world, unit);
+    if crate::faction::immunity_blocks_attack(
+        world.get::<UnitFlags>(creature),
+        attacker.is_player,
+        world.get::<UnitFlags>(unit),
+        target.is_player,
+    ) {
+        return false;
+    }
     let factions = world.resource::<FactionTemplates>();
-    if !factions.can_attack(unit_faction(world, creature), unit_faction(world, unit)) {
+    if !factions.can_attack(attacker, target) {
         return false;
     }
     crate::auras::stealth::can_detect(world, creature, unit)
