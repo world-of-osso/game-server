@@ -14,10 +14,34 @@ struct Decay {
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::SummonInitialized(initialize),
     SpellScriptHook::AfterCastUpdate(update),
     SpellScriptHook::AfterPolicyDirectDamage(extend_diseases),
 ];
+
+fn autonomous_actions(world: &World, actor: Entity) -> Vec<u32> {
+    if world.get::<Decay>(actor).is_some() {
+        vec![1251951]
+    } else {
+        Vec::new()
+    }
+}
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != 1251951 {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::caster(combat::spell_cast::targets::radius(
+        &spell.effects[0],
+        1,
+    ))
+}
 
 fn initialize(world: &mut World, actor: Entity) {
     let Some(owner) = world

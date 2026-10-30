@@ -128,6 +128,49 @@ fn transformed_unholy_ghoul_reports_its_autonomous_cleave() {
 }
 
 #[test]
+fn lesser_ghoul_expiry_uses_the_pets_native_explosion_radius() {
+    let mut harness = crate::test_support::harness(Vec::new(), &[], 6).unwrap();
+    harness.app.insert_resource(
+        crate::test_support::world_db()
+            .unwrap()
+            .spell_store()
+            .clone(),
+    );
+    let owner = harness.caster;
+    harness.app.world_mut().entity_mut(owner).insert(
+        combat::class_progression::KnownSpells::from_baseline(vec![288848]),
+    );
+    let pet = harness
+        .app
+        .world_mut()
+        .spawn((
+            combat::spell_cast::summon::SummonedCreature {
+                owner,
+                spell_id: 275430,
+                properties_id: 0,
+                properties: combat::spell_cast::summon::SummonProperties {
+                    control: 0,
+                    faction: 0,
+                    title: 0,
+                    slot: 0,
+                    flags: 0,
+                },
+                display_scale: 1.0,
+                expires_at: None,
+            },
+            shared::components::Position {
+                x: 20.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let reaches = party_unintended_reach(harness.app.world_mut(), &[owner]);
+    let pet_reach = reaches.iter().find(|(unit, _, _)| *unit == pet).unwrap();
+    assert_eq!(pet_reach.1, 8.0);
+}
+
+#[test]
 fn beast_mastery_follower_without_area_actions_has_no_secondary_reach() {
     let (mut harness, unit) = follower(209065, 3);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);

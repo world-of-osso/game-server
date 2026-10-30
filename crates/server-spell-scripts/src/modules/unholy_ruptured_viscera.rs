@@ -3,7 +3,24 @@ use super::combat;
 use bevy::prelude::*;
 use combat::spell_cast::{self, script_registry::SpellScriptHook, summon::SummonedCreature};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::SummonExpired(expire)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
+    SpellScriptHook::SummonExpired(expire),
+];
+
+fn autonomous_actions(world: &World, actor: Entity) -> Vec<u32> {
+    let Some(summon) = world.get::<SummonedCreature>(actor) else {
+        return Vec::new();
+    };
+    let ghoul = matches!(summon.spell_id, 275430 | 1294026);
+    let selected =
+        combat::spell_cast::script_registry::reach_source_selected(world, summon.owner, 288848);
+    if ghoul && selected {
+        vec![1247379]
+    } else {
+        Vec::new()
+    }
+}
 
 fn expire(world: &mut World, actor: Entity) {
     let Some(summon) = world.get::<SummonedCreature>(actor) else {

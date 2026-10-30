@@ -33,6 +33,7 @@ const AREA_ACTIONS: &[u32] = &[450499, 450462, METEORITE];
 const EXCEPTIONAL_ACTIONS: &[u32] = &[453326, 450421, METEORITE];
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
     SpellScriptHook::FireAuraRegistration(register),
     SpellScriptHook::BeforeNativeOnCast(before_cast),
     SpellScriptHook::CriticalChance(critical_chance),
@@ -188,6 +189,24 @@ fn remove(world: &mut World, owner: Entity, _aura: &AuraInstance, _reason: auras
     for actor in owned_phoenixes(world, owner) {
         spell_cast::summon::despawn_summon(world, actor);
     }
+}
+
+fn autonomous_actions(world: &World, actor: Entity) -> Vec<u32> {
+    if world.get::<Phoenix>(actor).is_none() {
+        return Vec::new();
+    }
+    SINGLE_ACTIONS
+        .iter()
+        .chain(AREA_ACTIONS)
+        .chain(EXCEPTIONAL_ACTIONS)
+        .copied()
+        .chain([
+            NORMAL_TRAVEL,
+            EXCEPTIONAL_TRAVEL,
+            METEORITE_IMPACT,
+            BUGGED_IMPACT,
+        ])
+        .collect()
 }
 
 fn opponents(world: &World, state: Phoenix) -> Vec<Entity> {
