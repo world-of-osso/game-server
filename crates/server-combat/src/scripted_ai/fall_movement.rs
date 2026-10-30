@@ -16,12 +16,23 @@ pub struct FallMovement {
     id: u32,
     from: Position,
     floor: f32,
+    horizontal_target: Option<Vec3>,
+    horizontal_duration: f32,
     elapsed_ms: u32,
     duration_ms: u32,
     started: std::time::Duration,
 }
 
 pub(crate) fn move_fall(world: &mut World, unit: Entity, id: u32) {
+    start_fall(world, unit, id, None);
+}
+
+/// Begin gravity at the supported edge while moving horizontally into the fall column.
+pub(crate) fn move_fall_towards(world: &mut World, unit: Entity, id: u32, landing: Vec3) {
+    start_fall(world, unit, id, Some(landing));
+}
+
+fn start_fall(world: &mut World, unit: Entity, id: u32, landing: Option<Vec3>) {
     let Some((position, map)) = world
         .get::<Position>(unit)
         .copied()
@@ -36,9 +47,23 @@ pub(crate) fn move_fall(world: &mut World, unit: Entity, id: u32) {
     {
         return;
     }
-    let Some(floor) = query_fall_floor(world, unit, map, position) else {
+    let search = landing.map_or(position, |target| Position {
+        x: target.x,
+        y: position.y,
+        z: target.z,
+    });
+    let Some(floor) = query_fall_floor(world, unit, map, search) else {
         return;
     };
+    if landing.is_some_and(|target| (target.y - floor).abs() > ::navigation::CELL_HEIGHT) {
+        warn!(
+            ?unit,
+            floor,
+            ?landing,
+            "MoveFall target does not match collision floor"
+        );
+        return;
+    }
     if (position.y - floor).abs() < 0.1 {
         return;
     }
@@ -47,11 +72,17 @@ pub(crate) fn move_fall(world: &mut World, unit: Entity, id: u32) {
         return;
     }
     let started = world.resource::<Time>().elapsed();
+    let horizontal_duration = landing.map_or(0.0, |target| {
+        Vec2::new(target.x - position.x, target.z - position.z).length()
+            / crate::creature_ai::BASE_RUN_SPEED
+    });
     super::movement::clear_point_movement(world, unit);
     world.entity_mut(unit).insert(FallMovement {
         id,
         from: position,
         floor,
+        horizontal_target: landing,
+        horizontal_duration,
         elapsed_ms: 0,
         duration_ms,
         started,
@@ -142,11 +173,21 @@ fn update_fall_positions(
         }
         fall.elapsed_ms = (fall.elapsed_ms + delta_ms).min(fall.duration_ms);
         let arrived = fall.elapsed_ms == fall.duration_ms;
+        let seconds = fall.elapsed_ms as f32 / 1000.0;
+        let fraction = if fall.horizontal_duration > 0.0 {
+            (seconds / fall.horizontal_duration).min(1.0)
+        } else {
+            0.0
+        };
+        let target =
+            fall.horizontal_target
+                .unwrap_or(Vec3::new(fall.from.x, fall.from.y, fall.from.z));
         *position = Position {
+            x: fall.from.x + (target.x - fall.from.x) * fraction,
             // TC computes elevation even when Done; integer-ms truncation can
             // leave the last sample slightly above the floor. Never force a snap.
-            y: (fall.from.y - fall_elevation(fall.elapsed_ms as f32 / 1000.0)).max(fall.floor),
-            ..fall.from
+            y: (fall.from.y - fall_elevation(seconds)).max(fall.floor),
+            z: fall.from.z + (target.z - fall.from.z) * fraction,
         };
         updates.push((unit, arrived.then_some(fall.id)));
     }
