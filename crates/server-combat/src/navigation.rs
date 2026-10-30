@@ -28,6 +28,7 @@ pub enum Goal {
     FollowerTargetSelection,
     OwnerTrail(u64),
     FollowerRelease,
+    FollowerFlightLanding,
     FearCollision,
     FearPath,
     Point,

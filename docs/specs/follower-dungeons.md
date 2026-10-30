@@ -43,6 +43,10 @@ For an in-memory follower run, disconnect and logout retain the same instance an
 
 `FANGS_WARMUP_LOG_CORRELATED`: After Orator Krix'vizk (2907) is Done, a living player within 20 yards of Nx starts a 25.7-second warmup. At its end Nx and Vx become selectable and attackable in that instance. LittleWigs records Executor Nizrek's Transformatory line and a 25.7-second active bar; WCL `APqCW2VFyNnLah6c` fight 8 pull 12 shows both bosses taking damage at the pull. The proximity trigger and radius are inferred, not sourced.
 
+## Flying follow
+
+`DAWNBREAKER_FLIGHT_TRAVERSAL`: In an area whose AreaTable MountFlags contains 0x2, living followers mount and follow their flying leader in three dimensions without a navigation route. When the leader lands, followers land on the navmesh surface connected to the leader's landing point before resuming ground follow. This is the project follower policy. The simulator leader must use the same flight rule; its implementation is pending.
+
 ## Nexus-Point Xenas passage
 
 `NEXUS_POINT_TAXIPATH_PASSAGE_LOG_CORRELATED`: After Corewarden Nysarra (3332) is Done, a living owner within 20 yards of native TaxiPath 11073 node 0 boards with living followers and their pets. Five player paths in WCL `frjtBDLW2AdnHQk4` fight 9 correlate with the native route. The proximity trigger and radius are inferred; the authored trigger and mount identities are unsourced.
