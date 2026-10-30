@@ -38,6 +38,56 @@ pub fn closest_graveyard_in_zone(
     near.or(entrance).map(|(_, grave)| grave).or(far)
 }
 
+/// The nearest zone graveyard whose safe location is on the current map.
+pub fn closest_graveyard_on_map(
+    store: &MapStore,
+    location: &WorldLocation,
+    zone_id: u32,
+) -> Option<WorldLocation> {
+    store
+        .graveyard_zones
+        .get(&zone_id)?
+        .iter()
+        .filter_map(|id| store.safe_locs.get(id))
+        .filter(|grave| grave.map_id == location.map_id)
+        .min_by(|a, b| {
+            a.position
+                .distance_squared(location.position)
+                .total_cmp(&b.position.distance_squared(location.position))
+        })
+        .copied()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::prelude::Vec3;
+
+    #[test]
+    fn same_map_graveyard_is_selected_before_a_closer_foreign_location() {
+        let mut store = MapStore::continents();
+        let location = WorldLocation {
+            map_id: 0,
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        };
+        let outside = WorldLocation {
+            map_id: 1,
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        };
+        let inside = WorldLocation {
+            map_id: 0,
+            position: Vec3::new(30.0, 0.0, 0.0),
+            orientation: 0.0,
+        };
+        store.safe_locs.insert(1, outside);
+        store.safe_locs.insert(2, inside);
+        store.graveyard_zones.insert(7, vec![1, 2]);
+        assert_eq!(closest_graveyard_on_map(&store, &location, 7), Some(inside));
+    }
+}
+
 fn keep_closest(best: &mut Option<(f32, WorldLocation)>, distance: f32, grave: WorldLocation) {
     if best.is_none_or(|(best_distance, _)| distance < best_distance) {
         *best = Some((distance, grave));
