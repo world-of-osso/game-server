@@ -2,12 +2,12 @@
 //! enemies or heal allies around the event's other party.
 use super::combat;
 use bevy::prelude::*;
-use std::collections::HashMap;
 use combat::auras::{AuraInstance, scripts::AuraScripts};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
 use combat::spell_cast::targets::{self, Relation};
 use combat::spell_cast::{PlannedEffect, TargetPlan};
 use combat::spell_info::SpellInfo;
+use std::collections::HashMap;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
@@ -34,8 +34,10 @@ fn register(scripts: &mut AuraScripts) {
 // SimC76f8118 sc_paladin.cpp2813–2822,3313–3314 keeps one callback
 // across armament activations; its RPPM clock is not reset on expiry.
 fn restore_weapon_clock(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    let timers = world.get::<SacredWeaponClocks>(unit)
-        .and_then(|clocks| clocks.0.get(&aura.caster)).copied();
+    let timers = world
+        .get::<SacredWeaponClocks>(unit)
+        .and_then(|clocks| clocks.0.get(&aura.caster))
+        .copied();
     if let Some(timers) = timers {
         combat::auras::procs::restore_proc_timers(world, unit, aura.instance_id, timers);
     }
@@ -48,7 +50,13 @@ fn save_weapon_clock(
     _: combat::auras::RemoveReason,
 ) {
     let timers = combat::auras::procs::snapshot_proc_timers(aura);
-    world.entity_mut(unit).entry::<SacredWeaponClocks>().or_default().get_mut().0.insert(aura.caster, timers);
+    world
+        .entity_mut(unit)
+        .entry::<SacredWeaponClocks>()
+        .or_default()
+        .get_mut()
+        .0
+        .insert(aura.caster, timers);
 }
 
 fn accept_weapon_event(

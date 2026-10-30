@@ -85,8 +85,13 @@ fn tick(world: &mut World, caster: Entity, aura: &AuraInstance, effect: u8) {
 }
 
 fn roll_gorestained_claws(world: &mut World, caster: Entity, depth: u8) {
-    let effect = world.get::<ActiveAuras>(caster)
-        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == TWO_PIECE && aura.caster == caster))
+    let effect = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == TWO_PIECE && aura.caster == caster)
+        })
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0));
     let Some(effect) = effect else { return };
     let (chance, child) = (effect.amount, effect.trigger_spell);
