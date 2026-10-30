@@ -244,6 +244,10 @@ fn follower_dps_production_dummy() {
     );
     if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
         assert!(
+            !hits.contains_key(&1269224),
+            "Blaze of Glory must not hit Shield of the Righteous's primary target"
+        );
+        assert!(
             casts.get(&389539).is_some_and(|count| *count > 0),
             "Sentinel must start"
         );
