@@ -223,14 +223,21 @@ def build_template_difficulties(conn, report):
         ContentTuningID INTEGER NOT NULL, HealthScalingExpansion INTEGER NOT NULL, LevelScalingDeltaMin INTEGER NOT NULL,
         LevelScalingDeltaMax INTEGER NOT NULL, HealthModifier REAL NOT NULL, ManaModifier REAL NOT NULL,
         ArmorModifier REAL NOT NULL, DamageModifier REAL NOT NULL, lootid INTEGER NOT NULL DEFAULT 0,
-        mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (entry, DifficultyID))""")
+        mingold INTEGER NOT NULL DEFAULT 0, maxgold INTEGER NOT NULL DEFAULT 0,
+        StaticFlags1 INTEGER NOT NULL DEFAULT 0, StaticFlags2 INTEGER NOT NULL DEFAULT 0,
+        StaticFlags3 INTEGER NOT NULL DEFAULT 0, StaticFlags4 INTEGER NOT NULL DEFAULT 0,
+        StaticFlags5 INTEGER NOT NULL DEFAULT 0, StaticFlags6 INTEGER NOT NULL DEFAULT 0,
+        StaticFlags7 INTEGER NOT NULL DEFAULT 0, StaticFlags8 INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (entry, DifficultyID))""")
     conn.execute("""INSERT INTO content_creature_template_difficulty (entry, DifficultyID, minlevel, maxlevel, exp,
             ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax, HealthModifier,
-            ManaModifier, ArmorModifier, DamageModifier)
+            ManaModifier, ArmorModifier, DamageModifier, StaticFlags1, StaticFlags2, StaticFlags3, StaticFlags4,
+            StaticFlags5, StaticFlags6, StaticFlags7, StaticFlags8)
         SELECT s.entry, s.difficulty, COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1),
             health_expansion(d.HealthScalingExpansion), d.ContentTuningID, d.HealthScalingExpansion,
             d.LevelScalingDeltaMin, d.LevelScalingDeltaMax, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
-            d.DamageModifier
+            d.DamageModifier, d.StaticFlags1, d.StaticFlags2, d.StaticFlags3, d.StaticFlags4,
+            d.StaticFlags5, d.StaticFlags6, d.StaticFlags7, d.StaticFlags8
         FROM temp.spawn_row s
         JOIN tdb_creature_template_difficulty d ON d.Entry = s.entry AND d.DifficultyID = s.row_difficulty
         LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
@@ -402,7 +409,8 @@ def insert_tdb_templates(conn, entries, *, replace_legacy=False):
             BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
             type, type_flags, VehicleId, mingold, maxgold, AIName, MovementType, HealthModifier, ManaModifier,
             ArmorModifier, ExperienceModifier, RacialLeader, movementId, RegenHealth, flags_extra, ScriptName, VerifiedBuild,
-            ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax)
+            ContentTuningID, HealthScalingExpansion, LevelScalingDeltaMin, LevelScalingDeltaMax,
+            StaticFlags1, StaticFlags2, StaticFlags3, StaticFlags4, StaticFlags5, StaticFlags6, StaticFlags7, StaticFlags8)
         SELECT t.entry, t.KillCredit1, t.KillCredit2, t.name, t.subname, t.IconName,
             COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1), health_expansion(d.HealthScalingExpansion), t.faction,
             t.npcflag & (4294967295 | {TRADING_POST_NPC_FLAG}), t.speed_walk, t.speed_run, t.scale,
@@ -410,7 +418,9 @@ def insert_tdb_templates(conn, entries, *, replace_legacy=False):
             t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
             d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
             t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild,
-            d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin, d.LevelScalingDeltaMax
+            d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin, d.LevelScalingDeltaMax,
+            d.StaticFlags1, d.StaticFlags2, d.StaticFlags3, d.StaticFlags4,
+            d.StaticFlags5, d.StaticFlags6, d.StaticFlags7, d.StaticFlags8
         FROM tdb_creature_template t
         JOIN temp.tdb_difficulty d ON d.Entry = t.entry
         LEFT JOIN content_tuning_level l ON l.ID = d.ContentTuningID
@@ -434,7 +444,8 @@ def build_templates(conn, report):
     entries spells transform into or class/spec/talent spell closures summon. No world spawns are added."""
     clone_table(conn, "creature_template", "content_creature_template")
     conn.execute("INSERT INTO content_creature_template SELECT * FROM creature_template")
-    for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax"):
+    for column in ("ContentTuningID", "HealthScalingExpansion", "LevelScalingDeltaMin", "LevelScalingDeltaMax",
+                   *(f"StaticFlags{i}" for i in range(1, 9))):
         conn.execute(f"ALTER TABLE content_creature_template ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
     create_level_table(conn)
     create_difficulty_table(conn)
@@ -450,6 +461,9 @@ def build_templates(conn, report):
         WHERE t.entry = content_creature_template.entry
           AND content_creature_template.entry IN (SELECT entry FROM creature_template)""")
     take_retail_taming_columns(conn)
+    flags = ", ".join(f"StaticFlags{i} = d.StaticFlags{i}" for i in range(1, 9))
+    conn.execute(f"""UPDATE content_creature_template SET {flags} FROM temp.tdb_difficulty d
+        WHERE d.Entry = content_creature_template.entry""")
     # AzerothCore templates TrinityCore also tunes take its ContentTuning range, and the
     # difficulty-0 scaling expansion, level delta and modifiers ExpectedStat is scaled by.
     conn.execute("""UPDATE content_creature_template SET ContentTuningID = d.ContentTuningID,

@@ -40,6 +40,7 @@ pub mod creature_aggro;
 pub mod creature_ai;
 pub mod creature_scripts;
 mod creature_sight;
+pub mod creature_static;
 mod creature_tap;
 mod creature_tooltip;
 mod currency;

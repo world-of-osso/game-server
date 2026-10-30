@@ -181,6 +181,7 @@ impl EntryProjection {
             return false;
         }
         self.apply_core(&mut actor, initial_spawn);
+        self.apply_static_flags(&mut actor);
         self.apply_scaling(&mut actor);
         self.apply_equipment(&mut actor);
         self.apply_pose(&mut actor);
@@ -248,10 +249,58 @@ impl EntryProjection {
             CreatureArmor(self.stats.armor),
             CreatureClassification::from_rank(self.template.rank).expect("validated template rank"),
             UnitFactionTemplate(u32::from(self.template.faction)),
-            UnitFlags(flags),
+            UnitFlags(crate::creature_static::unit_flags(
+                flags,
+                self.template.static_flags,
+            )),
+            shared::components::UnitFlags2(crate::creature_static::unit_flags2(
+                self.template.unit_flags2,
+                self.template.static_flags,
+            )),
             NpcFlags(self.template.npc_flags),
             UnitPowers::default(),
         ));
+    }
+
+    fn apply_static_flags(&self, actor: &mut EntityWorldMut<'_>) {
+        use crate::creature_static::{CreatureStaticFlags, FLOATING, SESSILE, UNKILLABLE};
+        let flags = CreatureStaticFlags(self.template.static_flags);
+        let was_sessile = actor
+            .get::<CreatureStaticFlags>()
+            .is_some_and(|old| old.sessile());
+        actor.insert(flags);
+        if flags.sessile() {
+            let mut mods = actor
+                .get::<crate::auras::AuraStatMods>()
+                .cloned()
+                .unwrap_or_default();
+            mods.movement_speed = 0.0;
+            actor.insert(mods);
+        } else if was_sessile {
+            let speed = actor
+                .get::<crate::auras::ActiveAuras>()
+                .map(|auras| {
+                    crate::auras::stat_mods::compute(auras, false)
+                        .1
+                        .movement_speed
+                })
+                .unwrap_or(1.0);
+            if let Some(mut mods) = actor.get_mut::<crate::auras::AuraStatMods>() {
+                mods.movement_speed = speed;
+            }
+        }
+        if flags.0[0] & (SESSILE | FLOATING) != 0 {
+            actor.insert(crate::scripted_ai::waypoint_path::GravityDisabled);
+        }
+        if flags.0[0] & UNKILLABLE != 0 {
+            actor.insert(crate::combat::Unkillable);
+        }
+        if flags.0[2] & crate::creature_static::ALLOW_INTERACTION_IN_COMBAT != 0 {
+            let value = actor
+                .get::<shared::components::UnitFlags3>()
+                .map_or(0, |flags| flags.0);
+            actor.insert(shared::components::UnitFlags3(value | 0x0010_0000));
+        }
     }
 
     fn unit_flags_for(&self, actor: &EntityWorldMut<'_>, initial_spawn: bool) -> u32 {
@@ -390,7 +439,9 @@ impl EntryProjection {
     }
 
     fn update_react_state(&self, actor: &mut EntityWorldMut<'_>) {
-        let state = if self.template.trigger || self.template.creature_type == CREATURE_TYPE_CRITTER
+        let state = if self.template.trigger
+            || self.template.creature_type == CREATURE_TYPE_CRITTER
+            || self.template.static_flags[0] & crate::creature_static::IGNORE_COMBAT != 0
         {
             crate::scripted_ai::ReactState::Passive
         } else {

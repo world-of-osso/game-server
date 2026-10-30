@@ -125,6 +125,20 @@ fn create_world_schema(conn: &rusqlite::Connection) {
         );",
     )
     .expect("create world schema");
+    for table in [
+        "content_creature_template",
+        "content_creature_template_difficulty",
+    ] {
+        for index in 1..=8 {
+            conn.execute(
+                &format!(
+                    "ALTER TABLE {table} ADD COLUMN StaticFlags{index} INTEGER NOT NULL DEFAULT 0"
+                ),
+                [],
+            )
+            .unwrap();
+        }
+    }
 }
 
 fn write_to_temp_sqlite(populate: impl FnOnce(&rusqlite::Connection)) -> PathBuf {
@@ -147,8 +161,8 @@ fn world_data_loads_from_sqlite() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO content_creature_template VALUES
-                (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000),
-                (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000);
+                (1,'Wolf',NULL,3,4,35,0, 1.0,1.4,1.0,0,1,0,1,1.0,1.0,'',1,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000,0,0,0,0,0,0,0,0),
+                (2,'Boar',NULL,2,3,35,0, 1.0,1.2,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000,0,0,0,0,0,0,0,0);
              INSERT INTO content_creature_template_model VALUES (1,0,100,1.0,1.0),(2,0,200,1.0,1.0);
              INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
                 position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (10,1,0,1,1, 0.0,0.0,0.0,0.0, 300,5.0,1);
@@ -237,7 +251,7 @@ fn world_data_spawns_indexed_by_map() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO content_creature_template VALUES
-                (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000);
+                (1,'Wolf',NULL,1,1,35,0,1.0,1.0,1.0,0,1,0,1,1.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000,0,0,0,0,0,0,0,0);
              INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
                 position_z, orientation, spawntimesecs, wander_distance, MovementType) VALUES (1,1,0,1,1, 0.0,0.0,0.0,0.0, 300,0.0,0);
              INSERT INTO content_creature (guid, id1, map, zoneId, areaId, position_x, position_y,
@@ -267,7 +281,7 @@ fn world_data_models_attached_to_templates() {
     let path = write_to_temp_sqlite(|conn| {
         conn.execute_batch(
             "INSERT INTO content_creature_template VALUES
-                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000);
+                (5,'Demon',NULL,10,10,35,0,1.0,1.5,1.0,0,1,0,1,2.0,1.0,'',0,0,0,1.0,'',20.0,0,0,0,0,1.0,1.0,0,1,0,0,2000,0,0,0,0,0,0,0,0);
              INSERT INTO content_creature_template_model VALUES (5,0,301,1.0,0.7);
              INSERT INTO content_creature_template_model VALUES (5,1,302,1.0,0.3);",
         )

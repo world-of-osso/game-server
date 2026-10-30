@@ -580,6 +580,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
         Option<&crate::creature_ai::CreatureState>,
         Has<Walking>,
         Has<GravityDisabled>,
+        Option<&crate::creature_static::CreatureStaticFlags>,
         Option<&mut Rotation>,
         Option<&mut CreatureMotion>,
         Option<&mut MovementSpeed>,
@@ -598,11 +599,15 @@ pub(crate) fn path_movement_system(world: &mut World) {
         state,
         walking,
         flying,
+        static_flags,
         rotation,
         motion,
         speed,
     ) in movers.iter_mut(world)
     {
+        if static_flags.is_some_and(|flags| flags.sessile()) {
+            continue;
+        }
         if movement.finalized {
             retired.push(entity);
             continue;
