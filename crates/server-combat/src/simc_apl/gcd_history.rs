@@ -1,7 +1,8 @@
 //! Bounded successful-GCD history configured from a loaded APL's lookback.
+use bevy::prelude::*;
 use std::collections::VecDeque;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Component, Debug, Clone, Default)]
 pub struct GcdHistory {
     limit: usize,
     casts: VecDeque<u32>,
@@ -40,6 +41,13 @@ impl GcdHistory {
     }
 }
 
+/// Install the loaded program's exact lookback before its first cast.
+pub fn initialize(world: &mut World, actor: Entity, program: &crate::simc_apl::Program) {
+    world
+        .entity_mut(actor)
+        .insert(GcdHistory::new(program.gcd_history_limit()));
+}
+
 /// Find the greatest prev_gcd index in every literal row, including action
 /// options such as channel interruption expressions.
 pub fn required_lookback<'a>(rows: impl IntoIterator<Item = &'a str>) -> Result<usize, String> {
@@ -76,7 +84,10 @@ mod tests {
         .unwrap();
         let limit = program.gcd_history_limit();
         assert_eq!(limit, 3);
-        let mut history = GcdHistory::new(limit);
+        let mut world = World::new();
+        let actor = world.spawn_empty().id();
+        initialize(&mut world, actor, &program);
+        let mut history = world.get_mut::<GcdHistory>(actor).unwrap();
         for spell in [1, 2, 3, 4] {
             history.record(spell);
         }
