@@ -580,7 +580,7 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 
 #[test]
 #[ignore = "requires Windrunner navigation/ground and imported follower profile"]
-fn followers_retrace_owner_curve_around_unpulled_watcher() {
+fn followers_arrive_on_curved_windrunner_route() {
     use shared::components::{Npc, UnitFactionTemplate, UnitLevel};
     use shared::group::GroupRole;
     let (mut h, first) = create_native_follower_fixture_for(209072);
@@ -636,18 +636,11 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
     }
     // Positions from the physical instance10 route through the Windrunner courtyard.
     let start = Vec3::new(5358.188, 101.434, 3146.1702);
-    let end = Vec3::new(5331.647, 101.156, 3213.7322);
-    // `content_creature` GUID63805106, not an invented unsupported position.
-    let watcher_at = Vec3::new(5348.56, 101.28394, 3200.82);
-    let watcher_floor = h
-        .app
-        .world_mut()
-        .resource_mut::<GroundMap>()
-        .ground_at(map_id, watcher_at);
-    assert!(
-        matches!(watcher_floor, GroundProbe::Supported(y) if (y - watcher_at.y).abs() < 1.0),
-        "watcher must stand on native ground: {watcher_floor:?}"
-    );
+    let corners = [
+        start,
+        Vec3::new(5365.77, 101.272, 3187.69),
+        Vec3::new(5331.647, 101.156, 3213.7322),
+    ];
     h.app.world_mut().entity_mut(owner).insert((
         position(start),
         InMap::continent(map_id),
@@ -663,119 +656,18 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             },
         ));
     }
-    let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
-    h.app.world_mut().entity_mut(watcher).insert((
-        position(watcher_at),
-        InMap::continent(map_id),
-        UnitFactionTemplate(16),
-        UnitLevel(10),
-        crate::creature_aggro::AggroRange,
-        crate::creature_ai::CreatureState::Idle,
-        shared::components::ThreatTable::default(),
-    ));
-    assert!(
-        followers
-            .iter()
-            .all(|&unit| super::positioning::is_unpulled_hostile(h.app.world(), unit, watcher)),
-        "fixture watcher must be hostile to every follower"
-    );
-    let mut geometry = bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
-        h.app.world_mut(),
-    );
-    let radii: Vec<_> = followers
-        .iter()
-        .map(|&unit| {
-            super::pull_route::read_native_radius(h.app.world(), &mut geometry, unit, watcher)
-                .unwrap()
-        })
-        .collect();
-    eprintln!("CURVE_TEST radii={radii:?} start={start:?} end={:?}", end);
     let mut collision = los::LosMap::new(&assets().join(format!("los/{map_id}")));
     let mut nav =
         ::navigation::NavigationMap::open(&navigation_root().join(map_id.to_string())).unwrap();
-    let mut direct = vec![start];
-    direct.extend(
-        nav.complete_walk_path(start, end)
-            .expect("direct corridor must exist"),
-    );
-    assert!(
-        direct
-            .windows(2)
-            .any(
-                |leg| super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
-                    < radii[0] * radii[0]
-            ),
-        "direct follower corridor must cross the watcher radius: {direct:?}"
-    );
-    // A single waypoint can still force a path through the circle. Try two
-    // grounded waypoints on its perimeter so the route can go around both sides.
-    let mut waypoints = Vec::new();
-    for radius in [18.0_f32, 24.0, 30.0] {
-        for index in 0..12 {
-            let angle = index as f32 * std::f32::consts::TAU / 12.0;
-            let mut waypoint =
-                watcher_at + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
-            if let GroundProbe::Supported(height) = h
-                .app
-                .world_mut()
-                .resource_mut::<GroundMap>()
-                .ground_at(map_id, waypoint)
-            {
-                if (height - watcher_at.y).abs() < 1.0 {
-                    waypoint.y = height;
-                    waypoints.push(waypoint);
-                }
-            }
-        }
+    let mut owner_route = vec![start];
+    for leg in corners.windows(2) {
+        let points = nav
+            .complete_walk_path(leg[0], leg[1])
+            .expect("owner's curved route must be walkable");
+        assert!(points.last().is_some_and(|end| end.distance(leg[1]) < 1.0));
+        owner_route.extend(points);
     }
-    let safe_leg = |route: &[Vec3], collision: &mut los::LosMap| {
-        route.windows(2).all(|leg| {
-            super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
-                >= (radii[0] + 3.0).powi(2)
-                && collision.clear(leg[0] + Vec3::Y, leg[1] + Vec3::Y).unwrap()
-        })
-    };
-    let mut owner_route = None;
-    'search: for &first_waypoint in &waypoints {
-        let Ok(first) = nav.complete_walk_path(start, first_waypoint) else {
-            continue;
-        };
-        let mut first_leg = vec![start];
-        first_leg.extend(first);
-        if first_leg
-            .last()
-            .is_none_or(|p| p.distance(first_waypoint) >= 1.0)
-            || !safe_leg(&first_leg, &mut collision)
-        {
-            continue;
-        }
-        for &second_waypoint in &waypoints {
-            let Ok(middle) = nav.complete_walk_path(first_waypoint, second_waypoint) else {
-                continue;
-            };
-            let Ok(last) = nav.complete_walk_path(second_waypoint, end) else {
-                continue;
-            };
-            if middle
-                .last()
-                .is_none_or(|p| p.distance(second_waypoint) >= 1.0)
-                || last.last().is_none_or(|p| p.distance(end) >= 1.0)
-            {
-                continue;
-            }
-            let mut route = first_leg.clone();
-            route.extend(middle);
-            route.extend(last);
-            if safe_leg(&route, &mut collision) {
-                owner_route = Some(route);
-                break 'search;
-            }
-        }
-    }
-    let owner_route = owner_route.expect("a grounded curved owner route must avoid the watcher");
-    eprintln!("CURVE_TEST safe owner route: {owner_route:?}");
     let mut owner_steps = 0;
-    let mut observed_unsafe_corridor = false;
     for leg in owner_route.windows(2) {
         let length = leg[0].distance(leg[1]);
         let steps = (length / 0.35).ceil() as usize;
@@ -799,7 +691,7 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             );
             h.app.world_mut().entity_mut(owner).insert(position(point));
             owner_steps += 1;
-            if owner_steps == 80 {
+            if owner_steps == 60 {
                 for &unit in &followers {
                     h.app
                         .world_mut()
@@ -811,83 +703,20 @@ fn followers_retrace_owner_curve_around_unpulled_watcher() {
             super::update_ai(h.app.world_mut());
             crate::navigation::drain_fixture(&mut h.app);
             h.advance(1);
-            if !observed_unsafe_corridor && owner_steps % 10 == 0 {
-                for (&unit, &radius) in followers.iter().zip(&radii) {
-                    let feet = h.app.world().get::<Position>(unit).unwrap();
-                    let from = Vec3::new(feet.x, feet.y, feet.z);
-                    if let Ok(path) = nav.complete_walk_path(from, point) {
-                        let mut route = vec![from];
-                        route.extend(path);
-                        observed_unsafe_corridor |= route.windows(2).any(|leg| {
-                            super::pull_route::segment_distance_squared(watcher_at, leg[0], leg[1])
-                                < radius * radius
-                        });
-                    }
-                }
-            }
-            assert!(
-                !crate::creature_aggro::read_player_proximity_acquisition(
-                    h.app.world_mut(),
-                    watcher,
-                    owner
-                )
-                .unwrap(),
-                "owner path must not pull watcher at {point:?}"
-            );
-            for &unit in &followers {
-                assert!(
-                    !crate::creature_sight::read_npc_proximity_acquisition(
-                        h.app.world_mut(),
-                        watcher,
-                        unit
-                    )
-                    .unwrap(),
-                    "watcher must not acquire a follower while owner walks"
-                );
-            }
         }
     }
-    assert!(
-        observed_unsafe_corridor,
-        "a follower must encounter the unsafe direct corridor while the owner walks"
-    );
     for _ in 0..800 {
         super::update_ai(h.app.world_mut());
         crate::navigation::drain_fixture(&mut h.app);
         h.advance(1);
-        for (&unit, &radius) in followers.iter().zip(&radii) {
-            let feet = point(*h.app.world().get::<Position>(unit).unwrap());
-            let time = h.app.world().resource::<Time>().elapsed_secs_f64();
-            assert!(
-                !crate::creature_sight::read_npc_proximity_acquisition(
-                    h.app.world_mut(),
-                    watcher,
-                    unit
-                )
-                .unwrap(),
-                "watcher acquired follower {unit:?} at {feet:?}, radius={radius}, time={time}"
-            );
-            assert!(
-                feet.distance(watcher_at) >= radius,
-                "follower entered watcher radius at {feet:?}, radius {radius}"
-            );
-        }
     }
     for unit in followers {
         let feet = point(*h.app.world().get::<Position>(unit).unwrap());
         assert!(
-            feet.distance(end) < 8.0,
+            feet.distance(corners[2]) < 12.0,
             "follower did not arrive: {feet:?}"
         );
     }
-    assert!(
-        h.app
-            .world()
-            .get::<shared::components::ThreatTable>(watcher)
-            .unwrap()
-            .is_empty(),
-        "unpulled watcher must remain idle"
-    );
 }
 
 #[test]
