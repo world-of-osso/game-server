@@ -398,3 +398,72 @@ fn darkness_appears_on_candle_king_done_and_ends_at_logged_55_percent() {
     });
     assert!(!living, "the ended Darkness leaves and does not respawn");
 }
+
+#[test]
+fn candlelight_source_box_clears_darklight_on_entry_and_removes_light_on_exit() {
+    let (mut h, _, map) = encounter_fixture(
+        CANDLE_KING,
+        MAP,
+        BIT,
+        205,
+        None,
+        EncounterState::NotStarted,
+        true,
+    );
+    crate::world_area_triggers::spawn_map(h.app.world_mut(), map, 205);
+    let player = h.player();
+    let area = h
+        .app
+        .world_mut()
+        .query::<(
+            Entity,
+            &InMap,
+            &crate::world_area_triggers::WorldAreaTrigger,
+            &Position,
+        )>()
+        .iter(h.app.world())
+        .find(|(_, copy, area, _)| **copy == map && area.spawn_id == 285)
+        .map(|(_, _, area, at)| (area.clone(), *at))
+        .expect("actual TDB world-static candlelight spawn 285");
+    assert_eq!(area.0.script_name, "at_the_candle_king_candlelight");
+    let center = area.1;
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 40.0,
+        ..center
+    });
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(426127)
+        .unwrap()
+        .clone();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: player,
+            target: player,
+            spell_id: 426127,
+            effect_mask: crate::auras::aura_effect_mask(&spell),
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(h.has_aura(player, 426127));
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(!h.has_aura(player, 426125));
+    h.app.world_mut().entity_mut(player).insert(center);
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(h.has_aura(player, 426125));
+    assert!(!h.has_aura(player, 426127));
+    crate::spell_cast::cast_triggered(h.app.world_mut(), player, 426127, Some(player), 0);
+    assert!(
+        !h.has_aura(player, 426127),
+        "native ExcludeTargetAuraSpell prevents darklight reapplication"
+    );
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: center.x + 40.0,
+        ..center
+    });
+    crate::world_area_triggers::update_candlelight(h.app.world_mut());
+    assert!(!h.has_aura(player, 426125));
+}

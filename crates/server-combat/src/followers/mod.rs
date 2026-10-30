@@ -2,6 +2,7 @@
 #[cfg(test)]
 mod action_knowledge_tests;
 mod ai;
+mod candlelight;
 mod catalog;
 #[cfg(test)]
 mod darkflame_drop_tests;
