@@ -9,7 +9,33 @@ use combat::spell_info::SpellInfo;
 const TALENT: u32 = 448403;
 const DAMAGE: u32 = 448405;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::TargetPlan(target_plan)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::TargetPlan(target_plan),
+];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, TALENT | DAMAGE | 263165) {
+        return Default::default();
+    }
+    let damage = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(DAMAGE)
+        .expect("native Collapse damage");
+    let radius = damage
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Collapse effect")
+        .radius[1]
+        .expect("native Collapse radius")
+        .radius_max;
+    combat::spell_cast::script_registry::ScriptReach::target(radius)
+}
 
 pub(super) fn growth_multiplier(world: &World, caster: Entity, growth: u8) -> f32 {
     if growth == 0 {

@@ -7,6 +7,7 @@ use combat::spell_cast::{PlannedEffect, TargetPlan, effects::EffectCtx, targets}
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::PeriodicPrimaryDamage(after_tick),
     SpellScriptHook::TargetPlan(target_plan),
 ];
@@ -16,6 +17,21 @@ use shared::components::ActiveSpec;
 const EXPLOSIVE: u32 = 212431;
 const CLEAVE: u32 = 212680;
 const MID2_FOUR_PIECE: u32 = 1296634;
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, EXPLOSIVE | CLEAVE) {
+        return Default::default();
+    }
+    let cleave = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(CLEAVE)
+        .expect("native Explosive cleave");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::radius(&cleave.effects[0], 1))
+}
 
 fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32, _crit: bool) {
     if ctx.spell.id != EXPLOSIVE

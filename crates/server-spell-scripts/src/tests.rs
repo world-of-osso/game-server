@@ -129,6 +129,20 @@ fn psychic_link_does_not_reach_unafflicted_enemies() {
 }
 
 #[test]
+fn wildfire_declaration_matches_its_target_centered_explosion() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data
+        .spell_store()
+        .get(259495)
+        .expect("native Wildfire Bomb");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(reach.caster_radius, 0.0);
+    assert_eq!(reach.target_radius, 5.0);
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));

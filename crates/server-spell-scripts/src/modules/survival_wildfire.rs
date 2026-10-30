@@ -8,6 +8,7 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(root_hit),
     SpellScriptHook::TargetPlan(payload_plan),
     SpellScriptHook::ResolvedDamage(apply_periodic_payload),
@@ -22,6 +23,18 @@ const SHRAPNEL_FOCUS: u32 = 1292687;
 // SimC76f8118 sc_hunter.cpp7064: its sourced approximation is a5yd circle
 // around the actual primary. Neither native damage record carries a radius.
 const EXPLOSION_RADIUS: f32 = 5.0;
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if matches!(spell.id, WILDFIRE_BOMB | EXPLOSION) {
+        combat::spell_cast::script_registry::ScriptReach::target(EXPLOSION_RADIUS)
+    } else {
+        Default::default()
+    }
+}
 
 fn root_hit(spell: u32, effect: u8) -> Option<HitHook> {
     (spell == WILDFIRE_BOMB && effect == 2).then_some(explode)

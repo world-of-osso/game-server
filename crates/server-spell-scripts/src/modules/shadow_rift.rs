@@ -10,6 +10,7 @@ use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterAuraApplication(start_rift),
     SpellScriptHook::AfterElementalLaunch(grow_rift),
     SpellScriptHook::EarlyAuraRegistration(register),
@@ -19,6 +20,21 @@ const TORRENT: u32 = 263165;
 const DRIVER: u32 = 459314;
 const OBJECT: u32 = 447445;
 const DAMAGE: u32 = 447448;
+const MAX_GROWTH: u8 = 5;
+const GROWTH_RADIUS_INCREMENT: f32 = 0.5;
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, TORRENT | DRIVER | DAMAGE) {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::target(
+        read_base_radius(world) + f32::from(MAX_GROWTH) * GROWTH_RADIUS_INCREMENT,
+    )
+}
 
 #[derive(Component)]
 struct Rift {
@@ -90,7 +106,7 @@ fn grow_rift(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: b
         return;
     }
     if let Some(mut rift) = world.get_mut::<Rift>(caster) {
-        rift.growth = (rift.growth + 1).min(5);
+        rift.growth = (rift.growth + 1).min(MAX_GROWTH);
     }
 }
 
@@ -142,7 +158,7 @@ fn plan_pulse(
     };
     let growth = world.get::<Rift>(caster).map_or(0, |rift| rift.growth);
     // Pinned SimC bugs=true applies half a yard for each growth stack.
-    let radius = read_base_radius(world) + f32::from(growth) * 0.5;
+    let radius = read_base_radius(world) + f32::from(growth) * GROWTH_RADIUS_INCREMENT;
     let units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
     vec![PlannedEffect {
         index: 0,

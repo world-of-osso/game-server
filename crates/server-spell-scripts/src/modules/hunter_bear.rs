@@ -6,12 +6,30 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, summon::SummonedCreatu
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterElementalLaunch(rend_on_summon),
     SpellScriptHook::TargetPlan(rend_plan),
 ];
 
 const BEAR_SUMMON: u32 = 471990;
 const REND_FLESH: u32 = 471999;
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, BEAR_SUMMON | REND_FLESH) {
+        return Default::default();
+    }
+    let rend = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(REND_FLESH)
+        .expect("native Rend Flesh");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::effect_radius(
+        &rend.effects[0],
+    ))
+}
 
 #[derive(Component)]
 struct RendStarted;
