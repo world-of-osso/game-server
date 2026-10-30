@@ -31,7 +31,7 @@ Dungeon spirit release uses one location policy for players and followers: a zon
 
 ## Windrunner Spire passage
 
-`WINDRUNNER_TAXIPATH_PASSAGE_LOG_CORRELATED`: A living owner within 20 yards of native TaxiPath node 0 automatically boards with living followers and their pets after the preceding encounter is Done: 10301 after Emberdawn (3056), 10303 after the Derelict Duo (3057), and 10308 after Commander Kroluk (3058). WCL `X4tT9P73BvRrGxyM` fight 1 correlates 10301 and 10303 with player movement; `jpfFa36xhQkZqr4d` fight 6 correlates 10308. The 20-yard proximity activation is a project inference; the authored trigger and mount identities are unsourced. The shared taxi mover uses its existing flight speed; the observed Retail segments are faster.
+`WINDRUNNER_TAXIPATH_PASSAGE_LOG_CORRELATED` (including `WINDRUNNER_TAXIPATH_10308_PASSAGE_LOG_CORRELATED`): A living owner within 20 yards of native TaxiPath node 0 automatically boards with living followers and their pets after the preceding encounter is Done: 10301 after Emberdawn (3056), 10303 after the Derelict Duo (3057), and 10308 after Commander Kroluk (3058). WCL `X4tT9P73BvRrGxyM` fight 1 correlates 10301 and 10303 with player movement; `jpfFa36xhQkZqr4d` fight 6 correlates 10308. The 20-yard proximity activation is a project inference; the authored trigger and mount identities are unsourced. The shared taxi mover uses its existing flight speed; the observed Retail segments are faster.
 
 ## Murder Row live clear
 

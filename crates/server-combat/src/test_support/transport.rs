@@ -481,6 +481,29 @@ fn headless_taxi_landing_uses_native_fall_to_the_ground() {
 }
 
 #[test]
+#[ignore = "requires native Windrunner ground assets and world database"]
+fn windrunner_registrations_load_each_native_path_and_landing() {
+    let path = crate::test_data::world_db_path();
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let registrations = read_registrations(2805, &db).unwrap();
+    let paths: Vec<_> = registrations
+        .iter()
+        .map(|registration| registration.entry)
+        .collect();
+    assert_eq!(paths, [10301, 10303, 10308]);
+    assert!(registrations.iter().all(|registration| {
+        registration.action == Action::TaxiProximity && registration.radius == 20.0
+    }));
+    assert!(
+        registrations
+            .iter()
+            .all(|registration| registration.source_guid.is_none())
+    );
+}
+
+#[test]
 fn ruby_registration_uses_native_taxi_points_and_academy_uses_pad_registry() {
     let path = crate::test_data::world_db_path();
     let db =
