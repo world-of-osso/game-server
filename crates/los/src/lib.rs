@@ -5,6 +5,7 @@
 
 pub use shared::los::*;
 pub mod liquid;
+pub mod wmo_liquid;
 
 #[cfg(feature = "bake")]
 pub mod bake;

@@ -7,6 +7,69 @@ use bevy::prelude::*;
 use shared::components::Position;
 use std::{collections::HashMap, path::PathBuf};
 
+#[test]
+#[ignore = "requires Halls of Infusion extracted WMO assets"]
+fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+        });
+    let mut ground = GroundMap::new(&data, HashMap::from([(2527, 4290690)]));
+    let map = InMap {
+        map_id: 2527,
+        instance_id: 1,
+    };
+    let from = Position {
+        x: -70.5,
+        y: -40.0,
+        z: 145.0,
+    };
+    let to = Position {
+        x: -70.4,
+        y: -39.8,
+        z: 145.0,
+    };
+    let height =
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to);
+    assert!((height - to.y).abs() < 0.01, "swimmer snapped to {height}");
+    let vertical = Position {
+        x: from.x,
+        y: to.y,
+        z: from.z,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        from,
+        vertical,
+    );
+    assert!(
+        (height - vertical.y).abs() < 0.01,
+        "vertical swim stopped at {height}"
+    );
+    let bank = Position {
+        x: -70.5,
+        y: -38.79386,
+        z: 145.0,
+    };
+    let entering = Position {
+        x: -70.4,
+        y: -39.1,
+        z: 145.0,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        bank,
+        entering,
+    );
+    assert!(
+        (height - entering.y).abs() < 0.01,
+        "water entry snapped to {height}"
+    );
+}
+
 fn wow(x: f32, y: f32, z: f32) -> Position {
     Position { x, y: z, z: -y }
 }

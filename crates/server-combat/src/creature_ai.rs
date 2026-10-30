@@ -362,10 +362,18 @@ pub(crate) fn follower_footprint_ground(
 ) -> f32 {
     let mut ground = ground;
     let direction = Vec2::new(to.x - from.x, to.z - from.z).normalize_or_zero();
+    let center = Vec3::new(to.x, from.y, to.z);
+    if let (Some(ground), Some(map)) = (ground.as_deref_mut(), map)
+        && let Some(liquid) = ground.liquid_at(map.map_id, Vec3::new(to.x, to.y, to.z))
+    {
+        let top = shared::movement::swim_top(liquid.level);
+        if liquid.depth_level <= top && to.y <= top + navigation::AGENT_CLIMB {
+            return to.y.max(liquid.depth_level);
+        }
+    }
     if direction == Vec2::ZERO {
         return from.y;
     }
-    let center = Vec3::new(to.x, from.y, to.z);
     let offset = Vec3::new(direction.x, 0.0, direction.y) * navigation::AGENT_RADIUS;
     let probes = [center, center - offset, center + offset];
     let supported = probes

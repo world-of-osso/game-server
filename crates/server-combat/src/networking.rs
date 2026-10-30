@@ -778,14 +778,20 @@ pub(crate) fn apply_terrain_gravity(
         }
         let previous_health = *health;
         let feet = Vec3::new(pos.x, pos.y, pos.z);
-        let surface = ground
-            .liquid_at(map.map_id, feet)
-            .map(|liquid| liquid.level);
+        let liquid = ground.liquid_at(map.map_id, feet);
+        let mut support = ground.player_solid_ground_in(*map, feet);
+        if let (Some(liquid), GroundProbe::Supported(height)) = (liquid, support)
+            && height > feet.y + 0.05
+            && shared::movement::is_swimming(feet.y, liquid.depth_level, Some(liquid.level))
+        {
+            support = GroundProbe::Supported(liquid.depth_level);
+        }
+        let surface = liquid.map(|liquid| liquid.level);
         let (next_pos, next_vert_vel, next_fall_tracker, mut next_health, fall) =
             calculate_gravity_state(
                 entity,
                 // The same footprint support movement authority admits the player onto.
-                (ground.player_solid_ground_in(*map, feet), surface),
+                (support, surface),
                 *pos,
                 *vert_vel,
                 fall_tracker.for_epoch(control.epoch, pos.y),
