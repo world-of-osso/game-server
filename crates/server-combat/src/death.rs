@@ -21,8 +21,8 @@ use crate::networking::PlayerLink;
 use crate::teleport::teleported;
 use crate::world_data::WorldData;
 
-const GHOST_RESURRECT_HEALTH_PCT: f32 = 0.5;
-const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
+pub(crate) const GHOST_RESURRECT_HEALTH_PCT: f32 = 0.5;
+pub(crate) const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 
 mod instrument_of_retribution;
 #[path = "death/resurrection.rs"]

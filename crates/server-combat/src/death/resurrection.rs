@@ -80,6 +80,9 @@ fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, 
     let Some(pending) = build_offer(world, ctx, effect, target) else {
         return;
     };
+    if let Some(mut nav) = world.get_resource_mut::<crate::navigation::Navigation>() {
+        nav.cancel_query(target, crate::navigation::Goal::FollowerRelease);
+    }
     world
         .entity_mut(target)
         .remove::<(crate::combat::DeathState, crate::combat::Corpse)>()
