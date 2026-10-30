@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "academy_barrier.rs"]
+mod academy_barrier;
 #[path = "ancient.rs"]
 mod ancient;
 #[path = "anubzekt.rs"]

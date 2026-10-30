@@ -82,6 +82,10 @@
 - `ANUBZEKT_IMPALE_DUMMY_CHILD_UNSOURCED`, `ANUBZEKT_BURROW_SELECTOR_MOVEMENT_CHILD_UNSOURCED`, `ANUBZEKT_EYE_CENTER_AREA_PHASE_EXIT_UNSOURCED` and `ANUBZEKT_WEBMAGE_CONTROLLER_UNSOURCED` retain missing dummy forwarding, charge destinations, center movement, Eye area/aura434408 ingress/exit and add controller. Never manufacture those actions or infer25s phase exit from the warning duration. Lua outgoing countdown updates are a declared partial, not certification of the absent controller or whole fight.
 - Ignored native RED must be pushed/executed before combat implementation. Require native Normal/Follower ongoing request/effect/reset/rearm/copy-credit/corpse proof and producer preservation/idempotence/conflict tests before gate packet. Final integration/publication remains lead-owned.
 
+## Algeth'ar Academy bramble barrier
+
+`ACADEMY_BRAMBLE_BARRIER_UNLOCK_LOG_CORRELATED`: GO382475 opens in its copy after Vexamus2562, Overgrown Ancient2563 and Crawth2564 are Done. WCL gWkPyzwJ2mbxRtdr fight 3 observes a player near the barrier at 5827316 ms and beyond it by 5834173 ms, after all three kills; tjnzpa3Axg6QLHfJ fight 1 observes a player beyond it at 1265363 ms after those kills. TC 15e0ed76 and LittleWigs do not establish the door trigger. The three-boss gate is project policy, not a claim about the exact Retail condition.
+
 ## Uldaman Prehistoria door
 
 `ULDAMAN_PREHISTORIA_DOOR_LITTLEWIGS_TIMER`: when Bromach2556 completes with Lost Dwarves2555 already Done, open source Vault Door376557 in that copy after18.3s. LittleWigs `UldamanLegacyOfTyr/Trash.lua:176–185` ties the timer to Bromach's win and the completed Dwarves criterion; the dwarves' RP movement is not modelled. Do not infer a gossip or spellclick trigger.

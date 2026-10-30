@@ -12,6 +12,24 @@ struct Door {
 }
 
 const DOORS: &[Door] = &[
+    // ACADEMY_BRAMBLE_BARRIER_UNLOCK_LOG_CORRELATED: WCL gWkPyzwJ2mbxRtdr fight 3
+    // and tjnzpa3Axg6QLHfJ fight 1 place players past this door after all three
+    // encounters. The three-boss gate is project policy; Retail's trigger is unknown.
+    Door {
+        map_id: 2526,
+        entry: 382475,
+        encounter: 2562,
+    },
+    Door {
+        map_id: 2526,
+        entry: 382475,
+        encounter: 2563,
+    },
+    Door {
+        map_id: 2526,
+        entry: 382475,
+        encounter: 2564,
+    },
     // ULDAMAN_TALONDRAS_DOOR_PASSAGE_INFERRED: the TDB door blocks the only
     // nav route from Talondras to Emberon; its exact Retail trigger is unsourced.
     Door {
