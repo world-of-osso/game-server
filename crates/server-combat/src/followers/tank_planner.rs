@@ -18,8 +18,9 @@ pub(super) fn update_caster_goal(
     tank: Entity,
     follower: &Follower,
     party: &[Entity],
+    enemies: &[(Entity, Option<Entity>)],
 ) -> Option<Entity> {
-    let Some(caster) = read_admitted_caster(world, tank, follower, party) else {
+    let Some(caster) = read_admitted_caster(world, tank, follower, party, enemies) else {
         clear_caster_goal(world, tank);
         return None;
     };
@@ -33,6 +34,7 @@ fn read_admitted_caster(
     tank: Entity,
     follower: &Follower,
     party: &[Entity],
+    enemies: &[(Entity, Option<Entity>)],
 ) -> Option<Entity> {
     if follower.profile.role != shared::group::GroupRole::Tank
         || world.get::<AdmittedPosition>(tank).is_some()
@@ -40,7 +42,9 @@ fn read_admitted_caster(
         return None;
     }
     for caster in read_engaged_caster_candidates(world, tank, follower, party) {
-        if super::hazards::target_is_hazardous(world, tank, caster) {
+        if !enemies.iter().any(|(enemy, _)| *enemy == caster)
+            || super::hazards::target_is_hazardous(world, tank, caster)
+        {
             continue;
         }
         match read_movement_admission(world, tank, caster, follower, None) {

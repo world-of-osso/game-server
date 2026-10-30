@@ -49,14 +49,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
-    super::tank_frontal::update_goal(world, unit, follower, &party);
-    let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
-    if let Some(target) = collection_target
-        && !enemies.iter().any(|(enemy, _)| *enemy == target)
-    {
-        enemies.push((target, None));
-    }
     let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
     let lost_target = world
         .get::<CombatTarget>(unit)
@@ -77,6 +70,9 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     if pending {
         return;
     }
+    super::tank_frontal::update_goal(world, unit, follower, &party);
+    let collection_target =
+        super::tank_planner::update_caster_goal(world, unit, follower, &party, &enemies);
     let selection = collection_target
         .filter(|target| enemies.iter().any(|(enemy, _)| enemy == target))
         .map_or_else(|| select_enemy(world, &enemies), EnemySelection::Attack);
