@@ -23,7 +23,7 @@ fn client_data_dir() -> PathBuf {
 
 #[test]
 #[ignore = "requires Halls of Infusion extracted WMO assets"]
-fn halls_wmo_liquid_has_surface_and_collision_depth() {
+fn wmo_surface_halls_liquid_has_surface_and_collision_depth() {
     let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(2527, 4290690)]));
     let (x, y, z) = crate::terrain_height::wow_to_bevy(-70.5, -145.0, -44.0);
     let liquid = ground
@@ -36,7 +36,7 @@ fn halls_wmo_liquid_has_surface_and_collision_depth() {
 
 #[test]
 #[ignore = "requires Operation Floodgate extracted WMO assets"]
-fn floodgate_wmo_liquid_covers_drop_landing() {
+fn wmo_surface_floodgate_liquid_covers_drop_landing() {
     let mut ground = GroundMap::new(&client_data_dir(), HashMap::from([(2773, 5839271)]));
     let feet = Vec3::new(1524.25, 275.314, 2746.25);
     let liquid = ground.liquid_at(2773, feet).expect("landing WMO water");

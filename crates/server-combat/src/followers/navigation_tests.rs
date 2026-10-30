@@ -9,7 +9,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 #[test]
 #[ignore = "requires Halls of Infusion extracted WMO assets"]
-fn halls_wmo_swimming_follower_uses_navigation_height() {
+fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
     let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| {

@@ -662,14 +662,30 @@ impl GroundMap {
         self.maps.get_mut(&map_id)?.as_mut()?.min_height(feet)
     }
 
-    /// The terrain liquid over `feet` on map `map_id` (`TerrainInfo::GetLiquidStatus`'s
-    /// grid lookup); `None` where there is none or the tile is not available.
+    /// Terrain or WMO liquid over `feet`, with the highest floor below the swimmer.
     pub fn liquid_at(&mut self, map_id: u32, feet: Vec3) -> Option<LiquidSample> {
         if !self.maps.contains_key(&map_id) {
             let loaded = self.open_map(map_id);
             self.maps.insert(map_id, loaded);
         }
-        self.maps.get_mut(&map_id)?.as_mut()?.liquid_at(feet)
+        let mut liquid = self.maps.get_mut(&map_id)?.as_mut()?.liquid_at(feet)?;
+        // The LOS floor query searches up by STEP_UP_HEIGHT. Shift it down so a
+        // stacked M2 above the swimmer cannot become the liquid bottom.
+        let top = feet.y.min(liquid.level) + 0.05;
+        let probe = feet.with_y(top - shared::ground::STEP_UP_HEIGHT);
+        let m2 = self
+            .m2_floors
+            .entry(map_id)
+            .or_insert_with(|| los::LosMap::new(&self.data_dir.join(format!("los/{map_id}/m2"))));
+        match m2.floor_height(probe) {
+            Ok(Some(height)) => liquid.depth_level = liquid.depth_level.max(height),
+            Ok(None) => {}
+            Err(error) => {
+                error!("M2 liquid floor query on map {map_id}: {error}");
+                return None;
+            }
+        }
+        Some(liquid)
     }
 
     /// Authored terrain area under `feet`, from the map's WDT/ADT MCNK header.

@@ -7,7 +7,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 #[test]
 #[ignore = "requires Halls of Infusion extracted WMO assets"]
-fn halls_wmo_swim_bounds_use_floor_below_player() {
+fn wmo_surface_halls_swim_bounds_use_floor_below_player() {
     let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
