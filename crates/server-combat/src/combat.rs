@@ -1404,6 +1404,7 @@ fn record_swing(
         world,
         target_entity,
         outcome.health_before,
+        outcome.incoming_loss,
     );
     if caused_damage {
         // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
@@ -2936,7 +2937,7 @@ pub(crate) fn deal_health_damage(
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
-    crate::scripted_ai::health_threshold::complete_crossing(world, victim, before);
+    crate::scripted_ai::health_threshold::complete_crossing(world, victim, before, incoming_loss);
     if !commit.lethal {
         return;
     }

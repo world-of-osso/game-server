@@ -9,6 +9,11 @@ fn bound_health_threshold_completes_alive_on_spell_and_lethal_direct_damage() {
             .resource_mut::<MapStore>()
             .encounter_health_thresholds
             .insert((2652, 213216), threshold);
+        if threshold == 0.0 {
+            let mut health = h.app.world_mut().get_mut::<Health>(boss).unwrap();
+            health.max = 226_379_184.0;
+            health.current = health.max;
+        }
         h.engage(boss);
         h.hit_pct(boss, 20.0);
         assert_eq!(

@@ -2472,7 +2472,7 @@ fn deal_source_damage_and_report(
     if amount > 0.0 && !recorded_hit {
         push_damage_event(world, ctx, target, periodic, scaled_loss);
     }
-    crate::scripted_ai::health_threshold::complete_crossing(world, target, before);
+    crate::scripted_ai::health_threshold::complete_crossing(world, target, before, incoming_loss);
     if commit.lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }

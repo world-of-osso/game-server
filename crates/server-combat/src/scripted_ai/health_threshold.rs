@@ -24,18 +24,29 @@ pub(crate) fn limit_loss(world: &World, unit: Entity, health: &Health, loss: f32
     let Some(floor) = threshold(world, unit, health) else {
         return loss;
     };
-    loss.min((health.current - floor).max(0.0))
+    let limit = (health.current - floor).max(0.0);
+    let safe_limit = if floor == 1.0 && limit >= health.current {
+        health.current.next_down()
+    } else {
+        limit
+    };
+    loss.min(safe_limit)
 }
 
 /// Complete only on an actual crossing while the bound encounter is in progress.
-pub(crate) fn complete_crossing(world: &mut World, unit: Entity, before: f32) {
+pub(crate) fn complete_crossing(world: &mut World, unit: Entity, before: f32, incoming: f32) {
     let Some(health) = world.get::<Health>(unit) else {
         return;
     };
     let Some(floor) = threshold(world, unit, health) else {
         return;
     };
-    if before <= floor || health.current > floor || health.current <= 0.0 {
+    let rounded_lethal_floor = floor == 1.0
+        && before - floor == before
+        && incoming >= before
+        && health.current <= before - before.next_down();
+    if before <= floor || health.current <= 0.0 || (health.current > floor && !rounded_lethal_floor)
+    {
         return;
     }
     let Some(map) = world.get::<InMap>(unit).copied() else {
@@ -52,6 +63,12 @@ pub(crate) fn complete_crossing(world: &mut World, unit: Entity, before: f32) {
         return;
     }
     if instance_script::complete_bound_entry(world, map, entry, unit) {
+        if rounded_lethal_floor {
+            world
+                .get_mut::<Health>(unit)
+                .expect("living encounter actor")
+                .current = floor;
+        }
         super::lost_dwarves::leave_combat_friendly(world, unit);
     }
 }
