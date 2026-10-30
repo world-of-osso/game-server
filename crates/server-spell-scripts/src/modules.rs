@@ -11,6 +11,10 @@ macro_rules! register_modules {
         pub const MODULES: &[&[SpellScriptHook]] = &order_modules([
             $(($position, $name::HOOKS)),*
         ]);
+        #[cfg(test)]
+        pub const NAMED_MODULES: &[(&str, &[SpellScriptHook])] = &[
+            $(($path, $name::HOOKS)),*
+        ];
     };
 }
 

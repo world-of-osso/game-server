@@ -31,6 +31,8 @@ mod party_reach_tests;
 #[cfg(test)]
 mod policy_order_tests;
 #[cfg(test)]
+mod reach_declaration_audit_tests;
+#[cfg(test)]
 mod registry_target_tests;
 #[cfg(test)]
 mod runtime_stage_tests;
