@@ -41,7 +41,13 @@ fn assert_native_admission(attempt: &super::cast_admission::Admission, expected_
 }
 
 #[test]
-fn encounter_coverage_talondras_passage_opens_only_after_done_in_its_copy() {
+fn encounter_coverage_talondras_passages_open_only_after_done_in_their_copy() {
+    for entry in [376554, 376191] {
+        assert_talondras_passage(entry);
+    }
+}
+
+fn assert_talondras_passage(entry: u32) {
     let (mut h, boss, map) = talondras_copy(205);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -49,7 +55,7 @@ fn encounter_coverage_talondras_passage_opens_only_after_done_in_its_copy() {
     let source = spawns
         .0
         .iter()
-        .find(|spawn| spawn.info.entry == 376554)
+        .find(|spawn| spawn.info.entry == entry)
         .unwrap();
     assert_eq!(source.map_id, MAP);
     let door = h
