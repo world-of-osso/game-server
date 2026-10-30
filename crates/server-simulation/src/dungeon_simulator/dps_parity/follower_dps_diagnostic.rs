@@ -3,6 +3,65 @@ use super::*;
 use shared::components::{Level, UnitLevel, UnitSummonedBy};
 use shared::protocol::CombatLogKind;
 
+fn build_follower_app(path: &std::path::Path) -> App {
+    let mut app = super::super::runtime::build_app_with_world_db(path);
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    app.insert_resource(crate::followers::simulator::load_parity_catalog(&db).unwrap());
+    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db).unwrap();
+    app
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_dps_loads_spell_and_item_catalogs_from_selected_database() {
+    let source = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("snapshot path");
+    assert_eq!(
+        crate::test_data::world_db_path().canonicalize().unwrap(),
+        std::path::Path::new(&source).canonicalize().unwrap(),
+        "startup catalogs must read the requested snapshot"
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("world.db");
+    std::fs::copy(source, &path).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    let db = rusqlite::Connection::open(&path).unwrap();
+    db.execute(
+        "UPDATE spell_effect SET EffectBasePointsF=777 WHERE SpellID=391142 AND EffectIndex=0 AND DifficultyID=0",
+        [],
+    )
+    .unwrap();
+    db.execute(
+        "INSERT INTO item_set(ID, SetFlags, RequiredSkill, RequiredSkillRank) VALUES (9999999, 0, 0, 0)",
+        [],
+    )
+    .unwrap();
+    drop(db);
+    let app = build_follower_app(&path);
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(391142)
+        .unwrap();
+    assert_eq!(
+        spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .base_points,
+        777.0
+    );
+    assert!(
+        app.world()
+            .resource::<crate::item_proc_data::ItemProcInputs>()
+            .sets
+            .contains_key(&9999999)
+    );
+}
+
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
@@ -17,23 +76,9 @@ fn follower_dps_production_dummy() {
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
     let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(seed);
-    let mut app = super::super::runtime::build_app();
-    if let Some(path) = std::env::var_os("FOLLOWER_DPS_WORLD_DB") {
-        let data = crate::world_data::load_world_data(std::path::Path::new(&path));
-        app.insert_resource(data.armor_constants.clone());
-        app.insert_resource(data);
-        let db =
-            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-                .unwrap();
-        app.insert_resource(crate::followers::simulator::load_parity_catalog(&db).unwrap());
-    }
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    app.insert_resource(crate::item_proc_data::load(&db).unwrap());
-    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db).unwrap();
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB")
+        .expect("FOLLOWER_DPS_WORLD_DB must name the measurement snapshot");
+    let mut app = build_follower_app(std::path::Path::new(&path));
     let copy = app
         .world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
