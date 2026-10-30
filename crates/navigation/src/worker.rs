@@ -19,6 +19,11 @@ pub enum Query {
         from: Vec3,
         to: Vec3,
     },
+    /// Resolve all walking segments, or report an incomplete route and its reason.
+    CompleteRoute {
+        from: Vec3,
+        to: Vec3,
+    },
     /// Follow a formation point projected onto the owner's connected surface.
     FollowFormation {
         from: Vec3,
@@ -44,6 +49,7 @@ pub enum Query {
 #[derive(Clone, Debug)]
 pub enum Output {
     Path(NavigationPath),
+    CompleteRoute(crate::CompleteRoute),
     Collision(Vec3),
     Candidates(Vec<Result<Vec<Vec3>, String>>),
 }
@@ -536,6 +542,9 @@ fn run_query(
     let output = match query {
         Query::Path { from, to } => Output::Path(map.path_with_plan(from, to, plan)?),
         Query::FollowPath { from, to } => Output::Path(map.follow_path(from, to, plan)?),
+        Query::CompleteRoute { from, to } => {
+            Output::CompleteRoute(crate::complete_route::follow_complete_route(map, from, to))
+        }
         Query::FollowFormation { from, to, owner } => {
             Output::Path(map.follow_formation_path(from, to, owner, plan)?)
         }
