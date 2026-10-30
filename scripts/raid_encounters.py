@@ -116,6 +116,8 @@ def prepare(db, journal, creatures, output, report, build):
     with closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
         bindings, gaps = derive_bindings(conn, encounters, actors)
         bindings = add_threshold_bindings(conn, bindings, encounters, actors, thresholds)
+    completed = {row['encounter_id'] for row in thresholds}
+    gaps = [gap for gap in gaps if gap['encounter_id'] not in completed]
     if not bindings:
         raise ValueError("No unambiguous instance boss bindings derived")
     with closing(sqlite3.connect(":memory:")) as staging:

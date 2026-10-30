@@ -54,7 +54,8 @@ class DeriveBindingsTest(unittest.TestCase):
             output, report = root / 'bindings.sql', root / 'report.json'
             for _ in range(2):
                 with patch('raid_encounters.read_journal', side_effect=[encounters, actors]):
-                    prepare(database, root / 'journal.db2', root / 'actors.db2', output, report, 'test')
+                    _, gaps = prepare(database, root / 'journal.db2', root / 'actors.db2', output, report, 'test')
+                self.assertFalse(any(gap['encounter_id'] in (2839, 3458) for gap in gaps))
                 with closing(sqlite3.connect(':memory:')) as rebuilt:
                     rebuilt.executescript(output.read_text())
                     self.assertEqual(
