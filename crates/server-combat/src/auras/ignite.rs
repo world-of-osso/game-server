@@ -77,6 +77,11 @@ fn ignite_bank(aura: &AuraInstance) -> f64 {
     f64::from(ignite_effect(aura).amount) * fractional_ticks(aura)
 }
 
+/// Returns the unpaid Ignite damage owned by this caster on the target.
+pub fn owned_ignite_bank(world: &World, caster: Entity, target: Entity) -> f64 {
+    owned_ignite(world, caster, target).map_or(0.0, ignite_bank)
+}
+
 fn find_spread_targets(
     world: &mut World,
     caster: Entity,
