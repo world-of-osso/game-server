@@ -83,7 +83,7 @@ fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, 
     world
         .entity_mut(target)
         .remove::<(crate::combat::DeathState, crate::combat::Corpse)>()
-        .insert((pending.position, crate::creature_ai::CreatureState::Idle));
+        .insert(crate::creature_ai::CreatureState::Idle);
     restore_vitals(world, target, &pending);
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(target);
