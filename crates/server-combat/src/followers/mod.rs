@@ -4,6 +4,7 @@ mod action_knowledge_tests;
 mod ai;
 mod candlelight;
 mod catalog;
+pub mod class_profiles;
 #[cfg(test)]
 mod darkflame_drop_tests;
 mod empower_policy;
