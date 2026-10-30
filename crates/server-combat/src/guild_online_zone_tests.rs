@@ -10,8 +10,8 @@ fn catalog() -> rusqlite::Connection {
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch(
         "CREATE TABLE area_table(ID INTEGER,ParentAreaID INTEGER,ContinentID INTEGER,
-            Flags_0 INTEGER,FactionGroupMask INTEGER,Flags_1 INTEGER,AreaName_lang TEXT);
-         INSERT INTO area_table VALUES (12,0,0,0,0,0,'Elwynn Forest'),
+            Flags_0 INTEGER,FactionGroupMask INTEGER,Flags_1 INTEGER,AreaName_lang TEXT,MountFlags INTEGER DEFAULT 0);
+         INSERT INTO area_table (ID,ParentAreaID,ContinentID,Flags_0,FactionGroupMask,Flags_1,AreaName_lang) VALUES (12,0,0,0,0,0,'Elwynn Forest'),
             (87,12,0,1073741824,0,0,'Goldshire'),(40,0,0,0,0,0,'Westfall');",
     )
     .unwrap();

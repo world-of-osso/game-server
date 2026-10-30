@@ -29,7 +29,7 @@ fn server(path: &std::path::Path) -> App {
     });
     app.add_plugins(ProtocolPlugin);
     let catalog = rusqlite::Connection::open_in_memory().unwrap();
-    catalog.execute_batch("CREATE TABLE area_table(ID INTEGER,ParentAreaID INTEGER,ContinentID INTEGER,Flags_0 INTEGER,FactionGroupMask INTEGER,Flags_1 INTEGER,AreaName_lang TEXT);").unwrap();
+    catalog.execute_batch("CREATE TABLE area_table(ID INTEGER,ParentAreaID INTEGER,ContinentID INTEGER,Flags_0 INTEGER,FactionGroupMask INTEGER,Flags_1 INTEGER,AreaName_lang TEXT,MountFlags INTEGER DEFAULT 0);").unwrap();
     app.insert_resource(crate::area_table::load_area_table(&catalog).unwrap());
     app.insert_resource(crate::ground::GroundMap::with_area_samples(&[]));
     app.insert_resource(GameDatabase::new(db));

@@ -23,6 +23,7 @@ struct AreaEntry {
     flags: u32,
     flags2: u32,
     faction_group: u32,
+    mount_flags: u32,
     name: String,
 }
 
@@ -30,6 +31,13 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
+    /// AreaTable MountFlags bit 0x2 permits flying mounts in this area.
+    pub(crate) fn permits_flying(&self, area_id: u32, map_id: u32) -> bool {
+        self.0
+            .get(&area_id)
+            .is_some_and(|area| area.map_id == map_id && area.mount_flags & 0x2 != 0)
+    }
+
     /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.
     pub(crate) fn is_in_area(&self, mut area_id: u32, required: u32) -> bool {
         for _ in 0..=self.0.len() {
@@ -128,7 +136,7 @@ impl AreaTable {
 
 pub(crate) fn load_area_table(conn: &Connection) -> rusqlite::Result<AreaTable> {
     let mut stmt = conn.prepare(
-        "SELECT ID, ParentAreaID, ContinentID, Flags_0, FactionGroupMask, Flags_1, AreaName_lang FROM area_table",
+        "SELECT ID, ParentAreaID, ContinentID, Flags_0, FactionGroupMask, Flags_1, AreaName_lang, MountFlags FROM area_table",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -141,6 +149,7 @@ pub(crate) fn load_area_table(conn: &Connection) -> rusqlite::Result<AreaTable> 
                 faction_group: row.get(4)?,
                 flags2: row.get::<_, i64>(5)? as u32,
                 name: row.get(6)?,
+                mount_flags: row.get(7)?,
             },
         ))
     })?;
@@ -199,6 +208,15 @@ mod tests {
         assert_eq!(areas.zone_name(87, 0), None);
     }
 
+    #[test]
+    fn flying_permission_uses_the_current_area_mount_flags() {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let areas = load_area_table(&conn).unwrap();
+        assert!(areas.permits_flying(14971, 2662));
+        assert!(!areas.permits_flying(15544, 2662));
+        assert!(!areas.permits_flying(14971, 1));
+    }
+
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
     /// the loader keeps the bit pattern instead of failing at startup.
     #[test]
@@ -207,8 +225,8 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContinentID INTEGER,
                                       Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER,
-                                      AreaName_lang TEXT);
-             INSERT INTO area_table VALUES (1519, 0, 0, -1610530816, 2, 0, 'Stormwind City');",
+                                      AreaName_lang TEXT, MountFlags INTEGER DEFAULT 0);
+             INSERT INTO area_table (ID,ParentAreaID,ContinentID,Flags_0,FactionGroupMask,Flags_1,AreaName_lang) VALUES (1519, 0, 0, -1610530816, 2, 0, 'Stormwind City');",
         )
         .unwrap();
         let table = load_area_table(&conn).unwrap();
