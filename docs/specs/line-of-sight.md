@@ -103,7 +103,7 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   which the server and the Godot client link; `crates/los` is the bake and re-exports it.
 - The eye table covers each resolvable runtime display from current and legacy creature template
   models, spawn overrides, battle-pet species and overrides, shapeshift forms, and `ChrModel`
-  character displays. The same runtime display query drives extraction and the deployment guard. The bake writes required displays it cannot resolve and their
+  character displays. It also requires Nibbles' scripted friendly display 128332 when its Murder Row script is present. The same runtime display query drives extraction and the deployment guard. The bake writes required displays it cannot resolve and their
   causes to `eye_gaps.tsv`; they remain fail-closed at runtime. The other `content_creature_template_model` displays (summons,
   transforms) bake when they can; those that cannot are skipped and listed in `report.txt` with
   why (no `CreatureDisplayInfo` row, a model without geometry, a sequence whose `.anim` the model
