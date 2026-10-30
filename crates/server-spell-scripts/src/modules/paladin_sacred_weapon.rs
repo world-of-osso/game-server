@@ -56,6 +56,11 @@ fn accept_weapon_event(
     _: &AuraInstance,
     event: &combat::auras::procs::AuraEvent,
 ) -> bool {
+    // SimC76f8118 sc_paladin.cpp2403–2408,2444–2449,2462–2467,2490–2496:
+    // Sacred and Lesser Weapon child actions disable proc callbacks.
+    if matches!(event.spell_id, Some(432616 | 441590 | 1239282 | 1239276)) {
+        return false;
+    }
     if event.target != Some(event.actor) || event.damage > 0.0 || event.heal.is_some() {
         return true;
     }
