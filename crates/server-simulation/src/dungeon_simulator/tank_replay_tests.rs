@@ -1795,6 +1795,47 @@ fn masterwork_hammers_forge_lesser_weapon_strikes_on_the_dummy() {
 }
 
 #[test]
+#[ignore = "uses real Protection Paladin casts and native Lesser Weapon procs"]
+fn lesser_weapon_routes_cast_procs_to_the_cast_target() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    for (spell, enemy, expected, kind) in [
+        (204019, true, 1239282, CombatLogKind::Damage),
+        (432472, false, 1239276, CombatLogKind::Heal),
+    ] {
+        let mut run = engaged_protection_paladin();
+        let actor = run.actor;
+        let target = if enemy { run.targets[0] } else { actor };
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .remove::<crate::combat::AutoAttack>();
+        apply_self_aura(&mut run, 1239091);
+        run.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+            .unwrap();
+        run.app.update();
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events.iter().any(|event| {
+                event.spell_id == Some(expected)
+                    && event.kind == kind
+                    && event.target == Some(target.to_bits())
+                    && event.amount > 0
+            }),
+            "Lesser Weapon must use the cast target for spell {spell}"
+        );
+        let wrong = if enemy { 1239276 } else { 1239282 };
+        assert!(!events.iter().any(|event| event.spell_id == Some(wrong)));
+    }
+}
+
+#[test]
 #[ignore = "uses the selected MID2 Protection player and native Sacred Weapon"]
 fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
