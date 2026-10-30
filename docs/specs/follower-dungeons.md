@@ -33,7 +33,7 @@ When the follower's regroup corridor crosses an unpulled hostile's aggro radius,
 
 Followers select a hostile only when a complete navigation corridor reaches it, or when an available hostile spell can reach it with line of sight. They drop a current target that no longer meets either condition. The same eligible enemy set feeds the primary selection and the follower kit.
 
-Class-follower roster portraits use the same race, customization and head equipment as their `CharacterVisual` and `EquipmentAppearance`; they do not carry an NPC display ID. Explicit story-NPC diagnostics retain their actual template display. Class followers retain player-derived maximum-mana aura bonuses; ordinary NPCs remain excluded. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
+Class-follower roster portraits use the same race, customization and head equipment as their `CharacterVisual` and `EquipmentAppearance`; they do not carry an NPC display ID. Explicit story-NPC diagnostics retain their actual template display. Class followers use player combat reach and race/sex eye geometry, and retain player-derived maximum-mana aura bonuses; ordinary NPCs retain their native behavior. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
 
 ### Private live queue fixture
 

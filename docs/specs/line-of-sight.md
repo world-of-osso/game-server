@@ -41,7 +41,8 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   Retail animation is established for it (uncited; TrinityCore, AzerothCore, WMVx, wow_client,
   WoWee, WebWowViewerCpp and solarityclient map it to none; chairs seat units in states 4-6). User
   decision 2026-10-02. `player_displays.tsv` maps race and sex to the
-  character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`).
+  character display (`ChrRaceXChrModel` → `ChrModel.DisplayID`). Non-player class followers use
+  their `CharacterVisual` race and sex with the same table; they do not need an NPC display.
 
 ## Player casts: authoritative target visibility
 - At cast processing, the server searches from its authoritative caster eye point to the target's

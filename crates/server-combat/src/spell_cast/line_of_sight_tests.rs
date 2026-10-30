@@ -66,6 +66,7 @@ fn search(h: &Harness) -> (Option<WitnessRay>, WitnessRay) {
             None,
             unit.get::<shared::components::Player>(),
             unit.get::<shared::components::PlayerStandState>(),
+            unit.get::<shared::components::CharacterVisual>(),
         ))
         .unwrap()
     };

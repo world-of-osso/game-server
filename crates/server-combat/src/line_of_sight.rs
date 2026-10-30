@@ -19,7 +19,8 @@ use bevy::prelude::*;
 use los::eye::EyeTable;
 use los::{Body, LosMap};
 use shared::components::{
-    ModelDisplay, Npc, Player, PlayerStandState, Position, Rotation, StandState, UnitPose,
+    CharacterVisual, ModelDisplay, Npc, Player, PlayerStandState, Position, Rotation, StandState,
+    UnitPose,
 };
 
 use crate::maps::InMap;
@@ -51,6 +52,7 @@ pub(crate) type BodyParts<'a> = (
     Option<&'a UnitPose>,
     Option<&'a Player>,
     Option<&'a PlayerStandState>,
+    Option<&'a CharacterVisual>,
 );
 
 impl LineOfSight {
@@ -89,21 +91,27 @@ impl LineOfSight {
     /// eye row.
     pub fn body(
         &self,
-        (entity, npc, position, rotation, display, pose, player, player_stand): BodyParts,
+        (entity, npc, position, rotation, display, pose, player, player_stand, visual): BodyParts,
     ) -> Option<Body> {
         let eyes = self.eyes.as_ref()?;
-        let (display, stand_state) = match (player, display) {
-            (Some(player), _) => (
-                eyes.player_display(player.race, player.appearance.sex)
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "{}: no character display for race {} sex {}",
-                            self.dir.display(),
-                            player.race,
-                            player.appearance.sex
-                        )
-                    }),
-                player_stand.map_or(StandState::Stand, |stand| stand.0),
+        let character = player
+            .map(|player| (player.race, player.appearance.sex))
+            .or_else(|| visual.map(|visual| (visual.race, visual.appearance.sex)));
+        let (display, stand_state) = match (character, display) {
+            (Some((race, sex)), _) => (
+                eyes.player_display(race, sex).unwrap_or_else(|| {
+                    panic!(
+                        "{}: no character display for race {} sex {}",
+                        self.dir.display(),
+                        race,
+                        sex
+                    )
+                }),
+                if player.is_some() {
+                    player_stand.map_or(StandState::Stand, |stand| stand.0)
+                } else {
+                    pose.map_or(StandState::Stand, |pose| pose.stand_state)
+                },
             ),
             (None, Some(display)) => (
                 display.display_id,
@@ -233,6 +241,7 @@ fn parts_in_world(world: &World, unit: Entity) -> Option<BodyParts<'_>> {
         entity.get::<UnitPose>(),
         entity.get::<Player>(),
         entity.get::<PlayerStandState>(),
+        entity.get::<CharacterVisual>(),
     ))
 }
 
@@ -302,6 +311,86 @@ pub(crate) fn sees_area_center(world: &World, target: Entity, center: Vec3) -> b
     };
     let eye_height = body.eyes.y - body.feet.y;
     los.clear(map, body.eyes, center + Vec3::Y * eye_height)
+}
+
+#[cfg(test)]
+mod character_visual_tests {
+    use super::*;
+    use shared::components::CharacterAppearance;
+
+    #[test]
+    fn character_visual_uses_player_race_and_sex_eye_geometry() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(los::eye::EYE_TABLE_FILE),
+            "display_id\tstand_state\tsource\tx\ty\tz\n49\t0\teyes\t0\t0\t1.8\n50\t0\teyes\t0\t0\t1.6\n77\t0\teyes\t0\t0\t0.7\n",
+        ).unwrap();
+        std::fs::write(
+            dir.path().join(los::eye::PLAYER_DISPLAYS_FILE),
+            "race\tsex\tdisplay_id\n1\t0\t49\n1\t1\t50\n",
+        )
+        .unwrap();
+        let los = LineOfSight::load(dir.path()).unwrap();
+        let position = Position {
+            x: 2.0,
+            y: 3.0,
+            z: 4.0,
+        };
+        let player = Player {
+            name: "Mage".into(),
+            race: 1,
+            class: 8,
+            appearance: CharacterAppearance {
+                sex: 1,
+                ..Default::default()
+            },
+        };
+        let visual = CharacterVisual::from(&player);
+        let entity = Entity::from_raw_u32(1).unwrap();
+        let player_body = los
+            .body((
+                entity,
+                None,
+                &position,
+                None,
+                None,
+                None,
+                Some(&player),
+                None,
+                None,
+            ))
+            .unwrap();
+        let follower_body = los
+            .body((
+                entity,
+                None,
+                &position,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(&visual),
+            ))
+            .unwrap();
+        let npc_display = ModelDisplay { display_id: 77 };
+        let npc_body = los
+            .body((
+                entity,
+                None,
+                &position,
+                None,
+                Some(&npc_display),
+                None,
+                None,
+                None,
+                None,
+            ))
+            .unwrap();
+        assert_eq!(follower_body.eyes, player_body.eyes);
+        assert!((follower_body.eyes.y - 4.6).abs() < 0.0001);
+        assert!((npc_body.eyes.y - 3.7).abs() < 0.0001);
+    }
 }
 
 pub struct LineOfSightPlugin;

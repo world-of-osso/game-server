@@ -241,6 +241,89 @@ fn halls_follower_approach_resolves_all_corridor_segments() {
     assert!(points.iter().any(|point| point.y > 10.0));
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::followers::profile_behavior_tests::spawn_profile_fixture_with_plugins;
+    use crate::test_support::graph::{Graph, Pack};
+    use shared::components::{
+        CharacterAppearance, CharacterVisual, ModelDisplay, Position, UnitLevel,
+    };
+
+    #[test]
+    fn character_visual_follower_keeps_following_when_watchers_are_off_route() {
+        let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209072, |_| {});
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(crate::test_data::world_data().clone());
+        h.app
+            .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+        h.app.insert_resource(crate::test_support::Space(Graph {
+            map_id: 0,
+            entrance: [0.0, 0.0],
+            entrance_height: 0.0,
+            entrance_pack: 1,
+            packs: vec![Pack {
+                id: 1,
+                position: [0.0, 0.0],
+                height: 0.0,
+                spawns: vec![],
+            }],
+            edges: vec![],
+            teleports: vec![],
+            transports: vec![],
+            unreachable: vec![],
+            route: vec![],
+            follower_difficulty: 0,
+            follower_boss_entries: vec![],
+            follower_boss_sources: default(),
+            follower_boss_bits: default(),
+            follower_encounter_actor_bits: default(),
+        }));
+        h.app
+            .world_mut()
+            .entity_mut(follower)
+            .remove::<ModelDisplay>()
+            .insert((
+                CharacterVisual {
+                    race: 1,
+                    class: 5,
+                    appearance: CharacterAppearance::default(),
+                },
+                UnitLevel(90),
+                Position {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ));
+        h.app.world_mut().entity_mut(h.npc).insert((
+            UnitLevel(90),
+            Position {
+                x: 100.0,
+                y: 0.0,
+                z: 100.0,
+            },
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        let owner = h.caster;
+        assert!(!hold_unsafe_approach(h.app.world_mut(), follower, owner));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::FollowOwner>(follower)
+                .unwrap()
+                .owner,
+            owner
+        );
+    }
+}
+
 pub(super) fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
     // Match CreatureSight's optional react state: absent means Aggressive.
     let aggressive = world
