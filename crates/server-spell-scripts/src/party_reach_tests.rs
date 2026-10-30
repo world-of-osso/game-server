@@ -93,6 +93,41 @@ fn demonology_felguard_autonomous_felstorm_contributes_pet_reach() {
 }
 
 #[test]
+fn transformed_unholy_ghoul_reports_its_autonomous_cleave() {
+    let mut harness = crate::test_support::harness(Vec::new(), &[], 6).unwrap();
+    harness.app.insert_resource(
+        crate::test_support::world_db()
+            .unwrap()
+            .spell_store()
+            .clone(),
+    );
+    let owner = harness.caster;
+    harness.app.world_mut().entity_mut(owner).insert((
+        shared::components::ActiveSpec(252),
+        combat::class_progression::KnownSpells::from_baseline(vec![1233448]),
+    ));
+    let pet = harness
+        .app
+        .world_mut()
+        .spawn((
+            combat::hunter_pet::HunterPet { owner, slot: 0 },
+            shared::components::Npc {
+                template_id: 26125,
+                name: "Ghoul".into(),
+            },
+            shared::components::Position {
+                x: 20.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ))
+        .id();
+    let reaches = party_unintended_reach(harness.app.world_mut(), &[owner]);
+    let pet_reach = reaches.iter().find(|(unit, _, _)| *unit == pet).unwrap();
+    assert_eq!(pet_reach.1, 8.0);
+}
+
+#[test]
 fn beast_mastery_follower_without_area_actions_has_no_secondary_reach() {
     let (mut harness, unit) = follower(209065, 3);
     let reaches = party_unintended_reach(harness.app.world_mut(), &[unit]);

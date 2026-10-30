@@ -62,6 +62,7 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
     ("subtlety_goremaw.rs", "after_damage", "area", 1),
     ("survival_wildfire.rs", "select_recipients", "area", 1),
     ("unholy_necrotic_coil.rs", "enemies", "area", 1),
+    ("unholy_permanent_claws.rs", "update", "query", 1),
     ("unholy_undeath.rs", "spread", "area", 1),
 ];
 
@@ -386,13 +387,6 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
     (
         "unholy_grave_mastery.rs",
         "initialize_controlled_ghoul",
-        "query",
-        1,
-        "finds owned ghouls",
-    ),
-    (
-        "unholy_permanent_claws.rs",
-        "update",
         "query",
         1,
         "finds owned ghouls",
