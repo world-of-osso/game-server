@@ -12,6 +12,8 @@ use crate::spell_cast::targets;
 use ::navigation::worker::{Output, Query as NavQuery};
 
 const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
+/// Extra clearance for movement and sight updates between ticks, in yards.
+const AGGRO_STEP_MARGIN: f32 = 0.5;
 
 /// Live idle-hostile geometry used at the final combat-movement step.
 #[derive(Component)]
@@ -40,10 +42,6 @@ pub(super) fn update_combat_exclusions(
 ) {
     let party = super::ai::party_units(world, follower.owner);
     let enemies = super::ai::engaged_enemies(world, follower, unit, &party);
-    if enemies.is_empty() {
-        world.entity_mut(unit).remove::<CombatMovementExclusions>();
-        return;
-    }
     let Some(map) = world.get::<InMap>(unit).copied() else {
         world
             .entity_mut(unit)
@@ -65,7 +63,7 @@ pub(super) fn update_combat_exclusions(
         .map(|watcher| {
             let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
             let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
-            Ok((center, radius))
+            Ok((center, radius + AGGRO_STEP_MARGIN))
         })
         .collect();
     if let Err(error) = &exclusions {
