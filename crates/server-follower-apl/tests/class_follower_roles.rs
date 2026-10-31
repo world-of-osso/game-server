@@ -11,9 +11,6 @@ use server_follower_apl::{FollowerApl, FollowerAplFailed};
 use shared::components::{Health, Level};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
-/// SimC76f8118 sc_hunter.cpp1052: the default summon_pet duck.
-const HUNTER_DUCK: u32 = 174_884;
-
 /// Ten seconds of 20Hz frames: precombat plus several GCDs.
 const FRAMES: usize = 200;
 
@@ -37,9 +34,8 @@ fn dungeon_owner(h: &mut Harness) {
         .resource_mut::<server_combat::world_data::WorldData>();
     data.class_level_base_hp = source.class_level_base_hp.clone();
     data.class_level_base_mana = source.class_level_base_mana.clone();
-    // BM and Survival followers summon the SimC default duck from world data.
-    data.templates
-        .insert(HUNTER_DUCK, source.templates[&HUNTER_DUCK].clone());
+    // Followers summon pets (the BM/Survival duck, warlock demons) from world templates.
+    data.templates = source.templates.clone();
     drop(data);
     let path = server_combat::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
