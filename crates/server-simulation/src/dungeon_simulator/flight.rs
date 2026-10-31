@@ -4,6 +4,7 @@ use shared::los;
 
 // Fifteen yards separates the inferred path from the selected collision surface.
 const CLEARANCE: f32 = 15.0;
+const MAX_LOS_REPAIRS: usize = 8;
 // FlightCapability 11 caps an impulse at 100 yd/s. Treating that as a vertical
 // continuity bound is inferred; dives may exceed the impulse speed.
 const VERTICAL_BOUND: f32 = shared::skyriding::SKYRIDING.add_impulse_max_speed;
@@ -25,6 +26,12 @@ struct TraceLeg {
 #[derive(Clone, Copy)]
 struct LoggedPoint {
     horizontal: Vec2,
+    seconds: f32,
+}
+
+#[derive(Clone, Copy)]
+struct FlightPoint {
+    position: Vec3,
     seconds: f32,
 }
 
@@ -69,7 +76,7 @@ fn flight_path(
     ground_end: Vec3,
     samples: &[LoggedPoint],
     mut surfaces: impl FnMut(Vec2, f32) -> Result<Vec<f32>, String>,
-    mut clear: impl FnMut(Vec3, Vec3) -> Result<bool, String>,
+    mut hit: impl FnMut(Vec3, Vec3) -> Result<Option<f32>, String>,
 ) -> Result<Vec<Vec3>, String> {
     if samples.len() < 2 {
         return Err("flight leg needs at least two logged samples".into());
@@ -85,8 +92,10 @@ fn flight_path(
     if !duration.is_finite() || duration <= 0.0 {
         return Err("flight sample timestamps are not strictly increasing".into());
     }
-    let mut path = vec![ground_start, ground_start + Vec3::Y * CLEARANCE];
-    let mut previous_height = ground_start.y + CLEARANCE;
+    let mut points = vec![FlightPoint {
+        position: ground_start + Vec3::Y * CLEARANCE,
+        seconds: first.seconds,
+    }];
     for pair in samples.windows(2) {
         let seconds = pair[1].seconds - pair[0].seconds;
         if !seconds.is_finite() || seconds <= 0.0 {
@@ -109,18 +118,17 @@ fn flight_path(
         if pair[1].seconds == last.seconds {
             height = height.max(ground_end.y + CLEARANCE);
         }
-        let max_change = VERTICAL_BOUND * seconds;
-        if (height - previous_height).abs() > max_change {
-            return Err(format!(
-                "flight altitude exceeds continuity bound at {point:?}: previous={previous_height}, next={height}, max_change={max_change}"
-            ));
-        }
-        previous_height = height;
-        path.push(Vec3::new(point.x, height, point.y));
+        points.push(FlightPoint {
+            position: Vec3::new(point.x, height, point.y),
+            seconds: pair[1].seconds,
+        });
     }
+    repair_flight_segments(&mut points, &mut hit)?;
+    let mut path = vec![ground_start];
+    path.extend(points.iter().map(|point| point.position));
     path.push(ground_end);
     for (index, pair) in path.windows(2).enumerate() {
-        if !clear(pair[0], pair[1])? {
+        if hit(pair[0], pair[1])?.is_some() {
             return Err(format!(
                 "flight segment {index} blocked: {:?} -> {:?}",
                 pair[0], pair[1]
@@ -128,6 +136,91 @@ fn flight_path(
         }
     }
     Ok(path)
+}
+
+/// A blocked descent holds its height; other hits get a clearance waypoint.
+fn repair_flight_segments(
+    points: &mut Vec<FlightPoint>,
+    hit: &mut impl FnMut(Vec3, Vec3) -> Result<Option<f32>, String>,
+) -> Result<(), String> {
+    bound_flight_altitudes(points)?;
+    let mut index = 0;
+    let mut repairs = 0;
+    while index + 1 < points.len() {
+        let from = points[index];
+        let to = points[index + 1];
+        let allowance = VERTICAL_BOUND * (to.seconds - from.seconds);
+        if allowance <= 0.0 || (to.position.y - from.position.y).abs() > allowance {
+            return Err(format!(
+                "flight altitude exceeds continuity bound: {:?} -> {:?}, allowance={allowance}",
+                from.position, to.position
+            ));
+        }
+        let Some(fraction) = hit(from.position, to.position)? else {
+            index += 1;
+            continue;
+        };
+        if repairs == MAX_LOS_REPAIRS {
+            return Err(format!(
+                "flight LOS repair limit reached at segment {index}"
+            ));
+        }
+        repairs += 1;
+        if to.position.y < from.position.y {
+            let held = Vec3::new(to.position.x, from.position.y, to.position.z);
+            if hit(from.position, held)?.is_none() {
+                points[index + 1].position = held;
+                bound_flight_altitudes(points)?;
+                index = 0;
+                continue;
+            }
+        }
+        if !(0.0..1.0).contains(&fraction) || fraction == 0.0 {
+            return Err(format!(
+                "invalid flight LOS hit fraction {fraction} at segment {index}"
+            ));
+        }
+        let mut waypoint = from.position.lerp(to.position, fraction);
+        waypoint.y += CLEARANCE;
+        let seconds = from.seconds + (to.seconds - from.seconds) * fraction;
+        if seconds <= from.seconds || seconds >= to.seconds {
+            return Err(format!(
+                "flight LOS hit has no distinct timestamp at segment {index}"
+            ));
+        }
+        points.insert(
+            index + 1,
+            FlightPoint {
+                position: waypoint,
+                seconds,
+            },
+        );
+        bound_flight_altitudes(points)?;
+        index = 0;
+    }
+    Ok(())
+}
+
+/// Raise the minimum required flight heights to satisfy the per-interval speed bound.
+fn bound_flight_altitudes(points: &mut [FlightPoint]) -> Result<(), String> {
+    for i in 1..points.len() {
+        let allowance = VERTICAL_BOUND * (points[i].seconds - points[i - 1].seconds);
+        if !allowance.is_finite() || allowance <= 0.0 {
+            return Err("flight sample timestamps are not strictly increasing".into());
+        }
+        points[i].position.y = points[i]
+            .position
+            .y
+            .max(points[i - 1].position.y - allowance);
+    }
+    for i in (1..points.len()).rev() {
+        let allowance = VERTICAL_BOUND * (points[i].seconds - points[i - 1].seconds);
+        points[i - 1].position.y = points[i - 1]
+            .position
+            .y
+            .max(points[i].position.y - allowance);
+    }
+    Ok(())
 }
 
 fn project_endpoint(
@@ -243,7 +336,7 @@ pub(super) fn build_paths(
                 }
                 Ok(candidates)
             },
-            |from, to| los.borrow_mut().clear(from, to),
+            |from, to| los.borrow_mut().first_hit(from, to),
         )
         .map_err(|error| format!("encounter {} flight: {error}", leg.encounter))?;
         paths.push(path);
@@ -312,7 +405,7 @@ fn inferred_flight_clears_lower_surfaces_and_checks_every_segment() {
         |point, _| Ok(vec![5000.0, if point.x == 5.0 { 3.0 } else { 4.0 }]),
         |a, b| {
             checked.push((a, b));
-            Ok(true)
+            Ok(None)
         },
     )
     .unwrap();
@@ -328,7 +421,11 @@ fn inferred_flight_clears_lower_surfaces_and_checks_every_segment() {
     );
     assert_eq!(
         checked,
-        path.windows(2).map(|p| (p[0], p[1])).collect::<Vec<_>>()
+        path[1..path.len() - 1]
+            .windows(2)
+            .chain(path.windows(2))
+            .map(|p| (p[0], p[1]))
+            .collect::<Vec<_>>()
     );
 }
 
@@ -355,7 +452,7 @@ fn flight_continuity_uses_the_logged_sample_interval() {
             queried.push(point);
             Ok(vec![90.0])
         },
-        |_, _| Ok(true),
+        |_, _| Ok(None),
     )
     .unwrap();
     assert_eq!(queried, vec![Vec2::new(13.0, 0.0)]);
@@ -391,7 +488,7 @@ fn inferred_flight_ignores_higher_layers_and_raises_for_lower_surfaces() {
                 vec![100.0]
             })
         },
-        |_, _| Ok(true),
+        |_, _| Ok(None),
     )
     .unwrap();
     assert_eq!(path[2], Vec3::new(5.0, 60.0, 0.0));
@@ -399,7 +496,73 @@ fn inferred_flight_ignores_higher_layers_and_raises_for_lower_surfaces() {
 }
 
 #[test]
-fn inferred_flight_rejects_invalid_surfaces_speed_and_blocked_segments() {
+fn flight_holds_a_blocked_descent_until_the_floor_is_clear() {
+    let mut points = vec![
+        FlightPoint {
+            position: Vec3::new(0.0, 10.0, 0.0),
+            seconds: 0.0,
+        },
+        FlightPoint {
+            position: Vec3::new(1.0, 0.0, 0.0),
+            seconds: 1.0,
+        },
+        FlightPoint {
+            position: Vec3::new(20.0, 0.0, 0.0),
+            seconds: 2.0,
+        },
+    ];
+    let mut floor = |a: Vec3, b: Vec3| -> Result<Option<f32>, String> {
+        if a.y > 5.0 && b.y < 5.0 {
+            let t = (a.y - 5.0) / (a.y - b.y);
+            if a.lerp(b, t).x <= 10.0 {
+                return Ok(Some(t));
+            }
+        }
+        Ok(None)
+    };
+    repair_flight_segments(&mut points, &mut floor).unwrap();
+    assert_eq!(points[1].position, Vec3::new(1.0, 10.0, 0.0));
+    assert_eq!(points[2].position, Vec3::new(20.0, 0.0, 0.0));
+    assert!(
+        points
+            .windows(2)
+            .all(|pair| floor(pair[0].position, pair[1].position).unwrap().is_none())
+    );
+}
+
+#[test]
+fn flight_inserts_clearance_above_a_blocking_wall() {
+    let mut points = vec![
+        FlightPoint {
+            position: Vec3::ZERO,
+            seconds: 0.0,
+        },
+        FlightPoint {
+            position: Vec3::new(10.0, 0.0, 0.0),
+            seconds: 2.0,
+        },
+    ];
+    let mut wall = |a: Vec3, b: Vec3| -> Result<Option<f32>, String> {
+        if a.x < 5.0 && b.x > 5.0 {
+            let t = (5.0 - a.x) / (b.x - a.x);
+            if a.lerp(b, t).y < 5.0 {
+                return Ok(Some(t));
+            }
+        }
+        Ok(None)
+    };
+    repair_flight_segments(&mut points, &mut wall).unwrap();
+    assert_eq!(points.len(), 3);
+    assert_eq!(points[1].position, Vec3::new(5.0, 15.0, 0.0));
+    assert!(
+        points
+            .windows(2)
+            .all(|pair| wall(pair[0].position, pair[1].position).unwrap().is_none())
+    );
+}
+
+#[test]
+fn inferred_flight_rejects_invalid_surfaces_and_unrepairable_segments() {
     let start = Vec3::ZERO;
     let end = Vec3::new(10.0, 0.0, 0.0);
     let samples = [
@@ -412,34 +575,35 @@ fn inferred_flight_rejects_invalid_surfaces_speed_and_blocked_segments() {
             seconds: 1.0,
         },
     ];
-    let clear_sky = flight_path(start, end, &samples, |_, _| Ok(vec![]), |_, _| Ok(true)).unwrap();
+    let clear_sky = flight_path(start, end, &samples, |_, _| Ok(vec![]), |_, _| Ok(None)).unwrap();
     assert_eq!(clear_sky[2], Vec3::new(10.0, 15.0, 0.0));
     let invalid = flight_path(
         start,
         end,
         &samples,
         |_, _| Ok(vec![f32::NAN]),
-        |_, _| Ok(true),
+        |_, _| Ok(None),
     )
     .unwrap_err();
     assert!(invalid.contains("invalid flight surface"));
     let high_landing = Vec3::new(end.x, 250.0, end.z);
-    let impossible = flight_path(
+    let bounded = flight_path(
         start,
         high_landing,
         &samples,
         |_, _| Ok(vec![0.0]),
-        |_, _| Ok(true),
+        |_, _| Ok(None),
     )
-    .unwrap_err();
-    assert!(impossible.contains("continuity bound"));
+    .unwrap();
+    assert_eq!(bounded[1].y, 165.0);
+    assert_eq!(bounded[2].y, 265.0);
     let blocked = flight_path(
         start,
         end,
         &samples,
         |_, _| Ok(vec![0.0]),
-        |a, b| Ok(a.x == b.x),
+        |a, b| Ok((a.x != b.x).then_some(0.5)),
     )
     .unwrap_err();
-    assert!(blocked.contains("flight segment 1 blocked"));
+    assert!(blocked.contains("flight LOS repair limit"));
 }
