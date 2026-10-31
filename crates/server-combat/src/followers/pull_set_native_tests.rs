@@ -128,7 +128,7 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
 
 #[test]
 #[ignore = "requires Windrunner native world, ground and LOS data"]
-fn windrunner_transitive_assistance_and_first_wave_discipline() {
+fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
     let (mut h, tank, profile) =
         super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
             app.insert_resource(crate::test_data::world_data().clone());
@@ -236,11 +236,31 @@ fn windrunner_transitive_assistance_and_first_wave_discipline() {
     .unwrap();
     assert_eq!(
         projected,
-        std::collections::BTreeSet::from([63805113, 63805114, 63805162])
+        std::collections::BTreeSet::from([63805113, 63805114])
     );
     assert!(
-        planned.contains(&dragonhawk),
-        "second-wave Dragonhawk belongs to the closure"
+        !planned.contains(&dragonhawk),
+        "an assistant's own potential helper is not in the first-wave plan"
+    );
+    data.formations.insert(
+        63805114,
+        crate::world_data::FormationInfo {
+            leader_guid: 63805113,
+            follow_dist: 0.0,
+            follow_angle: 0.0,
+            group_ai: 3,
+        },
+    );
+    h.app.insert_resource(data.clone());
+    assert!(
+        super::pull_set::members(h.app.world(), caller, tank).contains(&dragonhawk),
+        "formation members contribute their own immediate assistance snapshot"
+    );
+    data.formations.remove(&63805114);
+    h.app.insert_resource(data);
+    assert!(
+        super::pull_set::risky_pending_helpers(h.app.world(), caller, tank).contains(&helper),
+        "directly hitting the pending helper could call the Dragonhawk"
     );
     assert!(
         !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
@@ -272,18 +292,22 @@ fn windrunner_transitive_assistance_and_first_wave_discipline() {
             .is_some(),
         "the native delayed dispatch must join the helper"
     );
-    let post_planned = super::pull_set::members(h.app.world(), caller, tank);
-    let post_risky = super::pull_set::risky_pending_helpers(h.app.world(), caller, tank);
-    let post_first = super::pull_set::first_wave(h.app.world(), helper, tank);
     assert!(
-        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "AoE is allowed after first-wave dispatch; planned={post_planned:?}, risky={post_risky:?}, helper_wave={post_first:?}, caller={caller:?}, helper={helper:?}, dragonhawk={dragonhawk:?}"
+        super::pull_set::risky_pending_helpers(h.app.world(), caller, tank).is_empty(),
+        "the first-wave pending restriction ends after native dispatch"
+    );
+    assert!(
+        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "the ordinary AoE guard must still protect the unplanned Dragonhawk"
     );
     assert!(crate::combat_refs::has_active_reference_to(
         h.app.world(),
         helper,
         tank
     ));
+    // TC 15e0ed76 Creature.cpp:288-300 marks an assistant no-call before engagement.
+    // Wait beyond another native 1.5-second delay to catch an unintended second wave.
+    h.advance(80);
     assert!(
         !crate::combat_refs::has_active_reference_to(h.app.world(), dragonhawk, tank),
         "the second wave must not be pulled by the first-wave dispatch"

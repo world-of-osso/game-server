@@ -1,4 +1,4 @@
-//! Formation and transitive native assistance snapshots for a pull.
+//! Formation and first-wave native assistance snapshots for a pull.
 use bevy::prelude::*;
 use std::collections::HashSet;
 
@@ -33,9 +33,8 @@ fn assistants(world: &World, target: Entity, victim: Entity) -> Vec<Entity> {
         .unwrap_or_else(|| crate::creature_assistance::assistance_snapshot(world, target, victim))
 }
 
-pub(super) fn first_wave(world: &World, target: Entity, victim: Entity) -> HashSet<Entity> {
-    let mut result: HashSet<_> = assistants(world, target, victim).into_iter().collect();
-    result.insert(target);
+fn formation(world: &World, target: Entity) -> HashSet<Entity> {
+    let mut result = HashSet::from([target]);
     if let (Some(map), Some(units)) = (
         world.get::<crate::maps::InMap>(target),
         world.get_resource::<crate::maps::units::MapUnits>(),
@@ -43,6 +42,14 @@ pub(super) fn first_wave(world: &World, target: Entity, victim: Entity) -> HashS
         result.extend(units.in_map(*map).filter(|&candidate| {
             super::positioning::in_target_formation(world, target, candidate)
         }));
+    }
+    result
+}
+
+pub(super) fn first_wave(world: &World, target: Entity, victim: Entity) -> HashSet<Entity> {
+    let mut result = formation(world, target);
+    for caller in result.clone() {
+        result.extend(assistants(world, caller, victim));
     }
     result
 }
@@ -78,14 +85,5 @@ pub(super) fn risky_pending_helpers(
 }
 
 pub(super) fn members(world: &World, target: Entity, victim: Entity) -> HashSet<Entity> {
-    let mut result = HashSet::from([target]);
-    let mut pending = vec![target];
-    while let Some(caller) = pending.pop() {
-        for member in first_wave(world, caller, victim) {
-            if result.insert(member) {
-                pending.push(member);
-            }
-        }
-    }
-    result
+    first_wave(world, target, victim)
 }
