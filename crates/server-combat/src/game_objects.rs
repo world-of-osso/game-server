@@ -142,6 +142,20 @@ pub(crate) fn set_go_state(world: &mut World, object: Entity, state: u8) {
     }
 }
 
+/// Initialize an already-open door without replaying its opening transition.
+pub(crate) fn set_initial_go_state(world: &mut World, object: Entity, state: u8) {
+    set_go_state(world, object, state);
+    let is_door = world
+        .get::<GameObjectInfo>(object)
+        .is_some_and(|info| info.go_type == GAMEOBJECT_TYPE_DOOR);
+    if is_door && state == GO_STATE_ACTIVE {
+        world.entity_mut(object).insert(GameObjectAnimation {
+            animation_id: ANIM_OPENED,
+            looping: true,
+        });
+    }
+}
+
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct GameObjectBounds {
@@ -312,7 +326,7 @@ pub(crate) fn spawn_map_game_objects(
     }
     if map.instance_id != 0 {
         commands.queue(move |world: &mut World| {
-            crate::scripted_ai::door_data::update_doors(world, map)
+            crate::scripted_ai::door_data::initialize_doors(world, map)
         });
     }
     count

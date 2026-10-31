@@ -519,6 +519,19 @@ fn fire_wall(h: &mut Harness, map: InMap) -> (u8, bool) {
     walls[0]
 }
 
+fn fire_wall_animation(h: &mut Harness, map: InMap) -> shared::protocol::GameObjectAnimation {
+    let mut walls = h.app.world_mut().query::<(
+        &shared::protocol::GameObjectInfo,
+        &InMap,
+        &shared::protocol::GameObjectAnimation,
+    )>();
+    *walls
+        .iter(h.app.world())
+        .find(|(info, copy, _)| info.entry == 377194 && **copy == map)
+        .expect("fire wall animation")
+        .2
+}
+
 #[test]
 fn kokia_fire_wall_opens_only_when_kokia_is_done() {
     let (mut h, _, map) = kokia_copy(205);
@@ -544,6 +557,13 @@ fn kokia_fire_wall_opens_only_when_kokia_is_done() {
         (0, false),
         "open, without collision"
     );
+    assert_eq!(
+        fire_wall_animation(&mut h, map),
+        shared::protocol::GameObjectAnimation {
+            animation_id: 148,
+            looping: false,
+        }
+    );
 }
 
 #[test]
@@ -556,4 +576,11 @@ fn kokia_fire_wall_spawns_open_in_a_copy_with_kokia_done() {
         EncounterState::Done
     ));
     assert_eq!(spawn_fire_wall(&mut h, map), (0, false));
+    assert_eq!(
+        fire_wall_animation(&mut h, map),
+        shared::protocol::GameObjectAnimation {
+            animation_id: 149,
+            looping: true,
+        }
+    );
 }

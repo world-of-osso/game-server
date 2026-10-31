@@ -6,7 +6,9 @@ use bevy::prelude::*;
 use shared::protocol::GameObjectInfo;
 
 use super::instance_script::{EncounterState, instance_script};
-use crate::game_objects::{GO_STATE_ACTIVE, GO_STATE_READY, GameObjectState, set_go_state};
+use crate::game_objects::{
+    GO_STATE_ACTIVE, GO_STATE_READY, GameObjectState, set_go_state, set_initial_go_state,
+};
 use crate::maps::InMap;
 
 /// TC `EncounterDoorBehavior`; variants are added with the first door that uses them.
@@ -44,6 +46,14 @@ const DOORS: &[Door] = &[
 /// `UpdateDoorState` for every door object of `map`'s copy: open only while every
 /// encounter bound to its entry allows it.
 pub(crate) fn update_doors(world: &mut World, map: InMap) {
+    reconcile_doors(world, map, false);
+}
+
+pub(crate) fn initialize_doors(world: &mut World, map: InMap) {
+    reconcile_doors(world, map, true);
+}
+
+fn reconcile_doors(world: &mut World, map: InMap, initial: bool) {
     if !DOORS.iter().any(|door| door.map_id == map.map_id) {
         return;
     }
@@ -72,7 +82,11 @@ pub(crate) fn update_doors(world: &mut World, map: InMap) {
             GO_STATE_READY
         };
         if current != Some(state) {
-            set_go_state(world, object, state);
+            if initial {
+                set_initial_go_state(world, object, state);
+            } else {
+                set_go_state(world, object, state);
+            }
         }
     }
 }
