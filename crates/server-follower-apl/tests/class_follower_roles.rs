@@ -338,9 +338,18 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
         "no APL heal during pull-back; casts {:?}",
         pull.casts()
     );
-    assert!(pull.events().iter().all(|event| {
-        event.source != Some(pull.follower.to_bits()) || event.kind != CombatLogKind::Damage
-    }));
+    let damage: Vec<_> = pull
+        .events()
+        .iter()
+        .filter(|event| {
+            event.source == Some(pull.follower.to_bits()) && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert!(
+        damage.is_empty(),
+        "healer damage {damage:?}; hold still active {}",
+        server_combat::followers::holding_pull_damage(pull.harness.app.world(), pull.follower)
+    );
     assert!(
         !pull.casts().contains(&19236),
         "legacy defensive bridge ran"
