@@ -51,6 +51,7 @@ impl NavigationMap {
                             "border target",
                         )?;
                         if target != tile
+                            && (tile == added || target == added)
                             && (*target_poly).areaAndtype >> 6
                                 == dtPolyTypes_DT_POLYTYPE_GROUND as u8
                             && self.border_height_gap(tile, polygon, source, entry)? > AGENT_CLIMB
