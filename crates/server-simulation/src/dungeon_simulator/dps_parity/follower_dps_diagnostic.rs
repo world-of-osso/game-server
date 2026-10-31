@@ -381,7 +381,8 @@ fn follower_combustion_restores_selected_fire_blast_charge() {
         read(&app)
     }
     assert_eq!(charges_after_combustion(false), 0.0);
-    assert_eq!(charges_after_combustion(true), 1.0);
+    // This level-70 native starter build selects rank two: two charges.
+    assert_eq!(charges_after_combustion(true), 2.0);
 }
 
 #[test]
