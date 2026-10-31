@@ -1183,7 +1183,10 @@ fn dk252_army_epidemic_hits_survivors_after_primary_dies() {
     assert!(events.iter().any(|event| event.source.is_some_and(|source| army.contains(&source))
         && event.target == Some(survivor.to_bits()) && event.spell_id == Some(1300330)
         && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "Army Epidemic must reach living enemies after the primary dies");
+        "Army Epidemic must reach living enemies after the primary dies; selected={:?}, opponents={:?}, relevant events={:?}",
+        run.app.world().get::<crate::networking::CombatTarget>(actor),
+        crate::combat_refs::active_opponents(run.app.world(), actor),
+        events.iter().filter(|event| matches!(event.spell_id, Some(55090 | 1294264 | 1300330))).map(|event| (event.spell_id, event.source, event.target, event.amount)).collect::<Vec<_>>());
 }
 
 #[test]
