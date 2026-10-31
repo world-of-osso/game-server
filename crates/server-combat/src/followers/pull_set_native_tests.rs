@@ -242,9 +242,12 @@ fn windrunner_transitive_assistance_and_first_wave_discipline() {
             .is_some(),
         "the native delayed dispatch must join the helper"
     );
+    let post_planned = super::pull_set::members(h.app.world(), caller, tank);
+    let post_risky = super::pull_set::risky_pending_helpers(h.app.world(), caller, tank);
+    let post_first = super::pull_set::first_wave(h.app.world(), helper, tank);
     assert!(
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "AoE is allowed after first-wave dispatch"
+        "AoE is allowed after first-wave dispatch; planned={post_planned:?}, risky={post_risky:?}, helper_wave={post_first:?}, caller={caller:?}, helper={helper:?}, dragonhawk={dragonhawk:?}"
     );
     assert!(crate::combat_refs::has_active_reference_to(
         h.app.world(),
