@@ -46,10 +46,9 @@ fn roll_torrent(world: &mut World, caster: Entity, critical: bool) {
         divisor > 0.0,
         "native Icy Death Torrent divisor must be positive"
     );
-    if random::random::<f32>() < chance / divisor {
-        assert!(
-            try_cast_triggered(world, caster, DAMAGE, None, 1),
-            "native Icy Death Torrent refused"
-        );
+    if random::random::<f32>() < chance / divisor
+        && !try_cast_triggered(world, caster, DAMAGE, None, 1)
+    {
+        warn!(?caster, "native Icy Death Torrent refused");
     }
 }

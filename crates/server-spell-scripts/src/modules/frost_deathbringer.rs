@@ -273,20 +273,19 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo, foreground
         // SimC76f8118 sc_death_knight.cpp8530–8537/8591–8595: an actual
         // Mark grants the selected Echoing Fury's authored Exterminate uses.
         let stacks = script_effect_value(world, caster, ECHOING_FURY, 0) as u8;
-        assert!(
-            spell_cast::cast_triggered_with_overrides(
-                world,
-                caster,
-                EXTERMINATE,
-                Some(caster),
-                1,
-                TriggeredSpellOverrides {
-                    aura_stacks: Some(stacks),
-                    ..Default::default()
-                }
-            ),
-            "native Echoing Fury Exterminate aura refused"
-        );
+        if !spell_cast::cast_triggered_with_overrides(
+            world,
+            caster,
+            EXTERMINATE,
+            Some(caster),
+            1,
+            TriggeredSpellOverrides {
+                aura_stacks: Some(stacks),
+                ..Default::default()
+            },
+        ) {
+            warn!(?caster, "native Echoing Fury Exterminate aura refused");
+        }
     } else if matches!(spell.id, 207230 | 49020) {
         let instance = world.get::<ActiveAuras>(caster).and_then(|active| {
             active
