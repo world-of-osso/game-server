@@ -5,6 +5,19 @@ use shared::item_data::ItemDefinitionSource::Retail;
 use shared::protocol::EquipmentSlot::{MainHand, OffHand};
 
 #[test]
+fn weapon_fixture_uses_native_class_proficiency_for_casts() {
+    for (class, spell) in [(3, 19_434), (12, 263_642)] {
+        let mut h = harness(Vec::new(), &[spell], class).unwrap();
+        let result = creature_cast(h.app.world_mut(), h.caster, spell, Some(h.npc), false);
+        assert_ne!(
+            result,
+            Err(CastFailure::EquippedItemClass),
+            "class {class}: {result:?}"
+        );
+    }
+}
+
+#[test]
 fn vengeance_weapon_requirements_reject_dagger_main_hand() {
     let mut h = harness(Vec::new(), &[263_642, 228_477], 12).unwrap();
     let path = crate::test_data::world_db_path();

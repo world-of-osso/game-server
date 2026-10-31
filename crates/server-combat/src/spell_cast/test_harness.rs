@@ -46,6 +46,7 @@ pub struct FiendSummonReceipt {
 }
 
 mod assisted_parity;
+mod equipment;
 pub use assisted_parity::{
     read_facts as read_assisted_parity_facts,
     read_facts_with_dots as read_assisted_parity_facts_with_dots,
@@ -176,6 +177,7 @@ pub fn collect_broadcast_swings(
 pub struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,
+    pub(crate) items: crate::item_templates::ItemTemplates,
     pub powers_db: PathBuf,
 }
 
@@ -259,9 +261,11 @@ pub fn world_db() -> Option<&'static WorldData> {
         let path = crate::test_data::world_db_path();
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let (store, classes) = load_spell_data(&conn).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
         Some(WorldData {
             store,
             classes,
+            items,
             powers_db: path,
         })
     })
@@ -721,6 +725,7 @@ pub fn harness_with_plugins(
         .map(|&id| data.store.get(id).expect("spell in world.db").clone())
         .collect();
     spells.extend(extra);
+    let fixture_items = equipment::select(data, class, &spells);
     let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
     app.insert_resource(SpellStore::fixture_from_catalog(spells, &data.store));
     app.insert_resource(power_table(data));
@@ -736,6 +741,7 @@ pub fn harness_with_plugins(
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);
+    equipment::install(&mut app, caster, fixture_items);
     if computed_stats {
         app.world_mut()
             .entity_mut(caster)
