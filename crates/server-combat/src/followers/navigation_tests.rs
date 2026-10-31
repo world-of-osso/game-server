@@ -75,6 +75,14 @@ fn follower_leaves_ship_and_follows_owner(owner_drop: f32) {
         ..deck
     };
     h.app.world_mut().entity_mut(owner).insert(destination);
+    if owner_drop > 0.0 {
+        h.app
+            .world_mut()
+            .entity_mut(owner)
+            .insert(shared::components::PlayerMotion(
+                shared::components::PlayerMotion::SWIMMING,
+            ));
+    }
     crate::transport::disembark(h.app.world_mut(), owner);
     crate::transport::sync_deck_passengers(h.app.world_mut());
     assert!(h.app.world().get::<TransportPassenger>(follower).is_none());
