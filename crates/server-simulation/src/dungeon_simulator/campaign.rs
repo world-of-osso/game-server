@@ -741,7 +741,7 @@ fn azure_remaining_formation_member_reaches_native_admission_after_leader_death(
 }
 
 #[test]
-#[ignore = "explicit Stockade32 Henry roster; opening200sim_s native movement reproduction"]
+#[ignore = "explicit Stockade32 Holy Priest roster (DUNGEON_SIMULATOR_HEALER_SPEC=257); opening200sim_s native movement reproduction"]
 fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
     let _rng_scope = crate::random::seed_scope(6);
     let mut run = spawn_run(6, &mut None).unwrap();
@@ -753,9 +753,9 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
             .get::<crate::followers::Follower>(healer)
             .unwrap()
             .profile
-            .entry,
-        215011,
-        "qualify the explicit Henry roster, never silently test Crenna"
+            .spec_id,
+        257,
+        "qualify the explicit Holy Priest roster, never silently test Restoration Druid"
     );
     let origin = *run.app.world().get::<Position>(healer).unwrap();
     let started = std::time::Instant::now();
@@ -833,7 +833,7 @@ fn write_stockade_follower_combat(run: &Run) -> Result<(), String> {
                 }
             }
             let total: i64 = damage.values().sum();
-            serde_json::json!({"entry": follower.profile.entry, "spec": follower.profile.spec_id,
+            serde_json::json!({"spec": follower.profile.spec_id,
             "casts": casts, "damage_by_spell": damage, "damage": total,
             "dps": total as f64 / run.now()})
         })
