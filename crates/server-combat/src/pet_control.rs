@@ -582,7 +582,9 @@ fn autocast(world: &mut World, pet: Entity, victim: Entity) {
                 let spell = store.get(spell_id)?;
                 Some(crate::spell_info::positivity::negative_effects(store, spell) != 0)
             });
-        if negative != Some(true) {
+        if negative != Some(true)
+            || !crate::followers::action_safe(world, pet, victim, Some(spell_id))
+        {
             continue;
         }
         let cast = crate::spell_cast::creature_cast(world, pet, spell_id, Some(victim), false);
@@ -596,6 +598,7 @@ fn autocast(world: &mut World, pet: Entity, victim: Entity) {
 fn need_to_stop(world: &World, owner: Entity, pet: Entity, target: Entity) -> bool {
     distance(world, pet, owner).is_none_or(|gap| gap >= MAX_CHASE_FROM_OWNER)
         || !valid_attack_target(world, pet, target)
+        || !crate::followers::action_safe(world, pet, target, None)
 }
 
 /// `SelectNextTarget` for a pet that is not passive: what attacks the pet, then what
@@ -639,7 +642,10 @@ fn can_attack(world: &World, pet: Entity, target: Entity) -> bool {
     let Some(charm) = world.get::<PetCharm>(pet) else {
         return false;
     };
-    if is_dead(world, target) || !valid_attack_target(world, pet, target) {
+    if is_dead(world, target)
+        || !valid_attack_target(world, pet, target)
+        || !crate::followers::action_safe(world, pet, target, None)
+    {
         return false;
     }
     if charm.react == REACT_PASSIVE {

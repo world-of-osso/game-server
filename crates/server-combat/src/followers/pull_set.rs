@@ -60,6 +60,26 @@ pub(super) fn first_wave(world: &World, target: Entity, victim: Entity) -> HashS
     result
 }
 
+pub(super) fn pending_helpers(world: &World, target: Entity, victim: Entity) -> HashSet<Entity> {
+    let uncalled = world
+        .get::<crate::creature_assistance::AssistanceCalled>(target)
+        .is_none()
+        .then_some(target);
+    crate::creature_assistance::pending_callers(world)
+        .chain(uncalled)
+        .filter(|caller| {
+            world.get::<crate::maps::InMap>(*caller) == world.get::<crate::maps::InMap>(victim)
+        })
+        .flat_map(|caller| assistants(world, caller, victim))
+        .filter(|helper| {
+            world
+                .get::<crate::creature_assistance::AssistanceCalled>(*helper)
+                .is_none()
+        })
+        .collect()
+}
+
+#[cfg(test)]
 pub(super) fn risky_pending_helpers(
     world: &World,
     target: Entity,

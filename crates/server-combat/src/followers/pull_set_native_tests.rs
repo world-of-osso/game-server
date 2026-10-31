@@ -85,8 +85,24 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
     assert!(planned.contains(&caller));
     assert!(helpers.iter().all(|helper| planned.contains(helper)));
     assert!(
+        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "area attacks wait for the first-wave dispatch"
+    );
+    crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    for _ in 0..60 {
+        h.advance(1);
+        if helpers.iter().all(|&helper| {
+            h.app
+                .world()
+                .get::<crate::creature_assistance::AssistanceCalled>(helper)
+                .is_some()
+        }) {
+            break;
+        }
+    }
+    assert!(
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "the tank may use its native chain against planned assistants"
+        "the tank may use its native chain after planned assistants dispatch"
     );
     crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
         .expect("the tank's native Avenger's Shield must start against the planned pull");
@@ -271,6 +287,24 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         "single-target taunt remains available"
     );
     crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    let pet = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(pet).insert((
+        map,
+        here,
+        crate::hunter_pet::HunterPet {
+            owner: tank,
+            slot: 0,
+        },
+        crate::pet_control::PetCharm::new([0; 10], shared::protocol::REACT_ASSIST),
+    ));
+    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .is_none_or(|target| target.0 != Some(helper)),
+        "a follower pet must not attack a pending helper"
+    );
     assert!(
         !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "AoE remains unsafe while assistance is pending"
