@@ -139,7 +139,7 @@ fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
 
 #[test]
 #[ignore = "requires Halls of Infusion collision and navigation assets"]
-fn halls_follower_exits_water_at_garrick_recorded_shore() {
+fn halls_follower_reaches_ramp_from_recorded_swim_exit() {
     let data = crate::ground::ground_data_dir();
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     h.app.world_mut().despawn(h.npc);
@@ -149,14 +149,14 @@ fn halls_follower_exits_water_at_garrick_recorded_shore() {
         .unwrap()
         .0 = None;
     let start = Position {
-        x: -133.17523,
-        y: -38.791077,
-        z: 160.96422,
+        x: -74.0251,
+        y: -38.345554,
+        z: 148.5022,
     };
     let owner = Position {
-        x: -147.1641,
-        y: -34.40178,
-        z: 174.8028,
+        x: -120.2864,
+        y: -38.791,
+        z: 153.5835,
     };
     let map = InMap::continent(2527);
     h.app.world_mut().entity_mut(h.caster).insert((owner, map));
@@ -177,8 +177,8 @@ fn halls_follower_exits_water_at_garrick_recorded_shore() {
     let end = *h.app.world().get::<Position>(unit).unwrap();
     println!("follower start={start:?} end={end:?} owner={owner:?}");
     assert!(
-        end.y > -36.0 && point(end).distance(point(owner)) < 12.0,
-        "follower did not leave shore: {end:?}"
+        point(end).distance(point(owner)) < 12.0,
+        "follower did not reach the ramp: {end:?}"
     );
 }
 
