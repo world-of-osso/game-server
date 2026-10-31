@@ -33,7 +33,8 @@ class FollowerPopulationTests(unittest.TestCase):
     def test_actual_source_projection_is_complete_exact_and_idempotent(self):
         report = population.apply_population(SOURCE, self.copy, DB2)
         self.assertEqual(len(report["maps"]), 27)
-        self.assertEqual([row["map_id"] for row in report["maps"] if row["source_complete"]], [2451, 2515, 2521, 2526, 2648])
+        complete = {row["map_id"] for row in report["maps"] if row["source_complete"]}
+        self.assertTrue({2451, 2515, 2521, 2526, 2648} <= complete)
         with closing(sqlite3.connect(SOURCE.as_uri() + "?mode=ro", uri=True)) as source, closing(sqlite3.connect(self.copy)) as target, target:
             for row in report["maps"]:
                 map_id = row["map_id"]
@@ -45,6 +46,7 @@ class FollowerPopulationTests(unittest.TestCase):
                 self.assertEqual(actual, expected, row["name"])
                 expected_entrances = source.execute("SELECT * FROM tdb_world_safe_locs WHERE MapID=? AND Comment LIKE '%Entrance%' ORDER BY ID", (map_id,)).fetchall()
                 self.assertEqual(target.execute("SELECT * FROM tdb_world_safe_locs WHERE MapID=? ORDER BY ID", (map_id,)).fetchall(), expected_entrances)
+                self.assertEqual(row["source_complete"], bool(expected and expected_entrances), row["name"])
                 self.assertEqual(bool(row["gaps"]), not row["source_complete"])
         self.assertEqual(population.apply_population(SOURCE, self.copy, DB2), report)
 
