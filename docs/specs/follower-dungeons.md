@@ -56,6 +56,8 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 `FLOODGATE_DAM_GATE_LOG_CORRELATED`: Swampface Done opens Dam Gate 505620 and its collision proxy 528436 at spawn 30001653. The other 528436 placement stays unchanged. WCL `67c3WanVygd4ZvCt`/1 crosses the gate plane after Swampface; the exact Retail trigger is unknown.
 
+`GEEZLE_PROXIMITY_RELEASE_LOG_CORRELATED`: Geezle Gigazap (226404) spawns with template PC/NPC immunity (`unit_flags` 0x340). A living player within 21.6577 yards in the same instance clears both flags; then players can attack him and start encounter 3054. The radius is the largest nearest-player distance at the first hostile cast in WCL `67c3WanVygd4ZvCt`/1 pull 13 (Taunt from 21.7 yd), `CPzKQd3xLrWJgRNw`/1 pull 14 and `hAtcnVyGZ6JRvWpN`/3 pull 12. TC 15e0ed76 has no Floodgate script; the Retail trigger is not logged.
+
 ## Ara-Kara ambient flyers and eggs
 
 TDB's Jabbing Flyer 216341 spawns 30003831, 30003832, 30003838, 30003846, 30003848, 30003853 and 30003854 carry both PC and NPC immunity and the `[DNT] Cosmetic Spawn State Dead` aura 387851. Treat these authored spawns as ambient; do not infer an unlock from combat logs. Other Flyer spawns have no such immunity override. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 show attackable Flyers near unflagged placements, but do not identify their TDB spawn GUIDs.
