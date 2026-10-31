@@ -19,7 +19,7 @@ fn hits(run: &Run, target: Entity) -> usize {
 
 #[test]
 #[ignore = "native Dragonfire after a lethal Breath of Fire"]
-fn dragonfire_hits_survivor_after_lethal_breath() {
+fn dragonfire_cancels_after_lethal_breath() {
     use shared::components::Health;
 
     let _seed = crate::random::seed_scope(70448);
@@ -40,7 +40,7 @@ fn dragonfire_hits_survivor_after_lethal_breath() {
         && event.spell_id == Some(115181)
         && event.kind == CombatLogKind::Damage
         && event.amount > 0), "Breath of Fire must kill the primary");
-    assert!(hits(&run, survivor) > 0, "the destination cone must still hit the survivor");
+    assert_eq!(hits(&run, survivor), 0, "the delayed cone must cancel for a dead target");
 }
 
 #[test]
