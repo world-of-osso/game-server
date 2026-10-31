@@ -11,6 +11,7 @@ pub use polygons::read_walkable_polygons;
 #[path = "collision_drop.rs"]
 mod collision_drop;
 pub use collision_drop::CollisionDrop;
+mod border_links;
 #[cfg(feature = "bake")]
 mod connectivity_probe;
 mod hierarchy_bake;
@@ -118,8 +119,12 @@ impl NavigationMap {
 
     /// Read and verify the hierarchy before the worker begins processing requests.
     pub fn preload_hierarchy(&mut self) {
-        self.hierarchy =
-            Some(crate::hierarchy::PortalGraph::read_artifact(&self.dir).map(std::sync::Arc::new));
+        self.hierarchy = Some(crate::hierarchy::PortalGraph::read_artifact(&self.dir).map(
+            |mut graph| {
+                graph.prune_high_cross_tile_edges();
+                std::sync::Arc::new(graph)
+            },
+        ));
     }
 
     /// Native MovePositionToFirstCollision's Detour walkable-surface ray.
@@ -590,17 +595,19 @@ impl NavigationMap {
                 return Err("Detour tile allocation failed".into());
             }
             std::ptr::copy_nonoverlapping(bytes.as_ptr(), data, bytes.len());
+            let mut tile_ref = 0;
             let result = (*self.mesh).addTile(
                 data,
                 bytes.len() as i32,
                 dtTileFlags_DT_TILE_FREE_DATA as i32,
                 0,
-                std::ptr::null_mut(),
+                &mut tile_ref,
             );
             if result & DT_FAILURE != 0 {
                 dtFree(data.cast());
             }
-            status(result, "loading tile")
+            status(result, "loading tile")?;
+            self.prune_border_links(tile_ref)
         }
     }
 }

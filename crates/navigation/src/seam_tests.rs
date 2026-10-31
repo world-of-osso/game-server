@@ -17,6 +17,26 @@ fn seam_floor(boundary: f32, rotate: bool) -> Vec<[Vec3; 3]> {
 }
 
 #[test]
+#[ignore = "requires published Halls of Infusion navigation assets"]
+fn halls_garrick_shore_route_avoids_unclimbable_border_links() {
+    let root =
+        PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground assets"));
+    let mut map = NavigationMap::open(&root.join("navmesh/2527")).unwrap();
+    let start = Vec3::new(-133.17523, -38.791077, 160.96422);
+    let end = Vec3::new(-147.1641, -34.40178, 174.8028);
+    let points = map
+        .complete_path(start, end)
+        .expect("a walkable route to the shore");
+    assert!(
+        points.windows(2).all(|pair| {
+            let horizontal = (pair[1].x - pair[0].x).hypot(pair[1].z - pair[0].z);
+            horizontal >= 0.5 || (pair[1].y - pair[0].y).abs() <= AGENT_CLIMB
+        }),
+        "route crosses an unclimbable border: {points:?}"
+    );
+}
+
+#[test]
 fn generated_open_floor_routes_stay_short_near_subtile_and_wow_tile_corners() {
     let mut failures = Vec::new();
     for boundary in [
