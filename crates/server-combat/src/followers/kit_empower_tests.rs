@@ -100,6 +100,7 @@ fn spawn_surge_fixture(level: u8, enemies: usize) -> (Harness, Entity) {
             current: 1_000_000_000.0,
             max: 1_000_000_000.0,
         });
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, enemy);
     }
     (h, caster)
 }

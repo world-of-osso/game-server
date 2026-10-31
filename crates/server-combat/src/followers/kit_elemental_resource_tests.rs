@@ -61,6 +61,8 @@ fn spawn_resource_fixture(case: ResourceCase) -> (Harness, Entity, Vec<Entity>) 
         let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
         health.max = 1_000_000_000.0;
         health.current = health.max;
+        // Chain targets must already be in the follower party's fight.
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, target);
         targets.push(target);
     }
     (h, caster, targets)

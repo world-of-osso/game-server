@@ -460,6 +460,7 @@ fn proc_fidelity_262_native_stormkeeper_chain_lightning_overloads_each_hit_targe
         let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
         health.current = 1_000_000_000.0;
         health.max = health.current;
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, target);
     }
     // Feedback Loop independently adds extra overloads; isolate the guaranteed casts.
     crate::auras::remove_auras(
