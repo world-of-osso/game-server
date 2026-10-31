@@ -146,7 +146,9 @@ fn add_clarity(world: &mut World, caster: Entity, _: &SpellInfo) {
     {
         return;
     }
-    let stats = world.get::<CharacterStats>(caster).expect("Harmony caster stats");
+    let stats = world
+        .get::<CharacterStats>(caster)
+        .expect("Harmony caster stats");
     let attack_power = stats.total_attack_power(
         WeaponAttackType::MainHand,
         world.get::<StatModifiers>(caster),
@@ -157,8 +159,13 @@ fn add_clarity(world: &mut World, caster: Entity, _: &SpellInfo) {
 }
 
 fn add_accumulator(world: &mut World, caster: Entity, amount: f32) {
-    let max = world.get::<Health>(caster).expect("Harmony caster health").max;
-    let current = world.get::<HarmonyPools>(caster).map_or(0.0, |pools| pools.accumulator);
+    let max = world
+        .get::<Health>(caster)
+        .expect("Harmony caster health")
+        .max;
+    let current = world
+        .get::<HarmonyPools>(caster)
+        .map_or(0.0, |pools| pools.accumulator);
     let next = (current + amount).min(max);
     if let Some(mut pools) = world.get_mut::<HarmonyPools>(caster) {
         pools.accumulator = next;
