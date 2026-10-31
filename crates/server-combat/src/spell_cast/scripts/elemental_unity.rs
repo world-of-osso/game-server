@@ -12,7 +12,11 @@ const SOURCES: &[(u32, u8, &[u32])] = &[
     (157299, 3, &[157299, 157319]),
 ];
 
-pub(super) fn periodic_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+pub(in crate::spell_cast) fn periodic_multiplier(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> f32 {
     if !world
         .get::<crate::class_progression::ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 262)
