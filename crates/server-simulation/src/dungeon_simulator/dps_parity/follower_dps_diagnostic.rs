@@ -277,6 +277,60 @@ fn follower_fire_blast_recharge_refund_preserves_internal_cooldown() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_fireball_master_of_flame_depends_on_combustion() {
+    fn fireball_damage(selected: bool, combustion: bool) -> i32 {
+        let _seed = crate::random::seed_scope(70448);
+        let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+        let known: Vec<_> = app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| selected || *id != 384174)
+            .collect();
+        app.world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        for _ in 0..5 {
+            app.update();
+        }
+        let mut health = app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current = health.max * 0.5;
+        if combustion {
+            crate::spell_cast::cast_triggered(app.world_mut(), actor, 190319, Some(actor), 1);
+        }
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 133, Some(target), false).unwrap();
+        for _ in 0..100 {
+            app.update();
+        }
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(133)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("ordinary Fireball must hit the target")
+            .amount
+    }
+    for (combustion, multiplier) in [(false, 1.15), (true, 1.0)] {
+        let base = fireball_damage(false, combustion) as f32;
+        let actual = fireball_damage(true, combustion) as f32;
+        assert!(
+            (actual / base - multiplier).abs() < 0.002,
+            "Master of Flame with combustion={combustion}: {base} -> {actual}, expected {multiplier}x"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_uses_class_apl_to_cast() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     assert!(
