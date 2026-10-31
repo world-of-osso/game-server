@@ -149,8 +149,8 @@ fn halls_follower_reaches_ramp_from_recorded_swim_exit() {
         .unwrap()
         .0 = None;
     let start = Position {
-        x: -74.0251,
-        y: -38.345554,
+        x: -74.02512,
+        y: -38.58777,
         z: 148.5022,
     };
     let owner = Position {

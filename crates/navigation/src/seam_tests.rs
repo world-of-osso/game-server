@@ -29,7 +29,7 @@ fn halls_swim_exit_reaches_ramp_without_unclimbable_border_links() {
     let root =
         PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground assets"));
     let mut map = NavigationMap::open(&root.join("navmesh/2527")).unwrap();
-    let exit = Vec3::new(-74.0251, -38.345554, 148.5022);
+    let exit = Vec3::new(-74.02512, -38.58777, 148.5022);
     let ramp = Vec3::new(-120.2864, -38.791, 153.5835);
     let points = map.complete_path(exit, ramp).expect("route to the ramp");
     assert!(points.last().unwrap().distance(ramp) < 1.0);
