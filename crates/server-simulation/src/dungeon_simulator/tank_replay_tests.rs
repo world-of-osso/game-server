@@ -2000,6 +2000,19 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                 run.app.update();
             }
             let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+            eprintln!(
+                "seed={seed} events={:?}",
+                events
+                    .iter()
+                    .map(|event| (
+                        event.source,
+                        event.target,
+                        event.spell_id,
+                        event.amount,
+                        event.kind
+                    ))
+                    .collect::<Vec<_>>()
+            );
             assert!(
                 run.app
                     .world()
