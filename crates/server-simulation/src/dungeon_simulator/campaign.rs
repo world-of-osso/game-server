@@ -57,6 +57,8 @@ pub(super) struct Report {
     pub simulated_seconds: f64,
     pub wall_seconds: f64,
     pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deck_population_unsourced: Option<serde_json::Value>,
     pub samples: Vec<Sample>,
     pub pulls: Vec<PullDecision>,
     pub performance: serde_json::Value,
@@ -1966,6 +1968,15 @@ fn alternate_roster_attackers_participate_in_the_first_native_fight() {
     );
 }
 
+fn deck_replay_provenance(replay_executed: bool) -> serde_json::Value {
+    serde_json::json!({
+        "report": "x3HzDRn6yVjqCbt8", "fight": 7, "replay_executed": replay_executed,
+        "transport_start_ms": 86000, "commander_death_ms": 162380,
+        "radiant_light_ms": 166807, "altitude": "inferred",
+        "boundary_positions": "interpolated from logged cast positions",
+    })
+}
+
 struct DeckReplay {
     started_at: f64,
     start: Vec3,
@@ -2036,6 +2047,8 @@ fn deck_replay_preserves_logged_carry_and_grant_times() {
         start: Vec3::new(1421.0, 3.0, 331.0),
         end: Vec3::new(1973.0, 1104.0, -289.0),
     };
+    assert_eq!(deck_replay_provenance(false)["replay_executed"], false);
+    assert_eq!(deck_replay_provenance(true)["commander_death_ms"], 162380);
     assert_eq!(deck.position(5.0), deck.start);
     assert!(
         deck.position(43.19)
@@ -2072,7 +2085,6 @@ struct Run {
     current_pack: Option<u32>,
     waiting_objective: Option<(u32, f64)>,
     deck_replay: Option<DeckReplay>,
-    deck_population_unsourced: bool,
     /// Packs whose frozen route anchor the owner reached without engaging them.
     anchors_reached: std::collections::BTreeSet<u32>,
     last_progress: f64,
@@ -2211,6 +2223,7 @@ fn aborted_initialization(seed: u64, started: std::time::Instant, reason: String
         simulated_seconds: 0.0,
         wall_seconds: started.elapsed().as_secs_f64(),
         detail: format!("gameplay initialization aborted: {reason}"),
+        deck_population_unsourced: None,
         samples: Vec::new(),
         pulls: Vec::new(),
         performance: serde_json::json!({"combat_events": [], "initialization_complete": false}),
@@ -2278,6 +2291,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         ));
     }
     let healer_metrics = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
+    let deck_provenance = (graph.map_id == 2662).then(|| deck_replay_provenance(false));
     Ok(Run {
         app,
         graph,
@@ -2287,7 +2301,6 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         current_pack: None,
         waiting_objective: None,
         deck_replay: None,
-        deck_population_unsourced: false,
         anchors_reached: Default::default(),
         last_progress: 0.0,
         event_cursor: 0,
@@ -2308,6 +2321,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             simulated_seconds: 0.0,
             wall_seconds: 0.0,
             detail: String::new(),
+            deck_population_unsourced: deck_provenance,
             samples: Vec::new(),
             pulls: Vec::new(),
             performance: serde_json::Value::Null,
@@ -2327,7 +2341,6 @@ impl Run {
         let elapsed = started.elapsed();
         let steady = elapsed.saturating_sub(setup).as_secs_f64();
         serde_json::json!({"ticks": ticks, "sim_seconds": self.now(),
-            "deck_population_unsourced": self.deck_population_unsourced.then_some(serde_json::json!({"report": "x3HzDRn6yVjqCbt8", "fight": 7, "transport_start_ms": 86000, "commander_death_ms": 162380, "radiant_light_ms": 166807, "altitude": "inferred"})), 
             "setup_wall_seconds": setup.as_secs_f64(), "wall_seconds": elapsed.as_secs_f64(),
             "sim_per_wall": self.now() / elapsed.as_secs_f64(),
             "steady_sim_per_wall": self.now() / steady,
@@ -2919,7 +2932,7 @@ impl Run {
                     start,
                     end: Vec3::from_array(transport.landing),
                 });
-                self.deck_population_unsourced = true;
+                self.report.deck_population_unsourced = Some(deck_replay_provenance(true));
                 self.record_pull(source, "deck_population_unsourced: WCL x3HzDRn6yVjqCbt8 fight 7, 86000–162380ms; grant 166807ms".into());
                 return Ok(true);
             }
