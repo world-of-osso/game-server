@@ -208,6 +208,36 @@ fn windrunner_transitive_assistance_and_first_wave_discipline() {
     assert!(first.contains(&helper));
     assert!(!first.contains(&dragonhawk));
     let planned = super::pull_set::members(h.app.world(), caller, tank);
+    let sources = [
+        (63805113, caller),
+        (63805114, helper),
+        (63805162, dragonhawk),
+    ]
+    .into_iter()
+    .map(|(guid, actor)| {
+        (
+            guid,
+            super::pull_sources::Source {
+                guid,
+                entry: 0,
+                pack_guid: guid,
+                position: Vec3::ZERO,
+                actor: Some(actor),
+            },
+        )
+    })
+    .collect();
+    let projected = super::pull_admission::expand_assistance(
+        h.app.world(),
+        tank,
+        &std::collections::BTreeSet::from([63805113]),
+        &sources,
+    )
+    .unwrap();
+    assert_eq!(
+        projected,
+        std::collections::BTreeSet::from([63805113, 63805114, 63805162])
+    );
     assert!(
         planned.contains(&dragonhawk),
         "second-wave Dragonhawk belongs to the closure"

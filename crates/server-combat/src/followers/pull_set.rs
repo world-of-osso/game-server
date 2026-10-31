@@ -58,6 +58,9 @@ pub(super) fn risky_pending_helpers(
         .then_some(target);
     crate::creature_assistance::pending_callers(world)
         .chain(uncalled)
+        .filter(|caller| {
+            world.get::<crate::maps::InMap>(*caller) == world.get::<crate::maps::InMap>(victim)
+        })
         .flat_map(|caller| {
             let first = first_wave(world, caller, victim);
             assistants(world, caller, victim)
