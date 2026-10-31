@@ -371,6 +371,7 @@ mod tests {
             edges: vec![],
             teleports: vec![],
             transports: vec![],
+            flights: vec![],
             unreachable: vec![],
             route: vec![],
             follower_difficulty: 0,
