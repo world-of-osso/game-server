@@ -51,12 +51,19 @@ fn swampface_done_opens_dam_and_only_its_collision_proxy() {
         );
     }
     let boss = instance_script::boss_id_for_encounter(world, map, 3053).unwrap();
-    assert!(instance_script::set_boss_state(
-        world,
-        map,
-        boss,
-        EncounterState::InProgress
-    ));
+    // The fixture's nearby player may already have pulled Swampface.
+    if instance_script::get_boss_state(world, map, boss) == Some(EncounterState::NotStarted) {
+        assert!(instance_script::set_boss_state(
+            world,
+            map,
+            boss,
+            EncounterState::InProgress
+        ));
+    }
+    assert_eq!(
+        instance_script::get_boss_state(world, map, boss),
+        Some(EncounterState::InProgress)
+    );
     assert_eq!(
         world.get::<GameObjectCollision>(gate),
         Some(&GameObjectCollision(true))
