@@ -97,6 +97,8 @@ impl Corners {
     }
 }
 
+const GOAL_TRACE: &str = "game_server::goal_trace";
+
 #[derive(Resource)]
 pub struct Navigation {
     dir: PathBuf,
@@ -107,6 +109,8 @@ pub struct Navigation {
     queries: EntityHashMap<PendingQuery>,
     unbaked: HashSet<u32>,
     next_id: u64,
+    /// Last goal kind per unit, kept only while `GOAL_TRACE` debug logging is enabled.
+    traced_goals: EntityHashMap<Goal>,
     #[cfg(any(test, feature = "test-support"))]
     applied: Vec<(Entity, u64)>,
 }
@@ -122,6 +126,7 @@ impl Navigation {
             queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
             next_id: 0,
+            traced_goals: EntityHashMap::default(),
             #[cfg(any(test, feature = "test-support"))]
             applied: Vec::new(),
         }
@@ -145,6 +150,22 @@ impl Navigation {
             route = ?self.routes.get(&entity), "tank cached chase route");
     }
 
+    /// Log a unit's goal when its kind or target changes; a formation slot moving with its
+    /// owner is the same goal.
+    fn trace_goal_change(&mut self, entity: Entity, request: &MoveRequest) {
+        if !bevy::log::tracing::enabled!(target: GOAL_TRACE, bevy::log::tracing::Level::DEBUG) {
+            return;
+        }
+        let kind = match request.goal {
+            Goal::FollowFormation(owner, _) => Goal::FollowFormation(owner, Vec3::ZERO),
+            goal => goal,
+        };
+        if self.traced_goals.insert(entity, kind) != Some(kind) {
+            debug!(target: GOAL_TRACE, actor = entity.to_bits(), goal = ?request.goal,
+                from = ?point(request.from), to = ?point(request.to), "navigation goal");
+        }
+    }
+
     /// Drop an interrupted chase corridor before it can resume from stale corners.
     pub(crate) fn cancel_route(&mut self, entity: Entity) {
         self.drop_requests.remove(&entity);
@@ -156,6 +177,7 @@ impl Navigation {
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
+        self.trace_goal_change(entity, &request);
         if self.drop_requests.contains_key(&entity) {
             return Step::Pending;
         }
