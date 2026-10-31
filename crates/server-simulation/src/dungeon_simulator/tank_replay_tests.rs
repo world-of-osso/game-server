@@ -1981,9 +1981,20 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                 run.app.world_mut(),
                 actor,
                 31_146,
-                [1.5, 0.0, 0.0, 0.0],
+                [15.0, 0.0, 0.0, 0.0],
             )
             .unwrap();
+            // Keep the pack outside the player's Consecration field so the
+            // Hammer projectile, rather than a ground tick, delivers the kill.
+            let position = *run
+                .app
+                .world()
+                .get::<shared::components::Position>(primary)
+                .unwrap();
+            *run.app
+                .world_mut()
+                .get_mut::<shared::components::Position>(survivor)
+                .unwrap() = position;
             run.app
                 .world_mut()
                 .entity_mut(primary)
