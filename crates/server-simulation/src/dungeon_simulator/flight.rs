@@ -455,6 +455,46 @@ pub(super) fn build_paths(
 }
 
 #[test]
+#[ignore = "requires Dawnbreaker terrain and current area catalog"]
+fn dawnbreaker_logged_area_permissions_are_reported() {
+    let root = super::graph::extraction::asset_root();
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons/dawnbreaker-flight-wcl.json");
+    let trace: Trace = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut areas = server::test_support::flight::Areas::open(&db, &root).unwrap();
+    for leg in trace.legs {
+        let points: Vec<_> = leg
+            .points
+            .iter()
+            .map(|&(ms, x, z)| LoggedPoint {
+                horizontal: Vec2::new(x, z),
+                seconds: ms / 1000.0,
+            })
+            .collect();
+        let mut counts = std::collections::BTreeMap::<(u32, bool), usize>::new();
+        for point in &points {
+            *counts
+                .entry(areas.inspect(2662, point.horizontal).unwrap())
+                .or_default() += 1;
+        }
+        let windows =
+            permitted_flight_windows(&points, |point| areas.permits(2662, point)).unwrap();
+        println!(
+            "DAWNBREAKER_AREAS encounter={} samples={} areas={counts:?} windows={}",
+            leg.encounter,
+            points.len(),
+            windows.len()
+        );
+        assert!(!points.is_empty());
+    }
+}
+
+#[test]
 #[ignore = "requires baked Dawnbreaker LOS and navmesh"]
 fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
     let root = std::path::Path::new("/home/osso/Projects/world-of-osso/game-engine/data");

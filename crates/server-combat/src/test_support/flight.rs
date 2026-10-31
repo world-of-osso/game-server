@@ -24,14 +24,20 @@ impl Areas {
         })
     }
 
-    pub fn permits(&mut self, map: u32, point: Vec2) -> Result<bool, String> {
+    pub fn inspect(&mut self, map: u32, point: Vec2) -> Result<(u32, bool), String> {
         let area = self
             .ground
             .area_at(map, Vec3::new(point.x, 0.0, point.y))
             .ok_or_else(|| format!("flight area unavailable at {point:?} on map {map}"))?;
-        self.table
+        let permitted = self
+            .table
             .flight_permission(area, map)
-            .ok_or_else(|| format!("flight area {area} is missing from map {map}'s AreaTable"))
+            .ok_or_else(|| format!("flight area {area} is missing from map {map}'s AreaTable"))?;
+        Ok((area, permitted))
+    }
+
+    pub fn permits(&mut self, map: u32, point: Vec2) -> Result<bool, String> {
+        self.inspect(map, point).map(|(_, permitted)| permitted)
     }
 }
 
