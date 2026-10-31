@@ -906,14 +906,14 @@ fn follower_sentinel_starts_full_and_decay_follows_simc() {
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_survives_sentinel_expiry_at_one_health() {
     let (mut app, actor, target, _) = prepare_follower(209057, 70, 2515);
-    app.world_mut()
-        .entity_mut(actor)
-        .remove::<crate::followers::AplControlled>();
     for _ in 0..5 {
         app.update();
     }
     crate::spell_cast::creature_cast(app.world_mut(), actor, 389539, Some(actor), false).unwrap();
     crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server_follower_apl::FollowerAplFailed);
     for _ in 0..220 {
         app.update();
     }
@@ -943,12 +943,12 @@ fn follower_survives_sentinel_expiry_at_one_health() {
         !crate::auras::has_aura(app.world(), actor, 389539),
         "Sentinel must expire"
     );
-    assert!(
+    assert_eq!(
         app.world()
             .get::<shared::components::Health>(actor)
             .unwrap()
-            .current
-            >= 1.0
+            .current,
+        1.0
     );
     assert!(
         crate::auras::has_aura(app.world(), actor, 132403),
