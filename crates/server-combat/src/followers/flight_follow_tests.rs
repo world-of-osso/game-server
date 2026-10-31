@@ -138,15 +138,16 @@ fn flying_follower_leaves_moving_ship_and_follows_owner() {
         "follower must ascend toward its flying owner"
     );
     h.app.world_mut().entity_mut(owner).insert((
-        deck,
+        airborne,
         TransportPassenger {
             transport: ship.to_bits(),
             position: [0.0; 3],
             orientation: 0.0,
         },
     ));
-    h.app.world_mut().entity_mut(follower).insert(deck);
     crate::transport::sync_deck_passengers(h.app.world_mut());
+    h.app.world_mut().entity_mut(owner).insert(deck);
+    h.app.world_mut().entity_mut(follower).insert(deck);
     crate::transport::sync_deck_passengers(h.app.world_mut());
     assert!(
         h.app.world().get::<TransportPassenger>(owner).is_none(),
