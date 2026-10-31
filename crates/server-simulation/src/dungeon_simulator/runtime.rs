@@ -123,17 +123,18 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
-    build_runtime_app(catalogs, &crate::test_data::world_db_path())
+    build_runtime_app(catalogs, &crate::test_data::world_db_path(), false)
 }
 
 #[cfg(test)]
 pub(super) fn build_app_with_world_db(path: &std::path::Path) -> App {
-    build_runtime_app(&mut None, path)
+    build_runtime_app(&mut None, path, true)
 }
 
 fn build_runtime_app(
     catalogs: &mut Option<super::catalogs::Catalogs>,
     path: &std::path::Path,
+    follower_apl: bool,
 ) -> App {
     let mut app = App::new();
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
@@ -153,6 +154,9 @@ fn build_runtime_app(
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
+    if follower_apl {
+        app.add_plugins(server_follower_apl::FollowerAplPlugin);
+    }
     server::test_support::install_player_death(&mut app);
     if app.world().resource::<super::Space>().0.map_id == 2825 {
         let db =
