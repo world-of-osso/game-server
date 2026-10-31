@@ -4,7 +4,6 @@ use shared::los;
 
 // Fifteen yards separates the inferred path from the selected collision surface.
 const CLEARANCE: f32 = 15.0;
-const SAMPLE_SPACING: f32 = 5.0;
 // FlightCapability 11 caps an impulse at 100 yd/s. Treating that as a vertical
 // continuity bound is inferred; dives may exceed the impulse speed.
 const VERTICAL_BOUND: f32 = shared::skyriding::SKYRIDING.add_impulse_max_speed;
@@ -89,39 +88,28 @@ fn flight_path(
         if !seconds.is_finite() || seconds <= 0.0 {
             return Err("flight sample timestamps are not strictly increasing".into());
         }
-        let count = (pair[0].horizontal.distance(pair[1].horizontal) / SAMPLE_SPACING)
-            .ceil()
-            .max(1.0) as usize;
-        for i in 1..=count {
-            let point = pair[0]
-                .horizontal
-                .lerp(pair[1].horizontal, i as f32 / count as f32);
-            let max_change = VERTICAL_BOUND * seconds / count as f32;
-            let candidates = surfaces(point, previous_height)?;
-            if candidates.iter().any(|height| !height.is_finite()) {
-                return Err(format!(
-                    "invalid flight surface at {point:?}: {candidates:?}"
-                ));
-            }
-            let height = candidates
-                .iter()
-                .copied()
-                .filter(|height| {
-                    height.is_finite() && (height - previous_height).abs() <= max_change
-                })
-                .min_by(|a, b| {
-                    (a - previous_height)
-                        .abs()
-                        .total_cmp(&(b - previous_height).abs())
-                })
-                .ok_or_else(|| {
-                    format!(
-                        "no flight surface within continuity bound at {point:?}: previous={previous_height}, max_change={max_change}, candidates={candidates:?}"
-                    )
-                })?;
-            previous_height = height;
-            path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
+        let point = pair[1].horizontal;
+        let max_change = VERTICAL_BOUND * seconds;
+        let candidates = surfaces(point, previous_height)?;
+        if candidates.iter().any(|height| !height.is_finite()) {
+            return Err(format!(
+                "invalid flight surface at {point:?}: {candidates:?}"
+            ));
         }
+        let height = candidates
+            .iter()
+            .copied()
+            .filter(|height| (height - previous_height).abs() <= max_change)
+            .min_by(|a, b| {
+                (a - previous_height).abs().total_cmp(&(b - previous_height).abs())
+            })
+            .ok_or_else(|| {
+                format!(
+                    "no flight surface within continuity bound at {point:?}: previous={previous_height}, max_change={max_change}, candidates={candidates:?}"
+                )
+            })?;
+        previous_height = height;
+        path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
     }
     if (previous_height - ground_end.y).abs() > navigation::AGENT_CLIMB {
         return Err(format!(
@@ -307,6 +295,10 @@ fn inferred_flight_selects_continuous_layer_and_checks_every_segment() {
             seconds: 0.0,
         },
         LoggedPoint {
+            horizontal: Vec2::new(5.0, 0.0),
+            seconds: 1.0,
+        },
+        LoggedPoint {
             horizontal: Vec2::new(10.0, 0.0),
             seconds: 2.0,
         },
@@ -337,6 +329,36 @@ fn inferred_flight_selects_continuous_layer_and_checks_every_segment() {
         checked,
         path.windows(2).map(|p| (p[0], p[1])).collect::<Vec<_>>()
     );
+}
+
+#[test]
+fn flight_continuity_uses_the_logged_sample_interval() {
+    let start = Vec3::ZERO;
+    let end = Vec3::new(13.0, 90.0, 0.0);
+    let samples = [
+        LoggedPoint {
+            horizontal: Vec2::ZERO,
+            seconds: 0.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(13.0, 0.0),
+            seconds: 1.0,
+        },
+    ];
+    let mut queried = Vec::new();
+    let path = flight_path(
+        start,
+        end,
+        &samples,
+        |point, _| {
+            queried.push(point);
+            Ok(vec![90.0])
+        },
+        |_, _| Ok(true),
+    )
+    .unwrap();
+    assert_eq!(queried, vec![Vec2::new(13.0, 0.0)]);
+    assert_eq!(path[2], Vec3::new(13.0, 105.0, 0.0));
 }
 
 #[test]
