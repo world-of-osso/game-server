@@ -296,6 +296,22 @@ fn ruby_fire_wall_state_replicates_door_animations() {
             .unwrap()
             .0
     );
+    set_initial_go_state(&mut world, closed, GO_STATE_ACTIVE);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 149,
+            looping: true,
+        })
+    );
+    set_initial_go_state(&mut world, closed, GO_STATE_READY);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 0,
+            looping: true,
+        })
+    );
 }
 
 const GOLDSHIRE_MAILBOX: u32 = 20_209_585;

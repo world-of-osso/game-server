@@ -113,6 +113,7 @@ pub(crate) const GO_STATE_ACTIVE: u8 = 0;
 pub(crate) const GO_STATE_DESTROYED: u8 = 2;
 pub(crate) const GO_STATE_READY: u8 = 1;
 
+const ANIM_STAND: u16 = 0;
 const ANIM_CLOSE: u16 = 146;
 const ANIM_OPEN: u16 = 148;
 const ANIM_OPENED: u16 = 149;
@@ -144,13 +145,19 @@ pub(crate) fn set_go_state(world: &mut World, object: Entity, state: u8) {
 
 /// Initialize an already-open door without replaying its opening transition.
 pub(crate) fn set_initial_go_state(world: &mut World, object: Entity, state: u8) {
+    let previous = world.get::<GameObjectState>(object).map(|state| state.0);
     set_go_state(world, object, state);
     let is_door = world
         .get::<GameObjectInfo>(object)
         .is_some_and(|info| info.go_type == GAMEOBJECT_TYPE_DOOR);
-    if is_door && state == GO_STATE_ACTIVE {
+    let animation_id = match (is_door, previous, state) {
+        (true, _, GO_STATE_ACTIVE) => Some(ANIM_OPENED),
+        (true, Some(GO_STATE_ACTIVE), GO_STATE_READY) => Some(ANIM_STAND),
+        _ => None,
+    };
+    if let Some(animation_id) = animation_id {
         world.entity_mut(object).insert(GameObjectAnimation {
-            animation_id: ANIM_OPENED,
+            animation_id,
             looping: true,
         });
     }
