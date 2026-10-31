@@ -331,6 +331,36 @@ fn follower_fireball_master_of_flame_depends_on_combustion() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_fuel_flamestrike_generates_heating_up_on_one_target() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+    assert!(
+        app.world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(416094)
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 190319, Some(actor), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 48108, Some(actor), 1);
+    server_follower_apl::literal_rotation::execution::execute(
+        app.world_mut(),
+        actor,
+        server_follower_apl::literal_rotation::execution::Execution::Spell(
+            1254851,
+            target,
+            Some(target),
+        ),
+    )
+    .unwrap();
+    assert!(!crate::auras::has_aura(app.world(), actor, 48108));
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 48107),
+        "a one-target Flamestrike during Combustion must grant Heating Up from Fuel the Fire"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_uses_class_apl_to_cast() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     assert!(
@@ -719,6 +749,42 @@ fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
     assert!(app.world().get::<Health>(actor).unwrap().current > 0.0);
 }
 
+fn sample_actor_auras(
+    world: &World,
+    actor: Entity,
+    samples: &mut std::collections::BTreeMap<u32, u32>,
+) {
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(actor) else {
+        return;
+    };
+    let active: std::collections::BTreeSet<u32> = auras.iter().map(|aura| aura.spell_id).collect();
+    for spell in active {
+        *samples.entry(spell).or_default() += 1;
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_aura_sampling_tracks_actual_active_duration() {
+    let (mut app, actor, _, _) = prepare_follower(209059, 70, 2515);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 190319, Some(actor), 1);
+    let mut samples = std::collections::BTreeMap::new();
+    for _ in 0..20 {
+        app.update();
+        sample_actor_auras(app.world(), actor, &mut samples);
+    }
+    assert_eq!(samples.get(&190319), Some(&20));
+    for _ in 0..240 {
+        app.update();
+    }
+    sample_actor_auras(app.world(), actor, &mut samples);
+    assert_eq!(
+        samples.get(&190319),
+        Some(&20),
+        "expired auras must not gain uptime"
+    );
+}
+
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
@@ -834,6 +900,7 @@ fn follower_dps_production_dummy() {
     let mut cast_trace = Vec::new();
     let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
+    let mut aura_frames = std::collections::BTreeMap::new();
     for frame in 0..2400 {
         if let Some(scenario) = &mut tank_scenario {
             scenario
@@ -853,6 +920,7 @@ fn follower_dps_production_dummy() {
         );
         app.update();
         let world = app.world();
+        sample_actor_auras(world, actor, &mut aura_frames);
         let now = crate::spell_cast::history_now(world);
         let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
         for (sum, value) in stat_sums.iter_mut().zip([
@@ -1059,7 +1127,7 @@ fn follower_dps_production_dummy() {
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
-        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"energize":energize,
+        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / 2400.0)).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
