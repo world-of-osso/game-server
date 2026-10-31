@@ -1984,6 +1984,51 @@ impl DeckReplay {
     }
 }
 
+/// Replay WCL XY/timing only; transport-backed deck population is not sourced.
+/// Replace this phase when server transport support lands and 214761/214762 are sourced.
+fn advance_deck_frame(
+    world: &mut World,
+    members: &[Entity],
+    deck: &DeckReplay,
+    now: f64,
+) -> Result<bool, String> {
+    let point = deck.position(now);
+    for &member in members {
+        if !crate::spell_cast::targets::is_alive(world, member) {
+            return Err("deck replay party member died; recorded phase cannot continue".into());
+        }
+        world.entity_mut(member).insert(Position {
+            x: point.x,
+            y: point.y,
+            z: point.z,
+        });
+    }
+    if !deck.grant_due(now) {
+        return Ok(true);
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(449042)
+        .ok_or("Radiant Light 449042 is missing from the spell catalog")?;
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    for &member in members {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: member,
+                target: member,
+                spell_id: 449042,
+                effect_mask,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if !crate::auras::has_aura(world, member, 449042) {
+            return Err(format!("Radiant Light did not apply to {member}"));
+        }
+    }
+    Ok(false)
+}
+
 #[test]
 fn deck_replay_preserves_logged_carry_and_grant_times() {
     let deck = DeckReplay {
@@ -1998,8 +2043,23 @@ fn deck_replay_preserves_logged_carry_and_grant_times() {
             < 0.001
     );
     assert_eq!(deck.position(81.38), deck.end);
-    assert!(!deck.grant_due(85.806));
-    assert!(deck.grant_due(85.807));
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[449042], 1)
+        .expect("real Radiant Light catalog");
+    let member = h.caster;
+    assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 81.38).unwrap());
+    assert_eq!(
+        *h.app.world().get::<Position>(member).unwrap(),
+        Position {
+            x: deck.end.x,
+            y: deck.end.y,
+            z: deck.end.z
+        }
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), member, 449042));
+    assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 85.806).unwrap());
+    assert!(!crate::auras::has_aura(h.app.world(), member, 449042));
+    assert!(!advance_deck_frame(h.app.world_mut(), &[member], &deck, 85.807).unwrap());
+    assert!(crate::auras::has_aura(h.app.world(), member, 449042));
 }
 
 struct Run {
@@ -2537,53 +2597,18 @@ impl Run {
         Ok(self.waiting_for_tank)
     }
 
-    /// Replay WCL XY/timing only; the transport-backed NPC population is not sourced.
-    /// Replace this phase with server transport support after its landing and the
-    /// 214761/214762 deck population are available.
     fn advance_deck_replay(&mut self) -> Result<bool, String> {
         let Some(deck) = self.deck_replay.take() else {
             return Ok(false);
         };
-        let point = deck.position(self.now());
+        let now = self.now();
         let members: Vec<_> = self.members().collect();
-        for member in &members {
-            if !crate::spell_cast::targets::is_alive(self.app.world(), *member) {
-                return Err("deck replay party member died; recorded phase cannot continue".into());
-            }
-            self.app.world_mut().entity_mut(*member).insert(Position {
-                x: point.x,
-                y: point.y,
-                z: point.z,
-            });
-        }
-        self.last_progress = self.now();
-        if !deck.grant_due(self.now()) {
+        let active = advance_deck_frame(self.app.world_mut(), &members, &deck, now)?;
+        self.last_progress = now;
+        if active {
             self.deck_replay = Some(deck);
-            return Ok(true);
         }
-        let spell = self
-            .app
-            .world()
-            .resource::<crate::spell_info::SpellStore>()
-            .get(449042)
-            .ok_or("Radiant Light 449042 is missing from the spell catalog")?;
-        let effect_mask = crate::auras::aura_effect_mask(spell);
-        for member in members {
-            crate::auras::apply_aura(
-                self.app.world_mut(),
-                &crate::auras::AuraApplication {
-                    caster: member,
-                    target: member,
-                    spell_id: 449042,
-                    effect_mask,
-                    source: crate::auras::AuraSource::Cast,
-                },
-            );
-            if !crate::auras::has_aura(self.app.world(), member, 449042) {
-                return Err(format!("Radiant Light did not apply to {member}"));
-            }
-        }
-        Ok(false)
+        Ok(active)
     }
 
     fn control(&mut self) -> Result<(), String> {
