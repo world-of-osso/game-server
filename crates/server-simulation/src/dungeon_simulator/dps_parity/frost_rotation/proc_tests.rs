@@ -215,6 +215,7 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
         .world_mut()
         .entity_mut(actor)
         .insert(crate::combat::AutoAttack::new(primary));
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     for _ in 0..200 {
         run.app.update();
         if run
@@ -230,7 +231,7 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
         run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0),
         "the primary must die"
     );
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
     assert!(
         events
             .iter()
