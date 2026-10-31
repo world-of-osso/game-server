@@ -177,7 +177,7 @@ impl NavigationMap {
         plan: &mut NavigationPlan,
     ) -> Result<NavigationPath, String> {
         let walking = self.walking_path_with_plan(start, end, plan);
-        let disconnected = matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)" || error == "unreachable target (hierarchy disconnected)");
+        let disconnected = matches!(&walking, Err(error) if error == "unreachable target (incomplete corridor)" || error == "unreachable target (hierarchy disconnected)" || error == "unreachable target (partial corridor made no progress)");
         if walking.is_err() {
             *plan = NavigationPlan::default();
         }
