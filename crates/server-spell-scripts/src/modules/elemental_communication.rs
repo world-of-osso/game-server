@@ -14,7 +14,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 const COMMUNICATION: u32 = 443445;
-const BUILDERS: &[u32] = &[188196, 188443, 51505];
+const BUILDERS: &[u32] = &[188196, 188443, 51505, 188389];
 
 #[derive(Component, Default)]
 struct CommunicationDeck(Vec<bool>);
@@ -82,8 +82,8 @@ fn draw_native_deck(world: &mut World, caster: Entity) -> bool {
 }
 
 fn draw_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
-    // SimC76f8118 sc_shaman.cpp6654–6658/7260–7263/7436–7438:
-    // normal Chain/Lava/Bolt execute, not background children or each recipient.
+    // SimC76f8118 sc_shaman.cpp6654–6658/7260–7263/7436–7438/8473–8480:
+    // normal Chain/Lava/Bolt/Flame Shock execute, not background children.
     if !foreground
         || spell.cast_parent_owns_modifier_charges
         || !BUILDERS.contains(&spell.id)

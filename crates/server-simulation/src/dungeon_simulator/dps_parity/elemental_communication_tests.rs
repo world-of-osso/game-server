@@ -79,12 +79,22 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     assert_eq!(count_summons(&run), 0, "background builders never summon");
     for _ in 0..total {
         cast(&mut run, spell);
+        if spell == 188389 {
+            // Let the real Flame Shock cooldown recover before the next cast.
+            for _ in 0..120 {
+                run.app.update();
+            }
+        }
     }
     assert_eq!(
         count_summons(&run),
         positive,
         "one complete native deck must summon exactly four real Ancestors; Chain recipients and overloads do not add draws"
     );
+    if spell == 188389 {
+        // Flame Shock summons but does not command an echo.
+        return;
+    }
     let hits = run
         .app
         .world()
@@ -105,6 +115,13 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
 fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
     assert_native_builder_deck(fixture_without_fellowship(1), 188196);
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_native_flame_shock_draws_four_of_fifty() {
+    let _seed = crate::random::seed_scope(70448);
+    assert_native_builder_deck(fixture_without_fellowship(1), 188389);
 }
 
 #[test]
