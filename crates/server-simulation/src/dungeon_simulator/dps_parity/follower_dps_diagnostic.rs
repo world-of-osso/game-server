@@ -902,6 +902,52 @@ fn follower_sentinel_starts_full_and_decay_follows_simc() {
     assert_eq!(stacks(&app, actor), 14);
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_survives_sentinel_expiry_at_one_health() {
+    let (mut app, actor, target, _) = prepare_follower(209057, 70, 2515);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 389539, Some(actor), false).unwrap();
+    for _ in 0..220 {
+        app.update();
+    }
+    assert!(crate::auras::has_aura(app.world(), actor, 389539));
+    app.world_mut()
+        .get_mut::<shared::components::Health>(actor)
+        .unwrap()
+        .current = 1.0;
+    app.world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(shared::components::PowerType::HolyPower)
+        .unwrap()
+        .current = 3.0;
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 53600, Some(target), false).unwrap();
+    for _ in 0..30 {
+        app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(app.world(), actor, 389539),
+        "Sentinel must expire"
+    );
+    assert_eq!(
+        app.world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current,
+        1.0
+    );
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 132403),
+        "expiration must not purge Shield of the Righteous"
+    );
+}
+
 fn trace_sotr_removal(
     world: &mut World,
     _: Entity,
