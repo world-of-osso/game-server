@@ -27,10 +27,16 @@ pub(super) fn log_admission(world: &mut World, tank: Entity, target: Entity) {
 }
 
 fn assistants(world: &World, target: Entity, victim: Entity) -> Vec<Entity> {
-    world
-        .get::<crate::creature_assistance::AssistanceSnapshot>(target)
-        .map(|snapshot| snapshot.0.clone())
-        .unwrap_or_else(|| crate::creature_assistance::assistance_snapshot(world, target, victim))
+    if let Some(snapshot) = world.get::<crate::creature_assistance::AssistanceSnapshot>(target) {
+        return snapshot.0.clone();
+    }
+    if world
+        .get::<crate::creature_assistance::AssistanceCalled>(target)
+        .is_some()
+    {
+        return Vec::new();
+    }
+    crate::creature_assistance::assistance_snapshot(world, target, victim)
 }
 
 fn formation(world: &World, target: Entity) -> HashSet<Entity> {
