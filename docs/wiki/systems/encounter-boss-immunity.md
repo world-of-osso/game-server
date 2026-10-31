@@ -21,6 +21,8 @@ The rule is in `auras/mechanic_immunity.rs` (`ENCOUNTER_BOSS_MECHANICS`). It app
 
 A spell with `SPELL_ATTR0_NO_IMMUNITIES` still bypasses the rule.
 
+The rule also does not apply to the boss's own casts. The logs only measure CC cast by other units, and boss scripts channel their own stun-mechanic spells: Landslide 21808 has category mechanic 12 and is a self-channel.
+
 ## Source (2026-10-31)
 
 Our data has no immunity source for these bosses:
