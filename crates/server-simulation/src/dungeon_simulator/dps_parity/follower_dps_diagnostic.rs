@@ -292,6 +292,60 @@ fn blood_tank_precombat_casts_deaths_caress() {
 }
 
 #[test]
+#[ignore = "requires MID2 Vengeance inputs and a Vengeance Demon Hunter SimC trace"]
+fn vengeance_tank_precombat_casts_sigil_and_immolation_aura() {
+    let (profile, traits) = super::read_reference(581).unwrap();
+    let race = super::inputs::read_reference_race(&profile.race).unwrap();
+    let mut run = super::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race },
+    )
+    .unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let target = run.targets[0];
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("Vengeance tank trace");
+    super::follower_tank_precombat::execute(
+        &mut run.app,
+        actor,
+        target,
+        std::path::Path::new(&trace),
+    )
+    .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for spell in [204596, 258920] {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::CastSuccess)
+        );
+    }
+    assert!(crate::auras::has_aura(run.app.world(), actor, 258920));
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(204598)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+}
+
+#[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
     use server::test_support::healer_intake::{Hit, HitKind};
