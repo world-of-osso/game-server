@@ -16,6 +16,8 @@ mod consecration_vision_tests;
 #[cfg(test)]
 mod elemental_rod_tests;
 #[cfg(test)]
+mod fire_follower_spread_safety_tests;
+#[cfg(test)]
 mod follower_dps_diagnostic;
 #[cfg(test)]
 mod follower_pull_safety_tests;
