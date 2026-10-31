@@ -1115,7 +1115,13 @@ fn directed_units(
         (!line && within_cone_boundary(world, caster, unit, offset))
             || within_directed_shape(offset, forward, line, width, half_arc)
     });
-    Ok(limit_implicit_targets(world, spell, caster, units, cap))
+    let mut units = limit_implicit_targets(world, spell, caster, units, cap);
+    if super::attributes(spell, 2) & super::SPELL_ATTR2_IGNORE_LINE_OF_SIGHT == 0 {
+        units.retain(|&unit| {
+            unit == caster || crate::line_of_sight::sees_in_world(world, unit, caster)
+        });
+    }
+    Ok(units)
 }
 
 /// TC Spell.cpp:9476 / Unit.cpp:712–720. Candidates already share the caster's map.

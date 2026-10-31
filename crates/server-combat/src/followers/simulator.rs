@@ -344,13 +344,17 @@ pub fn spawn_parity_attacker(
     if let ParityActor::Player { race } = actor {
         return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
     }
+    let source = super::class_profiles::read_profiles()?
+        .into_iter()
+        .find(|source| source.spec_id == spec_id)
+        .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
     let profile = world
         .resource::<FollowerCatalog>()
         .profiles
         .iter()
-        .find(|profile| profile.spec_id == spec_id)
+        .find(|profile| profile.class_id == source.class_id)
         .cloned()
-        .ok_or_else(|| format!("native follower spec{spec_id} absent"))?;
+        .ok_or_else(|| format!("native simulator owner class{} absent", source.class_id))?;
     let owner = initialize_player_owner(
         world,
         &profile,
@@ -363,10 +367,6 @@ pub fn spawn_parity_attacker(
         },
         difficulty,
     )?;
-    let source = super::class_profiles::read_profiles()?
-        .into_iter()
-        .find(|source| source.spec_id == spec_id)
-        .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
     let unit = super::class_spawn::spawn_class(
         world,
         owner,
