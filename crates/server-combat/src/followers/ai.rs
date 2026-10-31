@@ -45,7 +45,21 @@ pub(super) fn update(world: &mut World) {
         {
             let party = party_units(world, follower.owner);
             super::tank_frontal::record_observed_frontal(world, *unit, follower, &party);
+            let enemies = engaged_enemies(world, follower, *unit, &party);
+            if let Some((target, _)) = enemies.first() {
+                super::pull_set::log_admission(world, *unit, *target);
+                let reach = super::party_unintended_reach(world, &party)
+                    .into_iter()
+                    .flat_map(|(_, caster, target)| [caster, target])
+                    .fold(0.0_f32, f32::max);
+                super::tank_pull_back::update(world, *unit, follower, &party, reach);
+            } else if super::tank_pull_back::active(world, *unit) {
+                super::tank_pull_back::update(world, *unit, follower, &party, 0.0);
+            }
         }
+    }
+    for (unit, follower) in &followers {
+        super::positioning::update_combat_exclusions(world, *unit, follower);
     }
     for (unit, follower) in followers {
         if crate::spell_cast::targets::is_alive(world, unit)
@@ -66,6 +80,13 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
+    if follower.profile.role != GroupRole::Tank
+        && super::tank_pull_back::party_should_wait(world, follower.owner)
+    {
+        wait_for_tank_pull_back(world, unit, follower, &party);
+        return;
+    }
+    super::tank_pull_back_party::restore_pets(world, unit);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
     let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
     let lost_target = world
@@ -137,6 +158,22 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+fn wait_for_tank_pull_back(world: &mut World, unit: Entity, follower: &Follower, party: &[Entity]) {
+    super::tank_pull_back_party::stop_damage(world, unit);
+    if let Some(tank) = super::tank_pull_back_party::find_tank(world, party) {
+        super::tank_pull_back_party::follow_tank(world, unit, tank);
+    } else {
+        hold_combat(world, unit);
+    }
+    if !super::kit_ai::update(world, unit, follower, party, None, &[])
+        && follower.profile.heal_spell != 0
+        && let Some(patient) = lowest_health(world, party, unit)
+        && pursue(world, unit, patient, follower.profile.heal_spell, false)
+    {
+        cast(world, unit, patient, follower.profile.heal_spell);
+    }
 }
 
 fn trace_target_selection(
@@ -225,6 +262,9 @@ fn use_freightrunners_flask(world: &mut World, unit: Entity) {
     {
         return;
     }
+    if !super::spell_safety::safe(world, unit, unit, on_use.spell_id) {
+        return;
+    }
     if let Err(failure) = crate::spell_cast::cast_item_spell(
         world,
         unit,
@@ -249,6 +289,10 @@ fn update_auto_shot(world: &mut World, unit: Entity, follower: &Follower, enemy:
         crate::spell_cast::auto_repeat::cancel(world, unit);
         return;
     };
+    if !super::spell_safety::safe(world, unit, enemy, AUTO_SHOT) {
+        crate::spell_cast::auto_repeat::cancel(world, unit);
+        return;
+    }
     if let Some(mut repeat) = world.get_mut::<crate::spell_cast::auto_repeat::AutoRepeat>(unit) {
         if repeat.retarget_auto_shot(enemy) {
             return;
@@ -574,7 +618,9 @@ pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, sp
     let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
-    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy) {
+    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy)
+        || !super::spell_safety::safe(world, caster, enemy, spell)
+    {
         return false;
     }
     if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
@@ -615,6 +661,9 @@ fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) ->
     let Some(spell) = defensive_spell(class) else {
         return false;
     };
+    if !super::spell_safety::safe(world, unit, unit, spell) {
+        return false;
+    }
     match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
         Ok(()) => true,
         Err(failure) => {
@@ -712,6 +761,9 @@ fn spell_reach(world: &World, spell_id: u32) -> Option<f32> {
 }
 
 fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
+    if !super::spell_safety::safe(world, unit, target, spell) {
+        return false;
+    }
     match crate::spell_cast::creature_cast(world, unit, spell, Some(target), false) {
         Ok(()) => true,
         Err(

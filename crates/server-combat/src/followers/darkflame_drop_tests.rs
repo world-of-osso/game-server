@@ -257,6 +257,19 @@ fn create_native_follower_fixture_for(entry: u32) -> (Harness, Entity) {
         &mut h.app,
         crate::navigation::Navigation::new(&navigation_root()),
     );
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    let watcher = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(watcher.templates);
     place_follower_on_upper(&mut h, follower, entry);
     h.app
         .world_mut()
@@ -665,6 +678,15 @@ fn follower_combat_approach_holds_for_every_watcher_on_full_path() {
             crate::creature_ai::CreatureState::Idle,
         ));
         h.advance(1);
+        let mut geometry =
+            bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
+                h.app.world_mut(),
+            );
+        assert!(
+            super::pull_route::read_native_radius(h.app.world(), &mut geometry, follower, watcher)
+                .is_ok(),
+            "watcher must have native aggro geometry"
+        );
         for _ in 0..3 {
             super::positioning::hold_unsafe_approach(h.app.world_mut(), follower, h.npc);
             crate::navigation::drain_fixture(&mut h.app);
@@ -679,6 +701,127 @@ fn follower_combat_approach_holds_for_every_watcher_on_full_path() {
             "watcher at {watcher_at:?}"
         );
     }
+}
+
+#[test]
+#[ignore = "requires Windrunner navigation/ground and imported follower profile"]
+fn tank_fight_position_avoids_windrunner_hatchling_and_aoe_reach() {
+    let map = InMap::continent(2805);
+    let (mut h, tank) = create_native_follower_fixture_for(209057);
+    let target_at = Vec3::new(5314.9, 131.6, 3112.4);
+    // Authored source GUID 63805164, entry 234673 (coordinate converted to Bevy axes).
+    let hatchling_at = Vec3::new(5306.02, 126.48825, 3152.31);
+    h.app.world_mut().entity_mut(tank).insert((
+        position(target_at),
+        map,
+        shared::components::UnitLevel(90),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((position(target_at), map));
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[234673]);
+    let model = native.templates[&234673].models[0].clone();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    let hatchling = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(hatchling).insert((
+        shared::components::Npc {
+            template_id: 234673,
+            name: "Spindleweb Hatchling".into(),
+        },
+        shared::components::ModelDisplay {
+            display_id: model.display_id,
+        },
+        shared::components::UnitScale(model.display_scale),
+        position(hatchling_at),
+        map,
+        shared::components::UnitFactionTemplate(16),
+        shared::components::UnitLevel(80),
+        crate::creature_aggro::AggroRange,
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((position(target_at), map));
+    h.advance(1);
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(shared::components::CombatStatus(false));
+    for point in [
+        Vec3::new(5314.594, 136.86368, 3080.4695),
+        Vec3::new(5314.7, 136.0, 3090.0),
+        Vec3::new(5314.8, 134.0, 3100.0),
+        target_at,
+    ] {
+        h.app.world_mut().entity_mut(owner).insert(position(point));
+        super::owner_trail::record(h.app.world_mut(), owner);
+    }
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(shared::components::CombatStatus(true));
+    super::owner_trail::record(h.app.world_mut(), owner);
+    let mut geometry = bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
+        h.app.world_mut(),
+    );
+    let geometry = geometry.get(h.app.world()).unwrap();
+    assert!(
+        geometry.combat_reach(tank).is_some(),
+        "tank requires a native model reach"
+    );
+    assert!(
+        geometry.combat_reach(hatchling).is_some(),
+        "hatchling requires a native model reach"
+    );
+    assert!(
+        geometry.center_radius(hatchling, tank, 80, 90).is_some(),
+        "hatchling requires a native source template"
+    );
+    let exclusions =
+        super::tank_pull_back::read_exclusions(h.app.world_mut(), tank, h.npc, 40.0).unwrap();
+    assert!(!super::tank_pull_back::outside_exclusions(
+        target_at,
+        &exclusions
+    ));
+    let candidates =
+        super::tank_pull_back::safe_candidates(h.app.world(), tank, owner, map, &exclusions);
+    let selected = candidates
+        .first()
+        .copied()
+        .expect("a safe pre-combat trail point");
+    assert!(selected.distance(hatchling_at) >= exclusions[0].1);
+    let route = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>()
+        .query_path(2805, target_at, selected)
+        .unwrap()
+        .expect("native route to safe point");
+    assert!(!route.is_empty());
+
+    // An attackable reactive hostile has no proximity acquisition, but spread can still hit it.
+    h.app
+        .world_mut()
+        .entity_mut(hatchling)
+        .remove::<crate::creature_aggro::AggroRange>();
+    let reactive =
+        super::tank_pull_back::read_exclusions(h.app.world_mut(), tank, h.npc, 40.0).unwrap();
+    assert!(
+        reactive
+            .iter()
+            .any(|(center, radius)| *center == hatchling_at && *radius == 40.0)
+    );
+    assert!(!super::tank_pull_back::outside_exclusions(
+        hatchling_at + Vec3::X * 39.0,
+        &reactive
+    ));
 }
 
 #[test]
@@ -722,6 +865,15 @@ fn tank_enters_target_formation_but_holds_for_another_formation() {
         data.formations.insert(100, formation(100));
         data.formations.insert(101, formation(watcher_leader));
         h.advance(1);
+        let mut geometry =
+            bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(
+                h.app.world_mut(),
+            );
+        assert!(
+            super::pull_route::read_native_radius(h.app.world(), &mut geometry, tank, watcher)
+                .is_ok(),
+            "watcher must have native aggro geometry"
+        );
         for _ in 0..3 {
             super::positioning::hold_unsafe_approach(h.app.world_mut(), tank, h.npc);
             crate::navigation::drain_fixture(&mut h.app);
@@ -730,6 +882,21 @@ fn tank_enters_target_formation_but_holds_for_another_formation() {
             super::positioning::hold_unsafe_approach(h.app.world_mut(), tank, h.npc),
             should_hold,
             "watcher formation leader {watcher_leader}"
+        );
+        let mut path = vec![from];
+        path.extend(
+            h.app
+                .world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .query_path(MAP, from, to)
+                .unwrap()
+                .expect("native complete route"),
+        );
+        assert_eq!(
+            super::positioning::route_enters_unpulled_sight(h.app.world_mut(), tank, h.npc, &path)
+                .unwrap(),
+            should_hold,
+            "admitted route must apply the same formation boundary"
         );
     }
 }

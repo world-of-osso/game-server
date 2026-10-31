@@ -176,7 +176,9 @@ pub(super) fn read_movement_admission(
     }) else {
         return Ok(None);
     };
-    if super::hazards::route_crosses_hostile_field(world, tank, &route.points) {
+    if super::hazards::route_crosses_hostile_field(world, tank, &route.points)
+        || super::positioning::route_enters_unpulled_sight(world, tank, target, &route.points)?
+    {
         return Ok(Some(false));
     }
     debug!(
@@ -198,8 +200,9 @@ pub(super) fn read_movement_admission(
             .ok_or("Engaged source is not present")?;
         engaged_packs.insert(source.pack_guid);
     }
+    let projected = super::pull_admission::expand_assistance(world, tank, &route.spawns, &sources)?;
     // Moving only within already-engaged formations is defense, not another pull.
-    if route.spawns.iter().all(|guid| {
+    if projected.iter().all(|guid| {
         sources
             .get(guid)
             .is_some_and(|source| engaged_packs.contains(&source.pack_guid))
@@ -207,7 +210,7 @@ pub(super) fn read_movement_admission(
         return Ok(Some(true));
     }
     Ok(Some(matches!(
-        super::pull_admission::read_pull_budget(world, tank, &route.spawns, difficulty)?,
+        super::pull_admission::read_pull_budget(world, tank, &projected, difficulty)?,
         super::pull_budget::Decision::Allow { .. }
     )))
 }

@@ -439,17 +439,7 @@ fn command(world: &mut World, owner: Entity, pet: Entity, order: u32, action: &P
                 charm.stay_at = here;
             });
         }
-        COMMAND_FOLLOW => {
-            stop_attacking(world, pet);
-            crate::spell_cast::cancel_cast(world, pet);
-            follow(world, pet, owner);
-            update_charm(world, pet, |charm| {
-                charm.command = COMMAND_FOLLOW;
-                charm.command_attack = false;
-                charm.follow_ordered = true;
-                charm.stay_at = None;
-            });
-        }
+        COMMAND_FOLLOW => order_follow(world, owner, pet),
         COMMAND_ATTACK => {
             let Some(target) = action
                 .target
@@ -668,6 +658,24 @@ fn can_attack(world: &World, pet: Entity, target: Entity) -> bool {
 /// `PetAI::_AttackStart` → `DoAttack`: attack `target` (`Unit::Attack` through the pet's
 /// AI target) going after it (`UNIT_FLAG_PET_IN_COMBAT`), chasing it unless held by Stay
 /// without an order.
+fn order_follow(world: &mut World, owner: Entity, pet: Entity) {
+    stop_attacking(world, pet);
+    crate::spell_cast::cancel_cast(world, pet);
+    follow(world, pet, owner);
+    update_charm(world, pet, |charm| {
+        charm.command = COMMAND_FOLLOW;
+        charm.command_attack = false;
+        charm.follow_ordered = true;
+        charm.stay_at = None;
+    });
+}
+
+pub(crate) fn order_companion_follow(world: &mut World, owner: Entity) {
+    for pet in crate::hunter_pet::active_owned_pets(world, owner) {
+        order_follow(world, owner, pet);
+    }
+}
+
 /// Server-side orders from an authenticated NPC companion, using the same pet AI.
 pub fn order_companion_pet(world: &mut World, owner: Entity, target: Option<Entity>) {
     for pet in crate::hunter_pet::active_owned_pets(world, owner) {

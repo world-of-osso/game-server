@@ -518,6 +518,9 @@ fn group_heal_is_topped(world: &mut World, caster: Entity, target: Option<Entity
 }
 
 fn execute(world: &mut World, caster: Entity, follower: &Follower, decision: Decision) -> bool {
+    if !super::spell_safety::safe(world, caster, decision.target, decision.spell_id) {
+        return false;
+    }
     if let Some(cast) = world.get::<CastState>(caster) {
         if cast.spell_id == decision.spell_id && cast.target == decision.target.to_bits() {
             return true;

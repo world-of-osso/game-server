@@ -460,9 +460,21 @@ pub(crate) struct MoveQueues<'w, 's> {
     interest: Option<Res<'w, InterestDirtyQueue>>,
     replication: Option<Res<'w, ReplicationDirtyQueue>>,
     flags2: Query<'w, 's, &'static shared::components::UnitFlags2>,
+    combat_exclusions: Query<'w, 's, &'static crate::followers::CombatMovementExclusions>,
 }
 
 impl MoveQueues<'_, '_> {
+    fn combat_step_safe(&self, entity: Entity, from: Position, to: Position) -> bool {
+        self.combat_exclusions
+            .get(entity)
+            .map_or(true, |exclusions| {
+                exclusions.permits(
+                    Vec3::new(from.x, from.y, from.z),
+                    Vec3::new(to.x, to.y, to.z),
+                )
+            })
+    }
+
     /// Write `stride` back: the position (interest), the facing and motion (replication)
     /// when they change.
     fn apply(
@@ -1035,6 +1047,14 @@ pub(crate) fn chase_system(
                 )
             };
         }
+        if !queues.combat_step_safe(entity, *pos, next_position) {
+            if let Some(nav) = nav.as_deref_mut() {
+                nav.cancel_route(entity);
+            }
+            let here = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(here));
+            continue;
+        }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         if stride.facing.is_none() {
             // In reach: `ChaseMovementGenerator` turns it to face the target (`SetInFront`).
@@ -1405,6 +1425,15 @@ fn follow_owner_system(
             } else {
                 run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
             };
+        }
+        if !queues.combat_step_safe(entity, *pos, next_position) {
+            if let Some(nav) = nav.as_deref_mut() {
+                nav.cancel_route(entity);
+            }
+            follow.moving = false;
+            let here = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(here));
+            continue;
         }
         let mut stride = Stride::moving(*pos, next_position, CreatureMotion::Run, run_speed);
         follow.moving = !reached;

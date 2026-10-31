@@ -117,6 +117,9 @@ pub(super) fn is_interrupt_entry(entry: &Entry, store: &SpellStore) -> bool {
 
 fn try_source_spells(world: &mut World, unit: Entity, target: Entity, spells: &[u32]) -> bool {
     for &spell in spells {
+        if !super::spell_safety::safe(world, unit, target, spell) {
+            continue;
+        }
         match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(target)) {
             Ok(()) => return true,
             Err(error) => debug!(
@@ -154,7 +157,9 @@ fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) ->
     let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
-    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy) {
+    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy)
+        || !super::spell_safety::safe(world, caster, enemy, spell)
+    {
         return false;
     }
     if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {

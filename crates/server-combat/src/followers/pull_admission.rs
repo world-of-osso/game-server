@@ -31,16 +31,47 @@ pub(super) fn read_pull_budget(
     difficulty: u32,
 ) -> Result<Decision, String> {
     let run = read_run_budget(world, tank)?;
-    if let Some(decision) = read_cleared_single_pull(world, tank, &run, projected, difficulty)? {
+    let sources = pull_sources::read_present_sources(
+        world,
+        run.map,
+        difficulty,
+        &run.history.cleared_spawns,
+    )?;
+    let projected = expand_assistance(world, tank, projected, &sources)?;
+    if let Some(decision) = read_cleared_single_pull(world, tank, &run, &projected, difficulty)? {
         return Ok(decision);
     }
     let Some(ready) = pull_readiness::read_ready_heal(world, tank, &run.party)? else {
         return Ok(Decision::Wait(Reason::Healer));
     };
     debug!(healer=?ready.healer, spell_id=ready.spell_id, costs=?ready.costs, "Sourced tank healing capability checked");
-    let projection = read_projection(world, tank, &run, projected, difficulty)?;
+    let projection = read_projection(world, tank, &run, &projected, difficulty)?;
     let input = read_budget_input(world, tank, &run, &projection)?;
     Ok(pull_budget::evaluate(&input))
+}
+
+pub(super) fn expand_assistance(
+    world: &World,
+    tank: Entity,
+    projected: &BTreeSet<u32>,
+    sources: &BTreeMap<u32, Source>,
+) -> Result<BTreeSet<u32>, String> {
+    let mut expanded = projected.clone();
+    for guid in projected {
+        let source = sources
+            .get(guid)
+            .ok_or_else(|| format!("Projected source GUID {guid} is not present in this run"))?;
+        let Some(actor) = source.actor else { continue };
+        for member in super::pull_set::members(world, actor, tank) {
+            let origin = world
+                .get::<crate::zones::CreatureOrigin>(member)
+                .ok_or_else(|| {
+                    format!("Planned assistance actor {member:?} lacks a source GUID")
+                })?;
+            expanded.insert(origin.guid);
+        }
+    }
+    Ok(expanded)
 }
 
 /// User policies apply only to a cleared copy and one next authored pack.

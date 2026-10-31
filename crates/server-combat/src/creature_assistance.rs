@@ -41,6 +41,9 @@ impl Default for AssistanceConfig {
 pub(crate) struct AssistanceCalled;
 
 #[derive(Component)]
+pub(crate) struct AssistanceSnapshot(pub Vec<Entity>);
+
+#[derive(Component)]
 struct FormationEngaging;
 
 struct DelayedAssistance {
@@ -52,6 +55,13 @@ struct DelayedAssistance {
 
 #[derive(Resource, Default)]
 pub(crate) struct PendingAssistance(Vec<DelayedAssistance>);
+
+pub(crate) fn pending_callers(world: &World) -> impl Iterator<Item = Entity> + '_ {
+    world
+        .get_resource::<PendingAssistance>()
+        .into_iter()
+        .flat_map(|pending| pending.0.iter().map(|event| event.caller))
+}
 
 fn alive(world: &World, entity: Entity) -> bool {
     world
@@ -91,7 +101,7 @@ fn valid_target(world: &World, assistant: Entity, target: Entity) -> bool {
         && templates.can_attack(actor, enemy)
 }
 
-fn can_assist(
+pub(crate) fn can_assist(
     world: &World,
     assistant: Entity,
     caller: Entity,
@@ -217,6 +227,23 @@ pub(crate) fn engage_formation(world: &mut World, member: Entity, target: Entity
     }
 }
 
+/// Read the same immediate helper snapshot used by the native assistance call.
+pub(crate) fn assistance_snapshot(world: &World, caller: Entity, target: Entity) -> Vec<Entity> {
+    let Some(config) = world.get_resource::<AssistanceConfig>() else {
+        return Vec::new();
+    };
+    let radius = config.radius;
+    if radius <= 0.0 {
+        return Vec::new();
+    }
+    nearby(world, caller, radius)
+        .into_iter()
+        .filter(|&other| {
+            can_assist(world, other, caller, target, true) && sees(world, caller, other)
+        })
+        .collect()
+}
+
 /// Unit::Attack calls once per combat; assistants cannot call a second wave.
 pub(crate) fn call_assistance(world: &mut World, caller: Entity, target: Entity) {
     if world.get::<shared::components::Npc>(caller).is_none()
@@ -235,14 +262,22 @@ pub(crate) fn call_assistance(world: &mut World, caller: Entity, target: Entity)
     if radius <= 0.0 {
         return;
     }
-    let assistants: Vec<_> = nearby(world, caller, radius)
-        .into_iter()
-        .filter(|&other| {
-            can_assist(world, other, caller, target, true) && sees(world, caller, other)
-        })
-        .collect();
+    let assistants = assistance_snapshot(world, caller, target);
+    if !assistants.is_empty() {
+        info!(target: "game_server::creature_assistance", caller = caller.to_bits(), victim = target.to_bits(), count = assistants.len(), "planned assistance snapshot");
+    }
+    world
+        .entity_mut(caller)
+        .insert(AssistanceSnapshot(assistants.clone()));
     if assistants.is_empty() {
         return;
+    }
+    for &assistant in &assistants {
+        let distance = world
+            .get::<Position>(caller)
+            .zip(world.get::<Position>(assistant))
+            .map(|(a, b)| Vec3::new(a.x, a.y, a.z).distance(Vec3::new(b.x, b.y, b.z)));
+        info!(target: "game_server::creature_assistance", caller = caller.to_bits(), helper = assistant.to_bits(), victim = target.to_bits(), ?distance, delay_secs = delay, "assistance scheduled");
     }
     let due = world.resource::<Time>().elapsed_secs_f64() + delay;
     world
@@ -299,6 +334,7 @@ pub(crate) fn dispatch_assistance(world: &mut World) {
     for event in due {
         for assistant in event.assistants {
             if can_assist(world, assistant, event.caller, event.target, true) {
+                info!(target: "game_server::creature_assistance", caller = event.caller.to_bits(), helper = assistant.to_bits(), victim = event.target.to_bits(), due = event.due, now, "assistance dispatched");
                 world.entity_mut(assistant).insert(AssistanceCalled);
                 attack_start(world, assistant, event.target);
             }

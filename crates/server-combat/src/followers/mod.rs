@@ -70,6 +70,7 @@ mod pack_identity;
 pub mod parity_profile;
 pub(crate) mod party;
 mod positioning;
+pub(crate) use positioning::CombatMovementExclusions;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
@@ -99,6 +100,7 @@ mod pull_readiness_tests;
 mod pull_route;
 #[cfg(test)]
 mod pull_route_tests;
+mod pull_set;
 mod pull_sources;
 #[cfg(test)]
 mod pull_sources_tests;
@@ -112,12 +114,17 @@ mod rotation_dummy_tests;
 pub mod simulator;
 mod spawning;
 pub mod spec_selection;
+mod spell_safety;
 mod stockade_diagnostic;
 mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+mod tank_pull_back;
+#[cfg(test)]
+mod tank_pull_back_native_tests;
+mod tank_pull_back_party;
 mod trail_follow;
 mod unintended_reach;
 #[cfg(test)]
@@ -297,6 +304,8 @@ mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
 #[cfg(test)]
+mod combat_position_native_tests;
+#[cfg(test)]
 mod combat_refs_tests;
 #[cfg(test)]
 mod control_cast_stop_tests;
@@ -306,6 +315,8 @@ mod defensive_tests;
 mod hazard_reaction_tests;
 #[cfg(test)]
 mod hazard_tests;
+#[cfg(test)]
+mod pull_set_native_tests;
 #[cfg(test)]
 pub(crate) fn fixture_hazard_escape(world: &mut World, unit: Entity) -> bool {
     hazards::escape(world, unit)
