@@ -275,7 +275,7 @@ fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<
     let id = graph
         .packs
         .iter()
-        .map(|pack| pack.id)
+        .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
         .max()
         .unwrap_or(0)
         .checked_add(1)

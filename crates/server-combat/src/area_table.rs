@@ -31,6 +31,7 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn flight_permission(&self, area_id: u32, map_id: u32) -> Option<bool> {
         self.flight_permission_with_required(area_id, map_id, 0)
     }
