@@ -190,10 +190,15 @@ fn face_dummy_away_from_actor(world: &mut World, actor: Entity, target: Entity) 
         .y = orientation + std::f32::consts::FRAC_PI_2;
 }
 
-/// The fixture dummy in front of `actor`, at `level` with its native armor and
+/// The `index`th fixture dummy in front of `actor`, at `level` with its native armor and
 /// without level scaling, as a class follower measured at that level meets it.
-pub(crate) fn spawn_level_dummy(app: &mut App, actor: Entity, level: u8) -> Result<Entity, String> {
-    let target = spawn_dummy(app, actor, 0)?;
+pub(crate) fn spawn_level_dummy(
+    app: &mut App,
+    actor: Entity,
+    level: u8,
+    index: usize,
+) -> Result<Entity, String> {
+    let target = spawn_dummy(app, actor, index)?;
     let armor = app
         .world()
         .resource::<crate::world_data::WorldData>()

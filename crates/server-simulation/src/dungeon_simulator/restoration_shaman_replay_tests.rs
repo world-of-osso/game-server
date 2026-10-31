@@ -91,21 +91,17 @@ fn resurgence_restores_mana_for_critical_direct_heals() {
 }
 
 #[test]
-#[ignore = "requires native top-character profiles and world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Health;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 2).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
-    let add = run.targets[1];
+    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 2);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
+    let add = run.sources[1];
     run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
-    let mut policy = super::prepare(&mut run, healer).unwrap();
     for _ in 0..200 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     assert!(
@@ -123,9 +119,6 @@ fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
         hp.current = hp.max;
     }
     for _ in 0..300 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -138,11 +131,11 @@ fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
 }
 
 #[test]
-#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_simc_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         264,
         90,
         Path::new(&trace),
@@ -385,10 +378,10 @@ fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
 }
 
 #[test]
-#[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_shaman_replay_native_mana_regeneration() {
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 1);
+    let healer = run.healer;
     let known = run
         .app
         .world()
@@ -418,17 +411,11 @@ fn restoration_shaman_replay_native_mana_regeneration() {
 }
 
 #[test]
-#[ignore = "requires native MID2 tank, Shaman and canonical world DB"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 264).unwrap();
-    let tank = run.actor;
-    let party = crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
     let mut health = run
         .app
         .world_mut()
@@ -436,14 +423,10 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
         .unwrap();
     health.current = health.max * 0.5;
     drop(health);
-    super::super::dps_parity::literal_rotation::execution::execute(
+    super::dps_parity::literal_rotation::execution::execute(
         run.app.world_mut(),
         healer,
-        super::super::dps_parity::literal_rotation::execution::Execution::Spell(
-            5394,
-            healer,
-            Some(tank),
-        ),
+        super::dps_parity::literal_rotation::execution::Execution::Spell(5394, healer, Some(tank)),
     )
     .unwrap();
     for _ in 0..50 {
@@ -500,12 +483,11 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
 }
 
 #[test]
-#[ignore = "replays the MID2 Restoration Shaman against the SimC dummy trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_shaman_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_simc_replay::replay_simc(264, 90, Path::new(&trace), 300, 70448)
-            .unwrap();
+        super::healer_simc_replay::replay_simc(264, 90, Path::new(&trace), 300, 70448).unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

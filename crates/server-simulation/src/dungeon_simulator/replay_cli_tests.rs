@@ -2,7 +2,7 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
-#[ignore = "native replay CLI entry point"]
+#[ignore = "native replay CLI entry point; healer mode replays a class party over FOLLOWER_DPS_WORLD_DB"]
 fn native_replay_cli_driver() {
     let path = std::env::var("HEALER_TANK_TIMELINE").expect("HEALER_TANK_TIMELINE is required");
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");

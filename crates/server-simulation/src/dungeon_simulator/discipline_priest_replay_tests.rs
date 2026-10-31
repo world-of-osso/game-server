@@ -1,11 +1,9 @@
 use std::path::Path;
 
 #[test]
-#[ignore = "requires the selected real Discipline gear and canonical world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
-    use super::super::dps_parity::literal_rotation::{
-        Driver, equipment::Equipment, execution::Prepared,
-    };
+    use super::dps_parity::literal_rotation::{Driver, equipment::Equipment, execution::Prepared};
     use crate::simc_apl_native::Bindings;
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use server::simc_apl::Program;
@@ -13,15 +11,8 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     use std::collections::BTreeMap;
 
     let _seed = crate::random::seed_scope(70448);
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    let (tank, healer) = (run.tank, run.healer);
     let equipment = Equipment::load(run.app.world(), healer, &mut Bindings::default()).unwrap();
     let item = equipment
         .uses()
@@ -33,7 +24,7 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     let prepared = Prepared::read(
         run.app.world_mut(),
         healer,
-        &run.targets,
+        &run.sources,
         &equipment,
         std::iter::empty(),
         false,
@@ -55,8 +46,7 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     for _ in 0..55 {
         run.app.update();
     }
-    let mut members = party.members.clone();
-    members.push(tank);
+    let members = run.slots.to_vec();
     let shielded: Vec<_> = members
         .into_iter()
         .filter(|unit| crate::auras::has_aura(run.app.world(), *unit, 1307578))
@@ -75,7 +65,7 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
         .unwrap()
         .clone();
     let ctx = crate::spell_cast::effects::EffectCtx {
-        caster: run.targets[0],
+        caster: run.sources[0],
         spell: &fire,
         depth: 0,
         dest: None,
@@ -105,14 +95,14 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     );
 }
 #[test]
-#[ignore = "requires selected Discipline profile and native 70448 data"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn equipped_seastone_procs_intellect_and_reverses_after_six_stacks() {
-    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use super::dps_parity::literal_rotation::execution::{Execution, execute};
     use crate::auras::ActiveAuras;
     let _seed = crate::random::seed_scope(70448);
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let target = run.targets[0];
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    let healer = run.healer;
+    let target = run.sources[0];
     let driver = run
         .app
         .world()
@@ -170,15 +160,15 @@ fn equipped_seastone_procs_intellect_and_reverses_after_six_stacks() {
 }
 
 #[test]
-#[ignore = "requires selected Discipline profile and native 70448 data"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_pain_observes_power_of_dark_side_procs() {
-    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use super::dps_parity::literal_rotation::execution::{Execution, execute};
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70448);
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let target = run.targets[0];
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    let healer = run.healer;
+    let target = run.sources[0];
     for _ in 0..10 {
         execute(
             run.app.world_mut(),
@@ -215,16 +205,15 @@ fn discipline_pain_observes_power_of_dark_side_procs() {
 }
 
 #[test]
-#[ignore = "requires selected Discipline profile and native 70448 data"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn discipline_smite_and_penance_capture_matched_stat_factors() {
-    use super::super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use super::dps_parity::literal_rotation::execution::{Execution, execute};
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     for (root, focus) in [(585, 585), (47540, 47666)] {
         let _seed = crate::random::seed_scope(70448);
-        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-        let healer =
-            super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-        let target = run.targets[0];
+        let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+        let healer = run.healer;
+        let target = run.sources[0];
         let mut stats = run
             .app
             .world_mut()
@@ -259,28 +248,19 @@ fn discipline_smite_and_penance_capture_matched_stat_factors() {
 }
 
 #[test]
-#[ignore = "requires the selected real Discipline profile and canonical world database"]
-fn discipline_policy_applies_pain_and_does_not_refresh_early() {
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_apl_applies_pain_and_does_not_refresh_early() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
-    let mut members = party.members.clone();
-    members.push(tank);
-    let enemy = run.targets[0];
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
+    let members = run.slots.to_vec();
+    let enemy = run.sources[0];
     run.app
         .world_mut()
         .entity_mut(tank)
         .insert(crate::networking::CombatTarget(Some(enemy)));
-    let mut policy = super::prepare(&mut run, healer).unwrap();
-    policy.drive(run.app.world_mut(), healer, &members).unwrap();
     for _ in 0..40 {
         run.app.update();
     }
@@ -288,7 +268,7 @@ fn discipline_policy_applies_pain_and_does_not_refresh_early() {
         crate::auras::has_aura(run.app.world(), enemy, 589),
         "Pain must apply to the enemy"
     );
-    let casts = |run: &super::super::dps_parity::Run| {
+    let casts = |run: &super::healer_simc_replay::ClassParty| {
         run.app
             .world()
             .resource::<ObservedCombatEvents>()
@@ -302,7 +282,6 @@ fn discipline_policy_applies_pain_and_does_not_refresh_early() {
             .count()
     };
     assert_eq!(casts(&run), 1);
-    policy.drive(run.app.world_mut(), healer, &members).unwrap();
     for _ in 0..40 {
         run.app.update();
     }
@@ -314,28 +293,19 @@ fn discipline_policy_applies_pain_and_does_not_refresh_early() {
 }
 
 #[test]
-#[ignore = "requires the selected real Discipline profile and canonical world database"]
-fn discipline_policy_uses_evangelism_without_injury_gate() {
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_apl_uses_evangelism_without_injury_gate() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
-    let mut members = party.members.clone();
-    members.push(tank);
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
+    let members = run.slots.to_vec();
     run.app
         .world_mut()
         .entity_mut(tank)
         .insert(crate::networking::CombatTarget(None));
-    let mut policy = super::prepare(&mut run, healer).unwrap();
     let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    policy.drive(run.app.world_mut(), healer, &members).unwrap();
     for _ in 0..30 {
         run.app.update();
     }
@@ -367,7 +337,6 @@ fn discipline_policy_uses_evangelism_without_injury_gate() {
         .world_mut()
         .entity_mut(healer)
         .insert(crate::class_progression::KnownSpells::fixture(spells));
-    policy.drive(run.app.world_mut(), healer, &members).unwrap();
     for _ in 0..50 {
         run.app.update();
     }
@@ -383,23 +352,15 @@ fn discipline_policy_uses_evangelism_without_injury_gate() {
 }
 
 #[test]
-#[ignore = "requires the selected real Discipline profile and canonical world database"]
-fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
     for darkness in [false, true] {
-        let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-        let tank = run.actor;
-        let healer =
-            super::super::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-        let party = crate::followers::simulator::spawn_party_for_reference_healer(
-            run.app.world_mut(),
-            tank,
-            healer,
-        )
-        .unwrap();
-        let mut members = party.members.clone();
-        members.push(tank);
+        let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+        super::healer_simc_replay::engage(&mut run);
+        let (tank, healer) = (run.tank, run.healer);
+        let members = run.slots.to_vec();
         let ally = *members
             .iter()
             .find(|&&member| member != healer && member != tank)
@@ -434,9 +395,7 @@ fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
         run.app.world_mut().entity_mut(healer).insert(
             crate::class_progression::KnownSpells::fixture(vec![17, 1253593, 390691]),
         );
-        let mut policy = super::prepare(&mut run, healer).unwrap();
         let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
-        policy.drive(run.app.world_mut(), healer, &members).unwrap();
         run.app.update();
         let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
         let expected = if darkness { 1253593 } else { 17 };
@@ -460,12 +419,11 @@ fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
 }
 
 #[test]
-#[ignore = "requires MID2 profiles, canonical world database and SimC trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn discipline_priest_heals_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_simc_replay::replay_simc(256, 90, Path::new(&trace), 300, 70448)
-            .unwrap();
+        super::healer_simc_replay::replay_simc(256, 90, Path::new(&trace), 300, 70448).unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

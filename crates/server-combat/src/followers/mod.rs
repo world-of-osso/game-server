@@ -235,7 +235,7 @@ impl Follower {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn select_party(profiles: &[Profile], role: GroupRole) -> Result<Vec<Profile>, String> {
     let mut party = Vec::with_capacity(4);
     for (required, count) in [

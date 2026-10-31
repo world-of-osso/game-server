@@ -1,23 +1,19 @@
 use std::path::Path;
 
 #[test]
-#[ignore = "requires native top-character profiles and world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_druid_uses_innervate_at_low_mana() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Mana;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 105).unwrap();
-    let mut policy = super::prepare(&mut run, healer).unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
     {
         let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
         mana.current = mana.max * 0.5;
     }
     for _ in 0..120 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -180,11 +176,11 @@ fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
 }
 
 #[test]
-#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_druid_uses_selected_germination_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_simc_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         105,
         90,
         Path::new(&trace),
@@ -447,12 +443,11 @@ fn everbloom_copies_an_expiring_lifebloom_to_nearby_allies() {
 }
 
 #[test]
-#[ignore = "replays the MID2 Restoration Druid against the SimC dummy trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_druid_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_simc_replay::replay_simc(105, 90, Path::new(&trace), 300, 70448)
-            .unwrap();
+        super::healer_simc_replay::replay_simc(105, 90, Path::new(&trace), 300, 70448).unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

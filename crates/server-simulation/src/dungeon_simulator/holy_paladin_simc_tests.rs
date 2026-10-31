@@ -1,11 +1,11 @@
 use std::path::Path;
 
 #[test]
-#[ignore = "uses the MID2 Holy player and native Avenging Wrath"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_avenging_wrath_enables_and_removes_hammer_override() {
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let actor = super::super::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
-    let enemy = run.targets[0];
+    let mut run = super::healer_simc_replay::snapshot_party(65, 90, 1);
+    let actor = run.healer;
+    let enemy = run.sources[0];
     let resolve = |world: &bevy::prelude::World| {
         crate::spell_cast::knowledge::resolve_actor_action(world, actor, 20271).unwrap()
     };
@@ -45,11 +45,11 @@ fn holy_avenging_wrath_enables_and_removes_hammer_override() {
 }
 
 #[test]
-#[ignore = "replays party pressure with the MID2 Holy Paladin"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn holy_paladin_keeps_one_beacon_during_party_pressure() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
-    let report = super::super::healer_simc_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         65,
         90,
         Path::new(&trace),
@@ -62,12 +62,11 @@ fn holy_paladin_keeps_one_beacon_during_party_pressure() {
 }
 
 #[test]
-#[ignore = "replays the approved MID2 Holy Paladin against the SimC dummy trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn holy_paladin_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_simc_replay::replay_simc(65, 90, Path::new(&trace), 300, 70448)
-            .unwrap();
+        super::healer_simc_replay::replay_simc(65, 90, Path::new(&trace), 300, 70448).unwrap();
     println!(
         "HOLY_SUMMARY casts={} healing={} death={}",
         report["healer_casts"],

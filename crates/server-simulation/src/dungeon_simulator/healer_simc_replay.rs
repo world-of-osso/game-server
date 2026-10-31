@@ -15,27 +15,6 @@ const TICKS_PER_SECOND: u32 = 20;
 /// Bound on the party's APL precombat before the recorded clock starts.
 const MAX_PRECOMBAT_TICKS: u32 = 800;
 
-/// The fixture party tank's combat target: the healer's damage target.
-pub(super) fn tank_target(world: &World, party: &[Entity]) -> Option<Entity> {
-    let tank = server_follower_apl::party_tank(world, party)?;
-    world.get::<crate::networking::CombatTarget>(tank)?.0
-}
-
-pub(super) trait Policy {
-    fn drive(&mut self, world: &mut World, healer: Entity, party: &[Entity]) -> Result<(), String>;
-}
-
-/// The replay's follower companions, equipped by `equip_companions`.
-pub(crate) fn spawn_reference_party(
-    world: &mut World,
-    tank: Entity,
-    healer: Entity,
-) -> Result<crate::followers::simulator::Party, String> {
-    let party = crate::followers::simulator::spawn_party_for_reference_healer(world, tank, healer)?;
-    super::dps_parity::equip_companions(world, &party)?;
-    Ok(party)
-}
-
 /// The dungeon whose Journal gear a class party at `level` wears: the follower
 /// DPS harness's content for each measured level.
 fn measurement_map(level: u8) -> Result<u32, String> {
@@ -127,15 +106,30 @@ pub(super) fn replay_simc_party(
 /// A class party (tank, `spec` healer, two DPS and the leader DPS), each in
 /// its level's Journal gear and casting through its spec APL, engaged on the
 /// SimC tank dummy whose recorded pressure is replayed onto it.
-struct ClassParty {
-    app: App,
-    source: Entity,
-    tank: Entity,
-    healer: Entity,
-    slots: [Entity; 5],
+pub(super) struct ClassParty {
+    pub(super) app: App,
+    /// The engaged dummies; the first one is the recorded pressure source.
+    pub(super) sources: Vec<Entity>,
+    pub(super) tank: Entity,
+    pub(super) healer: Entity,
+    /// Tank, healer, two DPS and the leader: the SimC party trace's slots.
+    pub(super) slots: [Entity; 5],
 }
 
-fn spawn_class_party(path: &Path, spec: u32, level: u8) -> Result<ClassParty, String> {
+/// An unengaged class party over the `FOLLOWER_DPS_WORLD_DB` snapshot with
+/// `targets` dummies: its APLs stay idle until `engage`.
+#[cfg(test)]
+pub(super) fn snapshot_party(spec: u32, level: u8, targets: usize) -> ClassParty {
+    let (path, _) = read_snapshot().unwrap();
+    spawn_class_party(&path, spec, level, targets).unwrap()
+}
+
+fn spawn_class_party(
+    path: &Path,
+    spec: u32,
+    level: u8,
+    targets: usize,
+) -> Result<ClassParty, String> {
     let mut app = super::dps_parity::build_snapshot_app(path)?;
     let copy = super::dps_parity::create_open_follower_copy(&mut app, measurement_map(level)?)?;
     let origin = shared::components::Position {
@@ -151,20 +145,15 @@ fn spawn_class_party(path: &Path, spec: u32, level: u8) -> Result<ClassParty, St
         spec,
     )?;
     let (tank, healer) = (party.tank, party.members[1]);
-    let source = super::dps_parity::spawn_level_dummy(&mut app, tank, level)?;
-    let world = app.world_mut();
-    // The leader's attack engages the whole party, as a player's pull does.
-    world.entity_mut(party.owner).insert((
-        crate::networking::CombatTarget(Some(source)),
-        crate::combat::AutoAttack::new(source),
-    ));
-    crate::combat_refs::set_in_combat_with(world, party.owner, source);
-    world
+    let sources = (0..targets)
+        .map(|index| super::dps_parity::spawn_level_dummy(&mut app, tank, level, index))
+        .collect::<Result<Vec<_>, _>>()?;
+    app.world_mut()
         .entity_mut(healer)
         .insert(crate::spell_cast::ObservedResourcePayments::default());
     Ok(ClassParty {
         app,
-        source,
+        sources,
         tank,
         healer,
         slots: [
@@ -177,8 +166,22 @@ fn spawn_class_party(path: &Path, spec: u32, level: u8) -> Result<ClassParty, St
     })
 }
 
+/// The leader attacks the first dummy and enters combat with every dummy,
+/// which engages the whole party as a player's pull does.
+pub(super) fn engage(party: &mut ClassParty) {
+    let leader = party.slots[4];
+    let world = party.app.world_mut();
+    world.entity_mut(leader).insert((
+        crate::networking::CombatTarget(Some(party.sources[0])),
+        crate::combat::AutoAttack::new(party.sources[0]),
+    ));
+    for &source in &party.sources {
+        crate::combat_refs::set_in_combat_with(world, leader, source);
+    }
+}
+
 /// Run the party's APL precombat until the tank and healer enter combat.
-fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
+pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
     for _ in 0..MAX_PRECOMBAT_TICKS {
         app.update();
         let world = app.world();
@@ -221,13 +224,16 @@ fn replay(
         .transpose()?
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
+    let mut party = spawn_class_party(&snapshot, spec, level, 1)?;
+    engage(&mut party);
     let ClassParty {
         mut app,
-        source,
+        sources,
         tank,
         healer,
         slots,
-    } = spawn_class_party(&snapshot, spec, level)?;
+    } = party;
+    let source = sources[0];
     apply_optimal_raid_environment(&mut app, source, &slots)?;
     finish_precombat(&mut app, &[tank, healer])?;
     super::healer_replay::freeze_sources(app.world_mut(), &[(0, source)].into());

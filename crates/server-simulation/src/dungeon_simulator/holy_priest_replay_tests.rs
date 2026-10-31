@@ -1,11 +1,11 @@
 use std::path::Path;
 
 #[test]
-#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn holy_priest_uses_serenity_and_benediction_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_simc_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         257,
         90,
         Path::new(&trace),
@@ -323,7 +323,7 @@ fn prayer_of_mending_heals_its_target_only_with_prompt_prognosis() {
 }
 
 #[test]
-#[ignore = "requires the canonical MID2 Holy Priest profile and world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
     use crate::spell_cast::{
         CastTargets, cast_for_player_with_targets,
@@ -331,24 +331,11 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
     };
     use shared::components::{Health, Mana, PowerType};
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 257).unwrap();
-    let faction = *run
-        .app
-        .world()
-        .get::<shared::components::UnitFactionTemplate>(tank)
-        .unwrap();
-    run.app.world_mut().entity_mut(healer).insert(faction);
-    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(257, 90, 1);
+    let (tank, healer) = (run.tank, run.healer);
     run.app.insert_resource(ObservedPowerChanges::default());
-    // Renew is not selected in this MID2 profile. Grant the requested optional
-    // spells in this fixture so their native casts can still be exercised.
+    // Grant the requested optional spells the class build does not select so
+    // their native casts can still be exercised.
     let mut known: Vec<_> = run
         .app
         .world()
@@ -356,11 +343,11 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
         .unwrap()
         .iter()
         .collect();
-    assert!(
-        !known.contains(&139),
-        "MID2 profile unexpectedly selects Renew"
-    );
-    known.extend([139, 204883]);
+    for spell in [139, 204883] {
+        if !known.contains(&spell) {
+            known.push(spell);
+        }
+    }
     run.app
         .world_mut()
         .entity_mut(healer)
@@ -454,12 +441,11 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
 }
 
 #[test]
-#[ignore = "requires MID2 profiles, canonical world database and SimC trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn holy_priest_heals_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_simc_replay::replay_simc(257, 90, Path::new(&trace), 300, 70448)
-            .unwrap();
+        super::healer_simc_replay::replay_simc(257, 90, Path::new(&trace), 300, 70448).unwrap();
     println!("NATIVE_HOLY_PRIEST={report}");
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();

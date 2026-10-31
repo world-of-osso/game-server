@@ -1,20 +1,14 @@
-//! Class-party SimC replay receipts and native healer mechanics on reference actors.
+//! Class-party SimC replay receipts and native healer mechanics on the class party.
 use bevy::prelude::{Entity, World};
 use shared::components::Health;
 use std::path::Path;
 
 #[test]
-#[ignore = "requires canonical world database and healer-tank profiles"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn optimal_raid_environment_reaches_all_replay_actors() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 256).unwrap();
-    let party = super::spawn_reference_party(run.app.world_mut(), tank, healer).unwrap();
-    let members: Vec<_> = std::iter::once(tank)
-        .chain(party.members.iter().copied())
-        .collect();
-    let enemy = run.targets[0];
+    let mut run = super::snapshot_party(256, 90, 1);
+    let members = run.slots.to_vec();
+    let enemy = run.sources[0];
     super::apply_optimal_raid_environment(&mut run.app, enemy, &members).unwrap();
     let world = run.app.world();
     for member in members {
@@ -27,108 +21,19 @@ fn optimal_raid_environment_reaches_all_replay_actors() {
     }
     for spell in [1490, 113746] {
         assert!(
-            crate::auras::has_aura(world, run.targets[0], spell),
+            crate::auras::has_aura(world, run.sources[0], spell),
             "enemy lacks {spell}"
         );
     }
 }
 
 #[test]
-#[ignore = "requires canonical world database and healer-tank profiles"]
-fn reference_healer_remains_alive_during_single_faction_setup() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    crate::spell_cast::cast_triggered(run.app.world_mut(), tank, 1308399, Some(tank), 1);
-    let world = run.app.world_mut();
-    assert!(
-        world
-            .query::<&crate::spell_cast::summon::SummonedCreature>()
-            .iter(world)
-            .any(|summon| summon.owner == tank && summon.spell_id == 1308399),
-        "real tank summon must be present before healer setup"
-    );
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
-    let world = run.app.world();
-    assert_eq!(
-        world.get::<shared::components::UnitFactionTemplate>(healer),
-        world.get::<shared::components::UnitFactionTemplate>(tank)
-    );
-    assert!(
-        world.get::<Health>(healer).unwrap().current > 0.0,
-        "a same-party healer must survive all setup updates"
-    );
-    let events = &world
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
-    assert!(
-        !events
-            .iter()
-            .any(|event| event.target == Some(healer.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage),
-        "a tank summon must not attack the reference healer during setup"
-    );
-}
-
-#[test]
-#[ignore = "requires canonical world database and healer-tank profiles"]
-fn reference_replay_follower_companions_wear_replay_profile_gear() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
-    let party = super::spawn_reference_party(run.app.world_mut(), tank, healer).unwrap();
-    let directory = std::path::PathBuf::from(std::env::var_os("DPS_PARITY_OUTPUT").unwrap());
-    let world = run.app.world();
-    let companions: Vec<_> = party
-        .members
-        .iter()
-        .filter_map(|&unit| {
-            world
-                .get::<crate::followers::Follower>(unit)
-                .map(|follower| (unit, follower.profile.spec_id))
-        })
-        .collect();
-    assert_eq!(companions.len(), 3, "three follower companions");
-    for (unit, spec) in companions {
-        let path = directory.join(format!("{spec}.profile.json"));
-        let profile: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-        let expected: Vec<u32> = profile["equipment"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|item| item["item_id"].as_u64().unwrap() as u32)
-            .collect();
-        let equipped: Vec<u32> = world
-            .get::<crate::stats::EquippedItems>(unit)
-            .expect("replay companion equipment")
-            .items
-            .iter()
-            .map(|(_, _, item)| *item)
-            .collect();
-        assert!(!expected.is_empty());
-        assert_eq!(
-            equipped, expected,
-            "spec{spec} wears its replay profile gear"
-        );
-    }
-}
-
-#[test]
-#[ignore = "requires canonical world database and healer-tank profiles"]
-fn beacon_transfers_healing_between_player_and_follower_party_members() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 65).unwrap();
-    let party = crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
-    let follower = party.members[0];
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn beacon_transfers_healing_between_party_members() {
+    let mut run = super::snapshot_party(65, 90, 1);
+    let (tank, healer) = (run.tank, run.healer);
+    // A DPS party member.
+    let follower = run.slots[2];
     for (beacon, healed) in [(tank, follower), (follower, tank)] {
         for target in [beacon, healed] {
             let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
@@ -150,19 +55,10 @@ fn beacon_transfers_healing_between_player_and_follower_party_members() {
 }
 
 #[test]
-#[ignore = "requires canonical world database and Preservation reference profile"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 1468)
-            .unwrap();
-    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
+    let mut run = super::snapshot_party(1468, 90, 1);
+    let (tank, healer) = (run.tank, run.healer);
     crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 360995, Some(tank), 1);
     assert!(crate::auras::has_aura(run.app.world(), healer, 373267));
     assert!(crate::auras::has_aura(run.app.world(), tank, 373267));
@@ -270,19 +166,10 @@ fn preservation_lifebind_aggregates_raw_healing_on_native_party() {
 }
 
 #[test]
-#[ignore = "requires canonical world database and Preservation reference profile"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_lifebind_transfers_periodic_overhealing() {
-    let mut run = crate::dungeon_simulator::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer =
-        crate::dungeon_simulator::dps_parity::spawn_second_reference_player(&mut run, 1468)
-            .unwrap();
-    crate::dungeon_simulator::healer_simc_replay::spawn_reference_party(
-        run.app.world_mut(),
-        tank,
-        healer,
-    )
-    .unwrap();
+    let mut run = super::snapshot_party(1468, 90, 1);
+    let (tank, healer) = (run.tank, run.healer);
     crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 360995, Some(tank), 1);
     for unit in [tank, healer] {
         let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
@@ -338,7 +225,7 @@ fn fixture(name: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "class party replay requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn simc_party_pulse_hits_all_five_class_party_members() {
     let report = super::replay_simc_party(
         65,
@@ -368,7 +255,7 @@ fn simc_party_pulse_hits_all_five_class_party_members() {
 }
 
 #[test]
-#[ignore = "class party replay requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
     let trace = fixture("healer_simc_fixture.log");
     assert_eq!(

@@ -146,14 +146,16 @@ fn healer_benchmark_same_fight_has_identical_numbers() {
 
 #[test]
 fn healer_benchmark_spawns_every_healer_spec_as_its_class_actor() {
-    let mut app = super::runtime::build_app();
-    let copy = super::runtime::create_copy(&mut app);
     let at = Position {
         x: 0.0,
         y: 0.0,
         z: 0.0,
     };
+    let mut catalogs = None;
+    // One app per party: every headless simulator leader is character 1.
     for spec in [65, 105, 256, 257, 264, 270, 1468] {
+        let mut app = super::runtime::build_cached_app(&mut catalogs);
+        let copy = super::runtime::create_copy(&mut app);
         let party = crate::followers::simulator::spawn_party_with_healer(
             app.world_mut(),
             copy,
@@ -184,5 +186,6 @@ fn healer_benchmark_spawns_every_healer_spec_as_its_class_actor() {
                 .is_some_and(|equipped| !equipped.items.is_empty()),
             "spec{spec} wears its level32 Journal gear"
         );
+        catalogs = Some(super::catalogs::Catalogs::take(app.world_mut()));
     }
 }

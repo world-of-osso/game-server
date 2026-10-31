@@ -1,6 +1,6 @@
 //! Production follower gear and AI, measured independently of parity drivers.
 use super::*;
-use shared::components::{Level, UnitLevel, UnitSummonedBy};
+use shared::components::UnitSummonedBy;
 use shared::protocol::CombatLogKind;
 
 #[test]
@@ -83,7 +83,7 @@ fn prepare_follower(
         .unwrap()
         .profile
         .clone();
-    let target = spawn_level_dummy(&mut app, actor, level).unwrap();
+    let target = spawn_level_dummy(&mut app, actor, level, 0).unwrap();
     (app, actor, target, profile)
 }
 
