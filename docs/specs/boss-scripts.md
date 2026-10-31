@@ -35,7 +35,7 @@
 
 ## Ara-Kara spike wall
 
-- `AVANOXX_SPIKE_WALL_OPEN_LOG_CORRELATED`: Open game object 455378 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `qLNnp4x613mv2Ctz` fight 28, player 9's last cast during Avanoxx was at engine coordinates (-109.6, -398.47); 21.558 seconds after the encounter ended, their next recorded cast was at (-68.63, -590.77), beyond the wall near (-87.25, -521.23). This supports passage after the kill, not the exact retail trigger or door animation.
+- `AVANOXX_SPIKE_WALL_OPEN_LOG_CORRELATED`: Open game objects 455376, 455377, and 455378 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `qLNnp4x613mv2Ctz` fight 28, player 9's last cast during Avanoxx was at engine coordinates (-109.6, -398.47); 21.558 seconds after the encounter ended, their next recorded cast was at (-68.63, -590.77), beyond the wall near (-87.25, -521.23). This supports passage after the kill, not the exact retail trigger or door animation.
 
 ## Stonevault E.D.N.A. intro
 

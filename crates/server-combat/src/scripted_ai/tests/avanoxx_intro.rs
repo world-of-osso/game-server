@@ -7,31 +7,37 @@ fn avanoxx_done_opens_spike_wall_only_in_its_instance() {
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
-    let source = spawns
-        .0
-        .iter()
-        .find(|spawn| spawn.map_id == 2660 && spawn.info.entry == 455378)
-        .expect("authored Ara-Kara spike wall");
     let other = InMap {
         instance_id: map.instance_id + 1,
         ..map
     };
-    let wall = h
-        .app
-        .world_mut()
-        .spawn((crate::game_objects::game_object_bundle(source), map))
-        .id();
-    let other_wall = h
-        .app
-        .world_mut()
-        .spawn((crate::game_objects::game_object_bundle(source), other))
-        .id();
+    let mut walls = Vec::new();
+    for entry in [455376, 455377, 455378] {
+        let source = spawns
+            .0
+            .iter()
+            .find(|spawn| spawn.map_id == 2660 && spawn.info.entry == entry)
+            .expect("authored Ara-Kara spike wall segment");
+        let wall = h
+            .app
+            .world_mut()
+            .spawn((crate::game_objects::game_object_bundle(source), map))
+            .id();
+        let other_wall = h
+            .app
+            .world_mut()
+            .spawn((crate::game_objects::game_object_bundle(source), other))
+            .id();
+        walls.push((source, wall, other_wall));
+    }
     crate::scripted_ai::door_data::update_doors(h.app.world_mut(), map);
-    for object in [wall, other_wall] {
-        assert_eq!(
-            h.app.world().get::<GameObjectCollision>(object),
-            Some(&GameObjectCollision(true))
-        );
+    for (_, wall, other_wall) in &walls {
+        for object in [*wall, *other_wall] {
+            assert_eq!(
+                h.app.world().get::<GameObjectCollision>(object),
+                Some(&GameObjectCollision(true))
+            );
+        }
     }
     let world = h.app.world_mut();
     let boss = instance_script::boss_id_for_encounter(world, map, 2926).unwrap();
@@ -41,22 +47,24 @@ fn avanoxx_done_opens_spike_wall_only_in_its_instance() {
         boss,
         EncounterState::Done
     ));
-    assert_eq!(
-        world.get::<GameObjectCollision>(wall),
-        Some(&GameObjectCollision(false))
-    );
-    assert_eq!(
-        world.get::<GameObjectCollision>(other_wall),
-        Some(&GameObjectCollision(true))
-    );
-    let recreated = world
-        .spawn((crate::game_objects::game_object_bundle(source), map))
-        .id();
-    crate::scripted_ai::door_data::update_doors(world, map);
-    assert_eq!(
-        world.get::<GameObjectCollision>(recreated),
-        Some(&GameObjectCollision(false))
-    );
+    for (source, wall, other_wall) in walls {
+        assert_eq!(
+            world.get::<GameObjectCollision>(wall),
+            Some(&GameObjectCollision(false))
+        );
+        assert_eq!(
+            world.get::<GameObjectCollision>(other_wall),
+            Some(&GameObjectCollision(true))
+        );
+        let recreated = world
+            .spawn((crate::game_objects::game_object_bundle(source), map))
+            .id();
+        crate::scripted_ai::door_data::update_doors(world, map);
+        assert_eq!(
+            world.get::<GameObjectCollision>(recreated),
+            Some(&GameObjectCollision(false))
+        );
+    }
 }
 
 #[test]

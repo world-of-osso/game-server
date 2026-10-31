@@ -18,6 +18,16 @@ const DOORS: &[Door] = &[
     // WCL coordinates are (engine z, engine x); the exact door trigger is unknown.
     Door {
         map_id: 2660,
+        entry: 455376,
+        encounter: 2926,
+    },
+    Door {
+        map_id: 2660,
+        entry: 455377,
+        encounter: 2926,
+    },
+    Door {
+        map_id: 2660,
         entry: 455378,
         encounter: 2926,
     },
