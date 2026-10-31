@@ -34,6 +34,22 @@ pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) ->
     let planned = primary
         .map(|primary| super::pull_set::members(world, primary, caster))
         .unwrap_or_default();
+    let risky_helpers = primary
+        .filter(|_| {
+            world
+                .get::<super::Follower>(caster)
+                .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)
+        })
+        .map(|primary| super::pull_set::risky_pending_helpers(world, primary, caster))
+        .unwrap_or_default();
+    if risky_helpers.into_iter().any(|helper| {
+        targets::position(world, helper).is_none_or(|point| {
+            (caster_radius > 0.0 && caster_position.distance(point) <= caster_radius)
+                || (target_radius > 0.0 && target_position.distance(point) <= target_radius)
+        })
+    }) {
+        return false;
+    }
     !world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)

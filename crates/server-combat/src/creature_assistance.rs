@@ -56,6 +56,13 @@ struct DelayedAssistance {
 #[derive(Resource, Default)]
 pub(crate) struct PendingAssistance(Vec<DelayedAssistance>);
 
+pub(crate) fn pending_callers(world: &World) -> impl Iterator<Item = Entity> + '_ {
+    world
+        .get_resource::<PendingAssistance>()
+        .into_iter()
+        .flat_map(|pending| pending.0.iter().map(|event| event.caller))
+}
+
 fn alive(world: &World, entity: Entity) -> bool {
     world
         .get::<Health>(entity)
