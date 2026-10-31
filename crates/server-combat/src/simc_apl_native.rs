@@ -1108,7 +1108,11 @@ impl Facts for NativeFacts<'_> {
         if let Some(property) = name.strip_prefix("raid_event.movement.") {
             return self.movement_event(property);
         }
-        if let Some(alias) = name.strip_prefix("active_dot.") {
+        // SimC76f8118 player.cpp12122: active_dots.X is an alias of active_dot.X.
+        let active_dot = name
+            .strip_prefix("active_dot.")
+            .or_else(|| name.strip_prefix("active_dots."));
+        if let Some(alias) = active_dot {
             return self.active_dot(alias);
         }
         // SimC76f8118 action.cpp3817–3896: this named action's available

@@ -160,6 +160,7 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
     )
     .with_targets(Some(third), &targets);
     assert_eq!(facts.value("active_dot.rend_dot").unwrap(), 2.0);
+    assert_eq!(facts.value("active_dots.rend_dot").unwrap(), 2.0);
     assert_eq!(
         facts.value("dot.rend_dot.ticking").unwrap(),
         0.0,
