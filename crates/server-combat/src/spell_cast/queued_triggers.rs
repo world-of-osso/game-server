@@ -14,6 +14,7 @@ enum QueuedCastKind {
     NormalForce,
     InstantBackground,
     FullTrigger,
+    AreaFullTrigger,
     ScriptCallback(fn(&mut World, Entity, Entity, u8)),
     ApplyOwnedAura,
     RemoveOwnedAura,
@@ -243,6 +244,32 @@ pub fn schedule_destination_trigger(
         .push_back(trigger);
 }
 
+/// Queue an area trigger at a saved position without validating its policy primary as alive.
+pub fn schedule_area_trigger(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    request: DestinationTrigger,
+) {
+    let due_ms = now_ms(world) + u64::from(request.delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::AreaFullTrigger,
+        caster: ctx.caster,
+        target: request.target,
+        destination: Some(request.destination),
+        spell_id: request.spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+        item_inventory_type: ctx.spell.cast_item_inventory_type,
+        damage_multiplier: None,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
 /// Queue a triggered spell with its effect-zero amount captured at impact.
 pub fn schedule_amount_full_trigger(
     world: &mut World,
@@ -370,7 +397,10 @@ pub(crate) fn resolve_due(world: &mut World) {
         let Some(trigger) = world.resource_mut::<PendingTriggers>().pop_due(now_ms) else {
             return;
         };
-        if world.get_entity(trigger.caster).is_err() || world.get_entity(trigger.target).is_err() {
+        if world.get_entity(trigger.caster).is_err()
+            || (!matches!(trigger.kind, QueuedCastKind::AreaFullTrigger)
+                && world.get_entity(trigger.target).is_err())
+        {
             continue;
         }
         match trigger.kind {
@@ -386,7 +416,7 @@ pub(crate) fn resolve_due(world: &mut World) {
                 }
                 callback(world, trigger.caster, trigger.target, trigger.depth);
             }
-            QueuedCastKind::FullTrigger => {
+            QueuedCastKind::FullTrigger | QueuedCastKind::AreaFullTrigger => {
                 let Some(mut spell) =
                     super::load_triggered_spell(world, trigger.spell_id, trigger.depth)
                 else {
@@ -395,10 +425,13 @@ pub(crate) fn resolve_due(world: &mut World) {
                 spell.cast_item_level = trigger.item_level;
                 spell.cast_item_inventory_type = trigger.item_inventory_type;
                 spell.cast_destination = trigger.destination;
-                if !super::launch_triggered_spell(
+                let explicit =
+                    matches!(trigger.kind, QueuedCastKind::FullTrigger).then_some(trigger.target);
+                if !super::launch_triggered_spell_with_primary(
                     world,
                     trigger.caster,
                     &spell,
+                    explicit,
                     Some(trigger.target),
                     trigger.depth,
                 ) {
