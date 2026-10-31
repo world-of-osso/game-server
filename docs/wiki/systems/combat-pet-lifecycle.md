@@ -10,7 +10,7 @@ Family default specialization comes from the local `creature_family`/`chr_specia
 
 ## Player flight — 2026-10-30
 
-TC `MovementHandler.cpp:581–584` temporarily unsummons the controlled pet on player takeoff; `Unit.cpp:8374–8378` restores it on dismount. The flight lifecycle reuses taxi's saved slot and health, refuses Call Pet during flight, and requires a living non-flying owner before restoration. The real-pet takeoff/dismount and taxi regression tests are pending. [Requirements](../../specs/pet-lifecycle.md).
+TC `MovementHandler.cpp:581–584` temporarily unsummons the controlled pet on player takeoff; `Unit.cpp:8374–8378` restores it on dismount. The flight lifecycle reuses taxi's saved slot and health, refuses Call Pet during flight, and requires a living non-flying owner before restoration. At `030b862342`, the real player-pet takeoff/dismount and existing follower taxi-pet regression tests both pass; a simulator seed remains pending. [Requirements](../../specs/pet-lifecycle.md).
 
 ## Missing-storage Call Pet — 2026-10-16
 

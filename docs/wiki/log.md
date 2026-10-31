@@ -4845,4 +4845,4 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 
 - 2026-10-30: Recorded [player-class follower profile inputs](investigations/follower-data.md#player-class-profile-inputs--2026-10-30), including native talent validation and Hunter grant handling.
 - 2026-10-30: Recorded the [Darkflame opening timeout](systems/dungeon-simulator.md#darkflame-opening-timeout): blocked chase and 7,512 Evade misses; physical versus hierarchy disconnect remains unproven.
-- 2026-10-30: Added [player-flight pet suspension](systems/combat-pet-lifecycle.md#player-flight--2026-10-30); native pet and taxi regression tests are pending.
+- 2026-10-30: Added [player-flight pet suspension](systems/combat-pet-lifecycle.md#player-flight--2026-10-30); native player-pet and follower taxi regression tests pass at `030b862342`, simulator qualification pending.
