@@ -1103,9 +1103,19 @@ fn follower_dps_production_dummy() {
             for event in &events[seen_events..] {
                 if event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
                 {
+                    let sotr = app
+                        .world()
+                        .get::<crate::auras::ActiveAuras>(actor)
+                        .and_then(|auras| {
+                            auras
+                                .iter()
+                                .find(|aura| aura.spell_id == 132403 && aura.caster == actor)
+                        });
                     cast_trace.push(
                         json!({"at_s": (frame + 1) as f64 / 20.0, "spell": event.spell_id,
                         "power_before": before_power, "power_after": after_power,
+                        "sotr_remaining_s": sotr.and_then(|aura| aura.expires_at).map(|expiry| expiry - crate::spell_cast::history_now(app.world())),
+                        "sotr_duration_ms": sotr.map(|aura| aura.duration_ms),
                         "valor": crate::auras::has_aura(app.world(), actor, 1269179),
                         "divine_purpose": crate::auras::has_aura(app.world(), actor, 223819)}),
                     );
