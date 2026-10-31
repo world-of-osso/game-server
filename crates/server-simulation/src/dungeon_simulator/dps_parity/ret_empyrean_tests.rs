@@ -294,7 +294,7 @@ fn dps_parity_ret_empyrean_wrath_verdict_emits_native_percent_background_storm()
 
 #[test]
 #[ignore = "native Empyrean Legacy after a lethal Verdict"]
-fn dps_parity_ret_empyrean_storm_hits_survivor_after_lethal_verdict() {
+fn dps_parity_ret_empyrean_storm_cancels_after_lethal_verdict() {
     use shared::components::Health;
 
     let _seed = crate::random::seed_scope(70448);
@@ -319,11 +319,11 @@ fn dps_parity_ret_empyrean_storm_hits_survivor_after_lethal_verdict() {
         && event.kind == CombatLogKind::Damage
         && event.spell_id == Some(verdict)
         && event.amount > 0), "Verdict must kill the primary");
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+    assert!(!events.iter().any(|event| event.source == Some(actor.to_bits())
         && event.target == Some(survivor.to_bits())
         && event.kind == CombatLogKind::Damage
         && event.spell_id == Some(DIVINE_STORM)
-        && event.amount > 0), "the background Storm must still hit a living enemy");
+        && event.amount > 0), "the queued background Storm must cancel for a dead target");
 }
 
 #[test]
