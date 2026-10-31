@@ -79,6 +79,26 @@ pub(super) fn pending_helpers(world: &World, target: Entity, victim: Entity) -> 
         .collect()
 }
 
+pub(super) fn committed_helpers(world: &World, victim: Entity) -> HashSet<Entity> {
+    crate::creature_assistance::committed_assistants(world)
+        .filter(|helper| {
+            world.get::<crate::maps::InMap>(*helper) == world.get::<crate::maps::InMap>(victim)
+        })
+        .collect()
+}
+
+pub(super) fn uncommitted_helpers(
+    world: &World,
+    target: Entity,
+    victim: Entity,
+) -> HashSet<Entity> {
+    let committed = committed_helpers(world, victim);
+    pending_helpers(world, target, victim)
+        .difference(&committed)
+        .copied()
+        .collect()
+}
+
 #[cfg(test)]
 pub(super) fn risky_pending_helpers(
     world: &World,

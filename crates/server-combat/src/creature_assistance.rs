@@ -63,6 +63,18 @@ pub(crate) fn pending_callers(world: &World) -> impl Iterator<Item = Entity> + '
         .flat_map(|pending| pending.0.iter().map(|event| event.caller))
 }
 
+pub(crate) fn committed_assistants(world: &World) -> impl Iterator<Item = Entity> + '_ {
+    world
+        .get_resource::<PendingAssistance>()
+        .into_iter()
+        .flat_map(|pending| &pending.0)
+        .flat_map(move |event| {
+            event.assistants.iter().copied().filter(move |&assistant| {
+                can_assist(world, assistant, event.caller, event.target, true)
+            })
+        })
+}
+
 fn alive(world: &World, entity: Entity) -> bool {
     world
         .get::<Health>(entity)
