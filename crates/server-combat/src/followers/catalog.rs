@@ -14,6 +14,21 @@ pub struct Dungeon {
     pub id: u32,
     pub name: String,
     pub entrance: WorldLocation,
+    pub min_level: u32,
+    pub max_level: u32,
+}
+
+impl Dungeon {
+    pub fn level_lock(&self, level: u32) -> Option<&'static str> {
+        // TC 15e0ed76 LFGMgr.cpp:1762–1767 compares content tuning's inclusive levels.
+        if level < self.min_level {
+            Some("LFG_LOCKSTATUS_TOO_LOW_LEVEL")
+        } else if level > self.max_level {
+            Some("LFG_LOCKSTATUS_TOO_HIGH_LEVEL")
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Resource, Default)]
@@ -67,19 +82,30 @@ fn read_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     let entrances = crate::maps::store::load_entrance_store(db)?;
-    let mut query = db.prepare("SELECT d.id,d.name,d.map_id FROM follower_lfg_dungeons d WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,1,%') ORDER BY d.id")?;
+    let mut query = db.prepare("SELECT d.id,d.name,d.map_id,t.MinLevelSquish,t.MaxLevelSquish FROM follower_lfg_dungeons d LEFT JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3 AND EXISTS(SELECT 1 FROM content_creature c WHERE c.map=d.map_id AND (','||c.spawnDifficulties||',') LIKE '%,1,%') ORDER BY d.id")?;
     let rows = query.query_map([], |row| {
         Ok((
             row.get::<_, u32>(0)?,
             row.get::<_, String>(1)?,
             row.get::<_, u32>(2)?,
+            row.get::<_, u32>(3)?,
+            row.get::<_, u32>(4)?,
         ))
     })?;
     let mut dungeons = HashMap::new();
     for row in rows {
-        let (id, name, map_id) = row?;
+        let (id, name, map_id, min_level, max_level) = row?;
         if let Some(entrance) = entrances.dungeon_entrance_location(map_id) {
-            dungeons.insert(id, Dungeon { id, name, entrance });
+            dungeons.insert(
+                id,
+                Dungeon {
+                    id,
+                    name,
+                    entrance,
+                    min_level,
+                    max_level,
+                },
+            );
         }
     }
     Ok(FollowerCatalog {

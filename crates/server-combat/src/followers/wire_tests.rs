@@ -27,6 +27,8 @@ fn follower_catalog_query_returns_prepared_authored_entries_only() {
         crate::followers::catalog::Dungeon {
             id: 2436,
             name: "Ruby Life Pools".into(),
+            min_level: 10,
+            max_level: 70,
             entrance: crate::maps::WorldLocation {
                 map_id: 2521,
                 position: Vec3::new(1386.2, -169.719, 131.0),
