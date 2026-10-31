@@ -909,11 +909,11 @@ fn follower_survives_sentinel_expiry_at_one_health() {
     app.world_mut()
         .entity_mut(actor)
         .remove::<crate::followers::AplControlled>();
-    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
     for _ in 0..5 {
         app.update();
     }
     crate::spell_cast::creature_cast(app.world_mut(), actor, 389539, Some(actor), false).unwrap();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
     for _ in 0..220 {
         app.update();
     }
