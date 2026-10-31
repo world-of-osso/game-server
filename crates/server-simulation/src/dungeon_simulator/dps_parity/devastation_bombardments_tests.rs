@@ -52,7 +52,7 @@ fn devastation_bombardments_native_payload_does_not_inherit_giantkiller() {
 
 #[test]
 #[ignore = "native Bombardments on a lethal marked-target hit"]
-fn devastation_bombardments_hits_survivor_after_marked_target_dies() {
+fn devastation_bombardments_cancels_after_marked_target_dies() {
     use shared::components::Health;
     use shared::protocol::CombatLogKind;
 
@@ -74,10 +74,10 @@ fn devastation_bombardments_hits_survivor_after_marked_target_dies() {
         && event.target == Some(primary.to_bits()) && event.spell_id == Some(362969)
         && event.kind == CombatLogKind::Damage && event.amount > 0),
         "the marked target must die to real damage");
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+    assert!(!events.iter().any(|event| event.source == Some(actor.to_bits())
         && event.target == Some(survivor.to_bits()) && event.spell_id == Some(434481)
         && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "Bombardments must hit living enemies around the marked target");
+        "Bombardments must cancel when the marked target dies");
 }
 
 fn cast_mass_source(run: &mut Run, primary: Entity, earned: bool) {
