@@ -438,15 +438,18 @@ pub(super) fn build_paths(
             ));
         }
         if leg_index == 0 {
-            let start = logged_position_at(&points, 86.0)?;
-            let end = logged_position_at(&points, 162.380)?;
+            let start_seconds = super::campaign::DAWNBREAKER_DECK_START_MS as f32 / 1000.0;
+            let end_seconds = super::campaign::DAWNBREAKER_COMMANDER_DEATH_MS as f32 / 1000.0;
+            let grant_seconds = super::campaign::DAWNBREAKER_RADIANT_GRANT_MS as f32 / 1000.0;
+            let start = logged_position_at(&points, start_seconds)?;
+            let end = logged_position_at(&points, end_seconds)?;
             deck_start = Some(Vec3::new(start.x, graph.entrance_height, start.y));
-            points.retain(|point| point.seconds >= 166.807);
+            points.retain(|point| point.seconds >= grant_seconds);
             points.insert(
                 0,
                 LoggedPoint {
                     horizontal: end,
-                    seconds: 162.380,
+                    seconds: end_seconds,
                 },
             );
         }

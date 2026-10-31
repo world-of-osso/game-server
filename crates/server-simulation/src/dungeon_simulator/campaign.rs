@@ -8,6 +8,13 @@ use std::collections::BTreeMap;
 const MAX_TICKS: usize = 72_000;
 pub(super) const STALL_SECONDS: f64 = 60.0;
 const COHESION_CHECK_SECONDS: f64 = 1.0;
+pub(super) const DAWNBREAKER_DECK_START_MS: u32 = 86_000;
+pub(super) const DAWNBREAKER_COMMANDER_DEATH_MS: u32 = 162_380;
+pub(super) const DAWNBREAKER_RADIANT_GRANT_MS: u32 = 166_807;
+const DECK_CARRY_SECONDS: f64 =
+    (DAWNBREAKER_COMMANDER_DEATH_MS - DAWNBREAKER_DECK_START_MS) as f64 / 1000.0;
+const DECK_GRANT_SECONDS: f64 =
+    (DAWNBREAKER_RADIANT_GRANT_MS - DAWNBREAKER_DECK_START_MS) as f64 / 1000.0;
 
 #[path = "azure_positioning_tests.rs"]
 mod azure_positioning_tests;
@@ -1971,8 +1978,9 @@ fn alternate_roster_attackers_participate_in_the_first_native_fight() {
 fn deck_replay_provenance(replay_executed: bool) -> serde_json::Value {
     serde_json::json!({
         "report": "x3HzDRn6yVjqCbt8", "fight": 7, "replay_executed": replay_executed,
-        "transport_start_ms": 86000, "commander_death_ms": 162380,
-        "radiant_light_ms": 166807, "altitude": "inferred",
+        "transport_start_ms": DAWNBREAKER_DECK_START_MS,
+        "commander_death_ms": DAWNBREAKER_COMMANDER_DEATH_MS,
+        "radiant_light_ms": DAWNBREAKER_RADIANT_GRANT_MS, "altitude": "inferred",
         "boundary_positions": "interpolated from logged cast positions",
     })
 }
@@ -1986,12 +1994,14 @@ struct DeckReplay {
 impl DeckReplay {
     fn position(&self, now: f64) -> Vec3 {
         let elapsed = now - self.started_at;
-        self.start
-            .lerp(self.end, (elapsed / 76.380).clamp(0.0, 1.0) as f32)
+        self.start.lerp(
+            self.end,
+            (elapsed / DECK_CARRY_SECONDS).clamp(0.0, 1.0) as f32,
+        )
     }
 
     fn grant_due(&self, now: f64) -> bool {
-        now - self.started_at >= 80.807
+        now - self.started_at >= DECK_GRANT_SECONDS
     }
 }
 
