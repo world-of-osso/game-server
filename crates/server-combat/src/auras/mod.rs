@@ -3378,6 +3378,8 @@ mod earthen_rage_tests;
 #[cfg(test)]
 mod ebon_might_tests;
 #[cfg(test)]
+mod encounter_boss_immunity_tests;
+#[cfg(test)]
 mod enduring_torment_tests;
 #[cfg(test)]
 mod fear_tests;
