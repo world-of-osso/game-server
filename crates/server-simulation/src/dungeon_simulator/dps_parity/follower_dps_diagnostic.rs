@@ -964,6 +964,9 @@ fn trace_sotr_removal(
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
+    let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")
+        .ok()
+        .map(|entry| entry.parse().expect("numeric entry"));
     let level: u8 = std::env::var("FOLLOWER_DPS_LEVEL")
         .unwrap()
         .parse()
@@ -977,11 +980,11 @@ fn follower_dps_production_dummy() {
         let copy = create_open_follower_copy(&mut app, map).unwrap();
         prepare_class_follower(app, copy, spec.parse().expect("numeric spec"), level)
     } else {
-        let entry = std::env::var("FOLLOWER_DPS_ENTRY")
-            .unwrap()
-            .parse()
-            .unwrap();
-        prepare_follower(entry, level, map)
+        prepare_follower(
+            entry.expect("FOLLOWER_DPS_ENTRY or FOLLOWER_DPS_SPEC"),
+            level,
+            map,
+        )
     };
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         app.init_resource::<crate::auras::DeathAuraAudit>();
@@ -1330,7 +1333,7 @@ fn follower_dps_production_dummy() {
     }
     println!(
         "FOLLOWER_DPS {}",
-        json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
+        json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
         "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / 2400.0)).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
