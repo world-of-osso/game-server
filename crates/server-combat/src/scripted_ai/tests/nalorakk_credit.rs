@@ -72,6 +72,95 @@ fn nalorakk_water_door_opens_after_hoardmonger_in_its_copy() {
 }
 
 #[test]
+fn nalorakk_cave_door_opens_after_sentinel_in_its_copy() {
+    use crate::game_objects::{GO_STATE_ACTIVE, GO_STATE_READY, GameObjectState};
+    use shared::protocol::GameObjectCollision;
+
+    let (mut h, _, map) = bound_boss_at_difficulty(244100, 2825, 1, 205, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.info.entry == 570512 && spawn.map_id == 2825)
+        .unwrap();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let door = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    let other = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(source), other_map))
+        .id();
+    crate::scripted_ai::door_data::update_doors(h.app.world_mut(), map);
+    assert_eq!(
+        h.app.world().get::<GameObjectState>(door),
+        Some(&GameObjectState(GO_STATE_READY))
+    );
+    assert_eq!(
+        h.app.world().get::<GameObjectCollision>(door),
+        Some(&GameObjectCollision(true))
+    );
+    let world = h.app.world_mut();
+    let boss = instance_script::boss_id_for_encounter(world, map, 3208).unwrap();
+    if instance_script::get_boss_state(world, map, boss) == Some(EncounterState::InProgress) {
+        assert!(instance_script::set_boss_state(
+            world,
+            map,
+            boss,
+            EncounterState::NotStarted
+        ));
+    }
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        boss,
+        EncounterState::InProgress
+    ));
+    assert_eq!(
+        world.get::<GameObjectCollision>(door),
+        Some(&GameObjectCollision(true))
+    );
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        boss,
+        EncounterState::Done
+    ));
+    assert_eq!(
+        world.get::<GameObjectState>(door),
+        Some(&GameObjectState(GO_STATE_ACTIVE))
+    );
+    assert_eq!(
+        world.get::<GameObjectCollision>(door),
+        Some(&GameObjectCollision(false))
+    );
+    assert_eq!(
+        world.get::<GameObjectCollision>(other),
+        Some(&GameObjectCollision(true))
+    );
+    let recreated = world
+        .spawn((crate::game_objects::game_object_bundle(source), map))
+        .id();
+    crate::scripted_ai::door_data::update_doors(world, map);
+    assert_eq!(
+        world.get::<GameObjectState>(recreated),
+        Some(&GameObjectState(GO_STATE_ACTIVE))
+    );
+    assert_eq!(
+        world.get::<GameObjectCollision>(recreated),
+        Some(&GameObjectCollision(false))
+    );
+}
+
+#[test]
 fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
     use shared::components::{CombatStatus, UnitFlags};
     let (mut h, boss, _) = bound_boss_at_difficulty(241812, 2825, 0, 205, None);

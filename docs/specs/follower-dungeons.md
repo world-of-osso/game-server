@@ -482,6 +482,10 @@ Dungeon release prefers a linked graveyard on the instance map, then the importe
 
 `NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED` opens Water Door 531150 (GO state 0, collision disabled) when encounter 3207 is Done in the same map copy. Retail `WoWCombatLog-102026_223255.txt` lines 65154, 65165 and 65364 show encounter success and the same player on opposite sides of the door 7.629 seconds later. The logs do not record the door state or its exact trigger; the encounter gate is inferred.
 
+### Nalorakk cave door
+
+`NALORAKK_CAVE_DOOR_OPENS_ON_SENTINEL_DONE_LOG_CORRELATED` opens Cave Door 570512 (GO state 0, collision disabled) when encounter 3208 is Done in the same map copy. Retail `WoWCombatLog-102026_223255.txt` lines 136024, 136191 and 136205 show Sentinel success and the same player on opposite sides of the door 4.034 seconds apart. The log does not record the door state or exact trigger; the encounter gate is inferred. TC 15e0ed76 has no Den of Nalorakk instance script; its generic `InstanceScript::UpdateDoorState` supports OpenWhenDone.
+
 ### Hoardmonger offerings
 
 `HOARDMONGER_UNLOCK_LOG_CORRELATED` is an inferred bridge: successful TDB offering spellclicks grant the native Carrying Supplies aura 1239428 and retain the offering type; delivering within an inferred 5 yards of a distinct Avatar of Starvation removes that aura and its Feast of Misery aura 1249737. Six distinct fed avatars clear Hoardmonger's PC and NPC immunity in that map copy. Logs correlate aura removals with the pull; the pickup bridge, delivery radius, initial avatar aura, and immunity transition are not directly sourced. Failed or interrupted casts do not grant supplies.
