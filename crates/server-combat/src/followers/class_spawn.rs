@@ -381,7 +381,7 @@ pub fn install_class(
             },
             stat_fields,
             stats,
-            pools,
+            shared::components::PlayerStandState::default(),
             Mana {
                 current: stats.base_mana,
                 max: stats.base_mana,
@@ -404,6 +404,7 @@ pub fn install_class(
             ),
             traits,
         ));
+    crate::spell_cast::powers::install_class_powers(world, entity, pools);
     crate::auras::sync_passives(
         world,
         entity,
