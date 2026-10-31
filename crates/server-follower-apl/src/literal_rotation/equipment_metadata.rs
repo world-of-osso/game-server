@@ -98,6 +98,12 @@ impl Metadata {
     }
 
     pub fn proc_default_value(&self) -> Result<f64, String> {
+        // SimC76f8118 unique_gear.cpp3804–3815/3778–3788: only the item's buffs
+        // with an any_dps stat contribute, max with0. Without one (an absorb,
+        // a damage proc) no buff's default can count, whatever its driver sets.
+        if self.stats.is_empty() {
+            return Ok(0.0);
+        }
         for driver in &self.drivers {
             if !SIMC_UNSET_PROC_DEFAULT_DRIVERS.contains(driver) {
                 return Err(format!(
