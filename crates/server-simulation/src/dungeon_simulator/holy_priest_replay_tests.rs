@@ -95,6 +95,53 @@ fn divine_hymn_pulses_emit_scaled_cosmic_ripple() {
 }
 
 #[test]
+#[ignore = "native Divine Hymn pulse after the selected ally dies"]
+fn divine_hymn_heals_survivor_after_selected_ally_dies() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut h = harness(Vec::new(), &[64843, 64844], 5).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let dead = spawn_player(&mut h.app, 5, 2.0);
+    let survivor = spawn_player(&mut h.app, 5, 3.0);
+    h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    *h.app.world_mut().get_mut::<Health>(survivor).unwrap() = Health {
+        current: 1.0,
+        max: 1_000_000.0,
+    };
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(64843)
+        .unwrap()
+        .clone();
+    let ctx = crate::spell_cast::effects::EffectCtx {
+        caster: h.caster,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let tick = crate::spell_cast::script_registry::channel_periodic(h.app.world(), 64843, 0)
+        .expect("native Divine Hymn periodic hook");
+    tick(h.app.world_mut(), &ctx, dead);
+    h.advance(3);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(h.caster.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(64844)
+                && event.kind == CombatLogKind::Heal
+                && event.amount > 0),
+        "the native area pulse must heal a living ally"
+    );
+}
+
+#[test]
 #[ignore = "requires native Holy Priest spell data"]
 fn serenity_upgrades_the_next_real_flash_heal_to_benediction() {
     use crate::spell_cast::{
