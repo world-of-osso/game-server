@@ -885,6 +885,7 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 ### Literal precombat execution
 
 - The class-follower fixed-time dummy starts its encounter health timeline and damage accounting after the production APL finishes precombat. Preserve effects that arrive on the combat transition frame (SimC76f8118 `player.cpp:6138–6183`).
+- A recharge reduction for a charged spell does not reduce its separate spell internal cooldown (SimC76f8118 `action.cpp:711–719,2380–2382,2643–2647`).
 
 - [ ] Explicit literal controller handoff occurs before any native setup/warmup frames. Nonliteral fixtures retain native kit behavior; literal fixtures cannot acquire kit-cast precombat auras absent from their APL. Never delete those auras afterward to conceal a late handoff. Accepted Encounter::Fixture capture retires the actor's native FollowOwner while preserving Follower/NPC identity and native literal AA chase; rejected Dungeon capture leaves owner-follow behavior unchanged.
 - [ ] Execute precombat once in source order: eligible nonharmful actions and at most the first ready harmful action, following pinned player.cpp6138–6183. Continue to execute eligible nonharmful rows after the first harmful action; skip later harmful actions. It is not a repeating priority scan. Preserve WW snapshot/item behavior.
