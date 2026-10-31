@@ -305,6 +305,12 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
         GearSource::Journal,
     )
     .unwrap();
+    // Hold the tank's pull-back state fixed while testing the healer's controller.
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<server_combat::followers::Follower>();
     server_combat::followers::set_test_pull_back(pull.harness.app.world_mut(), owner, tank);
     assert!(server_combat::followers::holding_pull_damage(
         pull.harness.app.world(),
@@ -328,7 +334,15 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
             .is_none(),
         "follower brain started a kit cast"
     );
-    pull.fight();
+    for _ in 0..FRAMES {
+        assert!(server_combat::followers::holding_pull_damage(
+            pull.harness.app.world(),
+            pull.follower
+        ));
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
     let heals = server_follower_apl::holy_priest_rotation::SPELLS
         .iter()
         .filter(|(name, _, _)| !matches!(*name, "holy_fire" | "smite"));
