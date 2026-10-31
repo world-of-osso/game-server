@@ -2014,11 +2014,22 @@ fn advance_deck_frame(
     now: f64,
 ) -> Result<bool, String> {
     let point = deck.position(now);
+    let pets: Vec<_> = members
+        .iter()
+        .flat_map(|member| crate::hunter_pet::active_owned_pets(world, *member))
+        .collect();
     for &member in members {
         if !crate::spell_cast::targets::is_alive(world, member) {
             return Err("deck replay party member died; recorded phase cannot continue".into());
         }
         world.entity_mut(member).insert(Position {
+            x: point.x,
+            y: point.y,
+            z: point.z,
+        });
+    }
+    for pet in pets {
+        world.entity_mut(pet).insert(Position {
             x: point.x,
             y: point.y,
             z: point.z,
@@ -2069,6 +2080,26 @@ fn deck_replay_preserves_logged_carry_and_grant_times() {
     let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[449042], 1)
         .expect("real Radiant Light catalog");
     let member = h.caster;
+    let pet = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::hunter_pet::HunterPet {
+                owner: member,
+                slot: 0,
+            },
+            crate::maps::InMap::continent(0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Position {
+                x: deck.start.x,
+                y: deck.start.y,
+                z: deck.start.z,
+            },
+        ))
+        .id();
     assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 81.38).unwrap());
     assert_eq!(
         *h.app.world().get::<Position>(member).unwrap(),
@@ -2077,6 +2108,10 @@ fn deck_replay_preserves_logged_carry_and_grant_times() {
             y: deck.end.y,
             z: deck.end.z
         }
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(pet),
+        h.app.world().get::<Position>(member)
     );
     assert!(!crate::auras::has_aura(h.app.world(), member, 449042));
     assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 85.806).unwrap());
