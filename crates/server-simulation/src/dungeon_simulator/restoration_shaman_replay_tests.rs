@@ -118,6 +118,54 @@ fn restoration_shaman_holds_chain_lightning_against_one_enemy() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_shaman_chains_lightning_through_engaged_enemies_only() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use bevy::prelude::Entity;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 3);
+    // Two dummies without a formation are engaged; the third stands beside
+    // them, unengaged.
+    let idle = run.sources.pop().unwrap();
+    super::healer_simc_replay::engage(&mut run);
+    let [primary, engaged] = [run.sources[0], run.sources[1]];
+    let healer = run.healer;
+    let hit = |run: &super::healer_simc_replay::ClassParty, target: Entity| {
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| {
+                e.source == Some(healer.to_bits())
+                    && e.target == Some(target.to_bits())
+                    && e.spell_id == Some(188443)
+                    && e.kind == CombatLogKind::Damage
+            })
+    };
+    for _ in 0..600 {
+        if hit(&run, primary) && hit(&run, engaged) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        hit(&run, primary) && hit(&run, engaged),
+        "Chain Lightning must reach both engaged enemies"
+    );
+    assert!(
+        !hit(&run, idle),
+        "Chain Lightning must not jump to the unengaged neighbour"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), idle)
+            .next()
+            .is_none(),
+        "the unengaged neighbour must stay out of combat"
+    );
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
