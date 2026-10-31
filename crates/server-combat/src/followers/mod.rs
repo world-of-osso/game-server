@@ -130,6 +130,7 @@ mod unintended_reach;
 #[cfg(test)]
 mod unintended_reach_tests;
 mod utility;
+pub(crate) use utility::is_boss;
 #[cfg(test)]
 mod utility_buff_tests;
 mod utility_interrupt;

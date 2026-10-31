@@ -1,7 +1,7 @@
 //! Explicit native controller target context; no count-to-identity inference.
 use super::*;
 use crate::spell_cast::test_harness::{Harness, harness, spawn_npc, spawn_player};
-use shared::components::Health;
+use shared::components::{Health, Npc};
 
 const SMASH: u32 = 167105;
 const REND: u32 = 388539;
@@ -151,6 +151,11 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
                 .any(|aura| aura.spell_id == REND && aura.caster == expected_caster)
         );
     }
+    // SimC76f8118 player.cpp10879–10884: the actor's own selection is current.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(third)));
     let facts = NativeFacts::new(
         h.app.world(),
         h.caster,
@@ -160,6 +165,7 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
     )
     .with_targets(Some(third), &targets);
     assert_eq!(facts.value("active_dot.rend_dot").unwrap(), 2.0);
+    assert_eq!(facts.value("active_dots.rend_dot").unwrap(), 2.0);
     assert_eq!(
         facts.value("dot.rend_dot.ticking").unwrap(),
         0.0,
@@ -218,4 +224,33 @@ fn native_target_context_no_actual_cast_is_not_a_casting_debuff() {
     )
     .with_targets(Some(targets[0]), &targets);
     assert_eq!(facts.value("target.debuff.casting.react").unwrap(), 0.0);
+}
+
+#[test]
+fn native_dungeon_target_is_boss_reads_the_creature_boss_flag() {
+    let (mut h, targets, b) = enemies();
+    // Kresh (3653), a Wailing Caverns boss with the native dungeon-boss flag.
+    let data = crate::test_data::world_data().clone();
+    assert_ne!(data.templates[&3653].flags_extra & 0x1000_0000, 0);
+    h.app.world_mut().insert_resource(data);
+    let boss = spawn_npc(&mut h.app, 4.0);
+    h.app.world_mut().entity_mut(boss).insert(Npc {
+        template_id: 3653,
+        name: "Kresh".into(),
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(None));
+    let dungeon = Encounter::Dungeon {
+        started_at: crate::spell_cast::now(h.app.world()),
+    };
+    let read = |current: Entity| {
+        NativeFacts::new(h.app.world(), h.caster, &b, dungeon, 2)
+            .with_targets(Some(current), &targets)
+            .value("target.is_boss")
+            .unwrap()
+    };
+    assert_eq!(read(boss), 1.0);
+    assert_eq!(read(h.npc), 0.0, "Kobold Vermin is trash");
 }

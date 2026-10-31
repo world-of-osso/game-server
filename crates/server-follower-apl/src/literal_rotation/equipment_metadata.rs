@@ -29,9 +29,12 @@ const UTILITY_RATINGS: u32 = (1 << 13) | (1 << 16) | (1 << 20);
 // the stat magnitude. Gebbo1292291 creates its six stat buffs without setting
 // defaults (unique_gear_midnight.cpp3666–3734). Guillotine1291728 creates
 // only a damage proc, not a stat buff (unique_gear_midnight.cpp6325–6380).
+// Burgeoning Seed (journal gear): driver382108 is DISABLED_EFFECT and its
+// consume384636 builds brimming_life_pod/supernatural without defaults
+// (unique_gear_dragonflight.cpp970–1008/11501/11695).
 const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
     1250533, 1256896, 1259293, 1260459, 1292291, 1295058, 1293316, 1295179, 1297760, 1297761,
-    1297911, 1297908, 1291728,
+    1297911, 1297908, 1291728, 382108, 384636,
 ];
 
 #[derive(Clone, Default)]
@@ -95,6 +98,12 @@ impl Metadata {
     }
 
     pub fn proc_default_value(&self) -> Result<f64, String> {
+        // SimC76f8118 unique_gear.cpp3804–3815/3778–3788: only the item's buffs
+        // with an any_dps stat contribute, max with0. Without one (an absorb,
+        // a damage proc) no buff's default can count, whatever its driver sets.
+        if self.stats.is_empty() {
+            return Ok(0.0);
+        }
         for driver in &self.drivers {
             if !SIMC_UNSET_PROC_DEFAULT_DRIVERS.contains(driver) {
                 return Err(format!(

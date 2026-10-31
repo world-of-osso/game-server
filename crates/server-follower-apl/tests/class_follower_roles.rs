@@ -5,7 +5,7 @@ use server_combat::followers::class_profiles::read_profiles;
 use server_combat::followers::class_spawn::{GearSource, spawn_class};
 use server_combat::maps::instances::{InstanceEntrant, Now};
 use server_combat::spell_cast::test_harness::{
-    Harness, ObservedCombatEvents, harness_with_plugins, load_native_creature_world, world_db,
+    Harness, ObservedCombatEvents, harness_with_plugins, world_db,
 };
 use server_follower_apl::{FollowerApl, FollowerAplFailed};
 use shared::components::{Health, Level};
@@ -20,23 +20,24 @@ struct Pull {
 }
 
 fn dungeon_owner(h: &mut Harness) {
+    // Production world data, as the server loads it at startup, plus any
+    // creature templates this harness authored for its own units.
     let source = server_combat::test_data::world_data();
-    if h.app
+    let mut data = source.clone();
+    if let Some(harness) = h
+        .app
         .world()
         .get_resource::<server_combat::world_data::WorldData>()
-        .is_none()
     {
-        h.app.insert_resource(load_native_creature_world(&[]));
+        for (entry, template) in harness.templates.iter() {
+            data.templates
+                .entry(*entry)
+                .or_insert_with(|| template.clone());
+        }
     }
-    let mut data = h
-        .app
-        .world_mut()
-        .resource_mut::<server_combat::world_data::WorldData>();
-    data.class_level_base_hp = source.class_level_base_hp.clone();
-    data.class_level_base_mana = source.class_level_base_mana.clone();
-    // Followers summon pets (the BM/Survival duck, warlock demons) from world templates.
-    data.templates = source.templates.clone();
-    drop(data);
+    h.app.insert_resource(data);
+    // Production world startup inserts the armor constants Stagger and mitigation read.
+    h.app.insert_resource(source.armor_constants.clone());
     let path = server_combat::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let db2 = path.parent().unwrap().join("db2/active");

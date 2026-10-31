@@ -274,12 +274,22 @@ impl<'a> NativeFacts<'a> {
 
     fn target_fact(&self, property: &str, action: Option<&Action>) -> Result<f64, String> {
         let target = self.selected_target(action)?;
-        if property == "time_to_die" && matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return live_facts::target_time_to_die(
-                self.world,
-                target,
-                crate::spell_cast::now(self.world),
-            );
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            match property {
+                "time_to_die" => {
+                    return live_facts::target_time_to_die(
+                        self.world,
+                        target,
+                        crate::spell_cast::now(self.world),
+                    );
+                }
+                // SimC76f8118 player.hpp964: the encounter boss, not its adds;
+                // natively the creature template's dungeon/world boss flag.
+                "is_boss" => {
+                    return Ok(bool_value(crate::followers::is_boss(self.world, target)));
+                }
+                _ => {}
+            }
         }
         match property {
             // SimC76f8118 action.cpp4030–4032 exposes target.distance.
@@ -661,15 +671,9 @@ impl<'a> NativeFacts<'a> {
             .classes
             .iter()
             .flat_map(|class| &class.traits.sub_trees)
-            // SimC76f8118 trait_data.cpp225–236 / util.cpp3250–3276:
-            // display-name hyphens are removed (native Fel-Scarred → felscarred).
-            .find(|tree| {
-                tree.name
-                    .to_ascii_lowercase()
-                    .replace(' ', "_")
-                    .replace('-', "")
-                    == alias
-            })
+            // SimC76f8118 trait_data.cpp225–236: names compare as util::tokenize
+            // output (Fel-Scarred → felscarred, Elune's Chosen → elunes_chosen).
+            .find(|tree| simc_tokenize(&tree.name) == alias)
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
         let traits = self
             .world
@@ -733,10 +737,10 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn potion_cooldown(&self, property: &str) -> Result<f64, String> {
-        let potion = self
-            .world
-            .get::<ConfiguredPotion>(self.actor)
-            .ok_or("NATIVE_POTION_UNAVAILABLE: profile has no native use item")?;
+        // An actor without a potion (a class follower) never creates its cooldown.
+        let Some(potion) = self.world.get::<ConfiguredPotion>(self.actor) else {
+            return crate::spell_cast::cooldown_query::placeholder_cooldown_value(property);
+        };
         // SimC76f8118 consumable.cpp433–443: use the actor's potion
         // cooldown; native ItemEffect supplies its category and recovery.
         let mut spell = self.spell(potion.on_use.spell_id)?.clone();
@@ -1114,7 +1118,11 @@ impl Facts for NativeFacts<'_> {
         if let Some(property) = name.strip_prefix("raid_event.movement.") {
             return self.movement_event(property);
         }
-        if let Some(alias) = name.strip_prefix("active_dot.") {
+        // SimC76f8118 player.cpp12122: active_dots.X is an alias of active_dot.X.
+        let active_dot = name
+            .strip_prefix("active_dot.")
+            .or_else(|| name.strip_prefix("active_dots."));
+        if let Some(alias) = active_dot {
             return self.active_dot(alias);
         }
         // SimC76f8118 action.cpp3817–3896: this named action's available
@@ -1145,6 +1153,9 @@ impl Facts for NativeFacts<'_> {
             // SimC76f8118 action.cpp3886–3896: without distance targeting,
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
+            // SimC76f8118 sim.cpp3598–3599: the fight's configured enemy count; a
+            // dungeon pull's is the engaged enemy set this decision receives.
+            "enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "main_hand.2h" => self.main_hand_is_two_handed(),
             "movement.distance" => self.movement_distance(),
@@ -1258,6 +1269,22 @@ fn fixture_add_value(
         "count" => adds.map_or(0.0, |adds| adds.count as f64),
         _ => return Err(format!("unknown native add-event property {property}")),
     })
+}
+
+/// SimC76f8118 util.cpp3234–3279: strip leading `_`/`+`, lowercase letters,
+/// spaces become `_`, keep `_ + . %` and digits, drop everything else.
+fn simc_tokenize(name: &str) -> String {
+    name.trim_start_matches(['_', '+'])
+        .chars()
+        .filter_map(|c| match c {
+            _ if !c.is_ascii() => None,
+            c if c.is_ascii_alphabetic() => Some(c.to_ascii_lowercase()),
+            ' ' => Some('_'),
+            '_' | '+' | '.' | '%' => Some(c),
+            c if c.is_ascii_digit() => Some(c),
+            _ => None,
+        })
+        .collect()
 }
 
 fn bound_spell(bindings: &BTreeMap<String, u32>, alias: &str, kind: &str) -> Result<u32, String> {

@@ -26,7 +26,8 @@ impl<'a> WwFacts<'a> {
         xuen_active: bool,
     ) -> Self {
         Self {
-            native: NativeFacts::new(world, actor, bindings, encounter, targets.len()),
+            native: NativeFacts::new(world, actor, bindings, encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
             world,
             actor,
             bindings,

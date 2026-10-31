@@ -359,3 +359,28 @@ fn cycling_variable_max_uses_each_target_and_resets_each_pass() {
     assert!(chosen.is_none());
     assert_eq!(state.value("dung_pull_ttd"), Some(6.0));
 }
+
+#[test]
+fn simc_apl_balance_on_use_trinket_variable_adds_both_trinket_terms() {
+    // Pinned 102 profile precombat rows; SimC76f8118 variable.cpp269–271.
+    let program = Program::parse(&[
+        (
+            "precombat",
+            "variable,name=on_use_trinket,op=add,value=trinket.1.has_use_buff",
+        ),
+        (
+            "precombat",
+            "variable,name=on_use_trinket,op=add,value=(trinket.2.has_use_buff)*2",
+        ),
+    ])
+    .unwrap();
+    let rows = facts(&[
+        ("trinket.1.has_use_buff", 1.0),
+        ("trinket.2.has_use_buff", 1.0),
+    ]);
+    let mut state = program.state();
+    program
+        .select("precombat", &rows, &mut state, |_| Ok(false))
+        .unwrap();
+    assert_eq!(state.value("on_use_trinket"), Some(3.0));
+}
