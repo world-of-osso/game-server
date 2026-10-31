@@ -335,9 +335,10 @@ fn follower_combustion_restores_selected_fire_blast_charge() {
     fn charges_after_combustion(selected: bool) -> f64 {
         let _seed = crate::random::seed_scope(70448);
         let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+        // Isolate real casts from both the follower brain and its production APL.
         app.world_mut()
             .entity_mut(actor)
-            .remove::<crate::followers::AplControlled>();
+            .remove::<crate::followers::Follower>();
         let known: Vec<_> = app
             .world()
             .get::<crate::class_progression::KnownSpells>(actor)
