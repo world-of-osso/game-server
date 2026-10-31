@@ -603,7 +603,7 @@ fn need_to_stop(world: &World, owner: Entity, pet: Entity, target: Entity) -> bo
 
 /// `SelectNextTarget` for a pet that is not passive: what attacks the pet, then what
 /// attacks the owner, then (Assist) the owner's victim, the first `CanAttack` allows.
-fn select_next_target(world: &mut World, owner: Entity, pet: Entity) -> Option<Entity> {
+pub(crate) fn select_next_target(world: &mut World, owner: Entity, pet: Entity) -> Option<Entity> {
     let react = world.get::<PetCharm>(pet)?.react;
     if react == REACT_PASSIVE {
         return None;

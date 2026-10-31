@@ -313,6 +313,23 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         Some(caller),
         "the pet can attack the caller"
     );
+    h.app
+        .world_mut()
+        .entity_mut(caller)
+        .remove::<crate::combat::AutoAttack>();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::combat::AutoAttack::new(helper));
+    let selected = crate::pet_control::select_next_target(h.app.world_mut(), tank, pet);
+    assert_eq!(
+        selected, None,
+        "pet target selection must skip the pending helper"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<crate::combat::AutoAttack>();
     crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
     assert_eq!(
         h.app
