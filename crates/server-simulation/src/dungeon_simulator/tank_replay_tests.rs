@@ -2018,7 +2018,13 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                         && event.target == Some(primary.to_bits())
                         && event.spell_id == Some(1241413)
                         && event.kind == CombatLogKind::Damage
-                        && event.amount > 0)
+                        && event.amount > 0),
+                "primary events: {:?}",
+                events
+                    .iter()
+                    .filter(|event| event.target == Some(primary.to_bits()))
+                    .map(|event| (event.source, event.spell_id, event.amount, event.kind))
+                    .collect::<Vec<_>>()
             );
             if events.iter().any(|event| {
                 event.source == Some(actor.to_bits())
