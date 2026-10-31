@@ -23,6 +23,13 @@ const DOORS: &[Door] = &[
         entry: 440239,
         encounter: 2854,
     },
+    // STONEVAULT_FINAL_DOOR_LOG_CORRELATED: WCL 8maLdvGchJ1MK97g fight 1
+    // crosses GO 440238 after Master Machinists encounter 2888 ends.
+    Door {
+        map_id: 2652,
+        entry: 440238,
+        encounter: 2888,
+    },
     // NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED:
     // Retail WoWCombatLog-102026_223255.txt lines 65154, 65165, 65364
     // show encounter success and a player crossing the door plane 7.629s later.
