@@ -744,3 +744,48 @@ fn diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_
         "missing real pre-stop cache: {text}"
     );
 }
+
+#[test]
+#[ignore = "requires Den of Nalorakk ground and navigation bakes"]
+fn nalorakk_follower_leaves_observed_floor_toward_owner() {
+    use crate::ground::GroundMap;
+    use crate::maps::InMap;
+    use shared::components::Position;
+    use std::collections::HashMap;
+
+    let data = crate::ground::ground_data_dir();
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let start = Position {
+        x: 4528.2,
+        y: 63.956,
+        z: 5263.1,
+    };
+    let owner = Position {
+        x: 4498.2,
+        y: 84.1,
+        z: 5363.2,
+    };
+    let map = InMap::continent(2825);
+    h.app.world_mut().entity_mut(h.caster).insert((owner, map));
+    h.app.world_mut().entity_mut(unit).insert((start, map));
+    h.app
+        .insert_resource(GroundMap::new(&data, HashMap::from([(2825, 6_184_659)])));
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    for _ in 0..400 {
+        h.advance(1);
+    }
+    let end = *h.app.world().get::<Position>(unit).unwrap();
+    let distance = Vec3::new(end.x - owner.x, end.y - owner.y, end.z - owner.z).length();
+    assert!(
+        distance < 8.0,
+        "follower stalled at {end:?}; owner {owner:?}; distance {distance}"
+    );
+}
