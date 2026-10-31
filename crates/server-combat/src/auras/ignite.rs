@@ -14,6 +14,9 @@ const PYROBLAST: u32 = 11366;
 const FLAMESTRIKE: u32 = 2120;
 const NATIVE_FLAMESTRIKE: u32 = 1254851;
 const IGNITION: u32 = 1254756;
+const COMBUSTION: u32 = 190319;
+const MASTER_OF_FLAME: u32 = 384174;
+const SLOW_BURN: u32 = 383967;
 
 pub(super) fn check_damage(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
     // SimC76f8118 sc_mage.cpp2502: Intensifying Flame is a plain spell_t,
@@ -212,8 +215,10 @@ pub(super) fn apply_damage(
         controlled_destruction_multiplier(world, unit, target)
     });
     let ignition = flamestrike_ignite_multiplier(world, unit, event.spell_id);
-    let amount =
-        calculate_tick_amount(effect.amount, event, ticks, inflame) * target_multiplier * ignition;
+    let amount = calculate_tick_amount(effect.amount, event, ticks, inflame)
+        * target_multiplier
+        * ignition
+        * combustion_ignite_multiplier(world, unit);
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
@@ -222,6 +227,23 @@ pub(super) fn apply_damage(
         1,
         amount,
     );
+}
+
+fn combustion_ignite_multiplier(world: &World, caster: Entity) -> f32 {
+    // SimC76f8118 sc_mage.cpp1935–1946: each new Ignite contribution
+    // uses Slow Burn during Combustion and Master of Flame otherwise.
+    let (talent, effect) = if super::has_aura(world, caster, COMBUSTION) {
+        (SLOW_BURN, 1)
+    } else {
+        (MASTER_OF_FLAME, 0)
+    };
+    if !world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(talent))
+    {
+        return 1.0;
+    }
+    1.0 + crate::spell_cast::scripts::script_effect_value(world, caster, talent, effect) / 100.0
 }
 
 fn flamestrike_ignite_multiplier(world: &World, caster: Entity, spell: Option<u32>) -> f32 {
