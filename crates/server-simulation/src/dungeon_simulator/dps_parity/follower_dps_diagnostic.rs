@@ -133,6 +133,97 @@ fn prepare_follower(
     (app, actor, target, profile)
 }
 
+/// SimC runs precombat before the fixed-time target-health timeline starts.
+fn finish_follower_precombat(app: &mut App, actor: Entity) {
+    for _ in 0..800 {
+        let precombat_cast = app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .map(|cast| cast.spell_id);
+        app.world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        app.update();
+        assert!(
+            app.world()
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_none(),
+            "follower APL failed during precombat"
+        );
+        if app
+            .world()
+            .get::<server_follower_apl::FollowerApl>(actor)
+            .is_some_and(|apl| apl.in_combat())
+        {
+            let mut events = app
+                .world_mut()
+                .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+            if let Some(spell) = precombat_cast
+                && let Some(index) = events.0.iter().position(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::CastSuccess
+                        && event.spell_id == Some(spell)
+                })
+            {
+                events.0.remove(index);
+            }
+            return;
+        }
+    }
+    panic!("follower precombat did not reach combat");
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_dummy_starts_measurement_after_precombat() {
+    let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::combat::AutoAttack::new(target));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    let started = crate::spell_cast::now(app.world());
+    finish_follower_precombat(&mut app, actor);
+    assert!(
+        crate::spell_cast::now(app.world()) - started > 3.0,
+        "the Fire precast must complete before the measurement starts"
+    );
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerApl>(actor)
+            .unwrap()
+            .in_combat()
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(1459 | 55342 | 11366))),
+        "precombat casts must not be counted inside the fight"
+    );
+    let health = app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap();
+    assert!(
+        health.current > health.max * 0.99,
+        "the fixed-time health timeline must not advance during precombat"
+    );
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_uses_class_apl_to_cast() {
@@ -531,6 +622,7 @@ fn follower_dps_production_dummy() {
         .entity_mut(owner)
         .insert(crate::combat::AutoAttack::new(target));
     crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    finish_follower_precombat(&mut app, actor);
     let stats = app
         .world()
         .get::<crate::stats::CharacterStats>(actor)
@@ -566,10 +658,6 @@ fn follower_dps_production_dummy() {
             .unwrap()
             .items
     );
-    app.world_mut()
-        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .clear();
     let pet_factor = std::env::var_os("FOLLOWER_FACTOR_PET").is_some();
     if let Ok(spell) = std::env::var("FOLLOWER_FACTOR_SPELL")
         && !pet_factor
