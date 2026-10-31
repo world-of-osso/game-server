@@ -238,6 +238,82 @@ fn bundle_places_the_vault_in_server_space() {
     assert_eq!(info, vault.info);
 }
 
+#[test]
+fn ruby_fire_wall_state_replicates_door_animations() {
+    let spawns = spawns().expect("real world game objects");
+    let mut source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.map_id == 2521 && spawn.info.entry == 377194)
+        .expect("Ruby Life Pools fire wall")
+        .clone();
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 1,
+    };
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    source.initial_state = GO_STATE_READY;
+    let closed = spawn_game_object(&mut commands, &source, map);
+    source.initial_state = GO_STATE_ACTIVE;
+    let open = spawn_game_object(&mut commands, &source, map);
+    queue.apply(&mut world);
+
+    assert_eq!(world.get::<GameObjectAnimation>(closed), None);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(open),
+        Some(&GameObjectAnimation {
+            animation_id: 149,
+            looping: true,
+        })
+    );
+    set_go_state(&mut world, closed, GO_STATE_ACTIVE);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 148,
+            looping: false,
+        })
+    );
+    assert!(
+        !world
+            .get::<shared::protocol::GameObjectCollision>(closed)
+            .unwrap()
+            .0
+    );
+    set_go_state(&mut world, closed, GO_STATE_READY);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 146,
+            looping: false,
+        })
+    );
+    assert!(
+        world
+            .get::<shared::protocol::GameObjectCollision>(closed)
+            .unwrap()
+            .0
+    );
+    set_initial_go_state(&mut world, closed, GO_STATE_ACTIVE);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 149,
+            looping: true,
+        })
+    );
+    set_initial_go_state(&mut world, closed, GO_STATE_READY);
+    assert_eq!(
+        world.get::<GameObjectAnimation>(closed),
+        Some(&GameObjectAnimation {
+            animation_id: 0,
+            looping: true,
+        })
+    );
+}
+
 const GOLDSHIRE_MAILBOX: u32 = 20_209_585;
 
 #[test]

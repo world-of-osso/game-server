@@ -448,7 +448,7 @@ pub(crate) fn queue_map_content(
         );
         // TC OnGameObjectCreate → AddDoor: a door spawns in its encounters' state.
         commands.queue(move |world: &mut World| {
-            crate::scripted_ai::encounter_doors::update_doors(world, map);
+            crate::scripted_ai::encounter_doors::initialize_doors(world, map);
         });
     }
 }

@@ -156,6 +156,14 @@ const DOORS: &[Door] = &[
 
 /// `AddDoor` on copy fill and `UpdateDoorState` on every boss state change.
 pub(crate) fn update_doors(world: &mut World, map: InMap) {
+    reconcile_doors(world, map, false);
+}
+
+pub(crate) fn initialize_doors(world: &mut World, map: InMap) {
+    reconcile_doors(world, map, true);
+}
+
+fn reconcile_doors(world: &mut World, map: InMap, initial: bool) {
     if !DOORS.iter().any(|door| door.map_id == map.map_id) {
         return;
     }
@@ -198,7 +206,11 @@ pub(crate) fn update_doors(world: &mut World, map: InMap) {
         } else {
             crate::game_objects::GO_STATE_READY
         };
-        crate::game_objects::set_go_state(world, object, state);
+        if initial {
+            crate::game_objects::set_initial_go_state(world, object, state);
+        } else {
+            crate::game_objects::set_go_state(world, object, state);
+        }
     }
 }
 

@@ -36,7 +36,7 @@ use shared::components::{Position, Rotation};
 use shared::protocol::{
     GAMEOBJECT_TYPE_CHAIR, GAMEOBJECT_TYPE_GENERIC, GAMEOBJECT_TYPE_GUILD_BANK,
     GAMEOBJECT_TYPE_MAILBOX, GAMEOBJECT_TYPE_MEETINGSTONE, GAMEOBJECT_TYPE_SPELL_FOCUS,
-    GameObjectInfo,
+    GameObjectAnimation, GameObjectInfo,
 };
 
 use crate::interest::NetworkVisibility;
@@ -105,8 +105,7 @@ pub struct GameObjectScript(pub String);
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GameObjectInUse;
 
-/// Authoritative `GameObjectData::State`. Native animation selection is not yet
-/// driven by this field; model collision is replicated separately.
+/// Authoritative `GameObjectData::State`; model collision is replicated separately.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct GameObjectState(pub u8);
 
@@ -114,13 +113,54 @@ pub(crate) const GO_STATE_ACTIVE: u8 = 0;
 pub(crate) const GO_STATE_DESTROYED: u8 = 2;
 pub(crate) const GO_STATE_READY: u8 = 1;
 
+const ANIM_STAND: u16 = 0;
+const ANIM_CLOSE: u16 = 146;
+const ANIM_OPEN: u16 = 148;
+const ANIM_OPENED: u16 = 149;
+
 /// TC `GameObject::SetGoState`: store the state and enable model collision only
 /// in READY. No scripted GO AI/state-type callbacks are bound to the liquid pool.
 pub(crate) fn set_go_state(world: &mut World, object: Entity, state: u8) {
-    world.entity_mut(object).insert((
+    let is_door = world
+        .get::<GameObjectInfo>(object)
+        .is_some_and(|info| info.go_type == GAMEOBJECT_TYPE_DOOR);
+    let previous = world.get::<GameObjectState>(object).map(|state| state.0);
+    let animation = match (is_door, previous, state) {
+        (true, Some(GO_STATE_READY), GO_STATE_ACTIVE) => Some(ANIM_OPEN),
+        (true, Some(GO_STATE_ACTIVE), GO_STATE_READY) => Some(ANIM_CLOSE),
+        _ => None,
+    };
+    let mut entity = world.entity_mut(object);
+    entity.insert((
         GameObjectState(state),
         shared::protocol::GameObjectCollision(state == GO_STATE_READY),
     ));
+    if let Some(animation_id) = animation {
+        entity.insert(GameObjectAnimation {
+            animation_id,
+            looping: false,
+        });
+    }
+}
+
+/// Initialize an already-open door without replaying its opening transition.
+pub(crate) fn set_initial_go_state(world: &mut World, object: Entity, state: u8) {
+    let previous = world.get::<GameObjectState>(object).map(|state| state.0);
+    set_go_state(world, object, state);
+    let is_door = world
+        .get::<GameObjectInfo>(object)
+        .is_some_and(|info| info.go_type == GAMEOBJECT_TYPE_DOOR);
+    let animation_id = match (is_door, previous, state) {
+        (true, _, GO_STATE_ACTIVE) => Some(ANIM_OPENED),
+        (true, Some(GO_STATE_ACTIVE), GO_STATE_READY) => Some(ANIM_STAND),
+        _ => None,
+    };
+    if let Some(animation_id) = animation_id {
+        world.entity_mut(object).insert(GameObjectAnimation {
+            animation_id,
+            looping: true,
+        });
+    }
 }
 
 /// Model box in object space (WoW axes, unscaled) plus the spawn's facing.
@@ -293,7 +333,7 @@ pub(crate) fn spawn_map_game_objects(
     }
     if map.instance_id != 0 {
         commands.queue(move |world: &mut World| {
-            crate::scripted_ai::door_data::update_doors(world, map)
+            crate::scripted_ai::door_data::initialize_doors(world, map)
         });
     }
     count
@@ -312,6 +352,12 @@ pub(crate) fn spawn_game_object(
         Replicate::to_clients(NetworkTarget::All),
         NetworkVisibility::default(),
     ));
+    if spawn.info.go_type == GAMEOBJECT_TYPE_DOOR && spawn.initial_state == GO_STATE_ACTIVE {
+        object.insert(GameObjectAnimation {
+            animation_id: ANIM_OPENED,
+            looping: true,
+        });
+    }
     if let Some(quest_object) = &spawn.quest_object {
         object.insert(quest_object.clone());
     }
