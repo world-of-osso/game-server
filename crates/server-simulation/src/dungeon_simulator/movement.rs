@@ -427,6 +427,31 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
 }
 
 #[test]
+fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
+    let mut world = World::new();
+    let leader = world
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let path = [[1.0, 0.0, 0.0], [1.0, 3.0, 0.0], [5.0, 3.0, 0.0]];
+    assert!(begin_flight(&mut world, leader, &path).is_err());
+    assert!(!flight_in_progress(&world, leader));
+    world.entity_mut(leader).insert(Position {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    begin_flight(&mut world, leader, &path).unwrap();
+    assert!(flight_in_progress(&world, leader));
+    let (goal, remaining) = remaining_route(&world, leader).unwrap();
+    assert!(goal == RouteGoal::Point(Vec3::new(5.0, 3.0, 0.0)));
+    assert_eq!(remaining, 7.0);
+}
+
+#[test]
 fn dead_flight_leader_waits_for_native_release() {
     let mut world = World::new();
     let position = Position {
