@@ -60,7 +60,9 @@ fn transport_collision_loads_receipt_only_wmo_and_groups() {
     .unwrap();
     let assets: Vec<_> = [307812, 318242, 318243, 318244, 318245, 318246]
         .into_iter().map(|fdid| {
+            let key = if fdid == 318242 { "11111111111111111111111111111111" } else { key };
             let path = format!("products/wow/{key}/models/{fdid}.wmo");
+            std::fs::create_dir_all(root.join(&path).parent().unwrap()).unwrap();
             let bytes = std::fs::read(source.join(format!("models/{fdid}.wmo"))).unwrap();
             std::fs::write(root.join(&path), &bytes).unwrap();
             serde_json::json!({"product":"wow", "build_key":key, "build":"fixture", "fdid":fdid, "kind":"wmo", "path":path, "bytes":bytes.len(), "sha256":"a".repeat(64), "content_key":"b".repeat(32)})
