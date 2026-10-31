@@ -6643,6 +6643,7 @@ dependencies = [
  "server-catalog",
  "server-combat",
  "server-core",
+ "server-follower-apl",
  "server-follower-policy",
  "server-map-rules",
  "server-pet-battle",
@@ -6745,6 +6746,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "server-follower-apl"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "rusqlite",
+ "serde_json",
+ "server-combat",
+ "server-spell-scripts",
+ "shared",
+]
+
+[[package]]
 name = "server-follower-policy"
 version = "0.1.0"
 
@@ -6778,6 +6791,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server-combat",
+ "server-follower-apl",
  "server-spell-scripts",
  "shared",
  "tempfile",

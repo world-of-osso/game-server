@@ -435,7 +435,8 @@ pub(super) fn patient_is_eligible(
     same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
 }
 
-pub(super) fn is_tank(world: &World, unit: Entity) -> bool {
+/// A tank-role follower, or a unit whose active spec has the tank role.
+pub fn is_tank(world: &World, unit: Entity) -> bool {
     if world
         .get::<Follower>(unit)
         .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)

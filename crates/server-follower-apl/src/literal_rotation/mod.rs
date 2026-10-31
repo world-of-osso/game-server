@@ -1,0 +1,468 @@
+//! Shared native APL driver; source rows and spec facts belong to adapters.
+mod channel;
+pub use channel::Decision as ChannelDecision;
+pub mod default_pet;
+pub mod equipment;
+pub mod execution;
+mod item_context;
+pub mod melee_intent;
+mod precombat_potion;
+pub mod snapshot;
+use bevy::prelude::*;
+use equipment::Equipment;
+use execution::{Execution, Prepared};
+use serde_json::Value;
+use server::simc_apl::{Action, ActionFacts, Expression, Facts, Program, Variables};
+
+/// Set by every executed row; a caller advancing frames reads whether the tick progressed.
+#[derive(Resource, Default)]
+pub struct LiteralTickProgress(pub bool);
+
+/// The same encounter with its combat clock restarted when precombat finishes.
+pub fn encounter_starting_at(
+    encounter: crate::simc_apl_native::Encounter,
+    started_at: f64,
+) -> crate::simc_apl_native::Encounter {
+    use crate::simc_apl_native::Encounter;
+    match encounter {
+        Encounter::Fixture {
+            duration, style, ..
+        } => Encounter::Fixture {
+            started_at,
+            duration,
+            style,
+        },
+        Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
+    }
+}
+
+/// Repeat same-tick decisions until one starts a GCD or cast, or none executes.
+pub fn drive_tick(
+    world: &mut World,
+    actor: Entity,
+    mut drive: impl FnMut(&mut World) -> Result<(), String>,
+) -> Result<(), String> {
+    world.init_resource::<LiteralTickProgress>();
+    for _ in 0..128 {
+        world.resource_mut::<LiteralTickProgress>().0 = false;
+        let (gcd_before, cast_before) = read_busy(world, actor);
+        drive(world)?;
+        let progressed = world.resource::<LiteralTickProgress>().0;
+        let (gcd_after, cast_after) = read_busy(world, actor);
+        if !progressed || (!gcd_before && gcd_after) || (!cast_before && cast_after) {
+            return Ok(());
+        }
+    }
+    Err("literal rotation exceeded 128 same-tick actions".into())
+}
+
+/// Whether the actor's GCD and foreground cast are active.
+pub fn read_busy(world: &World, actor: Entity) -> (bool, bool) {
+    let gcd = world
+        .get::<crate::spell_cast::SpellHistory>(actor)
+        .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+    let cast = world.get::<shared::casting::CastState>(actor).is_some();
+    (gcd, cast)
+}
+
+pub enum PrecombatPoll {
+    Waiting,
+    Selected {
+        action: Action,
+        execution: Execution,
+    },
+    Finished,
+}
+
+pub struct Driver {
+    program: Program,
+    variables: Variables,
+    precombat_cursor: usize,
+    selected_precombat: bool,
+    precombat_harmful_executed: bool,
+    wait_until: Option<f64>,
+    queued: Option<(Action, Execution, f64)>,
+    pub snapshot: Option<Value>,
+    cancellation: Option<(Action, Expression, u32)>,
+    pending_fragment_row: Option<usize>,
+    line_ready_at: std::collections::BTreeMap<usize, f64>,
+    pending_line: Option<(usize, f64)>,
+    selected_list: String,
+    channel: Option<channel::Channel>,
+    pub decisions: u64,
+}
+
+impl Driver {
+    pub fn new(program: Program) -> Self {
+        let variables = program.state();
+        Self {
+            program,
+            variables,
+            precombat_cursor: 0,
+            selected_precombat: false,
+            precombat_harmful_executed: false,
+            wait_until: None,
+            queued: None,
+            snapshot: None,
+            cancellation: None,
+            pending_fragment_row: None,
+            line_ready_at: Default::default(),
+            pending_line: None,
+            selected_list: String::new(),
+            channel: None,
+            decisions: 0,
+        }
+    }
+
+    pub fn precombat_exhausted(&self) -> bool {
+        self.precombat_cursor
+            >= self
+                .program
+                .actions()
+                .filter(|(list, _)| *list == "precombat")
+                .count()
+    }
+
+    /// The caller advances native frames and resamples without consuming busy rows.
+    pub fn poll_precombat(
+        &mut self,
+        facts: &dyn ActionFacts,
+        prepared: &Prepared,
+        equipment: &Equipment,
+    ) -> Result<PrecombatPoll, String> {
+        if prepared.setup_pending() || self.waiting(facts)? {
+            return Ok(PrecombatPoll::Waiting);
+        }
+        Ok(
+            match self.select("precombat", facts, prepared, equipment)? {
+                Some((action, execution)) => PrecombatPoll::Selected { action, execution },
+                None => PrecombatPoll::Finished,
+            },
+        )
+    }
+
+    /// Evaluate only after native readiness has been sampled with mutable World.
+    pub fn select(
+        &mut self,
+        list: &str,
+        facts: &dyn ActionFacts,
+        prepared: &Prepared,
+        equipment: &Equipment,
+    ) -> Result<Option<(Action, Execution)>, String> {
+        if let Some((action, execution, deadline)) = self.queued.take() {
+            let ready = prepared.permits_row(&action)? && facts.target_ready(&action)?;
+            let current = if ready {
+                prepared.execution_in(&action, equipment, &self.program)?
+            } else {
+                None
+            };
+            match current {
+                Some(Execution::Queue(_, delay)) => {
+                    self.queued = Some((action, execution, prepared.now() + delay));
+                }
+                Some(_) => return Ok(Some((action, execution))),
+                None if prepared.now() < deadline => {
+                    self.queued = Some((action, execution, deadline));
+                }
+                None => {}
+            }
+            return Ok(None);
+        }
+        if self.waiting(facts)? {
+            return Ok(None);
+        }
+        self.wait_until = None;
+        self.selected_precombat = list == "precombat";
+        if self.selected_precombat && prepared.setup_pending() {
+            return Err("PRECOMBAT_WAIT_REQUIRED: advance native frames via poll_precombat".into());
+        }
+        let item_context = item_context::ItemContext {
+            facts,
+            equipment,
+            program: &self.program,
+        };
+        let facts: &dyn ActionFacts = &item_context;
+        let mut usable = |action: &Action| {
+            candidate_ready(
+                action,
+                facts,
+                prepared,
+                equipment,
+                &self.program,
+                &self.line_ready_at,
+            )
+        };
+        let action = if list == "precombat" {
+            self.program.select_next(
+                list,
+                &mut self.precombat_cursor,
+                facts,
+                &mut self.variables,
+                &mut usable,
+            )?
+        } else {
+            self.program
+                .select(list, facts, &mut self.variables, &mut usable)?
+        };
+        let Some(action) = action else {
+            return Ok(None);
+        };
+        let execution = if action.name == "wait" {
+            Execution::Wait(wait_deadline(&action, facts, &self.variables)?)
+        } else {
+            prepared
+                .execution_in(&action, equipment, &self.program)?
+                .ok_or("selected literal action lost native readiness")?
+        };
+        self.pending_line = line_deadline(&action, facts, &self.variables)?;
+        self.selected_list = list.into();
+        Ok(Some((action, execution)))
+    }
+
+    fn waiting(&self, facts: &dyn ActionFacts) -> Result<bool, String> {
+        match self.wait_until {
+            Some(deadline) => Ok(facts.value("time")? < deadline),
+            None => Ok(false),
+        }
+    }
+
+    pub fn execute(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        action: Action,
+        execution: Execution,
+    ) -> Result<(), String> {
+        server::simc_apl::gcd_history::ensure_initialized(world, actor, &self.program)?;
+        if let Execution::Queue(execution, delay) = execution {
+            self.queued = Some((
+                action,
+                *execution,
+                crate::spell_cast::history_now(world) + delay,
+            ));
+            return Ok(());
+        }
+        let ends_precombat = self.selected_precombat && harmful_execution(world, &execution)?;
+        // SimC76f8118 player.cpp6150–6182 executes one harmful precombat
+        // action but continues scanning and executes later non-harmful rows.
+        if ends_precombat && self.precombat_harmful_executed {
+            self.pending_line = None;
+            return Ok(());
+        }
+        let fragment_row = if matches!(execution, Execution::PickupFragment(_)) {
+            Some(
+                action
+                    .source_row
+                    .ok_or("fragment pickup has no source row")?,
+            )
+        } else {
+            None
+        };
+        let cancellation = if let Execution::Spell(id, _, _) = &execution {
+            action
+                .options
+                .get("cancel_if")
+                .map(|expression| {
+                    Expression::parse(expression).map(|expr| (action.clone(), expr, *id))
+                })
+                .transpose()?
+        } else {
+            None
+        };
+        let channel_action = if let Execution::Spell(spell, _, _) = &execution {
+            channel::Channel::read(&action, *spell, &self.selected_list)?
+        } else {
+            None
+        };
+        let continues_tick = !matches!(execution, Execution::Wait(_));
+        match execution {
+            Execution::Snapshot => self.snapshot = Some(snapshot::stats(world, actor)?),
+            Execution::Wait(deadline) => self.wait_until = Some(deadline),
+            Execution::Queue(_, _) => unreachable!("queued actions return before execution"),
+            execution => execution::execute_row(world, actor, &action, execution)?,
+        }
+        if fragment_row.is_some() {
+            self.pending_fragment_row = fragment_row;
+        }
+        if let Some((row, deadline)) = self.pending_line.take() {
+            self.line_ready_at.insert(row, deadline);
+        }
+        if channel_action.is_some() {
+            self.channel = channel_action;
+        }
+        if cancellation.is_some() {
+            self.cancellation = cancellation;
+        }
+        self.precombat_harmful_executed |= ends_precombat;
+        self.decisions += 1;
+        if let Some(mut progress) = world.get_resource_mut::<LiteralTickProgress>() {
+            progress.0 = continues_tick;
+        }
+        Ok(())
+    }
+
+    /// SimC re-evaluates the selected row's condition when pickup movement finishes.
+    pub fn fragment_pickup_permitted(
+        &mut self,
+        world: &World,
+        actor: Entity,
+        facts: &dyn ActionFacts,
+    ) -> Result<Option<bool>, String> {
+        let Some(row) = self.pending_fragment_row else {
+            return Ok(None);
+        };
+        if !server::soul_fragments::pickup_due(world, actor) {
+            return Ok(None);
+        }
+        self.pending_fragment_row = None;
+        Ok(Some(
+            self.program
+                .select_row(row, facts, &mut self.variables, |_| Ok(true))?
+                .is_some(),
+        ))
+    }
+
+    /// Caller releases its immutable facts borrow before cancelling the actual cast.
+    pub fn should_cancel(
+        &mut self,
+        world: &World,
+        actor: Entity,
+        facts: &dyn ActionFacts,
+    ) -> Result<bool, String> {
+        let Some((action, expression, spell)) = &self.cancellation else {
+            return Ok(false);
+        };
+        if !world
+            .get::<shared::casting::CastState>(actor)
+            .is_some_and(|cast| cast.spell_id == *spell)
+        {
+            self.cancellation = None;
+            return Ok(false);
+        }
+        let cancel = expression.evaluate(&BoundAction {
+            facts,
+            action,
+            variables: &self.variables,
+        })? != 0.0;
+        if cancel {
+            self.cancellation = None;
+        }
+        Ok(cancel)
+    }
+}
+
+fn harmful_execution(world: &World, execution: &Execution) -> Result<bool, String> {
+    let id = match execution {
+        Execution::Composite(_) => {
+            return Err("composite precombat requires a clock-aware executor".into());
+        }
+        Execution::Snapshot
+        | Execution::Wait(_)
+        | Execution::Queue(_, _)
+        | Execution::CancelCast
+        | Execution::PickupFragment(_)
+        | Execution::Retarget(_) => return Ok(false),
+        Execution::AutoAttack(_) | Execution::RetargetAutoAttack(_) => return Ok(true),
+        Execution::Spell(id, _, _) => *id,
+        Execution::Item(item, _) => item.on_use.spell_id,
+    };
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let spell = store
+        .get(id)
+        .ok_or_else(|| format!("native precombat spell{id} missing"))?;
+    Ok(crate::spell_info::positivity::negative_effects(store, spell) != 0)
+}
+
+fn candidate_ready(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    prepared: &Prepared,
+    equipment: &Equipment,
+    program: &Program,
+    deadlines: &std::collections::BTreeMap<usize, f64>,
+) -> Result<bool, String> {
+    Ok(line_ready(action, facts, deadlines)?
+        && prepared.permits_row(action)?
+        && facts.target_ready(action)?
+        && (action.name == "wait" || prepared.execution_in(action, equipment, program)?.is_some()))
+}
+
+fn wait_deadline(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    variables: &Variables,
+) -> Result<f64, String> {
+    // SimC76f8118 player.cpp9766–9803 evaluates sec once on selection;
+    // nonpositive sec uses available(), a Gaussian 100ms ± 10ms (player.cpp7130–7133).
+    let seconds = Expression::parse(action.options.get("sec").map_or("1.0", String::as_str))?
+        .evaluate(&BoundAction {
+            facts,
+            action,
+            variables,
+        })?;
+    if !seconds.is_finite() {
+        return Err("wait sec must be finite".into());
+    }
+    let duration = if seconds > 0.0 {
+        seconds
+    } else {
+        let radial = (-2.0 * (1.0 - crate::random::random::<f64>()).ln()).sqrt();
+        0.1 + 0.01 * radial * (std::f64::consts::TAU * crate::random::random::<f64>()).cos()
+    };
+    Ok(facts.value_for(action, "time")? + duration)
+}
+
+fn line_ready(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    deadlines: &std::collections::BTreeMap<usize, f64>,
+) -> Result<bool, String> {
+    let Some(row) = action.source_row else {
+        return Ok(true);
+    };
+    let Some(deadline) = deadlines.get(&row) else {
+        return Ok(true);
+    };
+    Ok(facts.value_for(action, "time")? >= *deadline)
+}
+
+fn line_deadline(
+    action: &Action,
+    facts: &dyn ActionFacts,
+    variables: &Variables,
+) -> Result<Option<(usize, f64)>, String> {
+    let Some(value) = action.options.get("line_cd") else {
+        return Ok(None);
+    };
+    let row = action.source_row.ok_or("line_cd requires a source row")?;
+    // SimC76f8118 action.cpp85/567/2610: line_cooldown belongs to this action object,
+    // not its spell cooldown, another identical row, or its target.
+    let seconds = Expression::parse(value)?.evaluate(&BoundAction {
+        facts,
+        action,
+        variables,
+    })?;
+    if !seconds.is_finite() || seconds < 0.0 {
+        return Err("line_cd must be finite and nonnegative".into());
+    }
+    Ok(Some((row, facts.value_for(action, "time")? + seconds)))
+}
+
+struct BoundAction<'a> {
+    facts: &'a dyn ActionFacts,
+    action: &'a Action,
+    variables: &'a Variables,
+}
+impl Facts for BoundAction<'_> {
+    fn value(&self, name: &str) -> Result<f64, String> {
+        // SimC76f8118 variable.cpp262–298 and apl/mage.cpp87/128: option
+        // expressions share the actor's current APL variables with ordinary if.
+        if let Some(variable) = name.strip_prefix("variable.") {
+            return self
+                .variables
+                .value(variable)
+                .ok_or_else(|| format!("unknown literal APL variable {variable}"));
+        }
+        self.facts.value_for(self.action, name)
+    }
+}

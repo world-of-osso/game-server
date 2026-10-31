@@ -1,5 +1,9 @@
 //! Native ItemEffect/SpellStore operands: catalog facts, not proc execution proof.
 use super::*;
+use crate::item_templates::ItemTemplates;
+use crate::simc_apl_native::{Bindings, NativeFacts};
+use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
+use shared::protocol::EquipmentSlot;
 use crate::simc_apl_native::{Encounter, FightStyle};
 use shared::item_data::ItemDefinitionSource;
 use std::path::PathBuf;
@@ -794,4 +798,32 @@ fn literal_equipment_detects_actual_attack_power_buff() {
         ),
         vec![Ok(1.0), Ok(0.0), Ok(0.0)]
     );
+}
+
+#[test]
+#[ignore = "native ItemEffect source-only cooldown override matrix"]
+fn literal_equipment_native_item_cooldown_zero_and_mixed_signs() {
+    use server_follower_apl::literal_rotation::equipment::metadata::read_cooldown;
+    let world = load_world();
+    let effects = &world
+        .resource::<crate::stats::NativeItemInstances>()
+        .effects
+        .effects;
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    // Exact native rows: zero/positive, negative/positive, zero/negative,
+    // zero/zero, negative/zero, both-negative, positive/negative.
+    let expected = [
+        (45, 60.0),
+        (553, 60.0),
+        (15477, 0.0),
+        (15541, 0.0),
+        (31108, 0.0),
+        (170101, 120.0),
+        (4894, 180.0),
+    ];
+    let actual: Vec<_> = expected
+        .iter()
+        .map(|&(id, _)| (id, read_cooldown(store, &effects[&id]).unwrap().duration))
+        .collect();
+    assert_eq!(actual, expected);
 }

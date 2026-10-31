@@ -21,13 +21,62 @@ pub(crate) fn track_target(world: &mut World, target: Entity) {
     }
 }
 
-pub(crate) fn record_damage(world: &mut World, event: &CombatLogEvent) {
-    if event.kind != CombatLogKind::Damage {
-        return;
+/// Damage and heal events landing on a unit an APL watches, kept for `WINDOW_SECONDS`.
+#[derive(Component, Default)]
+pub struct ObservedEvents {
+    next: u64,
+    events: VecDeque<(u64, f64, CombatLogEvent)>,
+}
+
+impl ObservedEvents {
+    /// Events numbered `seen` or later, and the number to pass on the next read.
+    pub fn since(&self, seen: u64) -> (impl Iterator<Item = &CombatLogEvent>, u64) {
+        let events = self
+            .events
+            .iter()
+            .filter(move |(number, _, _)| *number >= seen)
+            .map(|(_, _, event)| event);
+        (events, self.next)
     }
+}
+
+/// Start collecting the events that land on `unit`; existing history is kept.
+pub fn observe_unit(world: &mut World, unit: Entity) {
+    if world.get::<ObservedEvents>(unit).is_none() {
+        world.entity_mut(unit).insert(ObservedEvents::default());
+    }
+}
+
+pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
     let Some(target) = event.target.and_then(Entity::try_from_bits) else {
         return;
     };
+    if matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Heal) {
+        record_observed(world, target, event);
+    }
+    if event.kind == CombatLogKind::Damage {
+        record_damage(world, target, event);
+    }
+}
+
+fn record_observed(world: &mut World, target: Entity, event: &CombatLogEvent) {
+    let now = crate::spell_cast::now(world);
+    let Some(mut observed) = world.get_mut::<ObservedEvents>(target) else {
+        return;
+    };
+    while observed
+        .events
+        .front()
+        .is_some_and(|(_, at, _)| *at < now - WINDOW_SECONDS)
+    {
+        observed.events.pop_front();
+    }
+    let number = observed.next;
+    observed.next += 1;
+    observed.events.push_back((number, now, event.clone()));
+}
+
+fn record_damage(world: &mut World, target: Entity, event: &CombatLogEvent) {
     if world.get::<DamageHistory>(target).is_none() {
         return;
     }
@@ -121,7 +170,7 @@ mod tests {
             timestamp_unix_ms: 0,
             kind: CombatLogKind::Damage,
         };
-        record_damage(&mut world, &event);
+        record_event(&mut world, &event);
         let program = Program::parse(&[("default", "execute,if=target.time_to_die<10")]).unwrap();
         let bindings = Bindings::default();
         let targets = [target];
@@ -140,7 +189,7 @@ mod tests {
             .advance_by(Duration::from_secs(2));
         world.get_mut::<Health>(target).unwrap().current = 800.0;
         event.amount = 200;
-        record_damage(&mut world, &event);
+        record_event(&mut world, &event);
         let facts = NativeFacts::new(&world, actor, &bindings, encounter, 1)
             .with_targets(Some(target), &targets);
         assert_eq!(

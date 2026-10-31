@@ -184,6 +184,11 @@ impl WorldData {
     pub fn spell_store(&self) -> &SpellStore {
         &self.store
     }
+
+    /// Read the canonical class and specialization spell catalogs.
+    pub fn class_spells(&self) -> &ClassSpells {
+        &self.classes
+    }
 }
 
 /// Observe the canonical category's consumed charges and oldest pending recharge.

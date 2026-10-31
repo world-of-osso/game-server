@@ -92,6 +92,7 @@ fn add_social_plugins(app: &mut App) {
         .add_plugins(IgnoreListPlugin)
         .add_plugins(LfgPlugin)
         .add_plugins(FollowerPlugin)
+        .add_plugins(server_follower_apl::FollowerAplPlugin)
         .add_plugins(DuelPlugin)
         .add_plugins(inspect::InspectPlugin)
         .add_plugins(TradePlugin)

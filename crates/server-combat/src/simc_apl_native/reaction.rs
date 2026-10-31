@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Seconds from the pinned reference player's reaction fields; no implicit defaults.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct ReactionSettings {
     pub mean: f64,
     pub stddev: f64,
@@ -24,7 +24,6 @@ impl ReactionSettings {
         Ok(self)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
     fn sample(self) -> f64 {
         // rng.hpp gauss(timespan) truncates below zero; exgauss adds an exponential.
         let normal = sample_nonnegative_normal(self.mean, self.stddev);
@@ -34,7 +33,6 @@ impl ReactionSettings {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn sample_nonnegative_normal(mean: f64, stddev: f64) -> f64 {
     if stddev == 0.0 {
         return mean;
@@ -51,7 +49,6 @@ fn sample_nonnegative_normal(mean: f64, stddev: f64) -> f64 {
 
 #[derive(Component)]
 struct BuffReactions {
-    #[cfg(any(test, feature = "test-support"))]
     settings: ReactionSettings,
     spells: BTreeSet<u32>,
     deadlines: BTreeMap<u32, Vec<f64>>,
@@ -59,16 +56,21 @@ struct BuffReactions {
 }
 
 /// Configure before tracked buffs exist: a late query cannot reconstruct acquisition.
+/// Repeating the same policy keeps the observed state, as a follower's APL is
+/// reloaded every pull.
 pub fn configure(
     world: &mut World,
     actor: Entity,
     settings: ReactionSettings,
     spells: &[u32],
 ) -> Result<(), String> {
-    settings.validate()?;
+    let settings = settings.validate()?;
     let spells: BTreeSet<_> = spells.iter().copied().collect();
-    if world.get::<BuffReactions>(actor).is_some() {
-        return Err("native APL buff reaction policy already configured".into());
+    if let Some(existing) = world.get::<BuffReactions>(actor) {
+        if existing.settings == settings && existing.spells == spells {
+            return Ok(());
+        }
+        return Err("native APL buff reaction policy already configured differently".into());
     }
     let active = world
         .get::<crate::auras::ActiveAuras>(actor)
@@ -77,7 +79,6 @@ pub fn configure(
         return Err("native APL reaction policy must precede tracked aura acquisition".into());
     }
     world.entity_mut(actor).insert(BuffReactions {
-        #[cfg(any(test, feature = "test-support"))]
         settings,
         spells,
         deadlines: BTreeMap::new(),
@@ -86,7 +87,6 @@ pub fn configure(
     Ok(())
 }
 
-#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn applied(world: &mut World, target: Entity, aura: &crate::auras::AuraInstance) {
     let now = crate::spell_cast::now(world);
     let Some(mut reactions) = world.get_mut::<BuffReactions>(target) else {
@@ -109,14 +109,12 @@ pub(crate) fn applied(world: &mut World, target: Entity, aura: &crate::auras::Au
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn removed(world: &mut World, target: Entity, instance: u32) {
     if let Some(mut reactions) = world.get_mut::<BuffReactions>(target) {
         reactions.deadlines.remove(&instance);
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn stacks_changed(world: &mut World, target: Entity, instance: u32, stacks: u8) {
     if let Some(mut reactions) = world.get_mut::<BuffReactions>(target)
         && let Some(deadlines) = reactions.deadlines.get_mut(&instance)

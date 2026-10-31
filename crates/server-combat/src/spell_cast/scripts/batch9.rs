@@ -436,7 +436,6 @@ pub fn prepare_simc_precombat_consecration(
 }
 
 /// SimC76f8118 sc_paladin.cpp5058–5060: the APL checks the owned active field, not position.
-#[cfg(any(test, feature = "test-support"))]
 pub fn has_active_consecration(world: &mut World, caster: Entity) -> bool {
     let now = crate::auras::aura_now(world);
     world

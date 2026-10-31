@@ -274,7 +274,6 @@ mod hunter_cadence_tests;
 mod hunter_command_tests;
 mod hunter_companion_tests;
 mod hunter_explosive_tests;
-mod hunter_facts;
 mod hunter_fixture;
 #[cfg(test)]
 mod hunter_dire_command_tests;
