@@ -141,6 +141,7 @@ pub const OVERRIDE_ATTACK_POWER_BY_SP_PCT: u32 = 404;
 pub const MOD_INCREASE_HEALTH_PERCENT2: u32 = 145;
 pub const MOD_ABSORB_TAKEN_PCT: u32 = 422;
 pub const MOD_TOTAL_THREAT: u32 = 103;
+pub const SCHOOL_HEAL_ABSORB: u32 = 301;
 pub const SCHOOL_ABSORB_OVERKILL: u32 = 316;
 pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
 pub const MOD_SPELL_CRIT_CHANCE: u32 = 57;
@@ -561,7 +562,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST | MOD_MANA_COST_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
-        SCHOOL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
+        SCHOOL_ABSORB | SCHOOL_HEAL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
@@ -646,6 +647,6 @@ pub fn breaks_on_damage(aura_type: u32) -> bool {
 pub fn scales_with_power(aura_type: u32) -> bool {
     matches!(
         aura_type,
-        PERIODIC_DAMAGE | PERIODIC_LEECH | PERIODIC_HEAL | SCHOOL_ABSORB
+        PERIODIC_DAMAGE | PERIODIC_LEECH | PERIODIC_HEAL | SCHOOL_ABSORB | SCHOOL_HEAL_ABSORB
     )
 }

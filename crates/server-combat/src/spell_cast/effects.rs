@@ -2748,12 +2748,18 @@ fn apply_resolved_heal(
     crit: bool,
     periodic: bool,
 ) {
+    if !world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return;
+    }
+    let absorbed =
+        crate::auras::consume_heal_absorbs(world, target, ctx.spell.school_mask(), amount);
+    let amount = amount - absorbed;
     let Some(mut health) = world.get_mut::<Health>(target) else {
         return;
     };
-    if health.current <= 0.0 {
-        return;
-    }
     let before = health.current;
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
@@ -2768,6 +2774,7 @@ fn apply_resolved_heal(
     mark_dirty(world, target);
     let mut event = log_amount(ctx, target, CombatLogKind::Heal);
     event.amount = amount as i32;
+    event.absorbed = absorbed as i32;
     event.overflow = (amount - effective) as i32;
     event.crit = crit;
     event.periodic = periodic;

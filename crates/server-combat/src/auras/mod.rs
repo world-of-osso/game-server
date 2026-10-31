@@ -2640,6 +2640,59 @@ pub fn absorb_damage(
 }
 
 /// Capacity is consumed immediately, even when melee's world-side cleanup is queued.
+/// Consume heal-absorb auras in native priority order before applying a heal.
+/// TC 15e0ed76 Unit.cpp:2102–2150 uses the heal's school and removes depleted auras.
+pub(crate) fn consume_heal_absorbs(
+    world: &mut World,
+    unit: Entity,
+    school: u32,
+    amount: f32,
+) -> f32 {
+    let mut remaining = amount;
+    let mut depleted = Vec::new();
+    if let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) {
+        let mut candidates = auras
+            .auras
+            .iter()
+            .enumerate()
+            .flat_map(|(a, aura)| {
+                aura.effects
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(e, effect)| {
+                        (effect.aura_type == handlers::SCHOOL_HEAL_ABSORB
+                            && effect.misc_values[0] as u32 & school != 0)
+                            .then_some((a, e, effect.misc_values[1]))
+                    })
+            })
+            .collect::<Vec<_>>();
+        candidates.sort_by_key(|candidate| candidate.2);
+        for (aura_index, effect_index, _) in candidates {
+            if remaining <= 0.0 {
+                break;
+            }
+            let aura = &mut auras.auras[aura_index];
+            let effect = &mut aura.effects[effect_index];
+            if effect.amount < 0.0 {
+                continue;
+            }
+            let absorbed = remaining.min(effect.amount);
+            effect.amount -= absorbed;
+            remaining -= absorbed;
+            if effect.amount <= 0.0 {
+                depleted.push(aura.instance_id);
+            }
+        }
+    }
+    for instance in depleted {
+        remove_instance(world, unit, instance, RemoveReason::Consumed);
+    }
+    amount - remaining
+}
+
+#[cfg(test)]
+mod heal_absorb_tests;
+
 pub(crate) struct AbsorbResult {
     pub remaining: f32,
     pub absorbed: f32,
