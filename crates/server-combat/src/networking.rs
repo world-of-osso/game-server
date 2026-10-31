@@ -27,6 +27,9 @@ use movement::*;
 
 #[path = "networking_binding.rs"]
 mod binding;
+#[cfg(test)]
+#[path = "networking_listen_tests.rs"]
+mod listen_tests;
 /// Squared radius for immediate visibility grant on world entry (matches interest system).
 const INITIAL_VISIBILITY_RADIUS_SQ: f32 = 100.0 * 100.0;
 type LinkStatusData = (Has<Connected>, Has<ClientOf>, Has<ReplicationSender>);
@@ -197,7 +200,8 @@ impl Plugin for ServerNetworkPlugin {
         app.init_resource::<crate::friends::AutoAfkScheduler>();
         app.init_resource::<ConnectedAccounts>();
         app.init_resource::<ChatHistoryBuffer>();
-        app.add_systems(Startup, start_server);
+        app.insert_resource(ServerBindAddress(server_address()));
+        configure_listener(app);
         app.add_systems(PostUpdate, despawn_pending);
         app.add_systems(Update, crate::character_visual::sync_player_visuals);
         app.add_systems(FixedUpdate, process_player_inputs);
@@ -229,8 +233,19 @@ impl Plugin for ServerNetworkPlugin {
     }
 }
 
-fn start_server(mut commands: Commands) {
-    let addr = server_address();
+#[derive(Resource)]
+struct ServerBindAddress(SocketAddr);
+
+fn configure_listener(app: &mut App) {
+    app.add_systems(
+        Last,
+        start_server.run_if(bevy::ecs::schedule::common_conditions::run_once),
+    );
+    app.add_observer(log_server_listening);
+}
+
+fn start_server(mut commands: Commands, address: Res<ServerBindAddress>) {
+    let addr = address.0;
     let entity = commands
         .spawn((
             LocalAddr(addr),
@@ -239,7 +254,12 @@ fn start_server(mut commands: Commands) {
         ))
         .id();
     commands.trigger(Start { entity });
-    info!("Server listening on {addr}");
+}
+
+fn log_server_listening(trigger: On<Add, Linked>, servers: Query<&LocalAddr, With<ServerUdpIo>>) {
+    if let Ok(address) = servers.get(trigger.entity) {
+        info!("Server listening on {}", address.0);
+    }
 }
 
 fn server_address() -> SocketAddr {
