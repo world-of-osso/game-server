@@ -3,6 +3,8 @@ pub mod graph;
 pub mod healer_intake;
 pub mod objectives;
 pub mod transport;
+pub use crate::ground::GroundMap;
+pub use crate::line_of_sight::LineOfSight;
 pub use crate::navigation::within_reach;
 pub use graph::Space;
 

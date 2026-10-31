@@ -43,9 +43,10 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         std::env::var_os("FOLLOWER_COMPONENT_ASSETS").expect("ground assets"),
     );
     run.app.insert_resource(
-        crate::line_of_sight::LineOfSight::load(&root.join("los")).expect("native LOS"),
+        server::test_support::LineOfSight::load(&root.join("los")).expect("native LOS"),
     );
-    let mut ground = crate::ground::GroundMap::new(&root, HashMap::from([(2805, 6_099_383)]));
+    let mut ground =
+        server::test_support::GroundMap::new(&root, HashMap::from([(2805, 6_099_383)]));
     let mut queue = CommandQueue::default();
     let mut commands = Commands::new(&mut queue, run.app.world());
     assert_eq!(
@@ -86,11 +87,50 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     let caller = units[&63805113];
     let helper = units[&63805114];
     let outside = units[&63805162];
+    let caller_position = *run.app.world().get::<Position>(caller).unwrap();
+    let outside_position = *run.app.world().get::<Position>(outside).unwrap();
+    let direction = Vec2::new(
+        outside_position.x - caller_position.x,
+        outside_position.z - caller_position.z,
+    )
+    .normalize();
+    let cast_position = Position {
+        x: caller_position.x - direction.x * 3.0,
+        y: caller_position.y,
+        z: caller_position.z - direction.y * 3.0,
+    };
     run.app
         .world_mut()
         .entity_mut(actor)
-        .insert(crate::networking::CombatTarget(Some(caller)));
+        .insert((cast_position, crate::networking::CombatTarget(Some(caller))));
+    run.app.world_mut().entity_mut(owner).insert(cast_position);
     face_actor_toward_primary(run.app.world_mut(), actor, caller);
+    let release = crate::spell_cast::script_registry::empower_release_preview(
+        run.app.world(),
+        actor,
+        357208,
+        1,
+    )
+    .unwrap();
+    let damage = release
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    let recipients = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        actor,
+        Some(caller),
+        &release,
+        damage,
+        0,
+        false,
+    )
+    .unwrap();
+    assert!(
+        recipients.contains(&outside),
+        "native Fire Breath cone must actually reach the outsider"
+    );
     crate::creature_aggro::attack_start(run.app.world_mut(), caller, actor);
     let encounter = crate::simc_apl_native::Encounter::Dungeon {
         started_at: crate::spell_cast::now(run.app.world()),
@@ -145,6 +185,24 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     position.x += 100.0;
     drop(position);
     run.app.update();
+    face_actor_toward_primary(run.app.world_mut(), actor, caller);
+    let recipients = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        actor,
+        Some(caller),
+        &release,
+        damage,
+        0,
+        false,
+    )
+    .unwrap();
+    assert!(recipients.contains(&caller));
+    assert!(
+        recipients
+            .iter()
+            .all(|unit| [caller, helper].contains(unit)),
+        "all native cone recipients must be in the first wave"
+    );
     attempt(&mut apl, &mut run);
     assert!(
         run.app.world().get::<CastState>(actor).is_some(),
