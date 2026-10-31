@@ -72,33 +72,25 @@ fn replay_interpolates_only_between_timed_logged_samples() {
     assert!(logged_position_at(&points, 91.0).is_err());
 }
 
-/// Split at no-fly terrain cells; only logged points become takeoffs or landings.
-fn permitted_flight_windows(
+/// Validate the whole flight, including crossed cells; never clip an unproven route.
+fn validate_flight_areas(
     samples: &[LoggedPoint],
     mut permits: impl FnMut(Vec2) -> Result<bool, String>,
-) -> Result<Vec<Vec<LoggedPoint>>, String> {
-    let mut windows = Vec::new();
-    let mut current: Vec<LoggedPoint> = Vec::new();
-    for &sample in samples {
-        let allowed = permits(sample.horizontal)?;
-        if let Some(previous) = current.last().copied()
-            && (!allowed
-                || !segment_permitted(previous.horizontal, sample.horizontal, &mut permits)?)
-        {
-            if current.len() >= 2 {
-                windows.push(std::mem::take(&mut current));
-            } else {
-                current.clear();
-            }
-        }
-        if allowed {
-            current.push(sample);
+) -> Result<(), String> {
+    for sample in samples {
+        if !permits(sample.horizontal)? {
+            return Err(format!(
+                "flight is not permitted at {:?}",
+                sample.horizontal
+            ));
         }
     }
-    if current.len() >= 2 {
-        windows.push(current);
+    for pair in samples.windows(2) {
+        if !segment_permitted(pair[0].horizontal, pair[1].horizontal, &mut permits)? {
+            return Err("flight crosses an area that does not permit it".into());
+        }
     }
-    Ok(windows)
+    Ok(())
 }
 
 /// Check every crossed MCNK cell, not only the two logged endpoints.
@@ -458,69 +450,53 @@ pub(super) fn build_paths(
                 },
             );
         }
-        let windows = permitted_flight_windows(&points, |point| {
+        validate_flight_areas(&points, |point| {
             areas.permits_with_required(graph.map_id, point, required)
         })
         .map_err(|error| format!("encounter {} flight areas: {error}", leg.encounter))?;
-        if windows.len() != 1 || windows[0].len() != points.len() {
-            return Err(format!(
-                "encounter {} flight crosses an area not permitted by the observed grant",
-                leg.encounter
-            ));
-        }
-        let count = windows.len();
-        let mut reference = previous_boss_height;
-        for (index, window) in windows.into_iter().enumerate() {
-            let first = window.first().unwrap();
-            let last = window.last().unwrap();
-            let start = if leg_index == 0 && index == 0 {
-                // WCL lacks altitude; infer the moving deck's takeoff height from
-                // the first boss's static ship. The logged transport supplies XY.
-                Vec3::new(first.horizontal.x, boss_height, first.horizontal.y)
-            } else {
-                project_endpoint(
-                    &mut los.borrow_mut(),
-                    &mut nav.borrow_mut(),
-                    first.horizontal,
-                    reference,
-                )?
-            };
-            let end_reference = if index + 1 == count {
-                boss_height
-            } else {
-                start.y
-            };
-            let end = project_endpoint(
+        let first = points.first().unwrap();
+        let last = points.last().unwrap();
+        let start = if leg_index == 0 {
+            // WCL lacks altitude; infer the moving deck's takeoff height from
+            // the first boss's static ship. The logged transport supplies XY.
+            Vec3::new(first.horizontal.x, boss_height, first.horizontal.y)
+        } else {
+            project_endpoint(
                 &mut los.borrow_mut(),
                 &mut nav.borrow_mut(),
-                last.horizontal,
-                end_reference,
-            )?;
-            let path = flight_path(
-                start,
-                end,
-                &window,
-                |point, baseline| {
-                    let mut candidates = native_surfaces(&mut los.borrow_mut(), point)?;
-                    if let Some(floor) = nav
-                        .borrow_mut()
-                        .floor_polygon(Vec3::new(point.x, baseline, point.y))?
-                        && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
-                    {
-                        candidates.push(floor.y);
-                    }
-                    Ok(candidates)
-                },
-                |from, to| los.borrow_mut().first_hit(from, to),
-            )
-            .map_err(|error| format!("encounter {} flight: {error}", leg.encounter))?;
-            println!(
-                "FLIGHT_AREA_CLIP encounter={} takeoff={start:?} landing={end:?}",
-                leg.encounter
-            );
-            paths.push(path);
-            reference = end.y;
-        }
+                first.horizontal,
+                previous_boss_height,
+            )?
+        };
+        let end = project_endpoint(
+            &mut los.borrow_mut(),
+            &mut nav.borrow_mut(),
+            last.horizontal,
+            boss_height,
+        )?;
+        let path = flight_path(
+            start,
+            end,
+            &points,
+            |point, baseline| {
+                let mut candidates = native_surfaces(&mut los.borrow_mut(), point)?;
+                if let Some(floor) = nav
+                    .borrow_mut()
+                    .floor_polygon(Vec3::new(point.x, baseline, point.y))?
+                    && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
+                {
+                    candidates.push(floor.y);
+                }
+                Ok(candidates)
+            },
+            |from, to| los.borrow_mut().first_hit(from, to),
+        )
+        .map_err(|error| format!("encounter {} flight: {error}", leg.encounter))?;
+        println!(
+            "FLIGHT_AREA_VALIDATED encounter={} takeoff={start:?} landing={end:?}",
+            leg.encounter
+        );
+        paths.push(path);
         previous_boss_height = boss_height;
     }
     Ok((paths, deck_start.ok_or("Dawnbreaker deck start missing")?))
@@ -554,13 +530,10 @@ fn dawnbreaker_logged_area_permissions_are_reported() {
                 .entry(areas.inspect(2662, point.horizontal).unwrap())
                 .or_default() += 1;
         }
-        let windows =
-            permitted_flight_windows(&points, |point| areas.permits(2662, point)).unwrap();
         println!(
-            "DAWNBREAKER_AREAS encounter={} samples={} areas={counts:?} windows={}",
+            "DAWNBREAKER_AREAS encounter={} samples={} areas={counts:?}",
             leg.encounter,
-            points.len(),
-            windows.len()
+            points.len()
         );
         assert!(!points.is_empty());
     }
@@ -601,23 +574,6 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
 }
 
 #[test]
-fn flight_lands_at_last_permitted_logged_point_before_the_no_fly_destination() {
-    let samples: Vec<_> = [0.0, 10.0, 20.0, 30.0]
-        .into_iter()
-        .enumerate()
-        .map(|(seconds, x)| LoggedPoint {
-            horizontal: Vec2::new(x, 0.0),
-            seconds: seconds as f32,
-        })
-        .collect();
-    let windows = permitted_flight_windows(&samples, |point| Ok(point.x < 25.0)).unwrap();
-    assert_eq!(windows.len(), 1);
-    assert_eq!(windows[0].first().unwrap().horizontal, Vec2::ZERO);
-    assert_eq!(windows[0].last().unwrap().horizontal, Vec2::new(20.0, 0.0));
-    assert_eq!(samples.last().unwrap().horizontal, Vec2::new(30.0, 0.0));
-}
-
-#[test]
 fn flight_does_not_cross_a_no_fly_cell_between_permitted_samples() {
     let samples = [
         LoggedPoint {
@@ -629,13 +585,12 @@ fn flight_does_not_cross_a_no_fly_cell_between_permitted_samples() {
             seconds: 10.0,
         },
     ];
-    let windows =
-        permitted_flight_windows(&samples, |point| Ok(point.x < 33.0 || point.x >= 67.0)).unwrap();
-    assert!(
-        windows.is_empty(),
-        "the graph must use walking across the restricted cell"
-    );
-    let error = permitted_flight_windows(&samples, |_| Err("unknown area".into())).unwrap_err();
+    let error =
+        validate_flight_areas(&samples, |point| Ok(point.x < 33.0 || point.x >= 67.0)).unwrap_err();
+    assert!(error.contains("does not permit"));
+    let error = validate_flight_areas(&samples, |point| Ok(point.x < 100.0)).unwrap_err();
+    assert!(error.contains("not permitted"));
+    let error = validate_flight_areas(&samples, |_| Err("unknown area".into())).unwrap_err();
     assert!(error.contains("unknown area"));
 }
 

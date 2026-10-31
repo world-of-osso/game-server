@@ -36,10 +36,6 @@ impl Areas {
         Ok((area, permitted))
     }
 
-    pub fn permits(&mut self, map: u32, point: Vec2) -> Result<bool, String> {
-        self.inspect(map, point).map(|(_, permitted)| permitted)
-    }
-
     pub fn permits_with_required(
         &mut self,
         map: u32,
