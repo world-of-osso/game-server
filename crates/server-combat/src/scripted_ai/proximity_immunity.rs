@@ -8,7 +8,7 @@ struct Release {
     map: u32,
     entry: u32,
     radius: f32,
-    aura: u32,
+    aura: Option<u32>,
 }
 
 const RELEASES: &[Release] = &[
@@ -19,7 +19,18 @@ const RELEASES: &[Release] = &[
         map: 2825,
         entry: 246404,
         radius: 20.0,
-        aura: 1254622,
+        aura: Some(1254622),
+    },
+    // GEEZLE_PROXIMITY_RELEASE_LOG_CORRELATED: template unit_flags 0x340 are
+    // immune; TC 15e0ed76 has no Floodgate script. The radius is the largest
+    // nearest-player distance at the first hostile cast in WCL
+    // 67c3WanVygd4ZvCt/1 pull 13 (Taunt), CPzKQd3xLrWJgRNw/1 pull 14 and
+    // hAtcnVyGZ6JRvWpN/3 pull 12. The Retail trigger itself is not logged.
+    Release {
+        map: 2773,
+        entry: 226404,
+        radius: 21.6577,
+        aura: None,
     },
 ];
 
@@ -39,13 +50,15 @@ pub(super) fn update(world: &mut World) {
         })
         .collect();
     for (creature, map, position, release) in creatures {
-        if !crate::auras::has_aura(world, creature, release.aura) {
+        if let Some(aura) = release.aura
+            && !crate::auras::has_aura(world, creature, aura)
+        {
             crate::auras::apply_aura(
                 world,
                 &crate::auras::AuraApplication {
                     caster: creature,
                     target: creature,
-                    spell_id: release.aura,
+                    spell_id: aura,
                     effect_mask: 1,
                     source: crate::auras::AuraSource::Cast,
                 },
@@ -63,12 +76,14 @@ pub(super) fn update(world: &mut World) {
             });
         if nearby {
             world.get_mut::<UnitFlags>(creature).unwrap().0 &= !immunity;
-            crate::auras::remove_auras(
-                world,
-                creature,
-                crate::auras::RemoveReason::Cancelled,
-                |aura| aura.spell_id == release.aura,
-            );
+            if let Some(spell_id) = release.aura {
+                crate::auras::remove_auras(
+                    world,
+                    creature,
+                    crate::auras::RemoveReason::Cancelled,
+                    |aura| aura.spell_id == spell_id,
+                );
+            }
             crate::spell_cast::mark_dirty(world, creature);
         }
     }
