@@ -8,7 +8,6 @@ use server_follower_apl::literal_rotation::melee_intent::{
 };
 use shared::components::Position;
 
-
 struct WalkStep {
     target: Entity,
     position: Position,

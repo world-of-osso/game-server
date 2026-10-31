@@ -63,7 +63,12 @@ const ACTIONS: &[NativeAction<'static>] = &[
 
 fn channel_state(run: &Run, bindings: &Bindings, encounter: Encounter) -> serde_json::Value {
     let world = run.app.world();
-    let proposed = Action { source_row: None, name: "arcane_missiles".into(), target: None, options: Default::default() };
+    let proposed = Action {
+        source_row: None,
+        name: "arcane_missiles".into(),
+        target: None,
+        options: Default::default(),
+    };
     let facts = NativeFacts::new(world, run.actor, bindings, encounter, 1);
     serde_json::json!({
         "cast": world.get::<shared::casting::CastState>(run.actor),
@@ -390,7 +395,10 @@ fn literal_chain_recasts_ready_channel_at_penultimate_native_tick() {
                 .unwrap();
             let after = channel_state(&run, &bindings, encounter);
             assert_eq!(
-                run.app.world().get::<shared::casting::CastState>(run.actor).map(|cast| cast.elapsed),
+                run.app
+                    .world()
+                    .get::<shared::casting::CastState>(run.actor)
+                    .map(|cast| cast.elapsed),
                 Some(0.0),
                 "native chain must restart now; before={before}; after={after}"
             );
@@ -433,7 +441,8 @@ fn literal_early_chain_if_without_chain_recasts_with_native_gcd_guard() {
     let mut last_paid = u64::MAX;
     for _ in 0..200 {
         run.app.update();
-        let paid = crate::auras::paid_periodic_ticks(run.app.world(), run.actor, run.targets[0], 5143);
+        let paid =
+            crate::auras::paid_periodic_ticks(run.app.world(), run.actor, run.targets[0], 5143);
         if paid != last_paid {
             trace.push(channel_state(&run, &bindings, encounter));
             last_paid = paid;

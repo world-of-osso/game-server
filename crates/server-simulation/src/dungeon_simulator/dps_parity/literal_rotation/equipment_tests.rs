@@ -2,10 +2,10 @@
 use super::*;
 use crate::item_templates::ItemTemplates;
 use crate::simc_apl_native::{Bindings, NativeFacts};
-use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
-use shared::protocol::EquipmentSlot;
 use crate::simc_apl_native::{Encounter, FightStyle};
+use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use shared::item_data::ItemDefinitionSource;
+use shared::protocol::EquipmentSlot;
 use std::path::PathBuf;
 
 #[path = "ground_target_tests.rs"]

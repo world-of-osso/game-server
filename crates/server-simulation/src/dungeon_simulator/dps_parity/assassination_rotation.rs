@@ -1,7 +1,6 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::assassination_rotation::*;
 use bevy::prelude::*;
-
+pub(super) use server_follower_apl::assassination_rotation::*;
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     use super::literal_rotation::PrecombatPoll;

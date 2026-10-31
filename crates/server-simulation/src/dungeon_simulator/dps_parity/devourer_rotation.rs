@@ -6,7 +6,6 @@ pub(super) use server_follower_apl::devourer_rotation::*;
 mod facts_tests;
 use bevy::prelude::*;
 
-
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),

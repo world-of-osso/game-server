@@ -1,7 +1,6 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::survival_rotation::*;
 use bevy::prelude::*;
-
+pub(super) use server_follower_apl::survival_rotation::*;
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     // SimC76f8118 sc_hunter.cpp1052: summon_pet defaults to duck. Literal

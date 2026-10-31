@@ -1,9 +1,9 @@
 //! Feral fixture adapter over the production APL.
+use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
+use serde_json::Value;
 pub(super) use server_follower_apl::feral_rotation::Rotation;
 use server_follower_apl::literal_rotation::PrecombatPoll;
-use crate::simc_apl_native::Encounter;
-use serde_json::Value;
 
 pub(super) const REPORT_KEY: Option<&str> = Some("feral_rotation");
 

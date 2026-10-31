@@ -1,8 +1,8 @@
 //! Actual combat log accounting; no inferred hits or fabricated stat contributions.
 use bevy::prelude::*;
 use serde_json::{Value, json};
-use shared::protocol::{CombatLogEvent, CombatLogKind};
 use server_follower_apl::literal_rotation::snapshot::{self, power_snapshot};
+use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::BTreeMap;
 
 /// Parity actors always carry a native stat sheet and level.

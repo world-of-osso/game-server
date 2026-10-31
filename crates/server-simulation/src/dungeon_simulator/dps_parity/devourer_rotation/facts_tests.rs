@@ -1,10 +1,10 @@
 //! Devourer fact operands against a prepared parity actor.
 use super::super::{engage, prepare};
+use crate::simc_apl_native::NativeFacts;
+use crate::simc_apl_native::{Encounter, FightStyle};
+use server::simc_apl::Facts;
 use server_follower_apl::devourer_rotation::facts::*;
 use server_follower_apl::literal_rotation::equipment::Equipment;
-use crate::simc_apl_native::NativeFacts;
-use server::simc_apl::Facts;
-use crate::simc_apl_native::{Encounter, FightStyle};
 
 fn fact(
     run: &super::super::Run,
@@ -104,13 +104,8 @@ fn real_retreat_exposes_movement_until_native_duration_expires() {
         0.0,
         "no movement before cast"
     );
-    crate::spell_cast::cast_for_player_with_target(
-        run.app.world_mut(),
-        actor,
-        198793,
-        Some(actor),
-    )
-    .expect("real Vengeful Retreat");
+    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), actor, 198793, Some(actor))
+        .expect("real Vengeful Retreat");
     assert_eq!(
         fact(
             &run,

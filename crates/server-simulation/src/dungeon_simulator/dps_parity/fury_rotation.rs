@@ -1,11 +1,10 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::fury_rotation::*;
 use super::Run;
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
+pub(super) use server_follower_apl::fury_rotation::*;
 use shared::components::PowerType;
-
 
 #[cfg(test)]
 mod deep_wounds_tests;

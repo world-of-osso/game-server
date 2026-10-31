@@ -1,12 +1,8 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::subtlety_rotation::*;
-use super::{
-    literal_rotation::PrecombatPoll,
-    preparation,
-};
+use super::{literal_rotation::PrecombatPoll, preparation};
 use crate::simc_apl_native::{Encounter, FightStyle};
 use bevy::prelude::*;
-
+pub(super) use server_follower_apl::subtlety_rotation::*;
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     let encounter = Encounter::Fixture {
@@ -49,4 +45,3 @@ impl super::SpecDriver for Rotation {
         self.drive(world, actor, targets)
     }
 }
-

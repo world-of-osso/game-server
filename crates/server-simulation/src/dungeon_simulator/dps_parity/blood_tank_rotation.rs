@@ -1,8 +1,7 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::blood_tank_rotation::*;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::{Entity, World};
-
+pub(super) use server_follower_apl::blood_tank_rotation::*;
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     use server_follower_apl::{SpecRotation, literal_rotation::PrecombatPoll};

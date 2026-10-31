@@ -141,48 +141,129 @@ fn literal_queues_nearly_ready_cooldown_before_lower_priority_cast() {
     let actor = run.actor;
     let target = run.targets[0];
     crate::spell_cast::powers::change_power(
-        run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0,
-    ).unwrap();
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Chi,
+        10.0,
+    )
+    .unwrap();
     execution::execute(
-        run.app.world_mut(), actor, Execution::Spell(113656, target, Some(target)),
-    ).unwrap();
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(113656, target, Some(target)),
+    )
+    .unwrap();
     for _ in 0..100 {
         run.app.update();
     }
-    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0).unwrap();
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Chi,
+        10.0,
+    )
+    .unwrap();
     let world = run.app.world();
-    let spell = world.resource::<crate::spell_info::SpellStore>().get(113656).unwrap();
-    let remaining = world.get::<crate::spell_cast::SpellHistory>(actor).unwrap()
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(113656)
+        .unwrap();
+    let remaining = world
+        .get::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
         .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world));
     assert!(remaining > 250);
-    crate::spell_cast::scripts::reduce_cooldown(run.app.world_mut(), actor, 113656, (remaining as f64 - 200.0) / 1000.0);
+    crate::spell_cast::scripts::reduce_cooldown(
+        run.app.world_mut(),
+        actor,
+        113656,
+        (remaining as f64 - 200.0) / 1000.0,
+    );
     let actions = [
-        NativeAction { name: "fists_of_fury", spell: 113656, talent: None, self_target: false },
-        NativeAction { name: "tiger_palm", spell: 100780, talent: None, self_target: false },
+        NativeAction {
+            name: "fists_of_fury",
+            spell: 113656,
+            talent: None,
+            self_target: false,
+        },
+        NativeAction {
+            name: "tiger_palm",
+            spell: 100780,
+            talent: None,
+            self_target: false,
+        },
     ];
-    let mut driver = Driver::new(Program::parse(&[
-        ("default", "fists_of_fury,if=target.health.pct>50"),
-        ("default", "tiger_palm"),
-    ]).unwrap());
+    let mut driver = Driver::new(
+        Program::parse(&[
+            ("default", "fists_of_fury,if=target.health.pct>50"),
+            ("default", "tiger_palm"),
+        ])
+        .unwrap(),
+    );
     let initial = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, actions, false).unwrap();
-    let facts = TargetFacts { world: run.app.world(), targets: &run.targets };
-    let (action, execution) = driver.select("default", &facts, &prepared, &equipment).unwrap().unwrap();
-    driver.execute(run.app.world_mut(), actor, action, execution).unwrap();
-    run.app.world_mut().get_mut::<Health>(target).unwrap().current *= 0.25;
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        actions,
+        false,
+    )
+    .unwrap();
+    let facts = TargetFacts {
+        world: run.app.world(),
+        targets: &run.targets,
+    };
+    let (action, execution) = driver
+        .select("default", &facts, &prepared, &equipment)
+        .unwrap()
+        .unwrap();
+    driver
+        .execute(run.app.world_mut(), actor, action, execution)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(target)
+        .unwrap()
+        .current *= 0.25;
     for _ in 0..10 {
         run.app.update();
-        let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, actions, false).unwrap();
-        let facts = TargetFacts { world: run.app.world(), targets: &run.targets };
-        if let Some((action, execution)) = driver.select("default", &facts, &prepared, &equipment).unwrap() {
-            driver.execute(run.app.world_mut(), actor, action, execution).unwrap();
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &run.targets,
+            &equipment,
+            actions,
+            false,
+        )
+        .unwrap();
+        let facts = TargetFacts {
+            world: run.app.world(),
+            targets: &run.targets,
+        };
+        if let Some((action, execution)) = driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap()
+        {
+            driver
+                .execute(run.app.world_mut(), actor, action, execution)
+                .unwrap();
             break;
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[initial..];
-    let spells: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
-        && event.kind == CombatLogKind::CastSuccess).filter_map(|event| event.spell_id).collect();
-    assert_eq!(spells, vec![113656], "the queued Fists of Fury must execute after its cooldown without casting the lower-priority Tiger Palm");
+    let spells: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert_eq!(
+        spells,
+        vec![113656],
+        "the queued Fists of Fury must execute after its cooldown without casting the lower-priority Tiger Palm"
+    );
 }
 
 #[test]
@@ -192,50 +273,113 @@ fn literal_queues_nearly_recharged_action_before_lower_priority_cast() {
     let actor = run.actor;
     let target = run.targets[0];
     crate::spell_cast::powers::change_power(
-        run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0,
-    ).unwrap();
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Chi,
+        10.0,
+    )
+    .unwrap();
     execution::execute(
-        run.app.world_mut(), actor, Execution::Spell(107428, target, Some(target)),
-    ).unwrap();
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(107428, target, Some(target)),
+    )
+    .unwrap();
     crate::spell_cast::powers::change_power(
-        run.app.world_mut(), actor, shared::components::PowerType::Chi, 10.0,
-    ).unwrap();
-    let spell = run.app.world().resource::<crate::spell_info::SpellStore>().get(107428).unwrap().clone();
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Chi,
+        10.0,
+    )
+    .unwrap();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(107428)
+        .unwrap()
+        .clone();
     let mut queueable = false;
     for _ in 0..500 {
         run.app.update();
         if crate::spell_cast::read_native_cast_for_cooldown_queue(
-            run.app.world_mut(), actor, &spell, target, false,
-        ).is_ok() {
+            run.app.world_mut(),
+            actor,
+            &spell,
+            target,
+            false,
+        )
+        .is_ok()
+        {
             queueable = true;
             break;
         }
     }
-    assert!(queueable, "the spent Rising Sun Kick charge must enter the queue window");
+    assert!(
+        queueable,
+        "the spent Rising Sun Kick charge must enter the queue window"
+    );
     let actions = [
-        NativeAction { name: "rising_sun_kick", spell: 107428, talent: None, self_target: false },
-        NativeAction { name: "tiger_palm", spell: 100780, talent: None, self_target: false },
+        NativeAction {
+            name: "rising_sun_kick",
+            spell: 107428,
+            talent: None,
+            self_target: false,
+        },
+        NativeAction {
+            name: "tiger_palm",
+            spell: 100780,
+            talent: None,
+            self_target: false,
+        },
     ];
-    let mut driver = Driver::new(Program::parse(&[
-        ("default", "rising_sun_kick"), ("default", "tiger_palm"),
-    ]).unwrap());
+    let mut driver = Driver::new(
+        Program::parse(&[("default", "rising_sun_kick"), ("default", "tiger_palm")]).unwrap(),
+    );
     let initial = run.app.world().resource::<ObservedCombatEvents>().0.len();
     for _ in 0..10 {
-        let prepared = Prepared::read(run.app.world_mut(), actor, &run.targets, &equipment, actions, false).unwrap();
-        let facts = TargetFacts { world: run.app.world(), targets: &run.targets };
-        if let Some((action, execution)) = driver.select("default", &facts, &prepared, &equipment).unwrap() {
-            driver.execute(run.app.world_mut(), actor, action, execution).unwrap();
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &run.targets,
+            &equipment,
+            actions,
+            false,
+        )
+        .unwrap();
+        let facts = TargetFacts {
+            world: run.app.world(),
+            targets: &run.targets,
+        };
+        if let Some((action, execution)) = driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap()
+        {
+            driver
+                .execute(run.app.world_mut(), actor, action, execution)
+                .unwrap();
         }
         run.app.update();
         let events = &run.app.world().resource::<ObservedCombatEvents>().0[initial..];
-        if events.iter().any(|event| event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess) {
+        if events.iter().any(|event| {
+            event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        }) {
             break;
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[initial..];
-    let spells: Vec<_> = events.iter().filter(|event| event.source == Some(actor.to_bits())
-        && event.kind == CombatLogKind::CastSuccess).filter_map(|event| event.spell_id).collect();
-    assert_eq!(spells, vec![107428], "the queued charge action must execute before Tiger Palm");
+    let spells: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert_eq!(
+        spells,
+        vec![107428],
+        "the queued charge action must execute before Tiger Palm"
+    );
 }
 
 fn make_secondary_low(run: &mut Run) -> Entity {

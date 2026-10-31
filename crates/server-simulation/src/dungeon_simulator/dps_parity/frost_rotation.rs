@@ -1,16 +1,13 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::frost_rotation::*;
 use super::{
     Run,
-    literal_rotation::{
-        self, PrecombatPoll,
-    },
+    literal_rotation::{self, PrecombatPoll},
 };
 use crate::simc_apl_native::{Encounter, NativeFacts};
 use bevy::prelude::*;
 use serde_json::Value;
 use server::simc_apl::{Action, Facts};
-
+pub(super) use server_follower_apl::frost_rotation::*;
 
 #[cfg(test)]
 mod proc_tests;
@@ -121,7 +118,12 @@ pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn super::SpecDriver>
         match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
             PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
             PrecombatPoll::Selected { action, execution } => {
-                super::preparation::execute_precombat_plan(run, &mut rotation.driver, action, execution)?;
+                super::preparation::execute_precombat_plan(
+                    run,
+                    &mut rotation.driver,
+                    action,
+                    execution,
+                )?;
             }
             PrecombatPoll::Finished => {
                 rotation.start_combat_at(crate::spell_cast::now(run.app.world()));

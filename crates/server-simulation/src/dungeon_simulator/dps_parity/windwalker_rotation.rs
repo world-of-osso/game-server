@@ -1,15 +1,11 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::windwalker_rotation::*;
-use super::literal_rotation::{
-    self,
-    execution::Prepared,
-};
+use super::literal_rotation::{self, execution::Prepared};
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use facts::WwFacts;
 use serde_json::{Value, json};
 use server::simc_apl::{Action, ActionFacts};
-
+pub(super) use server_follower_apl::windwalker_rotation::*;
 
 #[cfg(test)]
 mod channel_melee_tests;
