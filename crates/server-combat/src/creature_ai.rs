@@ -404,12 +404,12 @@ pub(crate) fn follower_footprint_ground(
 /// A floor in step reach of `from` (at `to`'s x/z) that stands out of the water, such as a
 /// ramp over a pool: the follower walks on it rather than swimming under it. TC 15e0ed76
 /// TerrainMgr.cpp:741 GetWaterOrGroundLevel takes the ground first and the liquid only
-/// when that ground is under water; players use the same `is_swimming` test.
+/// when that ground is under the surface; a submerged shelf stays water, as the player's
+/// `is_swimming` needs `surface > ground`.
 fn has_dry_step(ground: &mut GroundMap, map: InMap, from: Vec3, surface: f32) -> bool {
     match ground.creature_ground_in(map, from) {
         GroundProbe::Supported(floor) => {
-            (floor - from.y).abs() <= navigation::AGENT_CLIMB
-                && !shared::movement::is_swimming(floor, floor, Some(surface))
+            (floor - from.y).abs() <= navigation::AGENT_CLIMB && floor >= surface
         }
         GroundProbe::Unloaded | GroundProbe::Unsupported => false,
     }
