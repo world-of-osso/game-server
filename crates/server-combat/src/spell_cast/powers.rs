@@ -450,34 +450,48 @@ fn change_runes(world: &mut World, entity: Entity, delta: f32) -> f32 {
     changed
 }
 
+/// Install the same resource and regeneration state for players and class followers.
+pub(crate) fn install_class_powers(world: &mut World, entity: Entity, pools: PowerPools) {
+    let runes = pools
+        .get(PowerType::Runes)
+        .map(|pool| super::runes::Runes::new(pool.max as usize));
+    let mut actor = world.entity_mut(entity);
+    actor.remove::<(CreatureRegenTimer, CreatureHealthRegenTimer)>();
+    actor.insert((pools, UnitPowers::default(), PlayerHealthRegen::default()));
+    if let Some(runes) = runes {
+        actor.insert(runes);
+    } else {
+        actor.remove::<super::runes::Runes>();
+    }
+}
+
 /// Give players their class pools once `ClassSpells` and the table are loaded.
-pub(crate) fn init_player_powers(
-    mut commands: Commands,
-    players: Query<(Entity, &Player), Without<PowerPools>>,
-    table: Option<Res<PowerTypeTable>>,
-    classes: Option<Res<ClassSpells>>,
-) {
-    let (Some(table), Some(classes)) = (table, classes) else {
+pub(crate) fn init_player_powers(world: &mut World) {
+    let mut query = world.query_filtered::<(Entity, &Player), Without<PowerPools>>();
+    let players: Vec<_> = query
+        .iter(world)
+        .map(|(entity, player)| (entity, player.class))
+        .collect();
+    let (Some(table), Some(classes)) = (
+        world.get_resource::<PowerTypeTable>(),
+        world.get_resource::<ClassSpells>(),
+    ) else {
         return;
     };
-    for (entity, player) in &players {
-        let class_power_types = classes
-            .classes
-            .iter()
-            .find(|class| class.class_id == player.class)
-            .map_or(&[][..], |class| class.power_types.as_slice());
-        let order = table.class_powers(player.class, class_power_types);
-        let pools = PowerPools::from_table(&table, order);
-        if let Some(runes) = pools.get(PowerType::Runes) {
-            commands
-                .entity(entity)
-                .insert(super::runes::Runes::new(runes.max as usize));
-        }
-        commands.entity(entity).insert((
-            pools,
-            UnitPowers::default(),
-            PlayerHealthRegen::default(),
-        ));
+    let pools: Vec<_> = players
+        .into_iter()
+        .map(|(entity, class_id)| {
+            let class_power_types = classes
+                .classes
+                .iter()
+                .find(|class| class.class_id == class_id)
+                .map_or(&[][..], |class| class.power_types.as_slice());
+            let order = table.class_powers(class_id, class_power_types);
+            (entity, PowerPools::from_table(table, order))
+        })
+        .collect();
+    for (entity, pools) in pools {
+        install_class_powers(world, entity, pools);
     }
 }
 
