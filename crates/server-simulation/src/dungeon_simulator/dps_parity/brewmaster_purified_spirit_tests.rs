@@ -1,6 +1,124 @@
 //! Purified Spirit spends the remaining Harmony pool through real periodic damage.
 
 #[test]
+#[ignore = "requires native Brewmaster profile and follower initialization"]
+fn follower_infusion_refuses_outsider_before_scripted_purified_spirit() {
+    use crate::auras::{AuraApplication, AuraSource, harmony::HarmonyPools};
+    use shared::components::Position;
+    use std::collections::BTreeMap;
+
+    let (profile, traits) = read_reference(268).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    let actor = run.actor;
+    let owner = fixture_player(&run);
+    let [primary, second, outsider] = [run.targets[0], run.targets[1], run.targets[2]];
+    for target in [primary, second] {
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, target);
+    }
+    run.app
+        .world_mut()
+        .entity_mut(outsider)
+        .insert(crate::creature_ai::CreatureState::Idle);
+    run.app.world_mut().entity_mut(actor).insert((
+        crate::followers::AplControlled,
+        crate::networking::CombatTarget(Some(primary)),
+        HarmonyPools {
+            accumulator: 0.0,
+            spender: 30000.0,
+        },
+    ));
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 450711,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let child = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(450820)
+        .unwrap()
+        .clone();
+    let selected = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        actor,
+        Some(primary),
+        &child,
+        &child.effects[0],
+        0,
+        false,
+    )
+    .unwrap();
+    assert!(
+        selected.contains(&outsider),
+        "native Purified Spirit must reach the idle outsider"
+    );
+    assert!(
+        selected.contains(&second),
+        "native Purified Spirit must reach an engaged secondary"
+    );
+    let rotation = server_follower_apl::registry::load(run.app.world_mut(), actor, 268).unwrap();
+    let mut apl = server_follower_apl::FollowerApl::new(rotation);
+    let action = server::simc_apl::Action {
+        source_row: None,
+        name: "celestial_brew".into(),
+        target: Some(actor.to_bits()),
+        options: BTreeMap::new(),
+    };
+    let attempt = |apl: &mut server_follower_apl::FollowerApl, run: &mut Run| {
+        apl.execute_plan(
+            run.app.world_mut(),
+            actor,
+            action.clone(),
+            server_follower_apl::literal_rotation::execution::Execution::Spell(
+                1241059, actor, None,
+            ),
+        )
+        .unwrap();
+    };
+    attempt(&mut apl, &mut run);
+    assert_eq!(
+        run.app.world().get::<HarmonyPools>(actor).unwrap().spender,
+        30000.0,
+        "unsafe recast must be refused"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), outsider)
+            .next()
+            .is_none()
+    );
+    run.app.world_mut().get_mut::<Position>(outsider).unwrap().x += 100.0;
+    run.app.update();
+    attempt(&mut apl, &mut run);
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.spell_id == Some(450820)
+            && event.kind == CombatLogKind::Damage
+            && event.target == Some(second.to_bits())),
+        "safe recast must damage the engaged secondary"
+    );
+    assert!(!events.iter().any(|event| event.spell_id == Some(450820) && event.target == Some(outsider.to_bits())));
+}
+
+#[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn refreshed_spender_splits_purified_spirit_between_targets() {
     let _seed = crate::random::seed_scope(70448);

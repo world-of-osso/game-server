@@ -293,6 +293,8 @@ pub enum ScriptReach {
     #[default]
     None,
     Area(DeclaredReach),
+    /// A scripted child using the parent's caster and target anchors.
+    Child(u32),
     EngagedOnly,
     /// A bounded selection that can only reach enemies already in combat.
     EngagedArea(DeclaredReach),
@@ -525,6 +527,18 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn declared_children(self, world: &World, caster: Entity, spell: &SpellInfo) -> Vec<u32> {
+        self.hooks()
+            .filter_map(|hook| match hook {
+                SpellScriptHook::DeclaredReach(declare) => match declare(world, caster, spell) {
+                    ScriptReach::Child(child) => Some(child),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect()
     }
 
     pub fn declared_reach(self, world: &World, caster: Entity, spell: &SpellInfo) -> DeclaredReach {

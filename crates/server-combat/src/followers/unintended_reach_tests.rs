@@ -15,6 +15,19 @@ fn holy_paladin_modifier_does_not_inherit_divine_toll_reach() {
 }
 
 #[test]
+fn native_trigger_and_periodic_trigger_inherit_child_area_reach() {
+    let (harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
+    let world = harness.app.world();
+    for spell in [1680, 1949] {
+        let reach = super::spell_unintended_reach(world, actor, spell, actor).unwrap();
+        assert!(
+            reach.0 > 0.0,
+            "spell {spell} must include its native child area: {reach:?}"
+        );
+    }
+}
+
+#[test]
 fn native_consecration_pulse_radius_is_included() {
     let (mut harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
     harness
