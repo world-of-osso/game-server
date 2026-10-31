@@ -77,9 +77,11 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         .insert((map, Level(90), UnitLevel(90), here));
     h.app.world_mut().entity_mut(tank).insert((map, here));
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
-    let mut health = h.app.world_mut().get_mut::<Health>(tank).unwrap();
-    health.current = health.max;
-    drop(health);
+    for unit in [tank, caller, helpers[0], helpers[1]] {
+        let mut health = h.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.max = 1_000_000.0;
+        health.current = health.max;
+    }
     let planned = super::pull_set::members(h.app.world(), caller, tank);
     assert_eq!(planned.len(), 3);
     assert!(planned.contains(&caller));
@@ -101,6 +103,16 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         }
     }
     assert!(
+        helpers
+            .iter()
+            .all(|&helper| crate::combat_refs::has_active_reference_to(
+                h.app.world(),
+                helper,
+                tank
+            )),
+        "planned assistants must join the tank's combat at dispatch"
+    );
+    assert!(
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "the tank may use its native chain after planned assistants dispatch"
     );
@@ -118,16 +130,6 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
             break;
         }
     }
-    assert!(
-        helpers
-            .iter()
-            .all(|&helper| crate::combat_refs::has_active_reference_to(
-                h.app.world(),
-                helper,
-                tank
-            )),
-        "planned assistants must actually join the tank's combat"
-    );
     assert!(
         h.inbox.log.iter().any(|event| {
             event.spell_id == Some(31935)
