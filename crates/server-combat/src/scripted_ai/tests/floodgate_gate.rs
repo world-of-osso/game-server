@@ -2,6 +2,63 @@ use super::*;
 use shared::protocol::GameObjectCollision;
 
 #[test]
+fn geezle_releases_near_player_and_melee_starts_encounter_3054() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(226404, 2773, 3, 205, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (other_boss, _) = spawn_authored_actor(&mut h.app, &conn, 226404, other_map, 205);
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    let place = |h: &mut Harness, dx: f32| {
+        h.app.world_mut().entity_mut(player).insert(Position {
+            x: origin.x + dx,
+            ..origin
+        });
+    };
+    let immunity = UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
+    place(&mut h, 23.0);
+    h.advance(0.2);
+    let initial = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(initial & immunity, immunity, "23 yd is outside the release");
+
+    place(&mut h, 21.0);
+    h.advance(0.2);
+    let released = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(released & immunity, 0, "21 yd releases Geezle");
+    assert_eq!(released & !immunity, initial & !immunity);
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(other_boss).unwrap().0 & immunity,
+        immunity,
+        "another copy stays protected"
+    );
+
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(shared::components::UnitLevel(80));
+    place(&mut h, 3.0);
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::combat::AutoAttack::new(boss));
+    h.advance(10.0);
+    let health = h.app.world().get::<Health>(boss).unwrap();
+    assert!(health.current < health.max, "melee damages Geezle");
+    let world = h.app.world_mut();
+    let encounter = instance_script::boss_id_for_encounter(world, map, 3054).unwrap();
+    assert_eq!(
+        instance_script::get_boss_state(world, map, encounter),
+        Some(EncounterState::InProgress)
+    );
+}
+
+#[test]
 fn swampface_done_opens_dam_and_only_its_collision_proxy() {
     let (mut h, _, map) = bound_boss_at_difficulty(226396, 2773, 2, 205, None);
     let conn =
