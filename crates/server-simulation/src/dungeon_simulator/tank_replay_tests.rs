@@ -1969,6 +1969,12 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
         let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
         super::dps_parity::engage(&mut run);
         let (actor, survivor) = (run.actor, run.targets[1]);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 386730,
+        );
         for _ in 0..15 {
             apply_self_aura(&mut run, 432502);
             let primary = crate::zones::summon_creature(
@@ -1988,31 +1994,17 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                 .unwrap()
                 .current = 1.0;
             let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
-            crate::spell_cast::creature_cast(
+            assert!(crate::spell_cast::try_cast_triggered(
                 run.app.world_mut(),
                 actor,
-                20271,
+                1241413,
                 Some(primary),
-                false,
-            )
-            .unwrap();
-            for _ in 0..250 {
+                1
+            ));
+            for _ in 0..20 {
                 run.app.update();
             }
             let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
-            eprintln!(
-                "seed={seed} events={:?}",
-                events
-                    .iter()
-                    .map(|event| (
-                        event.source,
-                        event.target,
-                        event.spell_id,
-                        event.amount,
-                        event.kind
-                    ))
-                    .collect::<Vec<_>>()
-            );
             assert!(
                 run.app
                     .world()
@@ -2024,7 +2016,7 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                     .iter()
                     .any(|event| event.source == Some(actor.to_bits())
                         && event.target == Some(primary.to_bits())
-                        && event.spell_id == Some(20271)
+                        && event.spell_id == Some(1241413)
                         && event.kind == CombatLogKind::Damage
                         && event.amount > 0)
             );
