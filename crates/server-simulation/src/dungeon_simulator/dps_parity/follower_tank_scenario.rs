@@ -122,6 +122,8 @@ impl TankScenario {
                                 "raw": hit.amount,
                                 "outcome": format!("{outcome:?}"),
                                 "armor": stats.map(|stats| stats.armor),
+                                "base_armor_pct": world.get::<crate::stats::StatModifiers>(self.tank).map(|mods| mods.base_armor_pct),
+                                "sanctified_plates": auras.and_then(|auras| auras.iter().find(|aura| aura.spell_id == 402964)).map(|aura| aura.effects.iter().map(|effect| (effect.index, effect.amount)).collect::<Vec<_>>()),
                                 "creature_armor": world.get::<crate::level_scaling::CreatureArmor>(self.tank).map(|armor| armor.0),
                                 "damage_taken": world.get::<crate::auras::AuraStatMods>(self.tank).map(|mods| mods.damage_taken(1)),
                                 "sentinel_stacks": stacks(389539),
