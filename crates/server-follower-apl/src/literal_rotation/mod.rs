@@ -234,6 +234,12 @@ impl Driver {
         execution: Execution,
     ) -> Result<(), String> {
         server::simc_apl::gcd_history::ensure_initialized(world, actor, &self.program)?;
+        if server::followers::holding_pull_damage(world, actor)
+            && pull_damage_execution(world, &execution)?
+        {
+            self.pending_line = None;
+            return Ok(());
+        }
         if let Execution::Queue(execution, delay) = execution {
             self.queued = Some((
                 action,
@@ -348,6 +354,21 @@ impl Driver {
             self.cancellation = None;
         }
         Ok(cancel)
+    }
+}
+
+fn pull_damage_execution(world: &World, execution: &Execution) -> Result<bool, String> {
+    match execution {
+        Execution::Composite(steps) => {
+            for step in steps {
+                if pull_damage_execution(world, step)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        Execution::Queue(step, _) => pull_damage_execution(world, step),
+        _ => harmful_execution(world, execution),
     }
 }
 

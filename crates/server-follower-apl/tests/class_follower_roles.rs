@@ -288,6 +288,49 @@ fn class_follower_healer_casts_holy_priest_apl_heals_on_dummy_pull() {
 }
 
 #[test]
+fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
+    let mut pull = spawn(257);
+    let owner = pull.harness.caster;
+    let profiles = read_profiles().unwrap();
+    let tank = profiles
+        .iter()
+        .find(|profile| profile.spec_id == 66)
+        .unwrap();
+    let tank = spawn_class(
+        pull.harness.app.world_mut(),
+        owner,
+        tank,
+        1,
+        1,
+        GearSource::Journal,
+    )
+    .unwrap();
+    server_combat::followers::set_test_pull_back(pull.harness.app.world_mut(), owner, tank);
+    assert!(server_combat::followers::holding_pull_damage(
+        pull.harness.app.world(),
+        pull.follower
+    ));
+    pull.fight();
+    let heals = server_follower_apl::holy_priest_rotation::SPELLS
+        .iter()
+        .filter(|(name, _, _)| !matches!(*name, "holy_fire" | "smite"));
+    let apl = pull.resolved(heals.map(|&(_, spell, _)| spell));
+    assert!(
+        pull.landed(CombatLogKind::Heal, owner, &apl),
+        "no APL heal during pull-back; casts {:?}",
+        pull.casts()
+    );
+    assert!(pull.events().iter().all(|event| {
+        event.source != Some(pull.follower.to_bits()) || event.kind != CombatLogKind::Damage
+    }));
+    assert!(
+        !pull.casts().contains(&19236),
+        "legacy defensive bridge ran"
+    );
+    assert!(!pull.apl_failed());
+}
+
+#[test]
 fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     let pull = pull(62);
     let table = server_follower_apl::arcane_rotation::ACTIONS;

@@ -146,6 +146,22 @@ use shared::group::GroupRole;
 mod group_buff_tests;
 
 pub use ai::{AplControlled, FollowerReach, acting_follower, engaged_targets, party_units};
+
+#[cfg(feature = "test-support")]
+pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
+    world
+        .entity_mut(owner)
+        .insert(tank_pull_back::WaitingForPullBack(tank));
+}
+
+/// Whether this class follower must hold damage while its tank repositions a pull.
+pub fn holding_pull_damage(world: &World, unit: Entity) -> bool {
+    world.get::<AplControlled>(unit).is_some()
+        && world.get::<Follower>(unit).is_some_and(|follower| {
+            follower.profile.role != GroupRole::Tank
+                && tank_pull_back::party_should_wait(world, follower.owner)
+        })
+}
 pub use catalog::{FollowerCatalog, load_catalog};
 pub use kit_ai::is_tank;
 pub use live_facts::{ObservedEvents, observe_unit};
