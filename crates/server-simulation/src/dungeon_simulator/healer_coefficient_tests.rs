@@ -315,6 +315,65 @@ fn preservation_reversion_tick_matches_native_coefficient() {
 }
 
 #[test]
+#[ignore = "checks native Protection Word of Glory rank 2"]
+fn protection_word_of_glory_rank_two_scales_self_healing_with_missing_health() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::PowerType;
+
+    let cast = |rank_two: bool| {
+        let spells = if rank_two {
+            vec![85673, 315921]
+        } else {
+            vec![85673]
+        };
+        let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+            Vec::new(),
+            &spells,
+            2,
+            false,
+            |app| {
+                app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
+            },
+        )
+        .unwrap();
+        h.app.init_resource::<ObservedCombatEvents>();
+        h.app.world_mut().entity_mut(h.caster).insert((
+            shared::components::Level(90),
+            shared::components::ActiveSpec(66),
+        ));
+        h.advance(3);
+        if rank_two {
+            assert!(crate::auras::has_aura(h.app.world(), h.caster, 315921));
+        }
+        *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+            current: 50_000.0,
+            max: 100_000.0,
+        };
+        h.set_power(PowerType::HolyPower, 3.0);
+        crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, 85673, Some(h.caster), false)
+            .unwrap();
+        h.advance(4);
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        let heal = events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(85673)
+                    && event.target == Some(h.caster.to_bits())
+            })
+            .expect("Word of Glory must heal");
+        heal.amount
+    };
+    let base = cast(false);
+    let ranked = cast(true);
+    let ratio = ranked as f32 / base as f32;
+    assert!(
+        (2.35..=2.65).contains(&ratio),
+        "rank 2 at 50% health: base={base}, ranked={ranked}, ratio={ratio}"
+    );
+}
+
+#[test]
 #[ignore = "explicit seven-spec core-heal coefficient ledger qualification"]
 fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
     // DB2 SpellEffect, DifficultyID0. TC a352b1fa Unit.cpp7345–7456:
