@@ -144,6 +144,69 @@ fn class_follower_uses_authored_starter_below_cap_and_strict_logged_build_at_cap
 }
 
 #[test]
+fn class_follower_selects_profile_hero_when_unlocked() {
+    let classes = classes().unwrap();
+    let profiles = crate::followers::class_profiles::read_profiles().unwrap();
+    let mut checked = 0;
+    for profile in profiles
+        .iter()
+        .filter(|profile| profile.rejection.is_none())
+    {
+        let Some(logged) = profile.talent_entries.as_deref() else {
+            continue;
+        };
+        let class = classes
+            .classes
+            .iter()
+            .find(|class| class.class_id == profile.class_id)
+            .unwrap();
+        let tree = &class.traits;
+        let selected = logged.iter().find_map(|&(entry_id, ranks)| {
+            (ranks > 0)
+                .then(|| {
+                    tree.nodes.iter().find_map(|node| {
+                        (node.kind == TraitNodeType::SubTreeSelection)
+                            .then(|| node.entry(entry_id).map(|entry| entry.sub_tree_id))
+                            .flatten()
+                    })
+                })
+                .flatten()
+        });
+        let Some(selected) = selected else { continue };
+        for (level, expected) in [(70, None), (78, Some(selected))] {
+            let ctx = TraitContext {
+                spec_id: profile.spec_id,
+                level,
+            };
+            let (_, entries) = build_follower_config(tree, ctx, TalentSource::SimcProfile, logged)
+                .unwrap_or_else(|error| panic!("spec {} level {level}: {error}", profile.spec_id));
+            assert_eq!(
+                selected_sub_tree(tree, &entries),
+                expected,
+                "spec {} level {level}",
+                profile.spec_id
+            );
+            let starter = build_config(tree, ctx, &starter_purchases(tree, ctx).unwrap()).unwrap();
+            for existing in starter.iter().filter(|entry| {
+                tree.node(entry.node_id).unwrap().sub_tree_id == 0
+                    && tree.node(entry.node_id).unwrap().kind != TraitNodeType::SubTreeSelection
+            }) {
+                assert!(
+                    entries.contains(existing),
+                    "starter entry lost for spec {}: {existing:?}",
+                    profile.spec_id
+                );
+            }
+        }
+        if profile.spec_id == 268 {
+            assert_eq!(selected, 66, "Brewmaster selects Master of Harmony");
+        }
+        checked += 1;
+    }
+    assert!(checked > 1, "exercise multiple class profiles");
+}
+
+#[test]
 fn class_follower_logged_trait_entries_resolve_and_use_strict_player_validation() {
     use std::collections::BTreeMap;
 

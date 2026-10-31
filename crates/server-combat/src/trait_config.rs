@@ -147,8 +147,8 @@ impl TalentSource {
     }
 }
 
-/// Select authored level-appropriate starter talents below the level cap. At the cap,
-/// validate the supplied build under its supplied provenance; never truncate it.
+/// Select authored level-appropriate starter talents below the level cap, with the
+/// supplied profile's hero choice when available. At the cap, validate the full build.
 pub fn build_follower_config(
     tree: &TraitTree,
     ctx: TraitContext,
@@ -160,7 +160,10 @@ pub fn build_follower_config(
         return Err(format!("invalid follower talent level {}", ctx.level));
     }
     if u32::from(ctx.level) < max_level || source == TalentSource::NativeStarterLoadout {
-        let purchases = starter_purchases(tree, ctx)?;
+        let mut purchases = starter_purchases(tree, ctx)?;
+        if source != TalentSource::NativeStarterLoadout {
+            select_profile_hero(tree, ctx, logged, &mut purchases)?;
+        }
         return Ok((
             TalentSource::NativeStarterLoadout,
             build_config(tree, ctx, &purchases)?,
@@ -173,6 +176,51 @@ pub fn build_follower_config(
         ));
     }
     Ok((source, build_logged_config(tree, ctx, logged)?))
+}
+
+fn select_profile_hero(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    logged: &[(u32, u32)],
+    purchases: &mut Vec<Purchase>,
+) -> Result<(), String> {
+    let choices: Vec<_> = logged
+        .iter()
+        .filter(|(_, ranks)| *ranks > 0)
+        .filter_map(|&(entry_id, _)| {
+            tree.nodes.iter().find_map(|node| {
+                (node.kind == TraitNodeType::SubTreeSelection)
+                    .then(|| node.entry(entry_id).map(|entry| (node, entry)))
+                    .flatten()
+            })
+        })
+        .collect();
+    let [(node, entry)] = choices.as_slice() else {
+        return if choices.is_empty() {
+            Ok(())
+        } else {
+            Err("follower profile selects multiple hero trees".into())
+        };
+    };
+    let starter = build_config(tree, ctx, purchases)?;
+    if Checker::new(tree, ctx, &starter)
+        .node_meets_conditions(node, entry.id)
+        .is_err()
+    {
+        return Ok(());
+    }
+    purchases.retain(|purchase| {
+        tree.node(purchase.node_id).is_some_and(|selected| {
+            selected.kind != TraitNodeType::SubTreeSelection
+                && (selected.sub_tree_id == 0 || selected.sub_tree_id == entry.sub_tree_id)
+        })
+    });
+    purchases.push(Purchase {
+        node_id: node.id,
+        entry_id: entry.id,
+        ranks: 1,
+    });
+    Ok(())
 }
 
 /// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
