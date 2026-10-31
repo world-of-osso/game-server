@@ -481,6 +481,9 @@ pub(super) fn on_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
             other.spell_id == speed_aura && other.caster == unit
         });
     }
+    if world.get::<shared::components::Player>(unit).is_some() {
+        crate::hunter_pet::resummon_temporarily_unsummoned(world, unit);
+    }
 }
 
 /// `Unit::CancelMountAura` (Unit.cpp:8367-8377, `CMSG_CANCEL_MOUNT_AURA`): remove the
