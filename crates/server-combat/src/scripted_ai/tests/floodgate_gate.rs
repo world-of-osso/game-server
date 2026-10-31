@@ -3,7 +3,7 @@ use shared::protocol::GameObjectCollision;
 
 #[test]
 fn geezle_releases_near_player_and_melee_starts_encounter_3054() {
-    let (mut h, boss, map) = bound_boss_at_difficulty(226404, 2773, 2, 205, None);
+    let (mut h, boss, map) = bound_boss_at_difficulty(226404, 2773, 3, 205, None);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     h.app
