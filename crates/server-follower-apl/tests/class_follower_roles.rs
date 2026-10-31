@@ -310,6 +310,24 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
         pull.harness.app.world(),
         pull.follower
     ));
+    let before = pull.casts().len();
+    for _ in 0..5 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    assert_eq!(
+        pull.casts().len(),
+        before,
+        "follower brain cast a kit action"
+    );
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<shared::casting::CastState>(pull.follower)
+            .is_none(),
+        "follower brain started a kit cast"
+    );
     pull.fight();
     let heals = server_follower_apl::holy_priest_rotation::SPELLS
         .iter()
