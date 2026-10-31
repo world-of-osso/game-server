@@ -842,6 +842,67 @@ fn follower_aura_sampling_tracks_actual_active_duration() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_sentinel_starts_full_and_decay_follows_simc() {
+    fn fixture() -> (App, Entity, Entity) {
+        let (mut app, actor, target, _) = prepare_follower(209057, 70, 2515);
+        app.world_mut()
+            .entity_mut(actor)
+            .remove::<crate::followers::AplControlled>();
+        for _ in 0..5 {
+            app.update();
+        }
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 389539, Some(actor), false)
+            .unwrap();
+        (app, actor, target)
+    }
+    fn stacks(app: &App, actor: Entity) -> u8 {
+        app.world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 389539 && aura.caster == actor)
+            .unwrap()
+            .stacks
+    }
+    let (mut app, actor, _) = fixture();
+    assert_eq!(stacks(&app, actor), 15);
+    for _ in 0..22 {
+        app.update();
+    }
+    assert_eq!(stacks(&app, actor), 14);
+    for _ in 0..25 {
+        app.update();
+    }
+    assert_eq!(
+        stacks(&app, actor),
+        14,
+        "SimC decay cannot retrigger while its own cooldown runs"
+    );
+
+    let (mut app, actor, target) = fixture();
+    app.world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(shared::components::PowerType::HolyPower)
+        .unwrap()
+        .current = 3.0;
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 53600, Some(target), false).unwrap();
+    for _ in 0..22 {
+        app.update();
+    }
+    assert_eq!(
+        stacks(&app, actor),
+        15,
+        "paid spender delays the first decay"
+    );
+    for _ in 0..20 {
+        app.update();
+    }
+    assert_eq!(stacks(&app, actor), 14);
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: u32 = std::env::var("FOLLOWER_DPS_ENTRY")

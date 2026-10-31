@@ -344,6 +344,7 @@ register_modules! {
     paladin_armaments: (1000, "modules/paladin_armaments.rs"),
     paladin_consecration: (9804, "modules/paladin_consecration.rs"),
     paladin_refining_fire: (9806, "modules/paladin_refining_fire.rs"),
+    paladin_sentinel: (9807, "modules/paladin_sentinel.rs"),
     paladin_vengeful_wrath: (9807, "modules/paladin_vengeful_wrath.rs"),
     paladin_word_of_glory: (9808, "modules/paladin_word_of_glory.rs"),
     paladin_edict: (1001, "modules/paladin_edict.rs"),
