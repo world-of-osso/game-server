@@ -31,7 +31,17 @@ fn cast_after_slam(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool
         warn!(?caster, "Native Concussive Slam lacks its source primary");
         return;
     };
-    if !combat::spell_cast::try_cast_triggered(world, caster, CONCUSSIVE_SLAM, Some(primary), 1) {
+    let Some(position) = combat::spell_cast::targets::position(world, primary) else {
+        warn!(?primary, "Concussive Slam primary position unavailable");
+        return;
+    };
+    let Some(mut child) = combat::spell_cast::load_triggered_spell(world, CONCUSSIVE_SLAM, 1) else {
+        return;
+    };
+    child.cast_destination = Some(position.to_array());
+    // SimC sc_warrior.cpp3443–3452, 3534–3535 executes the secondary area
+    // after Slam even if the primary died, retaining it for exclusion.
+    if !combat::spell_cast::launch_triggered_spell_with_primary(world, caster, &child, None, Some(primary), 1) {
         warn!(?caster, ?primary, "Native Concussive Slam payload refused");
     }
 }
@@ -47,6 +57,7 @@ fn exclude_primary(
     // sc_warrior.cpp3443–3453: secondary_targets_only(). Native payload
     // selection still supplies its radius and admitted enemy recipients.
     if spell.id == CONCUSSIVE_SLAM && index == 0 && equipped(world, caster) {
+        let primary = spell.cast_primary_target.or(primary);
         recipients.retain(|target| Some(*target) != primary);
     }
 }
