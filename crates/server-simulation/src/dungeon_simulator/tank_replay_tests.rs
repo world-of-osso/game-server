@@ -1958,6 +1958,66 @@ fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
 }
 
 #[test]
+#[ignore = "uses a lethal Protection ability and native Sacred Weapon proc"]
+fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    for seed in [70448, 1, 2] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
+        super::dps_parity::engage(&mut run);
+        let (actor, primary, survivor) = (run.actor, run.targets[0], run.targets[1]);
+        apply_self_aura(&mut run, 432502);
+        for _ in 0..40 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .entity_mut(primary)
+            .remove::<crate::creature_scripts::TrainingDummy>();
+        run.app
+            .world_mut()
+            .get_mut::<Health>(primary)
+            .unwrap()
+            .current = 1.0;
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 20271, Some(primary), false)
+            .unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+        if events.iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(432616)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }) {
+            assert!(
+                run.app
+                    .world()
+                    .get::<Health>(primary)
+                    .is_some_and(|health| health.current <= 0.0)
+            );
+            assert!(
+                events
+                    .iter()
+                    .any(|event| event.source == Some(actor.to_bits())
+                        && event.target == Some(primary.to_bits())
+                        && event.spell_id == Some(20271)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0)
+            );
+            return;
+        }
+    }
+    panic!("native Sacred Weapon did not proc on a lethal ability in the fixed seed matrix");
+}
+
+#[test]
 #[ignore = "uses real Protection Hammer of Wrath and Sacred Weapon procs"]
 fn sacred_weapon_strikes_on_hammer_of_wrath_without_healing_from_energize() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
