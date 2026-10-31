@@ -77,7 +77,7 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
             &data,
             crate::zones::MapContent {
                 map,
-                difficulty_id: 1,
+                difficulty_id: 205,
                 dead_bosses: vec![]
             },
             false,
@@ -101,6 +101,7 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
         .find(|(_, origin)| origin.guid == 63805162)
         .unwrap()
         .0;
+    h.app.world_mut().entity_mut(hawk).insert(UnitLevel(90));
     crate::combat_refs::set_in_combat_with(h.app.world_mut(), owner, enemy);
     h.app.world_mut().entity_mut(healer).insert((
         crate::creature_ai::FollowOwner::new(owner),
@@ -123,7 +124,7 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
     let unguarded_follow_point = Vec3::new(5316.1387, 126.344864, 3142.1423);
     assert!(
         unguarded_follow_point.distance(center) < radius,
-        "the authored follow offset must enter the Dragonhawk radius"
+        "the follow offset {unguarded_follow_point:?} must enter the Dragonhawk radius {radius} around {center:?}"
     );
     let mut farthest = 0.0_f32;
     for _ in 0..200 {
