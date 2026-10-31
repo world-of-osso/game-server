@@ -1385,6 +1385,32 @@ pub fn adjust_owned_stack_cap(world: &mut World, unit: Entity, spell_id: u32, de
     true
 }
 
+/// Limit a caster-owned aura's stacks without changing its lifetime or phase.
+pub fn limit_owned_stacks(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    maximum: u8,
+) -> bool {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    aura.max_stacks = aura.max_stacks.min(maximum.max(1));
+    aura.stacks = aura.stacks.min(aura.max_stacks);
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, unit);
+    true
+}
+
 /// Set a caster-owned counter without changing its lifetime or periodic phase.
 pub fn set_owned_stacks(
     world: &mut World,

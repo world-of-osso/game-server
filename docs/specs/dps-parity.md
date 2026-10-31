@@ -53,6 +53,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - Selected Scald guarantees Fireball and Fire-specialization Frostfire Bolt critically hit targets at or below its native effect3 health threshold; it does not guarantee Pyroblast (SimC76f8118 `sc_mage.cpp:2299–2305,3850–3857,5769–5772`).
 
+### Umbrelskul's Fractured Heart
+
+- The equipped Heart's native proc applies item-level-scaled Crystal Sickness. Each tick raises its stack up to ten; on a non-boss at or below the native threshold, it executes that target and jumps to another enemy, subject to the native jump-counter cap (SimC76f8118 `unique_gear_dragonflight.cpp:7575–7685`).
+
 ### Fire Ignite
 
 - Each new Ignite deposit receives selected Slow Burn's native effect2 during Combustion or selected Master of Flame's native effect1 otherwise; existing unpaid Ignite is not rescaled (SimC76f8118 `sc_mage.cpp:1935–1946`).

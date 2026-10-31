@@ -34,6 +34,8 @@ pub struct AuraScript {
     /// Duration expiry or explicit full channel completion, never interruption.
     pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
+    /// Called after a periodic damage tick, with its actual aura recipient.
+    pub after_periodic_damage: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
     pub check_proc: Option<ProcCheckHook>,
     pub on_damage_proc: Option<DamageProcHook>,
@@ -140,6 +142,25 @@ pub(super) fn check_proc(
 pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_periodic) {
         run(world, unit, aura, effect_index);
+    }
+}
+
+pub(super) fn after_periodic_damage(
+    world: &mut World,
+    unit: Entity,
+    spell_id: u32,
+    instance_id: u32,
+    effect_index: u8,
+) {
+    let Some(run) = script(world, spell_id).and_then(|script| script.after_periodic_damage) else {
+        return;
+    };
+    let aura = world
+        .get::<super::ActiveAuras>(unit)
+        .and_then(|auras| auras.get(instance_id))
+        .cloned();
+    if let Some(aura) = aura {
+        run(world, unit, &aura, effect_index);
     }
 }
 

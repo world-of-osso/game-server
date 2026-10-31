@@ -955,6 +955,154 @@ fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn equipped_fractured_heart_procs_ramps_and_jumps_from_nonboss() {
+    let _seed = crate::random::seed_scope(70_448);
+    let (mut profile, traits) = read_reference(63).unwrap();
+    let identity = inputs::read_actor(&profile).unwrap();
+    let trinket = profile
+        .equipment
+        .iter_mut()
+        .find(|item| item.slot == "trinket1")
+        .unwrap();
+    trinket.item_id = 212684;
+    trinket.item_level_override = Some(73);
+    trinket.bonus_list.clear();
+    trinket.enchant = 0;
+    trinket.gems.clear();
+    trinket.options.clear();
+    let mut run = prepare_literal_reference(profile, &traits, 2, identity).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let other = run.targets[1];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, other);
+    let driver = run
+        .app
+        .world()
+        .get::<ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 432699)
+        .expect("equipped Heart driver");
+    assert!(matches!(
+        driver.source,
+        crate::auras::AuraSource::Equipment(_)
+    ));
+    assert_eq!(driver.cast_item_level, Some(73));
+    for _ in 0..80 {
+        start_native(&mut run, 133, target);
+        preparation::finish_pending_setup(&mut run).unwrap();
+        for _ in 0..20 {
+            run.app.update();
+        }
+        if crate::auras::has_aura(run.app.world(), target, 433522) {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), target, 433522),
+        "equipped native driver must proc Crystal Sickness"
+    );
+    for _ in 0..70 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 433522 && aura.caster == actor)
+        .unwrap();
+    assert!(
+        aura.stacks >= 3 && aura.max_stacks == 10,
+        "real periodic ticks must ramp to the sourced cap"
+    );
+    let amount = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(crate::auras::set_owned_stacks(
+        run.app.world_mut(),
+        actor,
+        target,
+        433522,
+        10
+    ));
+    assert!(crate::spell_cast::cast_triggered_with_overrides(
+        run.app.world_mut(),
+        actor,
+        433522,
+        Some(target),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            effect0_amount: Some(amount),
+            item_level: Some(73),
+            ..Default::default()
+        },
+    ));
+    let refreshed = run
+        .app
+        .world()
+        .get::<ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 433522 && aura.caster == actor)
+        .unwrap();
+    assert_eq!(
+        (refreshed.stacks, refreshed.max_stacks),
+        (10, 10),
+        "refresh must retain the ten-stack cap"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(433522)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && event.amount > 0)
+    );
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.02;
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), target, 433522),
+        "the boss dummy must not be executed or jumped"
+    );
+    // Dummy combat references expire after five seconds without direct hits.
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, other);
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Npc>(target)
+        .unwrap()
+        .template_id = 6;
+    // A training dummy prevents health loss; the nonboss control must permit it.
+    run.app
+        .world_mut()
+        .entity_mut(target)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), other, 433522),
+        "nonboss at execute health must jump to another engaged enemy"
+    );
+    assert!(
+        run.app.world().get::<Health>(target).unwrap().current <= 0.0,
+        "jump executes its former target"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_ignite_deposit_uses_the_selected_combustion_phase_talent() {
     let contribution = |combustion: bool, phase_talent: bool| {
         let _seed = crate::random::seed_scope(70_448);
