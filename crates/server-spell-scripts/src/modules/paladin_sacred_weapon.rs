@@ -126,7 +126,12 @@ fn wield_sacred_weapon(
         return;
     };
     if targets::relation_matches(world, unit, target, Relation::Enemy) {
-        combat::spell_cast::cast_triggered(world, unit, STRIKE, Some(target), 1);
+        // SimC sc_paladin.cpp2400–2409 executes the area proc even when the
+        // triggering hit killed its target; retain that target as its center.
+        let Some(spell) = combat::spell_cast::load_triggered_spell(world, STRIKE, 1) else {
+            return;
+        };
+        combat::spell_cast::launch_triggered_spell_with_primary(world, unit, &spell, None, Some(target), 1);
         super::paladin_armaments::roll_reflection_of_radiance(world, unit, REFLECTION_CHANCE);
     } else {
         combat::spell_cast::cast_triggered(world, unit, HEAL, Some(target), 1);
@@ -150,6 +155,7 @@ fn plan_strike(
     primary: Option<Entity>,
 ) -> TargetPlan {
     let cap = spell.effects[1].base_points;
+    let primary = spell.cast_primary_target.or(primary);
     let units = units_around(world, caster, spell, primary, Relation::Enemy);
     let lone = if units.len() == 1 { 1.5 } else { 1.0 };
     let multiplier = combat::spell_cast::scripts::soft_cap_multiplier(units.len(), cap) * lone;
@@ -183,7 +189,9 @@ fn units_around(
     let mut units = targets::area_units(world, caster, center, radius, relation, 0);
     // SimC AoE actions retain the selected primary first.
     units.retain(|unit| *unit != primary);
-    units.insert(0, primary);
+    if targets::is_alive(world, primary) {
+        units.insert(0, primary);
+    }
     units
 }
 

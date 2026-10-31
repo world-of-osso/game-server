@@ -1958,6 +1958,100 @@ fn sacred_weapon_procs_strike_the_dummy_with_the_lone_target_bonus() {
 }
 
 #[test]
+#[ignore = "uses a lethal Protection ability and native Sacred Weapon proc"]
+fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    for seed in [70448, 1, 2] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
+        super::dps_parity::engage(&mut run);
+        let (actor, survivor) = (run.actor, run.targets[1]);
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 386730,
+        );
+        for _ in 0..15 {
+            apply_self_aura(&mut run, 432502);
+            let primary = crate::zones::summon_creature(
+                run.app.world_mut(),
+                actor,
+                31_146,
+                [15.0, 0.0, 0.0, 0.0],
+            )
+            .unwrap();
+            // Keep the pack outside the player's Consecration field so the
+            // Hammer projectile, rather than a ground tick, delivers the kill.
+            let position = *run
+                .app
+                .world()
+                .get::<shared::components::Position>(primary)
+                .unwrap();
+            *run.app
+                .world_mut()
+                .get_mut::<shared::components::Position>(survivor)
+                .unwrap() = position;
+            run.app
+                .world_mut()
+                .entity_mut(primary)
+                .remove::<crate::creature_scripts::TrainingDummy>();
+            run.app
+                .world_mut()
+                .get_mut::<Health>(primary)
+                .unwrap()
+                .current = 1.0;
+            let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                actor,
+                1241413,
+                Some(primary),
+                1
+            ));
+            for _ in 0..20 {
+                run.app.update();
+            }
+            let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+            assert!(
+                run.app
+                    .world()
+                    .get::<Health>(primary)
+                    .is_some_and(|health| health.current <= 0.0)
+            );
+            assert!(
+                events
+                    .iter()
+                    .any(|event| event.source == Some(actor.to_bits())
+                        && event.target == Some(primary.to_bits())
+                        && event.spell_id == Some(1241413)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0),
+                "primary events: {:?}",
+                events
+                    .iter()
+                    .filter(|event| event.target == Some(primary.to_bits()))
+                    .map(|event| (event.source, event.spell_id, event.amount, event.kind))
+                    .collect::<Vec<_>>()
+            );
+            if events.iter().any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(432616)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }) {
+                return;
+            }
+        }
+    }
+    panic!("native Sacred Weapon did not proc on a lethal ability in the fixed seed matrix");
+}
+
+#[test]
 #[ignore = "uses real Protection Hammer of Wrath and Sacred Weapon procs"]
 fn sacred_weapon_strikes_on_hammer_of_wrath_without_healing_from_energize() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
