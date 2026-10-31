@@ -16,6 +16,40 @@ fn seam_floor(boundary: f32, rotate: bool) -> Vec<[Vec3; 3]> {
     vec![[a, b, c], [a, c, d]]
 }
 
+fn has_unclimbable_seam(points: &[Vec3]) -> bool {
+    points.windows(2).any(|pair| {
+        let horizontal = (pair[1].x - pair[0].x).hypot(pair[1].z - pair[0].z);
+        horizontal < 0.5 && (pair[1].y - pair[0].y).abs() > AGENT_CLIMB
+    })
+}
+
+#[test]
+#[ignore = "requires published Halls of Infusion navigation assets"]
+fn halls_swim_exit_reaches_ramp_without_unclimbable_border_links() {
+    let root =
+        PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground assets"));
+    let mut map = NavigationMap::open(&root.join("navmesh/2527")).unwrap();
+    let exit = Vec3::new(-74.02512, -38.58777, 148.5022);
+    let ramp = Vec3::new(-120.2864, -38.791, 153.5835);
+    let points = map.complete_path(exit, ramp).expect("route to the ramp");
+    assert!(points.last().unwrap().distance(ramp) < 1.0);
+    assert!(
+        !has_unclimbable_seam(&points),
+        "exit route crosses an unclimbable border: {points:?}"
+    );
+
+    // This walled pocket exposed the bad connection. It need not be reachable;
+    // if a future legitimate route exists, it must not use the overheight seam.
+    let pocket = Vec3::new(-133.17523, -38.791077, 160.96422);
+    let shore = Vec3::new(-147.1641, -34.40178, 174.8028);
+    if let Ok(points) = map.complete_path(pocket, shore) {
+        assert!(
+            !has_unclimbable_seam(&points),
+            "route crosses an unclimbable border: {points:?}"
+        );
+    }
+}
+
 #[test]
 fn generated_open_floor_routes_stay_short_near_subtile_and_wow_tile_corners() {
     let mut failures = Vec::new();

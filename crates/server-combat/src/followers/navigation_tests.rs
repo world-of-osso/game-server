@@ -137,6 +137,51 @@ fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
     }
 }
 
+#[test]
+#[ignore = "requires Halls of Infusion collision and navigation assets"]
+fn halls_follower_reaches_ramp_from_recorded_swim_exit() {
+    let data = crate::ground::ground_data_dir();
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let start = Position {
+        x: -74.02512,
+        y: -38.58777,
+        z: 148.5022,
+    };
+    let owner = Position {
+        x: -120.2864,
+        y: -38.791,
+        z: 153.5835,
+    };
+    let map = InMap::continent(2527);
+    h.app.world_mut().entity_mut(h.caster).insert((owner, map));
+    h.app.world_mut().entity_mut(unit).insert((start, map));
+    let mut ground = GroundMap::new(&data, HashMap::from([(2527, 4290690)]));
+    println!(
+        "start liquid={:?} ground={:?}",
+        ground.liquid_at(2527, point(start)),
+        ground.ground_at(2527, point(start))
+    );
+    h.app.insert_resource(ground);
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    for _ in 0..600 {
+        h.advance(1);
+    }
+    let end = *h.app.world().get::<Position>(unit).unwrap();
+    println!("follower start={start:?} end={end:?} owner={owner:?}");
+    assert!(
+        point(end).distance(point(owner)) < 12.0,
+        "follower did not reach the ramp: {end:?}"
+    );
+}
+
 fn wow(x: f32, y: f32, z: f32) -> Position {
     Position { x, y: z, z: -y }
 }

@@ -62,6 +62,24 @@ impl Ord for QueueEntry {
 }
 
 impl PortalGraph {
+    /// Keep existing graph artifacts consistent with the runtime border-link limit.
+    pub(crate) fn prune_high_cross_tile_edges(&mut self) {
+        let nodes: Vec<_> = self
+            .nodes
+            .iter()
+            .map(|node| (node.polygon, node.position[1]))
+            .collect();
+        for node in &mut self.nodes {
+            node.edges.retain(|edge| {
+                let (other, height) = nodes[edge.destination as usize];
+                let same_tile = node.polygon.tile_x == other.tile_x
+                    && node.polygon.tile_z == other.tile_z
+                    && node.polygon.layer == other.layer;
+                same_tile || (node.position[1] - height).abs() <= crate::AGENT_CLIMB
+            });
+        }
+    }
+
     /// Find the lowest-cost abstract route from actual start-leg costs to goal-leg costs.
     pub fn route(
         &self,
