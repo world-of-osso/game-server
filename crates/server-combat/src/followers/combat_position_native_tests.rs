@@ -64,6 +64,13 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
             z: 3138.0,
         },
     ));
+    let model = &data.templates[&209072].models[0];
+    h.app.world_mut().entity_mut(healer).insert((
+        shared::components::ModelDisplay {
+            display_id: model.display_id,
+        },
+        shared::components::UnitScale(model.display_scale),
+    ));
     super::spawning::initialize(h.app.world_mut(), owner, healer, profile).unwrap();
     let root = std::path::PathBuf::from(
         std::env::var_os("FOLLOWER_COMPONENT_ASSETS").expect("ground assets"),
@@ -114,6 +121,18 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
         .unwrap()
         .clone();
     super::positioning::update_combat_exclusions(h.app.world_mut(), healer, &follower);
+    println!(
+        "NATIVE_HAWK_LEVEL hawk={:?} scaling={:?} healer={:?} model={:?}",
+        h.app.world().get::<UnitLevel>(hawk).map(|level| level.0),
+        h.app
+            .world()
+            .get::<shared::level_scaling::LevelScaling>(hawk),
+        h.app.world().get::<UnitLevel>(healer).map(|level| level.0),
+        h.app
+            .world()
+            .get::<shared::components::ModelDisplay>(healer)
+            .map(|model| model.display_id)
+    );
     let mut geometry = SystemState::<crate::creature_aggro::AggroDistance>::new(h.app.world_mut());
     let radius =
         super::pull_route::read_native_radius(h.app.world_mut(), &mut geometry, healer, hawk)
