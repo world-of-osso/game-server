@@ -135,11 +135,19 @@ fn burst_at_parent(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
             warn!(?target, "Shadeburst primary position unavailable");
             return;
         };
-        let Some(mut spell) = spell_cast::load_triggered_spell(world, SHADEBURST, ctx.depth + 1) else {
+        let Some(mut spell) = spell_cast::load_triggered_spell(world, SHADEBURST, ctx.depth + 1)
+        else {
             return;
         };
         spell.cast_destination = Some(position.to_array());
-        spell_cast::launch_triggered_spell_with_primary(world, ctx.caster, &spell, None, Some(target), ctx.depth + 1);
+        spell_cast::launch_triggered_spell_with_primary(
+            world,
+            ctx.caster,
+            &spell,
+            None,
+            Some(target),
+            ctx.depth + 1,
+        );
     }
 }
 

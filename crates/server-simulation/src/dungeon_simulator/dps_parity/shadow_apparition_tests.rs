@@ -16,27 +16,70 @@ fn shadow_apparition_lethal_parent_hit_bursts_on_survivor() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
-    literal_rotation::execution::execute(run.app.world_mut(), actor,
-        literal_rotation::execution::Execution::Spell(1227280, primary, None)).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(1227280, primary, None),
+    )
+    .unwrap();
     for _ in 0..200 {
         run.app.update();
-        if run.app.world().resource::<ObservedCombatEvents>().0.iter().any(|event|
-            event.source == Some(actor.to_bits()) && event.spell_id == Some(335467)
-            && event.target == Some(primary.to_bits()) && event.kind == CombatLogKind::Damage) { break; }
+        if run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(335467)
+                    && event.target == Some(primary.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+        {
+            break;
+        }
     }
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
-    for _ in 0..200 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    for _ in 0..200 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_some_and(|health| health.current <= 0.0)
+    );
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(primary.to_bits())
-        && matches!(event.spell_id, Some(413231 | 1264176))
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "apparition must kill the primary");
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(1231479)
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "Shadeburst must reach a survivor");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && matches!(event.spell_id, Some(413231 | 1264176))
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "apparition must kill the primary"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1231479)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Shadeburst must reach a survivor"
+    );
 }
 
 #[test]
