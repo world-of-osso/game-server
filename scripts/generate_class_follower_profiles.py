@@ -44,7 +44,13 @@ def generate(db, simc, parity):
         if not spec or not race or not profile.get("talents") or spec[0] != profile.get("spec_id"):
             continue
         spec_id, role = spec
-        profiles.setdefault(spec_id, {"spec_id": spec_id, "class_id": class_id, "role": role, "race": race, "talents": profile["talents"], "race_source": "RACE_FROM_PARITY_PROFILE", "source": path.name, "sha256": hashlib.sha256(payload).hexdigest()})
+        row = {"spec_id": spec_id, "class_id": class_id, "role": role, "race": race, "talents": profile["talents"], "race_source": "RACE_FROM_PARITY_PROFILE", "source": path.name, "sha256": hashlib.sha256(payload).hexdigest()}
+        # The pinned SimC tree has only the obsolete MID1 Guardian loadout.
+        # The tracked MID2 parity profile is a current, native-decodable build.
+        if spec_id == 104 and profile.get("reference_tier") == "MID2":
+            profiles[spec_id] = row
+        else:
+            profiles.setdefault(spec_id, row)
     return [profiles[key] for key in sorted(profiles)]
 
 
