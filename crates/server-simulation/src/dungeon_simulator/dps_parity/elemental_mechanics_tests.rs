@@ -55,6 +55,104 @@ pub(super) fn own_aura(run: &Run, spell: u32) -> Option<&crate::auras::AuraInsta
         .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
 }
 
+fn flame_shock_hits(imbued: bool) -> [i32; 2] {
+    let _seed = crate::random::seed_scope(818181);
+    let mut run = fixture();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        318038,
+        Some(run.actor),
+        false,
+    )
+    .unwrap();
+    settle(&mut run);
+    let percent = own_aura(&run, 382028)
+        .expect("real main-hand imbue modifier")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(
+        (percent - 6.5).abs() < 0.001,
+        "native Enhanced Imbues modifies the native 5% amount"
+    );
+    if !imbued {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.actor,
+            RemoveReason::Cancelled,
+            |aura| aura.spell_id == 319778,
+        );
+        assert!(
+            own_aura(&run, 382028).is_none(),
+            "modifier retires with its source"
+        );
+    }
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.targets[0],
+        RemoveReason::Cancelled,
+        |aura| aura.spell_id == 188389,
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .crit_pct = -100.0;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        188389,
+        Some(run.targets[0]),
+        1
+    ));
+    for _ in 0..80 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .crit_pct = -100.0;
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    [false, true].map(|periodic| {
+        let hit = events
+            .iter()
+            .find(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.targets[0].to_bits())
+                    && event.spell_id == Some(188389)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic == periodic
+            })
+            .expect("actual full Flame Shock hit");
+        assert!(!hit.crit, "controlled hit must not crit");
+        hit.amount
+    })
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_flametongue_imbue_modifies_shock_until_removed() {
+    let empowered = flame_shock_hits(true);
+    let plain = flame_shock_hits(false);
+    for (value, base) in empowered.into_iter().zip(plain) {
+        let ratio = f64::from(value) / f64::from(base);
+        let expected = 1.0 + 0.05 * 1.3;
+        assert!(
+            (ratio - expected).abs() < 0.02,
+            "imbued {value}, plain {base}, expected {expected}"
+        );
+    }
+}
+
 fn remove_mote(run: &mut Run) {
     let instance = own_aura(run, MOTE).expect("earned MOTE").instance_id;
     crate::auras::remove_instance(

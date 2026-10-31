@@ -8,7 +8,8 @@ use shared::protocol::EquipmentSlot;
 use super::combat;
 use combat::auras::procs::{self, AuraEvent};
 use combat::auras::scripts::{AuraScript, AuraScripts};
-use combat::auras::{self, AuraInstance};
+use combat::auras::{self, AuraInstance, RemoveReason};
+use combat::class_progression::TraitLoadout;
 use combat::spell_cast;
 use combat::spell_info::{SpellInfo, SpellStore};
 use combat::stats::{EquippedItems, NativeItemInstances};
@@ -17,6 +18,8 @@ const WINDFURY: u32 = 319773;
 const FLAMETONGUE: u32 = 319778;
 const WINDFURY_ATTACK: u32 = 25504;
 const FLAMETONGUE_ATTACK: u32 = 10444;
+const FLAMETONGUE_TALENT: u32 = 318038;
+const IMPROVED_FLAMETONGUE: u32 = 382028;
 // Native70448 Unruly Winds;384355 is Elemental Weapons, not the extra-attack talent.
 const UNRULY_WINDS: u32 = 390288;
 const REQUIRES_MAIN_HAND: u32 = 0x0000_0400;
@@ -36,13 +39,37 @@ pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         FLAMETONGUE,
         AuraScript {
-            on_apply: Some(super::enhancement_elemental_weapons::refresh),
-            on_remove: Some(super::enhancement_elemental_weapons::refresh_after_remove),
+            on_apply: Some(apply_flametongue_modifier),
+            on_remove: Some(remove_flametongue_modifier),
             check_proc: Some(check_flametongue),
             on_proc: Some(cast_flametongue),
             ..Default::default()
         },
     );
+}
+
+fn apply_flametongue_modifier(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    super::enhancement_elemental_weapons::refresh(world, unit, aura);
+    let elemental = world.get::<ActiveSpec>(unit).is_some_and(|spec| spec.0 == 262);
+    let selected = world.get::<TraitLoadout>(unit).is_some_and(|traits| {
+        traits.active_talent_spells().any(|entry| entry.spell_id == FLAMETONGUE_TALENT)
+    });
+    // SimC76f8118 sc_shaman.cpp2814–2818/2855–2859: selected main-hand imbue.
+    if elemental && selected {
+        spell_cast::cast_triggered(world, unit, IMPROVED_FLAMETONGUE, Some(unit), 1);
+    }
+}
+
+fn remove_flametongue_modifier(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    reason: RemoveReason,
+) {
+    super::enhancement_elemental_weapons::refresh_after_remove(world, unit, aura, reason);
+    auras::remove_auras(world, unit, reason, |active| {
+        active.spell_id == IMPROVED_FLAMETONGUE && active.caster == unit
+    });
 }
 
 pub(super) fn apply(world: &mut World, caster: Entity, spell: &SpellInfo) {
