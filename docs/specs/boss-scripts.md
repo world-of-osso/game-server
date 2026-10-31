@@ -33,9 +33,11 @@
 - Damage that takes the actor below 55% sets 2788 DONE with copy-local credit and ENCOUNTER_END success. The actor then leaves the world without a corpse; leaving is ours. A done boss does not respawn.
 - `DARKNESS_CANDLE_MECHANICS_GAP`: candles, Massive Candle 212777 and the encounter's darkness abilities are not ported; the actor fights with its native template only.
 
-## Ara-Kara spike wall
+## Ara-Kara passage barriers
 
 - `AVANOXX_SPIKE_WALL_OPEN_LOG_CORRELATED`: Open game objects 455376, 455377, and 455378 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `qLNnp4x613mv2Ctz` fight 28, player 9's last cast during Avanoxx was at engine coordinates (-109.6, -398.47); 21.558 seconds after the encounter ended, their next recorded cast was at (-68.63, -590.77), beyond the wall near (-87.25, -521.23). This supports passage after the kill, not the exact retail trigger or door animation.
+
+- `AVANOXX_WEB_BARRIER_OPEN_LOG_CORRELATED`: Open game object 467576 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `XCmNaPcWdFA4kJ8D` fight 9 pull 4, actor 91 passes within 2 yards of the barrier at engine (-141, -811.5) after Avanoxx ends and 70.561 seconds before Anub'zekt starts. The exact retail trigger is unknown.
 
 ## Stonevault E.D.N.A. intro
 

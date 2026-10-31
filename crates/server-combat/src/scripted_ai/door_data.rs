@@ -31,6 +31,14 @@ const DOORS: &[Door] = &[
         entry: 455378,
         encounter: 2926,
     },
+    // AVANOXX_WEB_BARRIER_OPEN_LOG_CORRELATED: WCL XCmNaPcWdFA4kJ8D fight 9,
+    // pull 4 actor 91 crosses within 2 yd of GO 467576 before Anub'zekt starts,
+    // after Avanoxx ends. The exact retail trigger is unknown.
+    Door {
+        map_id: 2660,
+        entry: 467576,
+        encounter: 2926,
+    },
     // TC 15e0ed76 instance_the_stonevault.cpp doorData: both paths open when E.D.N.A. is Done.
     Door {
         map_id: 2652,

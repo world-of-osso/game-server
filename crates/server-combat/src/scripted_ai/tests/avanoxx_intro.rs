@@ -12,12 +12,12 @@ fn avanoxx_done_opens_spike_wall_only_in_its_instance() {
         ..map
     };
     let mut walls = Vec::new();
-    for entry in [455376, 455377, 455378] {
+    for entry in [455376, 455377, 455378, 467576] {
         let source = spawns
             .0
             .iter()
             .find(|spawn| spawn.map_id == 2660 && spawn.info.entry == entry)
-            .expect("authored Ara-Kara spike wall segment");
+            .expect("authored Ara-Kara barrier");
         let wall = h
             .app
             .world_mut()
