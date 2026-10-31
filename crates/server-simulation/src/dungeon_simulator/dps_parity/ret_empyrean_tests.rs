@@ -293,6 +293,39 @@ fn dps_parity_ret_empyrean_wrath_verdict_emits_native_percent_background_storm()
 }
 
 #[test]
+#[ignore = "native Empyrean Legacy after a lethal Verdict"]
+fn dps_parity_ret_empyrean_storm_hits_survivor_after_lethal_verdict() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture(true);
+    let verdict = resolved_verdict(&run);
+    earn_finisher_power(&mut run, verdict);
+    let actor = run.actor;
+    cast_ready(&mut run, AVENGING_WRATH, actor);
+    for _ in 0..30 { run.app.update(); }
+    assert!(has(&run, LEGACY_BUFF));
+    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    cast_ready(&mut run, verdict, primary);
+    for _ in 0..100 { run.app.update(); }
+    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(primary.to_bits())
+        && event.kind == CombatLogKind::Damage
+        && event.spell_id == Some(verdict)
+        && event.amount > 0), "Verdict must kill the primary");
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(survivor.to_bits())
+        && event.kind == CombatLogKind::Damage
+        && event.spell_id == Some(DIVINE_STORM)
+        && event.amount > 0), "the background Storm must still hit a living enemy");
+}
+
+#[test]
 #[ignore = "Legacy background consumes opposite Arbiter, but not real Divine Purpose or its charge"]
 fn dps_parity_ret_empyrean_background_preserves_purpose_and_consumes_opposite_arbiter() {
     let _seed = crate::random::seed_scope(70448);

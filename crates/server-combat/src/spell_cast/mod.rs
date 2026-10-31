@@ -4313,8 +4313,20 @@ pub fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
+    launch_triggered_spell_with_primary(world, caster, spell, explicit, explicit, depth)
+}
+
+/// Launch an area spell while retaining the original action's primary for script policies.
+pub fn launch_triggered_spell_with_primary(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    primary: Option<Entity>,
+    depth: u8,
+) -> bool {
     let mut prepared = spell.clone();
-    prepared.cast_primary_target = explicit;
+    prepared.cast_primary_target = primary;
     prepared.cast_executed_target = explicit;
     let consumed_damage =
         scripts::capture_consumed_damage_modifier(world, caster, &mut prepared, false);

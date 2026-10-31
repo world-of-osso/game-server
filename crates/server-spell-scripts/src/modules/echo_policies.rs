@@ -164,7 +164,10 @@ fn queue_echo(
         };
         child.cast_damage_multiplier = Some(multiplier);
         child.cast_damage_role = combat::spell_info::CastDamageRole::Echo;
-        if !combat::spell_cast::launch_triggered_spell(world, caster, &child, Some(target), 1) {
+        let explicit = (policy.payload != 53385).then_some(target);
+        if !combat::spell_cast::launch_triggered_spell_with_primary(
+            world, caster, &child, explicit, Some(target), 1,
+        ) {
             warn!(
                 policy = policy.name,
                 ?caster,

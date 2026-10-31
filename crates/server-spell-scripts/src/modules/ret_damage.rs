@@ -257,7 +257,10 @@ fn queue_tempest(world: &mut World, caster: Entity, parent: &SpellInfo, target: 
         Some(script_effect_value(world, caster, TEMPEST_TALENT, 0) / 100.0);
     child.cast_damage_role = CastDamageRole::Secondary;
     world.commands().queue(move |world: &mut World| {
-        if !spell_cast::launch_triggered_spell(world, caster, &child, Some(target), depth + 1) {
+        let explicit = (id != STORM).then_some(target);
+        if !spell_cast::launch_triggered_spell_with_primary(
+            world, caster, &child, explicit, Some(target), depth + 1,
+        ) {
             warn!("Ret Tempest native child refused");
         }
     });

@@ -72,7 +72,7 @@ fn schedule_empyrean_legacy(
     // schedule_execute() has no authored delay. Defer behind the foreground
     // action rather than introducing a timer or running a paid second spender.
     world.commands().queue(move |world: &mut World| {
-        if world.get_entity(caster).is_ok() && world.get_entity(target).is_ok() {
+        if world.get_entity(caster).is_ok() {
             cast_background_storm(world, caster, target, multiplier);
         }
     });
@@ -88,7 +88,9 @@ fn cast_background_storm(world: &mut World, caster: Entity, target: Entity, mult
     };
     storm.cast_damage_multiplier = Some(multiplier);
     storm.cast_primary_target = Some(target);
-    if combat::spell_cast::launch_triggered_spell(world, caster, &storm, Some(target), 1) {
+    if combat::spell_cast::launch_triggered_spell_with_primary(
+        world, caster, &storm, None, Some(target), 1,
+    ) {
         super::ret_tier::after_background_storm(world, caster, target);
         // Ret576–602/hpp1721–1726: Legacy can produce fresh Purpose,
         // although it cannot consume or classify the existing charge.
