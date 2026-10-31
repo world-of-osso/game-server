@@ -70,7 +70,7 @@ fn order_army(world: &mut World, caster: Entity) {
         })
         .collect();
     for actor in actors {
-        if !spell_cast::try_cast_triggered(world, actor, spell, Some(target), 1) {
+        if !super::unholy_eruption::cast_army_order(world, actor, spell, target) {
             warn!(?actor, spell, "Soul Reaper Army order refused");
         }
     }
