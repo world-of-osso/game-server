@@ -331,6 +331,60 @@ fn follower_fireball_master_of_flame_depends_on_combustion() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_combustion_restores_selected_fire_blast_charge() {
+    fn charges_after_combustion(selected: bool) -> f64 {
+        let _seed = crate::random::seed_scope(70448);
+        let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+        app.world_mut()
+            .entity_mut(actor)
+            .remove::<crate::followers::AplControlled>();
+        let known: Vec<_> = app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| selected || *id != 451875)
+            .collect();
+        app.world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        for _ in 0..3 {
+            crate::spell_cast::creature_cast(app.world_mut(), actor, 108853, Some(target), false)
+                .unwrap();
+            for _ in 0..11 {
+                app.update();
+            }
+        }
+        let bindings = crate::simc_apl_native::Bindings {
+            actions: [("fire_blast".into(), 108853)].into(),
+            ..default()
+        };
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 120.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        let read = |app: &App| {
+            let facts = crate::simc_apl_native::NativeFacts::new(
+                app.world(),
+                actor,
+                &bindings,
+                encounter,
+                1,
+            );
+            server::simc_apl::Facts::value(&facts, "cooldown.fire_blast.charges").unwrap()
+        };
+        assert_eq!(read(&app), 0.0, "all three native charges must be spent");
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 190319, Some(actor), false)
+            .unwrap();
+        read(&app)
+    }
+    assert_eq!(charges_after_combustion(false), 0.0);
+    assert_eq!(charges_after_combustion(true), 1.0);
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_fuel_flamestrike_generates_heating_up_on_one_target() {
     let _seed = crate::random::seed_scope(70448);
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
