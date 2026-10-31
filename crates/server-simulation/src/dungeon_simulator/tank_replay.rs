@@ -622,7 +622,8 @@ pub(super) fn replay_simc_with_targets(
             if racial.is_some() && raid_buffs.is_empty() {
                 run.app.update();
             }
-            apply_simc_dummy_debuffs(run, &dummy_debuffs)
+            let (actor, target) = (run.actor, run.targets[0]);
+            apply_simc_dummy_debuffs(&mut run.app, actor, target, &dummy_debuffs)
         })?;
     apply_simc_starting_holy_power(&mut run);
     if dummy_bleeding {
@@ -738,16 +739,16 @@ pub(super) fn apply_simc_raid_buffs(
     buffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<(), String> {
     let tank = run.actor;
-    apply_simc_raid_buffs_to(run, tank, buffs)
+    apply_simc_raid_buffs_to(&mut run.app, tank, buffs)
 }
 
 pub(super) fn apply_simc_raid_buffs_to(
-    run: &mut super::dps_parity::Run,
+    app: &mut App,
     tank: Entity,
     buffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<(), String> {
     for buff in buffs {
-        let world = run.app.world_mut();
+        let world = app.world_mut();
         if world
             .resource::<crate::spell_info::SpellStore>()
             .get(buff.spell_id)
@@ -779,19 +780,21 @@ pub(super) fn apply_simc_raid_buffs_to(
     }
     if !buffs.is_empty() {
         // Mastery-dependent aura amounts refresh after the first stat recompute.
-        run.app.update();
-        run.app.update();
+        app.update();
+        app.update();
     }
     Ok(())
 }
 
+/// `caster`'s SimC dummy debuffs on `target`, applied as the fixture's raid.
 pub(super) fn apply_simc_dummy_debuffs(
-    run: &mut super::dps_parity::Run,
+    app: &mut App,
+    caster: Entity,
+    target: Entity,
     debuffs: &[simc_tank_timeline::RaidBuff],
 ) -> Result<(), String> {
-    let target = run.targets[0];
     for debuff in debuffs {
-        let world = run.app.world_mut();
+        let world = app.world_mut();
         if world
             .resource::<crate::spell_info::SpellStore>()
             .get(debuff.spell_id)
@@ -803,7 +806,7 @@ pub(super) fn apply_simc_dummy_debuffs(
             ));
         }
         let application = crate::auras::AuraApplication {
-            caster: run.actor,
+            caster,
             target,
             spell_id: debuff.spell_id,
             effect_mask: u32::MAX,
@@ -835,8 +838,8 @@ pub(super) fn apply_simc_dummy_debuffs(
         }
     }
     if !debuffs.is_empty() {
-        run.app.update();
-        run.app.update();
+        app.update();
+        app.update();
     }
     Ok(())
 }

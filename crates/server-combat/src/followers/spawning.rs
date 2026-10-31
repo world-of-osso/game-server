@@ -4,6 +4,7 @@ use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel,
 use super::{Follower, Profile};
 use crate::spell_cast::powers::PowerPools;
 
+#[cfg(test)]
 pub(super) fn spawn_members(
     world: &mut World,
     owner: Entity,
@@ -30,6 +31,7 @@ pub(super) fn spawn_members(
     Ok(members)
 }
 
+#[cfg(test)]
 pub(super) fn unsummon_members(world: &mut World, members: &[Entity]) {
     for &unit in members {
         crate::zones::unsummon(world, unit);

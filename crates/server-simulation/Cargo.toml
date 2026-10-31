@@ -15,6 +15,8 @@ shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 blake3 = "1.8"
+# SHA-256 provenance of the measurement world snapshot in replay results.
+sha2 = "0.10"
 tempfile = "3"
 rusqlite = { version = "0.35", features = ["bundled"] }
 # Exact frozen AssistedCombat types/rules shared with the core fixture bindings.

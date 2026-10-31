@@ -6,6 +6,8 @@ use serde_json::{Value, json};
 pub(super) use server_follower_apl::protection_paladin_rotation::Rotation;
 
 pub(super) const REPORT_KEY: Option<&str> = Some("protection_rotation");
+/// Shield of the Righteous: the native active-mitigation aura replays sample.
+pub(crate) const ACTIVE_MITIGATION_AURAS: &[u32] = &[132403];
 
 pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn SpecDriver>, String> {
     let encounter = Encounter::Fixture {
@@ -48,7 +50,7 @@ impl SpecDriver for Rotation {
         "LITERAL_SIMC_PROTECTION_76f8118"
     }
     fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
-        Some(&[132403])
+        Some(ACTIVE_MITIGATION_AURAS)
     }
     fn report(&self) -> Value {
         json!({"driver":self.label(),"decisions":self.driver.decisions})

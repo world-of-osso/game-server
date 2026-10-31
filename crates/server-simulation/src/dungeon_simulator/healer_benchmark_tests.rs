@@ -143,3 +143,49 @@ fn healer_benchmark_same_fight_has_identical_numbers() {
     );
     assert_eq!(first, small_fight());
 }
+
+#[test]
+fn healer_benchmark_spawns_every_healer_spec_as_its_class_actor() {
+    let at = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let mut catalogs = None;
+    // One app per party: every headless simulator leader is character 1.
+    for spec in [65, 105, 256, 257, 264, 270, 1468] {
+        let mut app = super::runtime::build_cached_app(&mut catalogs);
+        let copy = super::runtime::create_copy(&mut app);
+        let party = crate::followers::simulator::spawn_party_with_healer(
+            app.world_mut(),
+            copy,
+            at,
+            32,
+            spec,
+        )
+        .unwrap();
+        let world = app.world();
+        let healer = party.members[1];
+        let profile = &world
+            .get::<crate::followers::Follower>(healer)
+            .unwrap()
+            .profile;
+        assert_eq!(
+            (profile.spec_id, profile.role),
+            (spec, shared::group::GroupRole::Healer),
+            "the requested healer spec itself, not a borrowed actor"
+        );
+        assert!(
+            world
+                .get::<crate::followers::AplControlled>(healer)
+                .is_some()
+        );
+        assert!(
+            world
+                .get::<crate::stats::EquippedItems>(healer)
+                .is_some_and(|equipped| !equipped.items.is_empty()),
+            "spec{spec} wears its level32 Journal gear"
+        );
+        catalogs = Some(super::catalogs::Catalogs::take(app.world_mut()));
+    }
+}

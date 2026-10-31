@@ -123,7 +123,13 @@ pub(super) fn build_app() -> App {
 }
 
 pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
-    build_runtime_app(catalogs, &crate::test_data::world_db_path(), false)
+    build_runtime_app(catalogs, &crate::test_data::world_db_path(), true)
+}
+
+/// The literal parity harness drives its actor's rotation itself, so its
+/// class actors run no follower APL.
+pub(super) fn build_literal_app() -> App {
+    build_runtime_app(&mut None, &crate::test_data::world_db_path(), false)
 }
 
 #[cfg(test)]
@@ -177,7 +183,9 @@ fn build_runtime_app(
             crate::creature_ai::no_path_evade_system,
         )
             .chain()
-            .after(crate::followers::update_ai),
+            .after(crate::followers::update_ai)
+            // The leader is positioned before its APL acts, like every follower.
+            .before(server_follower_apl::drive_followers),
     );
     for label in [
         Startup.intern(),

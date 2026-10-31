@@ -189,8 +189,10 @@ pub(super) fn start(
 
 fn available_periodic_heals(world: &World, healer: Entity) -> BTreeMap<u32, f64> {
     let store = world.resource::<crate::spell_info::SpellStore>();
-    crate::followers::simulator::available_kit_spells(world, healer)
+    world
+        .get::<crate::class_progression::KnownSpells>(healer)
         .into_iter()
+        .flat_map(|known| known.iter())
         .filter(|spell| {
             store.get(*spell).is_some_and(|spell| {
                 spell.effects.iter().any(|effect| {
