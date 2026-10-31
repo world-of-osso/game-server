@@ -94,7 +94,7 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
         "each eligible execution or Voltaic target draws once from the native deck"
     );
     if matches!(spell, 188389 | 470057) {
-        // Flame Shock and Voltaic Blaze summon but do not command an echo.
+        // This test checks the deck; separate tests cover Ancestor echoes.
         return;
     }
     let hits = run

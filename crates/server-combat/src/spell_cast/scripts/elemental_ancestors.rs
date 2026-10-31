@@ -68,7 +68,6 @@ const ECHOES: &[(u32, u32)] = &[
     (8042, 447419),
     (61882, 447425),
     (462620, 447425),
-    (470411, 447419),
     (1219480, 447425),
 ];
 
@@ -95,6 +94,19 @@ pub(super) fn after_launch(
     // Ancestral replacement call a new ancestor after the owner's execution.
     if spell.id == 191634 || (spell.id == 443454 && selected(world, caster, 378081)) {
         summon(world, caster, depth);
+    }
+}
+
+// SimC76f8118 sc_shaman.cpp3157–3167,8351–8356: every Flame Shock
+// impact, including secondary variants, commands each active Ancestor.
+pub fn flame_shock_impact(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if !selected(world, caster, CALL) {
+        return;
+    }
+    for actor in actors(world, caster) {
+        if !super::super::try_cast_triggered(world, actor, 447419, Some(target), depth + 1) {
+            warn!(?actor, "Ancestor Flame Shock echo refused");
+        }
     }
 }
 

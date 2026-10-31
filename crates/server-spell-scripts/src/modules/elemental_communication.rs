@@ -4,14 +4,28 @@ use bevy::prelude::*;
 use combat::auras::{ActiveAuras, SpellModOp, spell_mods};
 use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::random::seq::SliceRandom;
-use combat::spell_cast::{self, script_registry::SpellScriptHook, targets};
+use combat::spell_cast::{
+    self,
+    effects::EffectCtx,
+    script_registry::{EnemyContextHitHook, SpellScriptHook},
+    targets,
+};
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(draw_after_builder),
+    SpellScriptHook::EnemyContextHit(flame_shock_hit),
     // SimC76f8118 sc_shaman.cpp12726–12728: each ancestor buff stack expires independently.
     SpellScriptHook::AsynchronousAuras(&[447244]),
 ];
+
+fn flame_shock_hit(spell: u32) -> Option<EnemyContextHitHook> {
+    (spell == 188389).then_some(echo_flame_shock)
+}
+
+fn echo_flame_shock(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    spell_cast::scripts::ancestor_flame_shock_impact(world, ctx.caster, target, ctx.depth);
+}
 
 const COMMUNICATION: u32 = 443445;
 const BUILDERS: &[u32] = &[188196, 188443, 51505, 188389];
