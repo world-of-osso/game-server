@@ -1,10 +1,10 @@
 //! Native Routine Communication draws once per ordinary builder execution.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::ActiveAuras;
+use combat::auras::{ActiveAuras, SpellModOp, spell_mods};
 use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::random::seq::SliceRandom;
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{self, script_registry::SpellScriptHook, targets};
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -84,14 +84,28 @@ fn draw_native_deck(world: &mut World, caster: Entity) -> bool {
 fn draw_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
     // SimC76f8118 sc_shaman.cpp6654–6658/7260–7263/7436–7438/8473–8480:
     // normal Chain/Lava/Bolt/Flame Shock execute, not background children.
-    if !foreground
-        || spell.cast_parent_owns_modifier_charges
-        || !BUILDERS.contains(&spell.id)
-        || !selected(world, caster)
-    {
+    if !foreground || spell.cast_parent_owns_modifier_charges || !selected(world, caster) {
         return;
     }
-    draw_and_summon(world, caster);
+    if spell.id == super::voltaic_blaze::ROOT {
+        draw_for_voltaic_targets(world, caster, spell);
+    } else if BUILDERS.contains(&spell.id) {
+        draw_and_summon(world, caster);
+    }
+}
+
+fn draw_for_voltaic_targets(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let Some(origin) = targets::position(world, caster) else {
+        return;
+    };
+    let (_, maximum) = targets::spell_range(spell, true);
+    let maximum = spell_mods::modify(world, caster, spell, SpellModOp::Range, maximum);
+    let enemies = targets::area_units(world, caster, origin, maximum, targets::Relation::Enemy, 0);
+    // SimC76f8118 sc_shaman.cpp10130–10135 draws for the full target list,
+    // not the capped Voltaic damage recipients.
+    for _ in enemies {
+        draw_and_summon(world, caster);
+    }
 }
 
 pub(super) fn draw_and_summon(world: &mut World, caster: Entity) {

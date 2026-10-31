@@ -79,20 +79,22 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     assert_eq!(count_summons(&run), 0, "background builders never summon");
     for _ in 0..total {
         cast(&mut run, spell);
-        if spell == 188389 {
-            // Let the real Flame Shock cooldown recover before the next cast.
-            for _ in 0..120 {
-                run.app.update();
-            }
+        let recovery_ticks = match spell {
+            188389 => 120,
+            470057 => 200,
+            _ => 0,
+        };
+        for _ in 0..recovery_ticks {
+            run.app.update();
         }
     }
     assert_eq!(
         count_summons(&run),
-        positive,
-        "one complete native deck must summon exactly four real Ancestors; Chain recipients and overloads do not add draws"
+        positive * if spell == 470057 { 3 } else { 1 },
+        "each eligible execution or Voltaic target draws once from the native deck"
     );
-    if spell == 188389 {
-        // Flame Shock summons but does not command an echo.
+    if matches!(spell, 188389 | 470057) {
+        // Flame Shock and Voltaic Blaze summon but do not command an echo.
         return;
     }
     let hits = run
@@ -115,6 +117,13 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
 fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
     assert_native_builder_deck(fixture_without_fellowship(1), 188196);
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_voltaic_draws_for_each_available_target() {
+    let _seed = crate::random::seed_scope(70448);
+    assert_native_builder_deck(fixture_without_fellowship(3), 470057);
 }
 
 #[test]
