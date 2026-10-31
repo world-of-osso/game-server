@@ -14,7 +14,25 @@ use combat::spell_info::SpellInfo;
 const AGONY: u32 = 980;
 const SHARED_AGONY: u32 = 1259825;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(after_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::NativeAfterCast(after_cast),
+];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != AGONY
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, SHARED_AGONY)
+    {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::target(
+        spell_cast::scripts::script_effect_value(world, caster, SHARED_AGONY, 1),
+    )
+}
 
 #[derive(Component)]
 struct CastingTwin;

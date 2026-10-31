@@ -24,6 +24,7 @@ const HEAL_ESSENCE_BURST_CHANCE: f32 = 0.9;
 const RUBY_EMBERS: u32 = 365_937;
 
 pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::CheckTarget(check_target),
     SpellScriptHook::EffectEnabled(ruby_embers_periodic),
@@ -31,6 +32,20 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::RawHeal(record_scarlet_heal),
     SpellScriptHook::NamedAuraFields(&[(431442, 0), (431442, 1), (431442, 2), (1260647, 0)]),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let selected =
+        combat::spell_cast::script_registry::reach_source_selected(world, caster, 369939)
+            || combat::auras::has_aura(world, caster, 370901);
+    if spell.id != LIVING_FLAME || !selected {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::caster(targets::spell_range(spell, true).1)
+}
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {

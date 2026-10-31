@@ -7,11 +7,34 @@ use combat::class_progression::KnownSpells;
 use combat::random::Rng;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook, targets};
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterResolvedHits(after_resolution)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::AfterResolvedHits(after_resolution),
+];
 
 const TALENT: u32 = 210689;
 const ROD: u32 = 197209;
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    match spell.id {
+        188196 | 45284 | 188443 | 45297 | 463351 => {
+            combat::spell_cast::script_registry::ScriptReach::EngagedOnly
+        }
+        61882 | 462620 => {
+            let effect = spell
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .expect("native Earthquake effect");
+            combat::spell_cast::script_registry::ScriptReach::target(targets::radius(effect, 0))
+        }
+        _ => Default::default(),
+    }
+}
 
 fn selected(world: &World, caster: Entity) -> bool {
     world

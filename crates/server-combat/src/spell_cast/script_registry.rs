@@ -280,8 +280,62 @@ pub type AfterPolicyCastLookup = fn(u32) -> Option<AfterPolicyCastHook>;
 pub type BeforeMeleeComboDamageHook = fn(&mut World, &EffectCtx<'_>);
 pub type BeforePeriodicItemDamageHook = fn(&mut World, &EffectCtx<'_>, Entity);
 
+/// Maximum hostile secondary-target distance from the actor and its primary target.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DeclaredReach {
+    pub caster_radius: f32,
+    pub target_radius: f32,
+}
+
+/// Effects restricted to already-afflicted enemies cannot acquire an idle pack.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum ScriptReach {
+    #[default]
+    None,
+    Area(DeclaredReach),
+    EngagedOnly,
+    /// A bounded selection that can only reach enemies already in combat.
+    EngagedArea(DeclaredReach),
+}
+
+impl ScriptReach {
+    pub fn caster(radius: f32) -> Self {
+        Self::Area(DeclaredReach {
+            caster_radius: radius,
+            target_radius: 0.0,
+        })
+    }
+
+    pub fn target(radius: f32) -> Self {
+        Self::Area(DeclaredReach {
+            caster_radius: 0.0,
+            target_radius: radius,
+        })
+    }
+}
+
+/// A selected passive may be represented by its spellbook entry or its active aura.
+pub fn reach_source_selected(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(spell))
+        || world
+            .get::<crate::class_progression::TraitLoadout>(caster)
+            .is_some_and(|traits| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == spell)
+            })
+        || crate::auras::has_aura(world, caster, spell)
+}
+
+pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
+
 #[derive(Clone, Copy)]
 pub enum SpellScriptHook {
+    DeclaredReach(DeclaredReachHook),
+    /// Autonomous actions used by this unit outside its ordinary spellbook.
+    AdditionalReachActions(fn(&World, Entity) -> Vec<u32>),
     Policies(&'static [Policy]),
     NativeAfterCast(AfterCastLookup),
     ScriptedChannel(ScriptedChannelHook),
@@ -471,6 +525,29 @@ impl SpellScriptRegistry {
 
     fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
         self.modules.iter().flat_map(|module| module.iter())
+    }
+
+    pub fn declared_reach(self, world: &World, caster: Entity, spell: &SpellInfo) -> DeclaredReach {
+        self.hooks()
+            .fold(DeclaredReach::default(), |mut reach, hook| {
+                if let SpellScriptHook::DeclaredReach(declare) = hook
+                    && let ScriptReach::Area(declared) = declare(world, caster, spell)
+                {
+                    reach.caster_radius = reach.caster_radius.max(declared.caster_radius);
+                    reach.target_radius = reach.target_radius.max(declared.target_radius);
+                }
+                reach
+            })
+    }
+
+    pub fn additional_reach_actions(self, world: &World, unit: Entity) -> Vec<u32> {
+        self.hooks()
+            .filter_map(|hook| match hook {
+                SpellScriptHook::AdditionalReachActions(actions) => Some(actions(world, unit)),
+                _ => None,
+            })
+            .flatten()
+            .collect()
     }
 
     pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
@@ -666,7 +743,10 @@ impl Default for SpellScriptRegistry {
         // Unit tests compile the exact downstream module sources against this test
         // crate's types. Production and external fixtures install the host registry.
         #[cfg(test)]
-        return Self::new(fixtures::MODULES);
+        {
+            debug_assert_eq!(fixtures::NAMED_MODULES.len(), fixtures::MODULES.len());
+            return Self::new(fixtures::MODULES);
+        }
         #[cfg(not(test))]
         Self::new(&[])
     }

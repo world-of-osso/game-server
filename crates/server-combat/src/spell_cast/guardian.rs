@@ -619,7 +619,7 @@ pub(super) fn load_startup(mut commands: Commands) {
 
 #[derive(Component)]
 pub(crate) struct GuardianActor {
-    spells: Vec<u32>,
+    pub(crate) spells: Vec<u32>,
     pub(super) regenerates_power: bool,
     /// Untimed actions already attempted; source-once casts use real history.
     once_used: Vec<u32>,

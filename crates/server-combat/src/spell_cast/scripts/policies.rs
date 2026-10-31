@@ -17,6 +17,51 @@ use crate::spell_cast::script_registry::{
     self, ChannelMomentum, Policy, Relationship, SpellScriptRegistry,
 };
 
+/// Script-owned children that can select additional hostiles from this action.
+pub(crate) fn reach_children(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Vec<(u32, f32, f32)> {
+    let Some(registry) = world.get_resource::<SpellScriptRegistry>() else {
+        return Vec::new();
+    };
+    registry
+        .policies()
+        .filter(|policy| selected(world, caster, policy))
+        .filter_map(|policy| match policy.relationship {
+            Relationship::PeriodicSplash {
+                parent,
+                payload,
+                radius_slot,
+                ..
+            } if parent == spell.id => {
+                let child = world
+                    .resource::<SpellStore>()
+                    .get(payload)
+                    .expect("native policy splash payload");
+                Some((
+                    payload,
+                    0.0,
+                    targets::radius(&child.effects[0], usize::from(radius_slot)),
+                ))
+            }
+            Relationship::SpenderHit {
+                resource, payload, ..
+            } if spell
+                .power_costs
+                .iter()
+                .any(|cost| cost.power_type == resource as i32) =>
+            {
+                let range = targets::spell_range(spell, true).1;
+                let range = spell_mods::modify(world, caster, spell, SpellModOp::Range, range);
+                Some((payload, range, 0.0))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 fn spender_extensions<'a>(
     world: &World,
     spell: &'a SpellInfo,

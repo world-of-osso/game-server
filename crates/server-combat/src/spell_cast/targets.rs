@@ -1239,6 +1239,162 @@ const SPELL_ATTR2_CHAIN_FROM_CASTER: u32 = 0x0000_1000;
 /// `SpellEffectAttributes::ChainFromInitialTarget` (DBCEnums.h:2425).
 const EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET: u32 = 0x0000_0080;
 
+/// Native hostile selection bounds, relative to the caster and explicit target.
+/// Selector meanings follow TrinityCore 15e0ed76 SpellInfo.cpp and Spell.cpp.
+pub fn unintended_effect_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> (f32, f32) {
+    #[derive(Clone, Copy)]
+    enum Center {
+        Caster,
+        Target,
+    }
+    let mut center = None;
+    let mut offset = 0.0;
+    let mut caster_radius: f32 = 0.0;
+    let mut target_radius: f32 = 0.0;
+    let ordered = effect
+        .implicit_targets
+        .iter()
+        .any(|&id| matches!(id, 41 | 43 | 46 | 48 | 73 | 74 | 148));
+    for (slot, &id) in effect.implicit_targets.iter().enumerate() {
+        let selector = selector(id);
+        match selector {
+            Some(Selector::CenterCaster) => {
+                center = Some(Center::Caster);
+                offset = 0.0;
+            }
+            Some(Selector::CenterExplicit(_)) => {
+                center = Some(Center::Target);
+                offset = 0.0;
+            }
+            Some(Selector::DestTargetOffset(_)) => {
+                center = Some(Center::Target);
+                offset = radius(effect, slot);
+            }
+            Some(Selector::CasterOffset(_)) => {
+                center = Some(Center::Caster);
+                if ordered && matches!(id, 41 | 43 | 48) {
+                    let Some(distance) = ordered_destination::maximum_caster_offset(
+                        world, caster, spell, effect, slot,
+                    ) else {
+                        continue;
+                    };
+                    offset = distance;
+                } else {
+                    let distance = radius(effect, slot);
+                    offset = if distance > 0.0 {
+                        distance
+                    } else {
+                        DEFAULT_TOTEM_DISTANCE
+                    };
+                }
+            }
+            Some(Selector::CasterRadius) => {
+                center = Some(Center::Caster);
+                let Some(distance) =
+                    ordered_destination::maximum_caster_offset(world, caster, spell, effect, slot)
+                else {
+                    continue;
+                };
+                offset = distance;
+            }
+            Some(Selector::CasterRandom | Selector::ForwardLeap) => {
+                center = Some(Center::Caster);
+                offset = radius(effect, slot);
+            }
+            Some(Selector::DestTargetRandom) => {
+                center = Some(Center::Target);
+                offset =
+                    effect.radius[radius_slot(effect, slot)].map_or(0.0, |entry| entry.radius_max);
+            }
+            Some(Selector::DestOffset(_) | Selector::DestRandom) => {
+                center = Some(center.unwrap_or(Center::Caster));
+                offset += radius(effect, slot);
+            }
+            Some(Selector::AreaAroundSrc(Relation::Enemy) | Selector::EntryAreaSource) => {
+                let extent = offset + radius(effect, slot);
+                match center.unwrap_or(Center::Caster) {
+                    Center::Caster => caster_radius = caster_radius.max(extent),
+                    Center::Target => target_radius = target_radius.max(extent),
+                }
+            }
+            Some(
+                Selector::AreaAroundDest(Relation::Enemy)
+                | Selector::EntryAreaDestination
+                | Selector::DynObj(Relation::Enemy),
+            ) => {
+                let extent = offset + radius(effect, slot);
+                match center.unwrap_or(Center::Target) {
+                    Center::Caster => caster_radius = caster_radius.max(extent),
+                    Center::Target => target_radius = target_radius.max(extent),
+                }
+            }
+            Some(
+                Selector::ConeEnemy
+                | Selector::ConeEntry
+                | Selector::CasterLine
+                | Selector::ConeToDest
+                | Selector::LineToDest,
+            ) => {
+                caster_radius = caster_radius.max(radius(effect, slot));
+            }
+            Some(Selector::Explicit(Relation::Enemy | Relation::Any))
+                if !spell.cast_single_target =>
+            {
+                let (jumps, jump_radius) = chain_jump_parameters(world, caster, spell, effect);
+                if jumps == 0 {
+                    continue;
+                }
+                if spell
+                    .misc
+                    .as_ref()
+                    .is_some_and(|misc| misc.attributes[2] & SPELL_ATTR2_CHAIN_FROM_CASTER != 0)
+                {
+                    caster_radius = caster_radius.max(jump_radius);
+                } else if effect.attributes & EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET != 0 {
+                    target_radius = target_radius.max(jump_radius);
+                } else {
+                    target_radius = target_radius.max(jumps as f32 * jump_radius);
+                }
+            }
+            _ => {}
+        }
+    }
+    (caster_radius, target_radius)
+}
+
+/// Native chain count and jump distance, shared with reach forecasting.
+/// TrinityCore 15e0ed76 Spell.cpp:1825–1840,2210–2248.
+pub fn chain_jump_parameters(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> (usize, f32) {
+    let count = crate::auras::spell_mods::modify(
+        world,
+        caster,
+        spell,
+        crate::auras::SpellModOp::ChainTargets,
+        effect.chain_targets as f32,
+    ) as i32;
+    let defense = spell
+        .categories
+        .as_ref()
+        .map_or(0, |value| value.defense_type);
+    let radius = match defense {
+        3 => 7.5,
+        2 => 5.0,
+        _ if effect.implicit_targets.contains(&45) => 12.5,
+        _ => 10.0,
+    };
+    (count.saturating_sub(1).max(0) as usize, radius)
+}
+
 /// `Spell::SelectImplicitChainTargets` / `SearchChainTargets` (Spell.cpp:1832-1864,
 /// 2216-2320): after `target`, up to `EffectChainTargets - 1` more units matching
 /// `relation`, each the living one nearest the chain source within the jump radius
@@ -1261,29 +1417,12 @@ pub fn chain_targets(
     }
     // TC a352b1fa Spell.cpp1834–1836 applies native ChainTargets modifiers
     // before deciding whether this effect chains at all.
-    let max_targets = crate::auras::spell_mods::modify(
-        world,
-        caster,
-        spell,
-        crate::auras::SpellModOp::ChainTargets,
-        effect.chain_targets as f32,
-    ) as i32;
-    if max_targets <= 1 {
+    let (jumps, jump_radius) = chain_jump_parameters(world, caster, spell, effect);
+    if jumps == 0 {
         return Vec::new();
     }
-    let jumps = (max_targets - 1) as usize;
     // TC Spell.cpp:1848,2233–2235: target45 uses the chain-heal search.
     let chain_heal = effect.implicit_targets.contains(&45);
-    let defense = spell
-        .categories
-        .as_ref()
-        .map_or(0, |categories| categories.defense_type);
-    let jump_radius = match defense {
-        3 => 7.5,
-        2 => 5.0,
-        _ if chain_heal => 12.5,
-        _ => 10.0,
-    };
     let from_caster = spell.misc.as_ref().map_or(0, |misc| misc.attributes[2])
         & SPELL_ATTR2_CHAIN_FROM_CASTER
         != 0;

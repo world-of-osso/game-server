@@ -15,10 +15,19 @@ struct DiseaseCloud {
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
     SpellScriptHook::AuraRollAfterCast(after_cast),
     SpellScriptHook::SummonInitialized(initialize),
     SpellScriptHook::AfterCastUpdate(update),
 ];
+
+fn autonomous_actions(world: &World, actor: Entity) -> Vec<u32> {
+    if world.get::<DiseaseCloud>(actor).is_some() {
+        vec![1244347]
+    } else {
+        Vec::new()
+    }
+}
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     (spell == 42650).then_some(schedule)

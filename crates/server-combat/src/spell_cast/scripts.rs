@@ -4,6 +4,44 @@
 use super::script_registry;
 use crate::random as rand;
 
+/// Reach from combat-owned scripts whose selection is not encoded by the root effects.
+pub fn native_script_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> script_registry::ScriptReach {
+    use script_registry::{DeclaredReach, ScriptReach, reach_source_selected};
+    let mut reach = DeclaredReach::default();
+    match spell.id {
+        44425 if reach_source_selected(world, caster, 231564) => {
+            reach.caster_radius = reach
+                .caster_radius
+                .max(super::targets::spell_range(spell, true).1);
+        }
+        153626 => {
+            reach.caster_radius = reach
+                .caster_radius
+                .max(super::targets::spell_range(spell, true).1);
+        }
+        53595 => {
+            let wave = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(88263)
+                .expect("native Hammer of the Righteous wave");
+            reach.target_radius = reach
+                .target_radius
+                .max(super::targets::radius(&wave.effects[0], 1));
+        }
+        191427 => reach.target_radius = reach.target_radius.max(batch14::LANDING_RADIUS),
+        _ => {}
+    }
+    if reach == DeclaredReach::default() {
+        ScriptReach::None
+    } else {
+        ScriptReach::Area(reach)
+    }
+}
+
 mod arcane;
 mod arcane_area;
 mod arcane_charge;
@@ -75,7 +113,7 @@ pub(super) use policies::{
     before_impact as before_impact_policies, has_impact_policy, on_hit as apply_hit_policies,
     snapshot as snapshot_hit_policies,
 };
-pub(crate) use policies::{extends_reapplication, register_lifecycle_policies};
+pub(crate) use policies::{extends_reapplication, reach_children, register_lifecycle_policies};
 pub use script_registry::conjure_count as conjure_spellslinger;
 
 pub(crate) fn filter_secondary_targets(
@@ -175,7 +213,10 @@ pub(crate) use batch3::{
     check_whirling_blade_proc,
 };
 pub use batch9::spawn_delayed_ground_pulses;
-pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
+pub(crate) use batch9::{
+    ground_pulse_radius, hostile_ground_fields, hostile_ground_pulse_radius, owned_ground_fields,
+    owned_hostile_ground_fields,
+};
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(super) use protection_items::snapshot_guillotine_health;

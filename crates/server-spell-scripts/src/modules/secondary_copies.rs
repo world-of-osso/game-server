@@ -12,6 +12,7 @@ use combat::spell_cast::{
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::SpellResidual(after_spell),
     SpellScriptHook::MeleeResidual(after_melee),
 ];
@@ -45,6 +46,24 @@ const COPIES: &[SecondaryCopy] = &[SecondaryCopy {
     bonus_talent: 441367,
     bonus_aura: (441326, 2),
 }];
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let caster_radius = COPIES
+        .iter()
+        .filter(|policy| policy.aura == spell.id || policy.spells.contains(&spell.id))
+        .map(|policy| policy.radius)
+        .fold(0.0, f32::max);
+    combat::spell_cast::script_registry::ScriptReach::Area(
+        combat::spell_cast::script_registry::DeclaredReach {
+            caster_radius,
+            target_radius: 0.0,
+        },
+    )
+}
 
 struct CopySource {
     caster: Entity,

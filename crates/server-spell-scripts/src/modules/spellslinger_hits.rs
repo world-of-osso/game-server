@@ -12,9 +12,35 @@ use combat::spell_cast::{
 };
 use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(after_damage)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::ResolvedDamage(after_damage),
+];
 const CONTROLLED_INSTINCTS: u32 = 444483;
 const INFUSED_SPLINTERS: u32 = 1261080;
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, 443763 | 443722 | CONTROLLED_INSTINCTS)
+        || !combat::spell_cast::script_registry::reach_source_selected(
+            world,
+            caster,
+            CONTROLLED_INSTINCTS,
+        )
+    {
+        return Default::default();
+    }
+    let store = world.resource::<SpellStore>();
+    let radius = [444720, 444487]
+        .into_iter()
+        .filter_map(|id| store.get(id))
+        .map(|payload| targets::radius(&payload.effects[0], 1))
+        .fold(0.0, f32::max);
+    combat::spell_cast::script_registry::ScriptReach::target(radius)
+}
 
 fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _critical: bool, amount: f32) {
     let Some(spec) = world.get::<ActiveSpec>(ctx.caster).map(|spec| spec.0) else {

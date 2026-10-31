@@ -16,7 +16,22 @@ const TALENT: u32 = 426591;
 const DOT: u32 = 426593;
 const FRACTION: u32 = 1309274;
 const RESIDUAL: u32 = 1309309;
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::ResolvedDamage(after_damage)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::ResolvedDamage(after_damage),
+];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    _spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if has_talent(world, caster, TALENT) {
+        combat::spell_cast::script_registry::ScriptReach::EngagedOnly
+    } else {
+        Default::default()
+    }
+}
 
 fn after_damage(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage: f32) {
     if damage <= 0.0 || !has_talent(world, ctx.caster, TALENT) {

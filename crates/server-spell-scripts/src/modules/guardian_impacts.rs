@@ -5,6 +5,7 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(hit_hook),
     SpellScriptHook::TargetPlan(plan_hook),
 ];
@@ -22,6 +23,17 @@ const IMPACTS: &[Impact] = &[Impact {
     effect: 0,
     child: 1292391,
 }];
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !IMPACTS.iter().any(|policy| policy.parent == spell.id) {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::caster(targets::spell_range(spell, true).1)
+}
 
 pub(super) fn hit_hook(spell: u32, effect: u8) -> Option<HitHook> {
     IMPACTS

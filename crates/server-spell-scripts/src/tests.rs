@@ -54,6 +54,156 @@ const SECOND: &[SpellScriptHook] = &[
 ];
 
 #[test]
+fn native_fire_blast_declares_the_actual_spread_range() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data.spell_store().get(108853).expect("native Fire Blast");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(
+        reach.caster_radius,
+        combat::spell_cast::targets::spell_range(spell, true).1
+    );
+    assert_eq!(reach.caster_radius, 40.0);
+    assert_eq!(reach.target_radius, 0.0);
+}
+
+#[test]
+fn native_chain_lightning_uses_chain_count_and_jump_distance() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data
+        .spell_store()
+        .get(188443)
+        .expect("native Chain Lightning");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let (jumps, radius) =
+        combat::spell_cast::targets::chain_jump_parameters(&world, caster, spell, effect);
+    assert_eq!(jumps, 2);
+    assert_eq!(radius, 10.0);
+    assert_eq!(jumps as f32 * radius, 20.0);
+}
+
+#[test]
+fn hunter_bounce_reach_includes_native_chain_and_finisher_area() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let store = data.spell_store();
+    let spell = store.get(1264949).expect("native bounce action");
+    let mut world = World::new();
+    world.insert_resource(store.clone());
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(reach.target_radius, 55.0);
+    assert_eq!(reach.caster_radius, 0.0);
+}
+
+#[test]
+fn blade_flurry_declares_the_caster_centered_copy_radius() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data.spell_store().get(13877).expect("native Blade Flurry");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(reach.caster_radius, 5.0);
+    assert_eq!(reach.target_radius, 0.0);
+}
+
+#[test]
+fn psychic_link_does_not_reach_unafflicted_enemies() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data.spell_store().get(8092).expect("native Mind Blast");
+    let mut world = World::new();
+    let caster = world
+        .spawn(combat::class_progression::KnownSpells::from_baseline(vec![
+            199484,
+        ]))
+        .id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(reach.target_radius, 0.0);
+    assert_eq!(reach.caster_radius, 0.0);
+}
+
+#[test]
+fn wildfire_declaration_matches_its_target_centered_explosion() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let spell = data
+        .spell_store()
+        .get(259495)
+        .expect("native Wildfire Bomb");
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    assert_eq!(reach.caster_radius, 0.0);
+    assert_eq!(reach.target_radius, 5.0);
+}
+
+#[test]
+fn hammer_of_the_righteous_declares_its_native_target_centered_wave() {
+    let store = crate::test_support::world_db()
+        .unwrap()
+        .spell_store()
+        .clone();
+    let hammer = store.get(53595).unwrap().clone();
+    let mut world = World::new();
+    world.insert_resource(store);
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, &hammer);
+    assert_eq!(reach.target_radius, 8.0);
+    assert_eq!(reach.caster_radius, 0.0);
+}
+
+#[test]
+fn native_area_reach_includes_destination_offsets() {
+    let store = crate::test_support::world_db().unwrap().spell_store();
+    let mut world = World::new();
+    let caster = world.spawn_empty().id();
+    // 251921 uses caster-front47 with no radius, then a native30-yard area.
+    let front = store.get(251921).unwrap();
+    let effect = front
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(
+        combat::spell_cast::targets::unintended_effect_reach(&world, caster, front, effect),
+        (33.0, 0.0)
+    );
+    // 69660 selects a random point within5 yards, then a4-yard area.
+    let random = store.get(69660).unwrap();
+    let effect = random
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    assert_eq!(
+        combat::spell_cast::targets::unintended_effect_reach(&world, caster, random, effect),
+        (9.0, 0.0)
+    );
+}
+
+#[test]
+fn ordered_native_area_reach_includes_running_offset() {
+    let harness = crate::test_support::harness(Vec::new(), &[], 1).unwrap();
+    let world = harness.app.world();
+    let store = crate::test_support::world_db().unwrap().spell_store();
+    let spell = store.get(97545).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap();
+    let (caster_radius, target_radius) =
+        combat::spell_cast::targets::unintended_effect_reach(world, harness.caster, spell, effect);
+    assert_eq!(caster_radius, 10.0);
+    assert_eq!(target_radius, 0.0);
+}
+
+#[test]
 fn registry_keeps_first_match_and_additive_module_order() {
     let mut world = World::new();
     world.insert_resource(SpellScriptRegistry::new(&[FIRST, &[], SECOND]));

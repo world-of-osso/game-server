@@ -11,6 +11,7 @@ use combat::spell_cast::{
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::ResolvedDamage(copy_link),
     SpellScriptHook::ConsumedEffectValues(&[(TALENT, 0)]),
 ];
@@ -21,6 +22,22 @@ const VAMPIRIC_TOUCH: u32 = 34914;
 const SOURCES: &[u32] = &[
     8092, 15407, 32379, 263165, 323673, 335467, 391403, 450983, 1243105, 1243106,
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    let selected = world
+        .get::<combat::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(TALENT))
+        || combat::auras::has_aura(world, caster, TALENT);
+    if selected && SOURCES.contains(&spell.id) {
+        combat::spell_cast::script_registry::ScriptReach::EngagedOnly
+    } else {
+        combat::spell_cast::script_registry::ScriptReach::None
+    }
+}
 
 fn native_fraction(world: &World, caster: Entity) -> Option<f32> {
     let aura = world

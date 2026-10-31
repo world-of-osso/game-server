@@ -19,9 +19,27 @@ const ELIGIBLE: &[u32] = &[
 ];
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::ResolvedDamage(after_damage),
 ];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, 370965 | 370966 | 1246168) {
+        return Default::default();
+    }
+    let store = world.resource::<SpellStore>();
+    let radius = [370969, 1246168]
+        .into_iter()
+        .filter_map(|id| store.get(id))
+        .map(|dot| combat::spell_cast::targets::spell_range(dot, true).1)
+        .fold(0.0, f32::max);
+    combat::spell_cast::script_registry::ScriptReach::caster(radius)
+}
 
 #[derive(Component, Default)]
 struct TargetProcDeadlines(HashMap<Entity, f64>);

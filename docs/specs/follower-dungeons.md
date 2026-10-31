@@ -229,6 +229,12 @@ A death-driven encounter completes only after every bound creature spawned in th
 
 ## Shared tank pull project policies
 
+For each selected spell, follower combat can query its caster- and target-centered unintended reach separately. A missing spell or target returns no result; the consumer logs it and skips the check. The per-party maximum also includes autonomous pet actions and active hostile fields.
+
+`PARTY_UNINTENDED_REACH`: Pull-position selection must be able to read per-unit caster-centered and target-centered hostile secondary reach for each party member and its actual pets. Use the follower's level-eligible kit, native effect radii and triggered effects, and source-owned script declarations; exclude effects restricted to already-engaged targets. Chain bounds use TrinityCore 15e0ed76 `Spell.cpp:2210–2248`. Fire Blast Ignite spread uses its native hostile SpellRange around the caster (`auras/ignite.rs`), not a guessed effect radius. Current hostile fields retain their actual centers after the caster moves. The script audit detects its listed selection helpers and component queries; it is not a proof for arbitrary aliases or target selection outside those paths.
+
+Void Shield discharge prefers its actual hostile attacker. When none is valid, select only an engaged enemy on the same map within the native discharge range, or do not discharge. SimC 76f8118 `sc_priest.cpp:86–102` selects a non-sleeping fallback, not an idle pack.
+
 Named proof gap `TANK_PACING_AFFORDABLE_NATIVE_FIXTURE_UNAVAILABLE`: three preserved owner-pacing fixtures were RED from introduction because their full-route admission was never affordable. Current fresh Normal Stockade projection covers100 eligible sourced endpoints, all exposing at least two packs; the authored entrance route to20375682 exposes23 and must retain `Wait(Reserve)`. These are limits of the current conservative endpoint-route projection, not a claim that ordinary ranged first pulls are impossible. Keep the three assertions visibly ignored until a genuinely sourced first-single-pack approach qualifies; do not tune HP, kits, budget or reserve to satisfy them. Runtime owner-pacing and first-single-pack policies below remain requirements.
 
 `TANK_IDLE_FOLLOWS_OWNER_PACE` — user decision, relayed by the lead: follow the owner's pace. With the owner idle out of combat, tanks must not autonomously pull. Chaining additional packs is allowed only during an active engagement and within `TANK_PULL_BUDGET`. Owner selection alone remains insufficient to start combat.

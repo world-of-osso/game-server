@@ -9,9 +9,30 @@ use combat::spell_cast::{
 };
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::AfterPolicyDirectDamage(extend_diseases),
 ];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != 1242174 {
+        return Default::default();
+    }
+    let coil = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(1242174)
+        .expect("native Necrotic Coil");
+    let effect = coil
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Necrotic Coil area effect");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::effect_radius(effect))
+}
 
 fn extend_diseases(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
     if !matches!(ctx.spell.id, 47632 | 1242178) {

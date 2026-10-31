@@ -11,6 +11,10 @@ macro_rules! register_modules {
         pub const MODULES: &[&[SpellScriptHook]] = &order_modules([
             $(($position, $name::HOOKS)),*
         ]);
+        #[cfg(test)]
+        pub const NAMED_MODULES: &[(&str, &[SpellScriptHook])] = &[
+            $(($path, $name::HOOKS)),*
+        ];
     };
 }
 
@@ -116,6 +120,7 @@ register_modules! {
     cast_relationships: (370, "modules/cast_relationships.rs"),
     cast_resets: (90, "modules/cast_resets.rs"),
     clearcasting: (1000, "modules/clearcasting.rs"),
+    core_reach: (1000, "modules/core_reach.rs"),
     death_knight_permafrost: (2506, "modules/death_knight_permafrost.rs"),
     defensive_health_procs: (9801, "modules/defensive_health_procs.rs"),
     demon_hunter_burning: (1482, "modules/demon_hunter_burning.rs"),

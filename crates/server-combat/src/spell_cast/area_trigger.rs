@@ -33,6 +33,17 @@ pub fn install_native_catalog(
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
+/// Maximum authored radius, including any later growth of an active field.
+pub(crate) fn maximum_field_radius(world: &World, entity: Entity) -> Option<f32> {
+    if world.get::<frozen_ground::FrozenGround>(entity).is_some() {
+        frozen_ground::maximum_radius(world, entity)
+    } else if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
+        aura_owned::maximum_radius(world, entity)
+    } else {
+        Some(world.get::<SpellAreaTrigger>(entity)?.radius)
+    }
+}
+
 /// Source-bound spheres add native reach; only authored native curves advance in time.
 pub(crate) fn avoidance_radius_at(
     world: &World,

@@ -13,6 +13,7 @@ use shared::components::{Npc, Position};
 struct UndeathReady(f64);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::SummonInitialized(initialize),
     SpellScriptHook::AfterForegroundSpender(whitemane_spender),
     SpellScriptHook::TargetFilter(exclude_epidemic_primary),
@@ -174,6 +175,25 @@ fn update(world: &mut World) {
         assert!(duration > 0, "native Undeath duration must be positive");
         world.get_mut::<UndeathReady>(actor).unwrap().0 = now + f64::from(duration) / 1000.0;
     }
+}
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != 55090
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, 444033)
+    {
+        return Default::default();
+    }
+    let undeath = world
+        .resource::<SpellStore>()
+        .get(444633)
+        .expect("native Undeath range");
+    combat::spell_cast::script_registry::ScriptReach::caster(
+        spell_cast::targets::spell_range(undeath, true).1,
+    )
 }
 
 fn spread(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {

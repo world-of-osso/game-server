@@ -12,12 +12,30 @@ use combat::spell_cast::{self, PlannedEffect, TargetPlan, effects::EffectCtx, ta
 use combat::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::TargetPlan(target_plan),
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::ResolvedDamage(apply_residual),
     SpellScriptHook::AfterDirectDamageBeforeItems(roll_auto_lock),
     SpellScriptHook::AfterNativeOnCast(roll_surging_shots),
 ];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, AIMED_SHOT | RAPID_FIRE | RAPID_FIRE_SHOT) {
+        return Default::default();
+    }
+    let volley = world
+        .resource::<SpellStore>()
+        .get(VOLLEY)
+        .expect("native Volley radius");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::effect_radius(
+        &volley.effects[0],
+    ))
+}
 
 fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(

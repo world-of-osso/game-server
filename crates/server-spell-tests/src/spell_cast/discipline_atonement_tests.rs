@@ -835,6 +835,82 @@ fn master_the_darkness_mind_blast_earns_void_shield_and_absorb_discharges() {
 }
 
 #[test]
+fn void_shield_without_attacker_never_discharges_at_idle_enemy() {
+    use shared::components::CombatStatus;
+    let mut h = harness(Vec::new(), &[1253593, 1253827, 1253828], 5).unwrap();
+    let caster = h.caster;
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(CombatStatus(false));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 1253827,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let before = h.app.world().get::<Health>(enemy).unwrap().current;
+    crate::spell_cast::script_registry::after_absorb_consumed(
+        h.app.world_mut(),
+        caster,
+        caster,
+        None,
+        1253593,
+        200.0,
+    );
+    h.advance(5);
+    assert_eq!(h.app.world().get::<Health>(enemy).unwrap().current, before);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(1253828))
+    );
+
+    h.app.world_mut().entity_mut(enemy).insert((
+        CombatStatus(true),
+        shared::components::Position {
+            x: 50_001.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    crate::spell_cast::script_registry::after_absorb_consumed(
+        h.app.world_mut(),
+        caster,
+        caster,
+        None,
+        1253593,
+        200.0,
+    );
+    h.advance(5);
+    assert_eq!(h.app.world().get::<Health>(enemy).unwrap().current, before);
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(shared::components::Position {
+            x: 3.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    crate::spell_cast::script_registry::after_absorb_consumed(
+        h.app.world_mut(),
+        caster,
+        caster,
+        None,
+        1253593,
+        200.0,
+    );
+    h.advance(5);
+    assert!(h.app.world().get::<Health>(enemy).unwrap().current < before);
+}
+
+#[test]
 fn atonement_transfers_critical_smite_before_absorb_but_not_fireball() {
     let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 585, 133], 5).unwrap();
     h.app

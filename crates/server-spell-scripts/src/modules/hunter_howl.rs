@@ -15,6 +15,7 @@ mod pack_mentality;
 mod summons;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::OwnsPolicyProc(hogstrider::owns_proc),
     SpellScriptHook::ResolvedDamage(hogstrider::after_boar_impact),
@@ -34,6 +35,32 @@ const STAMPEDE: u32 = 472741;
 const INCOMING: u32 = 1258338;
 const STAMPEDE_TRIGGER: u32 = 1258344;
 const STAMPEDE_DAMAGE: u32 = 201594;
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(
+        spell.id,
+        19574 | 34026 | 259489 | STAMPEDE | STAMPEDE_TRIGGER | STAMPEDE_DAMAGE
+    ) {
+        return Default::default();
+    }
+    let selected = has_talent(world, caster, STAMPEDE)
+        || auras::has_aura(world, caster, INCOMING)
+        || auras::has_aura(world, caster, STAMPEDE_TRIGGER);
+    if !selected && spell.id != STAMPEDE_DAMAGE {
+        return Default::default();
+    }
+    let trigger = world
+        .resource::<SpellStore>()
+        .get(STAMPEDE_TRIGGER)
+        .expect("native Stampede area");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::effect_radius(
+        &trigger.effects[0],
+    ))
+}
 
 #[derive(Component, Default)]
 struct NextBeast(usize);

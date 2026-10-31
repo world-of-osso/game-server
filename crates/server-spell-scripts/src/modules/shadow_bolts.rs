@@ -10,9 +10,25 @@ const VOLLEY_BOLT: u32 = 1242189;
 const BOLT_INTERVAL_MS: u32 = 50;
 const VOIDFORM: u32 = 228260;
 pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::TargetPlan(target_plan),
 ];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if !matches!(spell.id, VOID_VOLLEY | VOIDFORM) {
+        return Default::default();
+    }
+    let root = world
+        .resource::<SpellStore>()
+        .get(VOID_VOLLEY)
+        .expect("native Void Volley");
+    combat::spell_cast::script_registry::ScriptReach::target(targets::radius(&root.effects[0], 1))
+}
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {

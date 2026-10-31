@@ -15,7 +15,33 @@ struct Energy {
     ready: f64,
 }
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterCastUpdate(update)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
+    SpellScriptHook::AfterCastUpdate(update),
+];
+
+fn autonomous_actions(world: &World, pet: Entity) -> Vec<u32> {
+    let Some(owner) = world.get::<HunterPet>(pet).map(|pet| pet.owner) else {
+        return Vec::new();
+    };
+    let ghoul = world
+        .get::<Npc>(pet)
+        .is_some_and(|npc| npc.template_id == 26125);
+    let unholy = world
+        .get::<ActiveSpec>(owner)
+        .is_some_and(|spec| spec.0 == 252);
+    if !ghoul || !unholy {
+        return Vec::new();
+    }
+    let transformed =
+        combat::spell_cast::script_registry::reach_source_selected(world, owner, 1233448)
+            || combat::auras::has_aura(world, pet, 1233448);
+    if transformed {
+        vec![91776, 91778]
+    } else {
+        vec![91776]
+    }
+}
 
 // server-combat compiles this file in its own tests (cfg(test)), where no test uses it.
 #[cfg(all(feature = "test-support", not(test)))]

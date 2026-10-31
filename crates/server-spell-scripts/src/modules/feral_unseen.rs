@@ -22,11 +22,32 @@ const CRAVING: u32 = 1263939;
 const SWIPE_THRESHOLD: usize = 3;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::ResourceContext(&[BITE]),
     SpellScriptHook::ContextHit(hit),
     SpellScriptHook::LaunchDelay(travel_delay),
     SpellScriptHook::ConsumedEffectValues(&[(UNSEEN, 0), (UNSEEN, 1)]),
 ];
+
+fn declared_reach(
+    world: &World,
+    caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != BITE
+        || !combat::spell_cast::script_registry::reach_source_selected(world, caster, UNSEEN)
+    {
+        return Default::default();
+    }
+    let range = spell_cast::scripts::script_effect_value(world, caster, UNSEEN, 1);
+    let swipe = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(SWIPE)
+        .expect("native Unseen Swipe");
+    combat::spell_cast::script_registry::ScriptReach::caster(
+        range + targets::radius(&swipe.effects[0], 0),
+    )
+}
 
 fn hit(spell: u32) -> Option<ContextHitHook> {
     match spell {

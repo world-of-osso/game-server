@@ -21,10 +21,19 @@ const SUMMONS: &[u32] = &[1235843, 1237036];
 struct CommandTarget(Entity);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AdditionalReachActions(autonomous_actions),
     SpellScriptHook::AfterResourceValues(breath_hook),
     SpellScriptHook::MidAuraRegistration(register),
     SpellScriptHook::CriticalChance(pyre_critical_chance),
 ];
+
+fn autonomous_actions(world: &World, actor: Entity) -> Vec<u32> {
+    if world.get::<CommandTarget>(actor).is_some() {
+        vec![PYRE]
+    } else {
+        Vec::new()
+    }
+}
 
 fn pyre_critical_chance(world: &World, caster: Entity, _target: Entity, spell: u32) -> Option<f32> {
     if spell != PYRE || world.get::<Npc>(caster)?.template_id != ENTRY {

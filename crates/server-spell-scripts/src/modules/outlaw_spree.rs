@@ -8,7 +8,21 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::{self, targets};
 use combat::spell_info::SpellStore;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EarlyAuraRegistration(register)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::EarlyAuraRegistration(register),
+];
+
+fn declared_reach(
+    _world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> combat::spell_cast::script_registry::ScriptReach {
+    if spell.id != KILLING_SPREE {
+        return Default::default();
+    }
+    combat::spell_cast::script_registry::ScriptReach::caster(targets::spell_range(spell, true).1)
+}
 
 const KILLING_SPREE: u32 = 51690;
 const HANDS: &[u32] = &[57841, 57842];
