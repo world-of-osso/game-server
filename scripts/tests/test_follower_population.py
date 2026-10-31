@@ -13,7 +13,7 @@ spec = importlib.util.spec_from_file_location("follower_population", SCRIPTS / "
 population = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(population)
 SOURCE = (SCRIPTS.parent / "data/world.db").resolve()
-DB2 = SOURCE.parent.parent / "db2/12.1.5.70448"
+DB2 = SOURCE.parent.parent.parent / "game-engine/data/db2/12.1.5.70448"
 
 
 class FollowerPopulationTests(unittest.TestCase):

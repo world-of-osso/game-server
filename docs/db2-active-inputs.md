@@ -10,7 +10,7 @@ The process/schema regression `python3 -m unittest scripts.tests.test_db2_curves
 
 ## Follower population test prerequisite
 
-`followers::catalog_tests::follower_population_catalog_lists_every_map_with_authentic_sources` runs `scripts/follower_population.py` against a copy of the test world database. It requires `receipt.json` and `Map.csv`, `MapDifficulty.csv`, `LFGDungeons.csv`, and `AreaTrigger.csv` from authenticated local CASC build 12.1.5.70448 in `db2/12.1.5.70448` beside the canonical database's `data` directory. The producer validates the receipt and CSV hashes; a generic active DB2 export is not a substitute. These files are untracked. The merge train only runs this test if a submitted filter selects it.
+`followers::catalog_tests::follower_population_catalog_lists_every_map_with_authentic_sources` runs `scripts/follower_population.py` against a copy of the test world database. It requires `receipt.json` and `Map.csv`, `MapDifficulty.csv`, `LFGDungeons.csv`, and `AreaTrigger.csv` from authenticated local CASC build 12.1.5.70448 in the sibling engine's `data/db2/12.1.5.70448` directory. The producer validates the receipt and CSV hashes; another build is not a substitute. These files are untracked. The merge train only runs this test if a submitted filter selects it.
 
 ## Private CSV roots
 
