@@ -90,9 +90,18 @@ fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
     }
     assert!(run.app.world().get::<Health>(primary).unwrap().current <= 0.0);
     let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(pet.to_bits())
-        && event.target == Some(survivor.to_bits())
-        && event.kind == CombatLogKind::Damage
-        && event.spell_id == Some(227291)
-        && event.amount > 0), "Niuzao must stomp a living enemy after the kick kills its primary");
+    let lethal = events.iter().position(|event| {
+        event.source == Some(actor.to_bits())
+            && event.target == Some(primary.to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(205523)
+            && event.amount > 0
+    }).expect("Blackout Kick must deal the lethal hit");
+    assert!(events.iter().skip(lethal + 1).any(|event| {
+        event.source == Some(pet.to_bits())
+            && event.target == Some(survivor.to_bits())
+            && event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(227291)
+            && event.amount > 0
+    }), "Niuzao must stomp a living enemy after the kick kills its primary");
 }
