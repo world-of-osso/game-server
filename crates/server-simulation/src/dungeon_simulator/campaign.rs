@@ -1966,6 +1966,42 @@ fn alternate_roster_attackers_participate_in_the_first_native_fight() {
     );
 }
 
+struct DeckReplay {
+    started_at: f64,
+    start: Vec3,
+    end: Vec3,
+}
+
+impl DeckReplay {
+    fn position(&self, now: f64) -> Vec3 {
+        let elapsed = now - self.started_at;
+        self.start
+            .lerp(self.end, (elapsed / 76.380).clamp(0.0, 1.0) as f32)
+    }
+
+    fn grant_due(&self, now: f64) -> bool {
+        now - self.started_at >= 80.807
+    }
+}
+
+#[test]
+fn deck_replay_preserves_logged_carry_and_grant_times() {
+    let deck = DeckReplay {
+        started_at: 5.0,
+        start: Vec3::new(1421.0, 3.0, 331.0),
+        end: Vec3::new(1973.0, 1104.0, -289.0),
+    };
+    assert_eq!(deck.position(5.0), deck.start);
+    assert!(
+        deck.position(43.19)
+            .distance(deck.start.lerp(deck.end, 0.5))
+            < 0.001
+    );
+    assert_eq!(deck.position(81.38), deck.end);
+    assert!(!deck.grant_due(85.806));
+    assert!(deck.grant_due(85.807));
+}
+
 struct Run {
     app: App,
     graph: Graph,
@@ -1975,6 +2011,8 @@ struct Run {
     report: Report,
     current_pack: Option<u32>,
     waiting_objective: Option<(u32, f64)>,
+    deck_replay: Option<DeckReplay>,
+    deck_population_unsourced: bool,
     /// Packs whose frozen route anchor the owner reached without engaging them.
     anchors_reached: std::collections::BTreeSet<u32>,
     last_progress: f64,
@@ -2188,6 +2226,8 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         objects,
         current_pack: None,
         waiting_objective: None,
+        deck_replay: None,
+        deck_population_unsourced: false,
         anchors_reached: Default::default(),
         last_progress: 0.0,
         event_cursor: 0,
@@ -2227,6 +2267,7 @@ impl Run {
         let elapsed = started.elapsed();
         let steady = elapsed.saturating_sub(setup).as_secs_f64();
         serde_json::json!({"ticks": ticks, "sim_seconds": self.now(),
+            "deck_population_unsourced": self.deck_population_unsourced.then_some(serde_json::json!({"report": "x3HzDRn6yVjqCbt8", "fight": 7, "transport_start_ms": 86000, "commander_death_ms": 162380, "radiant_light_ms": 166807, "altitude": "inferred"})), 
             "setup_wall_seconds": setup.as_secs_f64(), "wall_seconds": elapsed.as_secs_f64(),
             "sim_per_wall": self.now() / elapsed.as_secs_f64(),
             "steady_sim_per_wall": self.now() / steady,
@@ -2496,7 +2537,59 @@ impl Run {
         Ok(self.waiting_for_tank)
     }
 
+    /// Replay WCL XY/timing only; the transport-backed NPC population is not sourced.
+    /// Replace this phase with server transport support after its landing and the
+    /// 214761/214762 deck population are available.
+    fn advance_deck_replay(&mut self) -> Result<bool, String> {
+        let Some(deck) = self.deck_replay.take() else {
+            return Ok(false);
+        };
+        let point = deck.position(self.now());
+        let members: Vec<_> = self.members().collect();
+        for member in &members {
+            if !crate::spell_cast::targets::is_alive(self.app.world(), *member) {
+                return Err("deck replay party member died; recorded phase cannot continue".into());
+            }
+            self.app.world_mut().entity_mut(*member).insert(Position {
+                x: point.x,
+                y: point.y,
+                z: point.z,
+            });
+        }
+        self.last_progress = self.now();
+        if !deck.grant_due(self.now()) {
+            self.deck_replay = Some(deck);
+            return Ok(true);
+        }
+        let spell = self
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(449042)
+            .ok_or("Radiant Light 449042 is missing from the spell catalog")?;
+        let effect_mask = crate::auras::aura_effect_mask(spell);
+        for member in members {
+            crate::auras::apply_aura(
+                self.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: member,
+                    target: member,
+                    spell_id: 449042,
+                    effect_mask,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            if !crate::auras::has_aura(self.app.world(), member, 449042) {
+                return Err(format!("Radiant Light did not apply to {member}"));
+            }
+        }
+        Ok(false)
+    }
+
     fn control(&mut self) -> Result<(), String> {
+        if self.advance_deck_replay()? {
+            return Ok(());
+        }
         self.refresh_population();
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
@@ -2787,6 +2880,24 @@ impl Run {
             .find(|edge| edge.from == source && edge.to == destination)
             .cloned()
         {
+            if transport.action == server::test_support::transport::Action::RecordedDawnbreakerDeck
+            {
+                let start =
+                    Vec3::from_array(transport.departure.ok_or("deck replay lacks departure")?);
+                let here = Vec3::new(from.x, from.y, from.z);
+                if here.distance(start) > transport.radius {
+                    return Err("deck replay party is not at its logged starting point".into());
+                }
+                super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.deck_replay = Some(DeckReplay {
+                    started_at: self.now(),
+                    start,
+                    end: Vec3::from_array(transport.landing),
+                });
+                self.deck_population_unsourced = true;
+                self.record_pull(source, "deck_population_unsourced: WCL x3HzDRn6yVjqCbt8 fight 7, 86000–162380ms; grant 166807ms".into());
+                return Ok(true);
+            }
             let source_objects = matches!(
                 transport.action,
                 server::test_support::transport::Action::ObjectGossip

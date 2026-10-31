@@ -36,6 +36,42 @@ struct FlightPoint {
     seconds: f32,
 }
 
+/// WCL actor positions have XY and time but no altitude. Linear interpolation is
+/// used only to resolve the requested replay boundary timestamps.
+fn logged_position_at(points: &[LoggedPoint], seconds: f32) -> Result<Vec2, String> {
+    let pair = points
+        .windows(2)
+        .find(|pair| pair[0].seconds <= seconds && seconds <= pair[1].seconds)
+        .ok_or_else(|| format!("no logged positions around {seconds}s"))?;
+    let span = pair[1].seconds - pair[0].seconds;
+    if span <= 0.0 {
+        return Err("non-increasing logged timestamps".into());
+    }
+    Ok(pair[0]
+        .horizontal
+        .lerp(pair[1].horizontal, (seconds - pair[0].seconds) / span))
+}
+
+#[test]
+fn replay_interpolates_only_between_timed_logged_samples() {
+    let points = [
+        LoggedPoint {
+            horizontal: Vec2::new(10.0, 20.0),
+            seconds: 80.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(30.0, 40.0),
+            seconds: 90.0,
+        },
+    ];
+    assert_eq!(
+        logged_position_at(&points, 86.0).unwrap(),
+        Vec2::new(22.0, 32.0)
+    );
+    assert!(logged_position_at(&points, 79.0).is_err());
+    assert!(logged_position_at(&points, 91.0).is_err());
+}
+
 /// Split at no-fly terrain cells; only logged points become takeoffs or landings.
 fn permitted_flight_windows(
     samples: &[LoggedPoint],
@@ -340,7 +376,7 @@ pub(super) fn build_paths(
     graph: &super::graph::Graph,
     nav: &mut navigation::NavigationMap,
     db: &rusqlite::Connection,
-) -> Result<Vec<Vec<Vec3>>, String> {
+) -> Result<(Vec<Vec<Vec3>>, Vec3), String> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons/dawnbreaker-flight-wcl.json");
     let trace: Trace = serde_json::from_slice(
@@ -383,10 +419,19 @@ pub(super) fn build_paths(
     ));
     let nav = std::cell::RefCell::new(nav);
     let mut areas = server::test_support::flight::Areas::open(db, &root)?;
+    let required: u32 = db.query_row(
+        "SELECT EffectMiscValue_0 FROM spell_effect WHERE SpellID = 449042 AND Effect = 6 AND EffectAura = 541",
+        [],
+        |row| row.get(0),
+    ).map_err(|error| format!("Radiant Light required mount capabilities: {error}"))?;
+    if required & 2 == 0 {
+        return Err("Radiant Light does not require a flying mount capability".into());
+    }
     let mut paths = Vec::new();
     let mut previous_boss_height = graph.entrance_height;
-    for (leg, &boss_height) in trace.legs.iter().zip(&boss_heights) {
-        let points: Vec<_> = leg
+    let mut deck_start = None;
+    for (leg_index, (leg, &boss_height)) in trace.legs.iter().zip(&boss_heights).enumerate() {
+        let mut points: Vec<_> = leg
             .points
             .iter()
             .map(|&(ms, x, z)| LoggedPoint {
@@ -400,19 +445,46 @@ pub(super) fn build_paths(
                 leg.encounter
             ));
         }
-        let windows = permitted_flight_windows(&points, |point| areas.permits(graph.map_id, point))
-            .map_err(|error| format!("encounter {} flight areas: {error}", leg.encounter))?;
+        if leg_index == 0 {
+            let start = logged_position_at(&points, 86.0)?;
+            let end = logged_position_at(&points, 162.380)?;
+            deck_start = Some(Vec3::new(start.x, graph.entrance_height, start.y));
+            points.retain(|point| point.seconds >= 166.807);
+            points.insert(
+                0,
+                LoggedPoint {
+                    horizontal: end,
+                    seconds: 162.380,
+                },
+            );
+        }
+        let windows = permitted_flight_windows(&points, |point| {
+            areas.permits_with_required(graph.map_id, point, required)
+        })
+        .map_err(|error| format!("encounter {} flight areas: {error}", leg.encounter))?;
+        if windows.len() != 1 || windows[0].len() != points.len() {
+            return Err(format!(
+                "encounter {} flight crosses an area not permitted by the observed grant",
+                leg.encounter
+            ));
+        }
         let count = windows.len();
         let mut reference = previous_boss_height;
         for (index, window) in windows.into_iter().enumerate() {
             let first = window.first().unwrap();
             let last = window.last().unwrap();
-            let start = project_endpoint(
-                &mut los.borrow_mut(),
-                &mut nav.borrow_mut(),
-                first.horizontal,
-                reference,
-            )?;
+            let start = if leg_index == 0 && index == 0 {
+                // WCL lacks altitude; infer the moving deck's takeoff height from
+                // the first boss's static ship. The logged transport supplies XY.
+                Vec3::new(first.horizontal.x, boss_height, first.horizontal.y)
+            } else {
+                project_endpoint(
+                    &mut los.borrow_mut(),
+                    &mut nav.borrow_mut(),
+                    first.horizontal,
+                    reference,
+                )?
+            };
             let end_reference = if index + 1 == count {
                 boss_height
             } else {
@@ -451,7 +523,7 @@ pub(super) fn build_paths(
         }
         previous_boss_height = boss_height;
     }
-    Ok(paths)
+    Ok((paths, deck_start.ok_or("Dawnbreaker deck start missing")?))
 }
 
 #[test]

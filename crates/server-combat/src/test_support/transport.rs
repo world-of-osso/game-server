@@ -12,6 +12,8 @@ pub enum Action {
     ObjectGossip,
     ObjectScript,
     CollisionDrop,
+    /// WCL replay until transport-backed Dawnbreaker deck population is sourced.
+    RecordedDawnbreakerDeck,
 }
 
 #[derive(Clone, Debug)]
@@ -443,7 +445,10 @@ pub fn activate(
                 return Err("registered game object script did not start transport".into());
             }
         }
-        Action::CollisionDrop | Action::GatewayProximity | Action::TaxiProximity => unreachable!(),
+        Action::CollisionDrop
+        | Action::GatewayProximity
+        | Action::TaxiProximity
+        | Action::RecordedDawnbreakerDeck => unreachable!(),
     }
     Ok(())
 }
