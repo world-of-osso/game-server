@@ -186,6 +186,7 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
             break;
         }
     }
+    h.advance(100);
     assert!(
         h.inbox.log.iter().any(|event| {
             event.spell_id == Some(31935)
