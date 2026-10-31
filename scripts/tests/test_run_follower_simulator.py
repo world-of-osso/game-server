@@ -38,6 +38,18 @@ class FollowerSimulatorInputs(unittest.TestCase):
             self.assertEqual(report['simulated_seconds'], 0.0)
             self.assertIsNone(report['encounters_total'])
 
+    def test_blocked_dawnbreaker_identifies_unsourced_deck_without_claiming_replay(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            runner.write_blocked_report(output, 2662, 1, 'missing flight path')
+            report = json.loads((output / 'run-1.json').read_text())
+            self.assertEqual(report['deck_population_unsourced'], {
+                'report': 'x3HzDRn6yVjqCbt8', 'fight': 7, 'replay_executed': False,
+                'transport_start_ms': 86000, 'commander_death_ms': 162380,
+                'radiant_light_ms': 166807,
+            })
+            self.assertEqual(report['encounters_killed'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
