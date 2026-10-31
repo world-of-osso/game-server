@@ -107,6 +107,7 @@ fn start_flight(world: &mut World, unit: Entity, follower: &Follower) -> bool {
     if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
         nav.cancel_route(unit);
     }
+    crate::transport::disembark(world, unit);
     world.entity_mut(unit).insert(FlightFollow {
         previous_form,
         druid,

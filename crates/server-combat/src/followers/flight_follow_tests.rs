@@ -48,6 +48,85 @@ fn spawn_druid(h: &mut crate::spell_cast::test_harness::Harness, position: Posit
 }
 
 #[test]
+fn flying_follower_leaves_moving_ship_and_follows_owner() {
+    use shared::components::{TransportPassenger, TransportState};
+    use std::time::Duration;
+
+    let at = Position {
+        x: 150.557,
+        y: -34.85624,
+        z: -45.8164,
+    };
+    let (mut h, follower, _) = stockade_fixture(at);
+    let owner = h.caster;
+    let map = crate::maps::InMap {
+        map_id: 2662,
+        instance_id: 1,
+    };
+    h.app
+        .insert_resource(crate::transport_catalog::fixture_catalog());
+    h.app.insert_resource(Time::<Fixed>::default());
+    crate::transport::spawn_ships(h.app.world_mut(), map);
+    let ship = h
+        .app
+        .world_mut()
+        .query::<(Entity, &TransportState)>()
+        .iter(h.app.world())
+        .find(|(_, state)| state.spawn_id == 409273)
+        .unwrap()
+        .0;
+    let deck = *h.app.world().get::<Position>(ship).unwrap();
+    let airborne = Position {
+        y: deck.y + 20.0,
+        ..deck
+    };
+    h.app.world_mut().entity_mut(owner).insert((
+        map,
+        airborne,
+        PlayerMotion(PlayerMotion::CAN_FLY | PlayerMotion::FLYING),
+    ));
+    h.app.world_mut().entity_mut(follower).insert((
+        map,
+        deck,
+        TransportPassenger {
+            transport: ship.to_bits(),
+            position: [0.0; 3],
+            orientation: 0.0,
+        },
+    ));
+    h.app.insert_resource(GroundMap::with_area_samples(&[(
+        2662,
+        Vec3::new(airborne.x, airborne.y, airborne.z),
+        9001,
+    )]));
+    let db = rusqlite::Connection::open_in_memory().unwrap();
+    db.execute_batch("CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER, AreaName_lang TEXT, MountFlags INTEGER); INSERT INTO area_table VALUES (9001,0,2662,0,0,0,'Flight fixture',2);").unwrap();
+    h.app
+        .insert_resource(crate::area_table::load_area_table(&db).unwrap());
+    h.app
+        .world_mut()
+        .resource_mut::<Time>()
+        .advance_by(Duration::from_secs(1));
+    crate::creature_ai::flight_follow::update(h.app.world_mut());
+    assert!(h.app.world().get::<Mounted>(follower).is_some());
+    let following = *h.app.world().get::<Position>(follower).unwrap();
+    assert!(
+        following.y > deck.y,
+        "follower must ascend toward its flying owner"
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .advance_by(Duration::from_secs(6));
+    crate::transport::advance_ships(h.app.world_mut());
+    assert_eq!(
+        *h.app.world().get::<Position>(follower).unwrap(),
+        following,
+        "ship movement must not pull the flying follower back"
+    );
+}
+
+#[test]
 fn simulator_leader_uses_native_mount_and_area_flight_permission() {
     let mut h =
         crate::auras::mount_tests::rider(225, true, &[]).expect("native Golden Gryphon catalog");
