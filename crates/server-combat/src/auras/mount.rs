@@ -311,6 +311,18 @@ fn mark_dirty(world: &World, unit: Entity) {
     }
 }
 
+pub(crate) fn required_capability_flags(auras: Option<&ActiveAuras>) -> u32 {
+    auras.map_or(0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .filter(|effect| {
+                effect.aura_type == super::handlers::MOD_REQUIRED_MOUNT_CAPABILITY_FLAGS
+            })
+            .fold(0, |flags, effect| flags | effect.misc_values[0] as u32)
+    })
+}
+
 /// The rider state `GetMountCapability` reads, handed to `read`.
 pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Rider) -> R) -> R {
     let swimming = world
@@ -342,15 +354,7 @@ pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Ride
         map_id: world
             .get::<crate::maps::InMap>(unit)
             .map_or(0, |map| map.map_id),
-        required_capability_flags: auras.map_or(0, |auras| {
-            auras
-                .iter()
-                .flat_map(|aura| &aura.effects)
-                .filter(|effect| {
-                    effect.aura_type == super::handlers::MOD_REQUIRED_MOUNT_CAPABILITY_FLAGS
-                })
-                .fold(0, |flags, effect| flags | effect.misc_values[0] as u32)
-        }),
+        required_capability_flags: required_capability_flags(auras),
         aura_stacks: &aura_stacks,
         knows: &knows,
     };

@@ -39,6 +39,18 @@ impl Areas {
     pub fn permits(&mut self, map: u32, point: Vec2) -> Result<bool, String> {
         self.inspect(map, point).map(|(_, permitted)| permitted)
     }
+
+    pub fn permits_with_required(
+        &mut self,
+        map: u32,
+        point: Vec2,
+        required_capabilities: u32,
+    ) -> Result<bool, String> {
+        let (area, _) = self.inspect(map, point)?;
+        self.table
+            .flight_permission_with_required(area, map, required_capabilities)
+            .ok_or_else(|| format!("flight area {area} is missing from map {map}'s AreaTable"))
+    }
 }
 
 pub fn install(
@@ -134,10 +146,7 @@ pub fn enter_flight(world: &mut World, owner: Entity) -> Result<(), String> {
         .resource_mut::<crate::ground::GroundMap>()
         .area_at(map.map_id, Vec3::new(position.x, position.y, position.z))
         .ok_or("flight leader area is unavailable")?;
-    if !world
-        .resource::<crate::area_table::AreaTable>()
-        .permits_flying(area, map.map_id)
-    {
+    if !permits_flight(world, owner, area, map.map_id) {
         return Err(format!("flight is not permitted in area {area}"));
     }
     let mut motion = world
@@ -148,6 +157,16 @@ pub fn enter_flight(world: &mut World, owner: Entity) -> Result<(), String> {
     }
     motion.0 |= shared::components::PlayerMotion::FLYING;
     Ok(())
+}
+
+pub(crate) fn permits_flight(world: &World, owner: Entity, area: u32, map: u32) -> bool {
+    let required = crate::auras::mount::required_capability_flags(
+        world.get::<crate::auras::ActiveAuras>(owner),
+    );
+    world
+        .resource::<crate::area_table::AreaTable>()
+        .flight_permission_with_required(area, map, required)
+        == Some(true)
 }
 
 pub fn land(world: &mut World, owner: Entity) -> Result<(), String> {

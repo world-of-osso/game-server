@@ -418,6 +418,49 @@ fn radiant_light_requires_a_flying_mount_capability() {
 }
 
 #[test]
+fn radiant_light_grants_flight_in_restricted_area_only_while_active() {
+    let mut h = rider(225, true, &[449042]).expect("real mount and Radiant Light catalog");
+    let data = world_db().unwrap();
+    let conn =
+        Connection::open_with_flags(&data.powers_db, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    let caster = h.caster;
+    let permits = |h: &Harness| {
+        crate::test_support::flight::permits_flight(h.app.world(), caster, 15544, 2662)
+    };
+    assert!(!permits(&h));
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(449042)
+        .unwrap();
+    let effect_mask = aura_effect_mask(spell);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 449042,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(permits(&h));
+    assert!(!crate::test_support::flight::permits_flight(
+        h.app.world(),
+        caster,
+        15544,
+        1
+    ));
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 449042
+    });
+    assert!(!permits(&h));
+}
+
+#[test]
 fn a_mounted_player_cannot_cast_and_dismounts_with_cancel_mount_aura() {
     let Some(mut h) = rider(225, true, &[]) else {
         return;
