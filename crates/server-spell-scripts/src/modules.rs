@@ -123,6 +123,7 @@ register_modules! {
     core_reach: (1000, "modules/core_reach.rs"),
     death_knight_permafrost: (2506, "modules/death_knight_permafrost.rs"),
     defensive_health_procs: (9801, "modules/defensive_health_procs.rs"),
+    dragonflight_heart: (1000, "modules/dragonflight_heart.rs"),
     demon_hunter_burning: (1482, "modules/demon_hunter_burning.rs"),
     demon_hunter_effects: (1000, "modules/demon_hunter_effects.rs"),
     demonology_reign: (2660, "modules/demonology_reign.rs"),
