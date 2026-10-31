@@ -172,10 +172,7 @@ fn single_value(code: &mut Bytecode, values: &Values) -> Result<i32, String> {
     match code.byte()? {
         CONSTANT => code.int(),
         WORLD_STATE => values(code.int()?),
-        FUNCTION => Err(format!(
-            "function {} is not a load-time value",
-            code.int()?
-        )),
+        FUNCTION => Err(format!("function {} is not a load-time value", code.int()?)),
         kind => Err(format!("unknown value type {kind}")),
     }
 }
@@ -195,8 +192,8 @@ mod tests {
     #[test]
     fn world_state_expressions_read_realm_values_like_trinitycore() {
         let (expressions, conn) = read();
-        // 38025: untemplated world state21851 == 0; nothing sets it, so it reads 0.
-        assert_eq!(expressions.evaluate(&conn, 38025), Ok(true));
+        // 38025: untemplated world state21851 == 1; nothing sets it, so it reads 0.
+        assert_eq!(expressions.evaluate(&conn, 38025), Ok(false));
         // World state17043 is a realm template with DefaultValue10.
         assert_eq!(expressions.evaluate(&conn, 28225), Ok(false), ">= 20");
         assert_eq!(expressions.evaluate(&conn, 29288), Ok(true), "< 20");

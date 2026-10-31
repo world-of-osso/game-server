@@ -252,14 +252,11 @@ mod tests {
         )
         .unwrap();
         // Dragonflight item context picker241's low-level entry: ContentTuning2485
-        // (10–69) AND WorldStateExpression38025 (untemplated world state21851 == 0).
+        // (10–69) AND WorldStateExpression38025 (untemplated world state21851 == 1).
+        // The unset state reads 0, so even levels inside the range fail.
         let condition = load_condition(&conn, 103325, &expressions()).unwrap();
-        for (level, eligible) in [(9, false), (10, true), (32, true), (69, true), (70, false)] {
-            assert_eq!(
-                condition.evaluate(level, None),
-                Ok(eligible),
-                "level{level}"
-            );
+        for level in [10, 32, 69] {
+            assert_eq!(condition.evaluate(level, None), Ok(false), "level{level}");
         }
     }
 
