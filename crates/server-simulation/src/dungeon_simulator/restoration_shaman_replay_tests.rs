@@ -98,6 +98,14 @@ fn restoration_shaman_holds_chain_lightning_against_one_enemy() {
     let mut run = super::healer_simc_replay::snapshot_party(264, 90, 1);
     super::healer_simc_replay::engage(&mut run);
     let healer = run.healer;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(healer)
+            .unwrap()
+            .contains(188443),
+        "the class build knows Chain Lightning"
+    );
     let mut damage_casts = 0;
     for _ in 0..300 {
         run.app.update();
@@ -122,14 +130,35 @@ fn restoration_shaman_holds_chain_lightning_against_one_enemy() {
 fn restoration_shaman_chains_lightning_through_engaged_enemies_only() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use bevy::prelude::Entity;
+    use shared::components::Position;
     use shared::protocol::CombatLogKind;
     let mut run = super::healer_simc_replay::snapshot_party(264, 90, 3);
-    // Two dummies without a formation are engaged; the third stands beside
-    // them, unengaged.
-    let idle = run.sources.pop().unwrap();
-    super::healer_simc_replay::engage(&mut run);
-    let [primary, engaged] = [run.sources[0], run.sources[1]];
     let healer = run.healer;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(healer)
+            .unwrap()
+            .contains(188443),
+        "the class build knows Chain Lightning"
+    );
+    // Two dummies without a formation are engaged. The third stands 9 yd from
+    // the second, inside one 10 yd jump, but 14 yd from the primary, outside
+    // its assistance snapshot: it stays unengaged.
+    let idle = run.sources.pop().unwrap();
+    let [primary, engaged] = [run.sources[0], run.sources[1]];
+    let origin = *run.app.world().get::<Position>(primary).unwrap();
+    for (unit, z) in [(engaged, 5.0), (idle, 14.0)] {
+        run.app.world_mut().entity_mut(unit).insert(Position {
+            z: origin.z + z,
+            ..origin
+        });
+    }
+    // Only the healer casts, so no other member's spread engages the neighbour.
+    for unit in [run.slots[0], run.slots[2], run.slots[3], run.slots[4]] {
+        super::healer_simc_replay::hold(&mut run, unit);
+    }
+    super::healer_simc_replay::engage(&mut run);
     let hit = |run: &super::healer_simc_replay::ClassParty, target: Entity| {
         run.app
             .world()
@@ -143,10 +172,14 @@ fn restoration_shaman_chains_lightning_through_engaged_enemies_only() {
                     && e.kind == CombatLogKind::Damage
             })
     };
-    for _ in 0..600 {
+    let leader = run.slots[4];
+    for _ in 0..1200 {
         if hit(&run, primary) && hit(&run, engaged) {
             break;
         }
+        // A training dummy drops a combat reference 5 s after its last direct
+        // hit; the held party no longer hits it, so keep its fight going.
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), leader, engaged);
         run.app.update();
     }
     assert!(
