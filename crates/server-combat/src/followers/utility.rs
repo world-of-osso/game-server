@@ -228,7 +228,7 @@ fn try_battle_res(world: &mut World, unit: Entity, follower: &Follower, party: &
     false
 }
 
-fn is_boss(world: &World, unit: Entity) -> bool {
+pub(crate) fn is_boss(world: &World, unit: Entity) -> bool {
     let Some(npc) = world.get::<Npc>(unit) else {
         return false;
     };

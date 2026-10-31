@@ -274,12 +274,22 @@ impl<'a> NativeFacts<'a> {
 
     fn target_fact(&self, property: &str, action: Option<&Action>) -> Result<f64, String> {
         let target = self.selected_target(action)?;
-        if property == "time_to_die" && matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return live_facts::target_time_to_die(
-                self.world,
-                target,
-                crate::spell_cast::now(self.world),
-            );
+        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+            match property {
+                "time_to_die" => {
+                    return live_facts::target_time_to_die(
+                        self.world,
+                        target,
+                        crate::spell_cast::now(self.world),
+                    );
+                }
+                // SimC76f8118 player.hpp964: the encounter boss, not its adds;
+                // natively the creature template's dungeon/world boss flag.
+                "is_boss" => {
+                    return Ok(bool_value(crate::followers::is_boss(self.world, target)));
+                }
+                _ => {}
+            }
         }
         match property {
             // SimC76f8118 action.cpp4030–4032 exposes target.distance.
