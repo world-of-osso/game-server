@@ -144,17 +144,24 @@ mod tests {
     }
 
     #[test]
-    fn guardian_class_follower_profile_passes_native_validation() {
+    fn class_follower_roster_passes_native_validation() {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
         let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
-        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, &spells, 90);
+        let roster = read_profiles().unwrap();
+        let validated = validate_profiles(&roster, &classes, &spells, 90);
+        let accepted: BTreeSet<_> = validated.iter().map(|profile| profile.spec_id).collect();
+        let rejected: Vec<_> = roster
+            .iter()
+            .filter(|profile| !accepted.contains(&profile.spec_id))
+            .map(|profile| (profile.spec_id, &profile.rejection))
+            .collect();
         assert!(
-            profiles.iter().any(|profile| profile.spec_id == 104),
-            "the current Guardian loadout must be selectable after native validation"
+            rejected.is_empty(),
+            "rejected follower profiles: {rejected:?}"
         );
     }
 

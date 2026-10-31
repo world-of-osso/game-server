@@ -54,6 +54,22 @@ def generate(db, simc, parity):
     return [profiles[key] for key in sorted(profiles)]
 
 
+def apply_mid2_overrides(profiles, directory):
+    if not directory.is_dir():
+        raise ValueError(f'MID2 follower overrides directory not found: {directory}')
+    by_spec = {profile['spec_id']: profile for profile in profiles}
+    for path in sorted(directory.glob('*.json')):
+        payload = path.read_bytes()
+        source = json.loads(payload)
+        profile = by_spec[source['spec_id']]
+        if source['class_id'] != profile['class_id'] or source['reference_tier'] != 'MID2':
+            raise ValueError(f'invalid MID2 follower profile {path}')
+        profile['talents'] = source['talents']
+        profile['source'] = f'class-follower-mid2/{path.name}'
+        profile['sha256'] = hashlib.sha256(payload).hexdigest()
+    return profiles
+
+
 def decode_profiles(profiles, decoder, db2):
     completed = subprocess.run(
         [str(decoder), str(db2)], input=json.dumps(profiles), text=True,
@@ -78,9 +94,11 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--decoder", type=Path, required=True)
     parser.add_argument("--db2", type=Path, required=True)
+    parser.add_argument("--mid2-overrides", type=Path, default=Path(__file__).resolve().parent / 'reference/class-follower-mid2')
     args = parser.parse_args()
     with sqlite3.connect(f"file:{args.world_db}?mode=ro", uri=True) as db:
         profiles = generate(db, args.simc, args.parity)
+    profiles = apply_mid2_overrides(profiles, args.mid2_overrides)
     profiles = decode_profiles(profiles, args.decoder, args.db2)
     args.output.write_text(json.dumps(profiles, indent=2) + "\n")
 

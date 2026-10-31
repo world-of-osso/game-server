@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from generate_class_follower_profiles import decode_profiles, generate
+from generate_class_follower_profiles import apply_mid2_overrides, decode_profiles, generate
 
 
 class ClassFollowerProfilesTest(unittest.TestCase):
@@ -65,6 +65,21 @@ class ClassFollowerProfilesTest(unittest.TestCase):
         self.assertEqual(guardian['talents'], 'current')
         self.assertEqual(guardian['race_source'], 'RACE_FROM_PARITY_PROFILE')
         self.assertEqual(guardian['source'], '104.profile.json')
+
+    def test_mid2_override_replaces_only_talents_and_preserves_race_source(self):
+        profiles = [{'spec_id': 103, 'class_id': 11, 'race': 4,
+                     'race_source': 'RACE_FROM_SIMC_PROFILE', 'talents': 'old',
+                     'source': 'old.simc', 'sha256': 'old'}]
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / '103.json'
+            path.write_text(json.dumps({'spec_id': 103, 'class_id': 11,
+                                        'talents': 'current', 'reference_tier': 'MID2'}))
+            [profile] = apply_mid2_overrides(profiles, Path(root))
+        self.assertEqual(profile['talents'], 'current')
+        self.assertEqual(profile['race'], 4)
+        self.assertEqual(profile['race_source'], 'RACE_FROM_SIMC_PROFILE')
+        self.assertEqual(profile['source'], 'class-follower-mid2/103.json')
+        self.assertEqual(len(profile['sha256']), 64)
 
     def test_decode_records_success_and_failure(self):
         profiles = [
