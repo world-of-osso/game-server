@@ -2015,10 +2015,6 @@ pub(crate) fn apply_attack_damage(
     loss: f32,
     school: u32,
 ) -> DamageCommit {
-    if let Some(rescue) = find_death_prevention(world, unit, loss, school) {
-        return commit_death_prevention(world, unit, rescue, loss);
-    }
-    let absorbed_loss = overkill_absorb_amount(world, unit, loss, school);
     #[cfg(any(test, feature = "test-support"))]
     if world
         .get::<crate::test_support::SimcInfiniteHealth>(unit)
@@ -2031,9 +2027,13 @@ pub(crate) fn apply_attack_damage(
         }
         return DamageCommit {
             lethal: false,
-            absorbed_loss,
+            absorbed_loss: 0.0,
         };
     }
+    if let Some(rescue) = find_death_prevention(world, unit, loss, school) {
+        return commit_death_prevention(world, unit, rescue, loss);
+    }
+    let absorbed_loss = overkill_absorb_amount(world, unit, loss, school);
     // Generic316 reports absorption, but only a sourced script may prevent death.
     DamageCommit {
         lethal: world

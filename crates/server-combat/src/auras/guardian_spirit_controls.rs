@@ -8,6 +8,53 @@ use crate::spell_cast::test_harness::{Harness, harness, spawn_npc};
 use shared::protocol::{CombatLogKind, MissKind};
 
 #[test]
+fn infinite_health_does_not_trigger_overkill_or_death_prevention() {
+    for spell in [209_258, GUARDIAN_SPIRIT] {
+        let mut h = harness(Vec::new(), &[spell, GUARDIAN_HEAL, DEATH_BY_DARKNESS], 5).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::test_support::SimcInfiniteHealth);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: h.caster,
+                spell_id: spell,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(has_aura(h.app.world(), h.caster, spell));
+        for _ in 0..2 {
+            cast_native_attack(&mut h, DEATH_BY_DARKNESS);
+        }
+        let hits: Vec<_> = h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(DEATH_BY_DARKNESS)
+            })
+            .collect();
+        assert_eq!(hits.len(), 2, "spell {spell}");
+        assert!(
+            hits.iter()
+                .all(|hit| hit.amount == 1000 && hit.absorbed == 0),
+            "spell {spell}: {hits:?}"
+        );
+        assert_eq!(h.health(h.caster), 1.0);
+        assert!(has_aura(h.app.world(), h.caster, spell));
+        assert!(
+            !h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(GUARDIAN_HEAL))
+        );
+    }
+}
+
+#[test]
 fn guardian_spirit_native_nonlethal_then_expiry_does_not_rescue() {
     let mut h = fixture();
     cast_guardian(&mut h);
