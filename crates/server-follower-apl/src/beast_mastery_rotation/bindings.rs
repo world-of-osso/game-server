@@ -36,6 +36,9 @@ pub fn build() -> Bindings {
             ("howl_wyvern", 471878),
             ("howl_boar", 472324),
             ("howl_bear", 472325),
+            // The trinket row's condition reads it with any potion configured;
+            // native item potion aura 1295132, absent unless that potion was drunk.
+            ("liquid_luster", 1295132),
         ]
         .map(|(name, id)| (name.into(), id))
         .into(),
