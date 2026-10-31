@@ -103,6 +103,32 @@ impl TankScenario {
                         table.miss,
                         table.crit,
                     )?;
+                    if std::env::var_os("FOLLOWER_TRACE_MITIGATION").is_some() {
+                        let stats = world.get::<crate::stats::CharacterStats>(self.tank);
+                        let auras = world.get::<crate::auras::ActiveAuras>(self.tank);
+                        let stacks = |spell| {
+                            auras.and_then(|auras| {
+                                auras
+                                    .iter()
+                                    .find(|aura| aura.spell_id == spell)
+                                    .map(|aura| aura.stacks)
+                            })
+                        };
+                        eprintln!(
+                            "FOLLOWER_TANK_STATE {}",
+                            serde_json::json!({
+                                "at_ms": elapsed_ms,
+                                "kind": format!("{:?}", hit.kind),
+                                "raw": hit.amount,
+                                "outcome": format!("{outcome:?}"),
+                                "armor": stats.map(|stats| stats.armor),
+                                "creature_armor": world.get::<crate::level_scaling::CreatureArmor>(self.tank).map(|armor| armor.0),
+                                "damage_taken": world.get::<crate::auras::AuraStatMods>(self.tank).map(|mods| mods.damage_taken(1)),
+                                "sentinel_stacks": stacks(389539),
+                                "sotr_stacks": stacks(132403),
+                            })
+                        );
+                    }
                     let recorded = RecordedHit {
                         tick: (elapsed_ms / 50) as u32,
                         source_guid: 0,
