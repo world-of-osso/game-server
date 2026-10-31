@@ -41,6 +41,11 @@ pub(crate) fn launch_damage(world: &mut World, caster: Entity, target: Entity) -
     let Some(mut payload) = combat::spell_cast::load_triggered_spell(world, 434481, 1) else {
         return false;
     };
+    let Some(position) = combat::spell_cast::targets::position(world, target) else {
+        return false;
+    };
+    payload.cast_destination = Some(position.to_array());
+    payload.cast_primary_target = Some(target);
     let effect = payload
         .effects
         .iter()
@@ -48,22 +53,22 @@ pub(crate) fn launch_damage(world: &mut World, caster: Entity, target: Entity) -
         .expect("native Bombardments damage effect0");
     // Native434481 uses deterministic destination-area selectors. Like Crash Lightning,
     // count the native recipients immediately before launching the same native payload.
-    let recipients = combat::spell_cast::targets::select_targets(
-        world,
-        caster,
-        Some(target),
-        &payload,
-        effect,
-        0,
-        true,
-    )
-    .unwrap_or_else(|selector| panic!("native Bombardments target selector {selector}"));
+    let recipients =
+        combat::spell_cast::targets::select_targets(world, caster, None, &payload, effect, 0, true)
+            .unwrap_or_else(|selector| panic!("native Bombardments target selector {selector}"));
     if recipients.is_empty() {
         return false;
     }
     // sc_evoker.cpp8230–8233: split the unmodified native payload, not its coefficients.
     payload.cast_damage_multiplier = Some(1.0 / recipients.len() as f32);
-    combat::spell_cast::launch_triggered_spell(world, caster, &payload, Some(target), 1)
+    combat::spell_cast::launch_triggered_spell_with_primary(
+        world,
+        caster,
+        &payload,
+        None,
+        Some(target),
+        1,
+    )
 }
 
 fn sample_delay(mean: f64, deviation: f64) -> f64 {
