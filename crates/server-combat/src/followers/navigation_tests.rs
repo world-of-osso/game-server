@@ -7,6 +7,135 @@ use bevy::prelude::*;
 use shared::components::Position;
 use std::{collections::HashMap, path::PathBuf};
 
+fn follower_leaves_ship_and_follows_owner(owner_drop: f32) {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+    use shared::components::{Rotation, TransportPassenger, TransportState};
+    use std::sync::Arc;
+
+    let (mut h, follower, _) = spawn_profile_fixture(209072);
+    h.app.world_mut().despawn(h.npc);
+    let owner = h.caster;
+    let map = InMap {
+        map_id: 2662,
+        instance_id: 1,
+    };
+    h.app
+        .insert_resource(crate::transport_catalog::fixture_catalog());
+    h.app.insert_resource(Time::<Fixed>::default());
+    crate::transport::spawn_ships(h.app.world_mut(), map);
+    let ship = h
+        .app
+        .world_mut()
+        .query::<(Entity, &TransportState)>()
+        .iter(h.app.world())
+        .find(|(_, state)| state.spawn_id == 409273)
+        .unwrap()
+        .0;
+    let deck = *h.app.world().get::<Position>(ship).unwrap();
+    let origin = point(deck);
+    let hull = Arc::new(shared::los::LosTile::build(
+        0,
+        0,
+        vec![
+            origin + Vec3::new(-4.0, 0.0, -4.0),
+            origin + Vec3::new(4.0, 0.0, -4.0),
+            origin + Vec3::new(0.0, 0.0, 4.0),
+        ],
+        vec![[0, 1, 2]],
+    ));
+    let mut ground = GroundMap::flat_arena(deck.y);
+    ground.set_transport_hulls(HashMap::from([(map, vec![(ship, hull)])]));
+    h.app.insert_resource(ground);
+    let rotation = Rotation {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((map, deck, rotation));
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .remove::<crate::creature_ai::PartyFollowSlot>()
+        .insert((
+            map,
+            deck,
+            rotation,
+            crate::creature_ai::FollowOwner::new(owner),
+        ));
+    crate::transport::sync_deck_passengers(h.app.world_mut());
+    assert!(h.app.world().get::<TransportPassenger>(owner).is_some());
+    assert!(h.app.world().get::<TransportPassenger>(follower).is_some());
+
+    let destination = Position {
+        z: deck.z + 12.0,
+        y: deck.y - owner_drop,
+        ..deck
+    };
+    h.app.world_mut().entity_mut(owner).insert(destination);
+    crate::transport::disembark(h.app.world_mut(), owner);
+    crate::transport::sync_deck_passengers(h.app.world_mut());
+    assert!(h.app.world().get::<TransportPassenger>(follower).is_none());
+    assert_eq!(
+        *h.app.world().get::<Position>(follower).unwrap(),
+        deck,
+        "must not teleport"
+    );
+    crate::transport::sync_deck_passengers(h.app.world_mut());
+    assert!(h.app.world().get::<TransportPassenger>(follower).is_none());
+
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let target = Position {
+        z: destination.z - 4.0,
+        ..destination
+    };
+    nav.adopt_candidate_route(
+        follower,
+        MoveRequest {
+            map_id: map.map_id,
+            goal: Goal::FollowFormation(owner.to_bits(), point(destination)),
+            from: deck,
+            to: target,
+            distance: 0.0,
+            reach: 0.0,
+        },
+        vec![point(deck), Vec3::new(target.x, deck.y, target.z)],
+    );
+    h.app.insert_resource(nav);
+    crate::creature_ai::install_follow_fixture(&mut h.app);
+    for _ in 0..80 {
+        h.advance(1);
+        crate::transport::sync_deck_passengers(h.app.world_mut());
+    }
+    let after = *h.app.world().get::<Position>(follower).unwrap();
+    assert!(
+        point(after).distance(point(destination)) < point(deck).distance(point(destination)),
+        "follower did not approach: {after:?}"
+    );
+    assert!(
+        (after.y - deck.y).abs() < 0.5,
+        "follower left the ground: {after:?}"
+    );
+    assert!(
+        after.z > deck.z + 4.0,
+        "follower remains on the deck: {after:?}"
+    );
+    assert!(h.app.world().get::<TransportPassenger>(follower).is_none());
+}
+
+#[test]
+fn follower_leaves_ship_when_owner_walks_onto_dock() {
+    follower_leaves_ship_and_follows_owner(0.0);
+}
+
+#[test]
+fn follower_leaves_ship_when_owner_falls_into_water() {
+    follower_leaves_ship_and_follows_owner(2.0);
+}
+
 #[test]
 #[ignore = "requires Halls of Infusion extracted WMO assets"]
 fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
