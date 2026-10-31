@@ -28,6 +28,7 @@ fn dragonfire_hits_survivor_after_lethal_breath() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115181, Some(primary), false)
         .unwrap();

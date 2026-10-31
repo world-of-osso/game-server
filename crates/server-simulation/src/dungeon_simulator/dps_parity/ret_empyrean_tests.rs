@@ -308,6 +308,7 @@ fn dps_parity_ret_empyrean_storm_hits_survivor_after_lethal_verdict() {
     run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
     let primary = run.targets[0];
     let survivor = run.targets[1];
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     cast_ready(&mut run, verdict, primary);
     for _ in 0..100 { run.app.update(); }

@@ -82,6 +82,7 @@ fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
     for _ in 0..300 {
         run.app.update();
     }
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 205523, Some(primary), false)
         .unwrap();

@@ -205,6 +205,7 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
         stats.crit_pct = 100.0;
         stats.main_hand.kind = WeaponType::TwoHand;
     }
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app
         .world_mut()
         .get_mut::<Health>(primary)
@@ -791,6 +792,7 @@ fn frost_soul_rupture_hits_survivor_after_lethal_mark() {
     cast(&mut run, 439843);
     assert!(auras::has_aura(run.app.world(), primary, 434765));
     run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     auras::remove_auras(run.app.world_mut(), primary, RemoveReason::Consumed, |aura| {
         aura.spell_id == 434765 && aura.caster == actor
