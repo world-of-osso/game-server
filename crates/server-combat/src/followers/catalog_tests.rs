@@ -5,6 +5,18 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
     use std::collections::BTreeSet;
 
     let source = crate::test_data::world_db_path();
+    let source_path = source.canonicalize().unwrap();
+    let db2 = source_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("db2/12.1.5.70448");
+    assert!(
+        db2.join("receipt.json").is_file(),
+        "prerequisite: authenticated local CASC build 12.1.5.70448 receipt and Map, MapDifficulty, LFGDungeons, AreaTrigger CSVs in {}; see docs/db2-active-inputs.md",
+        db2.display()
+    );
     let temporary = tempfile::tempdir().unwrap();
     let copy = temporary.path().join("follower-population.sqlite");
     std::fs::copy(&source, &copy).unwrap();
@@ -38,13 +50,6 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
     )
     .unwrap();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let source_path = source.canonicalize().unwrap();
-    let db2 = source_path
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("db2/12.1.5.70448");
     let output = std::process::Command::new("python3")
         .arg(root.join("scripts/follower_population.py"))
         .arg("--source-db")
