@@ -227,6 +227,177 @@ fn finish_follower_precombat(app: &mut App, actor: Entity) {
     panic!("follower precombat did not reach combat");
 }
 
+fn class_follower_combat_fixture(spec: u32) -> (App, Entity, Entity) {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, enemy, _) = prepare_class_follower(app, copy, spec, 90);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(shared::components::Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    app.world_mut().entity_mut(actor).insert((
+        shared::components::Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        shared::components::Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        shared::components::Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        },
+    ));
+    app.world_mut()
+        .entity_mut(enemy)
+        .insert(shared::components::Position {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        });
+    (app, actor, enemy)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn class_combat_player_like_tank_uses_defense_against_enemy_autoattacks() {
+    use shared::protocol::MissKind;
+    let _seed = crate::random::seed_scope(1);
+    let (mut app, actor, enemy) = class_follower_combat_fixture(66);
+    app.world_mut()
+        .entity_mut(enemy)
+        .insert(crate::combat::AutoAttack::new(actor));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), enemy, actor);
+    for kind in 0..3 {
+        {
+            let mut stats = app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap();
+            stats.defense.dodge = if kind == 0 { 100.0 } else { 0.0 };
+            stats.defense.parry = if kind == 1 { 100.0 } else { 0.0 };
+            stats.defense.block = if kind == 2 { 100.0 } else { 0.0 };
+            stats.defense.shield_block = 10000.0;
+        }
+        let start = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        for _ in 0..400 {
+            app.update();
+        }
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..];
+        let defended = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(enemy.to_bits()) && event.target == Some(actor.to_bits())
+            })
+            .any(|event| match kind {
+                0 => event.kind == CombatLogKind::Miss(MissKind::Dodge),
+                1 => event.kind == CombatLogKind::Miss(MissKind::Parry),
+                _ => event.blocked > 0,
+            });
+        assert!(defended, "class tank did not use defense case {kind}");
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn class_combat_player_like_melee_uses_player_white_miss_table() {
+    use shared::protocol::MissKind;
+    let _seed = crate::random::seed_scope(1);
+    let (mut app, actor, enemy) = class_follower_combat_fixture(250);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::combat::AutoAttack::new(enemy));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, enemy);
+    for _ in 0..1000 {
+        if let Some(mut attack) = app.world_mut().get_mut::<crate::combat::AutoAttack>(actor) {
+            attack.timer = std::time::Duration::ZERO;
+        }
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let swings: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(enemy.to_bits())
+                && matches!(event.spell_id, None | Some(0))
+        })
+        .collect();
+    assert!(
+        swings.len() >= 100,
+        "expected sustained native autoattacks, got {}",
+        swings.len()
+    );
+    assert!(
+        !swings
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Miss(MissKind::Miss)),
+        "same-level player white swings cannot miss"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn class_combat_player_like_guardian_form_uses_player_attack_timing() {
+    let (mut app, actor, _) = class_follower_combat_fixture(104);
+    assert!(crate::spell_cast::try_cast_triggered(
+        app.world_mut(),
+        actor,
+        5487,
+        Some(actor),
+        1
+    ));
+    let bear = crate::auras::shapeshift::attack_timing(app.world(), actor)
+        .expect("native Bear Form timing");
+    assert_eq!(bear.seconds, 2.5);
+    assert!(bear.use_form_ap_speed);
+    assert!(crate::spell_cast::try_cast_triggered(
+        app.world_mut(),
+        actor,
+        426268,
+        Some(actor),
+        1
+    ));
+    let nonferal = crate::auras::shapeshift::attack_timing(app.world(), actor)
+        .expect("native Chi-Ji form timing");
+    assert_eq!(nonferal.seconds, 2.0);
+    assert!(
+        !nonferal.use_form_ap_speed,
+        "class actor uses the player nonferal AP multiplier"
+    );
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn class_blood_follower_regenerates_runes_and_keeps_casting() {

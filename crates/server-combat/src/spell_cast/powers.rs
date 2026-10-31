@@ -674,6 +674,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::hunter_pet::HunterPet>,
         Option<&'static super::guardian::GuardianActor>,
         Option<&'static mut super::ObservedResourcePayments>,
+        (Has<Player>, Has<crate::followers::ClassCombatant>),
     ),
     Without<GridDormant>,
 >;
@@ -692,7 +693,23 @@ fn read_owner_focus_rates(
     units
         .iter()
         .filter_map(
-            |(unit, pools, _, auras, combat, mods, stats, death, npc, flags, _, _, guardian, _)| {
+            |(
+                unit,
+                pools,
+                _,
+                auras,
+                combat,
+                mods,
+                stats,
+                death,
+                npc,
+                flags,
+                _,
+                _,
+                guardian,
+                _,
+                (player, class_combatant),
+            )| {
                 let pool = pools.get(PowerType::Focus)?;
                 let stats = stats?;
                 if !read_creature_power_regeneration(npc, flags, data, guardian)
@@ -702,7 +719,8 @@ fn read_owner_focus_rates(
                 }
                 let in_combat = combat.is_some_and(|status| status.0);
                 let interrupted = in_combat
-                    || (npc.is_none()
+                    || ((npc.is_none()
+                        || crate::followers::player_like_combatant(player, class_combatant))
                         && auras.is_some_and(|auras| {
                             auras.has_type(crate::auras::handlers::INTERRUPT_REGEN)
                         }));
@@ -757,10 +775,12 @@ pub(crate) fn regenerate_powers(
         pet,
         guardian,
         mut observed,
+        (player, class_combatant),
     ) in &mut units
     {
         // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
-        let aura_interrupts_regen = npc.is_none()
+        let aura_interrupts_regen = (npc.is_none()
+            || crate::followers::player_like_combatant(player, class_combatant))
             && auras.is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN));
         let auras = auras
             .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
@@ -930,7 +950,8 @@ fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u
         .get::<CombatStatus>(unit)
         .is_some_and(|status| status.0);
     let interrupted = in_combat
-        || (world.get::<Npc>(unit).is_none()
+        || ((world.get::<Npc>(unit).is_none()
+            || crate::followers::is_player_like_combatant(world, unit))
             && world
                 .get::<crate::auras::ActiveAuras>(unit)
                 .is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN)));

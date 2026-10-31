@@ -142,6 +142,21 @@ pub mod visual;
 use bevy::prelude::*;
 use shared::group::GroupRole;
 
+/// A follower installed from a player class profile, not a story NPC.
+#[derive(Component)]
+pub struct ClassCombatant;
+
+pub(crate) fn player_like_combatant(player: bool, class_combatant: bool) -> bool {
+    player || class_combatant
+}
+
+pub(crate) fn is_player_like_combatant(world: &World, unit: Entity) -> bool {
+    player_like_combatant(
+        world.get::<shared::components::Player>(unit).is_some(),
+        world.get::<ClassCombatant>(unit).is_some(),
+    )
+}
+
 #[cfg(test)]
 mod group_buff_tests;
 

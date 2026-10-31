@@ -291,7 +291,7 @@ fn weapon_spell_dodge_chance(
     unit: Entity,
     defense: u32,
 ) -> f32 {
-    let is_player = world.get::<shared::components::Player>(unit).is_some();
+    let is_player = crate::followers::is_player_like_combatant(world, unit);
     let is_unit = is_player || world.get::<shared::components::Npc>(unit).is_some();
     if defense != DEFENSE_MELEE || !is_unit {
         return 0.0;
@@ -406,7 +406,7 @@ fn spell_block_chance(
     if !can_defend_from_front(world, caster, unit, auras) {
         return 0.0;
     }
-    if world.get::<shared::components::Player>(unit).is_some() {
+    if crate::followers::is_player_like_combatant(world, unit) {
         return world
             .get::<crate::stats::CharacterStats>(unit)
             .map_or(0.0, |stats| {
@@ -481,6 +481,7 @@ fn incoming_miss_chance(
 ) -> f32 {
     let creature_melee = defense == DEFENSE_MELEE
         && world.get::<shared::components::Npc>(caster).is_some()
+        && !crate::followers::is_player_like_combatant(world, caster)
         && targets::is_hostile(world, caster, unit);
     let baseline = if creature_melee {
         crate::combat::creature_miss_chance(world.get::<crate::auras::AuraStatMods>(caster))
