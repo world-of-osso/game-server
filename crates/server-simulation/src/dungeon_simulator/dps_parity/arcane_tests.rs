@@ -421,6 +421,29 @@ fn arcane_touch_native_cast_marks_target_and_expires_into_stored_damage() {
 
 #[test]
 #[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
+fn arcane_touch_explodes_on_survivors_after_primary_dies() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(62, 3).unwrap();
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    cast(&mut run, 321507);
+    cast(&mut run, 30451);
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    cast(&mut run, 30451);
+    for _ in 0..100 { run.app.update(); }
+    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(210833)
+        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "the accumulated Touch must explode on a survivor when the marked target dies");
+}
+
+#[test]
+#[ignore = "requires private native70448 DB and exact Arcane62 inputs"]
 fn arcane_touch_aegwynns_clearcasting_also_grants_selected_brainstorm() {
     let mut run = prepare_literal(62, 1).unwrap();
     cast(&mut run, 321507);

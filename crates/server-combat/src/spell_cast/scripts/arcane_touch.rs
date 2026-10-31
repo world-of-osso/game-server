@@ -86,14 +86,32 @@ fn discharge(world: &mut World, target: Entity, aura: &AuraInstance, _: RemoveRe
         return;
     }
     let fraction = super::script_effect_value(world, aura.caster, 321507, 0) / 100.0;
-    // sc_mage.cpp1422/5207–5245: stored damage supplies BP0. Native210833
-    // retains its own school, radius and ignore-caster-modifier attributes.
-    spell_cast::cast_triggered_with_effect0_amount(
+    // SimC sc_mage.cpp1416–1425 executes the area on debuff expiry, including
+    // demise. Retain the primary for its full-damage policy but do not validate
+    // the dead unit as the explicit target of the area.
+    let Some(position) = spell_cast::targets::position(world, target) else {
+        warn!(
+            ?target,
+            "Touch of the Magi explosion has no target position"
+        );
+        return;
+    };
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, EXPLOSION, 1) else {
+        return;
+    };
+    let amount = pool.amount * fraction;
+    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+        return;
+    };
+    effect.base_points = amount;
+    spell.cast_effect0_amount = Some(amount);
+    spell.cast_destination = Some(position.to_array());
+    spell_cast::launch_triggered_spell_with_primary(
         world,
         aura.caster,
-        EXPLOSION,
+        &spell,
+        None,
         Some(target),
         1,
-        pool.amount * fraction,
     );
 }
