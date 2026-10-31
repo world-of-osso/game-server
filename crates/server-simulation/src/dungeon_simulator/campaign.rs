@@ -1140,7 +1140,13 @@ fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
     let mut run = spawn_run(34, &mut None).unwrap();
-    let target = run.actors[&20375718];
+    // Every Stockade spawn stands inside another pack's aggro radius. Slag Fury
+    // 20375676 has one neighbour within 18.5 yards, Enraged Fire Elemental
+    // 20375742 at 13 yards; an earlier pull cleared it, so this fight stands
+    // outside every idle pack's sight.
+    let target = run.actors[&20375676];
+    let owner = run.party.owner;
+    crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&20375742]);
     let position = *run.app.world().get::<Position>(target).unwrap();
     let tank = run.party.tank;
     let members: Vec<_> = run.members().collect();
@@ -1158,7 +1164,7 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
         let index = data
             .spawns
             .iter()
-            .position(|spawn| spawn.guid == 20375718)
+            .position(|spawn| spawn.guid == 20375676)
             .unwrap();
         data.spawns_by_map.insert(34, vec![index]);
     }
