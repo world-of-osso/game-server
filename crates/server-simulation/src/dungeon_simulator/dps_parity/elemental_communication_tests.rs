@@ -48,6 +48,22 @@ fn fixture_without_fellowship(targets: usize) -> Run {
     run
 }
 
+fn wait_for_cooldown(run: &mut Run, spell: u32) {
+    for _ in 0..1000 {
+        let world = run.app.world();
+        let info = world.resource::<crate::spell_info::SpellStore>().get(spell).unwrap();
+        let now = crate::spell_cast::history_now(world);
+        if world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_none_or(|history| !history.on_cooldown(info, now))
+        {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("native spell{spell} cooldown did not recover");
+}
+
 fn assert_native_builder_deck(mut run: Run, spell: u32) {
     let (positive, total) = native_deck(&run);
     let traits = run
@@ -78,13 +94,18 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     }
     assert_eq!(count_summons(&run), 0, "background builders never summon");
     for _ in 0..total {
+        wait_for_cooldown(&mut run, spell);
         cast(&mut run, spell);
     }
     assert_eq!(
         count_summons(&run),
-        positive,
-        "one complete native deck must summon exactly four real Ancestors; Chain recipients and overloads do not add draws"
+        positive * if spell == 470057 { run.targets.len() } else { 1 },
+        "each eligible execution or Voltaic target draws once from the native deck"
     );
+    if matches!(spell, 188389 | 470057) {
+        // This test checks the deck; separate tests cover Ancestor echoes.
+        return;
+    }
     let hits = run
         .app
         .world()
@@ -105,6 +126,50 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
 fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
     assert_native_builder_deck(fixture_without_fellowship(1), 188196);
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_voltaic_draws_for_each_available_target() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture_without_fellowship(3);
+    let owner = fixture_player(&run);
+    for index in 3..7 {
+        let target = spawn_dummy(&mut run.app, run.actor, index).unwrap();
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, target);
+        run.targets.push(target);
+    }
+    assert_native_builder_deck(run, 470057);
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_ascendance_draws_for_each_entry_target() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture_without_fellowship(3);
+    let (positive, total) = native_deck(&run);
+    let before = count_summons(&run);
+    for _ in 0..total {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1219480,
+            Some(run.actor),
+            1,
+        ));
+    }
+    assert_eq!(
+        count_summons(&run) - before,
+        positive * 3,
+        "each of three eligible entry targets draws from the native deck"
+    );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_native_flame_shock_draws_four_of_fifty() {
+    let _seed = crate::random::seed_scope(70448);
+    assert_native_builder_deck(fixture_without_fellowship(1), 188389);
 }
 
 #[test]

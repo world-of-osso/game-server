@@ -1,20 +1,34 @@
 //! Native Routine Communication draws once per ordinary builder execution.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::ActiveAuras;
+use combat::auras::{ActiveAuras, SpellModOp, spell_mods};
 use combat::class_progression::{ActiveSpec, TraitLoadout};
 use combat::random::seq::SliceRandom;
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    self,
+    effects::EffectCtx,
+    script_registry::{EnemyContextHitHook, SpellScriptHook},
+    targets,
+};
 use combat::spell_info::SpellInfo;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(draw_after_builder),
+    SpellScriptHook::EnemyContextHit(flame_shock_hit),
     // SimC76f8118 sc_shaman.cpp12726–12728: each ancestor buff stack expires independently.
     SpellScriptHook::AsynchronousAuras(&[447244]),
 ];
 
+fn flame_shock_hit(spell: u32) -> Option<EnemyContextHitHook> {
+    (spell == 188389).then_some(echo_flame_shock)
+}
+
+fn echo_flame_shock(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    spell_cast::scripts::ancestor_flame_shock_impact(world, ctx.caster, target, ctx.depth);
+}
+
 const COMMUNICATION: u32 = 443445;
-const BUILDERS: &[u32] = &[188196, 188443, 51505];
+const BUILDERS: &[u32] = &[188196, 188443, 51505, 188389];
 
 #[derive(Component, Default)]
 struct CommunicationDeck(Vec<bool>);
@@ -82,16 +96,32 @@ fn draw_native_deck(world: &mut World, caster: Entity) -> bool {
 }
 
 fn draw_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
-    // SimC76f8118 sc_shaman.cpp6654–6658/7260–7263/7436–7438:
-    // normal Chain/Lava/Bolt execute, not background children or each recipient.
-    if !foreground
-        || spell.cast_parent_owns_modifier_charges
-        || !BUILDERS.contains(&spell.id)
-        || !selected(world, caster)
-    {
+    // SimC76f8118 sc_shaman.cpp6654–6658/7260–7263/7436–7438/8473–8480:
+    // normal Chain/Lava/Bolt/Flame Shock execute, not background children.
+    if !foreground || spell.cast_parent_owns_modifier_charges || !selected(world, caster) {
         return;
     }
-    if draw_native_deck(world, caster) {
+    if spell.id == super::voltaic_blaze::ROOT {
+        draw_for_voltaic_targets(world, caster, spell);
+    } else if BUILDERS.contains(&spell.id) {
+        draw_and_summon(world, caster);
+    }
+}
+
+fn draw_for_voltaic_targets(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let origin = targets::position(world, caster).expect("Voltaic caster retains position");
+    let (_, maximum) = targets::spell_range(spell, true);
+    let maximum = spell_mods::modify(world, caster, spell, SpellModOp::Range, maximum);
+    let enemies = targets::area_units(world, caster, origin, maximum, targets::Relation::Enemy, 0);
+    // SimC76f8118 sc_shaman.cpp10130–10135 draws for the full target list,
+    // not the capped Voltaic damage recipients.
+    for _ in enemies {
+        draw_and_summon(world, caster);
+    }
+}
+
+pub(super) fn draw_and_summon(world: &mut World, caster: Entity) {
+    if selected(world, caster) && draw_native_deck(world, caster) {
         spell_cast::scripts::summon_ancestor(world, caster, 0);
     }
 }
