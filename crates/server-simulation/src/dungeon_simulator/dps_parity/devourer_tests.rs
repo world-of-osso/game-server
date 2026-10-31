@@ -111,6 +111,47 @@ fn batch6_real_rotation_produces_voidsurge() {
 }
 
 #[test]
+#[ignore = "native Devourer delayed Voidsurge after its primary dies"]
+fn devourer_voidsurge_hits_survivor_after_primary_dies() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = prepare_literal(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1217607));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        1245483,
+        Some(primary),
+        1,
+    ));
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(|event| {
+        event.source == Some(actor.to_bits())
+            && event.target == Some(survivor.to_bits())
+            && event.spell_id == Some(1246160)
+            && event.kind == CombatLogKind::Damage
+            && event.amount > 0
+    }), "the delayed caster-centered Voidsurge must hit a living enemy");
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn batch8_monster_rising_follows_metamorphosis() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
