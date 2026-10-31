@@ -1187,7 +1187,6 @@ pub fn despawn_summon(world: &mut World, entity: Entity) {
     }
     let registry = *world.resource::<super::script_registry::SpellScriptRegistry>();
     registry.summon_removed(world, entity);
-    super::scripts::elemental_ancestors::on_despawn(world, entity);
     if let Some(summon) = world.get::<SummonedCreature>(entity) {
         if summon.spell_id == DANCING_RUNE_WEAPON {
             let owner = summon.owner;

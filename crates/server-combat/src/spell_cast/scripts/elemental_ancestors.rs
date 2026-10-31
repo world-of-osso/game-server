@@ -156,20 +156,3 @@ pub(in crate::spell_cast) fn modify_critical_bonus(
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0));
     effect.map_or(bonus, |effect| bonus * (1.0 + effect.amount / 100.0))
 }
-
-pub(in crate::spell_cast) fn on_despawn(world: &mut World, actor: Entity) {
-    let Some(owner) = owner(world, actor) else {
-        return;
-    };
-    let instance = world
-        .get::<crate::auras::ActiveAuras>(owner)
-        .and_then(|auras| {
-            auras
-                .iter()
-                .find(|aura| aura.spell_id == BUFF && aura.caster == owner)
-        })
-        .map(|aura| aura.instance_id);
-    if let Some(instance) = instance {
-        crate::auras::spend_stack(world, owner, instance);
-    }
-}

@@ -15,6 +15,41 @@ fn ancestors(run: &mut Run) -> Vec<Entity> {
         .collect()
 }
 
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_ancestor_overlapping_buffs_follow_independent_lifetimes() {
+    let (profile, mut traits) = read_reference(262).unwrap();
+    // Fellowship can replace an expired actor, so remove it for this overlap test.
+    traits.retain(|entry| entry.entry_id != 123632);
+    let identity = inputs::read_actor(&profile).unwrap();
+    let mut run = prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    engage(&mut run);
+    crate::spell_cast::scripts::summon_ancestor(run.app.world_mut(), run.actor, 0);
+    let first = ancestors(&mut run)[0];
+    for _ in 0..80 {
+        run.app.update();
+    }
+    crate::spell_cast::scripts::summon_ancestor(run.app.world_mut(), run.actor, 0);
+    assert_eq!(own_aura(&run, 447244).unwrap().stacks, 2);
+    for _ in 0..200 {
+        run.app.update();
+        if run.app.world().get_entity(first).is_err() {
+            break;
+        }
+    }
+    assert!(run.app.world().get_entity(first).is_err());
+    assert_eq!(ancestors(&mut run).len(), 1);
+    assert_eq!(own_aura(&run, 447244).unwrap().stacks, 1);
+    for _ in 0..200 {
+        run.app.update();
+        if ancestors(&mut run).is_empty() {
+            break;
+        }
+    }
+    assert!(ancestors(&mut run).is_empty());
+    assert!(own_aura(&run, 447244).is_none());
+}
+
 fn stormkeeper(run: &mut Run) -> Entity {
     let before = ancestors(run);
     crate::spell_cast::creature_cast(

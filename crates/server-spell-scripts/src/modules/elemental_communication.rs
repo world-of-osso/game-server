@@ -7,8 +7,11 @@ use combat::random::seq::SliceRandom;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterElementalLaunch(draw_after_builder)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterElementalLaunch(draw_after_builder),
+    // SimC76f8118 sc_shaman.cpp12726–12728: each ancestor buff stack expires independently.
+    SpellScriptHook::AsynchronousAuras(&[447244]),
+];
 
 const COMMUNICATION: u32 = 443445;
 const BUILDERS: &[u32] = &[188196, 188443, 51505];
