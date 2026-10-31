@@ -80,6 +80,7 @@ pub struct DungeonItemLevels {
     trees: HashMap<u32, Tree>,
     nodes: HashMap<u32, Vec<Node>>,
     pickers: HashMap<u32, Vec<PickerEntry>>,
+    expressions: crate::world_state_expression::WorldStateExpressions,
 }
 
 impl DungeonItemLevels {
@@ -107,6 +108,7 @@ impl DungeonItemLevels {
             trees,
             nodes,
             pickers,
+            expressions: crate::world_state_expression::WorldStateExpressions::read(db2)?,
         })
     }
 
@@ -131,12 +133,13 @@ impl DungeonItemLevels {
         for entry in entries {
             let met = match entry.condition {
                 0 => true,
-                id => {
-                    crate::adventure_guide::conditions::load_conditions(db, BTreeSet::from([id]))?
-                        [&id]
-                        .evaluate(level, None)
-                        .map_err(|reason| format!("item context picker{picker}: {reason}"))?
-                }
+                id => crate::adventure_guide::conditions::load_conditions(
+                    db,
+                    BTreeSet::from([id]),
+                    &self.expressions,
+                )?[&id]
+                    .evaluate(level, None)
+                    .map_err(|reason| format!("item context picker{picker}: {reason}"))?,
             };
             if met == (entry.flags & PICKER_NEGATE_CONDITION != 0) {
                 continue;
@@ -321,5 +324,27 @@ mod tests {
         };
         // Level 80 meets 120217: entry995 (context1). Level 79 fails it: negated entry994 (context17).
         assert_eq!((level(80), level(79)), (79, 74));
+    }
+
+    #[test]
+    fn follower_gear_context_picker_reads_the_world_state_gate_below_level_70() {
+        let path = crate::test_data::world_db_path();
+        let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let db2 = path.parent().unwrap().join("db2/active");
+        let source = DungeonItemLevels::read(&db2).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
+        let item = items.get(ItemDefinitionSource::Retail, 193633).unwrap();
+        let bonuses = crate::item_instance::load::load_bonus_tables(&db).unwrap();
+        let stats = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+        let level = |player_level| {
+            source
+                .resolve(&db, 2515, 205, player_level, 193633, item, &bonuses, &stats)
+                .unwrap()
+        };
+        // Azure Vault picker241: PlayerCondition103268 (level70+) gives context1.
+        // Below it, 103325 (ContentTuning2485 10–69 AND WorldStateExpression38025,
+        // world state21851 == 1) fails on the unset state, so the map's own
+        // ItemContext1 applies and the item scales to the player's level.
+        assert_eq!((level(70), level(32)), (73, 35));
     }
 }

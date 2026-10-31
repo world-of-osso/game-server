@@ -10,6 +10,7 @@ use shared::components::{
 };
 
 use super::{Follower, Profile, class_profiles::ClassProfile};
+use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
 // Runtime-only identity. It is not a story creature or a catalog creature kit.
 const CLASS_FOLLOWER_ENTRY: u32 = u32::MAX - 1;
@@ -80,7 +81,7 @@ pub(super) fn profile_for(
 ) -> Result<Profile, String> {
     Ok(Profile {
         entry: CLASS_FOLLOWER_ENTRY,
-        name: format!("Follower{}", slot + 1),
+        name: follower_name(slot),
         class_id: source.class_id,
         spec_id: source.spec_id,
         role: source.group_role()?,
@@ -235,6 +236,45 @@ fn spawn_neutral(
     entity.ok_or_else(|| "neutral class follower spawn refused".to_owned())
 }
 
+/// Spawn `profiles` in order as the owner's party, each with a seeded sex and
+/// its follow slot. A failure unsummons the members already spawned.
+pub fn spawn_members(
+    world: &mut World,
+    owner: Entity,
+    profiles: &[ClassProfile],
+    seed: u64,
+    gear: GearSource,
+) -> Result<Vec<Entity>, String> {
+    use rand::{Rng, SeedableRng};
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+    let mut members = Vec::with_capacity(profiles.len());
+    for (slot, profile) in profiles.iter().enumerate() {
+        let sex = rng.gen_range(0..2);
+        match spawn_class(world, owner, profile, sex, slot, gear) {
+            Ok(unit) => {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::creature_ai::PartyFollowSlot::new(
+                        slot,
+                        profiles.len(),
+                    ));
+                members.push(unit);
+            }
+            Err(error) => {
+                unsummon_members(world, &members);
+                return Err(error);
+            }
+        }
+    }
+    Ok(members)
+}
+
+pub(super) fn unsummon_members(world: &mut World, members: &[Entity]) {
+    for &unit in members {
+        crate::zones::unsummon(world, unit);
+    }
+}
+
 /// Spawn one non-player class follower with the selected real gear source.
 pub fn spawn_class(
     world: &mut World,
@@ -250,6 +290,39 @@ pub fn spawn_class(
             source.spec_id
         ));
     }
+    let level = world
+        .get::<Level>(owner)
+        .ok_or("follower owner has no level")?
+        .0;
+    let entity = spawn_neutral(world, owner, &follower_name(slot), level)?;
+    match install_class(world, owner, entity, source, sex, slot, gear) {
+        Ok(talent_source) => {
+            info!(
+                "class follower spec {} uses {}",
+                source.spec_id,
+                talent_source.label()
+            );
+            Ok(entity)
+        }
+        Err(error) => {
+            unsummon_members(world, &[entity]);
+            Err(error)
+        }
+    }
+}
+
+/// Give `entity` the class actor `source` at the owner's level: native
+/// progression and talents, base stats and pools, and real gear. `entity`
+/// follows `owner`; the owner itself is a valid entity for a headless leader.
+pub fn install_class(
+    world: &mut World,
+    owner: Entity,
+    entity: Entity,
+    source: &ClassProfile,
+    sex: u8,
+    slot: usize,
+    gear: GearSource,
+) -> Result<crate::trait_config::TalentSource, String> {
     let level = world
         .get::<Level>(owner)
         .ok_or("follower owner has no level")?
@@ -280,9 +353,7 @@ pub fn spawn_class(
     if profile.role == shared::group::GroupRole::Tank {
         profile.taunt_spell = taunt_spell(store, &known)?;
     }
-    let (stats, pools, _) =
-        super::spawning::class_stats_for_race(world, &profile, level, source.race)?;
-    let entity = spawn_neutral(world, owner, &profile.name, level)?;
+    let (stats, pools, _) = class_stats(world, &profile, level, source.race)?;
     let passives: Vec<_> = known
         .iter()
         .filter(|spell| spell.passive)
@@ -295,7 +366,10 @@ pub fn spawn_class(
         .remove::<crate::creature_aggro::AggroRange>()
         .remove::<crate::level_scaling::CreatureArmor>()
         .insert((
-            Follower { owner, profile },
+            Follower {
+                owner,
+                profile: profile.clone(),
+            },
             super::AplControlled,
             CharacterVisual {
                 race: source.race,
@@ -336,23 +410,65 @@ pub fn spawn_class(
         crate::auras::AuraSource::KnownSpell,
         &passives,
     );
-    let profile = world
-        .get::<Follower>(entity)
-        .expect("spawned class follower")
-        .profile
-        .clone();
-    let equipped = match gear {
+    match gear {
         GearSource::Journal => super::gear::equip(world, entity, &profile),
     }
-    .and_then(|()| super::gear::publish_appearance(world, entity));
-    if let Err(error) = equipped {
-        super::spawning::unsummon_members(world, &[entity]);
-        return Err(error);
-    }
-    info!(
-        "class follower spec {} uses {}",
-        source.spec_id,
-        talent_source.label()
+    .and_then(|()| super::gear::publish_appearance(world, entity))?;
+    Ok(talent_source)
+}
+
+fn follower_name(slot: usize) -> String {
+    format!("Follower{}", slot + 1)
+}
+
+/// Native base stats and class power pools for `profile`'s class, spec, level and race.
+pub(super) fn class_stats(
+    world: &World,
+    profile: &Profile,
+    level: u8,
+    race: u8,
+) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let class = classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == profile.class_id)
+        .ok_or_else(|| format!("follower class {} absent", profile.class_id))?;
+    let spec = class
+        .specs
+        .iter()
+        .find(|spec| spec.spec_id == profile.spec_id)
+        .ok_or_else(|| format!("follower specialization {} absent", profile.spec_id))?;
+    let input = crate::stats::StatInputs {
+        class: profile.class_id,
+        race,
+        level,
+        primary_stat: Some(crate::stats::PrimaryStat::from_priority(
+            spec.primary_stat_priority,
+        )),
+        mastery_coefficient: 0.0,
+        attack_power_per_strength: class.attack_power_per_strength,
+        attack_power_per_agility: class.attack_power_per_agility,
+        ranged_attack_power_per_agility: class.ranged_attack_power_per_agility,
+        gear_primary: Default::default(),
+        gear_ratings: Default::default(),
+    };
+    let stats = crate::stats::compute_character_stats(&input, None)
+        .ok_or("unsupported follower class level")?;
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        let message = "follower native powers unavailable: PowerTypeTable is not installed";
+        warn!("{message}");
+        return Err(message.to_owned());
+    };
+    let pools = PowerPools::from_table(
+        table,
+        table.class_powers(class.class_id, &class.power_types),
     );
-    Ok(entity)
+    let passives = spec
+        .spells
+        .iter()
+        .filter(|spell| spell.passive && spell.required_level <= u32::from(level))
+        .map(|spell| spell.spell_id)
+        .collect();
+    Ok((stats, pools, passives))
 }

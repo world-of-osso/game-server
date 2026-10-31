@@ -179,6 +179,7 @@ mod world_quest_availability;
 mod world_quest_objectives;
 mod world_quest_rewards;
 mod world_quests;
+mod world_state_expression;
 pub mod zones;
 
 // Plugins installed by the native `server` assembly.

@@ -642,6 +642,7 @@ pub fn evaluate_follower_progression(
 /// Literal native kit-exporter starter book: requested NPC spec at every level,
 /// race-neutral class/default skills, spec spells and validated starter talents.
 /// No player-spec fallback, controller aliases or additional mastery grants.
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn evaluate_npc_starter(
     classes: &ClassSpells,
     class_id: u8,
@@ -663,6 +664,7 @@ pub(crate) fn evaluate_npc_starter(
     Ok((known, traits))
 }
 
+#[cfg(any(test, feature = "test-support"))]
 fn collect_npc_starter_spells(
     class: &ClassInfo,
     spec: &SpecInfo,

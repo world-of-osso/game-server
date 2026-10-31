@@ -34,6 +34,45 @@ pub fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Entity, Str
     super::spawning::spawn(world, owner, profile)
 }
 
+/// Install the world sources a class follower spawn reads: native classes,
+/// base pools, Journal gear and item data, loaded as server startup loads them.
+pub fn install_class_sources(world: &mut World) {
+    let path = crate::test_data::world_db_path();
+    let db =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .expect("class follower fixture database");
+    {
+        let source = crate::test_data::world_data();
+        let mut data = world.resource_mut::<crate::world_data::WorldData>();
+        data.class_level_base_hp = source.class_level_base_hp.clone();
+        data.class_level_base_mana = source.class_level_base_mana.clone();
+        data.armor_constants = source.armor_constants.clone();
+    }
+    world.insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    world.insert_resource(
+        super::gear::load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap(),
+    );
+    world.insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    world.insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    world.insert_resource(crate::stats::NativeItemInstances {
+        bonuses: crate::item_instance::load::load_bonus_tables(&db).unwrap(),
+        enchants: crate::item_instance::load::load_enchantment_tables(&db).unwrap(),
+        effects: crate::item_instance::load::load_item_effect_tables(&db).unwrap(),
+    });
+}
+
+/// Spawn the roster's `spec` class follower for `owner` through production
+/// `spawn_class`, with Journal gear from the owner's copy.
+pub fn spawn_class(world: &mut World, owner: Entity, spec: u32) -> Result<Entity, String> {
+    install_class_sources(world);
+    let profile = super::class_profiles::read_profiles()?
+        .into_iter()
+        .find(|profile| profile.spec_id == spec)
+        .ok_or_else(|| format!("class follower spec{spec} absent"))?;
+    let gear = super::class_spawn::GearSource::Journal;
+    super::class_spawn::spawn_class(world, owner, &profile, 0, 0, gear)
+}
+
 /// The fixture spawns without zone visuals, so read the authentic template display.
 #[cfg(test)]
 pub(crate) fn template_display(entry: u32) -> u32 {

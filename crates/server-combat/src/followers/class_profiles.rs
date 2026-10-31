@@ -87,6 +87,24 @@ pub(super) fn validate_profiles(
         .collect()
 }
 
+/// The qualified profiles a party for `player_spec` in `role` draws with `seed`.
+pub(super) fn select_party_profiles(
+    world: &bevy::prelude::World,
+    role: GroupRole,
+    player_spec: u32,
+    level: u8,
+    seed: u64,
+) -> Result<Vec<ClassProfile>, String> {
+    let classes = world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .ok_or("follower classes unavailable")?;
+    let spells = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .ok_or("follower spell store unavailable")?;
+    let qualified = validate_profiles(&read_profiles()?, classes, spells, level);
+    select_profiles(&qualified, role, player_spec, seed)
+}
+
 pub fn select_profiles(
     profiles: &[ClassProfile],
     role: GroupRole,

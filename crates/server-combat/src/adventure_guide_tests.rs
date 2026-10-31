@@ -224,7 +224,15 @@ fn adventure_guide_real_rows_unavailable_census_tracking_and_monthly_persistence
     prepare_real_catalog(&mut h, now);
     let snapshot = request(&mut h, AdventureGuideRequest::Query);
     assert!(snapshot.source_error.is_none());
-    assert_eq!(snapshot.activities.len(), 945);
+    // Every source activity row of the prepared copy reaches the snapshot.
+    let rows: usize = Connection::open_with_flags(
+        std::env::var_os("ADVENTURE_GUIDE_WORLD_COPY").unwrap(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap()
+    .query_row("SELECT COUNT(*) FROM perks_activity", [], |row| row.get(0))
+    .unwrap();
+    assert_eq!(snapshot.activities.len(), rows);
     assert_eq!(snapshot.month.month, 10);
     let quests = snapshot.activities.iter().find(|a| a.id == 3).unwrap();
     assert_eq!((&*quests.name, quests.points), ("Complete 30 Quests", 200));
