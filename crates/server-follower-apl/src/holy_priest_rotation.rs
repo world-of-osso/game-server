@@ -32,37 +32,52 @@ pub struct Holy {
     equipment: Equipment,
     encounter: Encounter,
 }
+fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .map(|(name, id, _)| ((*name).into(), *id))
+            .collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        global_cooldown_spell: 2060,
+        ..Default::default()
+    }
+}
+
+fn program() -> Result<Program, String> {
+    Program::parse(&[
+        ("default", "guardian_spirit,if=target.health.pct<30"),
+        ("default", "divine_hymn,if=party.injured>=3"),
+        ("default", "apotheosis,if=target.health.pct<35"),
+        ("default", "symbol_of_hope,if=mana.pct<60"),
+        ("default", "serenity,if=party.heal_worthwhile"),
+        ("default", "sanctify,if=party.injured>=3"),
+        ("default", "circle,if=party.injured>=3"),
+        ("default", "prayer_of_healing,if=party.injured>=3"),
+        ("default", "prayer_of_mending"),
+        ("default", "halo"),
+        ("default", "renew,if=target.health.pct<85&target.renew_up=0"),
+        ("default", "flash_heal,if=party.heal_worthwhile"),
+        ("default", "heal,if=party.heal_worthwhile"),
+        ("damage", "holy_fire"),
+        ("damage", "smite"),
+    ])
+}
+
+/// Resolve the Holy program's native action identities without mutating the world.
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Holy {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .map(|(name, id, _)| ((*name).into(), *id))
-                .collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            global_cooldown_spell: 2060,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        let program = Program::parse(&[
-            ("default", "guardian_spirit,if=target.health.pct<30"),
-            ("default", "divine_hymn,if=party.injured>=3"),
-            ("default", "apotheosis,if=target.health.pct<35"),
-            ("default", "symbol_of_hope,if=mana.pct<60"),
-            ("default", "serenity,if=party.heal_worthwhile"),
-            ("default", "sanctify,if=party.injured>=3"),
-            ("default", "circle,if=party.injured>=3"),
-            ("default", "prayer_of_healing,if=party.injured>=3"),
-            ("default", "prayer_of_mending"),
-            ("default", "halo"),
-            ("default", "renew,if=target.health.pct<85&target.renew_up=0"),
-            ("default", "flash_heal,if=party.heal_worthwhile"),
-            ("default", "heal,if=party.heal_worthwhile"),
-            ("damage", "holy_fire"),
-            ("damage", "smite"),
-        ])?;
         Ok(Holy {
-            driver: Driver::new(program),
+            driver: Driver::new(program()?),
             bindings,
             equipment,
             encounter,

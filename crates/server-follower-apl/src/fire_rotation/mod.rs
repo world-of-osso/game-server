@@ -8,6 +8,18 @@ use bevy::prelude::*;
 use facts::FireFacts;
 use serde_json::{Value, json};
 
+/// Resolve the Fire program's native action identities without mutating the world.
+pub fn action_spells(
+    profile: &server::followers::parity_profile::Profile,
+    traits: &crate::class_progression::TraitLoadout,
+) -> Result<Vec<u32>, String> {
+    let program = source::load(profile)?;
+    let bindings = bindings::build_for_traits(traits);
+    Ok(crate::literal_rotation::program_action_spells(
+        &program, &bindings,
+    ))
+}
+
 pub fn configure_reactions(
     world: &mut World,
     actor: Entity,

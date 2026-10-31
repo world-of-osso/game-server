@@ -215,6 +215,24 @@ fn class_rotation_reports_its_program_bound_spells() {
             server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
                 .unwrap();
         let actions = rotation.action_spells();
+        let pure = match spec {
+            63 => server_follower_apl::fire_rotation::action_spells(
+                &server_follower_apl::profiles::profile(spec).unwrap(),
+                pull.harness
+                    .app
+                    .world()
+                    .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
+                    .unwrap(),
+            )
+            .unwrap(),
+            257 => server_follower_apl::holy_priest_rotation::action_spells().unwrap(),
+            66 => server_follower_apl::protection_paladin_rotation::action_spells(
+                &server_follower_apl::profiles::profile(spec).unwrap(),
+            )
+            .unwrap(),
+            _ => unreachable!(),
+        };
+        assert_eq!(pure, actions, "spec{spec} pure and runtime actions differ");
         assert!(
             actions.contains(&spell),
             "spec{spec} missing {spell}: {actions:?}"
