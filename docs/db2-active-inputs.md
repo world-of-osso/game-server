@@ -8,6 +8,10 @@ The installed export contains62817 readable rows out of62819 declared records. C
 
 The process/schema regression `python3 -m unittest scripts.tests.test_db2_curves` exercises native8/33927 types/flags, build receipts, replacement on regeneration and retained Retail/Skyborne rows. It uses private fixtures; it does not publish canonical data. A real publication receipt must separately record the COPY-only import's exact command, input/output SHA256, row changes and both excluded IDs. No radius fallback or scale consumer is introduced by this publisher change.
 
+## Follower population test prerequisite
+
+`followers::catalog_tests::follower_population_catalog_lists_every_map_with_authentic_sources` runs `scripts/follower_population.py` against a copy of the test world database. It requires `receipt.json` and `Map.csv`, `MapDifficulty.csv`, `LFGDungeons.csv`, and `AreaTrigger.csv` from authenticated local CASC build 12.1.5.70448 in `db2/12.1.5.70448` beside the canonical database's `data` directory. The producer validates the receipt and CSV hashes; a generic active DB2 export is not a substitute. These files are untracked. The merge train only runs this test if a submitted filter selects it.
+
 ## Private CSV roots
 
 `DB2_CSV_ROOT` selects an isolated root for `scripts/db2.py` and importer tests that use its defaults. Without this setting, the source remains the sibling engine's `data/db2`. `--csv-root` overrides the environment for the DB2 command. Import also requires an explicit `--source-dir` for the separate raw Forever overlay; tests and `import-azerothcore.sh` require `FOREVER_DB2_SOURCE`. See [untracked cache paths](../scripts/reference/forever-1.60.1.70205/README.md#local-data-paths).
