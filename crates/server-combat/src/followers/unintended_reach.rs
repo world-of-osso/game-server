@@ -68,6 +68,20 @@ pub fn spell_unintended_reach(
     Some((reach.caster_radius, reach.target_radius))
 }
 
+pub(super) fn spell_reach_without_chain(
+    world: &World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> Option<(f32, f32)> {
+    world.get_entity(target).ok()?;
+    let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
+    spell.cast_single_target = true;
+    let registry = *world.resource::<SpellScriptRegistry>();
+    let reach = spell_reach(world, caster, &spell, registry, 0);
+    Some((reach.caster_radius, reach.target_radius))
+}
+
 fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
     let registry = *world.resource::<SpellScriptRegistry>();
     let mut reach = DeclaredReach::default();

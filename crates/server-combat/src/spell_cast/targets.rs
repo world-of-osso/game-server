@@ -1443,6 +1443,10 @@ pub fn chain_targets(
             .into_iter()
             .filter(|&unit| unit != target && (unit != caster || !excludes_caster(spell)))
             .filter(|&unit| implicit_target_allowed(world, caster, spell, unit))
+            .filter(|&unit| {
+                relation != Relation::Enemy
+                    || crate::followers::chain_candidate_allowed(world, caster, target, unit)
+            })
             .collect();
     let mut chain = Vec::new();
     while chain.len() < jumps {

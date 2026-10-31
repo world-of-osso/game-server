@@ -116,6 +116,62 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "the tank may use its native chain after planned assistants dispatch"
     );
+    let outsider = h.npc;
+    let origin = *h.app.world().get::<Position>(caller).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(Some(caller)));
+    h.app.world_mut().entity_mut(helpers[0]).insert(Position {
+        x: origin.x + 2.0,
+        ..origin
+    });
+    h.app.world_mut().entity_mut(helpers[1]).insert(Position {
+        x: origin.x + 6.0,
+        ..origin
+    });
+    h.app.world_mut().entity_mut(outsider).insert((
+        map,
+        Position {
+            x: origin.x + 4.0,
+            ..origin
+        },
+        crate::creature_ai::CreatureState::Idle,
+        crate::scripted_ai::ReactState::Passive,
+    ));
+    assert!(!planned.contains(&outsider));
+    assert!(
+        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "chain filtering must allow the shield even with the outsider in range"
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    let chain = crate::spell_cast::targets::chain_targets(
+        h.app.world_mut(),
+        tank,
+        &spell,
+        effect,
+        caller,
+        crate::spell_cast::targets::Relation::Enemy,
+    );
+    assert!(
+        chain.contains(&helpers[0]),
+        "the planned helper must be a chain recipient: {chain:?}"
+    );
+    assert!(
+        !chain.contains(&outsider),
+        "the unplanned creature must not be a chain recipient"
+    );
     crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
         .expect("the tank's native Avenger's Shield must start against the planned pull");
     for _ in 0..100 {
@@ -130,6 +186,7 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
             break;
         }
     }
+    h.advance(100);
     assert!(
         h.inbox.log.iter().any(|event| {
             event.spell_id == Some(31935)
@@ -145,6 +202,20 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
             .filter(|event| event.spell_id == Some(31935))
             .collect::<Vec<_>>(),
         [caller, helpers[0], helpers[1]].map(|unit| h.app.world().get::<Position>(unit).copied())
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .all(|event| event.target != Some(outsider.to_bits())
+                || event.kind != shared::protocol::CombatLogKind::Damage),
+        "the outsider must take no damage"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(h.app.world(), outsider)
+            .next()
+            .is_none(),
+        "the outsider must remain out of combat"
     );
     let after = super::pull_set::members(h.app.world(), caller, tank);
     assert!(
@@ -387,8 +458,8 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         "the first-wave pending restriction ends after native dispatch"
     );
     assert!(
-        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "the ordinary AoE guard must still protect the unplanned Dragonhawk"
+        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "the chain may cast once candidate filtering protects the unplanned Dragonhawk"
     );
     assert!(crate::combat_refs::has_active_reference_to(
         h.app.world(),
@@ -524,8 +595,8 @@ fn windrunner_hammer_chain_guard_protects_outside_first_wave() {
         "modified Hammer of Wrath must report chain reach: {reach:?}"
     );
     assert!(
-        !super::spell_safety::safe(h.app.world(), tank, helper, 1241413),
-        "the native Hammer chain must not reach a creature outside the first wave"
+        super::spell_safety::safe(h.app.world(), tank, helper, 1241413),
+        "the Hammer can cast when the unplanned chain candidate is excluded"
     );
     assert!(
         crate::combat_refs::active_opponents(h.app.world(), outside)
@@ -534,15 +605,29 @@ fn windrunner_hammer_chain_guard_protects_outside_first_wave() {
     );
     crate::spell_cast::creature_cast(h.app.world_mut(), tank, 1241413, Some(helper), false)
         .expect("native Hammer of Wrath must cast on the helper");
-    for _ in 0..100 {
-        h.advance(1);
-        if h.inbox.log.iter().any(|event| {
-            event.spell_id == Some(1241413)
-                && event.target == Some(outside.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage
-        }) {
-            return;
-        }
-    }
-    panic!("native Hammer of Wrath did not damage the outside creature");
+    h.advance(100);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(1241413)
+                && event.target == Some(helper.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "Hammer must damage its selected target"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .all(|event| event.spell_id != Some(1241413)
+                || event.target != Some(outside.to_bits())
+                || event.kind != shared::protocol::CombatLogKind::Damage),
+        "Hammer must not damage the outside creature"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(h.app.world(), outside)
+            .next()
+            .is_none(),
+        "the outside creature must remain out of combat"
+    );
 }
