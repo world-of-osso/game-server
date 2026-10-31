@@ -42,7 +42,9 @@ impl NavigationMap {
                     let source = base | index as dtPolyRef;
                     let mut link = polygon.firstLink;
                     while link != DT_NULL_LINK {
-                        let entry = &*(*tile).links.add(link as usize);
+                        // Detour stores tile data at four-byte alignment, but dtLink
+                        // contains a 64-bit polygon ref and may not be eight-byte aligned.
+                        let entry = (*tile).links.add(link as usize).read_unaligned();
                         let mut target = std::ptr::null();
                         let mut target_poly = std::ptr::null();
                         status(
@@ -57,7 +59,7 @@ impl NavigationMap {
                             && (tile == added || target == added)
                             && (*target_poly).areaAndtype >> 6
                                 == dtPolyTypes_DT_POLYTYPE_GROUND as u8
-                            && self.border_height_gap(tile, polygon, source, entry)? > AGENT_CLIMB
+                            && self.border_height_gap(tile, polygon, source, &entry)? > AGENT_CLIMB
                         {
                             rejected.insert(link_pair(source, entry.ref_));
                         }
@@ -75,13 +77,15 @@ impl NavigationMap {
                     let mut cursor = &mut polygon.firstLink as *mut u32;
                     while *cursor != DT_NULL_LINK {
                         let link = *cursor;
-                        let entry = &mut *(*tile).links.add(link as usize);
+                        let entry_ptr = (*tile).links.add(link as usize);
+                        let mut entry = entry_ptr.read_unaligned();
                         if rejected.contains(&link_pair(source, entry.ref_)) {
                             *cursor = entry.next;
                             entry.next = (*tile).linksFreeList;
+                            entry_ptr.write_unaligned(entry);
                             (*tile).linksFreeList = link;
                         } else {
-                            cursor = &mut entry.next;
+                            cursor = std::ptr::addr_of_mut!((*entry_ptr).next);
                         }
                     }
                 }
