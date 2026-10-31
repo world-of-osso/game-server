@@ -348,3 +348,20 @@ fn simc_apl_native_hero_tree_names_tokenize_like_simc() {
         "keeper_of_the_grove"
     );
 }
+
+/// Feral's potCountRemaining divides by cooldown.potion.duration; an actor with
+/// no potion reads SimC's never-created placeholder, duration timespan_t::min().
+#[test]
+fn native_apl_potionless_actor_reads_the_placeholder_potion_cooldown() {
+    let (h, actor) = monk();
+    let b = bindings();
+    let f = NativeFacts::new(h.app.world(), actor, &b, fixture(h.app.world()), 1);
+    assert!(h.app.world().get::<ConfiguredPotion>(actor).is_none());
+    assert_eq!(
+        f.value("cooldown.potion.duration").unwrap(),
+        i64::MIN as f64 / 1000.0
+    );
+    assert_eq!(f.value("cooldown.potion.charges_fractional").unwrap(), 1.0);
+    assert_eq!(f.value("cooldown.potion.remains").unwrap(), 0.0);
+    assert!(f.value("cooldown.potion.tick_time").is_err());
+}
