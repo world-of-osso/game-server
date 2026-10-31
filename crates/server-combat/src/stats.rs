@@ -1205,6 +1205,17 @@ fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
     scaled.min(new_max).trunc()
 }
 
+/// TC 15e0ed76 SpellAuraEffects.cpp:4260–4274 preserves a living unit's
+/// health percentage but floors the recalculated integer health at one.
+fn rescaled_health(current: f32, old_max: f32, new_max: f32) -> f32 {
+    let scaled = rescaled_current(current, old_max, new_max);
+    if current > 0.0 {
+        scaled.max(1.0)
+    } else {
+        scaled
+    }
+}
+
 type StatsQuery = (
     Entity,
     Option<&'static Player>,
@@ -1373,7 +1384,7 @@ pub(crate) fn update_character_stats(
         changed |= ratings.set_if_neq(stats.ratings);
         changed |= derived.set_if_neq(stats.derived());
         changed |= health.set_if_neq(Health {
-            current: rescaled_current(health.current, health.max, stats.max_health),
+            current: rescaled_health(health.current, health.max, stats.max_health),
             max: stats.max_health,
         });
         if let Some(mut mana) = mana {
