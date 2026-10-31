@@ -232,12 +232,16 @@ fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     );
 }
 
-/// BM's APL reads `buff.natures_ally.react`; its reaction policy must survive
+/// Shadow's APL reads `buff.mind_devourer.react`; its reaction policy must survive
 /// the APL reload a new pull performs, or every later pull stops casting.
 #[test]
-fn class_follower_beast_mastery_apl_keeps_casting_on_the_next_pull() {
-    let mut pull = pull(253);
-    assert!(!pull.apl_failed(), "first BM pull casts {:?}", pull.casts());
+fn class_follower_shadow_apl_keeps_casting_on_the_next_pull() {
+    let mut pull = pull(258);
+    assert!(
+        !pull.apl_failed(),
+        "first Shadow pull casts {:?}",
+        pull.casts()
+    );
     // A pull's end drops its APL; the next pull loads a fresh one.
     let follower = pull.follower;
     pull.harness
@@ -247,10 +251,10 @@ fn class_follower_beast_mastery_apl_keeps_casting_on_the_next_pull() {
         .remove::<FollowerApl>();
     let first = pull.casts().len();
     pull.fight();
-    assert!(!pull.apl_failed(), "second BM pull stopped its APL");
+    assert!(!pull.apl_failed(), "second Shadow pull stopped its APL");
     assert!(
         pull.casts().len() > first,
-        "second BM pull casts nothing new: {:?}",
+        "second Shadow pull casts nothing new: {:?}",
         pull.casts()
     );
 }
