@@ -733,10 +733,10 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn potion_cooldown(&self, property: &str) -> Result<f64, String> {
-        let potion = self
-            .world
-            .get::<ConfiguredPotion>(self.actor)
-            .ok_or("NATIVE_POTION_UNAVAILABLE: profile has no native use item")?;
+        // An actor without a potion (a class follower) never creates its cooldown.
+        let Some(potion) = self.world.get::<ConfiguredPotion>(self.actor) else {
+            return crate::spell_cast::cooldown_query::placeholder_cooldown_value(property);
+        };
         // SimC76f8118 consumable.cpp433–443: use the actor's potion
         // cooldown; native ItemEffect supplies its category and recovery.
         let mut spell = self.spell(potion.on_use.spell_id)?.clone();
