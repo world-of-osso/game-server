@@ -309,7 +309,9 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
     // Wait beyond another native 1.5-second delay to catch an unintended second wave.
     h.advance(80);
     assert!(
-        !crate::combat_refs::has_active_reference_to(h.app.world(), dragonhawk, tank),
-        "the second wave must not be pulled by the first-wave dispatch"
+        crate::combat_refs::active_opponents(h.app.world(), dragonhawk)
+            .next()
+            .is_none(),
+        "the second wave must not enter combat after the first-wave dispatch"
     );
 }
