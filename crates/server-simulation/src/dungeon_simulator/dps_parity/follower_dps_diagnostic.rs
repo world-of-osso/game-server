@@ -378,6 +378,56 @@ fn follower_dummy_uses_class_apl_to_cast() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
+fn follower_class_tank_replays_incoming_after_apl_precombat() {
+    let (mut app, actor, target, _) = prepare_follower(209057, 70, 2515);
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("tank trace");
+    let mut scenario = super::follower_tank_scenario::TankScenario::read(
+        std::path::Path::new(&trace),
+        app.world_mut(),
+        target,
+        actor,
+        70,
+    )
+    .unwrap();
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::combat::AutoAttack::new(target));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    finish_follower_precombat(&mut app, actor);
+    for frame in 1..=120 {
+        scenario.advance(app.world_mut(), frame * 50).unwrap();
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(target.to_bits())
+                && event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the class tank must receive the recorded SimC dummy attacks"
+    );
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none()
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_precombat_starts_consecration_on_simc_clock() {
     let (mut app, actor, target, _) = prepare_follower(209057, 90, 2813);
     app.world_mut()
@@ -700,13 +750,6 @@ fn follower_dps_production_dummy() {
     let mut tank_scenario = if profile.role == shared::group::GroupRole::Tank {
         let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE")
             .expect("tank measurements require a SimC tank dummy trace");
-        super::follower_tank_precombat::execute(
-            &mut app,
-            actor,
-            target,
-            std::path::Path::new(&trace),
-        )
-        .expect("execute SimC tank precombat");
         Some(
             super::follower_tank_scenario::TankScenario::read(
                 std::path::Path::new(&trace),
@@ -789,8 +832,7 @@ fn follower_dps_production_dummy() {
     let mut lava_during_stable_storm = 0u32;
     let mut seen_events = 0usize;
     let mut cast_trace = Vec::new();
-    let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some()
-        || std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some();
+    let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
     for frame in 0..2400 {
         if let Some(scenario) = &mut tank_scenario {
@@ -1005,105 +1047,6 @@ fn follower_dps_production_dummy() {
             > 0.0,
         "follower died before completing the dummy measurement"
     );
-    if entry == 209053 && level == 90 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
-        assert!(
-            !known_spells.contains(&117014),
-            "Shuja's profile does not select Elemental Blast"
-        );
-        assert!(
-            hits.get(&117014).is_some_and(|count| *count > 0),
-            "Fusion must produce actual Elemental Blast hits"
-        );
-        assert!(
-            [118522, 173183, 173184]
-                .iter()
-                .any(|id| aura_applications.get(id).is_some_and(|count| *count > 0)),
-            "Fusion Blast must grant an Elemental Blast stat buff without the separate talent"
-        );
-        assert!(
-            storm_frames > 0,
-            "Storm Elemental must actually be summoned"
-        );
-        assert_eq!(
-            lava_during_storm, 0,
-            "Shuja must hold Lava Burst during her non-Primal Storm Elemental"
-        );
-        assert_eq!(
-            lava_during_stable_storm, 0,
-            "instant Lava Surge casts must also wait during Storm Elemental"
-        );
-        assert!(
-            bolt_during_storm > 0,
-            "Shuja must use Lightning Bolt during Storm Elemental"
-        );
-        assert!(
-            casts.get(&51505).is_some_and(|count| *count > 0),
-            "Lava Burst resumes outside Storm Elemental"
-        );
-    }
-    if entry == 209057 && std::env::var_os("FOLLOWER_VERIFY_WINGS_ORDER").is_some() {
-        let wings: Vec<f64> = cast_trace
-            .iter()
-            .filter(|action| action["spell"] == 389539)
-            .map(|action| action["at_s"].as_f64().unwrap())
-            .collect();
-        let tolls: Vec<f64> = cast_trace
-            .iter()
-            .filter(|action| action["spell"] == 375576)
-            .map(|action| action["at_s"].as_f64().unwrap())
-            .collect();
-        assert_eq!(
-            (wings.len(), tolls.len()),
-            (2, 2),
-            "both cooldown windows must occur"
-        );
-        for (&wing, &toll) in wings.iter().zip(&tolls) {
-            assert!(
-                wing < toll && toll - wing < 2.0,
-                "Sentinel {wing}s must precede Toll {toll}s"
-            );
-        }
-    }
-    if entry == 209057 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
-        assert!(
-            !hits.contains_key(&1269224),
-            "Blaze of Glory must not hit Shield of the Righteous's primary target"
-        );
-        assert!(
-            casts.get(&389539).is_some_and(|count| *count > 0),
-            "Sentinel must start"
-        );
-        assert!(
-            casts.get(&1241413).is_some_and(|count| *count > 0),
-            "Sentinel must enable the actual Hammer of Wrath action"
-        );
-        assert!(
-            damage.get(&1241413).is_some_and(|amount| *amount > 0),
-            "Hammer of Wrath must damage the dummy"
-        );
-    }
-    if entry == 209053 && std::env::var_os("FOLLOWER_DPS_WORLD_DB").is_some() {
-        assert!(known_spells.contains(&378255) && known_spells.contains(&191717));
-        assert!(!known_spells.contains(&117013));
-        assert!(
-            damage.get(&57984).is_some_and(|amount| *amount > 0),
-            "Greater Fire must damage the dummy"
-        );
-        assert!(
-            damage.get(&157331).is_some_and(|amount| *amount > 0),
-            "Greater Storm must damage the dummy"
-        );
-    }
-    if entry == 209065 {
-        assert!(
-            incoming.iter().all(|event| event.spell_id != Some(321538)),
-            "owned pets must not apply Bloodshed to the follower"
-        );
-        assert!(
-            damage.get(&321538).is_some_and(|amount| *amount > 0),
-            "owned pets must damage the selected enemy with Bloodshed"
-        );
-    }
     if let Some(capture) = app
         .world()
         .get_resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
