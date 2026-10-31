@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use rand::{Rng, SeedableRng};
 use shared::components::{Player, UnitLevel};
 use shared::group::GroupRole;
 use shared::protocol::{GroupChannel, LfgChannel, LfgSnapshot, LfgStateUpdate};
@@ -122,17 +121,9 @@ fn begin_run(
         .get::<shared::components::Level>(player)
         .ok_or("follower queue requires a level")?
         .0;
-    let classes = world
-        .get_resource::<crate::spell_info::ClassSpells>()
-        .ok_or("follower classes unavailable")?;
-    let spells = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .ok_or("follower spell store unavailable")?;
-    let available = super::class_profiles::read_profiles()?;
-    let qualified = super::class_profiles::validate_profiles(&available, classes, spells, level);
     let seed = rand::random::<u64>();
     let class_profiles =
-        super::class_profiles::select_profiles(&qualified, role, player_spec, seed)?;
+        super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?;
     let profiles = class_profiles
         .iter()
         .enumerate()
@@ -289,28 +280,10 @@ pub(super) fn advance_runs(world: &mut World) {
 }
 
 fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<(), String> {
-    let mut rng = rand::rngs::StdRng::seed_from_u64(run.seed);
-    let mut members = Vec::with_capacity(run.class_profiles.len());
-    for (slot, profile) in run.class_profiles.iter().enumerate() {
-        let sex = rng.gen_range(0..2);
-        match super::class_spawn::spawn_class(world, owner, profile, sex, slot, run.gear) {
-            Ok(unit) => {
-                world
-                    .entity_mut(unit)
-                    .insert(crate::creature_ai::PartyFollowSlot::new(
-                        slot,
-                        run.class_profiles.len(),
-                    ));
-                members.push(unit);
-            }
-            Err(error) => {
-                super::spawning::unsummon_members(world, &members);
-                return Err(error);
-            }
-        }
-    }
+    let members =
+        super::class_spawn::spawn_members(world, owner, &run.class_profiles, run.seed, run.gear)?;
     if let Err(error) = join_party(world, owner, run, &members) {
-        super::spawning::unsummon_members(world, &members);
+        super::class_spawn::unsummon_members(world, &members);
         return Err(error);
     }
     let copy = *world

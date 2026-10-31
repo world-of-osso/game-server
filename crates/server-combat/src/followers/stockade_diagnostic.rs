@@ -182,10 +182,28 @@ pub(super) fn spawn_party(
     role: GroupRole,
 ) -> Result<Vec<Entity>, String> {
     let copy = stockade_copy(world, owner)?;
-    let profiles = super::select_party(&world.resource::<super::FollowerCatalog>().profiles, role)?;
-    let members = super::spawning::spawn_members(world, owner, &profiles)?;
+    let player_spec = world
+        .get::<shared::components::ActiveSpec>(owner)
+        .ok_or("diagnostic owner has no active specialization")?
+        .0;
+    let level = world
+        .get::<shared::components::Level>(owner)
+        .ok_or("diagnostic owner has no level")?
+        .0;
+    let seed = rand::random::<u64>();
+    let profiles =
+        super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?;
+    info!(
+        "stockade diagnostic seed {seed}, follower specs {:?}",
+        profiles
+            .iter()
+            .map(|profile| profile.spec_id)
+            .collect::<Vec<_>>()
+    );
+    let gear = super::class_spawn::GearSource::Journal;
+    let members = super::class_spawn::spawn_members(world, owner, &profiles, seed, gear)?;
     if let Err(error) = super::party::join_members(world, owner, role, &members) {
-        super::spawning::unsummon_members(world, &members);
+        super::class_spawn::unsummon_members(world, &members);
         return Err(error);
     }
     world.entity_mut(owner).insert(DiagnosticParty {
@@ -244,8 +262,12 @@ mod tests {
                 &crate::test_data::world_db_path(),
             ))
             .init_resource::<crate::group::GroupRegistry>();
+        super::super::native_fixture::install_class_sources(h.app.world_mut());
         h.app.world_mut().entity_mut(h.caster).insert((
             crate::persistence::ClientId(30),
+            // A level-10 Arcane Mage owner draws its party from the class roster.
+            shared::components::ActiveSpec(62),
+            shared::components::Level(10),
             shared::components::UnitLevel(10),
             DungeonDifficulty(1),
             copy,
@@ -420,8 +442,15 @@ mod tests {
             assert_eq!(h.app.world().get::<InMap>(member), Some(&copy));
             let follower = h.app.world().get::<Follower>(member).unwrap();
             assert_eq!(follower.owner, h.caster);
+            let race = h
+                .app
+                .world()
+                .get::<shared::components::CharacterVisual>(member)
+                .unwrap()
+                .race;
             let (stats, _, _) =
-                super::super::spawning::class_stats(h.app.world(), &follower.profile, 10).unwrap();
+                super::super::class_spawn::class_stats(h.app.world(), &follower.profile, 10, race)
+                    .unwrap();
             let health = h
                 .app
                 .world()

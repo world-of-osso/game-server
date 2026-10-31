@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use shared::components::{Level, Mana, UnitFactionTemplate, UnitFlags, UnitLevel, UnitSummonedBy};
 
 use super::{Follower, Profile};
-use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
+use crate::spell_cast::powers::PowerPools;
 
 pub(super) fn spawn_members(
     world: &mut World,
@@ -151,56 +151,5 @@ pub(super) fn class_stats(
     profile: &Profile,
     level: u8,
 ) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
-    class_stats_for_race(world, profile, level, 0)
-}
-
-pub(super) fn class_stats_for_race(
-    world: &World,
-    profile: &Profile,
-    level: u8,
-    race: u8,
-) -> Result<(crate::stats::CharacterStats, PowerPools, Vec<u32>), String> {
-    let classes = world.resource::<crate::spell_info::ClassSpells>();
-    let class = classes
-        .classes
-        .iter()
-        .find(|class| class.class_id == profile.class_id)
-        .ok_or_else(|| format!("follower class {} absent", profile.class_id))?;
-    let spec = class
-        .specs
-        .iter()
-        .find(|spec| spec.spec_id == profile.spec_id)
-        .ok_or_else(|| format!("follower specialization {} absent", profile.spec_id))?;
-    let input = crate::stats::StatInputs {
-        class: profile.class_id,
-        race,
-        level,
-        primary_stat: Some(crate::stats::PrimaryStat::from_priority(
-            spec.primary_stat_priority,
-        )),
-        mastery_coefficient: 0.0,
-        attack_power_per_strength: class.attack_power_per_strength,
-        attack_power_per_agility: class.attack_power_per_agility,
-        ranged_attack_power_per_agility: class.ranged_attack_power_per_agility,
-        gear_primary: Default::default(),
-        gear_ratings: Default::default(),
-    };
-    let stats = crate::stats::compute_character_stats(&input, None)
-        .ok_or("unsupported follower class level")?;
-    let Some(table) = world.get_resource::<PowerTypeTable>() else {
-        let message = "follower native powers unavailable: PowerTypeTable is not installed";
-        warn!("{message}");
-        return Err(message.to_owned());
-    };
-    let pools = PowerPools::from_table(
-        table,
-        table.class_powers(class.class_id, &class.power_types),
-    );
-    let passives = spec
-        .spells
-        .iter()
-        .filter(|spell| spell.passive && spell.required_level <= u32::from(level))
-        .map(|spell| spell.spell_id)
-        .collect();
-    Ok((stats, pools, passives))
+    super::class_spawn::class_stats(world, profile, level, 0)
 }
