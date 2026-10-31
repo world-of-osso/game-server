@@ -1,3 +1,4 @@
+- [Elemental class-follower DPS parity](systems/dungeon-simulator.md#elemental-class-follower-dps-parity--2026-10-31) — landed Ancestor, Flametongue and Unity fixes; level90 and70 10-seed point estimates within ±5%, intervals wider.
 - [Encounter boss immunity](systems/encounter-boss-immunity.md) — DungeonEncounter bosses reject stun, fear, root, disorient and incapacitate mechanics; snares land. Derived from 10 retail Mythic+ logs.
 - [Follower flight](systems/follower-flight.md) — area-gated 3D follow, follower identities, and navmesh landing.
 - [Player-class follower profile inputs](investigations/follower-data.md#player-class-profile-inputs--2026-10-30) — 39 sourced profiles, native talent decoding and rejection boundary; no Keystone qualification.

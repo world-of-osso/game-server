@@ -2,6 +2,14 @@
 
 **TRANSPORT_REGISTRY_DUPLICATED:** Simulator extraction repeats dispatch across production transport handlers. A new production edge requires an extraction registration and a test against its live handler until a shared registry replaces both. The follower-map inventory covers Azure books, Ruby ferry, Darkflame cart and collision drop, Academy pads, Murder Row gateway, Nalorakk pyres and Voidscar portal. The world database has no same-map `areatrigger_teleport` among the 27 follower maps; cross-map entries, player spells, dungeon entry/release, PvP, housing and admin staging are not in-dungeon route edges. Azure book actions and the final endpoint retain the source limitations documented in [Azure translocation](azure-translocation.md).
 
+## Elemental class-follower DPS parity — 2026-10-31
+
+The level90 class-built Elemental follower's original 10-seed result was −8.044% ±4.335 percentage points against pinned SimC. The final level90 and level70 point estimates are within ±5%; their 95% intervals extend outside that band. The [measurement table and inputs](../../specs/dps-parity.md#class-follower-single-target-result--2026-10-31) distinguish this 120-second fixture from BiS parity.
+
+Landed fixes: `1345aa7043` gives Ancestor buff stacks independent lifetimes; `383e53df51` adds Routine Communication triggers and Flame Shock impact echoes; `4d73f9e679` handles the real Flame Shock wrapper; `225e4f5e7a` ties native Improved Flametongue to the main-hand imbue; `85868a2889` supplies SimC's missing masked Elemental Unity periodic factors. Native70448 supplies values; SimC76f8118 supplies behavior. Real-actor tests cover overlapping expiry, per-target draws, foreground and secondary impacts, imbue lifetime, and Unity with both elementals absent or active.
+
+The retained native factor capture and SimC debug trace identify the periodic multiplier gap as Enhanced Flametongue ×1.065 and two Elemental Unity ×1.06 factors. Evidence is in `game-engine/data/diagnostics/elemental-follower-parity-2026-10-31/`; baseline SimC seed1 is reproducible. The ten-seed point estimates are not proof that the underlying means, or other gear and encounter configurations, meet the band.
+
 ## Party route progress —2026-10-30
 
 In the 2813 seed-1 stall, the leader repeatedly moved ahead during combat while the tank stayed near earlier pulls. Both use the same frozen walk graph. After the leader stopped, the tank followed a long valid loop: its remaining route fell from 724.8 to 296.3 yd over 50 simulated seconds, although direct distance initially increased. Leader-only movement detection falsely declared a stall. The driver waits when the tank's walk distance exceeds its opening range and measures decreasing remaining route distance for stable goals; arbitrary motion does not count.
