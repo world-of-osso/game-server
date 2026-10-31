@@ -410,9 +410,9 @@ fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
         }
         leave_only_shields(&mut run);
         // The plain shield needs fight_remains within mana.pct*6. A dungeon
-        // reads it from the enemy's observed time to die, which a training
-        // dummy never loses health to give: make this one mortal with a short
-        // fight left, like the 300 s fixture the decision was tuned on.
+        // reads it from the enemy's observed time to die; a training dummy
+        // keeps its whole pool, so make this one mortal with a short fight
+        // left, like the 300 s fixture the decision was tuned on.
         let enemy = run.sources[0];
         run.app
             .world_mut()
@@ -494,21 +494,20 @@ fn leave_only_shields(run: &mut super::healer_simc_replay::ClassParty) {
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_plain_shield_follows_the_replay_fight_length() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Mana;
     use shared::protocol::CombatLogKind;
-    // Against a dummy that never dies, only the replay's fixed fight length
-    // gives fight_remains a value inside the shield's mana gate.
-    for fixed_length in [false, true] {
+    // At 10% mana the shield's gate is fight_remains <= 60 s (Shield
+    // Discipline's mana.pct*6): a 30 s replay passes it, a 300 s one does not.
+    for (duration, expected) in [(300.0, false), (30.0, true)] {
         let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
-        if fixed_length {
-            run.app
-                .insert_resource(server_follower_apl::registry::FixedLengthFight {
-                    duration: 300.0,
-                });
-        }
+        run.app
+            .insert_resource(server_follower_apl::registry::FixedLengthFight { duration });
         super::healer_simc_replay::engage(&mut run);
         leave_only_shields(&mut run);
         let healer = run.healer;
-        let shielded = |run: &super::healer_simc_replay::ClassParty| {
+        let shielded = |run: &mut super::healer_simc_replay::ClassParty| {
+            let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+            mana.current = mana.max * 0.1;
             run.app
                 .world()
                 .resource::<ObservedCombatEvents>()
@@ -520,16 +519,16 @@ fn discipline_plain_shield_follows_the_replay_fight_length() {
                         && event.spell_id == Some(17)
                 })
         };
-        for _ in 0..400 {
-            if shielded(&run) {
+        for _ in 0..200 {
+            if shielded(&mut run) {
                 break;
             }
             run.app.update();
         }
         assert_eq!(
-            shielded(&run),
-            fixed_length,
-            "plain shield with fixed_length={fixed_length}"
+            shielded(&mut run),
+            expected,
+            "plain shield in a {duration} s replay"
         );
     }
 }
