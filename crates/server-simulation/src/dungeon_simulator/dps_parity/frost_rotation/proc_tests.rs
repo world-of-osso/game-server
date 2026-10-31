@@ -225,6 +225,10 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
             break;
         }
     }
+    assert!(
+        run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0),
+        "the primary must die"
+    );
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     assert!(
         events
@@ -233,7 +237,8 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
                 && event.target == Some(primary.to_bits())
                 && event.kind == CombatLogKind::Damage
                 && event.spell_id.is_none()
-                && event.crit),
+                && event.crit
+                && event.amount > 0),
         "the primary must die to a critical white swing"
     );
     assert!(
