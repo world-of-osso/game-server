@@ -22,7 +22,7 @@ HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
 
 
-def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank', party_trace=None, pressure_scale=1.0):
+def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, external_healing, mode='tank', party_trace=None, pressure_scale=1.0, healer_party=None):
     environment = os.environ | {
         'HEALER_TANK_TIMELINE': str(timeline), 'HEALER_TANK_SPEC': str(spec),
         'HEALER_TANK_SOURCE': source, 'HEALER_TANK_MODE': mode, 'HEALER_TANK_DURATION': str(duration),
@@ -33,6 +33,13 @@ def run_replay(timeline, spec, source, duration, seed, profile_dir, executable, 
     }
     if party_trace is not None and mode == 'healer':
         environment['HEALER_TANK_PARTY_TRACE'] = str(party_trace)
+    if mode == 'healer':
+        # The class-party healer replay reads only the measurement snapshot,
+        # catalogs included.
+        level, world_db = healer_party
+        environment['HEALER_TANK_LEVEL'] = str(level)
+        environment['FOLLOWER_DPS_WORLD_DB'] = str(world_db)
+        environment['DPS_PARITY_WORLD_DB'] = str(world_db)
     if executable:
         command = [str(executable), DRIVER, '--exact', '--ignored', '--nocapture']
     else:
@@ -162,14 +169,15 @@ def print_tank_aggregate(reports, seeds):
     print(f'| {reports[0]["spec"]} | {mitigation} | {uptime} | {deaths}/{len(reports)} |')
 
 
-def run_all(trace_dir, executable, output_dir, jobs, profile_dir=None, party_trace=None, seeds=(70448,)):
+def run_all(trace_dir, executable, output_dir, jobs, healer_party, profile_dir=None, party_trace=None, seeds=(70448,)):
     output_dir.mkdir(parents=True, exist_ok=True)
     def run(item):
         mode, spec, healed, seed = item
         profiles = profile_dir or ALL_PROFILES
         trace_spec = '66' if mode == 'healer' else spec
         timeline = (trace_dir / f'{trace_spec}.simc-trace.log').resolve(strict=True)
-        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, healed, mode, party_trace)
+        report = run_replay(timeline, spec, 'simc', 300, seed, profiles, executable, healed, mode, party_trace,
+                            healer_party=healer_party)
         suffix = 'healed' if healed else 'unhealed'
         seed_suffix = f'-seed{seed}' if mode == 'tank' and len(seeds) > 1 else ''
         path = output_dir / f'{mode}-{spec}-{suffix}{seed_suffix}.json'
@@ -264,6 +272,13 @@ def summarize_pressure(scale, reports):
     return {'scale': scale, 'survivors': survivors, 'mean_time': mean_time}
 
 
+def read_healer_party(parser, args):
+    if args.level is None or args.world_db is None:
+        parser.error('healer replays require --level (70 or 90) and the measurement snapshot '
+                     '(--world-db or FOLLOWER_DPS_WORLD_DB)')
+    return args.level, args.world_db.resolve(strict=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--timeline', type=Path, help='SimC debug trace or recorded intake JSON')
@@ -283,6 +298,9 @@ def main():
     parser.add_argument('--simc-tank-heal', action='store_true', help='replay the SimC dummy 75000 heal every 5 seconds')
     parser.add_argument('--profile-dir', type=Path, help='directory containing profile and trait inputs')
     parser.add_argument('--executable', type=Path, help='existing server-simulation test executable')
+    parser.add_argument('--level', type=int, choices=(70, 90), help='class-party level for healer replays')
+    parser.add_argument('--world-db', type=Path, default=os.environ.get('FOLLOWER_DPS_WORLD_DB'),
+                        help='measurement snapshot healer replays read (default: $FOLLOWER_DPS_WORLD_DB)')
     args = parser.parse_args()
     if not math.isfinite(args.pressure_scale) or args.pressure_scale <= 0:
         parser.error('--pressure-scale must be positive and finite')
@@ -312,7 +330,7 @@ def main():
         output = args.output_dir or TRACE_DIR / datetime.now().strftime('all-%Y-%m-%d-%H%M%S')
         profiles = args.profile_dir.resolve(strict=True) if args.profile_dir else None
         party_trace = args.party_trace.resolve(strict=True) if args.party_trace else None
-        run_all(trace_dir, executable, output, args.jobs, profiles, party_trace, seeds)
+        run_all(trace_dir, executable, output, args.jobs, read_healer_party(parser, args), profiles, party_trace, seeds)
         return 0
     if args.seeds > 1 and (args.mode != 'tank' or args.source != 'simc'):
         parser.error('--seeds greater than one requires SimC tank mode')
@@ -330,12 +348,13 @@ def main():
         parser.error('recorded intake playback currently supports specs 65 and 66')
     if args.duration <= 0 or args.seed < 0:
         parser.error('duration must be positive and seed must be nonnegative')
+    healer_party = read_healer_party(parser, args) if args.mode == 'healer' else None
     timeline = args.timeline.resolve(strict=True)
     profile_dir = (args.profile_dir or PROFILE_DIR).resolve(strict=True)
     executable = args.executable.resolve(strict=True) if args.executable else None
     all_specs = ('66', '73', '104', '250', '268', '581') if args.source == 'simc' else ('65', '66')
     for spec in (all_specs if args.spec == 'all' else (args.spec,)):
-        reports = [run_replay(timeline, spec, args.source, args.duration, seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None, args.pressure_scale) for seed in seeds]
+        reports = [run_replay(timeline, spec, args.source, args.duration, seed, profile_dir, executable, args.simc_tank_heal, args.mode, args.party_trace.resolve(strict=True) if args.party_trace else None, args.pressure_scale, healer_party) for seed in seeds]
         report = reports[0]
         if len(seeds) > 1:
             print_tank_aggregate(reports, seeds)
