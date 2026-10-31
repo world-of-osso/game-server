@@ -540,6 +540,17 @@ pub(crate) struct AdminInstances<'w, 's> {
     >,
     follower_motion: Query<'w, 's, NpcMotion<'static>>,
     npc_protection: Query<'w, 's, NpcProtection<'static>>,
+    aggro: crate::creature_aggro::AggroDistance<'w, 's>,
+    players: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static InMap,
+            &'static shared::components::UnitLevel,
+        ),
+        With<shared::components::Player>,
+    >,
     creatures: Query<
         'w,
         's,
@@ -672,7 +683,7 @@ impl AdminInstances<'_, '_> {
                             dormant,
                         )| {
                             format!(
-                                "{} (entity {}) level {} health {}/{} difficulty {} at {:?} state {:?} dormant {} combat={}",
+                                "{} (entity {}) level {} health {}/{} difficulty {} at {:?} state {:?} dormant {} aggro_to={} combat={}",
                                 npc.name,
                                 entity.to_bits(),
                                 level.map_or(0, |level| level.0),
@@ -682,6 +693,10 @@ impl AdminInstances<'_, '_> {
                                 position.map(|p| [p.x, p.y, p.z]),
                                 state,
                                 dormant,
+                                serde_json::Value::Array(self.players.iter().filter(|(_, player_map, _)| **player_map == map).map(|(player, _, player_level)| serde_json::json!({
+                                    "entity": player.to_bits(),
+                                    "radius": level.and_then(|level| self.aggro.center_radius(entity, player, level.0, player_level.0))
+                                })).collect()),
                                 npc_combat_metrics(stats, armor, target, threat, self.follower_motion.get(entity).ok(), self.npc_protection.get(entity).ok())
                             )
                         },
@@ -797,7 +812,7 @@ mod admin_npc_combat_tests {
     use bevy::ecs::system::SystemState;
     use shared::components::{Health, Npc, ThreatTable};
 
-    fn inspect(world: &mut World) -> serde_json::Value {
+    fn inspect_line(world: &mut World) -> String {
         let db = GameDatabase::new(crate::persistence::temp_database());
         let mut state = SystemState::<AdminInstances>::new(world);
         let response = state
@@ -816,9 +831,12 @@ mod admin_npc_combat_tests {
             panic!("npc-info did not return its live rows");
         };
         assert_eq!(lines.len(), 1);
-        let (_, metrics) = lines[0]
-            .split_once(" combat=")
-            .expect("native combat metrics");
+        lines.into_iter().next().unwrap()
+    }
+
+    fn inspect(world: &mut World) -> serde_json::Value {
+        let line = inspect_line(world);
+        let (_, metrics) = line.split_once(" combat=").expect("native combat metrics");
         serde_json::from_str(metrics).unwrap()
     }
 
@@ -839,6 +857,52 @@ mod admin_npc_combat_tests {
                 },
             ))
             .id()
+    }
+
+    #[test]
+    fn npc_info_reports_actual_player_specific_aggro_radius() {
+        use shared::components::{CharacterAppearance, ModelDisplay, Player, UnitLevel};
+        let mut world = World::new();
+        world.insert_resource(crate::test_data::world_data().clone());
+        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+            Default::default(),
+        ));
+        let npc = spawn_npc(&mut world);
+        world
+            .entity_mut(npc)
+            .insert((UnitLevel(90), ModelDisplay { display_id: 1 }));
+        let player = world
+            .spawn((
+                Player {
+                    name: "Ranged".into(),
+                    race: 1,
+                    class: 8,
+                    appearance: CharacterAppearance::default(),
+                },
+                UnitLevel(90),
+                InMap {
+                    map_id: 34,
+                    instance_id: 1,
+                },
+            ))
+            .id();
+        let line = inspect_line(&mut world);
+        let (_, aggro) = line.split_once(" aggro_to=").unwrap();
+        let (aggro, _) = aggro.split_once(" combat=").unwrap();
+        let aggro: serde_json::Value = serde_json::from_str(aggro).unwrap();
+        assert_eq!(
+            aggro,
+            serde_json::json!([{"entity": player.to_bits(), "radius": 16.5}])
+        );
+        world.entity_mut(player).insert(UnitLevel(80));
+        let line = inspect_line(&mut world);
+        let (_, aggro) = line.split_once(" aggro_to=").unwrap();
+        let (aggro, _) = aggro.split_once(" combat=").unwrap();
+        let aggro: serde_json::Value = serde_json::from_str(aggro).unwrap();
+        assert_eq!(
+            aggro,
+            serde_json::json!([{"entity": player.to_bits(), "radius": 26.5}])
+        );
     }
 
     #[test]
