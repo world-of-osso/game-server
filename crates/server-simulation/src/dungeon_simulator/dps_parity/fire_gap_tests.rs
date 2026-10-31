@@ -955,6 +955,86 @@ fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_deposit_uses_the_selected_combustion_phase_talent() {
+    let contribution = |combustion: bool, phase_talent: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let relevant = if combustion { 383967 } else { 384174 };
+        let other = if combustion { 384174 } else { 383967 };
+        let mut known: Vec<_> = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| !matches!(*id, 383967 | 384174))
+            .collect();
+        known.push(other);
+        if phase_talent {
+            known.push(relevant);
+        }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        preparation::warm_up_reference(&mut run).unwrap();
+        if combustion {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 190319, Some(actor), 1);
+            assert!(crate::auras::has_aura(run.app.world(), actor, 190319));
+        }
+        start_native(&mut run, 108853, target);
+        run.app.update();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("the ordinary Fire Blast must hit")
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .expect("Fire Blast must deposit a real Ignite")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (
+            tick / damage,
+            crate::spell_cast::scripts::script_effect_value(
+                world,
+                actor,
+                relevant,
+                if combustion { 1 } else { 0 },
+            ),
+        )
+    };
+    for combustion in [false, true] {
+        let (baseline, _) = contribution(combustion, false);
+        let (selected, percent) = contribution(combustion, true);
+        let expected = 1.0 + percent / 100.0;
+        assert!(
+            (selected / baseline - expected).abs() < 0.002,
+            "Combustion={combustion}: Ignite deposit ratio {} must match native talent factor {expected}",
+            selected / baseline
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_ignite_controlled_destruction_scales_only_owned_ignite_contribution() {
     let contribution = |keep_debuff: bool| {
         let _seed = crate::random::seed_scope(70_448);
