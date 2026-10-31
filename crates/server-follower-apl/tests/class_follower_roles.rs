@@ -97,6 +97,11 @@ fn pull(spec: u32) -> Pull {
 }
 
 fn spawn(spec: u32) -> Pull {
+    spawn_at(spec, 90)
+}
+
+/// Spawn `spec` for an owner at `level`; followers take their owner's level.
+fn spawn_at(spec: u32, level: u8) -> Pull {
     let mut harness = harness_with_plugins(vec![], &[], 8, false, |app| {
         app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
         app.add_plugins(server_combat::stats::StatsPlugin);
@@ -107,12 +112,17 @@ fn spawn(spec: u32) -> Pull {
     harness.app.insert_resource(data.class_spells().clone());
     harness.app.init_resource::<ObservedCombatEvents>();
     dungeon_owner(&mut harness);
+    let owner = harness.caster;
+    harness
+        .app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(Level(level));
     let profiles = read_profiles().unwrap();
     let profile = profiles
         .iter()
         .find(|profile| profile.spec_id == spec)
         .unwrap();
-    let owner = harness.caster;
     let follower = spawn_class(
         harness.app.world_mut(),
         owner,
@@ -206,6 +216,60 @@ fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     assert!(
         pull.landed(CombatLogKind::Damage, pull.harness.npc, &apl),
         "Protection follower casts {casts:?}; no APL damage {apl:?} on the dummy"
+    );
+}
+
+/// Holy Armaments alternates Holy Bulwark and Sacred Weapon through its override
+/// aura; the Protection APL must keep running across both armaments.
+#[test]
+fn class_follower_protection_apl_keeps_casting_through_both_holy_armaments() {
+    let mut pull = spawn(66);
+    let (follower, dummy) = (pull.follower, pull.harness.npc);
+    let rotation =
+        server_follower_apl::registry::load(pull.harness.app.world_mut(), follower, 66).unwrap();
+    let mut apl = FollowerApl::new(rotation);
+    // One minute: Holy Armaments (2 charges) is cast and its armament flips.
+    for frame in 0..1200 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        if let Err(error) = apl.tick(pull.harness.app.world_mut(), follower, &[dummy]) {
+            panic!("frame {frame}: {error}; casts {:?}", pull.casts());
+        }
+        pull.harness.app.update();
+    }
+    let casts = pull.casts();
+    for armament in [432459, 432472] {
+        assert!(
+            casts.contains(&armament),
+            "{armament} not in casts {casts:?}"
+        );
+    }
+}
+
+/// Below hero-talent level Holy Armaments is unknown; SimC skips the action and
+/// the rest of the Protection APL keeps running.
+#[test]
+fn class_follower_protection_apl_casts_without_hero_talents() {
+    let mut pull = spawn_at(66, 70);
+    let world = pull.harness.app.world();
+    let armaments =
+        server_combat::spell_cast::knowledge::resolve_action(world, pull.follower, 432459);
+    assert_eq!(
+        armaments,
+        Ok(None),
+        "a level-70 Protection follower knows Holy Armaments"
+    );
+    pull.fight();
+    assert!(
+        !pull.apl_failed(),
+        "Protection APL stopped; casts {:?}",
+        pull.casts()
+    );
+    let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;
+    let apl = pull.resolved(table.iter().map(|&(_, spell)| spell));
+    assert!(
+        pull.landed(CombatLogKind::Damage, pull.harness.npc, &apl),
+        "casts {:?}",
+        pull.casts()
     );
 }
 

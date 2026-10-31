@@ -65,11 +65,14 @@ impl Rotation {
     }
 
     pub fn refresh_armament(&mut self, world: &World, actor: Entity) -> Result<u8, String> {
-        let resolved = literal_rotation::execution::resolve_action(world, actor, 432459)?
-            .ok_or("NATIVE_HOLY_ARMAMENT_ACTION_UNAVAILABLE")?;
-        self.bindings
-            .actions
-            .insert("holy_armaments".into(), resolved);
+        // Without Lightsmith (e.g. below hero-talent level) the action is unknown;
+        // Prepared skips it like any unlearned action and its base binding stays.
+        if let Some(resolved) = literal_rotation::execution::resolve_action(world, actor, 432459)? {
+            self.bindings
+                .actions
+                .insert("holy_armaments".into(), resolved);
+        }
+        // sc_paladin.hpp781: next_armament is armament state, not talent knowledge.
         Ok(u8::from(crate::auras::has_aura(world, actor, 432478)))
     }
 
