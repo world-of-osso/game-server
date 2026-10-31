@@ -227,25 +227,6 @@ fn healer_benchmark_counts_nonunit_hit_absorbed_point_share() {
     assert_eq!(summary["gap_moot_for_intake"], false);
 }
 
-pub(super) fn replay_simc_party(
-    spec: u32,
-    trace: &std::path::Path,
-    party_trace: &std::path::Path,
-    duration: u32,
-    seed: u64,
-) -> Result<Value, String> {
-    super::healer_simc_replay::replay_simc_party(spec, trace, party_trace, duration, seed)
-}
-
-pub(super) fn replay_simc(
-    spec: u32,
-    trace: &std::path::Path,
-    duration: u32,
-    seed: u64,
-) -> Result<Value, String> {
-    super::healer_simc_replay::replay_simc(spec, trace, duration, seed)
-}
-
 /// The recorded-intake party, its companions equipped by `equip_companions`.
 pub(super) fn spawn_intake_party(
     world: &mut World,

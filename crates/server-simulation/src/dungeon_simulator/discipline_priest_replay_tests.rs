@@ -464,7 +464,8 @@ fn discipline_shield_policy_prefers_atoned_ally_and_uses_void_proc() {
 fn discipline_priest_heals_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(256, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(256, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

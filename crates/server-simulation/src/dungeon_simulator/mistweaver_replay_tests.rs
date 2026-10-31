@@ -170,8 +170,9 @@ fn mistweaver_waits_for_four_mana_tea_stacks() {
 fn mistweaver_prioritizes_rising_sun_kick_and_accumulates_mana_tea() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::super::healer_simc_replay::replay_simc_party(
         270,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -258,6 +259,7 @@ fn mistweaver_uses_sheilun_on_party_damage() {
         std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
     let report = super::super::healer_simc_replay::replay_simc_party(
         270,
+        90,
         Path::new(&trace),
         Path::new(&party_trace),
         300,
@@ -287,7 +289,8 @@ fn mistweaver_uses_sheilun_on_party_damage() {
 fn mistweaver_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(270, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(270, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

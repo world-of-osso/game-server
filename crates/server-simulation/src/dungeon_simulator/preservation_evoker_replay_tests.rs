@@ -5,8 +5,9 @@ use std::path::Path;
 fn preservation_casts_fire_breath_and_heals_from_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::super::healer_simc_replay::replay_simc_party(
         1468,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -33,7 +34,8 @@ fn preservation_casts_fire_breath_and_heals_from_damage() {
 fn preservation_evoker_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(1468, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(1468, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

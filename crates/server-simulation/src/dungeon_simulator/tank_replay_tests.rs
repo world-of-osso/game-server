@@ -2344,7 +2344,9 @@ fn traced_mortal_wounds_reduce_dummy_healing_for_the_encounter() {
         } else {
             Vec::new()
         };
-        super::tank_replay::apply_simc_dummy_debuffs(&mut run, &debuffs).unwrap();
+        let (actor, target) = (run.actor, run.targets[0]);
+        super::tank_replay::apply_simc_dummy_debuffs(&mut run.app, actor, target, &debuffs)
+            .unwrap();
         for _ in 0..220 {
             run.app.update();
         }
@@ -2459,7 +2461,8 @@ fn simc_dummy_debuffs_modify_real_damage_by_school() {
     fn damage(debuffs: &[RaidBuff], spell: u32) -> i32 {
         let _seed = crate::random::seed_scope(70_448);
         let mut run = super::dps_parity::prepare_registered_player(581, 1).unwrap();
-        super::tank_replay::apply_simc_dummy_debuffs(&mut run, debuffs).unwrap();
+        let (actor, target) = (run.actor, run.targets[0]);
+        super::tank_replay::apply_simc_dummy_debuffs(&mut run.app, actor, target, debuffs).unwrap();
         super::dps_parity::engage(&mut run);
         let actor = run.actor;
         let target = run.targets[0];

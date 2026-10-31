@@ -184,8 +184,9 @@ fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
 fn restoration_druid_uses_selected_germination_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::super::healer_simc_replay::replay_simc_party(
         105,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -450,7 +451,8 @@ fn everbloom_copies_an_expiring_lifebloom_to_nearby_allies() {
 fn restoration_druid_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(105, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(105, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

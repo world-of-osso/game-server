@@ -49,8 +49,9 @@ fn holy_avenging_wrath_enables_and_removes_hammer_override() {
 fn holy_paladin_keeps_one_beacon_during_party_pressure() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::super::healer_simc_replay::replay_simc_party(
         65,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -65,7 +66,8 @@ fn holy_paladin_keeps_one_beacon_during_party_pressure() {
 fn holy_paladin_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(65, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(65, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     println!(
         "HOLY_SUMMARY casts={} healing={} death={}",
         report["healer_casts"],

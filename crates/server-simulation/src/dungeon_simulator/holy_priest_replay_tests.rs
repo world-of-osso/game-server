@@ -5,8 +5,9 @@ use std::path::Path;
 fn holy_priest_uses_serenity_and_benediction_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::super::healer_simc_replay::replay_simc_party(
         257,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -457,7 +458,8 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
 fn holy_priest_heals_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(257, Path::new(&trace), 300, 70448).unwrap();
+        super::super::healer_simc_replay::replay_simc(257, 90, Path::new(&trace), 300, 70448)
+            .unwrap();
     println!("NATIVE_HOLY_PRIEST={report}");
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
