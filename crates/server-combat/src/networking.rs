@@ -574,6 +574,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
     mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
     controls: Query<'w, 's, &'static shared::components::MovementControl>,
     passengers: Query<'w, 's, &'static shared::components::TransportPassenger>,
+    awaiting_board: Query<'w, 's, (), With<crate::transport::AwaitingBoardAck>>,
     ships: crate::transport::ShipQuery<'w, 's>,
     auto_afk: ResMut<'w, crate::friends::AutoAfkScheduler>,
     dirty_queue: Option<Res<'w, InterestDirtyQueue>>,
@@ -668,6 +669,9 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         let ship = passenger
             .and_then(|passenger| crate::transport::movement_frame(&params.ships, passenger));
         for input in inputs {
+            if params.awaiting_board.contains(link.0) && input.transport.is_none() {
+                continue;
+            }
             let input = match crate::transport_movement::resolve_input(
                 &input,
                 passenger,
@@ -680,6 +684,12 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                     continue;
                 }
             };
+            if input.transport.is_some() && params.awaiting_board.contains(link.0) {
+                params
+                    .commands
+                    .entity(link.0)
+                    .remove::<crate::transport::AwaitingBoardAck>();
+            }
             if passenger.is_some() && input.transport.is_none() {
                 let player = link.0;
                 params
