@@ -43,6 +43,7 @@ pub(super) fn read_exclusions(
     if !reach.is_finite() || reach < 0.0 {
         return Err("Pull-back party reach is invalid".into());
     }
+    let planned = super::pull_set::members(world, target, tank);
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
@@ -56,7 +57,7 @@ pub(super) fn read_exclusions(
                 && !world
                     .get::<shared::components::CombatStatus>(actor)
                     .is_some_and(|status| status.0)
-                && !positioning::in_target_formation(world, target, actor)
+                && !planned.contains(&actor)
         })
         .collect();
     let mut geometry = SystemState::<AggroDistance>::new(world);

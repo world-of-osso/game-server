@@ -41,6 +41,9 @@ impl Default for AssistanceConfig {
 pub(crate) struct AssistanceCalled;
 
 #[derive(Component)]
+pub(crate) struct AssistanceSnapshot(pub Vec<Entity>);
+
+#[derive(Component)]
 struct FormationEngaging;
 
 struct DelayedAssistance {
@@ -217,6 +220,23 @@ pub(crate) fn engage_formation(world: &mut World, member: Entity, target: Entity
     }
 }
 
+/// Read the same immediate helper snapshot used by the native assistance call.
+pub(crate) fn assistance_snapshot(world: &World, caller: Entity, target: Entity) -> Vec<Entity> {
+    let Some(config) = world.get_resource::<AssistanceConfig>() else {
+        return Vec::new();
+    };
+    let radius = config.radius;
+    if radius <= 0.0 {
+        return Vec::new();
+    }
+    nearby(world, caller, radius)
+        .into_iter()
+        .filter(|&other| {
+            can_assist(world, other, caller, target, true) && sees(world, caller, other)
+        })
+        .collect()
+}
+
 /// Unit::Attack calls once per combat; assistants cannot call a second wave.
 pub(crate) fn call_assistance(world: &mut World, caller: Entity, target: Entity) {
     if world.get::<shared::components::Npc>(caller).is_none()
@@ -235,12 +255,13 @@ pub(crate) fn call_assistance(world: &mut World, caller: Entity, target: Entity)
     if radius <= 0.0 {
         return;
     }
-    let assistants: Vec<_> = nearby(world, caller, radius)
-        .into_iter()
-        .filter(|&other| {
-            can_assist(world, other, caller, target, true) && sees(world, caller, other)
-        })
-        .collect();
+    let assistants = assistance_snapshot(world, caller, target);
+    if !assistants.is_empty() {
+        info!(target: "game_server::creature_assistance", caller = caller.to_bits(), victim = target.to_bits(), count = assistants.len(), "planned assistance snapshot");
+    }
+    world
+        .entity_mut(caller)
+        .insert(AssistanceSnapshot(assistants.clone()));
     if assistants.is_empty() {
         return;
     }

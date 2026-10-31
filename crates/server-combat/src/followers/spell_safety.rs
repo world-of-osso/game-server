@@ -24,11 +24,22 @@ pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) ->
     let Some(target_position) = targets::position(world, target) else {
         return false;
     };
+    let primary = if targets::relation_matches(world, caster, target, targets::Relation::Enemy) {
+        Some(target)
+    } else {
+        world
+            .get::<crate::networking::CombatTarget>(caster)
+            .and_then(|target| target.0)
+    };
+    let planned = primary
+        .map(|primary| super::pull_set::members(world, primary, caster))
+        .unwrap_or_default();
     !world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
         .any(|actor| {
             actor != target
+                && !planned.contains(&actor)
                 && targets::is_alive(world, actor)
                 && world.get::<Npc>(actor).is_some()
                 && world

@@ -825,9 +825,10 @@ pub fn enter_evade_mode(world: &mut World, creature: Entity) {
     // `SetLastDamagedTime(0)` (CreatureAI.cpp:313-317).
     crate::creature_tap::clear(world, creature);
     world.entity_mut(creature).remove::<LastDamagedTime>();
-    world
-        .entity_mut(creature)
-        .remove::<crate::creature_assistance::AssistanceCalled>();
+    world.entity_mut(creature).remove::<(
+        crate::creature_assistance::AssistanceCalled,
+        crate::creature_assistance::AssistanceSnapshot,
+    )>();
     world
         .entity_mut(creature)
         .remove::<crate::spell_cast::SpellHistory>();
@@ -885,7 +886,10 @@ fn remove_auras_on_evade(world: &mut World, creature: Entity) {
 /// `ClearAllThreat`, `CombatStop`), so it respawns idle.
 pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
     entity.remove::<CurrentVictim>();
-    entity.remove::<crate::creature_assistance::AssistanceCalled>();
+    entity.remove::<(
+        crate::creature_assistance::AssistanceCalled,
+        crate::creature_assistance::AssistanceSnapshot,
+    )>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }

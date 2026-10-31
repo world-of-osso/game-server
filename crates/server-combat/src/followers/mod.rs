@@ -99,6 +99,7 @@ mod pull_readiness_tests;
 mod pull_route;
 #[cfg(test)]
 mod pull_route_tests;
+mod pull_set;
 mod pull_sources;
 #[cfg(test)]
 mod pull_sources_tests;

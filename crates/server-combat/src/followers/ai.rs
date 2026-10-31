@@ -46,7 +46,8 @@ pub(super) fn update(world: &mut World) {
             let party = party_units(world, follower.owner);
             super::tank_frontal::record_observed_frontal(world, *unit, follower, &party);
             let enemies = engaged_enemies(world, follower, *unit, &party);
-            if !enemies.is_empty() {
+            if let Some((target, _)) = enemies.first() {
+                super::pull_set::log_admission(world, *unit, *target);
                 let reach = super::party_unintended_reach(world, &party)
                     .into_iter()
                     .flat_map(|(_, caster, target)| [caster, target])
