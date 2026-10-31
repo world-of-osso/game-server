@@ -244,6 +244,37 @@ fn seed_native_refresh_keeps_original_explosion_timer_without_resource_reset() {
 
 #[test]
 #[ignore = "requires private265 native player inputs"]
+fn seed_native_lethal_owner_damage_explodes_on_survivors() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let (mut run, expiry, _) = prepare_actual_seed(3);
+    let primary = run.targets[0];
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    let actual = cast_native_action(&mut run, 686, primary);
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0) {
+            break;
+        }
+    }
+    for _ in 0..5 { run.app.update(); }
+    assert!(crate::spell_cast::now(run.app.world()) < expiry);
+    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+        && event.target == Some(primary.to_bits()) && event.spell_id == Some(actual)
+        && event.kind == CombatLogKind::Damage && event.amount > 0), "Shadow Bolt must kill the seeded target");
+    for survivor in &run.targets[1..] {
+        assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
+            && event.target == Some(survivor.to_bits()) && event.spell_id == Some(EXPLOSION)
+            && event.kind == CombatLogKind::Damage && event.amount > 0), "Seed must explode on survivor {survivor:?}");
+    }
+}
+
+#[test]
+#[ignore = "requires private265 native player inputs"]
 fn seed_native_actual_owner_damage_threshold_explodes_before_expiry_and_applies_wither() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, expiry, threshold) = prepare_actual_seed(3);
