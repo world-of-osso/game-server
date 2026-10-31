@@ -1,5 +1,9 @@
 # Follower dungeons
 
+## Queue level eligibility
+
+Follower queues use each entry's base ContentTuning level range. Conditional ContentTuning redirects are not modeled: the server has no player CtrOptions conditional flags, Chromie Time, or Timerunning state. The meanings of the redirect flags in the current data are not established. TrinityCore 15e0ed76 `LFGMgr.cpp:1762–1767` uses the player's conditional flags before checking the inclusive range; `DB2Stores.cpp:2187–2203` selects a matching redirect. Revisit these limits when the corresponding player states and flag semantics are modeled.
+
 ## APL active-enemy admission
 
 - [x] Dungeon follower entries may require `min_active_enemies`, counting current alive engaged hostile enemies in combat with the actor's group, including its pet combat coverage; no radius-based count or historical pull total.
@@ -40,7 +44,7 @@ Class-follower roster portraits use the same race, customization and head equipm
 
 ### Private live queue fixture
 
-With a solo level-90 damage character connected to a private server, run `game-engine-cli --socket /tmp/game-engine-<pid>.sock lfg queue --role damage --dungeon-id 2436`. The queue admits Ruby Life Pools, map 2521, difficulty 205. The party contains the player, one tank, one healer and two damage followers; the server logs the random seed and selected specs. The six core appearance selectors currently use index zero; only sex varies by seed. Keystone admission and band gear are outside this fixture. Live execution of this fixture is not yet verified.
+With a solo level-70 damage character connected to a private server, run `game-engine-cli --socket /tmp/game-engine-<pid>.sock lfg queue --role damage --dungeon-id 2436`. The queue admits Ruby Life Pools, map 2521, difficulty 205. The party contains the player, one tank, one healer and two damage followers; the server logs the random seed and selected specs. The six core appearance selectors currently use index zero; only sex varies by seed. Keystone admission and band gear are outside this fixture. Live execution of this fixture is not yet verified.
 
 A dead follower's corpse persists for the active dungeon run, including an owner disconnect, and remains eligible for ordinary party resurrection. This is the user's follower policy, not generic summon behavior: TC 15e0ed76 `Creature.cpp:430-438` removes a corpse and `TemporarySummon.cpp:73-80` unsummons a dead summon. TC `SpellEffects.cpp:3688-3715` calculates resurrection health and mana for dead players; followers accept the existing party spell effect in place. While any party member is in combat, it remains dead. After combat, it releases and revives at the shared dungeon release location only when the production Follow navmesh query returns a complete route to its owner. Otherwise it waits for resurrection at its corpse. There is no distance threshold or transport-aware route shortcut; normal Follow movement returns a released follower to its owner.
 

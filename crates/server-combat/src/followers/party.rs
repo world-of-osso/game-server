@@ -121,6 +121,9 @@ fn begin_run(
         .get::<shared::components::Level>(player)
         .ok_or("follower queue requires a level")?
         .0;
+    if let Some(reason) = dungeon.level_lock(u32::from(level)) {
+        return Err(reason.into());
+    }
     let seed = rand::random::<u64>();
     let class_profiles =
         super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?;
@@ -1804,6 +1807,78 @@ mod copy_tests {
                 .iter()
                 .all(|&unit| app.world().get_entity(unit).is_err())
         );
+    }
+
+    #[test]
+    fn follower_halls_queue_enforces_content_tuning_levels() {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let store = crate::maps::store::load_map_store(&db).unwrap();
+        let catalog = super::super::catalog::load_catalog(&db).unwrap();
+        let halls = catalog.dungeons.get(&2444).unwrap();
+        assert_eq!((halls.min_level, halls.max_level), (40, 70));
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(store)
+            .init_resource::<crate::maps::InstanceManager>()
+            .insert_resource(catalog)
+            .insert_resource(classes)
+            .insert_resource(spells)
+            .init_resource::<GroupRegistry>();
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "Test".into(),
+                    race: 1,
+                    class: 8,
+                    appearance: Default::default(),
+                },
+                ClientId(30),
+                shared::components::Level(80),
+                shared::components::ActiveSpec(62),
+                UnitLevel(70),
+                WorldLocation {
+                    map_id: 2444,
+                    position: Vec3::new(1341.3, -132.202, 137.45),
+                    orientation: 0.0,
+                }
+                .bevy_position(),
+                shared::components::Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                InMap {
+                    map_id: 2444,
+                    instance_id: 0,
+                },
+                DungeonDifficulty(1),
+            ))
+            .id();
+        assert_eq!(
+            begin_run(app.world_mut(), player, GroupRole::Dps, 2444),
+            Err("LFG_LOCKSTATUS_TOO_HIGH_LEVEL".into())
+        );
+        assert!(app.world().get::<MapTransfer>(player).is_none());
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::Level(39));
+        assert_eq!(
+            begin_run(app.world_mut(), player, GroupRole::Dps, 2444),
+            Err("LFG_LOCKSTATUS_TOO_LOW_LEVEL".into())
+        );
+        assert!(app.world().get::<MapTransfer>(player).is_none());
+        app.world_mut()
+            .entity_mut(player)
+            .insert(shared::components::Level(70));
+        begin_run(app.world_mut(), player, GroupRole::Dps, 2444).unwrap();
+        assert!(app.world().get::<MapTransfer>(player).is_some());
+        assert!(app.world().get::<FollowerRun>(player).is_some());
     }
 
     /// Live Ruby rerun: Rubynew killed Melidrussa, released outside, requeued, and was
