@@ -42,7 +42,6 @@ const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
 const KNOWN_GROUND_GAPS: &str = include_str!("ground_gaps.tsv");
 /// What `GroundMap::missing_files` reports for a map without a WDT.
 const NO_WDT: &str = "no WDT FileDataID";
-const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// Bounded startup-only filesystem concurrency; never changes ECS scheduling.
 const GROUND_VALIDATION_WORKERS: usize = 4;
