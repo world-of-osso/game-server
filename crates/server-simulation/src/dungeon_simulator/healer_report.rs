@@ -146,14 +146,6 @@ pub(super) fn report(intake: &Intake, bytes: &[u8], directory: &Path) -> Result<
             |gap| json!({"spec":spec,"status":"blocked","metrics":null,"gaps":[gap]}),
         );
         row["name"] = json!(name);
-        if let Some((entry, source_spec)) =
-            crate::followers::simulator::healer_profiles::alternate_source(spec)
-        {
-            row["actor_configuration"] = json!({
-                "kind":crate::followers::simulator::healer_profiles::ALTERNATE_SPEC_BRIDGE,
-                "source_entry":entry,"source_spec":source_spec,"requested_spec":spec
-            });
-        }
         write_json(&directory.join(format!("{spec}.json")), &row)?;
         rows.push(row);
     }

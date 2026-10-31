@@ -1078,49 +1078,40 @@ fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
 
 #[test]
 fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
-    let mut expected = [209057, 209072, 209053, 209059, 209065];
-    if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
-        expected = entries
+    let mut expected = crate::followers::simulator::DEFAULT_PARTY;
+    if let Ok(specs) = std::env::var("DUNGEON_SIMULATOR_PARTY_SPECS") {
+        expected = specs
             .split(',')
-            .map(|entry| entry.trim().parse::<u32>().unwrap())
+            .map(|spec| spec.trim().parse::<u32>().unwrap())
             .collect::<Vec<_>>()
             .try_into()
-            .expect("five requested native profiles");
+            .expect("five requested class specs");
     }
-    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_ENTRY") {
+    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_SPEC") {
         expected[1] = healer.parse().unwrap();
     }
     let level: u8 = std::env::var("DUNGEON_SIMULATOR_LEVEL")
         .map(|value| value.parse().unwrap())
         .unwrap_or(32);
     let run = spawn_run(1, &mut None).unwrap();
-    for (unit, entry) in run.party.members.iter().zip(expected[..4].iter()) {
-        let follower = run
-            .app
-            .world()
-            .get::<crate::followers::Follower>(*unit)
-            .unwrap();
-        assert_eq!(
-            follower.profile.entry, *entry,
-            "actual spawned native follower profile"
-        );
-    }
-    let leader = run
-        .app
-        .world()
-        .resource::<crate::followers::FollowerCatalog>()
-        .profiles
+    let world = run.app.world();
+    let spawned: Vec<_> = run
+        .party
+        .members
         .iter()
-        .find(|profile| profile.entry == expected[4])
-        .unwrap();
-    assert_eq!(
-        run.app
-            .world()
-            .get::<crate::class_progression::ActiveSpec>(run.party.owner)
-            .unwrap()
-            .0,
-        leader.spec_id
-    );
+        .chain([&run.party.owner])
+        .map(|&unit| {
+            assert!(
+                world.get::<crate::followers::AplControlled>(unit).is_some(),
+                "every simulator actor casts through its spec APL"
+            );
+            world
+                .get::<crate::class_progression::ActiveSpec>(unit)
+                .unwrap()
+                .0
+        })
+        .collect();
+    assert_eq!(spawned, expected, "actual spawned class specs, leader last");
     for unit in run.members() {
         assert_eq!(
             run.app

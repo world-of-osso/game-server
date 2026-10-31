@@ -1,5 +1,8 @@
 # Alternate-spec healer source candidates
 
+**Retired 2026-10-31:** every healer spec now spawns as its own class follower; the bridge below no longer exists ([healer metrics](../specs/healer-dungeon-metrics.md#healer-actors)).
+
+
 Verified2026-10-23 from read-only local DB2/TDB-backed `world.db`; [exact source rows](healer-alternate-spec-source-candidates.json). Parent-approved `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` preserves each source NPC/display and requests another native DB2 healer specialization of the same class. This is not an authored follower identity/spec claim or production roster change.
 
 | Requested spec | Source actor / authored spec | Native candidate spell roots |

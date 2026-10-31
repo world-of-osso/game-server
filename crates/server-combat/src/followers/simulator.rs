@@ -1,11 +1,11 @@
-//! Explicit transport-free simulator seam; real initializer and kit controller.
+//! Explicit transport-free simulator seam: class actors driven by their spec APL.
+use super::ai::LeaderProfile;
 pub use super::catalog::load_catalog as load_parity_catalog;
+use super::class_profiles::ClassProfile;
+use super::class_spawn::GearSource;
 use super::*;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};
-
-#[derive(Component)]
-struct LeaderProfile(Profile);
 
 pub struct Party {
     pub owner: Entity,
@@ -13,38 +13,20 @@ pub struct Party {
     pub members: Vec<Entity>,
 }
 
-/// Controller actions are level-gated kit rows, separate from the native NPC spellbook.
-pub fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
-    let follower = world
-        .get::<Follower>(unit)
-        .expect("initialized native follower");
-    let level = world
-        .get::<Level>(unit)
-        .expect("initialized follower level")
-        .0;
-    world
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .filter(|entry| entry.available(follower.profile.spec_id, level))
-        .map(|entry| entry.spell_id)
-        .collect()
-}
-
-pub mod healer_profiles;
-
-const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
+/// Tank, healer, two DPS and the leader DPS: Protection Paladin, Restoration
+/// Druid, Elemental Shaman, Fire Mage and Beast Mastery Hunter.
+pub const DEFAULT_PARTY: [u32; 5] = [66, 105, 262, 63, 253];
 
 struct PartyConfiguration {
     level: u8,
-    entries: [u32; 5],
+    specs: [u32; 5],
 }
 
 impl PartyConfiguration {
     fn read() -> Result<Self, String> {
         let level = read_override("DUNGEON_SIMULATOR_LEVEL")?;
-        let healer = read_override("DUNGEON_SIMULATOR_HEALER_ENTRY")?;
-        let party = read_override("DUNGEON_SIMULATOR_PARTY_ENTRIES")?;
+        let healer = read_override("DUNGEON_SIMULATOR_HEALER_SPEC")?;
+        let party = read_override("DUNGEON_SIMULATOR_PARTY_SPECS")?;
         Self::parse(level.as_deref(), healer.as_deref(), party.as_deref())
     }
 
@@ -63,16 +45,16 @@ impl PartyConfiguration {
                 crate::spell_info::MAX_LEVEL
             ));
         }
-        let mut entries = match party {
-            Some(party) => parse_party_entries(party)?,
+        let mut specs = match party {
+            Some(party) => parse_party_specs(party)?,
             None => DEFAULT_PARTY,
         };
         if let Some(healer) = healer {
-            entries[1] = healer
+            specs[1] = healer
                 .parse()
-                .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_HEALER_ENTRY: {error}"))?;
+                .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_HEALER_SPEC: {error}"))?;
         }
-        Ok(Self { level, entries })
+        Ok(Self { level, specs })
     }
 }
 
@@ -84,35 +66,35 @@ fn read_override(name: &str) -> Result<Option<String>, String> {
     }
 }
 
-fn parse_party_entries(value: &str) -> Result<[u32; 5], String> {
-    let entries: Vec<_> = value
+fn parse_party_specs(value: &str) -> Result<[u32; 5], String> {
+    let specs: Vec<_> = value
         .split(',')
-        .map(|entry| entry.trim().parse::<u32>())
+        .map(|spec| spec.trim().parse::<u32>())
         .collect::<Result<_, _>>()
-        .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_PARTY_ENTRIES: {error}"))?;
-    entries.try_into().map_err(|_| {
-        "DUNGEON_SIMULATOR_PARTY_ENTRIES requires tank,healer,dps,dps,leader-dps".into()
-    })
+        .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_PARTY_SPECS: {error}"))?;
+    specs
+        .try_into()
+        .map_err(|_| "DUNGEON_SIMULATOR_PARTY_SPECS requires tank,healer,dps,dps,leader-dps".into())
 }
 
-fn read_party_profiles(world: &World, entries: [u32; 5]) -> Result<Vec<Profile>, String> {
+/// The class profiles for `specs`, each checked against its party slot's role.
+fn read_party_profiles(specs: [u32; 5]) -> Result<Vec<ClassProfile>, String> {
     use shared::group::GroupRole::{Dps, Healer, Tank};
-    let catalog = world.resource::<FollowerCatalog>();
-    entries
+    let profiles = class_profiles::read_profiles()?;
+    specs
         .into_iter()
         .zip([Tank, Healer, Dps, Dps, Dps])
         .enumerate()
-        .map(|(slot, (entry, role))| {
-            let profile = catalog
-                .profiles
+        .map(|(slot, (spec, role))| {
+            let profile = profiles
                 .iter()
-                .find(|profile| profile.entry == entry)
-                .ok_or_else(|| format!("Native simulator follower profile{entry} absent"))?;
-            if profile.role != role {
+                .find(|profile| profile.spec_id == spec)
+                .ok_or_else(|| format!("Simulator class follower spec{spec} absent"))?;
+            let actual = profile.group_role()?;
+            if actual != role {
                 return Err(format!(
-                    "Simulator party slot{} requires{role:?}, profile{entry} is{:?}",
-                    slot + 1,
-                    profile.role
+                    "Simulator party slot{} requires{role:?}, spec{spec} is{actual:?}",
+                    slot + 1
                 ));
             }
             Ok(profile.clone())
@@ -125,7 +107,7 @@ fn simulator_configuration_rejects_invalid_levels_and_incomplete_rosters() {
     for level in ["0", "91", "not-a-level"] {
         assert!(PartyConfiguration::parse(Some(level), None, None).is_err());
     }
-    for party in ["209057,209072", "209057,209072,no,209059,209065"] {
+    for party in ["66,105", "66,105,no,63,253"] {
         assert!(PartyConfiguration::parse(None, None, Some(party)).is_err());
     }
 }
@@ -157,27 +139,22 @@ pub fn spawn_party_with_healer(
     level: u8,
     spec: u32,
 ) -> Result<Party, String> {
-    let healer = healer_profiles::configure(world, spec)?;
-    if spec == 65 {
-        healer_profiles::install_holy_paladin_policy(world, level)?;
-    }
-    healer_profiles::require_policy(world, &healer, level)?;
-    let mut profiles = read_party_profiles(world, DEFAULT_PARTY)?;
-    profiles[1] = healer;
-    spawn_profiled_party(world, copy, at, level, profiles)
+    let mut specs = DEFAULT_PARTY;
+    specs[1] = spec;
+    spawn_profiled_party(world, copy, at, level, read_party_profiles(specs)?)
 }
 
-/// Attach four native companions to an existing parity healer player.
+/// Attach four class companions to an existing parity healer player.
 pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Result<Party, String> {
     let copy = *world
         .get::<crate::maps::InMap>(healer)
         .ok_or("healer copy absent")?;
-    let profiles = read_party_profiles(world, DEFAULT_PARTY)?;
+    let profiles = read_party_profiles(DEFAULT_PARTY)?;
     let companions: Vec<_> = [0, 2, 3, 4]
         .into_iter()
         .map(|index| profiles[index].clone())
         .collect();
-    let members = spawning::spawn_members(world, healer, &companions)?;
+    let members = spawn_companions(world, healer, &companions)?;
     party::join_members(world, healer, shared::group::GroupRole::Healer, &members)?;
     world
         .entity_mut(healer)
@@ -186,20 +163,28 @@ pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Resul
             members: members.clone(),
             player_role: shared::group::GroupRole::Healer,
         });
-    let tank = members
-        .iter()
-        .copied()
-        .find(|unit| {
-            world
-                .get::<Follower>(*unit)
-                .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)
-        })
-        .ok_or("simulator party lacks tank")?;
     Ok(Party {
         owner: healer,
-        tank,
+        tank: members[0],
         members,
     })
+}
+
+/// Party sexes are cosmetic; one fixed draw keeps simulator runs reproducible.
+const SIMULATOR_SEX_SEED: u64 = 0;
+
+fn spawn_companions(
+    world: &mut World,
+    owner: Entity,
+    profiles: &[ClassProfile],
+) -> Result<Vec<Entity>, String> {
+    class_spawn::spawn_members(
+        world,
+        owner,
+        profiles,
+        SIMULATOR_SEX_SEED,
+        GearSource::Journal,
+    )
 }
 
 /// Assign the headless reference player its distinct group identity.
@@ -221,12 +206,12 @@ pub fn spawn_party_for_reference_healer(
     if world.get::<crate::maps::InMap>(healer) != Some(&copy) {
         return Err("healer is not in tank copy".into());
     }
-    let profiles = read_party_profiles(world, DEFAULT_PARTY)?;
+    let profiles = read_party_profiles(DEFAULT_PARTY)?;
     let companions: Vec<_> = [2, 3, 4]
         .into_iter()
         .map(|index| profiles[index].clone())
         .collect();
-    let mut members = spawning::spawn_members(world, tank, &companions)?;
+    let mut members = spawn_companions(world, tank, &companions)?;
     party::join_members_with_player(
         world,
         tank,
@@ -255,12 +240,8 @@ fn spawn_configured_party(
     at: Position,
     configuration: PartyConfiguration,
 ) -> Result<Party, String> {
-    let profiles = read_party_profiles(world, configuration.entries)?;
-    let party = spawn_profiled_party(world, copy, at, configuration.level, profiles)?;
-    for (unit, profile) in geared_profiles(world, &party) {
-        super::gear::equip(world, unit, &profile)?;
-    }
-    Ok(party)
+    let profiles = read_party_profiles(configuration.specs)?;
+    spawn_profiled_party(world, copy, at, configuration.level, profiles)
 }
 
 /// Party units that wear gear with the profile that selects it: follower
@@ -282,24 +263,12 @@ fn spawn_profiled_party(
     copy: crate::maps::InMap,
     at: Position,
     level: u8,
-    profiles: Vec<Profile>,
+    profiles: Vec<ClassProfile>,
 ) -> Result<Party, String> {
-    let difficulty_id = world
-        .resource::<crate::maps::InstanceManager>()
-        .copy_difficulty(copy)
-        .ok_or("simulator copy lacks native difficulty")?
-        .difficulty_id;
-    let leader = profiles[4].clone();
-    let owner = initialize_player_owner(
-        world,
-        &leader,
-        level,
-        copy,
-        at,
-        crate::maps::DungeonDifficulty(difficulty_id),
-    )?;
+    let difficulty = copy_difficulty(world, copy)?;
+    let (owner, leader) = spawn_class_owner(world, &profiles[4], level, copy, at, difficulty)?;
     world.entity_mut(owner).insert(LeaderProfile(leader));
-    let members = spawning::spawn_members(world, owner, &profiles[..4])?;
+    let members = spawn_companions(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
         .entity_mut(owner)
@@ -308,18 +277,22 @@ fn spawn_profiled_party(
             members: members.clone(),
             player_role: shared::group::GroupRole::Dps,
         });
-    let tank = members
-        .iter()
-        .copied()
-        .find(|member| {
-            world.get::<Follower>(*member).unwrap().profile.role == shared::group::GroupRole::Tank
-        })
-        .ok_or("simulator party lacks tank")?;
     Ok(Party {
         owner,
-        tank,
+        tank: members[0],
         members,
     })
+}
+
+fn copy_difficulty(
+    world: &World,
+    copy: crate::maps::InMap,
+) -> Result<crate::maps::DungeonDifficulty, String> {
+    let difficulty = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?;
+    Ok(crate::maps::DungeonDifficulty(difficulty.difficulty_id))
 }
 
 pub enum ParityActor {
@@ -335,12 +308,7 @@ pub fn spawn_parity_attacker(
     copy: crate::maps::InMap,
     actor: ParityActor,
 ) -> Result<Entity, String> {
-    let difficulty_id = world
-        .resource::<crate::maps::InstanceManager>()
-        .copy_difficulty(copy)
-        .ok_or("simulator copy lacks native difficulty")?
-        .difficulty_id;
-    let difficulty = crate::maps::DungeonDifficulty(difficulty_id);
+    let difficulty = copy_difficulty(world, copy)?;
     if let ParityActor::Player { race } = actor {
         return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
     }
@@ -348,25 +316,8 @@ pub fn spawn_parity_attacker(
         .into_iter()
         .find(|source| source.spec_id == spec_id)
         .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
-    let profile = world
-        .resource::<FollowerCatalog>()
-        .profiles
-        .iter()
-        .find(|profile| profile.class_id == source.class_id)
-        .cloned()
-        .ok_or_else(|| format!("native simulator owner class{} absent", source.class_id))?;
-    let owner = initialize_player_owner(
-        world,
-        &profile,
-        level,
-        copy,
-        Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        difficulty,
-    )?;
+    // An inert native Player owns the attacker's party and runs no rotation.
+    let owner = spawn_parity_player(world, spec_id, level, source.race, copy, difficulty)?;
     let unit = super::class_spawn::spawn_class(
         world,
         owner,
@@ -376,7 +327,6 @@ pub fn spawn_parity_attacker(
         super::class_spawn::GearSource::Journal,
     )?;
     // A living native owner can maintain /startattack without landing out-of-range swings.
-    // No LeaderProfile is installed: the owner runs no follower rotation.
     world.entity_mut(owner).insert(Position {
         x: 20.0,
         y: 0.0,
@@ -474,77 +424,40 @@ fn install_parity_player_stat_components(world: &mut World, player: Entity) {
     ));
 }
 
-fn initialize_player_owner(
+/// A headless native Player that owns the party and fights as the class actor
+/// `source`, returning the profile its follower brain uses.
+fn spawn_class_owner(
     world: &mut World,
-    profile: &Profile,
+    source: &ClassProfile,
     level: u8,
     copy: crate::maps::InMap,
     at: Position,
     difficulty: crate::maps::DungeonDifficulty,
-) -> Result<Entity, String> {
-    let owner = spawn_player_identity(world, profile, level, copy, at, difficulty);
-    // Run native Player initialization before the profile installs PowerPools;
-    // otherwise its Without<PowerPools> query never installs health regeneration.
-    world
-        .run_system_once(crate::spell_cast::powers::init_player_powers)
-        .map_err(|error| {
-            format!("initialize simulator leader through native player powers: {error}")
-        })?;
-    spawning::initialize(world, owner, owner, profile.clone())?;
-    // Preserve the native runtime-only stable before removing NPC ownership.
-    // This headless player has no transport InWorld/character identity.
-    crate::hunter_pet::init_pet_stable(world, owner)
-        .ok_or("initialize simulator leader runtime pet stable")?;
-    world
+) -> Result<(Entity, Profile), String> {
+    let owner = spawn_parity_player(world, source.spec_id, level, source.race, copy, difficulty)?;
+    world.entity_mut(owner).insert(at);
+    class_spawn::install_class(world, owner, owner, source, 0, 4, GearSource::Journal)?;
+    // install_class makes the actor follow `owner`; the party owner follows no one.
+    let follower = world
         .entity_mut(owner)
-        .remove::<(Follower, shared::components::UnitSummonedBy)>();
-    Ok(owner)
-}
-
-fn spawn_player_identity(
-    world: &mut World,
-    profile: &Profile,
-    level: u8,
-    copy: crate::maps::InMap,
-    at: Position,
-    difficulty: crate::maps::DungeonDifficulty,
-) -> Entity {
-    world
-        .spawn((
-            Player {
-                name: profile.name.clone(),
-                race: 1,
-                class: profile.class_id,
-                appearance: default(),
-            },
-            Level(level),
-            shared::components::UnitLevel(level),
-            UnitFactionTemplate(1),
-            at,
-            shared::components::Rotation {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            copy,
-            crate::persistence::ClientId(1),
-            difficulty,
-            crate::networking::CombatTarget::default(),
-            crate::networking::Moving(false),
-            shared::components::UnitPowers::default(),
-        ))
-        .id()
+        .take::<Follower>()
+        .ok_or("simulator leader lacks its class profile")?;
+    world.entity_mut(owner).remove::<(
+        shared::components::UnitSummonedBy,
+        crate::creature_ai::FollowOwner,
+    )>();
+    Ok((owner, follower.profile))
 }
 
 pub fn update_leader(world: &mut World) {
     let leaders: Vec<_> = world
-        .query::<(Entity, &LeaderProfile)>()
+        .query_filtered::<Entity, With<LeaderProfile>>()
         .iter(world)
-        .map(|(entity, profile)| (entity, profile.0.clone()))
         .collect();
-    for (owner, profile) in leaders {
+    for owner in leaders {
         if crate::spell_cast::targets::is_alive(world, owner) {
-            ai::update_follower(world, owner, &Follower { owner, profile });
+            let leader = ai::acting_follower(world, owner).expect("simulator leader profile");
+            ai::update_follower(world, owner, &leader);
         }
     }
 }
@@ -572,41 +485,10 @@ pub fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json:
         .iter()
         .map(|(enemy, _)| *enemy)
         .find(|enemy| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
-    let level = world.get::<Level>(unit).unwrap().0;
-    let entries: Vec<_> = world
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .filter(|entry| {
-            entry.available(follower.profile.spec_id, level)
-                && entry.slot == super::kit::Slot::Attack
-        })
-        .cloned()
-        .collect();
-    let mut decisions = Vec::new();
-    if let Some(target) = target {
-        for entry in entries {
-            let conditions =
-                super::kit_ai::conditions_met(world, unit, target, &party, &enemies, &entry);
-            let spell = world
-                .resource::<crate::spell_info::SpellStore>()
-                .get(entry.spell_id)
-                .unwrap()
-                .clone();
-            let native = format!(
-                "{:?}",
-                crate::spell_cast::read_native_cast_start(world, unit, &spell, target)
-            );
-            decisions.push(
-                serde_json::json!({"spell":entry.spell_id,"conditions":conditions,"native":native}),
-            );
-        }
-    }
     serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"target":target.map(Entity::to_bits),
         "enemies":enemies.iter().map(|(enemy,_)| enemy.to_bits()).collect::<Vec<_>>(),
         "self_hazard":super::hazards::target_is_hazardous(world,unit,unit),
-        "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target)),
-        "offense":decisions})
+        "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target))})
 }
 
 pub fn inspect_tank_movement(world: &mut World, tank: Entity) -> Result<Option<bool>, String> {
@@ -622,8 +504,9 @@ pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
 }
 
+/// The tank opens a pull with its native taunt, resolved when it spawned.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
-    let spell_id = world.get::<Follower>(tank).unwrap().profile.attack_spell;
+    let spell_id = world.get::<Follower>(tank).unwrap().profile.taunt_spell;
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
