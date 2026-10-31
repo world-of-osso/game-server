@@ -63,7 +63,7 @@ fn native_surfaces(los: &mut los::LosMap, point: Vec2) -> Result<Vec<f32>, Strin
     Ok(surfaces)
 }
 
-/// Use logged horizontal positions and continuity-selected native layers, then check LOS.
+/// Interpolate grounded anchors, clear lower native surfaces, and check every flight segment.
 fn flight_path(
     ground_start: Vec3,
     ground_end: Vec3,
@@ -81,41 +81,42 @@ fn flight_path(
     {
         return Err("projected flight endpoints do not match logged samples".into());
     }
+    let duration = last.seconds - first.seconds;
+    if !duration.is_finite() || duration <= 0.0 {
+        return Err("flight sample timestamps are not strictly increasing".into());
+    }
     let mut path = vec![ground_start, ground_start + Vec3::Y * CLEARANCE];
-    let mut previous_height = ground_start.y;
+    let mut previous_height = ground_start.y + CLEARANCE;
     for pair in samples.windows(2) {
         let seconds = pair[1].seconds - pair[0].seconds;
         if !seconds.is_finite() || seconds <= 0.0 {
             return Err("flight sample timestamps are not strictly increasing".into());
         }
         let point = pair[1].horizontal;
-        let max_change = VERTICAL_BOUND * seconds;
-        let candidates = surfaces(point, previous_height)?;
+        let fraction = (pair[1].seconds - first.seconds) / duration;
+        let baseline = ground_start.y + (ground_end.y - ground_start.y) * fraction;
+        let candidates = surfaces(point, baseline)?;
         if candidates.iter().any(|height| !height.is_finite()) {
             return Err(format!(
                 "invalid flight surface at {point:?}: {candidates:?}"
             ));
         }
-        let height = candidates
-            .iter()
-            .copied()
-            .filter(|height| (height - previous_height).abs() <= max_change)
-            .min_by(|a, b| {
-                (a - previous_height).abs().total_cmp(&(b - previous_height).abs())
-            })
-            .ok_or_else(|| {
-                format!(
-                    "no flight surface within continuity bound at {point:?}: previous={previous_height}, max_change={max_change}, candidates={candidates:?}"
-                )
-            })?;
+        let below = candidates
+            .into_iter()
+            .filter(|height| *height <= baseline)
+            .max_by(f32::total_cmp);
+        let mut height = below.map_or(baseline, |surface| baseline.max(surface + CLEARANCE));
+        if pair[1].seconds == last.seconds {
+            height = height.max(ground_end.y + CLEARANCE);
+        }
+        let max_change = VERTICAL_BOUND * seconds;
+        if (height - previous_height).abs() > max_change {
+            return Err(format!(
+                "flight altitude exceeds continuity bound at {point:?}: previous={previous_height}, next={height}, max_change={max_change}"
+            ));
+        }
         previous_height = height;
-        path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
-    }
-    if (previous_height - ground_end.y).abs() > navigation::AGENT_CLIMB {
-        return Err(format!(
-            "flight's final surface {previous_height} does not match projected landing {}",
-            ground_end.y
-        ));
+        path.push(Vec3::new(point.x, height, point.y));
     }
     path.push(ground_end);
     for (index, pair) in path.windows(2).enumerate() {
@@ -231,11 +232,11 @@ pub(super) fn build_paths(
             start,
             end,
             &points,
-            |point, previous_height| {
+            |point, baseline| {
                 let mut candidates = native_surfaces(&mut los.borrow_mut(), point)?;
-                if let Some(floor) =
-                    nav.borrow_mut()
-                        .floor_polygon(Vec3::new(point.x, previous_height, point.y))?
+                if let Some(floor) = nav
+                    .borrow_mut()
+                    .floor_polygon(Vec3::new(point.x, baseline, point.y))?
                     && (floor.x - point.x).hypot(floor.z - point.y) < 0.001
                 {
                     candidates.push(floor.y);
@@ -286,7 +287,7 @@ fn dawnbreaker_logged_endpoint_surfaces_are_reported() {
 }
 
 #[test]
-fn inferred_flight_selects_continuous_layer_and_checks_every_segment() {
+fn inferred_flight_clears_lower_surfaces_and_checks_every_segment() {
     let start = Vec3::new(0.0, 2.0, 0.0);
     let end = Vec3::new(10.0, 4.0, 0.0);
     let samples = [
@@ -362,7 +363,43 @@ fn flight_continuity_uses_the_logged_sample_interval() {
 }
 
 #[test]
-fn inferred_flight_rejects_missing_layers_impossible_changes_and_blocked_segments() {
+fn inferred_flight_ignores_higher_layers_and_raises_for_lower_surfaces() {
+    let start = Vec3::ZERO;
+    let end = Vec3::new(10.0, 100.0, 0.0);
+    let samples = [
+        LoggedPoint {
+            horizontal: Vec2::ZERO,
+            seconds: 0.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(5.0, 0.0),
+            seconds: 1.0,
+        },
+        LoggedPoint {
+            horizontal: Vec2::new(10.0, 0.0),
+            seconds: 2.0,
+        },
+    ];
+    let path = flight_path(
+        start,
+        end,
+        &samples,
+        |point, _| {
+            Ok(if point.x == 5.0 {
+                vec![45.0, 55.0, 5000.0]
+            } else {
+                vec![100.0]
+            })
+        },
+        |_, _| Ok(true),
+    )
+    .unwrap();
+    assert_eq!(path[2], Vec3::new(5.0, 60.0, 0.0));
+    assert_eq!(path[3], Vec3::new(10.0, 115.0, 0.0));
+}
+
+#[test]
+fn inferred_flight_rejects_invalid_surfaces_speed_and_blocked_segments() {
     let start = Vec3::ZERO;
     let end = Vec3::new(10.0, 0.0, 0.0);
     let samples = [
@@ -375,28 +412,27 @@ fn inferred_flight_rejects_missing_layers_impossible_changes_and_blocked_segment
             seconds: 1.0,
         },
     ];
-    let missing =
-        flight_path(start, end, &samples, |_, _| Ok(vec![]), |_, _| Ok(true)).unwrap_err();
-    assert!(missing.contains("continuity bound"));
-    let impossible = flight_path(
+    let clear_sky = flight_path(start, end, &samples, |_, _| Ok(vec![]), |_, _| Ok(true)).unwrap();
+    assert_eq!(clear_sky[2], Vec3::new(10.0, 15.0, 0.0));
+    let invalid = flight_path(
         start,
         end,
         &samples,
-        |_, _| Ok(vec![1000.0]),
+        |_, _| Ok(vec![f32::NAN]),
         |_, _| Ok(true),
     )
     .unwrap_err();
-    assert!(impossible.contains("continuity bound"));
-    let other_layer = Vec3::new(end.x, 250.0, end.z);
-    let wrong_landing = flight_path(
+    assert!(invalid.contains("invalid flight surface"));
+    let high_landing = Vec3::new(end.x, 250.0, end.z);
+    let impossible = flight_path(
         start,
-        other_layer,
+        high_landing,
         &samples,
         |_, _| Ok(vec![0.0]),
         |_, _| Ok(true),
     )
     .unwrap_err();
-    assert!(wrong_landing.contains("does not match projected landing"));
+    assert!(impossible.contains("continuity bound"));
     let blocked = flight_path(
         start,
         end,
