@@ -54,6 +54,8 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 `FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. The landing lies under WMO liquid type 941 at Y 278.167; a live-party water crossing remains untested. NPC fall damage remains unmodeled.
 
+`FLOODGATE_DAM_GATE_LOG_CORRELATED`: Swampface Done opens Dam Gate 505620 and its collision proxy 528436 at spawn 30001653. The other 528436 placement stays unchanged. WCL `67c3WanVygd4ZvCt`/1 crosses the gate plane after Swampface; the exact Retail trigger is unknown.
+
 ## Ara-Kara ambient flyers and eggs
 
 TDB's Jabbing Flyer 216341 spawns 30003831, 30003832, 30003838, 30003846, 30003848, 30003853 and 30003854 carry both PC and NPC immunity and the `[DNT] Cosmetic Spawn State Dead` aura 387851. Treat these authored spawns as ambient; do not infer an unlock from combat logs. Other Flyer spawns have no such immunity override. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 show attackable Flyers near unflagged placements, but do not identify their TDB spawn GUIDs.
