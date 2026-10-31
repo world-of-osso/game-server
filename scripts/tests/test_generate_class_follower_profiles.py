@@ -39,6 +39,33 @@ class ClassFollowerProfilesTest(unittest.TestCase):
         self.assertEqual([row['race_source'] for row in rows], ['RACE_FROM_PARITY_PROFILE', 'RACE_FROM_SIMC_PROFILE'])
         self.assertEqual(rows[1]['talents'], 'abc')
 
+    def test_guardian_uses_tracked_mid2_profile_instead_of_mid1_simc(self):
+        db = sqlite3.connect(":memory:")
+        db.executescript("""
+            CREATE TABLE chr_classes(ID INTEGER, Filename TEXT);
+            CREATE TABLE chr_specialization(ID INTEGER, Name_lang TEXT, ClassID INTEGER, Role INTEGER);
+            CREATE TABLE chr_races(ID INTEGER, Name_lang TEXT);
+            INSERT INTO chr_classes VALUES(11, 'DRUID');
+            INSERT INTO chr_specialization VALUES(104, 'Guardian', 11, 0);
+            INSERT INTO chr_races VALUES(4, 'Night Elf');
+        """)
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            (root / 'profiles/MID1').mkdir(parents=True)
+            (root / 'profiles/MID1/MID1_Druid_Guardian.simc').write_text(
+                'druid="Old"\nspec=guardian\nrace=nightelf\ntalents=old\n'
+            )
+            parity = root / 'parity'
+            parity.mkdir()
+            (parity / '104.profile.json').write_text(json.dumps({
+                'spec_id': 104, 'class': 'druid', 'spec': 'guardian',
+                'race': 'Night Elf', 'talents': 'current', 'reference_tier': 'MID2',
+            }))
+            [guardian] = generate(db, root, parity)
+        self.assertEqual(guardian['talents'], 'current')
+        self.assertEqual(guardian['race_source'], 'RACE_FROM_PARITY_PROFILE')
+        self.assertEqual(guardian['source'], '104.profile.json')
+
     def test_decode_records_success_and_failure(self):
         profiles = [
             {'spec_id': 66, 'talents': 'valid'},

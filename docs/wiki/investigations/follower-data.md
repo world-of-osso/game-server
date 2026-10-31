@@ -2,7 +2,7 @@
 
 ## Player-class profile inputs — 2026-10-30
 
-The [class-follower contract](../../specs/follower-dungeons.md#player-class-follower-design-2026-10-30) uses 39 tracked SimC/parity source profiles, not story-NPC identities. Their source hashes and decoded talent entries are in `scripts/reference/class-follower-profiles.json`; 31 passed offline decoding and eight retain explicit rejection reasons. Server admission must also validate each selected build against its native trait tree. Keystone/WCL band profiles remain separate and are not qualified by this roster.
+The [class-follower contract](../../specs/follower-dungeons.md#player-class-follower-design-2026-10-30) uses 39 tracked SimC/parity source profiles, not story-NPC identities. Their source hashes and decoded talent entries are in `scripts/reference/class-follower-profiles.json`; 32 passed offline decoding and seven retain explicit rejection reasons. Guardian uses the tracked [MID2 Raider.IO profile](../../specs/healer-tank-replay/104.md), replacing the invalid MID1 SimC loadout. Server admission must also validate each selected build against its native trait tree. Keystone/WCL band profiles remain separate and are not qualified by this roster.
 
 SimC Hunter exports can contain trailing zero bits after the native tree nodes. Retail import reads current tree nodes without rejecting trailing bits. Hunter nodes 94991 and 94976 belong to group 10531, whose condition 26696 grants one rank at level 71; the offline profile decoder subtracts those native grants when converting total ranks to purchases. The ordinary player import retains its purchased-rank convention.
 

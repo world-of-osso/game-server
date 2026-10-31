@@ -144,6 +144,21 @@ mod tests {
     }
 
     #[test]
+    fn guardian_class_follower_profile_passes_native_validation() {
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, &spells, 90);
+        assert!(
+            profiles.iter().any(|profile| profile.spec_id == 104),
+            "the current Guardian loadout must be selectable after native validation"
+        );
+    }
+
+    #[test]
     fn class_profiles_fill_each_missing_role_from_source_profiles() {
         let profiles = read_profiles().unwrap();
         for role in [GroupRole::Tank, GroupRole::Healer, GroupRole::Dps] {
