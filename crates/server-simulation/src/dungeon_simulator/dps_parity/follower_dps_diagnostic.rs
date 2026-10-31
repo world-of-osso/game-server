@@ -214,6 +214,32 @@ fn follower_tank_precombat_starts_consecration_on_simc_clock() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB and a Protection Warrior SimC trace"]
+fn follower_warrior_precombat_casts_battle_stance() {
+    let (mut app, actor, target, profile) = prepare_follower(215517, 90, 2813);
+    assert_eq!(profile.spec_id, 73);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::LiteralParityFixture);
+    for _ in 0..5 {
+        app.update();
+    }
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("warrior tank trace");
+    super::follower_tank_precombat::execute(&mut app, actor, target, std::path::Path::new(&trace))
+        .unwrap();
+    assert!(crate::auras::has_aura(app.world(), actor, 386164));
+    assert!(
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(386164)
+                && event.kind == CombatLogKind::CastSuccess)
+    );
+}
+
+#[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
     use server::test_support::healer_intake::{Hit, HitKind};
