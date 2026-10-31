@@ -1,5 +1,7 @@
-//! Bounded PlayerCondition semantics: existing ContentTuning levels and earned achievements.
-//! Other gates remain explicit unknowns. ClientExecutable is metadata; PvPFaction0 is unset.
+//! Bounded PlayerCondition semantics: existing ContentTuning levels, earned achievements
+//! and load-time WorldStateExpressions. Other gates remain explicit unknowns.
+//! ClientExecutable is metadata; PvPFaction0 is unset.
+use crate::world_state_expression::WorldStateExpressions;
 use rusqlite::{Connection, OptionalExtension, types::Value};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -10,6 +12,7 @@ const DISABLED: u32 = 0x100;
 #[derive(Clone, Debug)]
 pub(crate) enum ConditionRule {
     Always,
+    Never,
     Level { min: u8, max: u8 },
     Achievement { id: u32 },
     Unsupported(String),
@@ -18,6 +21,7 @@ impl ConditionRule {
     pub(crate) fn evaluate(&self, level: u8, earned: Option<&BTreeSet<u32>>) -> Result<bool, &str> {
         match self {
             Self::Always => Ok(true),
+            Self::Never => Ok(false),
             Self::Level { min, max } => Ok(level >= *min && (*max == 0 || level <= *max)),
             Self::Achievement { id } => earned
                 .map(|earned| earned.contains(id))
@@ -30,18 +34,23 @@ impl ConditionRule {
 pub(crate) fn load_conditions(
     conn: &Connection,
     ids: BTreeSet<u32>,
+    expressions: &WorldStateExpressions,
 ) -> Result<BTreeMap<u32, ConditionRule>, String> {
     let mut result = BTreeMap::new();
     for id in ids {
         if id == 0 {
             continue;
         }
-        result.insert(id, load_condition(conn, id)?);
+        result.insert(id, load_condition(conn, id, expressions)?);
     }
     Ok(result)
 }
 
-fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
+fn load_condition(
+    conn: &Connection,
+    id: u32,
+    expressions: &WorldStateExpressions,
+) -> Result<ConditionRule, String> {
     let Some(fields) = read_condition_fields(conn, id)? else {
         return Ok(ConditionRule::Unsupported(format!(
             "PlayerCondition {id} missing"
@@ -54,6 +63,19 @@ fn load_condition(conn: &Connection, id: u32) -> Result<ConditionRule, String> {
     }
     if let Some(reason) = unsupported_predicate(&fields, id, flags)? {
         return Ok(ConditionRule::Unsupported(reason));
+    }
+    // TC ConditionMgr IsPlayerMeetingCondition: the expression is one more AND gate.
+    let expression = condition_number(&fields, id, "WorldStateExpressionID")?;
+    if expression != 0 {
+        match expressions.evaluate(conn, expression) {
+            Ok(true) => {}
+            Ok(false) => return Ok(ConditionRule::Never),
+            Err(reason) => {
+                return Ok(ConditionRule::Unsupported(format!(
+                    "PlayerCondition {id}: {reason}"
+                )));
+            }
+        }
     }
     read_supported_predicate(conn, id, &fields, flags)
 }
@@ -172,6 +194,7 @@ fn supported_field(name: &str, value: &Value) -> bool {
             | "MinLevel"
             | "MaxLevel"
             | "Achievement_0"
+            | "WorldStateExpressionID"
     ) {
         return true;
     }
@@ -213,6 +236,33 @@ fn supported_field(name: &str, value: &Value) -> bool {
 mod tests {
     use super::*;
 
+    fn expressions() -> WorldStateExpressions {
+        let db2 = crate::test_data::world_db_path()
+            .parent()
+            .unwrap()
+            .join("db2/active");
+        WorldStateExpressions::read(&db2).unwrap()
+    }
+
+    #[test]
+    fn world_state_expression_gate_combines_with_its_level_range() {
+        let conn = Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        // Dragonflight item context picker241's low-level entry: ContentTuning2485
+        // (10–69) AND WorldStateExpression38025 (untemplated world state21851 == 0).
+        let condition = load_condition(&conn, 103325, &expressions()).unwrap();
+        for (level, eligible) in [(9, false), (10, true), (32, true), (69, true), (70, false)] {
+            assert_eq!(
+                condition.evaluate(level, None),
+                Ok(eligible),
+                "level{level}"
+            );
+        }
+    }
+
     #[test]
     fn suggested_provider_client_executable_level_gate_is_not_unknown() {
         let conn = Connection::open_with_flags(
@@ -221,7 +271,7 @@ mod tests {
         )
         .unwrap();
         // Authored Random Battleground34154: ClientExecutable, PvPFaction0, tuning982(10–90).
-        let condition = load_condition(&conn, 34154).unwrap();
+        let condition = load_condition(&conn, 34154, &expressions()).unwrap();
         for (level, eligible) in [(9, false), (10, true), (90, true), (91, false)] {
             assert_eq!(
                 condition.evaluate(level, None),
@@ -230,7 +280,7 @@ mod tests {
             );
         }
         // Wailing Caverns33956 also requires ModifierTree143498; keep it unknown.
-        let unknown = load_condition(&conn, 33956).unwrap();
+        let unknown = load_condition(&conn, 33956, &expressions()).unwrap();
         assert!(
             unknown
                 .evaluate(20, None)
@@ -247,7 +297,7 @@ mod tests {
         )
         .unwrap();
         // Existing Grim Batol115171: WithinOrAbove, PvPFaction0, tuning2720(80).
-        let condition = load_condition(&conn, 115171).unwrap();
+        let condition = load_condition(&conn, 115171, &expressions()).unwrap();
         assert_eq!(condition.evaluate(79, None), Ok(false));
         assert_eq!(condition.evaluate(80, None), Ok(true));
         assert_eq!(condition.evaluate(90, None), Ok(true));

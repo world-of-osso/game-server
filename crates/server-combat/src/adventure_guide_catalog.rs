@@ -201,7 +201,11 @@ impl CatalogData {
             .flat_map(|s| [s.condition, s.bonus0, s.bonus1])
             .chain(gates.iter().map(|g| g.condition))
             .collect();
-        let conditions = load_conditions(conn, ids)?;
+        let db2 = journal_csv
+            .parent()
+            .ok_or("AdventureJournal.csv has no DB2 directory")?;
+        let expressions = crate::world_state_expression::WorldStateExpressions::read(db2)?;
+        let conditions = load_conditions(conn, ids, &expressions)?;
         let tags = read_rows::<Tag>(conn, "perks_activity_tag")?
             .into_iter()
             .map(|tag| PerksActivityTag {

@@ -80,6 +80,7 @@ pub struct DungeonItemLevels {
     trees: HashMap<u32, Tree>,
     nodes: HashMap<u32, Vec<Node>>,
     pickers: HashMap<u32, Vec<PickerEntry>>,
+    expressions: crate::world_state_expression::WorldStateExpressions,
 }
 
 impl DungeonItemLevels {
@@ -107,6 +108,7 @@ impl DungeonItemLevels {
             trees,
             nodes,
             pickers,
+            expressions: crate::world_state_expression::WorldStateExpressions::read(db2)?,
         })
     }
 
@@ -131,12 +133,13 @@ impl DungeonItemLevels {
         for entry in entries {
             let met = match entry.condition {
                 0 => true,
-                id => {
-                    crate::adventure_guide::conditions::load_conditions(db, BTreeSet::from([id]))?
-                        [&id]
-                        .evaluate(level, None)
-                        .map_err(|reason| format!("item context picker{picker}: {reason}"))?
-                }
+                id => crate::adventure_guide::conditions::load_conditions(
+                    db,
+                    BTreeSet::from([id]),
+                    &self.expressions,
+                )?[&id]
+                    .evaluate(level, None)
+                    .map_err(|reason| format!("item context picker{picker}: {reason}"))?,
             };
             if met == (entry.flags & PICKER_NEGATE_CONDITION != 0) {
                 continue;
