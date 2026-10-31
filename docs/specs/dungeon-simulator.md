@@ -121,6 +121,11 @@ Production `HunterPetPlugin` and `PetControlPlugin` load native pet family/speci
 - `dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state`: exact spawn/spell allocation reuse with fresh clocks, actors and event queues (RED→GREEN6.39s).
 - `dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn`: actual kill→native corpse decay→absent actor sampling (RED→GREEN11.23s).
 
+## Dawnbreaker deck replay
+
+- [ ] Replay the party's transport-carried deck phase from WCL `x3HzDRn6yVjqCbt8` fight 7, 86,000–162,380 ms. Apply Radiant Light 449042 at 166,807 ms, after the logged commander death, and identify the replay in run output as `deck_population_unsourced`. Do not report simulated deaths or credit for the replayed deck enemies.
+- [ ] Replace the replay when transport-backed deck population is sourced and executable. Nightfall Ritualist 214761 and Nightfall Commander 214762 have no map-2662 `content_creature` rows; do not invent their spawns.
+
 ## Known gaps (current cycle)
 
 - [x] Graph extraction and isolated one-pack RED/GREEN: pack20375759, 5.70 simulated seconds, 221 real combat events. This fixture limits the source population to that pack; it does not prove full-route admission.
