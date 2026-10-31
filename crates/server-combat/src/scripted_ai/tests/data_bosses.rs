@@ -73,6 +73,8 @@ mod edna_intro;
 mod emberon;
 #[path = "fangs_warmup.rs"]
 mod fangs_warmup;
+#[path = "floodgate_gate.rs"]
+mod floodgate_gate;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
