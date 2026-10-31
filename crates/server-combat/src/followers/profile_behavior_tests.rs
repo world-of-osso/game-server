@@ -21,13 +21,15 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     let db =
         rusqlite::Connection::open_with_flags(kit_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
-    let profile = catalog::load_catalog(&db)
-        .unwrap()
+    let catalog = catalog::load_catalog(&db).unwrap();
+    let profile = catalog
         .profiles
-        .into_iter()
+        .iter()
         .find(|profile| profile.entry == entry)
-        .expect("authenticated imported follower profile");
+        .expect("authenticated imported follower profile")
+        .clone();
     let mut h = harness_with_plugins(vec![], &[], 8, false, configure).unwrap();
+    h.app.insert_resource(catalog);
     // Full native metadata includes actual form/passive/trigger dependencies.
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app.insert_resource(world_db().unwrap().classes.clone());
