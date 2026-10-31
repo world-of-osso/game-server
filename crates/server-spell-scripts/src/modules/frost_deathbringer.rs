@@ -187,7 +187,15 @@ fn trigger_soul_rupture(world: &mut World, ctx: &EffectCtx, target: Entity, dama
     {
         spell_cast::cast_triggered(world, ctx.caster, 469169, Some(ctx.caster), ctx.depth + 1);
     }
-    spell_cast::launch_triggered_spell(world, ctx.caster, &rupture, Some(target), ctx.depth + 1);
+    rupture.cast_destination = Some(center.to_array());
+    spell_cast::launch_triggered_spell_with_primary(
+        world,
+        ctx.caster,
+        &rupture,
+        None,
+        Some(target),
+        ctx.depth + 1,
+    );
 }
 
 fn explode_mark(
@@ -393,7 +401,7 @@ fn filter_damage_effect(
     targets: &mut Vec<Entity>,
 ) {
     if spell.id == 439594 && effect == 0 {
-        targets.retain(|target| Some(*target) != _primary);
+        targets.retain(|target| Some(*target) != spell.cast_primary_target);
     }
     // SimC76f8118 sc_death_knight.cpp8239–8242/8300–8302/8516–8517:
     // Frost uses effect2 for Exterminate and effect4 for Mark, not Blood's effect1.

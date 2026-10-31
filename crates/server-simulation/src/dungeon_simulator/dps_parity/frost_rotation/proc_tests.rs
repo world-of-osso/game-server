@@ -775,6 +775,40 @@ fn frost_soul_rupture_from_real_mark_explosion() {
 }
 
 #[test]
+#[ignore = "native Soul Rupture after a lethal Reaper's Mark explosion"]
+fn frost_soul_rupture_hits_survivor_after_lethal_mark() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    assert!(auras::has_aura(run.app.world(), actor, 437161));
+    cast(&mut run, 439843);
+    assert!(auras::has_aura(run.app.world(), primary, 434765));
+    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    auras::remove_auras(run.app.world_mut(), primary, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 434765 && aura.caster == actor
+    });
+    for _ in 0..30 { run.app.update(); }
+    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(primary.to_bits()) && event.spell_id == Some(436304)
+        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "the native Mark explosion must kill the primary");
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "Soul Rupture must hit a living enemy around the dead primary");
+}
+
+#[test]
 #[ignore = "real Mark explosion grants Swift and Painful with no secondary target"]
 fn frost_soul_rupture_without_secondary_earns_swift_and_painful() {
     let _seed = crate::random::seed_scope(70448);
