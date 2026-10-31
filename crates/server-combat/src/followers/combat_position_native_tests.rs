@@ -39,10 +39,16 @@ fn timed_out_pending_follow_cannot_step_into_windrunner_watcher() {
         y: 107.80156,
         z: 3169.1316,
     };
-    h.app
-        .world_mut()
-        .entity_mut(follower)
-        .insert((map, UnitLevel(90), from));
+    h.app.world_mut().entity_mut(follower).insert((
+        map,
+        UnitLevel(90),
+        from,
+        shared::components::CharacterVisual {
+            race: 1,
+            class: 10,
+            appearance: Default::default(),
+        },
+    ));
     let owner_position = Position {
         x: 5234.0,
         y: 104.8,
