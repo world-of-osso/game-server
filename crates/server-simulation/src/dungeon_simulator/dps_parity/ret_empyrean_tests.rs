@@ -1,6 +1,6 @@
 //! SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP: sourced dispatch, native amounts/targets.
 use super::ret_purpose_tests::{current_holy_power, earn_finisher_power};
-use super::ret_tier_tests::{has, native_ret};
+use super::ret_tier_tests::{has, native_ret_with_targets};
 use super::*;
 use crate::spell_cast::{CastFailure, test_harness::ObservedCombatEvents};
 use shared::protocol::CombatLogKind;
@@ -15,7 +15,11 @@ const VERDICT_ARBITER: u32 = 1306161;
 const DIVINE_ARBITER: u32 = 1306923;
 
 fn fixture(selected: bool) -> Run {
-    let mut run = native_ret(4);
+    fixture_with_targets(selected, 1)
+}
+
+fn fixture_with_targets(selected: bool, targets: usize) -> Run {
+    let mut run = native_ret_with_targets(4, targets);
     if !selected {
         inputs::install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
         for _ in 0..4 {
@@ -298,7 +302,7 @@ fn dps_parity_ret_empyrean_storm_cancels_after_lethal_verdict() {
     use shared::components::Health;
 
     let _seed = crate::random::seed_scope(70448);
-    let mut run = fixture(true);
+    let mut run = fixture_with_targets(true, 3);
     let verdict = resolved_verdict(&run);
     earn_finisher_power(&mut run, verdict);
     let actor = run.actor;
