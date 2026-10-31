@@ -83,6 +83,10 @@ pub(super) fn cast_entry(world: &mut World, caster: Entity, _self_target: Entity
     let cap = script_effect_value(world, caster, ASCENDANCE, 6) as usize;
     let multiplier = script_effect_value(world, caster, ASCENDANCE, 9) / 100.0;
     let units = select_flame_shock_eligible_enemies(world, caster, cap);
+    // SimC76f8118 sc_shaman.cpp8645–8655 draws once for each entry target.
+    for _ in &units {
+        super::elemental_communication::draw_and_summon(world, caster);
+    }
     for &unit in &units {
         spell_cast::cast_triggered(world, caster, FLAME_SHOCK, Some(unit), depth + 1);
     }

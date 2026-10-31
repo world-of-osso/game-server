@@ -119,6 +119,29 @@ fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
 
 #[test]
 #[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_ascendance_draws_for_each_entry_target() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture_without_fellowship(3);
+    let (positive, total) = native_deck(&run);
+    let before = count_summons(&run);
+    for _ in 0..total {
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            run.actor,
+            1219480,
+            Some(run.actor),
+            1,
+        ));
+    }
+    assert_eq!(
+        count_summons(&run) - before,
+        positive * 3,
+        "each of three eligible entry targets draws from the native deck"
+    );
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
 fn elemental_communication_native_flame_shock_draws_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
     assert_native_builder_deck(fixture_without_fellowship(1), 188389);

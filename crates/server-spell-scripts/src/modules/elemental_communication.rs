@@ -91,7 +91,11 @@ fn draw_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo, fore
     {
         return;
     }
-    if draw_native_deck(world, caster) {
+    draw_and_summon(world, caster);
+}
+
+pub(super) fn draw_and_summon(world: &mut World, caster: Entity) {
+    if selected(world, caster) && draw_native_deck(world, caster) {
         spell_cast::scripts::summon_ancestor(world, caster, 0);
     }
 }
