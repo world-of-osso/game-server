@@ -288,21 +288,39 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
     );
     crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
     let pet = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let faction = *h
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(tank)
+        .unwrap();
     h.app.world_mut().entity_mut(pet).insert((
         map,
         here,
+        faction,
         crate::hunter_pet::HunterPet {
             owner: tank,
             slot: 0,
         },
         crate::pet_control::PetCharm::new([0; 10], shared::protocol::REACT_ASSIST),
     ));
-    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
-    assert!(
+    crate::pet_control::attack_start(h.app.world_mut(), pet, caller);
+    assert_eq!(
         h.app
             .world()
             .get::<crate::networking::CombatTarget>(pet)
-            .is_none_or(|target| target.0 != Some(helper)),
+            .unwrap()
+            .0,
+        Some(caller),
+        "the pet can attack the caller"
+    );
+    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .unwrap()
+            .0,
+        Some(caller),
         "a follower pet must not attack a pending helper"
     );
     assert!(
@@ -325,6 +343,16 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
             .get::<crate::creature_assistance::AssistanceCalled>(helper)
             .is_some(),
         "the native delayed dispatch must join the helper"
+    );
+    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .unwrap()
+            .0,
+        Some(helper),
+        "the pet can attack the helper after dispatch"
     );
     assert!(
         super::pull_set::risky_pending_helpers(h.app.world(), caller, tank).is_empty(),
