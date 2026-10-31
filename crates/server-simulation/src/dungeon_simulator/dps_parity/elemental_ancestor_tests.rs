@@ -156,7 +156,10 @@ fn elemental_ancestor_flame_shock_foreground_and_secondary_impacts_echo() {
                 && event.amount > 0
         })
         .count();
-    assert_eq!(hits, 2, "both actual Flame Shock impacts command the Ancestor");
+    assert_eq!(
+        hits, 2,
+        "both actual Flame Shock impacts command the Ancestor"
+    );
 }
 
 fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64, f64) {

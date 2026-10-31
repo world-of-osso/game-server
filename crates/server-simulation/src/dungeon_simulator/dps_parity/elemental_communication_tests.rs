@@ -51,7 +51,10 @@ fn fixture_without_fellowship(targets: usize) -> Run {
 fn wait_for_cooldown(run: &mut Run, spell: u32) {
     for _ in 0..1000 {
         let world = run.app.world();
-        let info = world.resource::<crate::spell_info::SpellStore>().get(spell).unwrap();
+        let info = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell)
+            .unwrap();
         let now = crate::spell_cast::history_now(world);
         if world
             .get::<crate::spell_cast::SpellHistory>(run.actor)
@@ -99,7 +102,12 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     }
     assert_eq!(
         count_summons(&run),
-        positive * if spell == 470057 { run.targets.len() } else { 1 },
+        positive
+            * if spell == 470057 {
+                run.targets.len()
+            } else {
+                1
+            },
         "each eligible execution or Voltaic target draws once from the native deck"
     );
     if matches!(spell, 188389 | 470057) {

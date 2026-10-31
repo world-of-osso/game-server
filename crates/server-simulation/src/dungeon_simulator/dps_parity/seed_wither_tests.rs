@@ -250,25 +250,58 @@ fn seed_native_lethal_owner_damage_explodes_on_survivors() {
     let _seed = crate::random::seed_scope(70448);
     let (mut run, expiry, _) = prepare_actual_seed(3);
     let primary = run.targets[0];
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     for _ in 0..100 {
         run.app.update();
-        if run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0) {
+        if run
+            .app
+            .world()
+            .get::<Health>(primary)
+            .is_some_and(|health| health.current <= 0.0)
+        {
             break;
         }
     }
-    for _ in 0..5 { run.app.update(); }
+    for _ in 0..5 {
+        run.app.update();
+    }
     assert!(crate::spell_cast::now(run.app.world()) < expiry);
-    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_some_and(|health| health.current <= 0.0)
+    );
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.target == Some(primary.to_bits()) && event.spell_id == Some(1259790)
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "the owned periodic damage must kill the seeded target");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(1259790)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the owned periodic damage must kill the seeded target"
+    );
     for survivor in &run.targets[1..] {
-        assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.target == Some(survivor.to_bits()) && event.spell_id == Some(EXPLOSION)
-            && event.kind == CombatLogKind::Damage && event.amount > 0), "Seed must explode on survivor {survivor:?}");
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(run.actor.to_bits())
+                    && event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(EXPLOSION)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Seed must explode on survivor {survivor:?}"
+        );
     }
 }
 

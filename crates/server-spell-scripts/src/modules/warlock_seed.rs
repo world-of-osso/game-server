@@ -260,7 +260,10 @@ fn detonate_owned_seed(world: &mut World, caster: Entity, target: Entity) {
 }
 
 fn seed_removed(world: &mut World, target: Entity, aura: &AuraInstance, reason: RemoveReason) {
-    let detonate = matches!(reason, RemoveReason::Consumed | RemoveReason::Expired | RemoveReason::Death);
+    let detonate = matches!(
+        reason,
+        RemoveReason::Consumed | RemoveReason::Expired | RemoveReason::Death
+    );
     if !detonate || !is_supported_owner(world, aura.caster) {
         return;
     }
@@ -285,12 +288,16 @@ fn seed_removed(world: &mut World, target: Entity, aura: &AuraInstance, reason: 
     };
     // SimC player.cpp7146–7221 cancels the dot on demise; dot.cpp75–81
     // invokes its last tick, which queues the area explosion even for a dead primary.
-    queued_triggers::schedule_area_trigger(world, &ctx, queued_triggers::DestinationTrigger {
-        target,
-        spell_id: EXPLOSION,
-        delay_ms: 0,
-        destination: position.to_array(),
-    });
+    queued_triggers::schedule_area_trigger(
+        world,
+        &ctx,
+        queued_triggers::DestinationTrigger {
+            target,
+            spell_id: EXPLOSION,
+            delay_ms: 0,
+            destination: position.to_array(),
+        },
+    );
 }
 
 fn apply_background_dot(world: &mut World, caster: Entity, target: Entity) {
