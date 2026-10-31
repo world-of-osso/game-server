@@ -57,10 +57,11 @@ fn simulator_leader_uses_native_mount_and_area_flight_permission() {
         y: -34.85623,
         z: -76.0,
     };
-    h.app
-        .world_mut()
-        .entity_mut(owner)
-        .insert((at, crate::maps::InMap::continent(34)));
+    h.app.world_mut().entity_mut(owner).insert((
+        at,
+        crate::maps::InMap::continent(34),
+        crate::class_progression::KnownSpells::fixture(vec![123]),
+    ));
     h.app.insert_resource(GroundMap::with_area_samples(&[(
         34,
         Vec3::new(at.x, at.y, at.z),
@@ -68,6 +69,12 @@ fn simulator_leader_uses_native_mount_and_area_flight_permission() {
     )]));
     h.app.insert_resource(areas(2));
     crate::test_support::flight::configure_leader(h.app.world_mut(), owner).unwrap();
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(owner)
+        .unwrap();
+    assert!(known.contains(123) && known.contains(32235));
     crate::test_support::flight::request_mount(h.app.world_mut(), owner).unwrap();
     h.advance(32);
     assert_eq!(h.app.world().get::<Mounted>(owner).unwrap().mount_id, 129);
