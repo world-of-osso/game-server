@@ -501,6 +501,21 @@ mod tests {
             *world.get::<Position>(player).unwrap(),
             *world.get::<Position>(follower).unwrap()
         );
+        world.get_mut::<Position>(follower).unwrap().x += 0.25;
+        store_passenger_offsets(&mut world);
+        let walked = *world.get::<TransportPassenger>(follower).unwrap();
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs(1));
+        advance_ships(&mut world);
+        let expected = source_pose(&world, ship).local_to_world(TransportPose {
+            position: walked.position,
+            orientation: walked.orientation,
+        });
+        assert_eq!(
+            *world.get::<Position>(follower).unwrap(),
+            engine_pose(expected).0
+        );
         disembark(&mut world, player);
         assert!(world.get::<TransportPassenger>(player).is_none());
         assert!(world.get::<Disembarking>(player).is_some());
