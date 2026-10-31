@@ -30,6 +30,33 @@ fn shadow_follower_slam_refuses_idle_outsider_and_hits_engaged_secondary() {
         crate::networking::CombatTarget(Some(primary)),
     ));
     face_actor_toward_primary(run.app.world_mut(), actor, primary);
+    let mut child = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1227621)
+        .unwrap()
+        .clone();
+    let center = *run.app.world().get::<Position>(primary).unwrap();
+    child.cast_destination = Some([center.x, center.y, center.z]);
+    let selected = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        actor,
+        Some(primary),
+        &child,
+        &child.effects[0],
+        0,
+        false,
+    )
+    .unwrap();
+    assert!(
+        selected.contains(&outsider),
+        "native child targeting must actually reach the idle outsider"
+    );
+    assert!(
+        selected.contains(&second),
+        "native child targeting must actually reach the engaged secondary"
+    );
     let encounter = crate::simc_apl_native::Encounter::Dungeon {
         started_at: crate::spell_cast::now(run.app.world()),
     };
