@@ -485,13 +485,13 @@ fn native_overrides_keep_charge_transforms_bonus_sums_factors_and_effect_vetoes(
     const FIRST: &[SpellScriptHook] = &[
         SpellScriptHook::ProcCharges(|_, _, _, amount| amount + 2.0),
         SpellScriptHook::ExtraComboPoints(|_, _, _| 1.0),
-        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 3.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _, _| 3.0),
         SpellScriptHook::EffectEnabled(|_, _, spell, index| spell != 453314 || index < 2),
     ];
     const SECOND: &[SpellScriptHook] = &[
         SpellScriptHook::ProcCharges(|_, _, _, amount| amount * 3.0),
         SpellScriptHook::ExtraComboPoints(|_, _, _| 2.0),
-        SpellScriptHook::NamedHealingMultiplier(|_, _, _| 2.0),
+        SpellScriptHook::NamedHealingMultiplier(|_, _, _, _| 2.0),
         SpellScriptHook::EffectEnabled(|_, _, _, _| true),
     ];
     let mut world = World::new();
@@ -510,7 +510,7 @@ fn native_overrides_keep_charge_transforms_bonus_sums_factors_and_effect_vetoes(
         3.0
     );
     assert_eq!(
-        script_registry::named_healing_multiplier(&world, caster, &spell),
+        script_registry::named_healing_multiplier(&world, caster, caster, &spell),
         6.0
     );
     assert!(script_registry::effect_enabled(&world, caster, 453314, 0));
@@ -527,7 +527,7 @@ fn native_overrides_keep_charge_transforms_bonus_sums_factors_and_effect_vetoes(
         0.0
     );
     assert_eq!(
-        script_registry::named_healing_multiplier(&world, caster, &spell),
+        script_registry::named_healing_multiplier(&world, caster, caster, &spell),
         1.0
     );
     assert!(script_registry::effect_enabled(&world, caster, 453314, 2));

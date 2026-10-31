@@ -233,7 +233,7 @@ pub type SnapshotHealingAuraHook =
 
 pub type ProcChargesHook = fn(&World, Entity, &SpellInfo, f32) -> f32;
 pub type ExtraComboPointsHook = fn(&World, Entity, &SpellInfo) -> f32;
-pub type NamedHealingMultiplierHook = fn(&World, Entity, &SpellInfo) -> f32;
+pub type NamedHealingMultiplierHook = fn(&World, Entity, Entity, &SpellInfo) -> f32;
 pub type EffectEnabledHook = fn(&World, Entity, u32, u8) -> bool;
 
 pub type WeaponAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
@@ -1938,12 +1938,17 @@ pub fn extra_combo_points(world: &World, caster: Entity, spell: &SpellInfo) -> f
         .sum()
 }
 
-pub fn named_healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
+pub fn named_healing_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
         .hooks()
         .filter_map(|hook| match hook {
-            SpellScriptHook::NamedHealingMultiplier(run) => Some(run(world, caster, spell)),
+            SpellScriptHook::NamedHealingMultiplier(run) => Some(run(world, caster, target, spell)),
             _ => None,
         })
         .product()

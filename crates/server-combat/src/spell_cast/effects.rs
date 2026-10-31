@@ -2668,7 +2668,7 @@ fn apply_heal_with_raw(
         stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
     };
     let taken = general_taken * periodic_taken * caster_taken;
-    let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
+    let named = super::scripts::healing_multiplier(world, ctx.caster, target, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
         );

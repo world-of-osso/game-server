@@ -9,6 +9,6 @@ use combat::spell_info::SpellInfo;
 pub(super) const HOOKS: &[SpellScriptHook] =
     &[SpellScriptHook::NamedHealingMultiplier(healing_multiplier)];
 
-fn healing_multiplier(_: &World, _: Entity, spell: &SpellInfo) -> f32 {
+fn healing_multiplier(_: &World, _: Entity, _: Entity, spell: &SpellInfo) -> f32 {
     if spell.id == 382551 { 0.1 } else { 1.0 }
 }
