@@ -120,6 +120,11 @@ fn crenna_follow_position_does_not_pull_windrunner_dragonhawk() {
     let initial = crate::spell_cast::targets::position(h.app.world(), healer).unwrap();
     let center = crate::spell_cast::targets::position(h.app.world(), hawk).unwrap();
     assert!(initial.distance(center) > radius);
+    let unguarded_follow_point = Vec3::new(5316.1387, 126.344864, 3142.1423);
+    assert!(
+        unguarded_follow_point.distance(center) < radius,
+        "the authored follow offset must enter the Dragonhawk radius"
+    );
     let mut farthest = 0.0_f32;
     for _ in 0..200 {
         h.advance(1);
