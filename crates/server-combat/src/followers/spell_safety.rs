@@ -10,9 +10,8 @@ pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) ->
     action_safe(world, caster, target, Some(spell))
 }
 
-/// Shared admission for a follower spell or a follower-owned pet's direct attack.
-pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u32>) -> bool {
-    let follower = world
+fn controlling_follower(world: &World, actor: Entity) -> Option<Entity> {
+    world
         .get::<super::Follower>(actor)
         .map(|_| actor)
         .or_else(|| {
@@ -25,8 +24,30 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                         .map(|pet| pet.owner)
                 })?;
             world.get::<super::Follower>(owner).map(|_| owner)
-        });
-    let Some(follower) = follower else {
+        })
+}
+
+/// Admit native chain recipients only from the follower's planned first wave.
+pub fn chain_candidate_allowed(
+    world: &World,
+    actor: Entity,
+    primary: Entity,
+    candidate: Entity,
+) -> bool {
+    let Some(follower) = controlling_follower(world, actor) else {
+        return true;
+    };
+    let caller = world
+        .get::<crate::networking::CombatTarget>(follower)
+        .and_then(|target| target.0)
+        .unwrap_or(primary);
+    super::pull_set::members(world, caller, actor).contains(&candidate)
+        && !super::pull_set::pending_helpers(world, caller, actor).contains(&candidate)
+}
+
+/// Shared admission for a follower spell or a follower-owned pet's direct attack.
+pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u32>) -> bool {
+    let Some(follower) = controlling_follower(world, actor) else {
         return true;
     };
     let enemy_target = targets::relation_matches(world, actor, target, targets::Relation::Enemy);
@@ -51,6 +72,14 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
     }
     if !pending.is_empty() {
         return false;
+    }
+    let Some((caster_radius, target_radius)) =
+        super::unintended_reach::spell_reach_without_chain(world, actor, spell, target)
+    else {
+        return false;
+    };
+    if caster_radius <= 0.0 && target_radius <= 0.0 {
+        return true;
     }
     let caster = actor;
     let Some(map) = world.get::<InMap>(caster).copied() else {
