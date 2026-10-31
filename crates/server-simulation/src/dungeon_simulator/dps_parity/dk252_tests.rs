@@ -1169,6 +1169,9 @@ fn dk252_army_epidemic_hits_survivors_after_primary_dies() {
             .collect()
     };
     assert_eq!(army.len(), 8);
+    // Army setup advances long enough for untouched fixture combat references to expire.
+    // All four encounter targets must remain engaged when the lethal strike lands.
+    engage_fixture_opponents(&mut run);
     run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     literal_rotation::execution::execute(
