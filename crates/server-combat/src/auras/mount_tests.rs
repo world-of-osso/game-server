@@ -325,6 +325,46 @@ fn mounting_in_combat_fails() {
 }
 
 #[test]
+fn radiant_light_allows_mounting_in_combat_only_while_active() {
+    let mut h = rider(225, true, &[449042]).expect("real mount and Radiant Light catalog");
+    let caster = h.caster;
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(449042)
+        .unwrap();
+    let effect_mask = aura_effect_mask(spell);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 449042,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(CombatStatus(true));
+    mount(&mut h);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.app.world().get::<Mounted>(caster).is_some());
+    cancel_mount(&mut h);
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 449042
+    });
+    mount(&mut h);
+    assert_eq!(
+        h.inbox.failed.last().unwrap().reason,
+        CastFailReason::AffectingCombat
+    );
+    assert!(h.app.world().get::<Mounted>(caster).is_none());
+}
+
+#[test]
 fn a_mounted_player_cannot_cast_and_dismounts_with_cancel_mount_aura() {
     let Some(mut h) = rider(225, true, &[]) else {
         return;

@@ -170,6 +170,8 @@ pub const MOD_BLOCK_PERCENT: u32 = 51;
 pub const MOD_WEAPON_CRIT_PERCENT: u32 = 52;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
+/// SPELL_AURA_ALLOW_MOUNT_IN_COMBAT.
+pub const ALLOW_MOUNT_IN_COMBAT: u32 = 539;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
 pub const CONTROL_VEHICLE: u32 = 236;
 pub const TRANSFORM: u32 = 56;
