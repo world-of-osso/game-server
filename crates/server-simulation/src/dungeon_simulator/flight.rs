@@ -72,9 +72,10 @@ fn flight_path(
     mut surfaces: impl FnMut(Vec2, f32) -> Result<Vec<f32>, String>,
     mut clear: impl FnMut(Vec3, Vec3) -> Result<bool, String>,
 ) -> Result<Vec<Vec3>, String> {
-    let Some(first) = samples.first() else {
-        return Err("flight leg has no logged samples".into());
-    };
+    if samples.len() < 2 {
+        return Err("flight leg needs at least two logged samples".into());
+    }
+    let first = &samples[0];
     let last = samples.last().unwrap();
     if first.horizontal != Vec2::new(ground_start.x, ground_start.z)
         || last.horizontal != Vec2::new(ground_end.x, ground_end.z)
@@ -97,6 +98,11 @@ fn flight_path(
                 .lerp(pair[1].horizontal, i as f32 / count as f32);
             let max_change = VERTICAL_BOUND * seconds / count as f32;
             let candidates = surfaces(point, previous_height)?;
+            if candidates.iter().any(|height| !height.is_finite()) {
+                return Err(format!(
+                    "invalid flight surface at {point:?}: {candidates:?}"
+                ));
+            }
             let height = candidates
                 .iter()
                 .copied()
@@ -181,11 +187,10 @@ pub(super) fn build_paths(
     }
     let mut boss_heights = Vec::new();
     for entry in &graph.follower_boss_entries {
-        let source = graph
+        let source = *graph
             .follower_boss_sources
             .get(entry)
-            .copied()
-            .unwrap_or(*entry);
+            .ok_or_else(|| format!("flight boss {entry} lacks a source binding"))?;
         let matches: Vec<_> = graph
             .packs
             .iter()

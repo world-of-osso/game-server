@@ -61,7 +61,7 @@ pub fn configure_leader(world: &mut World, owner: Entity) -> Result<(), String> 
     let mut known = world
         .entity_mut(owner)
         .take::<crate::class_progression::KnownSpells>()
-        .unwrap_or_default();
+        .ok_or("flight fixture leader lacks native known spells")?;
     known.grant_fixture_spell(32235);
     world.entity_mut(owner).insert(known);
     if world

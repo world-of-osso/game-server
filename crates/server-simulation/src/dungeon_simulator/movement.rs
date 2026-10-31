@@ -41,9 +41,10 @@ pub(super) fn begin_flight(
             .get::<Position>(owner)
             .ok_or("flight leader lacks position")?,
     );
-    let Some(first) = points.first().copied().map(Vec3::from_array) else {
-        return Err("flight path is empty".into());
-    };
+    if points.len() < 2 {
+        return Err("flight path needs at least two points".into());
+    }
+    let first = Vec3::from_array(points[0]);
     if position.distance(first) > 0.001 {
         return Err(format!(
             "flight leader is not at the validated takeoff: {position:?} vs {first:?}"
