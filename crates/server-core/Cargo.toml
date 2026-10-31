@@ -6,7 +6,7 @@ rust-version.workspace = true
 
 [dependencies]
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "5fe2ff2ec050b0a1662c74f88f8a274964f264c9" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "cff29ac9376428fb298647d3899787a3d4033c6f" }
 rusqlite = { version = "0.35", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 # The existing immutable fixture cache hashes database content, not paths alone.

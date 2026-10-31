@@ -13,7 +13,7 @@ wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882
 # Bake math: the glam that bevy 0.19 re-exports, so its Vec3 is `shared::los::Vec3`.
 glam = "0.32"
 # The LOS runtime the bake writes for (`shared::los`).
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "5fe2ff2ec050b0a1662c74f88f8a274964f264c9" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "cff29ac9376428fb298647d3899787a3d4033c6f" }
 # Bake only: spawned creature displays from world.db and model names from the listfile.
 rusqlite = { version = "0.35", features = ["bundled"], optional = true }
 
