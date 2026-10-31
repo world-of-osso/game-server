@@ -90,7 +90,7 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     }
     assert_eq!(
         count_summons(&run),
-        positive * if spell == 470057 { 3 } else { 1 },
+        positive * if spell == 470057 { run.targets.len() } else { 1 },
         "each eligible execution or Voltaic target draws once from the native deck"
     );
     if matches!(spell, 188389 | 470057) {
@@ -123,7 +123,14 @@ fn elemental_communication_native_bolt_executions_draw_four_of_fifty() {
 #[ignore = "requires private262 native DB/profile"]
 fn elemental_communication_voltaic_draws_for_each_available_target() {
     let _seed = crate::random::seed_scope(70448);
-    assert_native_builder_deck(fixture_without_fellowship(3), 470057);
+    let mut run = fixture_without_fellowship(3);
+    let owner = fixture_player(&run);
+    for index in 3..7 {
+        let target = spawn_dummy(&mut run.app, run.actor, index).unwrap();
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, target);
+        run.targets.push(target);
+    }
+    assert_native_builder_deck(run, 470057);
 }
 
 #[test]
