@@ -88,8 +88,10 @@ fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
     for _ in 0..30 {
         run.app.update();
     }
-    assert!(run.app.world().get::<Health>(primary).unwrap().current <= 0.0);
+    let health = run.app.world().get::<Health>(primary).unwrap().current;
     let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    let kick_events: Vec<_> = events.iter().filter(|event| event.spell_id == Some(205523)).collect();
+    assert!(health <= 0.0, "primary health={health}, Blackout Kick events={kick_events:?}");
     let lethal = events.iter().position(|event| {
         event.source == Some(actor.to_bits())
             && event.target == Some(primary.to_bits())
