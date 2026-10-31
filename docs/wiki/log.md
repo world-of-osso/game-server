@@ -1,3 +1,4 @@
+- 2026-10-31: Added [encounter boss immunity](systems/encounter-boss-immunity.md) from retail log counts.
 - 2026-10-30: Documented [follower flight](systems/follower-flight.md), landing and the profile-mount gap.
 - 2026-10-30: Added WMO liquid sampling and swimmer floor selection to [swimming and breath](systems/swimming-and-breath.md); real-map qualification pending.
 - 2026-10-30: Recorded [complete-route inspection](systems/navigation.md#complete-route-inspection) and the Brackenhide node-limit result.

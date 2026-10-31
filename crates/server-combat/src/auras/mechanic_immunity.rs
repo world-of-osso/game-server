@@ -6,6 +6,36 @@ use crate::spell_info::{SpellInfo, SpellStore};
 
 const ATTR0_NO_IMMUNITIES: u32 = 0x2000_0000;
 
+/// Mechanics that never land on encounter bosses in retail logs, while they land on trash
+/// and on adds inside the same boss pulls: disoriented 2, fear 5, root 7, sleep 10,
+/// stun 12, freeze 13, knockout 14, polymorph 17, sapped 30. Snares, bleeds and taunts
+/// do land. Evidence: docs/wiki/systems/encounter-boss-immunity.md.
+const ENCOUNTER_BOSS_MECHANICS: u64 =
+    1 << 2 | 1 << 5 | 1 << 7 | 1 << 10 | 1 << 12 | 1 << 13 | 1 << 14 | 1 << 17 | 1 << 30;
+
+/// A unit bound to a DungeonEncounter through the encounter-state catalog carries the
+/// retail boss immunity mask against other casters; the logs measure only those, and
+/// boss scripts channel their own stun-mechanic spells (Landslide 21808).
+fn encounter_boss_mask(world: &World, caster: Entity, target: Entity) -> u64 {
+    if caster == target {
+        return 0;
+    }
+    let (Some(map), Some(npc)) = (
+        world.get::<crate::maps::InMap>(target),
+        world.get::<shared::components::Npc>(target),
+    ) else {
+        return 0;
+    };
+    let bound = world
+        .get_resource::<crate::maps::MapStore>()
+        .is_some_and(|store| {
+            store
+                .raid_creature_encounters
+                .contains_key(&(map.map_id, npc.template_id))
+        });
+    if bound { ENCOUNTER_BOSS_MECHANICS } else { 0 }
+}
+
 fn matches_mechanic(spell: &SpellInfo, effect_mechanic: u32, mechanic: i32) -> bool {
     mechanic > 0
         && (effect_mechanic == mechanic as u32
@@ -59,12 +89,20 @@ pub(crate) fn has_mechanic_immunity(world: &World, target: Entity, mechanic: u32
 /// Pass zero for category-only hit rejection; effect hits also supply their mechanic.
 pub(crate) fn blocks_mechanic(
     world: &World,
+    caster: Entity,
     target: Entity,
     spell: &SpellInfo,
     effect_mechanic: u32,
 ) -> bool {
     if super::attributes(spell, 0) & ATTR0_NO_IMMUNITIES != 0 {
         return false;
+    }
+    if mask_matches(
+        spell,
+        effect_mechanic,
+        encounter_boss_mask(world, caster, target),
+    ) {
+        return true;
     }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras
