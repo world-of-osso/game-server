@@ -107,15 +107,17 @@ fn is_two_handed(inventory_type: u8) -> bool {
 
 /// Select own-map loot first, then other same-tier loot; never repeat an item.
 /// Unknown Journal difficulty/faction masks are excluded rather than guessed.
-pub fn select_items(
+pub(super) fn select_items(
     candidates: &[JournalGearCandidate],
     map: u32,
     class: u8,
     primary: PrimaryStat,
     spec_id: u32,
+    level: u8,
     known: &KnownSpells,
     spells: &crate::spell_info::SpellStore,
     templates: &ItemTemplates,
+    item_specs: &super::item_spec::ItemSpecs,
 ) -> GearSelection {
     use EquipmentSlot::*;
     let mut candidates: Vec<_> = candidates
@@ -152,6 +154,8 @@ pub fn select_items(
                 || shield_tank
                 || no_dual_wield
                 || monk_two_hand
+                || (item.scaling.class_id == 2
+                    && !item_specs.allows(row.item_id, item, spec_id, level))
                 || !equipment_eligible(item, class, primary, known, templates)
             {
                 return None;
