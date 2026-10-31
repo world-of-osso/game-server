@@ -101,15 +101,14 @@ fn mistweaver_ancient_teachings_splits_damage_and_preserves_critical_result() {
 }
 
 #[test]
-#[ignore = "requires native top-character profiles and world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_waits_for_four_mana_tea_stacks() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Mana;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 270).unwrap();
-    let mut policy = super::prepare(&mut run, healer).unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let healer = run.healer;
     {
         let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
         mana.current = mana.max * 0.5;
@@ -128,9 +127,6 @@ fn mistweaver_waits_for_four_mana_tea_stacks() {
     };
     apply(run.app.world_mut());
     for _ in 0..10 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     assert!(
@@ -147,9 +143,6 @@ fn mistweaver_waits_for_four_mana_tea_stacks() {
         apply(run.app.world_mut());
     }
     for _ in 0..30 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     assert!(
@@ -166,12 +159,13 @@ fn mistweaver_waits_for_four_mana_tea_stacks() {
 }
 
 #[test]
-#[ignore = "requires top-character profiles, native DB and SimC party pulse"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn mistweaver_prioritizes_rising_sun_kick_and_accumulates_mana_tea() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").unwrap();
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         270,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -196,26 +190,22 @@ fn mistweaver_prioritizes_rising_sun_kick_and_accumulates_mana_tea() {
 }
 
 #[test]
-#[ignore = "requires native top-character profiles and world database"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Health;
     use shared::protocol::CombatLogKind;
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 2).unwrap();
-    let tank = run.actor;
-    let healer = super::super::dps_parity::spawn_second_reference_player(&mut run, 270).unwrap();
-    let enemy = run.targets[0];
-    let add = run.targets[1];
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 2);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
+    let enemy = run.sources[0];
+    let add = run.sources[1];
     run.app
         .world_mut()
         .entity_mut(tank)
         .insert(crate::networking::CombatTarget(Some(enemy)));
     run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
-    let mut policy = super::prepare(&mut run, healer).unwrap();
     for _ in 0..150 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     assert!(
@@ -233,9 +223,6 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
         hp.current = hp.max;
     }
     for _ in 0..250 {
-        policy
-            .drive(run.app.world_mut(), healer, &[tank, healer])
-            .unwrap();
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
@@ -251,13 +238,14 @@ fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
 }
 
 #[test]
-#[ignore = "replays the MID2 Mistweaver against the SimC party pulse"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn mistweaver_uses_sheilun_on_party_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let party_trace =
         std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
-    let report = super::super::healer_simc_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         270,
+        90,
         Path::new(&trace),
         Path::new(&party_trace),
         300,
@@ -283,11 +271,11 @@ fn mistweaver_uses_sheilun_on_party_damage() {
 }
 
 #[test]
-#[ignore = "replays the MID2 Mistweaver against the SimC dummy trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn mistweaver_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(270, Path::new(&trace), 300, 70448).unwrap();
+        super::healer_simc_replay::replay_simc(270, 90, Path::new(&trace), 300, 70448).unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

@@ -162,6 +162,7 @@ pub(crate) fn teleport_creature_with_companions(
 }
 
 fn place_companion(world: &mut World, unit: Entity, destination: &WorldLocation) {
+    crate::transport::clear_passenger(world, unit);
     if let Some(mut navigation) = world.get_resource_mut::<crate::navigation::Navigation>() {
         navigation.cancel_route(unit);
     }

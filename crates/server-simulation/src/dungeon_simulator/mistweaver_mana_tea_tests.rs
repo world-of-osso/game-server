@@ -14,10 +14,10 @@ fn stacks(world: &bevy::prelude::World, unit: bevy::prelude::Entity) -> u8 {
 }
 
 #[test]
-#[ignore = "requires the native MID2 Mistweaver profile and canonical DB"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
-    let mut run = super::super::dps_parity::prepare_registered_player(66, 1).unwrap();
-    let actor = super::super::dps_parity::spawn_second_reference_player(&mut run, 270).unwrap();
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let actor = run.healer;
     for _ in 0..5 {
         run.app.update();
     }
@@ -36,7 +36,7 @@ fn mana_tea_spending_earns_stacks_and_channel_consumes_them() {
         "actual paid healing casts must earn Mana Tea stacks"
     );
     assert_eq!(
-        super::super::dps_parity::literal_rotation::execution::resolve_action(
+        super::dps_parity::literal_rotation::execution::resolve_action(
             run.app.world(),
             actor,
             115294

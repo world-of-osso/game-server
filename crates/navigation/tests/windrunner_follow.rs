@@ -5,6 +5,26 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 #[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL with the Darkflame bake"]
+fn formation_uses_owners_floor_near_stacked_polygons() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut map = NavigationMap::open(&root.join("2651")).unwrap();
+    let follower = Vec3::new(535.1, 86.534424, 110.0);
+    let owner = Vec3::new(535.1, 56.281815, 114.0);
+    let offset = Vec3::new(535.1, 56.281815, 110.0);
+    let path = map
+        .follow_formation_path(follower, offset, owner, &mut NavigationPlan::default())
+        .expect("formation path on the owner's floor");
+    assert!(path.complete, "formation must be reachable: {path:?}");
+    assert!(
+        path.collision_drop.is_some(),
+        "route must descend: {path:?}"
+    );
+    let destination = path.points.last().unwrap();
+    assert!((destination.y - owner.y).abs() < 1.0, "{destination:?}");
+}
+
+#[test]
 #[ignore = "requires GAME_SERVER_NAV_DIR with the Windrunner bake"]
 fn windrunner_ramp_formation_reaches_connected_ground() {
     let root = PathBuf::from(std::env::var_os("GAME_SERVER_NAV_DIR").expect("GAME_SERVER_NAV_DIR"));

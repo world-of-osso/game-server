@@ -2,7 +2,9 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::TraitLoadout;
-use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::AfterCastHook};
+use combat::spell_cast::{
+    effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook, scripts::AfterCastHook,
+};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
@@ -30,20 +32,17 @@ fn schedule_dragonfire(world: &mut World, caster: Entity, parent: &SpellInfo) {
     let Some(target) = parent.cast_primary_target else {
         return;
     };
-    let Some(position) = spell_cast::targets::position(world, target) else {
-        return;
+    let count = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0) as u32;
+    let ctx = EffectCtx {
+        caster,
+        spell: parent,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
     };
-    let count = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0) as usize;
     for index in 1..=count {
-        let Some(mut spell) = spell_cast::load_triggered_spell(world, DAMAGE, 1) else {
-            return;
-        };
-        spell
-            .misc
-            .as_mut()
-            .expect("native Dragonfire Brew misc")
-            .launch_delay = 1.5 * index as f32;
-        spell.cast_destination = Some(position.to_array());
-        spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+        // SimC76f8118 sc_monk.cpp3295–3297 and sc_monk.hpp1268–1272:
+        // each delayed action is canceled when its original target dies.
+        queued_triggers::schedule_full_trigger(world, &ctx, target, DAMAGE, 1500 * index);
     }
 }

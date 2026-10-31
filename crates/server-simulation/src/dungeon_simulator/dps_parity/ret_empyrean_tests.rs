@@ -1,6 +1,6 @@
 //! SIMC_RET_EMPYREAN_LEGACY_RELATIONSHIP: sourced dispatch, native amounts/targets.
 use super::ret_purpose_tests::{current_holy_power, earn_finisher_power};
-use super::ret_tier_tests::{has, native_ret};
+use super::ret_tier_tests::{has, native_ret_with_targets};
 use super::*;
 use crate::spell_cast::{CastFailure, test_harness::ObservedCombatEvents};
 use shared::protocol::CombatLogKind;
@@ -15,7 +15,11 @@ const VERDICT_ARBITER: u32 = 1306161;
 const DIVINE_ARBITER: u32 = 1306923;
 
 fn fixture(selected: bool) -> Run {
-    let mut run = native_ret(4);
+    fixture_with_targets(selected, 1)
+}
+
+fn fixture_with_targets(selected: bool, targets: usize) -> Run {
+    let mut run = native_ret_with_targets(4, targets);
     if !selected {
         inputs::install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
         for _ in 0..4 {
@@ -289,6 +293,69 @@ fn dps_parity_ret_empyrean_wrath_verdict_emits_native_percent_background_storm()
     assert!(
         (measured - expected).abs() <= 4.0 * f64::from(f32::EPSILON),
         "real damage stage multiplier{measured} must equal native Legacy percentage{expected}"
+    );
+}
+
+#[test]
+#[ignore = "native Empyrean Legacy after a lethal Verdict"]
+fn dps_parity_ret_empyrean_storm_cancels_after_lethal_verdict() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = fixture_with_targets(true, 3);
+    let verdict = resolved_verdict(&run);
+    earn_finisher_power(&mut run, verdict);
+    let actor = run.actor;
+    cast_ready(&mut run, AVENGING_WRATH, actor);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(has(&run, LEGACY_BUFF));
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    cast_ready(&mut run, verdict, primary);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(verdict)
+                && event.amount > 0),
+        "Verdict must kill the primary"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(DIVINE_STORM)
+                && event.amount > 0),
+        "the queued background Storm must cancel for a dead target"
     );
 }
 

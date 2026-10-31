@@ -113,7 +113,16 @@ pub(super) fn hymn_tick(
 }
 
 fn cast_hymn_tick(world: &mut World, ctx: &combat::spell_cast::effects::EffectCtx, target: Entity) {
-    combat::spell_cast::cast_triggered(world, ctx.caster, 64_844, Some(target), ctx.depth + 1);
+    if let Some(spell) = combat::spell_cast::load_triggered_spell(world, 64_844, ctx.depth + 1) {
+        combat::spell_cast::launch_triggered_spell_with_primary(
+            world,
+            ctx.caster,
+            &spell,
+            None,
+            Some(target),
+            ctx.depth + 1,
+        );
+    }
     if !has_aura(world, ctx.caster, BENEDICTION_SERENITY) {
         return;
     }

@@ -41,6 +41,10 @@ pub(crate) fn launch_damage(world: &mut World, caster: Entity, target: Entity) -
     let Some(mut payload) = combat::spell_cast::load_triggered_spell(world, 434481, 1) else {
         return false;
     };
+    // SimC76f8118 sc_evoker.cpp8740–8744 skips a sleeping marked target.
+    if !combat::spell_cast::targets::is_alive(world, target) {
+        return false;
+    }
     let effect = payload
         .effects
         .iter()

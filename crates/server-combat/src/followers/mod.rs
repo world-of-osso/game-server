@@ -15,8 +15,6 @@ mod floodgate_healer_tests;
 mod form_combat_tests;
 pub mod gear;
 mod hazards;
-#[cfg(test)]
-mod healer_benchmark_profile_tests;
 mod healer_context;
 #[cfg(test)]
 mod healer_group_cancel_tests;
@@ -147,7 +145,7 @@ use shared::group::GroupRole;
 #[cfg(test)]
 mod group_buff_tests;
 
-pub use ai::{AplControlled, FollowerReach, engaged_targets, party_units};
+pub use ai::{AplControlled, FollowerReach, acting_follower, engaged_targets, party_units};
 pub use catalog::{FollowerCatalog, load_catalog};
 pub use kit_ai::is_tank;
 pub use live_facts::{ObservedEvents, observe_unit};
@@ -237,7 +235,7 @@ impl Follower {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(test)]
 pub(crate) fn select_party(profiles: &[Profile], role: GroupRole) -> Result<Vec<Profile>, String> {
     let mut party = Vec::with_capacity(4);
     for (required, count) in [

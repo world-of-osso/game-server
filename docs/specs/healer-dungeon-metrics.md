@@ -30,22 +30,20 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 
 ## Tests asserting this spec
 
-- `crates/server/src/dungeon_simulator/healer_benchmark_tests.rs`: concrete fight extraction and repeatability.
+- `crates/server/src/dungeon_simulator/healer_benchmark_tests.rs`: concrete fight extraction, repeatability, and every healer spec spawning as its own class actor.
 - `crates/server/src/dungeon_simulator/healer_intake_tests.rs`: raw-before-absorb capture, same-input native determinism and recipient reduction/armor/shield controls.
 - `crates/server/src/dungeon_simulator/healer_report.rs`: explicit ignored actual Stockade capture and recorded-input report drivers.
 - `crates/server/src/dungeon_simulator/healer_coefficient_tests.rs`: isolated native direct-heal probes for all seven specs.
 
 ## Known gaps (current cycle)
 
-- [ ] NATIVE_HEALER_POLICY_ABSENT:65,256,264,270,1468 until13191 publishes explicit available decision kits. The approved alternate-spec actor bridge is not an authored follower identity claim; production roster remains unchanged.
-- [ ] Alternate specs require the policy-owned primary heal/GCD reference; no zero-reference idle metrics. Use current master's unchanged book initialization. The separate14752 native-book helper is not a bridge dependency and is not duplicated.
 - [x] RED fixtures committed and pushed before implementation; historical behavioral RED executed. Targeted14PASS/0FAIL after master rebase at dce76186c (209.11s), including persisted actual Stockade replay and15 sourced direct-heal probes. [Generated native results and proof scope](../reports/healer-stockade-seed1/README.md). Broader integration gates remain lead-owned.
 
-## Approved alternate-spec benchmark bridge
+## Healer actors
 
-`HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` configures65 on source Garrick209057,256 on Henry215011,264 on Shuja209053,270 on Bo227734 and1468 on Kybel215240. Keep source entry/name/display and DB2 class, request the native healer specialization, and clear source DPS/tank actions rather than treating them as healer policy. Existing105/257 configurations remain unchanged. Private copies and benchmark only: no production roster or canonical DB mutation.
+Every one of the seven healer specs spawns directly as its class follower (`class_spawn`, spec APL, real Journal gear) in the default party's healer slot. No actor is borrowed from another spec's follower profile and no kit policy is installed. The former `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` and its `NATIVE_HEALER_POLICY_ABSENT` / `NATIVE_HEALER_PRIMARY_HEAL_ABSENT` rows are retired. Periodic-heal bookkeeping reads the healer's `KnownSpells`.
 
-JSON and Markdown label each alternate configuration with source entry/spec and requested spec, including blocked rows. Absent available decision rows report `NATIVE_HEALER_POLICY_ABSENT` before any party spawn; an unprovided primary heal reference reports `NATIVE_HEALER_PRIMARY_HEAL_ABSENT` rather than inventing idle normalization. Native class/spec mismatch blocks admission. [Exact source candidates and dependency boundaries](../reports/healer-alternate-spec-source-candidates.md) distinguish IDs from validated starter-book availability.
+APL encounter facts (`fight_remains`, `time_to_die`) are observed live from damage to the engaged enemies. A training dummy loses no health, so against SimC-replay dummies they read as unknown (10^9 s), and fight-length gates such as Discipline's plain Power Word: Shield and mana-gated Flash Heal stay closed. Dungeon runs against real creatures do not have this limit.
 
 ## Out of scope
 

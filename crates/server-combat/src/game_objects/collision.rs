@@ -250,6 +250,7 @@ pub(crate) fn sync_live_objects(
         return;
     };
     let mut active = LiveHulls::new();
+    let mut transports: HashMap<InMap, Vec<(Entity, Arc<LosTile>)>> = HashMap::new();
     cache.placed.retain(|entity, _| objects.contains(*entity));
     cache.errors.retain(|entity, _| objects.contains(*entity));
     for (entity, map, position, rotation, info, collision, visible) in &objects {
@@ -267,6 +268,12 @@ pub(crate) fn sync_live_objects(
         match cache.load_placed_hull(ground.data_dir(), entity, placement) {
             Ok(hull) => {
                 cache.errors.remove(&entity);
+                if info.go_type == 15 {
+                    transports
+                        .entry(*map)
+                        .or_default()
+                        .push((entity, Arc::clone(&hull)));
+                }
                 active.entry(*map).or_default().push(hull);
             }
             Err(error) => {
@@ -280,6 +287,7 @@ pub(crate) fn sync_live_objects(
             }
         }
     }
+    ground.set_transport_hulls(transports);
     ground.set_live_hulls(active.clone());
     if let Some(mut los) = los {
         los.set_live_hulls(active);

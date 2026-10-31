@@ -30,6 +30,9 @@ pub struct Discipline {
     bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
+    /// The engaged enemies of the current decision; `fight_remains` reads
+    /// them, not the heal or shield target.
+    enemies: Vec<Entity>,
 }
 impl Discipline {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
@@ -83,6 +86,7 @@ impl Discipline {
             bindings,
             equipment,
             encounter,
+            enemies: Vec::new(),
         })
     }
 }
@@ -105,6 +109,7 @@ pub struct PartyFacts<'a> {
     injured: usize,
     active_atonements: usize,
     atonement_remains: f64,
+    fight_remains: f64,
     borrowed_time: bool,
     darkness: bool,
     shield_discipline: bool,
@@ -116,6 +121,7 @@ impl Facts for PartyFacts<'_> {
             "party.active_atonements" => Ok(self.active_atonements as f64),
             "party.borrowed_time" => Ok(f64::from(self.borrowed_time)),
             "target.atonement_remains" => Ok(self.atonement_remains),
+            "fight_remains" => Ok(self.fight_remains),
             "party.darkness_up" => Ok(f64::from(self.darkness)),
             "party.shield_discipline" => Ok(f64::from(self.shield_discipline)),
             _ => self.native.value(name),
@@ -129,6 +135,7 @@ impl ActionFacts for PartyFacts<'_> {
             | "party.active_atonements"
             | "party.borrowed_time"
             | "target.atonement_remains"
+            | "fight_remains"
             | "party.darkness_up"
             | "party.shield_discipline" => self.value(name),
             _ => self.native.value_for(action, name),
@@ -167,12 +174,16 @@ impl Discipline {
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
         let atonement_remains = atonement_remaining(world, healer, target);
+        let fight_remains = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+            .with_targets(self.enemies.first().copied(), &self.enemies)
+            .value("fight_remains")?;
         let facts = PartyFacts {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             injured,
             active_atonements,
             atonement_remains,
+            fight_remains,
             borrowed_time: world
                 .get::<crate::class_progression::KnownSpells>(healer)
                 .is_some_and(|known| known.contains(390691)),
@@ -190,14 +201,16 @@ impl Discipline {
     }
 }
 impl Discipline {
-    /// Heal the party; damage `enemy` when no heal is due.
+    /// Heal the party; damage the first of `enemies` when no heal is due.
     pub fn drive(
         &mut self,
         world: &mut World,
         healer: Entity,
         party: &[Entity],
-        enemy: Option<Entity>,
+        enemies: &[Entity],
     ) -> Result<(), String> {
+        self.enemies = enemies.to_vec();
+        let enemy = enemies.first().copied();
         let living: Vec<_> = party
             .iter()
             .copied()
@@ -446,6 +459,6 @@ impl crate::follower::SpecRotation for Discipline {
         targets: &[Entity],
     ) -> Result<(), String> {
         let party = crate::follower::party_of(world, actor);
-        Discipline::drive(self, world, actor, &party, targets.first().copied())
+        Discipline::drive(self, world, actor, &party, targets)
     }
 }

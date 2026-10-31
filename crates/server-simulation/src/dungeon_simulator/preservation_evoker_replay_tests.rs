@@ -1,12 +1,13 @@
 use std::path::Path;
 
 #[test]
-#[ignore = "replays the Preservation Evoker against party pressure"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn preservation_casts_fire_breath_and_heals_from_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let party = std::env::var("HEALER_TANK_PARTY_TRACE").expect("HEALER_TANK_PARTY_TRACE required");
-    let report = super::super::healer_replay::replay_simc_party(
+    let report = super::healer_simc_replay::replay_simc_party(
         1468,
+        90,
         Path::new(&trace),
         Path::new(&party),
         300,
@@ -29,11 +30,11 @@ fn preservation_casts_fire_breath_and_heals_from_damage() {
 }
 
 #[test]
-#[ignore = "replays the MID2 Preservation Evoker against the SimC dummy trace"]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn preservation_evoker_heals_the_simc_dummy_party() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
     let report =
-        super::super::healer_replay::replay_simc(1468, Path::new(&trace), 300, 70448).unwrap();
+        super::healer_simc_replay::replay_simc(1468, 90, Path::new(&trace), 300, 70448).unwrap();
     let metrics = &report["metrics"];
     let effective = metrics["effective_hps"].as_f64().unwrap();
     let raw = metrics["raw_hps"].as_f64().unwrap();

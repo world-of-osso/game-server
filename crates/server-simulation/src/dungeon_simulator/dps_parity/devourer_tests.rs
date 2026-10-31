@@ -111,6 +111,119 @@ fn batch6_real_rotation_produces_voidsurge() {
 }
 
 #[test]
+#[ignore = "native Devourer delayed Voidsurge after its primary dies"]
+fn devourer_voidsurge_cancels_after_primary_dies() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    for target_dies in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(1480, 3).expect("native Devourer profile");
+        let actor = run.actor;
+        let primary = run.targets[0];
+        let survivor = run.targets[1];
+        engage(&mut run);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+        for _ in 0..30 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), actor, 1217607));
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            actor,
+            1245483,
+            Some(primary),
+            1,
+        ));
+        if target_dies {
+            run.app
+                .world_mut()
+                .get_mut::<Health>(primary)
+                .unwrap()
+                .current = 0.0;
+        }
+        for _ in 0..100 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let landed = events.iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1246160)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        });
+        assert_eq!(
+            landed, !target_dies,
+            "Voidsurge must cancel only for the dead primary"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native Voidstep after Retreat's primary dies"]
+fn devourer_voidstep_hits_survivor_after_primary_dies() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = prepare_literal(1480, 3).expect("native Devourer profile");
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    engage(&mut run);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        1223157,
+        Some(actor),
+        1,
+    ));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1223157));
+    let mut retreat = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(198793)
+        .unwrap()
+        .clone();
+    retreat.cast_primary_target = Some(primary);
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    crate::spell_cast::script_registry::before_native_on_cast(
+        run.app.world_mut(),
+        actor,
+        &retreat,
+        0,
+    );
+    for _ in 0..30 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1239526)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Voidstep must hit a living enemy around the caster"
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1223157));
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn batch8_monster_rising_follows_metamorphosis() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");

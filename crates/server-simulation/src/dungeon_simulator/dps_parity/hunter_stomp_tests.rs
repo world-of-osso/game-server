@@ -61,6 +61,58 @@ fn native_bm_wrath_triggers_thundering_hooves_from_permanent_pets() {
 }
 
 #[test]
+#[ignore = "native pet Stomp after the triggering primary dies"]
+fn native_bm_pet_stomps_survivor_after_primary_dies() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 3).expect("native literal BM fixture");
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    for parent in [19574, 217200] {
+        let mut spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(parent)
+            .unwrap()
+            .clone();
+        spell.cast_primary_target = Some(primary);
+        let hook = crate::spell_cast::script_registry::policy_tail_cast(run.app.world(), parent)
+            .expect("native pet Stomp policy");
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        hook(run.app.world_mut(), actor, &spell);
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(201754)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "parent {parent} must cause pet Stomp on a living enemy"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_barbed_stomps_the_pack_and_earns_mid2_cobra_fang() {
     use shared::protocol::CombatLogKind;

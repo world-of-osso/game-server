@@ -75,8 +75,7 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
     let Some(damage) = load_slam_damage(world, primary, depth) else {
         return;
     };
-    let plan = match spell_cast::plan_triggered_spell(world, caster, &damage, Some(primary), depth)
-    {
+    let plan = match spell_cast::plan_triggered_spell(world, caster, &damage, None, depth) {
         Ok(plan) => plan,
         Err(reason) => {
             warn!(?reason, "Tentacle Slam native area selection failed");
@@ -86,7 +85,14 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
     let units = spell_cast::selected_units(&plan);
     apply_slam_dots(world, caster, units, depth);
     // sc_priest_shadow.cpp1853–1869: VT before damage, then weak Madness.
-    spell_cast::launch_triggered_spell(world, caster, &damage, Some(primary), depth);
+    spell_cast::launch_triggered_spell_with_primary(
+        world,
+        caster,
+        &damage,
+        None,
+        Some(primary),
+        depth,
+    );
     cast_maddening_tentacles(world, caster, primary, depth);
 }
 
@@ -101,6 +107,7 @@ fn load_slam_damage(
         return None;
     };
     damage.cast_destination = Some([position.x, position.y, position.z]);
+    damage.cast_primary_target = Some(primary);
     Some(damage)
 }
 

@@ -222,7 +222,7 @@ fn native_item_and_control_gcd_remains_uses_actor_clock() {
 }
 
 fn feral() -> (App, Entity, Bindings) {
-    let mut app = super::super::runtime::build_app();
+    let mut app = super::super::runtime::build_literal_app();
     let copy = super::super::runtime::create_copy(&mut app);
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),

@@ -2,7 +2,7 @@ use super::healer_intake::Intake;
 use std::path::Path;
 
 #[test]
-#[ignore = "native replay CLI entry point"]
+#[ignore = "native replay CLI entry point; healer mode replays a class party over FOLLOWER_DPS_WORLD_DB"]
 fn native_replay_cli_driver() {
     let path = std::env::var("HEALER_TANK_TIMELINE").expect("HEALER_TANK_TIMELINE is required");
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");
@@ -19,22 +19,28 @@ fn native_replay_cli_driver() {
     }
     let report = match (source.as_str(), mode.as_str(), spec.as_str()) {
         ("simc", "healer", _) => {
+            let level = std::env::var("HEALER_TANK_LEVEL")
+                .expect("HEALER_TANK_LEVEL: the class party's level, 70 or 90")
+                .parse()
+                .expect("numeric party level");
             let duration = std::env::var("HEALER_TANK_DURATION")
                 .unwrap()
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
             if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
-                super::healer_replay::replay_simc_party(
+                super::healer_simc_replay::replay_simc_party(
                     spec.parse().unwrap(),
+                    level,
                     Path::new(&path),
                     Path::new(&party_trace),
                     duration,
                     seed,
                 )
             } else {
-                super::healer_replay::replay_simc(
+                super::healer_simc_replay::replay_simc(
                     spec.parse().unwrap(),
+                    level,
                     Path::new(&path),
                     duration,
                     seed,

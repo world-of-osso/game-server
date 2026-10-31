@@ -50,6 +50,8 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // sc_hunter.cpp6368–6379: native1258571 supplies the owner's Focus;
     // the pet child must not grant a second resource payload.
     spell_cast::cast_triggered(world, caster, OWNER_FOCUS, Some(caster), 1);
+    // SimC sc_hunter.cpp3096–3105, 6357–6365 and 6399–6405: both
+    // children are single-target; a dead primary cancels the pet action.
     spell_cast::cast_triggered(world, caster, PLAYER_DAMAGE, Some(target), 1);
     cast_pet_damage(world, caster, target);
 }

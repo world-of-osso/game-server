@@ -1,17 +1,7 @@
 //! Production follower gear and AI, measured independently of parity drivers.
 use super::*;
-use shared::components::{Level, UnitLevel, UnitSummonedBy};
+use shared::components::UnitSummonedBy;
 use shared::protocol::CombatLogKind;
-
-fn build_follower_app(path: &std::path::Path) -> App {
-    let mut app = super::super::runtime::build_app_with_world_db(path);
-    let db =
-        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .unwrap();
-    app.insert_resource(crate::followers::simulator::load_parity_catalog(&db).unwrap());
-    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db).unwrap();
-    app
-}
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
@@ -39,7 +29,7 @@ fn follower_dps_loads_spell_and_item_catalogs_from_selected_database() {
     )
     .unwrap();
     drop(db);
-    let app = build_follower_app(&path);
+    let app = build_snapshot_app(&path).unwrap();
     let spell = app
         .world()
         .resource::<crate::spell_info::SpellStore>()
@@ -69,31 +59,8 @@ fn prepare_follower(
 ) -> (App, Entity, Entity, crate::followers::Profile) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB")
         .expect("FOLLOWER_DPS_WORLD_DB must name the measurement snapshot");
-    let mut app = build_follower_app(std::path::Path::new(&path));
-    let copy = app
-        .world_mut()
-        .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
-            world
-                .resource_mut::<crate::maps::InstanceManager>()
-                .create_map(
-                    &maps,
-                    map,
-                    crate::maps::instances::InstanceEntrant {
-                        character_id: 1,
-                        leader: 1,
-                        difficulty_id: 205,
-                        ..default()
-                    },
-                    crate::maps::instances::Now {
-                        elapsed: 0.0,
-                        unix: 1_792_454_400,
-                    },
-                )
-                .unwrap()
-                .map
-        });
-    app.world_mut().remove_resource::<super::super::Space>();
-    crate::simc_apl_native::install_open_arena(app.world_mut());
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, map).unwrap();
     let profile = app
         .world()
         .resource::<crate::followers::FollowerCatalog>()
@@ -116,20 +83,7 @@ fn prepare_follower(
         .unwrap()
         .profile
         .clone();
-    let target = spawn_dummy(&mut app, actor, 0).unwrap();
-    let armor = app
-        .world()
-        .resource::<crate::world_data::WorldData>()
-        .creature_armor_at(DUMMY_ENTRY, 205, level)
-        .expect("native dummy armor at target level");
-    app.world_mut().entity_mut(target).insert((
-        Level(level),
-        UnitLevel(level),
-        crate::level_scaling::CreatureArmor(armor),
-    ));
-    app.world_mut()
-        .entity_mut(target)
-        .remove::<shared::level_scaling::LevelScaling>();
+    let target = spawn_level_dummy(&mut app, actor, level, 0).unwrap();
     (app, actor, target, profile)
 }
 

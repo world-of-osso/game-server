@@ -1,7 +1,7 @@
 //! Per-pull APL lifecycle for a class follower: its precombat list once, then the default list.
 use crate::literal_rotation::{self, PrecombatPoll, execution::Execution};
 use bevy::prelude::*;
-use server::followers::{AplControlled, Follower};
+use server::followers::AplControlled;
 use server::simc_apl::Action;
 use std::collections::VecDeque;
 
@@ -121,12 +121,13 @@ impl FollowerApl {
 /// Drive every APL-controlled follower after the follower brain positioned it.
 pub fn drive_followers(world: &mut World) {
     let units: Vec<_> = world
-        .query_filtered::<(Entity, &Follower), With<AplControlled>>()
+        .query_filtered::<Entity, With<AplControlled>>()
         .iter(world)
-        .map(|(unit, follower)| (unit, follower.profile.spec_id))
         .collect();
-    for (unit, spec) in units {
-        drive_follower(world, unit, spec);
+    for unit in units {
+        if let Some(follower) = server::followers::acting_follower(world, unit) {
+            drive_follower(world, unit, follower.profile.spec_id);
+        }
     }
 }
 
@@ -163,7 +164,7 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
 
 /// The follower's party, owner included; empty for an actor that is not a follower.
 pub fn party_of(world: &mut World, actor: Entity) -> Vec<Entity> {
-    match world.get::<Follower>(actor).map(|follower| follower.owner) {
+    match server::followers::acting_follower(world, actor).map(|follower| follower.owner) {
         Some(owner) => server::followers::party_units(world, owner),
         None => Vec::new(),
     }

@@ -17,6 +17,23 @@ pub struct FollowerReach(pub f32);
 #[derive(Component)]
 pub struct AplControlled;
 
+/// The simulator's headless leader: a party owner that fights with this
+/// profile. It owns the party, so it carries no `Follower` component.
+#[derive(Component)]
+pub(super) struct LeaderProfile(pub(super) super::Profile);
+
+/// `unit` as the follower brain sees it: its `Follower`, or a simulator leader
+/// following itself.
+pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
+    if let Some(follower) = world.get::<Follower>(unit) {
+        return Some(follower.clone());
+    }
+    world.get::<LeaderProfile>(unit).map(|leader| Follower {
+        owner: unit,
+        profile: leader.0.clone(),
+    })
+}
+
 pub(super) const MELEE_REACH: f32 = 2.0;
 const AUTO_SHOT: u32 = 75;
 
@@ -445,7 +462,7 @@ fn position_for_apl(
 
 /// Attackable enemies the follower's party is fighting, in this brain's priority order.
 pub fn engaged_targets(world: &mut World, unit: Entity) -> Vec<Entity> {
-    let Some(follower) = world.get::<Follower>(unit).cloned() else {
+    let Some(follower) = acting_follower(world, unit) else {
         return Vec::new();
     };
     let party = party_units(world, follower.owner);

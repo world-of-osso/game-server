@@ -3,6 +3,7 @@ include!("module_list.in");
 use crate::simc_apl_native::{FixtureAdds, FixtureTarget};
 use bevy::prelude::*;
 pub(crate) use inputs::equip_companions;
+pub(crate) use protection_paladin_rotation::ACTIVE_MITIGATION_AURAS as PROTECTION_ACTIVE_MITIGATION_AURAS;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -187,6 +188,78 @@ fn face_dummy_away_from_actor(world: &mut World, actor: Entity, target: Entity) 
         .get_mut::<Rotation>(target)
         .expect("parity dummy rotation")
         .y = orientation + std::f32::consts::FRAC_PI_2;
+}
+
+/// The `index`th fixture dummy in front of `actor`, at `level` with its native armor and
+/// without level scaling, as a class follower measured at that level meets it.
+pub(crate) fn spawn_level_dummy(
+    app: &mut App,
+    actor: Entity,
+    level: u8,
+    index: usize,
+) -> Result<Entity, String> {
+    let target = spawn_dummy(app, actor, index)?;
+    let armor = app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .creature_armor_at(DUMMY_ENTRY, 205, level)
+        .ok_or("native dummy armor at target level")?;
+    app.world_mut().entity_mut(target).insert((
+        shared::components::Level(level),
+        shared::components::UnitLevel(level),
+        crate::level_scaling::CreatureArmor(armor),
+    ));
+    app.world_mut()
+        .entity_mut(target)
+        .remove::<shared::level_scaling::LevelScaling>();
+    Ok(target)
+}
+
+/// The dungeon runtime over the measurement snapshot at `path`, with the
+/// parity follower and area-trigger catalogs read from that snapshot.
+pub(crate) fn build_snapshot_app(path: &std::path::Path) -> Result<App, String> {
+    let mut app = super::runtime::build_app_with_world_db(path);
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|error| format!("open measurement snapshot: {error}"))?;
+    app.insert_resource(
+        crate::followers::simulator::load_parity_catalog(&db).map_err(|error| error.to_string())?,
+    );
+    crate::spell_cast::area_trigger::install_native_catalog(app.world_mut(), &db)
+        .map_err(|error| error.to_string())?;
+    Ok(app)
+}
+
+/// A difficulty205 copy of `map` with the open origin arena of the dummy fixtures.
+pub(crate) fn create_open_follower_copy(
+    app: &mut App,
+    map: u32,
+) -> Result<crate::maps::InMap, String> {
+    let copy = app
+        .world_mut()
+        .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
+            world
+                .resource_mut::<crate::maps::InstanceManager>()
+                .create_map(
+                    &maps,
+                    map,
+                    crate::maps::instances::InstanceEntrant {
+                        character_id: 1,
+                        leader: 1,
+                        difficulty_id: 205,
+                        ..default()
+                    },
+                    crate::maps::instances::Now {
+                        elapsed: 0.0,
+                        unix: 1_792_454_400,
+                    },
+                )
+                .map(|created| created.map)
+        })
+        .map_err(|error| format!("create follower copy of map{map}: {error:?}"))?;
+    app.world_mut().remove_resource::<super::Space>();
+    crate::simc_apl_native::install_open_arena(app.world_mut());
+    Ok(copy)
 }
 
 fn spawn_targets(app: &mut App, actor: Entity, count: usize) -> Result<Vec<Entity>, String> {
@@ -484,7 +557,7 @@ pub(crate) fn spawn_reference(
     count: usize,
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
-    let mut app = super::runtime::build_app();
+    let mut app = super::runtime::build_literal_app();
     app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
@@ -1075,8 +1148,9 @@ fn dps_parity_native_bis_dummy_records_300s() {
         let directory = std::path::Path::new(
             "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
         );
-        let report = super::healer_replay::replay_simc_party(
+        let report = super::healer_simc_replay::replay_simc_party(
             spec,
+            90,
             &directory.join("66.simc-trace.log"),
             &directory.join("66.simc-party-pulse-seed70448.debug.log"),
             300,

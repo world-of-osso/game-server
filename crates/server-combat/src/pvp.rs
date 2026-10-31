@@ -511,9 +511,17 @@ impl Plugin for PvpPlugin {
         );
         app.add_systems(
             FixedUpdate,
-            crate::transport::store_passenger_offsets
+            (
+                crate::transport::sync_deck_passengers,
+                crate::transport::store_passenger_offsets,
+            )
+                .chain()
+                .after(crate::game_objects::collision::sync_live_objects)
                 .after(crate::networking::process_player_inputs)
-                .after(crate::networking::apply_terrain_gravity),
+                .after(crate::networking::apply_terrain_gravity)
+                .after(crate::followers::update_ai)
+                .after(crate::creature_ai::chase_system)
+                .after(crate::creature_ai::flight_follow::update),
         );
         app.add_systems(
             FixedUpdate,

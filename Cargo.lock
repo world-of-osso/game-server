@@ -6793,6 +6793,7 @@ dependencies = [
  "server-combat",
  "server-follower-apl",
  "server-spell-scripts",
+ "sha2",
  "shared",
  "tempfile",
 ]

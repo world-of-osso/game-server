@@ -21,6 +21,62 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
     );
 }
 
+#[test]
+#[ignore = "native Takedown pet impact after lethal owner damage"]
+fn survival_takedown_pet_cancels_after_owner_kills_primary() {
+    use shared::components::Health;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(255, 3).unwrap();
+    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    cast(&mut run, 883, true);
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    cast(&mut run, 1250646, false);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(1253859)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the owner impact must kill the primary"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(pet.to_bits())
+                && event.spell_id == Some(1253862)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))),
+        "the single-target pet impact must cancel after its primary dies"
+    );
+}
+
 fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
     let _seed = crate::random::seed_scope(seed);
     let mut run = prepare_literal(255, 1).unwrap();

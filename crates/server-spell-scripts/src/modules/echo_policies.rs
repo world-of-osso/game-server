@@ -158,6 +158,10 @@ fn queue_echo(
 ) {
     // Defer after the foreground action without a fabricated authored timer.
     world.commands().queue(move |world: &mut World| {
+        // SimC action/action.cpp:230–236 cancels the queued action if its target dies.
+        if !combat::spell_cast::targets::is_alive(world, target) {
+            return;
+        }
         let Some(mut child) = combat::spell_cast::load_triggered_spell(world, policy.payload, 1)
         else {
             return;

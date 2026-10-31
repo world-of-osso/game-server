@@ -1,7 +1,7 @@
 //! Actual Explosive Shot ticks must drive cleave and the equipped MID2 cooldowns.
 use super::marksmanship_mechanics_tests::{cast, owned_buff, player};
 use super::*;
-use shared::protocol::CombatLogKind;
+use shared::{components::Health, protocol::CombatLogKind};
 
 fn hits(run: &Run, spell: u32, target: Entity) -> usize {
     run.app
@@ -65,6 +65,43 @@ fn native_mm_explosive_ticks_cleave_only_actual_secondary_targets() {
         assert!(
             hits(&run, 212680, target) > 0,
             "native cleave reaches actual secondary {target:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private exact254 profile/traits and native world data"]
+fn native_mm_explosive_lethal_primary_tick_cleaves_survivors() {
+    let mut run = player(3);
+    let primary = run.targets[0];
+    let survivors = [run.targets[1], run.targets[2]];
+    cast(&mut run, 212431, false);
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    for _ in 0..160 {
+        run.app.update();
+    }
+    assert!(run.app.world().get::<Health>(primary).unwrap().current <= 0.0);
+    assert!(
+        hits(&run, 212431, primary) > 0,
+        "the Explosive tick killed its primary"
+    );
+    assert_eq!(
+        hits(&run, 212680, primary),
+        0,
+        "cleave excludes the primary"
+    );
+    for target in survivors {
+        assert!(
+            hits(&run, 212680, target) > 0,
+            "cleave reaches survivor {target:?}"
         );
     }
 }

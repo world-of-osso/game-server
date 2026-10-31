@@ -741,7 +741,7 @@ fn azure_remaining_formation_member_reaches_native_admission_after_leader_death(
 }
 
 #[test]
-#[ignore = "explicit Stockade32 Henry roster; opening200sim_s native movement reproduction"]
+#[ignore = "explicit Stockade32 Holy Priest roster (DUNGEON_SIMULATOR_HEALER_SPEC=257); opening200sim_s native movement reproduction"]
 fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
     let _rng_scope = crate::random::seed_scope(6);
     let mut run = spawn_run(6, &mut None).unwrap();
@@ -753,9 +753,9 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
             .get::<crate::followers::Follower>(healer)
             .unwrap()
             .profile
-            .entry,
-        215011,
-        "qualify the explicit Henry roster, never silently test Crenna"
+            .spec_id,
+        257,
+        "qualify the explicit Holy Priest roster, never silently test Restoration Druid"
     );
     let origin = *run.app.world().get::<Position>(healer).unwrap();
     let started = std::time::Instant::now();
@@ -833,7 +833,7 @@ fn write_stockade_follower_combat(run: &Run) -> Result<(), String> {
                 }
             }
             let total: i64 = damage.values().sum();
-            serde_json::json!({"entry": follower.profile.entry, "spec": follower.profile.spec_id,
+            serde_json::json!({"spec": follower.profile.spec_id,
             "casts": casts, "damage_by_spell": damage, "damage": total,
             "dps": total as f64 / run.now()})
         })
@@ -1078,49 +1078,40 @@ fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
 
 #[test]
 fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
-    let mut expected = [209057, 209072, 209053, 209059, 209065];
-    if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
-        expected = entries
+    let mut expected = crate::followers::simulator::DEFAULT_PARTY;
+    if let Ok(specs) = std::env::var("DUNGEON_SIMULATOR_PARTY_SPECS") {
+        expected = specs
             .split(',')
-            .map(|entry| entry.trim().parse::<u32>().unwrap())
+            .map(|spec| spec.trim().parse::<u32>().unwrap())
             .collect::<Vec<_>>()
             .try_into()
-            .expect("five requested native profiles");
+            .expect("five requested class specs");
     }
-    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_ENTRY") {
+    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_SPEC") {
         expected[1] = healer.parse().unwrap();
     }
     let level: u8 = std::env::var("DUNGEON_SIMULATOR_LEVEL")
         .map(|value| value.parse().unwrap())
         .unwrap_or(32);
     let run = spawn_run(1, &mut None).unwrap();
-    for (unit, entry) in run.party.members.iter().zip(expected[..4].iter()) {
-        let follower = run
-            .app
-            .world()
-            .get::<crate::followers::Follower>(*unit)
-            .unwrap();
-        assert_eq!(
-            follower.profile.entry, *entry,
-            "actual spawned native follower profile"
-        );
-    }
-    let leader = run
-        .app
-        .world()
-        .resource::<crate::followers::FollowerCatalog>()
-        .profiles
+    let world = run.app.world();
+    let spawned: Vec<_> = run
+        .party
+        .members
         .iter()
-        .find(|profile| profile.entry == expected[4])
-        .unwrap();
-    assert_eq!(
-        run.app
-            .world()
-            .get::<crate::class_progression::ActiveSpec>(run.party.owner)
-            .unwrap()
-            .0,
-        leader.spec_id
-    );
+        .chain([&run.party.owner])
+        .map(|&unit| {
+            assert!(
+                world.get::<crate::followers::AplControlled>(unit).is_some(),
+                "every simulator actor casts through its spec APL"
+            );
+            world
+                .get::<crate::class_progression::ActiveSpec>(unit)
+                .unwrap()
+                .0
+        })
+        .collect();
+    assert_eq!(spawned, expected, "actual spawned class specs, leader last");
     for unit in run.members() {
         assert_eq!(
             run.app
@@ -1149,7 +1140,13 @@ fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
     let mut run = spawn_run(34, &mut None).unwrap();
-    let target = run.actors[&20375718];
+    // Every Stockade spawn stands inside another pack's aggro radius. Slag Fury
+    // 20375676 has one neighbour within 18.5 yards, Enraged Fire Elemental
+    // 20375742 at 13 yards; an earlier pull cleared it, so this fight stands
+    // outside every idle pack's sight.
+    let target = run.actors[&20375676];
+    let owner = run.party.owner;
+    crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&20375742]);
     let position = *run.app.world().get::<Position>(target).unwrap();
     let tank = run.party.tank;
     let members: Vec<_> = run.members().collect();
@@ -1167,7 +1164,7 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
         let index = data
             .spawns
             .iter()
-            .position(|spawn| spawn.guid == 20375718)
+            .position(|spawn| spawn.guid == 20375676)
             .unwrap();
         data.spawns_by_map.insert(34, vec![index]);
     }

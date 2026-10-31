@@ -28,6 +28,12 @@ pub(crate) fn movement_frame(
 #[derive(Component)]
 struct PendingTransportEntry(TransportPassenger);
 
+#[derive(Component)]
+pub(crate) struct AwaitingBoardAck;
+
+#[derive(Component)]
+struct Disembarking;
+
 pub(crate) fn validate_entry(world: &World, spawn_id: u32, map_id: u32) -> Result<(), String> {
     let source = world
         .get_resource::<TransportCatalog>()
@@ -169,7 +175,9 @@ pub(crate) fn finish_entry(world: &mut World, player: Entity, map: InMap) {
 }
 
 pub(crate) fn clear_passenger(world: &mut World, player: Entity) {
-    world.entity_mut(player).remove::<TransportPassenger>();
+    world
+        .entity_mut(player)
+        .remove::<(TransportPassenger, AwaitingBoardAck, Disembarking)>();
 }
 
 pub(crate) fn advance_ships(world: &mut World) {
@@ -226,6 +234,93 @@ fn carry_passengers(world: &mut World) {
     }
 }
 
+pub(crate) fn sync_deck_passengers(world: &mut World) {
+    let mut actors = world.query_filtered::<(
+        Entity,
+        &InMap,
+        &Position,
+        &Rotation,
+        Option<&TransportPassenger>,
+        Option<&shared::components::Player>,
+        Option<&shared::components::PlayerMotion>,
+        Option<&crate::creature_ai::flight_follow::FlightFollow>,
+        Option<&Disembarking>,
+    ), Or<(
+        With<shared::components::Player>,
+        With<crate::followers::Follower>,
+    )>>();
+    let updates: Vec<_> = actors
+        .iter(world)
+        .map(
+            |(
+                entity,
+                map,
+                position,
+                rotation,
+                passenger,
+                player,
+                motion,
+                flight_follow,
+                disembarking,
+            )| {
+                let feet = Vec3::new(position.x, position.y, position.z);
+                let ship = world
+                    .get_resource::<crate::ground::GroundMap>()
+                    .and_then(|ground| ground.transport_at(*map, feet));
+                (
+                    entity,
+                    *map,
+                    *position,
+                    *rotation,
+                    passenger.copied(),
+                    player.is_some(),
+                    motion.is_some_and(|motion| {
+                        motion.contains(shared::components::PlayerMotion::FLYING)
+                    }) || flight_follow.is_some(),
+                    disembarking.is_some(),
+                    ship,
+                )
+            },
+        )
+        .collect();
+    for (actor, map, position, rotation, passenger, player, flying, disembarking, ship) in updates {
+        if flying {
+            if passenger.is_some() {
+                disembark(world, actor);
+            }
+            continue;
+        }
+        if disembarking {
+            if ship.is_none() {
+                world.entity_mut(actor).remove::<Disembarking>();
+            }
+            continue;
+        }
+        if passenger.is_none() {
+            let Some(ship) = ship else { continue };
+            if world.get::<ShipRoute>(ship).is_none() || world.get::<InMap>(ship) != Some(&map) {
+                continue;
+            }
+            let local = source_pose(world, ship).world_to_local(TransportPose {
+                position: [position.x, -position.z, position.y],
+                orientation: rotation.y - std::f32::consts::FRAC_PI_2,
+            });
+            world.entity_mut(actor).insert(TransportPassenger {
+                transport: ship.to_bits(),
+                position: local.position,
+                orientation: local.orientation,
+            });
+            if player {
+                world.entity_mut(actor).insert(AwaitingBoardAck);
+            }
+            mark_replication(world, actor);
+        } else if !player && ship.map(Entity::to_bits) != passenger.map(|frame| frame.transport) {
+            world.entity_mut(actor).remove::<TransportPassenger>();
+            mark_replication(world, actor);
+        }
+    }
+}
+
 pub(crate) fn store_passenger_offsets(world: &mut World) {
     let mut players = world.query::<(Entity, &TransportPassenger, &Position, &Rotation)>();
     let updates: Vec<_> = players
@@ -263,10 +358,15 @@ pub(crate) fn disembark(world: &mut World, player: Entity) {
     {
         return;
     }
-    let bg = world
+    world.entity_mut(player).remove::<AwaitingBoardAck>();
+    mark_replication(world, player);
+    let Some(bg) = world
         .get::<crate::pvp::PlayerPvpState>(player)
         .and_then(|state| state.battleground.as_ref())
-        .expect("Seething passenger match");
+    else {
+        world.entity_mut(player).insert(Disembarking);
+        return;
+    };
     if bg.phase != shared::battleground::BgPhase::InProgress {
         let team = bg.team;
         let start = shared::battleground::SEETHING_STARTS[if team == shared::battleground::BgTeam::A
@@ -290,6 +390,7 @@ pub(crate) fn disembark(world: &mut World, player: Entity) {
         finish_entry(world, player, map);
         return;
     }
+    world.entity_mut(player).insert(Disembarking);
     // TC transport_seething_shore::OnRemovePassenger, both triggered on the player.
     crate::spell_cast::cast_triggered(world, player, 250917, Some(player), 0);
     crate::spell_cast::cast_triggered(world, player, 262359, Some(player), 0);
@@ -300,6 +401,160 @@ mod tests {
     use super::*;
     use bevy::ecs::world::CommandQueue;
     use std::time::Duration;
+
+    #[test]
+    fn deck_contact_boards_party_and_carries_only_the_same_map_copy() {
+        use shared::components::{CharacterAppearance, Player};
+        use shared::group::GroupRole;
+        use std::{collections::HashMap, path::Path, sync::Arc};
+
+        let mut world = World::new();
+        world.insert_resource(crate::transport_catalog::fixture_catalog());
+        world.insert_resource(Time::<Fixed>::default());
+        let map = InMap {
+            map_id: 2662,
+            instance_id: 1,
+        };
+        let other = InMap {
+            map_id: 2662,
+            instance_id: 2,
+        };
+        spawn_ships(&mut world, map);
+        let ship = world
+            .query::<(Entity, &TransportState)>()
+            .iter(&world)
+            .find(|(_, state)| state.spawn_id == 409273)
+            .unwrap()
+            .0;
+        let ship_position = *world.get::<Position>(ship).unwrap();
+        let at = Vec3::new(ship_position.x, ship_position.y, ship_position.z);
+        let hull = Arc::new(shared::los::LosTile::build(
+            0,
+            0,
+            vec![
+                at + Vec3::new(-4.0, 0.0, -4.0),
+                at + Vec3::new(4.0, 0.0, -4.0),
+                at + Vec3::new(0.0, 0.0, 4.0),
+            ],
+            vec![[0, 1, 2]],
+        ));
+        let mut ground = crate::ground::GroundMap::new(Path::new("."), HashMap::new());
+        ground.set_transport_hulls(HashMap::from([(map, vec![(ship, hull)])]));
+        world.insert_resource(ground);
+        let player = world
+            .spawn((
+                Player {
+                    name: "Rider".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: CharacterAppearance::default(),
+                },
+                map,
+                ship_position,
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        let follower = world
+            .spawn((
+                crate::followers::Follower {
+                    owner: player,
+                    profile: crate::followers::Profile {
+                        entry: 1,
+                        name: "Follower".into(),
+                        class_id: 1,
+                        spec_id: 1,
+                        role: GroupRole::Dps,
+                        attack_spell: 0,
+                        cooldown_spell: 0,
+                        heal_spell: 0,
+                        taunt_spell: 0,
+                        form_spell: 0,
+                        melee: true,
+                    },
+                },
+                map,
+                ship_position,
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        let other_player = world
+            .spawn((
+                Player {
+                    name: "Other".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: CharacterAppearance::default(),
+                },
+                other,
+                ship_position,
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        sync_deck_passengers(&mut world);
+        assert_eq!(
+            world.get::<TransportPassenger>(player).unwrap().transport,
+            ship.to_bits()
+        );
+        assert_eq!(
+            world.get::<TransportPassenger>(follower).unwrap().transport,
+            ship.to_bits()
+        );
+        assert!(world.get::<AwaitingBoardAck>(player).is_some());
+        assert!(world.get::<TransportPassenger>(other_player).is_none());
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs(6));
+        advance_ships(&mut world);
+        assert_ne!(*world.get::<Position>(player).unwrap(), ship_position);
+        assert_eq!(
+            *world.get::<Position>(player).unwrap(),
+            *world.get::<Position>(follower).unwrap()
+        );
+        world.get_mut::<Position>(follower).unwrap().x += 0.25;
+        store_passenger_offsets(&mut world);
+        let walked = *world.get::<TransportPassenger>(follower).unwrap();
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(Duration::from_secs(1));
+        advance_ships(&mut world);
+        let expected = source_pose(&world, ship).local_to_world(TransportPose {
+            position: walked.position,
+            orientation: walked.orientation,
+        });
+        assert_eq!(
+            *world.get::<Position>(follower).unwrap(),
+            engine_pose(expected).0
+        );
+        disembark(&mut world, player);
+        assert!(world.get::<TransportPassenger>(player).is_none());
+        assert!(world.get::<Disembarking>(player).is_some());
+        let destination = WorldLocation {
+            map_id: 2662,
+            position: Vec3::new(1500.0, -200.0, 30.0),
+            orientation: 0.0,
+        };
+        crate::maps::transfer::teleport_creature_with_companions(
+            &mut world,
+            follower,
+            &destination,
+        );
+        assert!(world.get::<TransportPassenger>(follower).is_none());
+        let landed = *world.get::<Position>(follower).unwrap();
+        advance_ships(&mut world);
+        assert_eq!(*world.get::<Position>(follower).unwrap(), landed);
+    }
 
     #[test]
     fn dungeon_copies_spawn_and_advance_independent_ships() {
