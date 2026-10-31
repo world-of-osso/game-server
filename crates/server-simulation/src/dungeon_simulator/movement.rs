@@ -346,6 +346,12 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
 }
 
 fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), String> {
+    if !world
+        .get::<Health>(owner)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return Ok(());
+    }
     let mut flight = world.entity_mut(owner).take::<FlightTravel>().unwrap();
     match flight.phase {
         FlightPhase::Mounting => {
@@ -418,6 +424,35 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
     }
     world.entity_mut(owner).insert(flight);
     Ok(())
+}
+
+#[test]
+fn dead_flight_leader_waits_for_native_release() {
+    let mut world = World::new();
+    let position = Position {
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+    };
+    let leader = world
+        .spawn((
+            position,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            FlightTravel {
+                phase: FlightPhase::Flying,
+                travel: Travel {
+                    destination: Vec3::new(10.0, 20.0, 30.0),
+                    legs: [(Vec3::new(10.0, 20.0, 30.0), 30.0)].into(),
+                },
+            },
+        ))
+        .id();
+    advance_flight(&mut world, leader, 1.0).unwrap();
+    assert_eq!(*world.get::<Position>(leader).unwrap(), position);
+    assert!(flight_in_progress(&world, leader));
 }
 
 #[test]
