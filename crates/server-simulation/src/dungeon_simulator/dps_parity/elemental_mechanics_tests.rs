@@ -90,6 +90,10 @@ fn flame_shock_hits(imbued: bool) -> [i32; 2] {
             "modifier retires with its source"
         );
     }
+    read_flame_shock_hits(&mut run)
+}
+
+fn read_flame_shock_hits(run: &mut Run) -> [i32; 2] {
     crate::auras::remove_auras(
         run.app.world_mut(),
         run.targets[0],
@@ -150,6 +154,59 @@ fn elemental_flametongue_imbue_modifies_shock_until_removed() {
             (ratio - expected).abs() < 0.02,
             "imbued {value}, plain {base}, expected {expected}"
         );
+    }
+}
+
+fn unity_shock_hits(selected: bool, elementals: bool) -> [i32; 2] {
+    let _seed = crate::random::seed_scope(818181);
+    let mut run = fixture();
+    assert!(own_aura(&run, 462866).is_some(), "selected Elemental Unity");
+    if !selected {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.actor,
+            RemoveReason::Cancelled,
+            |aura| aura.spell_id == 462866,
+        );
+    }
+    if elementals {
+        for spell in [118291, 157319] {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                spell,
+                Some(run.actor),
+                1
+            ));
+        }
+        for _ in 0..5 {
+            run.app.update();
+        }
+        assert!(own_aura(&run, 118291).is_some());
+        assert!(own_aura(&run, 157319).is_some());
+    }
+    read_flame_shock_hits(&mut run)
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_unity_periodic_factors_apply_with_or_without_elementals() {
+    for active in [false, true] {
+        let with_unity = unity_shock_hits(true, active);
+        let without_unity = unity_shock_hits(false, active);
+        let periodic_ratio = f64::from(with_unity[1]) / f64::from(without_unity[1]);
+        let expected = (1.0_f64 + 0.06).powi(2);
+        assert!(
+            (periodic_ratio - expected).abs() < 0.02,
+            "elementals {active}: {periodic_ratio} expected {expected}"
+        );
+        if !active {
+            let direct_ratio = f64::from(with_unity[0]) / f64::from(without_unity[0]);
+            assert!(
+                (direct_ratio - 1.0).abs() < 0.02,
+                "no elemental means no direct bonus: {direct_ratio}"
+            );
+        }
     }
 }
 

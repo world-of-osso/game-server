@@ -1887,6 +1887,11 @@ fn damage_source_amount(
             target,
             ctx.spell.id,
         );
+        let elemental_unity = if periodic {
+            super::scripts::elemental_unity::periodic_multiplier(world, bonus_caster, ctx.spell)
+        } else {
+            1.0
+        };
         #[cfg(any(test, feature = "test-support"))]
         factor_capture::record_done(
             world,
@@ -1902,6 +1907,7 @@ fn damage_source_amount(
                 ("giantkiller", giantkiller),
                 ("ret_damage", ret_damage),
                 ("shadow_weaving", shadow_weaving),
+                ("elemental_unity", elemental_unity),
             ],
         );
         school_done
@@ -1913,6 +1919,7 @@ fn damage_source_amount(
             * giantkiller
             * ret_damage
             * shadow_weaving
+            * elemental_unity
     };
     let bonus_ctx = EffectCtx {
         caster: bonus_caster,

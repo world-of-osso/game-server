@@ -103,6 +103,7 @@ pub(super) use script_registry::{
     native_weapon_multiplier as enhancement_flurry_weapon_multiplier,
 };
 pub(in crate::spell_cast) mod elemental_ancestors;
+pub(super) mod elemental_unity;
 pub use elemental_ancestors::{
     flame_shock_impact as ancestor_flame_shock_impact, owner as ancestor_owner,
     summon as summon_ancestor,
