@@ -210,7 +210,18 @@ fn spell_reach(
             targets::unintended_effect_reach(world, caster, spell, effect);
         result.caster_radius = result.caster_radius.max(caster_radius);
         result.target_radius = result.target_radius.max(target_radius);
-        if effect.trigger_spell == 0 || depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
+        // Spell modifier auras reference the modified spell; they do not cast it.
+        if effect.trigger_spell == 0
+            || depth >= crate::spell_cast::effects::MAX_TRIGGER_DEPTH
+            || (effect.effect == 6
+                && matches!(
+                    effect.aura,
+                    crate::auras::handlers::ADD_FLAT_MODIFIER
+                        | crate::auras::handlers::ADD_PCT_MODIFIER
+                        | crate::auras::handlers::ADD_FLAT_MODIFIER_BY_SPELL_LABEL
+                        | crate::auras::handlers::ADD_PCT_MODIFIER_BY_SPELL_LABEL
+                ))
+        {
             continue;
         }
         let Some(child) = world.resource::<SpellStore>().get(effect.trigger_spell) else {

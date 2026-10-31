@@ -5,6 +5,16 @@ use shared::components::Position;
 use std::collections::HashSet;
 
 #[test]
+fn holy_paladin_modifier_does_not_inherit_divine_toll_reach() {
+    let (harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
+    let world = harness.app.world();
+    let modifier = super::spell_unintended_reach(world, actor, 1258016, actor).unwrap();
+    let toll = super::spell_unintended_reach(world, actor, 375576, actor).unwrap();
+    assert_eq!(modifier, (0.0, 0.0));
+    assert_eq!(toll.0, 30.0);
+}
+
+#[test]
 fn native_consecration_pulse_radius_is_included() {
     let (mut harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
     harness
