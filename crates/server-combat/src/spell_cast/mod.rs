@@ -2303,7 +2303,7 @@ fn validate_caster_state(
     let can_mount_in_combat = spell
         .effects
         .iter()
-        .any(|effect| effect.aura_type == crate::auras::handlers::MOUNTED)
+        .any(|effect| effect.aura == crate::auras::handlers::MOUNTED)
         && world
             .get::<crate::auras::ActiveAuras>(caster)
             .is_some_and(|auras| auras.has_type(crate::auras::handlers::ALLOW_MOUNT_IN_COMBAT));
