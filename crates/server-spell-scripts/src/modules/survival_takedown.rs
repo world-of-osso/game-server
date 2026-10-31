@@ -50,11 +50,21 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // sc_hunter.cpp6368–6379: native1258571 supplies the owner's Focus;
     // the pet child must not grant a second resource payload.
     spell_cast::cast_triggered(world, caster, OWNER_FOCUS, Some(caster), 1);
-    spell_cast::cast_triggered(world, caster, PLAYER_DAMAGE, Some(target), 1);
-    cast_pet_damage(world, caster, target);
+    let Some(position) = spell_cast::targets::position(world, target) else {
+        warn!(?caster, ?target, "Takedown primary position unavailable");
+        return;
+    };
+    let Some(mut damage) = spell_cast::load_triggered_spell(world, PLAYER_DAMAGE, 1) else {
+        return;
+    };
+    damage.cast_destination = Some(position.to_array());
+    spell_cast::launch_triggered_spell_with_primary(
+        world, caster, &damage, None, Some(target), 1,
+    );
+    cast_pet_damage(world, caster, target, position);
 }
 
-fn cast_pet_damage(world: &mut World, owner: Entity, target: Entity) {
+fn cast_pet_damage(world: &mut World, owner: Entity, target: Entity, position: Vec3) {
     let Some(pet) = combat::hunter_pet::summoned_pet(world, owner) else {
         return;
     };
@@ -67,5 +77,6 @@ fn cast_pet_damage(world: &mut World, owner: Entity, target: Entity) {
     // sc_hunter.cpp3096–3105: this pet payload's native energize effect is
     // not reflected in-game; only its authored damage effect executes here.
     spell.effects.retain(|effect| effect.index != 1);
-    spell_cast::launch_triggered_spell(world, pet, &spell, Some(target), 1);
+    spell.cast_destination = Some(position.to_array());
+    spell_cast::launch_triggered_spell_with_primary(world, pet, &spell, None, Some(target), 1);
 }
