@@ -45,7 +45,9 @@ fn party_area_spell_skips_native_summoned_trigger_and_hits_enemy() {
     group.respond_invite(2, true);
     assert!(group.is_in_same_group(1, 2));
     h.app.insert_resource(group);
-    super::cast_triggered(h.app.world_mut(), owner, 1122, Some(h.npc), 0);
+    let enemy_pos = *h.app.world().get::<Position>(h.npc).unwrap();
+    let destination = Vec3::new(enemy_pos.x, enemy_pos.y, enemy_pos.z);
+    super::cast_triggered_at_destination(h.app.world_mut(), owner, 1122, destination, 0);
     let world = h.app.world_mut();
     let summon = world
         .query::<(Entity, &Npc, &UnitSummonedBy)>()
