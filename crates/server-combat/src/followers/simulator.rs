@@ -138,6 +138,17 @@ pub fn spawn_party(
     spawn_configured_party(world, copy, at, PartyConfiguration::read()?)
 }
 
+/// Move a parity follower and its diagnostic admission to a test copy.
+pub fn relocate_parity_follower(world: &mut World, unit: Entity, copy: crate::maps::InMap) {
+    let owner = world.get::<Follower>(unit).expect("parity follower").owner;
+    world
+        .get_mut::<stockade_diagnostic::DiagnosticParty>(owner)
+        .expect("parity diagnostic party")
+        .copy = copy;
+    world.entity_mut(owner).insert(copy);
+    world.entity_mut(unit).insert(copy);
+}
+
 /// Explicit benchmark actor selection, without process-global environment mutation.
 pub fn spawn_party_with_healer(
     world: &mut World,

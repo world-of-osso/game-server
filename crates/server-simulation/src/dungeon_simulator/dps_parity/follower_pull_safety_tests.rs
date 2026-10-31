@@ -70,11 +70,12 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         y: 127.7347,
         z: 3124.3594,
     };
-    run.app.world_mut().entity_mut(owner).insert((map, here));
+    crate::followers::simulator::relocate_parity_follower(run.app.world_mut(), actor, map);
+    run.app.world_mut().entity_mut(owner).insert(here);
     run.app
         .world_mut()
         .entity_mut(actor)
-        .insert((map, here, crate::followers::AplControlled));
+        .insert((here, crate::followers::AplControlled));
     run.app.update();
     run.app.update();
     let units: HashMap<_, _> = run

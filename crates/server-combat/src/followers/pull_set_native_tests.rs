@@ -138,7 +138,13 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
                     .any(|helper| event.target == Some(helper.to_bits()))
                 && event.kind == shared::protocol::CombatLogKind::Damage
         }),
-        "native Avenger's Shield must actually damage a planned helper"
+        "native Avenger's Shield must actually damage a planned helper; events={:?}; positions={:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(31935))
+            .collect::<Vec<_>>(),
+        [caller, helpers[0], helpers[1]].map(|unit| h.app.world().get::<Position>(unit).copied())
     );
     let after = super::pull_set::members(h.app.world(), caller, tank);
     assert!(
