@@ -598,21 +598,15 @@ pub(super) fn replay_simc_with_targets(
     if !pressure_scale.is_finite() || pressure_scale <= 0.0 {
         return Err("SIMC_PRESSURE_SCALE_MUST_BE_POSITIVE_AND_FINITE".into());
     }
-    let canonical =
-        std::path::Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
-            .canonicalize()
-            .map_err(|error| format!("canonical world database: {error}"))?;
     let selected = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
-    if std::path::Path::new(&selected)
+    let selected = std::path::Path::new(&selected)
         .canonicalize()
-        .map_err(|error| error.to_string())?
-        != canonical
-        || crate::test_data::world_db_path()
-            .canonicalize()
-            .map_err(|error| error.to_string())?
-            != canonical
-    {
-        return Err("SIMC_REPLAY_REQUIRES_CANONICAL_WORLD_DB".into());
+        .map_err(|error| format!("selected world database: {error}"))?;
+    let startup = crate::test_data::world_db_path()
+        .canonicalize()
+        .map_err(|error| format!("startup world database: {error}"))?;
+    if selected != startup {
+        return Err("SIMC_REPLAY_WORLD_DB_MISMATCH".into());
     }
     if duration_seconds != 300 {
         return Err("NATIVE_LITERAL_ENCOUNTER_REQUIRES_300_SECONDS".into());
