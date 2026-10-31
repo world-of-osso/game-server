@@ -97,6 +97,48 @@ fn cast(h: &mut Harness, witness: Option<WitnessRay>) -> Option<CastFailReason> 
 }
 
 #[test]
+fn directional_area_checks_native_los_unless_the_spell_ignores_it() {
+    let Some(mut h) = harness_at((-8862.27, 471.05, 83.10), (-8835.97, 489.89, 98.26)) else {
+        return;
+    };
+    h.app.update();
+    let mut spell = world_db().unwrap().store.get(1227621).unwrap().clone();
+    let mut effect = spell.effects[0].clone();
+    effect.implicit_targets = [134, 0];
+    effect.radius[0] = effect.radius[1];
+    let target_position = *h.app.world().get::<Position>(h.npc).unwrap();
+    spell.cast_destination = Some([target_position.x, target_position.y, target_position.z]);
+    let caster = h.caster;
+    let target = h.npc;
+    assert!(!crate::line_of_sight::sees_in_world(
+        h.app.world(),
+        target,
+        caster
+    ));
+    let select = |h: &mut Harness, spell: &crate::spell_info::SpellInfo| {
+        super::targets::select_targets(
+            h.app.world_mut(),
+            caster,
+            Some(target),
+            spell,
+            &effect,
+            0,
+            false,
+        )
+        .unwrap()
+    };
+    assert!(
+        select(&mut h, &spell).contains(&target),
+        "the native ignore-LOS flag permits the hit"
+    );
+    spell.misc.as_mut().unwrap().attributes[2] &= !super::SPELL_ATTR2_IGNORE_LINE_OF_SIGHT;
+    assert!(
+        !select(&mut h, &spell).contains(&target),
+        "a player-cast directional area must exclude a target behind a wall"
+    );
+}
+
+#[test]
 fn a_cast_at_a_kobold_behind_the_stormwind_wall_fails_with_line_of_sight() {
     // Stormwind's outer wall west of the main gate: the mage on the Elwynn side, the
     // kobold on the street behind it, 36 yd away (floor heights from the bake).

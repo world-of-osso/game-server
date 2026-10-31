@@ -10,10 +10,11 @@ use combat::auras::ActiveAuras;
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
 use combat::spell_cast;
-use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
+use combat::spell_cast::script_registry::{DeclaredReach, HitHook, ScriptReach, SpellScriptHook};
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::EffectHit(effect_hit),
     SpellScriptHook::ConsumedEffectValues(&[(SLAM, 2)]),
     SpellScriptHook::LaunchDelay(launch_delay),
@@ -39,6 +40,29 @@ const WEAVING_PAYLOADS: &[u32] = &[
     589, 8092, 15407, 32379, VT, 263165, MADNESS, 373279, 391403, 413231, 447448, 448405, 450983,
     DAMAGE, 1231479, 1242189, 1243105, 1243106, 1264176, 1264177,
 ];
+
+fn declared_reach(
+    world: &World,
+    _caster: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) -> ScriptReach {
+    if spell.id != SLAM {
+        return ScriptReach::None;
+    }
+    let damage = world
+        .resource::<SpellStore>()
+        .get(DAMAGE)
+        .expect("native Tentacle Slam damage");
+    let effect = damage
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Tentacle Slam area effect");
+    ScriptReach::Area(DeclaredReach {
+        caster_radius: spell_cast::targets::radius(effect, 1),
+        target_radius: spell_cast::targets::radius(effect, 0),
+    })
+}
 
 /// SimC sc_priest_shadow.cpp1819–1826 explicitly authors500ms, absent in data.
 /// Keep the override in script policy, not in fabricated native spell records.

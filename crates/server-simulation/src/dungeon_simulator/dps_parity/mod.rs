@@ -25,6 +25,8 @@ mod follower_tank_scenario;
 #[cfg(test)]
 mod refining_fire_tests;
 #[cfg(test)]
+mod shadow_follower_slam_safety_tests;
+#[cfg(test)]
 mod tank_fixture_tests;
 #[cfg(test)]
 mod vengeance_consume_soul_tests;

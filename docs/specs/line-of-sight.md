@@ -68,9 +68,13 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   `AddUnitTarget`, then `CheckEffectTarget` checks `IsWithinLOS(target, *losPosition)`.
   `WorldObject::IsWithinLOS(point)` raises the destination by the recipient's collision height;
   this project's eye-geometry contract uses the recipient's baked eye height instead.
-- Native Arcane Explosion1449 wall/visible-recipient damage regression and destination/flag
-  selection controls cover this boundary. Chain, cone and persistent-area-aura LOS are not
-  certified by those tests.
+- Cone and line recipients require recipient-to-caster LOS after the target cap unless
+  `SPELL_ATTR2_IGNORE_LINE_OF_SIGHT` applies. TC 15e0ed76 `SelectImplicitConeTargets` and
+  `SelectImplicitLineTargets` pass no area center to `AddUnitTarget`; `CheckEffectTarget`
+  then checks caster/target LOS.
+- Native Arcane Explosion1449 wall/visible-recipient damage, destination/flag selection,
+  and a directional line wall/ignore-flag control cover these boundaries. Chain and
+  persistent-area-aura LOS are not certified by those tests.
 
 ## Auto-attacks
 - Player and creature auto-attack swings require LOS before they land, using the same
