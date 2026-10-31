@@ -854,6 +854,36 @@ fn follower_sentinel_starts_full_and_decay_follows_simc() {
         app.update();
     }
     assert_eq!(stacks(&app, actor), 14);
+
+    let (mut app, actor, target) = fixture();
+    app.world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(shared::components::PowerType::HolyPower)
+        .unwrap()
+        .current = 3.0;
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 53600, Some(target), false).unwrap();
+    app.world_mut()
+        .resource_mut::<Time<bevy::time::Virtual>>()
+        .pause();
+    for _ in 0..50 {
+        app.update();
+    }
+    app.world_mut()
+        .resource_mut::<Time<bevy::time::Virtual>>()
+        .unpause();
+    for _ in 0..22 {
+        app.update();
+    }
+    assert_eq!(
+        stacks(&app, actor),
+        15,
+        "paused real time must not advance the aura decay clock"
+    );
+    for _ in 0..20 {
+        app.update();
+    }
+    assert_eq!(stacks(&app, actor), 14);
 }
 
 #[test]
