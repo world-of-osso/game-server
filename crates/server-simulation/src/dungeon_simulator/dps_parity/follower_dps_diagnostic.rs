@@ -69,9 +69,18 @@ fn prepare_follower(
         .find(|profile| profile.entry == entry)
         .unwrap()
         .clone();
+    prepare_class_follower(app, copy, profile.spec_id, level)
+}
+
+fn prepare_class_follower(
+    mut app: App,
+    copy: crate::maps::InMap,
+    spec: u32,
+    level: u8,
+) -> (App, Entity, Entity, crate::followers::Profile) {
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
-        profile.spec_id,
+        spec,
         level,
         copy,
         crate::followers::simulator::ParityActor::Follower,
@@ -1045,10 +1054,9 @@ fn trace_sotr_removal(
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
-    let entry: u32 = std::env::var("FOLLOWER_DPS_ENTRY")
-        .unwrap()
-        .parse()
-        .unwrap();
+    let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")
+        .ok()
+        .map(|entry| entry.parse().expect("numeric entry"));
     let level: u8 = std::env::var("FOLLOWER_DPS_LEVEL")
         .unwrap()
         .parse()
@@ -1056,7 +1064,21 @@ fn follower_dps_production_dummy() {
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
     let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(seed);
-    let (mut app, actor, target, profile) = prepare_follower(entry, level, map);
+    let (mut app, actor, target, profile) = if let Ok(spec) = std::env::var("FOLLOWER_DPS_SPEC") {
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        prepare_class_follower(app, copy, spec.parse().expect("numeric spec"), level)
+    } else {
+        prepare_follower(
+            entry.expect("FOLLOWER_DPS_ENTRY or FOLLOWER_DPS_SPEC"),
+            level,
+            map,
+        )
+    };
+    if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
+        app.init_resource::<crate::auras::DeathAuraAudit>();
+    }
     if std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some() {
         let mut scripts = app
             .world_mut()
@@ -1184,6 +1206,7 @@ fn follower_dps_production_dummy() {
             shared::components::PowerType::HolyPower,
         );
         app.update();
+        super::super::healer_simc_replay::report_death_audit(&mut app, &[actor, owner]);
         let world = app.world();
         sample_actor_auras(world, actor, &mut aura_frames);
         let now = crate::spell_cast::history_now(world);
@@ -1400,7 +1423,7 @@ fn follower_dps_production_dummy() {
     }
     println!(
         "FOLLOWER_DPS {}",
-        json!({"entry":entry,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
+        json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
         "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / 2400.0)).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
