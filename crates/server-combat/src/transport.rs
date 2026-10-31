@@ -504,6 +504,20 @@ mod tests {
         disembark(&mut world, player);
         assert!(world.get::<TransportPassenger>(player).is_none());
         assert!(world.get::<Disembarking>(player).is_some());
+        let destination = WorldLocation {
+            map_id: 2662,
+            position: Vec3::new(1500.0, -200.0, 30.0),
+            orientation: 0.0,
+        };
+        crate::maps::transfer::teleport_creature_with_companions(
+            &mut world,
+            follower,
+            &destination,
+        );
+        assert!(world.get::<TransportPassenger>(follower).is_none());
+        let landed = *world.get::<Position>(follower).unwrap();
+        advance_ships(&mut world);
+        assert_eq!(*world.get::<Position>(follower).unwrap(), landed);
     }
 
     #[test]
