@@ -157,6 +157,8 @@ mod omrogg;
 mod orator;
 #[path = "porung.rs"]
 mod porung;
+#[path = "proximity_unlock.rs"]
+mod proximity_unlock;
 #[path = "ruby_final.rs"]
 mod ruby_final;
 #[path = "skarmorak.rs"]
