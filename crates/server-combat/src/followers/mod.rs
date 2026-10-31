@@ -10,6 +10,8 @@ pub mod class_spawn;
 mod darkflame_drop_tests;
 mod empower_policy;
 #[cfg(test)]
+mod floodgate_healer_tests;
+#[cfg(test)]
 mod form_combat_tests;
 pub mod gear;
 mod hazards;
