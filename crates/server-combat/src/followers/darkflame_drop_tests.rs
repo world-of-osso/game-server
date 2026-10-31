@@ -53,14 +53,9 @@ fn darkflame_drop_native_navigation_connects_downward_but_never_upward() {
 }
 
 #[test]
-#[ignore = "requires actual2527/2526/2661 navigation assets"]
-fn darkflame_drop_policy_preserves_the_three_unapproved_map_gaps() {
+#[ignore = "requires actual2526/2661 navigation assets"]
+fn darkflame_drop_policy_preserves_the_unapproved_map_gaps() {
     for (map_id, from, to) in [
-        (
-            2527,
-            Vec3::new(-0.370431, 20.8162, -228.269),
-            Vec3::new(-353.12274, -67.9066, 155.7234),
-        ),
         (
             2526,
             Vec3::new(1410.22, 955.637, 2771.71),
@@ -79,6 +74,22 @@ fn darkflame_drop_policy_preserves_the_three_unapproved_map_gaps() {
             "map{map_id} has no approved drop"
         );
     }
+}
+
+#[test]
+#[ignore = "requires actual2527 navigation assets"]
+fn map2527_route_needs_no_collision_drop() {
+    let mut map = ::navigation::NavigationMap::open(&navigation_root().join("2527")).unwrap();
+    let from = Vec3::new(-0.370431, 20.8162, -228.269);
+    let to = Vec3::new(-353.12274, -67.9066, 155.7234);
+    let path = map.path(from, to).expect("native map2527 route");
+    assert!(path.complete, "the native route must reach its destination");
+    assert!(
+        path.collision_drop.is_none(),
+        "map2527 has no approved drop"
+    );
+    assert!(path.points.first().unwrap().distance(from) < 1.0);
+    assert!(path.points.last().unwrap().distance(to) < 1.0);
 }
 
 #[test]
@@ -637,10 +648,10 @@ fn follower_approach_query_completes_after_hold_timeout() {
             follower,
             MAP,
             crate::navigation::Goal::RegroupApproach(h.caster.to_bits()),
-            ::navigation::worker::Query::Path { from, to },
+            ::navigation::worker::Query::CompleteRoute { from, to },
         );
     assert!(
-        matches!(result, Some(Ok(Some(::navigation::worker::Output::Path(path)))) if path.complete),
+        matches!(result, Some(Ok(Some(::navigation::worker::Output::CompleteRoute(path)))) if path.complete),
         "delayed path result must remain available"
     );
 }
@@ -834,6 +845,7 @@ fn tank_enters_target_formation_but_holds_for_another_formation() {
         h.app.world_mut().entity_mut(tank).insert(position(from));
         h.app.world_mut().entity_mut(h.npc).insert((
             position(to),
+            InMap::continent(MAP),
             crate::zones::CreatureOrigin {
                 guid: 100,
                 original_entry: 1,
