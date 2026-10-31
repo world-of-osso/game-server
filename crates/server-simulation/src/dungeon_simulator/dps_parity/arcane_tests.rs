@@ -430,16 +430,36 @@ fn arcane_touch_explodes_on_survivors_after_primary_dies() {
     let survivor = run.targets[1];
     cast(&mut run, 321507);
     cast(&mut run, 30451);
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     cast(&mut run, 30451);
-    for _ in 0..100 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_some_and(|health| health.current <= 0.0)
+    );
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(210833)
-        && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "the accumulated Touch must explode on a survivor when the marked target dies");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(run.actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(210833)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the accumulated Touch must explode on a survivor when the marked target dies"
+    );
 }
 
 #[test]
