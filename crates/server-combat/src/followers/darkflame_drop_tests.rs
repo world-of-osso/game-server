@@ -637,10 +637,10 @@ fn follower_approach_query_completes_after_hold_timeout() {
             follower,
             MAP,
             crate::navigation::Goal::RegroupApproach(h.caster.to_bits()),
-            ::navigation::worker::Query::Path { from, to },
+            ::navigation::worker::Query::CompleteRoute { from, to },
         );
     assert!(
-        matches!(result, Some(Ok(Some(::navigation::worker::Output::Path(path)))) if path.complete),
+        matches!(result, Some(Ok(Some(::navigation::worker::Output::CompleteRoute(path)))) if path.complete),
         "delayed path result must remain available"
     );
 }
@@ -834,6 +834,7 @@ fn tank_enters_target_formation_but_holds_for_another_formation() {
         h.app.world_mut().entity_mut(tank).insert(position(from));
         h.app.world_mut().entity_mut(h.npc).insert((
             position(to),
+            InMap::continent(MAP),
             crate::zones::CreatureOrigin {
                 guid: 100,
                 original_entry: 1,
