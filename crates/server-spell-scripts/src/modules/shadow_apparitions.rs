@@ -129,8 +129,17 @@ fn plan_apparition(
 fn burst_at_parent(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     let parent_hit = ctx.primary_target() == Some(target);
     if parent_hit && auras::has_aura(world, ctx.caster, SHADEBURST_TALENT) {
-        // The native E0 damage child has resolved synchronously before this hit hook.
-        spell_cast::cast_triggered(world, ctx.caster, SHADEBURST, Some(target), ctx.depth + 1);
+        // SimC sc_priest_shadow.cpp439–445 executes the area after impact,
+        // even when the damage child killed the parent target.
+        let Some(position) = spell_cast::targets::position(world, target) else {
+            warn!(?target, "Shadeburst primary position unavailable");
+            return;
+        };
+        let Some(mut spell) = spell_cast::load_triggered_spell(world, SHADEBURST, ctx.depth + 1) else {
+            return;
+        };
+        spell.cast_destination = Some(position.to_array());
+        spell_cast::launch_triggered_spell_with_primary(world, ctx.caster, &spell, None, Some(target), ctx.depth + 1);
     }
 }
 
