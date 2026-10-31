@@ -95,9 +95,7 @@ fn draw_after_builder(world: &mut World, caster: Entity, spell: &SpellInfo, fore
 }
 
 fn draw_for_voltaic_targets(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    let Some(origin) = targets::position(world, caster) else {
-        return;
-    };
+    let origin = targets::position(world, caster).expect("Voltaic caster retains position");
     let (_, maximum) = targets::spell_range(spell, true);
     let maximum = spell_mods::modify(world, caster, spell, SpellModOp::Range, maximum);
     let enemies = targets::area_units(world, caster, origin, maximum, targets::Relation::Enemy, 0);
