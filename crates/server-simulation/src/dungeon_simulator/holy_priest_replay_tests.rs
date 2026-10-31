@@ -325,14 +325,13 @@ fn prayer_of_mending_heals_its_target_only_with_prompt_prognosis() {
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
-    use crate::spell_cast::{
-        CastTargets, cast_for_player_with_targets,
-        test_harness::{ObservedCombatEvents, ObservedPowerChanges},
-    };
+    use super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, ObservedPowerChanges};
     use shared::components::{Health, Mana, PowerType};
     use shared::protocol::CombatLogKind;
     let mut run = super::healer_simc_replay::snapshot_party(257, 90, 1);
     let (tank, healer) = (run.tank, run.healer);
+    super::healer_simc_replay::hold(&mut run, healer);
     run.app.insert_resource(ObservedPowerChanges::default());
     // Grant the requested optional spells the class build does not select so
     // their native casts can still be exercised.
@@ -387,15 +386,10 @@ fn holy_priest_spells_target_the_tank_and_pay_native_mana() {
                 .map(|(_, amount, _)| amount)
                 .sum()
         };
-        cast_for_player_with_targets(
+        execute(
             run.app.world_mut(),
             healer,
-            id,
-            CastTargets {
-                unit: tank,
-                primary: Some(tank),
-                destination: None,
-            },
+            Execution::Spell(id, tank, Some(tank)),
         )
         .unwrap_or_else(|e| panic!("spell {id} rejected: {e:?}"));
         for _ in 0..100 {

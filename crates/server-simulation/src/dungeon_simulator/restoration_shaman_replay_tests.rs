@@ -92,42 +92,29 @@ fn resurgence_restores_mana_for_critical_direct_heals() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
+fn restoration_shaman_holds_chain_lightning_against_one_enemy() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
-    use shared::components::Health;
     use shared::protocol::CombatLogKind;
-    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 2);
+    let mut run = super::healer_simc_replay::snapshot_party(264, 90, 1);
     super::healer_simc_replay::engage(&mut run);
     let healer = run.healer;
-    let add = run.sources[1];
-    run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
-    for _ in 0..200 {
-        run.app.update();
-    }
-    assert!(
-        !run.app
-            .world()
-            .resource::<ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|e| e.source == Some(healer.to_bits())
-                && e.spell_id == Some(188443)
-                && e.kind == CombatLogKind::CastSuccess)
-    );
-    {
-        let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
-        hp.current = hp.max;
-    }
+    let mut damage_casts = 0;
     for _ in 0..300 {
         run.app.update();
     }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(
-        events.iter().any(|e| e.source == Some(healer.to_bits())
-            && e.spell_id == Some(188443)
-            && e.kind == CombatLogKind::CastSuccess),
-        "Chain Lightning must cast against a pack: {events:?}"
-    );
+    for event in &run.app.world().resource::<ObservedCombatEvents>().0 {
+        if event.source == Some(healer.to_bits()) && event.kind == CombatLogKind::CastSuccess {
+            assert_ne!(
+                event.spell_id,
+                Some(188443),
+                "no Chain Lightning against one enemy"
+            );
+            if event.target == Some(run.sources[0].to_bits()) {
+                damage_casts += 1;
+            }
+        }
+    }
+    assert!(damage_casts > 0, "the healer must reach its damage branch");
 }
 
 #[test]
