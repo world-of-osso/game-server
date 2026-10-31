@@ -168,6 +168,14 @@ fn follower_tank_precombat_starts_consecration_on_simc_clock() {
         .unwrap();
     let now = crate::spell_cast::now(app.world());
     assert!(!history.has_active_gcd(now));
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            app.world(),
+            actor,
+            shared::components::PowerType::HolyPower
+        ),
+        Some((1.0, 5.0))
+    );
     let remaining = history.remaining_cooldown_ms(spell, now);
     assert!(
         (1500..=2200).contains(&remaining),

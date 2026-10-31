@@ -70,5 +70,6 @@ pub(super) fn execute(
             history.clear_fixture_precombat_gcd();
         }
     }
+    super::super::tank_replay::apply_simc_starting_holy_power_to(app.world_mut(), actor);
     Ok(())
 }
