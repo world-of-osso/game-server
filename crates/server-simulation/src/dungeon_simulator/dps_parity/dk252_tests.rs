@@ -1185,7 +1185,7 @@ fn dk252_army_epidemic_hits_survivors_after_primary_dies() {
         && event.kind == CombatLogKind::Damage && event.amount > 0),
         "Army Epidemic must reach living enemies after the primary dies; selected={:?}, opponents={:?}, relevant events={:?}",
         run.app.world().get::<crate::networking::CombatTarget>(actor),
-        crate::combat_refs::active_opponents(run.app.world(), actor),
+        crate::combat_refs::active_opponents(run.app.world(), actor).collect::<Vec<_>>(),
         events.iter().filter(|event| matches!(event.spell_id, Some(55090 | 1294264 | 1300330))).map(|event| (event.spell_id, event.source, event.target, event.amount)).collect::<Vec<_>>());
 }
 
