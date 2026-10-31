@@ -290,6 +290,16 @@ pub(crate) fn sync_deck_passengers(world: &mut World) {
             }
             continue;
         }
+        if let Some(passenger) = passenger
+            && let Some(follow) = world.get::<crate::creature_ai::FollowOwner>(actor)
+            && world
+                .get::<TransportPassenger>(follow.owner)
+                .map(|p| p.transport)
+                != Some(passenger.transport)
+        {
+            disembark(world, actor);
+            continue;
+        }
         if disembarking {
             if ship.is_none() {
                 world.entity_mut(actor).remove::<Disembarking>();

@@ -3558,6 +3558,103 @@ mod tests {
 
     #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
+    fn blood_bloody_demise_area_hits_survivor_after_lethal_marrowrend() {
+        use crate::auras::{AuraApplication, AuraSource};
+        use shared::components::{Health, PowerType};
+        use shared::protocol::CombatLogKind;
+
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+        let actor = run.actor;
+        let primary = run.targets[0];
+        let survivor = run.targets[1];
+        super::super::engage(&mut run);
+        for spell_id in [1296650, 1296651] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &AuraApplication {
+                    caster: actor,
+                    target: actor,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::ItemSet(2055),
+                },
+            );
+        }
+        for _ in 0..10 {
+            crate::spell_cast::powers::change_power(
+                run.app.world_mut(),
+                actor,
+                PowerType::RunicPower,
+                1000.0,
+            );
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                49998,
+                Some(primary),
+                false,
+            )
+            .unwrap();
+            for _ in 0..30 {
+                run.app.update();
+            }
+        }
+        run.app
+            .world_mut()
+            .entity_mut(primary)
+            .remove::<crate::creature_scripts::TrainingDummy>();
+        run.app
+            .world_mut()
+            .get_mut::<Health>(primary)
+            .unwrap()
+            .current = 1.0;
+        let start = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 195182, Some(primary), false)
+            .unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert!(
+            run.app
+                .world()
+                .get::<Health>(primary)
+                .is_some_and(|health| health.current <= 0.0)
+        );
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(primary.to_bits())
+                    && event.spell_id == Some(195182)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Marrowrend must kill the primary"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(1310571)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Bloody Demise area must reach the survivor"
+        );
+    }
+
+    #[test]
+    #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_death_strike_heals_and_creates_real_mastery_shield() {
         use server::test_support::healer_intake::{Hit, HitKind};
         let _seed = crate::random::seed_scope(70448);

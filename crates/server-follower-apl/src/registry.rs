@@ -10,10 +10,24 @@ pub const SPECS: &[u32] = &[
     258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 577, 581, 1467, 1468, 1480,
 ];
 
+/// A harness's fixed-length fight against dummies that never die: like SimC's
+/// `max_time`, `fight_remains` is the duration minus elapsed time. Production
+/// dungeons never insert it and read time to die from the engaged enemies.
+#[derive(Resource, Clone, Copy)]
+pub struct FixedLengthFight {
+    pub duration: f64,
+}
+
 /// Load the spec's driver for a pull starting now.
 pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecRotation>, String> {
-    let encounter = Encounter::Dungeon {
-        started_at: crate::spell_cast::now(world),
+    let started_at = crate::spell_cast::now(world);
+    let encounter = match world.get_resource::<FixedLengthFight>() {
+        Some(fight) => Encounter::Fixture {
+            started_at,
+            duration: fight.duration,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        None => Encounter::Dungeon { started_at },
     };
     if matches!(spec, 253 | 255) {
         // SimC76f8118 sc_hunter.cpp1052: summon_pet defaults to the duck; Call Pet summons it.

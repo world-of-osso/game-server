@@ -8,7 +8,9 @@ fn native_replay_cli_driver() {
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");
     let source = std::env::var("HEALER_TANK_SOURCE").expect("HEALER_TANK_SOURCE is required");
     let mode = std::env::var("HEALER_TANK_MODE").unwrap_or_else(|_| "tank".into());
-    if source != "simc" || mode != "tank" {
+    // Recorded intakes were captured against canonical; the SimC healer
+    // replay refuses it and reads FOLLOWER_DPS_WORLD_DB instead.
+    if source == "recorded" {
         let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
             .canonicalize()
             .unwrap();
@@ -280,8 +282,8 @@ fn cli_prints_tank_energize_sources() {
 }
 
 #[test]
-#[ignore = "runs a registered healer against the MID2 tank and SimC dummy trace"]
-fn cli_prints_registered_healer_report() {
+#[ignore = "runs a class-party healer against the SimC dummy trace over FOLLOWER_DPS_WORLD_DB"]
+fn cli_prints_class_healer_report() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let output = std::process::Command::new("python3")
         .arg(root.join("scripts/healer_tank_replay.py"))
@@ -292,8 +294,12 @@ fn cli_prints_registered_healer_report() {
             "264",
             "--duration",
             "30",
-            "--timeline",
+            "--level",
+            "90",
+            "--world-db",
         ])
+        .arg(std::env::var("FOLLOWER_DPS_WORLD_DB").unwrap())
+        .arg("--timeline")
         .arg(std::env::var("HEALER_TANK_SIMC_TRACE").unwrap())
         .arg("--profile-dir")
         .arg(std::env::var("DPS_PARITY_OUTPUT").unwrap())

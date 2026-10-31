@@ -110,7 +110,7 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
             },
         "each eligible execution or Voltaic target draws once from the native deck"
     );
-    if matches!(spell, 188389 | 470057) {
+    if matches!(spell, 188389 | 470057 | 470411) {
         // This test checks the deck; separate tests cover Ancestor echoes.
         return;
     }
@@ -178,6 +178,13 @@ fn elemental_communication_ascendance_draws_for_each_entry_target() {
 fn elemental_communication_native_flame_shock_draws_four_of_fifty() {
     let _seed = crate::random::seed_scope(70448);
     assert_native_builder_deck(fixture_without_fellowship(1), 188389);
+}
+
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_communication_flame_shock_wrapper_draws_four_of_fifty() {
+    let _seed = crate::random::seed_scope(70448);
+    assert_native_builder_deck(fixture_without_fellowship(1), 470411);
 }
 
 #[test]

@@ -23,6 +23,9 @@ assert open(os.environ['HEALER_TANK_TIMELINE']).read() == trace_spec
 assert os.environ['HEALER_TANK_DURATION'] == '300'
 assert os.environ['HEALER_TANK_SEED'] == '70448'
 if os.environ['HEALER_TANK_MODE'] == 'healer':
+    assert os.environ['HEALER_TANK_LEVEL'] == '90'
+    assert os.environ['FOLLOWER_DPS_WORLD_DB'].endswith('snapshot.db')
+    assert os.environ['DPS_PARITY_WORLD_DB'] == os.environ['FOLLOWER_DPS_WORLD_DB']
     report = {'spec': spec, 'metrics': {'effective_hps': 10, 'raw_hps': 20, 'overheal_pct': 50, 'mana_min': 30, 'mana_curve': [{'current': 40}], 'first_death_seconds': None, 'tank_health_min': 60, 'idle_gcd_pct': 12.5, 'spell_healing': {'123': {'effective_hps': 10}}}}
 else:
     healed = os.environ['HEALER_TANK_EXTERNAL_HEALING'] == '1'
@@ -31,10 +34,17 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
 ''')
             executable.chmod(0o755)
             output = root / 'results'
-            result = subprocess.run(['python3', str(SCRIPT), '--all', '--trace-dir', str(root),
-                                     '--profile-dir', str(root), '--executable', str(executable),
-                                     '--output-dir', str(output), '--jobs', '3'],
-                                    text=True, capture_output=True, env=os.environ)
+            snapshot = root / 'snapshot.db'
+            snapshot.write_text('')
+            command = ['python3', str(SCRIPT), '--all', '--trace-dir', str(root),
+                       '--profile-dir', str(root), '--executable', str(executable),
+                       '--output-dir', str(output), '--jobs', '3']
+            environment = {key: value for key, value in os.environ.items() if key != 'FOLLOWER_DPS_WORLD_DB'}
+            refused = subprocess.run(command, text=True, capture_output=True, env=environment)
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn('healer replays require --level', refused.stderr)
+            result = subprocess.run(command + ['--level', '90', '--world-db', str(snapshot)],
+                                    text=True, capture_output=True, env=environment)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('| 105 | 10.00 | 20.00 | 50.00 | 30.00 | 40.00 | N/A | 60.00 | 12.50 |', result.stdout)
             self.assertIn('| 581 | 50.00 | 10.00 | 5.00 | 42.00 | 50.00 | 900.00 |', result.stdout)
@@ -99,7 +109,9 @@ print('HEALER_TANK_REPORT=' + json.dumps(report))
 ''')
             executable.chmod(0o755)
             output = root / 'results'
-            result = subprocess.run(['python3', str(SCRIPT), '--all', '--seeds', '2', '--trace-dir', str(root), '--profile-dir', str(root), '--executable', str(executable), '--output-dir', str(output), '--jobs', '3'], text=True, capture_output=True)
+            snapshot = root / 'snapshot.db'
+            snapshot.write_text('')
+            result = subprocess.run(['python3', str(SCRIPT), '--all', '--seeds', '2', '--trace-dir', str(root), '--profile-dir', str(root), '--executable', str(executable), '--output-dir', str(output), '--jobs', '3', '--level', '90', '--world-db', str(snapshot)], text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('| 66 | 50.00 (40.00–60.00) | 30.00 (20.00–40.00) | 0/2 | 1/2 |', result.stdout)
             self.assertIn('| 123 | 1.00 (0.00–2.00) | 0.00 (0.00–0.00) |', result.stdout)

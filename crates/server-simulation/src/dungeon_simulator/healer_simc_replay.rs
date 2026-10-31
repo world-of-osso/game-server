@@ -292,6 +292,12 @@ fn replay(
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();
     }
+    // SimC replays a fixed-length fight against a dummy that never dies.
+    party
+        .app
+        .insert_resource(server_follower_apl::registry::FixedLengthFight {
+            duration: f64::from(duration),
+        });
     engage(&mut party);
     let ClassParty {
         mut app,
