@@ -15,11 +15,6 @@ fn party_area_spell_skips_native_summoned_trigger_and_hits_enemy() {
     let db_path = &world_db().unwrap().powers_db;
     h.app
         .insert_resource(crate::world_data::load_world_data(db_path));
-    let conn =
-        rusqlite::Connection::open_with_flags(db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .unwrap();
-    h.app
-        .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
     let owner = spawn_player(&mut h.app, 9, 1.0);
     h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
     h.app.world_mut().entity_mut(owner).insert(ClientId(2));
@@ -46,15 +41,15 @@ fn party_area_spell_skips_native_summoned_trigger_and_hits_enemy() {
     assert!(group.is_in_same_group(1, 2));
     h.app.insert_resource(group);
     let enemy_pos = *h.app.world().get::<Position>(h.npc).unwrap();
-    let destination = Vec3::new(enemy_pos.x, enemy_pos.y, enemy_pos.z);
-    super::cast_triggered_at_destination(h.app.world_mut(), owner, 1122, destination, 0);
+    let position = [enemy_pos.x, -enemy_pos.z, enemy_pos.y, 0.0];
+    let summon = crate::zones::summon_creature(h.app.world_mut(), owner, 47319, position)
+        .expect("native Leap Target must spawn");
+    h.app
+        .world_mut()
+        .entity_mut(summon)
+        .insert(UnitSummonedBy(owner.to_bits()));
+    h.advance(1);
     let world = h.app.world_mut();
-    let summon = world
-        .query::<(Entity, &Npc, &UnitSummonedBy)>()
-        .iter(world)
-        .find(|(_, npc, source)| npc.template_id == 47319 && source.0 == owner.to_bits())
-        .map(|(entity, _, _)| entity)
-        .expect("native 1122 must spawn its Leap Target");
     let before = world.get::<Health>(summon).unwrap().current;
     let enemy_before = world.get::<Health>(h.npc).unwrap().current;
     h.cast_and_deliver(1449, None);
