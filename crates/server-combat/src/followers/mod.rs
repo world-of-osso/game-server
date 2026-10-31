@@ -316,6 +316,8 @@ mod hazard_reaction_tests;
 #[cfg(test)]
 mod hazard_tests;
 #[cfg(test)]
+mod pull_set_native_tests;
+#[cfg(test)]
 pub(crate) fn fixture_hazard_escape(world: &mut World, unit: Entity) -> bool {
     hazards::escape(world, unit)
 }
