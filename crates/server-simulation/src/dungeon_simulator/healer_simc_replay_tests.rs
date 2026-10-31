@@ -3,6 +3,40 @@ use shared::components::Health;
 use std::path::Path;
 
 #[test]
+#[ignore = "class-party death-removal audit over the measurement snapshot"]
+fn class_party_death_audit() {
+    let spec = std::env::var("HEALER_TANK_SPEC").unwrap().parse().unwrap();
+    let level = std::env::var("HEALER_TANK_LEVEL").unwrap().parse().unwrap();
+    let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
+    let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();
+    let report = super::replay_simc(spec, level, Path::new(&trace), 120, seed).unwrap();
+    println!("HEALER_DEATH_AUDIT_REPORT={report}");
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn death_audit_records_real_aura_removals() {
+    let mut run = super::snapshot_party(105, 70, 1);
+    let actors = run.slots.to_vec();
+    let enemy = run.sources[0];
+    super::apply_optimal_raid_environment(&mut run.app, enemy, &actors).unwrap();
+    run.app.init_resource::<crate::auras::DeathAuraAudit>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(run.tank)
+        .unwrap()
+        .current = 0.0;
+    run.app.update();
+    let audit = run.app.world().resource::<crate::auras::DeathAuraAudit>();
+    assert!(
+        audit
+            .0
+            .iter()
+            .any(|(unit, spells)| *unit == run.tank && spells.contains(&1126))
+    );
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn optimal_raid_environment_reaches_all_replay_actors() {
     let mut run = super::snapshot_party(256, 90, 1);

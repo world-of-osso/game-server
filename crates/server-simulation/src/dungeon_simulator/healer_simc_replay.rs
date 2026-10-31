@@ -15,6 +15,30 @@ const TICKS_PER_SECOND: u32 = 20;
 /// Bound on the party's APL precombat before the recorded clock starts.
 const MAX_PRECOMBAT_TICKS: u32 = 800;
 
+#[cfg(test)]
+pub(super) fn report_death_audit(app: &mut App, actors: &[Entity]) {
+    let Some(mut audit) = app
+        .world_mut()
+        .get_resource_mut::<crate::auras::DeathAuraAudit>()
+    else {
+        return;
+    };
+    let removals = std::mem::take(&mut audit.0);
+    for (unit, spells) in removals {
+        if actors.contains(&unit) {
+            let health = app.world().get::<Health>(unit);
+            eprintln!(
+                "REPLAY_DEATH_AUDIT {}",
+                json!({
+                    "unit": unit.to_bits(), "spells": spells,
+                    "health_after_tick": health.map(|health| health.current),
+                    "alive_after_tick": health.is_some_and(|health| health.current > 0.0),
+                })
+            );
+        }
+    }
+}
+
 /// The dungeon whose Journal gear a class party at `level` wears: the follower
 /// DPS harness's content for each measured level.
 fn measurement_map(level: u8) -> Result<u32, String> {
@@ -264,6 +288,10 @@ fn replay(
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
     let mut party = spawn_class_party(&snapshot, spec, level, 1)?;
+    #[cfg(test)]
+    if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
+        party.app.init_resource::<crate::auras::DeathAuraAudit>();
+    }
     engage(&mut party);
     let ClassParty {
         mut app,
@@ -275,6 +303,8 @@ fn replay(
     let source = sources[0];
     apply_optimal_raid_environment(&mut app, source, &slots)?;
     finish_precombat(&mut app, &[tank, healer])?;
+    #[cfg(test)]
+    report_death_audit(&mut app, &slots);
     super::healer_replay::freeze_sources(app.world_mut(), &[(0, source)].into());
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     app.insert_resource(Capture {
@@ -320,6 +350,8 @@ fn replay(
         }
         recorder.observe_idle_gcd(app.world());
         app.update();
+        #[cfg(test)]
+        report_death_audit(&mut app, &slots);
         let world = app.world();
         recorder.observe_frame(world, tick);
         // The default party's tank is a Protection Paladin.

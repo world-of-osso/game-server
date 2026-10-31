@@ -69,9 +69,18 @@ fn prepare_follower(
         .find(|profile| profile.entry == entry)
         .unwrap()
         .clone();
+    prepare_class_follower(app, copy, profile.spec_id, level)
+}
+
+fn prepare_class_follower(
+    mut app: App,
+    copy: crate::maps::InMap,
+    spec: u32,
+    level: u8,
+) -> (App, Entity, Entity, crate::followers::Profile) {
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
-        profile.spec_id,
+        spec,
         level,
         copy,
         crate::followers::simulator::ParityActor::Follower,
@@ -955,10 +964,6 @@ fn trace_sotr_removal(
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
-    let entry: u32 = std::env::var("FOLLOWER_DPS_ENTRY")
-        .unwrap()
-        .parse()
-        .unwrap();
     let level: u8 = std::env::var("FOLLOWER_DPS_LEVEL")
         .unwrap()
         .parse()
@@ -966,7 +971,21 @@ fn follower_dps_production_dummy() {
     let map: u32 = std::env::var("FOLLOWER_DPS_MAP").unwrap().parse().unwrap();
     let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(seed);
-    let (mut app, actor, target, profile) = prepare_follower(entry, level, map);
+    let (mut app, actor, target, profile) = if let Ok(spec) = std::env::var("FOLLOWER_DPS_SPEC") {
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        prepare_class_follower(app, copy, spec.parse().expect("numeric spec"), level)
+    } else {
+        let entry = std::env::var("FOLLOWER_DPS_ENTRY")
+            .unwrap()
+            .parse()
+            .unwrap();
+        prepare_follower(entry, level, map)
+    };
+    if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
+        app.init_resource::<crate::auras::DeathAuraAudit>();
+    }
     if std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some() {
         let mut scripts = app
             .world_mut()
@@ -1094,6 +1113,7 @@ fn follower_dps_production_dummy() {
             shared::components::PowerType::HolyPower,
         );
         app.update();
+        super::super::healer_simc_replay::report_death_audit(&mut app, &[actor, owner]);
         let world = app.world();
         sample_actor_auras(world, actor, &mut aura_frames);
         let now = crate::spell_cast::history_now(world);

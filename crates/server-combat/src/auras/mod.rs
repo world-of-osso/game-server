@@ -3197,6 +3197,10 @@ fn remove_casterless(world: &mut World, unit: Entity) {
     }
 }
 
+/// Optional replay audit of auras removed on death, checked after the simulation tick.
+#[derive(Resource, Default)]
+pub struct DeathAuraAudit(pub Vec<(Entity, Vec<u32>)>);
+
 /// Unit::RemoveAllAurasOnDeath, also used before post-lethal melee reactions.
 pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
     let store = world.get_resource::<SpellStore>();
@@ -3217,6 +3221,21 @@ pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
                 .collect()
         })
         .unwrap_or_default();
+    if world.contains_resource::<DeathAuraAudit>() {
+        let removed: Vec<_> = world
+            .get::<ActiveAuras>(unit)
+            .into_iter()
+            .flat_map(|auras| auras.iter())
+            .filter(|aura| !persistent.contains(&aura.instance_id))
+            .map(|aura| aura.spell_id)
+            .collect();
+        if !removed.is_empty() {
+            world
+                .resource_mut::<DeathAuraAudit>()
+                .0
+                .push((unit, removed));
+        }
+    }
     remove_auras(world, unit, RemoveReason::Death, |aura| {
         !persistent.contains(&aura.instance_id)
     });
