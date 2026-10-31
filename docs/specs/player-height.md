@@ -18,7 +18,7 @@ References:
 - [x] A report out of bounds is corrected to the bound, as x/z are shortened to the bank; the server sends no correction.
 - [x] Gravity leaves a height an input set that tick to the client; fall damage still lands on the server from the tracked peak. Without inputs gravity pulls the player to the ground as before.
 - [x] Without ground data (no `GroundMap`, unloaded tile) the height stays the server's.
-- [ ] WMO liquid (MLIQ) is not read, as the client swims in terrain water only.
+- [x] The server samples active WMO MLIQ tiles after the WMO placement transform, including global WMOs. Liquid type follows the WMO root and group fields. The client still swims in terrain water only.
 - [ ] The Godot client's pitched forward swim plus Ascend rises up to twice `SWIM_SPEED`; the server allows `SWIM_SPEED`, so such a climb reaches the server slower than the client shows it.
 - [ ] A client reporting `jumping` without end can bunny-hop: each landing allows a new jump arc.
 

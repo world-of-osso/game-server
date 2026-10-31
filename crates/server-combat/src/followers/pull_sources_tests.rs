@@ -178,3 +178,47 @@ fn tank_pull_sources_native_observed_death_clears_only_that_source_guid() {
     assert!(!sources.contains_key(&origin.guid));
     assert_eq!(sources[&other].entry, origin.original_entry);
 }
+
+#[test]
+fn pack_assistance_native_azure_formation_joins_follower_pull() {
+    use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
+    use super::pull_forecast_tests::spawn_source_actor;
+    use crate::networking::CombatTarget;
+    use std::collections::HashMap;
+
+    let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
+    let map = InMap {
+        map_id: 2515,
+        instance_id: 93,
+    };
+    h.app.world_mut().entity_mut(tank).insert(map);
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::faction::load_faction_templates(&conn).unwrap());
+    let data = crate::test_data::world_data();
+    let mut ground =
+        crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), HashMap::new());
+    let mut entities = HashMap::new();
+    for guid in [29001817, 29001831, 29001835] {
+        let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
+        let template = data.template_for(spawn.template_entry, 1).unwrap();
+        let actor = spawn_source_actor(h.app.world_mut(), data, template, spawn, map, &mut ground);
+        entities.insert(guid, actor);
+    }
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::insert_formation_members(&mut commands, data, &entities);
+    queue.apply(h.app.world_mut());
+    let pulled = entities[&29001817];
+    crate::creature_aggro::attack_start(h.app.world_mut(), pulled, tank);
+    for actor in entities.values() {
+        assert_eq!(
+            h.app.world().get::<CombatTarget>(*actor).unwrap().0,
+            Some(tank)
+        );
+    }
+}

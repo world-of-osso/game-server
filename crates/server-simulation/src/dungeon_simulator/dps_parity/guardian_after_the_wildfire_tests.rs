@@ -36,7 +36,10 @@ fn guardian_after_the_wildfire_heals_on_300_rage_and_retains_overflow() {
         );
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 192081, Some(actor), false)
             .unwrap();
-        run.app.update();
+        // Ironfur has a native 500 ms recovery; let the real clock clear it.
+        for _ in 0..20 {
+            run.app.update();
+        }
     };
     let heals = |run: &Run, spell| {
         run.app

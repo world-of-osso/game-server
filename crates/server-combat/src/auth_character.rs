@@ -738,13 +738,16 @@ fn build_player_runtime_components(character_id: u64, data: &CharacterData) -> i
 }
 
 fn build_player_components(data: &CharacterData, character_id: u64) -> impl Bundle {
+    let player = build_player_identity(data);
+    let visual = shared::components::CharacterVisual::from(&player);
     (
         persisted_player_position(data),
         Health {
             current: data.health,
             max: data.max_health,
         },
-        build_player_identity(data),
+        player,
+        visual,
         UnitFactionTemplate(crate::faction::faction_template_for_race(data.race)),
         crate::faction::current_pvp_faction_for_race(data.race),
         data.equipment_appearance.clone(),

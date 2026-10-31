@@ -16,8 +16,9 @@ pub(crate) const PYRES: &[(u32, u32, Vec3, f32)] = &[
     (
         613266,
         40088,
-        Vec3::new(4480.69, -4912.04, 13.435155),
-        3.26377,
+        // NALORAKK_PYRE_REVERSE_ARRIVAL_LOG_CORRELATED: WoWCombatLog-102026_223255.txt:136181.
+        Vec3::new(4484.93, -4906.93, 13.4853),
+        0.0689,
     ),
 ];
 

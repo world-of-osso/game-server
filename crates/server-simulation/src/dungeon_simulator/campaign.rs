@@ -333,6 +333,152 @@ fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
 }
 
 #[test]
+fn locked_gated_boss_on_an_off_graph_perch_holds_until_it_lands() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let landing = run
+        .graph
+        .edges
+        .iter()
+        .find_map(|edge| (edge.from == source).then_some(edge.to))
+        .unwrap();
+    let landing = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == landing)
+        .unwrap()
+        .point();
+    run.graph
+        .edges
+        .retain(|edge| edge.from != source && edge.to != source);
+    let perch = {
+        let pack = run
+            .graph
+            .packs
+            .iter_mut()
+            .find(|pack| pack.id == source)
+            .unwrap();
+        pack.position[0] += 500.0;
+        pack.point()
+    };
+    run.graph.teleports = vec![server::test_support::graph::Edge {
+        from: source,
+        to: source,
+        yards: 0.0,
+    }];
+    run.app
+        .world_mut()
+        .insert_resource(super::Space(run.graph.clone()));
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: perch.to_array(),
+    }];
+    // Crawth (Academy2526) stays immune on its perch until the Alpha Eagles die and it lands.
+    run.graph.map_id = 2526;
+    let boss = run.actors[&source];
+    let unlocked = *run
+        .app
+        .world()
+        .get::<shared::components::UnitFlags>(boss)
+        .unwrap();
+    run.app.world_mut().entity_mut(boss).insert((
+        shared::components::Npc {
+            template_id: 191736,
+            name: "Crawth".into(),
+        },
+        Position {
+            x: perch.x,
+            y: perch.y,
+            z: perch.z,
+        },
+        shared::components::UnitFlags(shared::components::UnitFlags::IMMUNE_TO_PC),
+    ));
+    run.control().unwrap();
+    assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_none());
+    assert_eq!(run.waiting_objective.map(|(pack, _)| pack), Some(source));
+    run.app.world_mut().entity_mut(boss).insert((
+        Position {
+            x: landing.x,
+            y: landing.y,
+            z: landing.z,
+        },
+        unlocked,
+    ));
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        landing
+    );
+}
+
+#[test]
+fn reached_anchor_that_did_not_engage_gives_way_to_the_live_source() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let boss = run.actors[&source];
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let live = Vec3::new(at.x, at.y, at.z);
+    let anchor = run
+        .graph
+        .packs
+        .iter()
+        .map(|pack| pack.point())
+        .find(|point| (40.0..200.0).contains(&point.distance(live)))
+        .unwrap();
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: anchor.to_array(),
+    }];
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        anchor
+    );
+    let standing = Position {
+        x: anchor.x,
+        y: anchor.y,
+        z: anchor.z,
+    };
+    for unit in [run.party.owner, run.party.tank] {
+        run.app.world_mut().entity_mut(unit).insert(standing);
+    }
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        live,
+        "an anchor that left the source idle must not hold the party there"
+    );
+    let step = Position {
+        x: anchor.x + 2.0,
+        ..standing
+    };
+    run.app.world_mut().entity_mut(run.party.owner).insert(step);
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        live,
+        "leaving the reached anchor must not send the party back to it"
+    );
+}
+
+#[test]
 fn relocated_attackable_objective_without_aggro_uses_live_position() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let boss = run.actors[&20375720];
@@ -1829,6 +1975,8 @@ struct Run {
     report: Report,
     current_pack: Option<u32>,
     waiting_objective: Option<(u32, f64)>,
+    /// Packs whose frozen route anchor the owner reached without engaging them.
+    anchors_reached: std::collections::BTreeSet<u32>,
     last_progress: f64,
     event_cursor: usize,
     best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
@@ -2037,6 +2185,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         objects,
         current_pack: None,
         waiting_objective: None,
+        anchors_reached: Default::default(),
         last_progress: 0.0,
         event_cursor: 0,
         best_routes: BTreeMap::new(),
@@ -2384,6 +2533,18 @@ impl Run {
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        let attackable = crate::spell_cast::targets::relation_matches(
+            self.app.world(),
+            self.party.owner,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        );
+        if !attackable && self.is_gated_boss(target) {
+            // Production unlocks a gated boss after its gate packs die and may relocate it
+            // (Crawth descends from an off-graph perch), so its spawn needs no path.
+            self.hold_for_objective(pack_id);
+            return Ok(());
+        }
         let approach = self.approach_point(pack_id, target, to);
         if self.approach_translocation(approach)? {
             return Ok(());
@@ -2394,12 +2555,6 @@ impl Run {
         let (_, range) =
             crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
-        let attackable = crate::spell_cast::targets::relation_matches(
-            self.app.world(),
-            self.party.owner,
-            target,
-            crate::spell_cast::targets::Relation::Enemy,
-        );
         if !attackable {
             if let Some(step) = server::test_support::objectives::next(
                 self.app.world_mut(),
@@ -2454,16 +2609,7 @@ impl Run {
                     .entity_mut(self.party.owner)
                     .insert(MoveIntent(to));
             } else {
-                if self
-                    .waiting_objective
-                    .is_none_or(|(pack, _)| pack != pack_id)
-                {
-                    self.waiting_objective = Some((pack_id, self.now()));
-                }
-                self.app
-                    .world_mut()
-                    .entity_mut(self.party.owner)
-                    .remove::<MoveIntent>();
+                self.hold_for_objective(pack_id);
             }
             return Ok(());
         }
@@ -2531,9 +2677,35 @@ impl Run {
         }
     }
 
+    fn is_gated_boss(&self, target: Entity) -> bool {
+        self.app
+            .world()
+            .get::<shared::components::Npc>(target)
+            .is_some_and(|npc| {
+                server::test_support::objectives::boss_gate_entries(self.graph.map_id)
+                    .contains_key(&npc.template_id)
+            })
+    }
+
+    /// Stops the party at a source that is not attackable yet; `stalled` reports it if it stays so.
+    fn hold_for_objective(&mut self, pack_id: u32) {
+        if self
+            .waiting_objective
+            .is_none_or(|(pack, _)| pack != pack_id)
+        {
+            self.waiting_objective = Some((pack_id, self.now()));
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
+    }
+
     /// An unmoved source is approached at its frozen route anchor, which lies on the walk graph
     /// even when the source itself stands off-mesh; a moved source is approached where it is.
-    fn approach_point(&self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
+    /// A reached anchor that did not engage the source (its contact member may be dead) gives
+    /// way to the live source.
+    fn approach_point(&mut self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
         let unmoved = self.actors.get(&pack_id) == Some(&target)
             && self
                 .graph
@@ -2541,9 +2713,26 @@ impl Run {
                 .iter()
                 .find(|pack| pack.id == pack_id)
                 .is_some_and(|pack| pack.point().distance(live) <= 1.0);
-        let anchor = self.graph.route.iter().find(|step| step.pack == pack_id);
+        let owner = self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .map(|at| Vec3::new(at.x, at.y, at.z));
+        let anchor = self
+            .graph
+            .route
+            .iter()
+            .find(|step| step.pack == pack_id)
+            .map(|step| Vec3::from_array(step.anchor));
+        if anchor
+            .zip(owner)
+            .is_some_and(|(anchor, owner)| owner.distance(anchor) <= 1.0)
+        {
+            self.anchors_reached.insert(pack_id);
+        }
+        let reached = self.anchors_reached.contains(&pack_id);
         match anchor {
-            Some(step) if unmoved => Vec3::from_array(step.anchor),
+            Some(anchor) if unmoved && !reached => anchor,
             _ => live,
         }
     }

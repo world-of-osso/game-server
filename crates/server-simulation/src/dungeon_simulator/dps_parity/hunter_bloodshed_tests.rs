@@ -54,6 +54,71 @@ fn hunter_pet_kill_command_uses_owner_default_attack_power_not_ranged_only_bonus
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
+fn bloody_frenzy_comes_from_wrath_not_pet_kill_command_hits() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).unwrap();
+    engage(&mut run);
+    let owner = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), owner, 407412));
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    assert!(!crate::auras::has_aura(run.app.world(), owner, 1265063));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        pet,
+        83381,
+        Some(target),
+        1
+    ));
+    for _ in 0..20 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), owner, 1265063),
+        "pet damage must not activate Bloody Frenzy"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        owner,
+        literal_rotation::execution::Execution::Spell(19574, owner, Some(target)),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(owner)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1265063 && aura.caster == owner)
+        .expect("actual Bestial Wrath grants Bloody Frenzy");
+    let expiry = aura.expires_at;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        pet,
+        83381,
+        Some(target),
+        1
+    ));
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(owner)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1265063 && aura.caster == owner)
+        .unwrap();
+    assert_eq!(
+        aura.expires_at, expiry,
+        "pet Kill Command must not refresh the earned buff"
+    );
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_wrath_applies_bloodshed_from_each_owned_pet() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");

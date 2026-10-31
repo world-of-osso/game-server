@@ -186,6 +186,15 @@ fn scenarios_entry_and_real_death_boundary_are_copy_scoped_and_clear_on_exit() {
     world.entity_mut(players[0]).insert(InMap::continent(0));
     send_entry_progress(&mut world);
     assert!(snapshot(&world, InMap::continent(0)).scenario.is_none());
+
+    // An unloaded instance ID can be reused for a new copy.
+    crate::maps::unload_map_content(&mut world, &[copies[0]]);
+    world.entity_mut(players[0]).insert(copies[0]);
+    send_entry_progress(&mut world);
+    let fresh = snapshot(&world, copies[0]).scenario.unwrap();
+    assert!(!fresh.completed);
+    assert_eq!(fresh.criteria[0].current, 0);
+    assert!(!snapshot(&world, copies[1]).scenario.unwrap().completed);
 }
 
 #[test]

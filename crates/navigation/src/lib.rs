@@ -1,7 +1,9 @@
 //! Offline Recast navigation tiles and Detour queries, in Bevy world coordinates.
 #[cfg(feature = "bake")]
 pub mod bake;
+mod complete_route;
 pub mod hierarchy;
+pub use complete_route::CompleteRoute;
 mod query;
 pub use query::read_walkable_polygons;
 pub use query::{CollisionDrop, NavigationMap, NavigationPath, NavigationPlan};

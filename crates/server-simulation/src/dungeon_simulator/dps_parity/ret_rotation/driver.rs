@@ -23,9 +23,6 @@ pub(crate) struct Rotation {
 
 impl Rotation {
     pub fn load(world: &mut World, actor: Entity, encounter: Encounter) -> Result<Self, String> {
-        if !matches!(encounter, Encounter::Fixture { .. }) {
-            return Err("DUNGEON_TTD_UNAVAILABLE: literal Ret requires a Fixture encounter".into());
-        }
         let follower = world
             .get::<crate::followers::Follower>(actor)
             .is_some_and(|follower| follower.profile.spec_id == 70);
@@ -78,16 +75,15 @@ impl Rotation {
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {
-        let Encounter::Fixture {
-            duration, style, ..
-        } = self.encounter
-        else {
-            unreachable!("literal Ret fixture validated at load");
-        };
-        self.encounter = Encounter::Fixture {
-            started_at,
-            duration,
-            style,
+        self.encounter = match self.encounter {
+            Encounter::Fixture {
+                duration, style, ..
+            } => Encounter::Fixture {
+                started_at,
+                duration,
+                style,
+            },
+            Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
         };
     }
 

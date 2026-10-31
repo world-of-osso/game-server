@@ -1,9 +1,23 @@
 //! Explicit missing-script relationships; native records retain payload ownership.
 use super::combat::spell_cast::script_registry::{Policy, Relationship, SpellScriptHook};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::Policies(POLICIES)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::Policies(POLICIES),
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == 407412),
+];
 
 const POLICIES: &[Policy] = &[
+    // SimC76f8118 sc_hunter.cpp6741–6745: Bestial Wrath, not arbitrary
+    // successful damage, activates the selected Bloody Frenzy buff.
+    Policy {
+        name: "SIMC_BM_WRATH_BLOODY_FRENZY",
+        spec: 253,
+        talent: 407412,
+        relationship: Relationship::ApplySelfAuraAfterCast {
+            parent: 19574,
+            payload: 1265063,
+        },
+    },
     // SimC76f8118 sc_hunter.cpp6702–6703: selected Nature's Ally spawns
     // through its native Effect188 record; native1282474 supplies count/lifetime.
     Policy {

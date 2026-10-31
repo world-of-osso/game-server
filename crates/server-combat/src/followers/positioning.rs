@@ -1,9 +1,9 @@
-//! Project positioning policy: non-tanks do not approach through idle native sight circles.
+//! Follower approaches avoid idle hostile formations other than the target's own.
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::{Health, UnitFactionTemplate};
 
-use super::{kit_ai, pull_route};
+use super::pull_route;
 use crate::creature_aggro::AggroDistance;
 use crate::faction::{FactionTemplates, Reaction};
 use crate::maps::InMap;
@@ -32,14 +32,24 @@ fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
     let hold =
         now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
     if hold {
-        world
-            .entity_mut(unit)
-            .remove::<crate::creature_ai::FollowOwner>()
-            .insert(crate::creature_ai::CreatureState::Idle);
-    } else if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-        nav.cancel_query(unit, Goal::Approach(target.to_bits()));
+        hold_position(world, unit);
     }
     hold
+}
+
+fn hold_position(world: &mut World, unit: Entity) {
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+}
+
+fn hold_pending_approach(world: &mut World, unit: Entity, target: Entity, is_owner: bool) -> bool {
+    if is_owner {
+        return bounded_hold(world, unit, target);
+    }
+    hold_position(world, unit);
+    true
 }
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -48,9 +58,6 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         .is_some_and(|follower| follower.owner == target);
     if !is_owner {
         super::trail_follow::clear(world, unit);
-    }
-    if kit_ai::is_tank(world, unit) && !is_owner {
-        return false;
     }
     if is_owner && super::trail_follow::active(world, unit, target) {
         return super::trail_follow::advance(world, unit, target, Vec::new());
@@ -62,12 +69,12 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
                 ?target,
                 "Follower approach waiting for a navigation result"
             );
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
         Ok(Some(blockers)) => blockers,
         Err(error) => {
             warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            return bounded_hold(world, unit, target);
+            return hold_pending_approach(world, unit, target, is_owner);
         }
     };
     if blockers.is_empty() {
@@ -75,14 +82,11 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         world.entity_mut(unit).remove::<HoldTimeout>();
         return false;
     }
-    world
-        .entity_mut(unit)
-        .remove::<crate::creature_ai::FollowOwner>()
-        .insert(crate::creature_ai::CreatureState::Idle);
+    hold_position(world, unit);
     if is_owner {
         return super::trail_follow::advance(world, unit, target, blockers);
     }
-    bounded_hold(world, unit, target)
+    true
 }
 
 fn approach_enters_unpulled_sight(
@@ -99,7 +103,10 @@ fn approach_enters_unpulled_sight(
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
+        .filter(|watcher| {
+            is_unpulled_hostile(world, unit, *watcher)
+                && !in_target_formation(world, target, *watcher)
+        })
         .collect();
     if watchers.is_empty() {
         return Ok(Some(Vec::new()));
@@ -130,6 +137,42 @@ fn approach_enters_unpulled_sight(
     Ok(Some(blockers))
 }
 
+fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {
+    if target == watcher {
+        return true;
+    }
+    let (Some(target), Some(watcher)) = (
+        world.get::<crate::zones::CreatureOrigin>(target),
+        world.get::<crate::zones::CreatureOrigin>(watcher),
+    ) else {
+        return false;
+    };
+    if target.guid == 0 || watcher.guid == 0 {
+        return false;
+    }
+    let Some(data) = world.get_resource::<crate::world_data::WorldData>() else {
+        return false;
+    };
+    let pack = |guid| {
+        super::pack_identity::pack_guid(
+            guid,
+            data.formations.get(&guid).map(|entry| entry.leader_guid),
+        )
+    };
+    pack(target.guid) == pack(watcher.guid)
+}
+
+pub(super) fn approach_goal(world: &World, unit: Entity, target: Entity) -> Goal {
+    if world
+        .get::<super::Follower>(unit)
+        .is_some_and(|follower| follower.owner == target)
+    {
+        Goal::RegroupApproach(target.to_bits())
+    } else {
+        Goal::Approach(target.to_bits())
+    }
+}
+
 fn read_approach_path(
     world: &mut World,
     unit: Entity,
@@ -142,28 +185,142 @@ fn read_approach_path(
     if let Some(space) = world.get_resource::<crate::test_support::Space>() {
         return space.route(from, to).map(Some);
     }
+    let goal = approach_goal(world, unit, target);
     let Some(result) = world
         .get_resource_mut::<Navigation>()
         .ok_or("Follower positioning requires authored navigation")?
-        .query_deferred(
-            unit,
-            map.map_id,
-            Goal::Approach(target.to_bits()),
-            NavQuery::Path { from, to },
-        )
+        .query_deferred(unit, map.map_id, goal, NavQuery::CompleteRoute { from, to })
     else {
         return Ok(None);
     };
     match result? {
-        Some(Output::Path(path)) => {
-            let points = path.into_complete()?;
-            if points.is_empty() {
+        Some(Output::CompleteRoute(route)) => {
+            if !route.complete {
+                return Err(route
+                    .reason
+                    .unwrap_or_else(|| "Follower positioning route is incomplete".into()));
+            }
+            if route.points.is_empty() {
                 return Err("Follower positioning route is empty".into());
             }
-            Ok(Some(points))
+            Ok(Some(route.points))
         }
         None => Err("Follower positioning has no authored navigation bake".into()),
         Some(_) => Err("Follower positioning received a non-path result".into()),
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn halls_follower_approach_resolves_all_corridor_segments() {
+    let root =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh");
+    let mut world = World::new();
+    world.insert_resource(Navigation::new(&root));
+    let unit = world.spawn_empty().id();
+    let owner = world.spawn_empty().id();
+    let map = InMap::continent(2527);
+    let from = Vec3::new(3.4296, -130.648, -227.02);
+    let to = Vec3::new(-0.37, 20.816, -228.269);
+    assert!(
+        read_approach_path(&mut world, unit, owner, map, from, to)
+            .unwrap()
+            .is_none()
+    );
+    world.resource_mut::<Navigation>().drain_until_idle();
+    let points = read_approach_path(&mut world, unit, owner, map, from, to)
+        .unwrap()
+        .expect("complete route");
+    assert!(
+        points.len() > 256,
+        "route must include all segments: {}",
+        points.len()
+    );
+    assert!(points.last().unwrap().distance(to) < 1.0);
+    assert!(points.iter().any(|point| point.y < -100.0));
+    assert!(points.iter().any(|point| point.y > 10.0));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::followers::profile_behavior_tests::spawn_profile_fixture_with_plugins;
+    use crate::test_support::graph::{Graph, Pack};
+    use shared::components::{
+        CharacterAppearance, CharacterVisual, ModelDisplay, Position, UnitLevel,
+    };
+
+    #[test]
+    fn character_visual_follower_keeps_following_when_watchers_are_off_route() {
+        let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209072, |_| {});
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        h.app
+            .insert_resource(crate::test_data::world_data().clone());
+        h.app
+            .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+        h.app.insert_resource(crate::test_support::Space(Graph {
+            map_id: 0,
+            entrance: [0.0, 0.0],
+            entrance_height: 0.0,
+            entrance_pack: 1,
+            packs: vec![Pack {
+                id: 1,
+                position: [0.0, 0.0],
+                height: 0.0,
+                spawns: vec![],
+            }],
+            edges: vec![],
+            teleports: vec![],
+            transports: vec![],
+            unreachable: vec![],
+            route: vec![],
+            follower_difficulty: 0,
+            follower_boss_entries: vec![],
+            follower_boss_sources: default(),
+            follower_boss_bits: default(),
+            follower_encounter_actor_bits: default(),
+        }));
+        h.app
+            .world_mut()
+            .entity_mut(follower)
+            .remove::<ModelDisplay>()
+            .insert((
+                CharacterVisual {
+                    race: 1,
+                    class: 5,
+                    appearance: CharacterAppearance::default(),
+                },
+                UnitLevel(90),
+                Position {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ));
+        h.app.world_mut().entity_mut(h.npc).insert((
+            UnitLevel(90),
+            Position {
+                x: 100.0,
+                y: 0.0,
+                z: 100.0,
+            },
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        let owner = h.caster;
+        assert!(!hold_unsafe_approach(h.app.world_mut(), follower, owner));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::FollowOwner>(follower)
+                .unwrap()
+                .owner,
+            owner
+        );
     }
 }
 

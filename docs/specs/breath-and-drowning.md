@@ -15,7 +15,7 @@ Breath and fatigue mirror timers and their environmental damage, TrinityCore mas
 - [x] The server sends no `MirrorTimerPause` and no feign-death timer: TrinityCore sends neither.
 - [ ] The timers count server simulation time (the 50 ms fixed step), TrinityCore counts real elapsed time (`Player::Update(p_time)`). When outer updates overrun Bevy's 250 ms virtual-time clamp ([tick loop design](../wiki/design/tick-loop-design.md#catch-up-and-overrun-policy)) the server falls behind the wall clock and so behind the client's bar, which counts real time: on :5000 on 2026-09-29 00:33:38-00:39:04 the server ran 4 000 ticks (200 s) in 326 s, so breath had not run out when the client's bar reached 0.
 - [ ] Fatigue in TrinityCore needs the liquid's `LiquidType.SoundBank` to be ocean (map_extractor System.cpp:690); the server has no LiquidType data, so any liquid with the `deep` mask fatigues.
-- [ ] Lava and slime damage (`FIRE_TIMER`, `DAMAGE_LAVA`) need `LiquidType.SoundBank`; not implemented. WMO liquid is not read.
+- [ ] Lava and slime damage (`FIRE_TIMER`, `DAMAGE_LAVA`) need `LiquidType.SoundBank`; not implemented. WMO liquid has no MH2O deep mask.
 - [ ] Collision height is TrinityCore's default for every race; `CreatureModelData.CollisionHeight` × scale of the player's display is not used.
 - [ ] A ghost's fatigue does not repop it at its graveyard; GM breathing disable, `SPELL_AURA_FORCE_BREATH_BAR`, `MOD_ENVIRONMENTAL_DAMAGE_TAKEN` and `SMSG_ENVIRONMENTAL_DAMAGE_LOG` are not implemented.
 

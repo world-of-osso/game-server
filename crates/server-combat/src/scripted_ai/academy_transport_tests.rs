@@ -26,7 +26,7 @@ fn player(world: &mut World, map: InMap, pos: Vec3) -> Entity {
 }
 
 #[test]
-fn academy_pad_moves_owner_and_follower_then_releases_control() {
+fn academy_pad_moves_owner_follower_and_pet_then_releases_control() {
     let mut app = App::new();
     app.insert_resource(Time::<()>::default());
     app.add_systems(
@@ -89,9 +89,28 @@ fn academy_pad_moves_owner_and_follower_then_releases_control() {
             },
         ))
         .id();
+    let pet = world
+        .spawn((
+            map,
+            Position {
+                x: PAD.x - 1.0,
+                y: PAD.y,
+                z: PAD.z,
+            },
+            shared::components::Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            crate::hunter_pet::HunterPet { owner, slot: 0 },
+        ))
+        .id();
     launch_entrance_pad(world);
     assert!(world.get::<MovementControl>(owner).unwrap().controlled);
     assert!(world.get::<JumpMovement>(follower).is_some());
+    assert!(
+        world.get::<JumpMovement>(pet).is_some(),
+        "the owner's pet rides the pad"
+    );
     assert!(world.get::<JumpMovement>(foreign).is_none());
     world
         .resource_mut::<Time>()
@@ -110,7 +129,7 @@ fn academy_pad_moves_owner_and_follower_then_releases_control() {
         .advance_by(std::time::Duration::from_secs(10));
     super::super::jump_movement::advance_jumps(world);
     app.update();
-    for rider in [owner, follower] {
+    for rider in [owner, follower, pet] {
         assert_eq!(
             *app.world().get::<Position>(rider).unwrap(),
             Position {

@@ -301,6 +301,9 @@ fn current_victim_within_two_yards_but_blocked_by_server_los_does_not_stop() {
     ];
     let wall = shared::los::LosTile::build(0, 0, vertices, vec![[0, 1, 2], [0, 2, 3]]);
     let map = crate::maps::InMap::continent(STOCKADE);
+    app.world_mut()
+        .entity_mut(chaser)
+        .insert(crate::followers::FollowerReach(30.0));
     let mut hulls = std::collections::HashMap::new();
     hulls.insert(map, vec![std::sync::Arc::new(wall)]);
     app.world_mut()
@@ -349,6 +352,37 @@ fn current_victim_ghost_with_positive_health_is_not_chased() {
         });
     step(&mut app);
     assert_eq!(*app.world().get::<Position>(chaser).unwrap(), from);
+}
+
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn ranged_follower_stays_at_visible_spell_range() {
+    let (mut app, victim, chaser, from) = fixture();
+    *app.world_mut().get_mut::<Position>(victim).unwrap() = Position {
+        x: 126.42,
+        y: -25.61,
+        z: -4.14,
+    };
+    app.world_mut()
+        .entity_mut(chaser)
+        .insert(crate::followers::FollowerReach(30.0));
+    let map = crate::maps::InMap::continent(STOCKADE);
+    let mut bodies = app.world_mut().query::<crate::line_of_sight::BodyParts>();
+    let world = app.world();
+    assert!(crate::line_of_sight::unit_sees(
+        Some(world.resource::<crate::line_of_sight::LineOfSight>()),
+        map,
+        bodies.get(world, chaser).unwrap(),
+        bodies.get(world, victim).unwrap()
+    ));
+    for _ in 0..10 {
+        step(&mut app);
+    }
+    assert_eq!(
+        *app.world().get::<Position>(chaser).unwrap(),
+        from,
+        "visible ranged target must not draw its caster into melee"
+    );
 }
 
 #[test]

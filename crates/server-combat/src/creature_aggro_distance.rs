@@ -1,7 +1,7 @@
 //! TC a352b1fa Creature::GetAttackDistance (Creature.cpp:2165–2206), with
 //! Rate.Creature.Aggro=1 and MaxPlayerLevel=90 (World.cpp:1002,751).
 use bevy::prelude::*;
-use shared::components::{ModelDisplay, Npc, Player, UnitScale};
+use shared::components::{CharacterVisual, ModelDisplay, Npc, Player, UnitScale};
 
 use crate::auras::{ActiveAuras, handlers::MOD_DETECTED_RANGE};
 use crate::scripted_ai::model_reach::{ModelReaches, PLAYER_COMBAT_REACH, creature_combat_reach};
@@ -66,6 +66,7 @@ type UnitGeometry<'w, 's> = Query<
     's,
     (
         Has<Player>,
+        Has<CharacterVisual>,
         Option<&'static Npc>,
         Option<&'static ModelDisplay>,
         Option<&'static UnitScale>,
@@ -89,8 +90,8 @@ impl AggroDistance<'_, '_> {
         creature_level: u8,
         target_level: u8,
     ) -> Option<f32> {
-        let (_, _, _, _, auras, _) = self.units.get(creature).ok()?;
-        let (_, _, _, _, target_auras, _) = self.units.get(target).ok()?;
+        let (_, _, _, _, _, auras, _) = self.units.get(creature).ok()?;
+        let (_, _, _, _, _, target_auras, _) = self.units.get(target).ok()?;
         Some(
             AttackDistance {
                 creature_level,
@@ -106,7 +107,7 @@ impl AggroDistance<'_, '_> {
     }
 
     fn expansion_max_level(&self, creature: Entity) -> Option<u8> {
-        let (_, npc, _, _, _, difficulty) = self.units.get(creature).ok()?;
+        let (_, _, npc, _, _, _, difficulty) = self.units.get(creature).ok()?;
         let npc = npc?;
         let difficulty = difficulty.map_or(0, |difficulty| difficulty.0);
         let template = self
@@ -126,9 +127,9 @@ impl AggroDistance<'_, '_> {
     }
 
     pub fn combat_reach(&self, unit: Entity) -> Option<f32> {
-        let (player, _, display, scale, _, _) = self.units.get(unit).ok()?;
+        let (player, character_visual, _, display, scale, _, _) = self.units.get(unit).ok()?;
         let scale = scale.map_or(1.0, |scale| scale.0);
-        if player {
+        if player || character_visual {
             return Some(PLAYER_COMBAT_REACH * scale);
         }
         let display = display?;
@@ -168,6 +169,54 @@ mod tests {
             detect_range: 0.0,
             detected_range: 0.0,
         }
+    }
+
+    #[test]
+    fn character_visual_target_has_the_same_aggro_radius_as_player() {
+        use bevy::ecs::system::SystemState;
+        use shared::components::CharacterAppearance;
+
+        let mut app = App::new();
+        app.insert_resource(crate::test_data::world_data().clone());
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+        let watcher = crate::spell_cast::test_harness::spawn_npc(&mut app, 0.0);
+        let player = crate::spell_cast::test_harness::spawn_player(&mut app, 8, 0.0);
+        let character = app
+            .world_mut()
+            .spawn(CharacterVisual {
+                race: 1,
+                class: 8,
+                appearance: CharacterAppearance::default(),
+            })
+            .id();
+        let ordinary_npc = app
+            .world_mut()
+            .spawn(Npc {
+                template_id: 6,
+                name: "No display".into(),
+            })
+            .id();
+        assert_eq!(
+            crate::scripted_ai::model_reach::melee_range(app.world(), watcher, character),
+            crate::scripted_ai::model_reach::melee_range(app.world(), watcher, player),
+        );
+        assert_eq!(
+            crate::scripted_ai::model_reach::bounding_radius(app.world(), character),
+            crate::scripted_ai::model_reach::bounding_radius(app.world(), player),
+        );
+        let mut state = SystemState::<AggroDistance>::new(app.world_mut());
+        let geometry = state.get(app.world()).unwrap();
+        let player_radius = geometry.center_radius(watcher, player, 90, 90).unwrap();
+        assert_eq!(
+            geometry.center_radius(watcher, character, 90, 90),
+            Some(player_radius)
+        );
+        assert_eq!(geometry.center_radius(watcher, ordinary_npc, 90, 90), None);
     }
 
     #[test]

@@ -1,3 +1,6 @@
+- 2026-10-30: Documented [follower flight](systems/follower-flight.md), landing and the profile-mount gap.
+- 2026-10-30: Added WMO liquid sampling and swimmer floor selection to [swimming and breath](systems/swimming-and-breath.md); real-map qualification pending.
+- 2026-10-30: Recorded [complete-route inspection](systems/navigation.md#complete-route-inspection) and the Brackenhide node-limit result.
 - 2026-10-29: Added the TDB spellclick projection to [content import](systems/content-import.md).
 - 2026-10-29: Recorded [Ruby affix summons imported as spawns](investigations/log-derived-population.md#ruby-affix-summons-imported-as-spawns--2026-10-29) and private-copy retirement.
 - 2026-10-29: Recorded [world-entry sight and paging measurements](investigations/server-tick-lag.md#world-entry-creature-sight-and-host-paging-2026-10-29) and login/ground worker changes.
@@ -4839,3 +4842,5 @@ Documented the first compile-boundary slice in [spell-script-crate](systems/spel
 - 2026-10-26: [Owned Survival strikes](systems/spell-casting.md#survival-native-producers--2026-10-26) landed5a8c96626d via b0f0f0b804: all41 native controls pass, including actual main-pet crit→Sic-Em. Source1251717 uses actual aura.instance_id and700ms policy ownership. Canonical means88726.483ST/145807.187three-target are44.70%/45.76% reference. Parent orders Mongoose259388/Stargazer1253750 next; real-cast RED12233749ba pending, no stat changes.
 - 2026-10-26: [Earned Mongoose/Stargazer](systems/spell-casting.md#survival-native-producers--2026-10-26) has2 genuine native REDs in12233749ba: actual Raptor and actual Tip consumption produce0 stacks. New full-effect applications preserve native caps/selected labels and asynchronous Stargazer lifetime; damage factors/stats remain native. GREEN and canonical remeasurement remain pending.
 - 2026-10-29: Updated [live GameObject lookup](reference/dev-commands.md#live-gameobject-lookup) with authoritative state and replicated collision diagnostics; live door-state comparison remains pending.
+
+- 2026-10-30: Recorded [player-class follower profile inputs](investigations/follower-data.md#player-class-profile-inputs--2026-10-30), including native talent validation and Hunter grant handling.

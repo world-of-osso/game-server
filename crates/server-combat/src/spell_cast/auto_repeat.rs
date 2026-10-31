@@ -41,7 +41,6 @@ impl AutoRepeat {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn active(world: &World, caster: Entity, spell: u32) -> bool {
     world
         .get::<AutoRepeat>(caster)
@@ -114,6 +113,30 @@ pub(super) fn update(world: &mut World) {
         .collect();
     for (caster, spell_id, target) in due {
         fire(world, caster, spell_id, target);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn class_follower_auto_repeat_query_reads_actual_active_spell() {
+        let mut world = World::new();
+        let target = world.spawn_empty().id();
+        let caster = world
+            .spawn(AutoRepeat {
+                spell_id: 75,
+                target,
+                ready_in: Duration::from_secs(2),
+            })
+            .id();
+        assert!(super::super::native_apl::auto_repeat_active(
+            &world, caster, 75
+        ));
+        assert!(!super::super::native_apl::auto_repeat_active(
+            &world, caster, 133
+        ));
     }
 }
 

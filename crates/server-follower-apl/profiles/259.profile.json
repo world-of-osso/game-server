@@ -1,0 +1,320 @@
+{
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271510,
+      "bonus_list": [
+        13692,
+        13698,
+        13750,
+        13847,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 7991,
+      "gems": [
+        240967
+      ],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "271875"
+      }
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [
+        13662,
+        13668,
+        13708,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [
+        240914,
+        240898
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271508,
+      "bonus_list": [
+        12854,
+        13694,
+        13697
+      ],
+      "item_level_override": null,
+      "enchant": 7973,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "251223"
+      }
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [
+        13662,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271513,
+      "bonus_list": [
+        12854,
+        13690,
+        13698
+      ],
+      "item_level_override": null,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268235"
+      }
+    },
+    {
+      "slot": "wrists",
+      "item_id": 244576,
+      "bonus_list": [
+        8790,
+        8960,
+        12214,
+        12384,
+        13750,
+        13751,
+        13836,
+        9627
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [
+        240890
+      ],
+      "crafted_stats": [
+        32,
+        49
+      ],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 271511,
+      "bonus_list": [
+        12854,
+        13691,
+        13697
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "159312"
+      }
+    },
+    {
+      "slot": "waist",
+      "item_id": 268256,
+      "bonus_list": [
+        13662,
+        13750,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [
+        240908
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271509,
+      "bonus_list": [
+        13693,
+        13698,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 8159,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268225"
+      }
+    },
+    {
+      "slot": "feet",
+      "item_id": 244569,
+      "bonus_list": [
+        8790,
+        8960,
+        12214,
+        12384
+      ],
+      "item_level_override": 331,
+      "enchant": 8019,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 268252,
+      "bonus_list": [
+        13534
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240908
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 252258,
+      "bonus_list": [
+        13534
+      ],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270168,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270175,
+      "bonus_list": [
+        13662,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 271093,
+      "bonus_list": [
+        13662,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 275070,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "actions": [
+    "actions.precombat=apply_poison",
+    "actions.precombat+=/snapshot_stats",
+    "actions.precombat+=/variable,name=trinket_sync_slot,value=1,if=trinket.1.has_use_buff&(!trinket.2.has_use_buff|trinket.1.cooldown.duration>=trinket.2.cooldown.duration)",
+    "actions.precombat+=/variable,name=trinket_sync_slot,value=2,if=trinket.2.has_use_buff&(!trinket.1.has_use_buff|trinket.2.cooldown.duration>trinket.1.cooldown.duration)",
+    "actions.precombat+=/stealth",
+    "actions.precombat+=/slice_and_dice,precombat_seconds=1",
+    "actions=stealth",
+    "actions+=/kick",
+    "actions+=/variable,name=single_target,value=spell_targets.fan_of_knives=1",
+    "actions+=/thistle_tea,if=energy.pct<30|fight_remains<10",
+    "actions+=/ambush,if=stealthed.rogue&variable.single_target&talent.blindside&talent.improved_ambush&!talent.shrouded_suffocation",
+    "actions+=/call_action_list,name=cds,if=variable.single_target|!talent.scent_of_blood|buff.scent_of_blood.stack>=(2*talent.scent_of_blood.rank*spell_targets.fan_of_knives>?20)",
+    "actions+=/call_action_list,name=core_dot",
+    "actions+=/call_action_list,name=generate,if=!buff.darkest_night.up&combo_points<5|buff.darkest_night.up&combo_points.deficit>0",
+    "actions+=/call_action_list,name=spend,if=!buff.darkest_night.up&combo_points>=5|buff.darkest_night.up&combo_points.deficit=0",
+    "actions.cds=deathmark,if=dot.garrote.ticking&dot.rupture.ticking&cooldown.kingsbane.remains<=2&buff.envenom.remains>2&(target.time_to_die>10|fight_remains<20)",
+    "actions.cds+=/invoke_external_buff,name=power_infusion,if=dot.deathmark.ticking",
+    "actions.cds+=/call_action_list,name=items",
+    "actions.cds+=/call_action_list,name=misc_cds",
+    "actions.cds+=/kingsbane,if=dot.garrote.ticking&dot.rupture.ticking&(dot.deathmark.ticking|cooldown.deathmark.remains>52)&buff.envenom.up&(target.time_to_die>10|fight_remains<20)",
+    "actions.cds+=/call_action_list,name=vanish,if=!stealthed.rogue",
+    "actions.core_dot=garrote,if=(buff.improved_garrote.up|stealthed.rogue)&(pmultiplier<=1|remains<=14+6*talent.razor_wire+4*!variable.single_target)",
+    "actions.core_dot+=/garrote,if=combo_points.deficit>=1&(pmultiplier<=1|!variable.single_target)&refreshable&target.time_to_die-remains>12",
+    "actions.core_dot+=/garrote,cycle_targets=1,if=!talent.crimson_tempest&combo_points.deficit>=1&(pmultiplier<=1|!variable.single_target)&refreshable&target.time_to_die-remains>12",
+    "actions.core_dot+=/rupture,if=combo_points>=5&refreshable&target.time_to_die-remains>12&(!buff.darkest_night.up|!dot.rupture.ticking)",
+    "actions.core_dot+=/rupture,cycle_targets=1,if=!talent.crimson_tempest&combo_points>=5&refreshable&target.time_to_die-remains>12&(!buff.darkest_night.up|!dot.rupture.ticking)",
+    "actions.generate=crimson_tempest,target_if=max:dot.rupture.remains,if=!variable.single_target&(active_dot.garrote<spell_targets.fan_of_knives|active_dot.rupture<spell_targets.fan_of_knives)&(dot.rupture.remains>5|energy.regen_combined>40)",
+    "actions.generate+=/shiv,if=spell_targets.fan_of_knives<=1&talent.toxic_stiletto&talent.darkest_night",
+    "actions.generate+=/fan_of_knives,if=buff.darkest_night.up&combo_points.deficit=1&spell_targets.fan_of_knives<=1",
+    "actions.generate+=/fan_of_knives,if=spell_targets.fan_of_knives>1+(talent.blindside&!talent.clear_the_witnesses)",
+    "actions.generate+=/ambush,if=spell_targets.fan_of_knives<=1+(talent.blindside&!talent.clear_the_witnesses)",
+    "actions.generate+=/mutilate,if=spell_targets.fan_of_knives<=1+(talent.blindside&!talent.clear_the_witnesses)",
+    "actions.generate+=/fan_of_knives,if=!(main_hand.dagger&off_hand.dagger)",
+    "actions.items=variable,name=base_trinket_condition,value=dot.rupture.ticking&cooldown.deathmark.remains<2|dot.deathmark.ticking|fight_remains<=22",
+    "actions.items+=/use_item,name=astral_gladiators_badge_of_ferocity,use_off_gcd=1,if=dot.kingsbane.ticking|dot.deathmark.ticking|(cooldown.kingsbane.remains>60|cooldown.deathmark.remains>60)",
+    "actions.items+=/use_item,name=algethar_puzzle_box,use_off_gcd=1,if=variable.base_trinket_condition&buff.envenom.up&(target.time_to_die>10|fight_remains<20)",
+    "actions.items+=/use_item,name=font_of_venomous_rage,use_off_gcd=1,if=buff.lingering_darkness.up|!dot.deathmark.ticking&!cooldown.deathmark.ready&cooldown.deathmark.remains>20",
+    "actions.items+=/use_items,slots=trinket1,if=(variable.trinket_sync_slot=1&(debuff.deathmark.up)|(variable.trinket_sync_slot=2&!trinket.2.cooldown.ready&cooldown.deathmark.remains>20))|!variable.trinket_sync_slot|fight_remains<=20",
+    "actions.items+=/use_items,slots=trinket2,if=(variable.trinket_sync_slot=2&(debuff.deathmark.up)|(variable.trinket_sync_slot=1&!trinket.1.cooldown.ready&cooldown.deathmark.remains>20))|!variable.trinket_sync_slot|fight_remains<=20",
+    "actions.misc_cds=potion,if=dot.rupture.ticking&(buff.bloodlust.react|fight_remains<30|debuff.deathmark.up)",
+    "actions.misc_cds+=/blood_fury,use_off_gcd=1,if=debuff.deathmark.up",
+    "actions.misc_cds+=/berserking,use_off_gcd=1,if=debuff.deathmark.up",
+    "actions.misc_cds+=/fireblood,use_off_gcd=1,if=debuff.deathmark.up",
+    "actions.misc_cds+=/ancestral_call,use_off_gcd=1,if=debuff.deathmark.up",
+    "actions.spend=envenom,if=buff.envenom.remains<=1|buff.deathmark.up",
+    "actions.spend+=/envenom,if=energy.pct>70|fight_remains<15",
+    "actions.spend+=/envenom,if=energy.pct>30&(target.time_to_die<12|spell_targets.fan_of_knives>=4)",
+    "actions.vanish=vanish,if=variable.single_target&talent.improved_garrote&dot.garrote.pmultiplier<=1&(dot.deathmark.ticking|cooldown.deathmark.remains>target.time_to_die-10)&!raid_event.adds.in<=30",
+    "actions.vanish+=/vanish,if=!variable.single_target&talent.improved_garrote&dot.garrote.pmultiplier<=1&(raid_event.adds.remains>=10|!raid_event.adds.in<=30)"
+  ],
+  "consumables": {
+    "potion": "lights_potential_2",
+    "flask": "flask_of_the_shattered_sun_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2/off_hand:thalassian_phoenix_oil_2"
+  },
+  "class": "rogue",
+  "name": "MID2_Rogue_Assassination_Deathstalker",
+  "source": "default",
+  "spec": "assassination",
+  "level": "90",
+  "race": "troll",
+  "role": "attack",
+  "position": "back",
+  "talents": "CMQAAAAAAAAAAAAAAAAAAAAAAYmlxsNDGAAAAAYWGsNDAAAAAIbzMzMzMjxyMzMbzsMzMzYGzYMmZMMAbmlBGwSwywEYYxgZGgxYA",
+  "omnium_talents": "136822:1/136819:1/136817:1/136821:1/136814:1",
+  "spec_id": 259,
+  "profile": "profiles/MID2/MID2_Rogue_Assassination.simc",
+  "profile_sha256": "05777d82fa481ff69769754c3ae2a66b3b81f02b7b5feafbee4b54cce955c47e",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc"
+}

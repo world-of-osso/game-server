@@ -763,6 +763,10 @@ fn validate_packet(bytes: &[u8]) -> Result<(), String> {
 #[path = "seam_tests.rs"]
 mod seam_tests;
 
+#[cfg(test)]
+#[path = "complete_route_tests.rs"]
+mod complete_route_tests;
+
 #[cfg(all(test, feature = "bake"))]
 #[path = "gorek_diagnostic.rs"]
 mod gorek_diagnostic;

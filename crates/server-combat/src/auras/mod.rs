@@ -46,6 +46,7 @@ pub(crate) mod forecast;
 pub mod handlers;
 pub(crate) mod health_pct_trigger;
 mod ignite;
+pub use ignite::owned_ignite_bank;
 mod incoming_spell_masks;
 pub mod invisibility;
 mod item_requirements;
@@ -209,7 +210,6 @@ pub fn aura_now(world: &World) -> f64 {
     world.resource::<Time<Virtual>>().elapsed_secs_f64()
 }
 
-#[cfg(any(test, feature = "test-support"))]
 /// Actual native equipment proc timer; reading never starts or retimes a proc.
 pub(crate) fn equipment_proc_cooldown_remaining(
     world: &World,
@@ -2298,7 +2298,12 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         if !player_controlled_npc || world.get::<crate::followers::Follower>(unit).is_none() {
             combat.armor_penetration_pct = 0.0;
         }
-        stats.max_mana_pct = 0.0;
+        if world
+            .get::<shared::components::CharacterVisual>(unit)
+            .is_none()
+        {
+            stats.max_mana_pct = 0.0;
+        }
         stats.rating_from_rating.clear();
         combat.max_power_mult.clear();
     }

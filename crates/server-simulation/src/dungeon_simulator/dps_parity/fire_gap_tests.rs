@@ -955,6 +955,86 @@ fn fire_meteor_deep_impact_amplifies_only_nearest_target() {
 
 #[test]
 #[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_ignite_deposit_uses_the_selected_combustion_phase_talent() {
+    let contribution = |combustion: bool, phase_talent: bool| {
+        let _seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_literal(63, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let relevant = if combustion { 383967 } else { 384174 };
+        let other = if combustion { 384174 } else { 383967 };
+        let mut known: Vec<_> = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| !matches!(*id, 383967 | 384174))
+            .collect();
+        known.push(other);
+        if phase_talent {
+            known.push(relevant);
+        }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        preparation::warm_up_reference(&mut run).unwrap();
+        if combustion {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 190319, Some(actor), 1);
+            assert!(crate::auras::has_aura(run.app.world(), actor, 190319));
+        }
+        start_native(&mut run, 108853, target);
+        run.app.update();
+        let world = run.app.world();
+        let damage = world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .rev()
+            .find(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(108853)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .expect("the ordinary Fire Blast must hit")
+            .amount as f32;
+        let tick = world
+            .get::<ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 12654 && aura.caster == actor)
+            .expect("Fire Blast must deposit a real Ignite")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        (
+            tick / damage,
+            crate::spell_cast::scripts::script_effect_value(
+                world,
+                actor,
+                relevant,
+                if combustion { 1 } else { 0 },
+            ),
+        )
+    };
+    for combustion in [false, true] {
+        let (baseline, _) = contribution(combustion, false);
+        let (selected, percent) = contribution(combustion, true);
+        let expected = 1.0 + percent / 100.0;
+        assert!(
+            (selected / baseline - expected).abs() < 0.002,
+            "Combustion={combustion}: Ignite deposit ratio {} must match native talent factor {expected}",
+            selected / baseline
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
 fn fire_ignite_controlled_destruction_scales_only_owned_ignite_contribution() {
     let contribution = |keep_debuff: bool| {
         let _seed = crate::random::seed_scope(70_448);
@@ -1098,6 +1178,164 @@ fn fire_feedback_fiery_rush_ends_with_combustion() {
         }
     }
     panic!("unextended native Combustion must expire within30s");
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn scald_guarantees_fireball_critical_at_execute_threshold() {
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(63, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    let mut known: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .filter(|id| *id != 450746)
+        .collect();
+    known.push(450746);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(known));
+    let chance = |run: &Run, spell_id| {
+        let spell = run
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .unwrap();
+        crate::spell_cast::effects::crit_chance(run.app.world(), actor, target, spell)
+    };
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.31;
+    assert!(
+        chance(&run, 133) < 100.0,
+        "Scald must not force a crit above 30%"
+    );
+    let mut health = run.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.30;
+    assert_eq!(
+        chance(&run, 133),
+        100.0,
+        "health {:?}, threshold {}",
+        run.app.world().get::<Health>(target),
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), actor, 450746, 2)
+    );
+    assert_eq!(chance(&run, 431044), 100.0);
+    assert!(
+        chance(&run, 11366) < 100.0,
+        "Scald must not guarantee Pyroblast crit"
+    );
+    start_native(&mut run, 133, target);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(133)
+                    && event.kind == CombatLogKind::Damage
+                    && event.crit
+            }),
+        "ordinary Fireball must land a critical hit at 30% health"
+    );
+    let known: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .filter(|id| *id != 450746)
+        .collect();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(known));
+    assert!(
+        chance(&run, 133) < 100.0,
+        "without Scald, Fireball uses ordinary crit chance"
+    );
+}
+
+#[test]
+#[ignore = "requires exact Fire63 inputs and private70448 DB"]
+fn fire_burnout_discharges_only_owned_ignite_when_combustion_ends() {
+    for selected in [false, true] {
+        let mut run = prepare_literal(63, 2).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        let mut known: Vec<_> = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .iter()
+            .filter(|id| *id != 1271177)
+            .collect();
+        if selected {
+            known.push(1271177);
+        }
+        run.app
+            .world_mut()
+            .entity_mut(actor)
+            .insert(crate::class_progression::KnownSpells::fixture(known));
+        start_native(&mut run, 190319, actor);
+        run.app.update();
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = 0.0;
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            run.app.world_mut(),
+            actor,
+            12654,
+            Some(target),
+            1,
+            1000.0,
+        );
+        let bank = crate::auras::owned_ignite_bank(run.app.world(), actor, target);
+        assert!(
+            bank > 0.0,
+            "the owned Ignite bank must exist before Combustion ends"
+        );
+        crate::auras::set_owned_duration(run.app.world_mut(), actor, actor, 190319, 100);
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let hits: Vec<_> = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(1271335)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), usize::from(selected));
+        if selected {
+            assert_eq!(hits[0].target, Some(target.to_bits()));
+            let expected = bank * 0.75;
+            assert!(
+                (f64::from(hits[0].amount) - expected).abs() < expected * 0.08,
+                "Burnout must deal 75% of the Ignite bank: bank {bank}, damage {}",
+                hits[0].amount
+            );
+        }
+    }
 }
 
 fn fire_phoenix_actor(run: &mut Run) -> Option<Entity> {

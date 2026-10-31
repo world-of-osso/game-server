@@ -7,6 +7,8 @@ mod academy_barrier;
 mod ancient;
 #[path = "anubzekt.rs"]
 mod anubzekt;
+#[path = "avanoxx_intro.rs"]
+mod avanoxx_intro;
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
 #[path = "azure_blade.rs"]
@@ -159,6 +161,8 @@ mod porung;
 mod ruby_final;
 #[path = "skarmorak.rs"]
 mod skarmorak;
+#[path = "stonevault_doors.rs"]
+mod stonevault_doors;
 #[path = "talondras.rs"]
 mod talondras;
 #[path = "the_maker.rs"]

@@ -24,15 +24,27 @@ pub enum Goal {
     FollowFormation(u64, Vec3),
     Hazard(u64),
     Approach(u64),
+    RegroupApproach(u64),
     PullAdmission,
     FollowerTargetSelection,
     OwnerTrail(u64),
     FollowerRelease,
+    FollowerFlightLanding,
     FearCollision,
     FearPath,
     Point,
     Home,
     Waypoint(u32, usize),
+}
+
+impl Goal {
+    fn query_priority(self) -> u8 {
+        match self {
+            Self::RegroupApproach(_) => 0,
+            Self::Hazard(_) | Self::FearCollision | Self::FearPath => 2,
+            _ => 1,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -113,6 +125,10 @@ impl Navigation {
             #[cfg(any(test, feature = "test-support"))]
             applied: Vec::new(),
         }
+    }
+
+    pub(crate) fn current_destination(&self, entity: Entity) -> Option<Vec3> {
+        self.routes.get(&entity).map(|route| route.destination)
     }
 
     pub(crate) fn route_destination(&self, entity: Entity, goal: Goal) -> Option<Vec3> {

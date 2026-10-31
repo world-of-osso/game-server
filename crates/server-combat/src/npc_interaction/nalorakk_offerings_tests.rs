@@ -172,6 +172,10 @@ fn unlock_hoardmonger_through_objective(source: u32, name: &str, pickup: u32) {
                 name: "Hoardmonger".into(),
             },
             UnitFlags(immunity),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
         ))
         .id();
     // Fishing is SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL; the route driver offers it out of combat.
@@ -197,6 +201,16 @@ fn unlock_hoardmonger_through_objective(source: u32, name: &str, pickup: u32) {
                 objectives::next(h.app.world_mut(), owner, boss)
                     .unwrap()
                     .is_none()
+            );
+            // The unlocked boss must fight back: an attack puts the attacker on its threat list.
+            crate::creature_aggro::add_threat(h.app.world_mut(), boss, owner, 10.0);
+            let threat = h.app.world().get::<shared::components::ThreatTable>(boss);
+            assert_eq!(
+                threat
+                    .and_then(|table| table.top_threat())
+                    .map(|top| top.entity),
+                Some(owner.to_bits()),
+                "unlocked Hoardmonger stayed passive"
             );
             return;
         }

@@ -1228,6 +1228,7 @@ type StatsFilter = (
     Or<(
         Added<Player>,
         Changed<crate::followers::Follower>,
+        Changed<shared::components::CharacterVisual>,
         Changed<Level>,
         Changed<ActiveSpec>,
         Changed<EquippedItems>,
@@ -1237,18 +1238,20 @@ type StatsFilter = (
     )>,
 );
 
-/// Followers retain the bridge's source-neutral race0 and labelled spec. They
-/// remain NPCs; no synthetic Player or persistent-character identity is inserted.
+/// Character followers use their replicated race without acquiring a Player identity.
 fn stat_identity(
     player: Option<&Player>,
     follower: Option<&crate::followers::Follower>,
+    visual: Option<&shared::components::CharacterVisual>,
     spec: Option<&ActiveSpec>,
 ) -> Option<(u8, u8, Option<u32>)> {
     match (player, follower) {
         (Some(player), _) => Some((player.class, player.race, spec.map(|spec| spec.0))),
-        (None, Some(follower)) => {
-            Some((follower.profile.class_id, 0, Some(follower.profile.spec_id)))
-        }
+        (None, Some(follower)) => Some((
+            follower.profile.class_id,
+            visual.map_or(0, |visual| visual.race),
+            Some(follower.profile.spec_id),
+        )),
         (None, None) => None,
     }
 }
@@ -1258,6 +1261,7 @@ fn stat_identity(
 pub(crate) fn update_character_stats(
     mut commands: Commands,
     mut characters: Query<StatsQuery, StatsFilter>,
+    visuals: Query<&shared::components::CharacterVisual>,
     classes: Option<Res<ClassSpells>>,
     spells: Option<Res<SpellStore>>,
     items: ItemData,
@@ -1284,7 +1288,9 @@ pub(crate) fn update_character_stats(
         mana,
     ) in &mut characters
     {
-        let Some((class_id, race, spec_id)) = stat_identity(player, follower, spec) else {
+        let Some((class_id, race, spec_id)) =
+            stat_identity(player, follower, visuals.get(entity).ok(), spec)
+        else {
             continue;
         };
         #[cfg(any(test, feature = "test-support"))]

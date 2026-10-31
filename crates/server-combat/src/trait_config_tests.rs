@@ -87,6 +87,99 @@ fn talent_lightforged_blessing_visible_to_holy_and_protection_not_retribution() 
 }
 
 #[test]
+fn class_follower_uses_authored_starter_below_cap_and_strict_logged_build_at_cap() {
+    let classes = classes().unwrap();
+    let tree = paladin_tree().unwrap();
+    let lower = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 70,
+    };
+    let progression = |level, source, logged: &[(u32, u32)]| {
+        crate::class_progression::evaluate_follower_progression(
+            classes,
+            PALADIN,
+            1,
+            SPEC_RETRIBUTION,
+            level,
+            source,
+            logged,
+        )
+    };
+    // Below the cap the native starter is used whatever the caller decoded.
+    let (spells, traits, source) =
+        progression(70, TalentSource::SimcProfile, &[(u32::MAX, 1)]).unwrap();
+    assert_eq!(source, TalentSource::NativeStarterLoadout);
+    assert_eq!(source.label(), "TALENTS_FROM_NATIVE_STARTER_LOADOUT");
+    assert_eq!(
+        traits.source_config().0,
+        build_config(tree, lower, &starter_purchases(tree, lower).unwrap()).unwrap()
+    );
+    assert!(spells.iter().any(|spell| spell.spell_id == 184575));
+
+    let cap = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 90,
+    };
+    let starter = build_config(tree, cap, &starter_purchases(tree, cap).unwrap()).unwrap();
+    let logged: Vec<_> = starter
+        .iter()
+        .filter(|entry| entry.total() > 0)
+        .map(|entry| (entry.entry_id, entry.total()))
+        .collect();
+    // At the cap the supplied build keeps the caller's provenance.
+    for (supplied, label) in [
+        (TalentSource::SimcProfile, "TALENTS_FROM_SIMC_PROFILE"),
+        (TalentSource::ParityProfile, "TALENTS_FROM_PARITY_PROFILE"),
+        (TalentSource::Wcl, "TALENTS_FROM_WCL"),
+    ] {
+        let (_, cap_traits, source) = progression(90, supplied, &logged).unwrap();
+        assert_eq!((source, source.label()), (supplied, label));
+        assert_eq!(cap_traits.source_config().0, starter);
+        assert!(progression(90, supplied, &[(u32::MAX, 1)]).is_err());
+        assert!(progression(90, supplied, &[]).unwrap_err().contains(label));
+    }
+    let (_, native_cap, source) = progression(90, TalentSource::NativeStarterLoadout, &[]).unwrap();
+    assert_eq!(source, TalentSource::NativeStarterLoadout);
+    assert_eq!(native_cap.source_config().0, starter);
+}
+
+#[test]
+fn class_follower_logged_trait_entries_resolve_and_use_strict_player_validation() {
+    use std::collections::BTreeMap;
+
+    let tree = paladin_tree().unwrap();
+    let ctx = TraitContext {
+        spec_id: SPEC_RETRIBUTION,
+        level: 90,
+    };
+    let purchases = starter_purchases(tree, ctx).unwrap();
+    let player = build_config(tree, ctx, &purchases).unwrap();
+    let logged: Vec<_> = player
+        .iter()
+        .filter(|entry| entry.total() > 0)
+        .map(|entry| (entry.entry_id, entry.total()))
+        .collect();
+    let resolved = build_logged_config(tree, ctx, &logged).unwrap();
+    let totals = |entries: &[ConfigEntry]| {
+        entries
+            .iter()
+            .map(|entry| ((entry.node_id, entry.entry_id), entry.total()))
+            .collect::<BTreeMap<_, _>>()
+    };
+    assert_eq!(totals(&resolved), totals(&player));
+    assert!(build_logged_config(tree, ctx, &[(JURISDICTION.1, 1)]).is_err());
+    assert!(
+        build_logged_config(
+            tree,
+            ctx,
+            &[(BLADE_OF_JUSTICE.1, 1), (BLADE_OF_JUSTICE.1, 1)]
+        )
+        .is_err()
+    );
+    assert!(build_logged_config(tree, ctx, &[(u32::MAX, 1)]).is_err());
+}
+
+#[test]
 fn talent_starter_authored_rows_use_cumulative_ranks_and_independent_budgets() {
     let classes = classes().unwrap();
     for (class_id, spec_id) in [(2, 70), (8, 62)] {

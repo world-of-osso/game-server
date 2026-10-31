@@ -45,7 +45,7 @@ const MAX_AGGRO_RESET_SECS: f64 = 10.0;
 
 const CREATURE_TYPE_CRITTER: u32 = 8;
 const CREATURE_TYPE_NON_COMBAT_PET: u32 = 12;
-const CREATURE_FLAG_EXTRA_CIVILIAN: u32 = 0x2;
+pub(crate) const CREATURE_FLAG_EXTRA_CIVILIAN: u32 = 0x2;
 const CREATURE_FLAG_EXTRA_TRIGGER: u32 = 0x80;
 const UNIT_FLAG_IMMUNE_TO_PC: u32 = 0x100;
 
@@ -54,13 +54,16 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
-        app.init_resource::<PendingThreatWakes>()
+        app.init_resource::<crate::creature_assistance::AssistanceConfig>()
+            .init_resource::<crate::creature_assistance::PendingAssistance>()
+            .init_resource::<PendingThreatWakes>()
             .add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
                 activate_unblocked_creatures,
                 aggro_on_sight_system,
+                crate::creature_assistance::dispatch_assistance,
                 update_victim_system,
                 publish_woken_threat_lists,
                 replicate_threat_list_system,
@@ -156,6 +159,24 @@ pub(crate) fn insert_aggro_components(entity: &mut EntityCommands, mode: AggroMo
     }
 }
 
+/// A scripted unlock: clear PC/NPC immunity and grant the aggressive combat
+/// components the passive (immune) spawn never received. Without them the boss
+/// takes damage but never builds threat or fights back.
+pub(crate) fn unlock_immune_creature(world: &mut World, creature: Entity) {
+    use shared::components::UnitFlags;
+    let Some(mut flags) = world.get_mut::<UnitFlags>(creature) else {
+        return;
+    };
+    if flags.0 & UnitFlags::IMMUNE_TO_PC == 0 {
+        return;
+    }
+    flags.0 &= !(UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC);
+    let mut entity = world.entity_mut(creature);
+    entity.entry::<ThreatTable>().or_default();
+    entity.insert((CreatureState::Idle, AggroRange));
+    crate::spell_cast::mark_dirty(world, creature);
+}
+
 type Victims<'w, 's> = Query<
     'w,
     's,
@@ -181,6 +202,7 @@ fn valid_victim(
     templates: &FactionTemplates,
     creature_faction: u32,
     creature_map: &InMap,
+    creature: Entity,
     victim: Entity,
 ) -> bool {
     let Ok((_, health, faction, _, death, is_player, flying, npc_dead, map, flags)) =
@@ -188,20 +210,31 @@ fn valid_victim(
     else {
         return false;
     };
+    let creature_info = victims.get(creature).ok();
+    let creature_flags = creature_info.and_then(|row| row.9);
+    let creature_controlled =
+        creature_info.is_some_and(|row| crate::faction::player_affected(row.5, row.9));
+    let victim_controlled = crate::faction::player_affected(is_player, flags);
     let alive = health.current > 0.0
         && !npc_dead
         && death.is_none_or(|death| death.state == shared::death::DeathState::Alive);
     map == Some(creature_map)
         && alive
         && !flying
+        && !crate::faction::immunity_blocks_attack(
+            creature_flags,
+            creature_controlled,
+            flags,
+            victim_controlled,
+        )
         && templates.can_attack(
             UnitFaction {
                 template: creature_faction,
-                is_player: false,
+                is_player: creature_controlled,
             },
             UnitFaction {
                 template: faction.map_or(0, |faction| faction.0),
-                is_player: crate::faction::player_affected(is_player, flags),
+                is_player: victim_controlled,
             },
         )
 }
@@ -265,7 +298,14 @@ impl PlayerSight<'_, '_> {
             == Reaction::Hostile;
         (distance < radius
             && hostile
-            && valid_victim(&self.victims, &self.templates, faction.0, map, player))
+            && valid_victim(
+                &self.victims,
+                &self.templates,
+                faction.0,
+                map,
+                creature,
+                player,
+            ))
         .then_some(distance)
     }
 
@@ -674,7 +714,11 @@ pub(crate) fn add_unmodified_threat(
     attacker: Entity,
     amount: f32,
 ) {
-    if creature == attacker || !can_engage(world, creature) {
+    if creature == attacker
+        || !can_engage(world, creature)
+        || crate::faction::world_immunity_blocks_attack(world, creature, attacker)
+        || !crate::combat_refs::can_begin_combat(world, creature, attacker)
+    {
         return;
     }
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
@@ -704,6 +748,8 @@ fn engage_after_threat(world: &mut World, creature: Entity, attacker: Entity) {
     }
     crate::combat_refs::set_in_combat_with(world, creature, attacker);
     if engages {
+        crate::creature_assistance::engage_formation(world, creature, attacker);
+        crate::creature_assistance::call_assistance(world, creature, attacker);
         // Creature::AtEngage → CreatureAI::JustEngagedWith.
         crate::scripted_ai::dispatch(
             world,
@@ -717,7 +763,9 @@ fn engage_after_threat(world: &mut World, creature: Entity, attacker: Entity) {
 ///then attack the caster. Aura11 holds selection independently until removal.
 ///Units without a creature threat list (including players) cannot be forced.
 pub(crate) fn taunt(world: &mut World, creature: Entity, caster: Entity) {
-    if !can_engage(world, creature) {
+    if !can_engage(world, creature)
+        || crate::faction::world_immunity_blocks_attack(world, creature, caster)
+    {
         return;
     }
     let table = world
@@ -779,6 +827,9 @@ pub fn enter_evade_mode(world: &mut World, creature: Entity) {
     world.entity_mut(creature).remove::<LastDamagedTime>();
     world
         .entity_mut(creature)
+        .remove::<crate::creature_assistance::AssistanceCalled>();
+    world
+        .entity_mut(creature)
         .remove::<crate::spell_cast::SpellHistory>();
     let mut entity = world.entity_mut(creature);
     entity.insert(CreatureState::Returning);
@@ -834,6 +885,7 @@ fn remove_auras_on_evade(world: &mut World, creature: Entity) {
 /// `ClearAllThreat`, `CombatStop`), so it respawns idle.
 pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
     entity.remove::<CurrentVictim>();
+    entity.remove::<crate::creature_assistance::AssistanceCalled>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }

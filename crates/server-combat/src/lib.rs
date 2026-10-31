@@ -3,6 +3,7 @@
 extern crate self as server;
 
 pub mod character_data;
+mod character_visual;
 pub mod item_instance;
 pub mod mythic_plus_catalog;
 pub mod mythic_plus_history;
@@ -38,6 +39,7 @@ pub mod consumables;
 mod crafting_orders;
 pub mod creature_aggro;
 pub mod creature_ai;
+pub mod creature_assistance;
 pub mod creature_scripts;
 mod creature_sight;
 pub mod creature_static;
@@ -135,7 +137,6 @@ mod rest;
 pub mod scripted_ai;
 mod seething_parachute;
 mod sheet_visibility;
-#[cfg(any(test, feature = "test-support"))]
 pub mod simc_apl_native;
 mod skyriding;
 pub mod soul_fragments;

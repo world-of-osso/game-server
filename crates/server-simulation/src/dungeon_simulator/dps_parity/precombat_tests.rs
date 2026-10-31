@@ -263,9 +263,7 @@ fn literal_precombat_uncaptured_follower_still_follows_its_native_owner() {
     let encounter = crate::simc_apl_native::Encounter::Dungeon {
         started_at: crate::spell_cast::now(run.app.world()),
     };
-    let error =
-        literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap_err();
-    assert!(error.contains("DUNGEON_TTD_UNAVAILABLE"));
+    literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap();
     assert!(
         run.app
             .world()

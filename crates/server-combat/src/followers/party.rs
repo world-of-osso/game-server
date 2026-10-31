@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use rand::{Rng, SeedableRng};
 use shared::components::{Player, UnitLevel};
 use shared::group::GroupRole;
 use shared::protocol::{GroupChannel, LfgChannel, LfgSnapshot, LfgStateUpdate};
@@ -45,6 +46,9 @@ impl DisconnectedRuns {
 pub(crate) struct FollowerRun {
     dungeon: Dungeon,
     profiles: Vec<Profile>,
+    class_profiles: Vec<super::class_profiles::ClassProfile>,
+    seed: u64,
+    gear: super::class_spawn::GearSource,
     members: Vec<Entity>,
     copy: Option<InMap>,
     previous_difficulty: u32,
@@ -107,7 +111,33 @@ fn begin_run(
         .get(&dungeon_id)
         .cloned()
         .ok_or("follower dungeon lacks imported Normal spawns or an authored entrance")?;
-    let profiles = super::select_party(&catalog.profiles, role)?;
+    let player_spec = world
+        .get::<shared::components::ActiveSpec>(player)
+        .ok_or("follower queue requires an active specialization")?
+        .0;
+    if player_spec == 0 {
+        return Err("follower queue requires an active specialization".into());
+    }
+    let level = world
+        .get::<shared::components::Level>(player)
+        .ok_or("follower queue requires a level")?
+        .0;
+    let classes = world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .ok_or("follower classes unavailable")?;
+    let spells = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .ok_or("follower spell store unavailable")?;
+    let available = super::class_profiles::read_profiles()?;
+    let qualified = super::class_profiles::validate_profiles(&available, classes, spells, level);
+    let seed = rand::random::<u64>();
+    let class_profiles =
+        super::class_profiles::select_profiles(&qualified, role, player_spec, seed)?;
+    let profiles = class_profiles
+        .iter()
+        .enumerate()
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot, 0))
+        .collect::<Result<Vec<_>, _>>()?;
     let position = *world
         .get::<shared::components::Position>(player)
         .ok_or("player has no position")?;
@@ -163,9 +193,19 @@ fn begin_run(
             members: roster,
         }),
     });
+    info!(
+        "class follower queue seed {seed}, player spec {player_spec}, follower specs {:?}",
+        class_profiles
+            .iter()
+            .map(|profile| profile.spec_id)
+            .collect::<Vec<_>>()
+    );
     world.entity_mut(player).insert(FollowerRun {
         dungeon,
         profiles,
+        class_profiles,
+        seed,
+        gear: super::class_spawn::GearSource::Journal,
         members: Vec::new(),
         copy: None,
         previous_difficulty,
@@ -249,7 +289,26 @@ pub(super) fn advance_runs(world: &mut World) {
 }
 
 fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<(), String> {
-    let members = super::spawning::spawn_equipped_members(world, owner, &run.profiles)?;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(run.seed);
+    let mut members = Vec::with_capacity(run.class_profiles.len());
+    for (slot, profile) in run.class_profiles.iter().enumerate() {
+        let sex = rng.gen_range(0..2);
+        match super::class_spawn::spawn_class(world, owner, profile, sex, slot, run.gear) {
+            Ok(unit) => {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::creature_ai::PartyFollowSlot::new(
+                        slot,
+                        run.class_profiles.len(),
+                    ));
+                members.push(unit);
+            }
+            Err(error) => {
+                super::spawning::unsummon_members(world, &members);
+                return Err(error);
+            }
+        }
+    }
     if let Err(error) = join_party(world, owner, run, &members) {
         super::spawning::unsummon_members(world, &members);
         return Err(error);
@@ -308,18 +367,23 @@ pub(super) fn join_members_with_player(
         .iter()
         .map(|&unit| {
             let follower = world.get::<Follower>(unit).expect("spawned follower");
-            online.insert(
-                Follower::member_id(unit),
-                follower.online(
-                    unit,
-                    world.get::<UnitLevel>(unit).expect("follower level").0,
-                    difficulty,
-                    world
+            let level = world.get::<UnitLevel>(unit).expect("follower level").0;
+            let member =
+                if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
+                    follower.online_character(
+                        unit,
+                        level,
+                        difficulty,
+                        visual,
+                        world.get::<shared::components::EquipmentAppearance>(unit),
+                    )
+                } else {
+                    let display = world
                         .get::<shared::components::ModelDisplay>(unit)
-                        .expect("spawned follower display")
-                        .display_id,
-                ),
-            );
+                        .expect("spawned follower display");
+                    follower.online(unit, level, difficulty, display.display_id)
+                };
+            online.insert(Follower::member_id(unit), member);
             (Follower::member_id(unit), follower.profile.role)
         })
         .collect();
@@ -431,6 +495,9 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
         }
         if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(member) {
             follow.owner = player;
+        }
+        if let Some(mut summoned_by) = world.get_mut::<shared::components::UnitSummonedBy>(member) {
+            summoned_by.0 = player.to_bits();
         }
     }
     world
@@ -631,6 +698,9 @@ mod copy_tests {
         let run = FollowerRun {
             dungeon,
             profiles,
+            class_profiles: Vec::new(),
+            seed: 0,
+            gear: super::super::class_spawn::GearSource::Journal,
             members,
             copy: Some(copy),
             previous_difficulty: 1,
@@ -876,6 +946,49 @@ mod copy_tests {
     }
 
     #[test]
+    fn follower_reconnect_restores_owner_target_healing() {
+        let (fixture_app, _, mut run) = fixture();
+        let map = run.copy.unwrap();
+        drop(fixture_app);
+        let (mut h, healer) = super::super::kit_tests::level32(209072);
+        run.members = vec![healer];
+        let old_owner = h.caster;
+        h.app.init_resource::<GroupRegistry>();
+        h.app.world_mut().entity_mut(old_owner).insert((
+            ClientId(30),
+            map,
+            run,
+            crate::lfg::PlayerLfgState::default(),
+        ));
+        h.app.world_mut().entity_mut(healer).insert(map);
+        crate::networking::install_disconnect_fixture(&mut h.app);
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .insert(lightyear::prelude::server::ClientOf)
+            .remove::<Connected>();
+        h.app.world_mut().flush();
+        h.app.update();
+        assert!(h.app.world().get_entity(old_owner).is_err());
+
+        let owner = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
+        h.app.world_mut().entity_mut(owner).insert((
+            ClientId(30),
+            map,
+            shared::components::Health {
+                current: 300.0,
+                max: 1000.0,
+            },
+        ));
+        reconnect(h.app.world_mut(), owner, 30);
+        assert!(!crate::auras::has_aura(h.app.world(), owner, 774));
+        crate::spell_cast::creature_cast(h.app.world_mut(), healer, 18562, Some(owner), false)
+            .expect("Swiftmend must recognize the reconnected owner without a heal-over-time aura");
+        h.advance(3);
+        assert!(h.health(owner) > 300.0);
+    }
+
+    #[test]
     fn follower_disconnect_expires_copy_after_last_player_unload_delay() {
         let (mut app, owner, run) = fixture();
         let map = run.copy.unwrap();
@@ -979,6 +1092,180 @@ mod copy_tests {
                 .completed_encounters(place.map),
             0
         );
+    }
+
+    #[derive(Clone, Default)]
+    struct ReleaseLogBuffer(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for ReleaseLogBuffer {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> bevy::log::tracing_subscriber::fmt::MakeWriter<'a> for ReleaseLogBuffer {
+        type Writer = Self;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    fn capture_release_update(app: &mut App) -> String {
+        let buffer = ReleaseLogBuffer::default();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(buffer.clone())
+            .without_time()
+            .with_ansi(false)
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            super::super::release::update(app.world_mut());
+        });
+        let output = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+        output
+    }
+
+    #[test]
+    fn follower_release_logs_combat_pending_and_reachable_decisions() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            CombatStatus(true),
+            Position {
+                x: 1403.56,
+                y: 128.0,
+                z: 173.39,
+            },
+        ));
+        app.world_mut().entity_mut(member).insert((
+            Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+        ));
+        let buffer = ReleaseLogBuffer::default();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(buffer.clone())
+            .without_time()
+            .with_ansi(false)
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            super::super::release::update(app.world_mut());
+            app.world_mut().get_mut::<CombatStatus>(owner).unwrap().0 = false;
+            super::super::release::update(app.world_mut());
+            app.world_mut()
+                .resource_mut::<crate::navigation::Navigation>()
+                .drain_until_idle();
+            super::super::release::update(app.world_mut());
+        });
+        let output = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+        let events: Vec<_> = output
+            .lines()
+            .filter(|line| line.contains("Follower release evaluation"))
+            .collect();
+        assert_eq!(events.len(), 3, "{output}");
+        assert!(
+            events.iter().all(|line| line.contains("decision=")),
+            "{output}"
+        );
+        assert!(
+            events[0].contains("party_in_combat") && events[0].contains("walk_seconds=None"),
+            "{output}"
+        );
+        assert!(
+            events[1].contains("route_pending") && events[1].contains("walk_seconds=None"),
+            "{output}"
+        );
+        assert!(
+            events[2].contains("route_reachable") && events[2].contains("walk_seconds=Some("),
+            "{output}"
+        );
+        assert!(
+            events
+                .iter()
+                .all(|line| line.contains(&format!("{member:?}"))),
+            "{output}"
+        );
+    }
+
+    #[test]
+    fn follower_release_staggered_deaths_survive_navigation_pruning() {
+        use shared::components::{CombatStatus, Health, Position};
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        run.dungeon = super::super::catalog::load_catalog(&db).unwrap().dungeons[&2745].clone();
+        let copy = InMap {
+            map_id: 2805,
+            instance_id: 1,
+        };
+        run.copy = Some(copy);
+        let (mut h, healer) = super::super::kit_tests::at_level_unengaged(209072, 32, |_| {});
+        let first = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        let second = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        run.members = vec![healer, first, second];
+        h.app.insert_resource(store);
+        crate::navigation::install_fixture(
+            &mut h.app,
+            crate::navigation::Navigation::new(
+                &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/ground/navmesh"),
+            ),
+        );
+        h.app
+            .add_systems(FixedUpdate, super::super::release::update);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            run,
+            copy,
+            Position {
+                x: 5316.5,
+                y: 127.4,
+                z: 3125.3,
+            },
+        ));
+        h.app.world_mut().entity_mut(healer).insert(copy);
+        // The two corpse positions and owner position are from the Windrunner live snapshot.
+        for (member, x, z) in [(first, 5254.49, 3158.06), (second, 5257.81, 3158.04)] {
+            h.app.world_mut().entity_mut(member).insert((
+                copy,
+                Position { x, y: 126.30, z },
+                crate::combat::CorpseDelay(60.0),
+            ));
+        }
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, first);
+        h.advance(3);
+        assert!(h.app.world().get::<crate::combat::Corpse>(first).is_some());
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, second);
+        assert!(h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        h.advance(30);
+        for member in [first, second] {
+            assert!(
+                h.app.world().get::<crate::combat::Corpse>(member).is_none(),
+                "member {member:?} did not release"
+            );
+            assert!(h.app.world().get::<Health>(member).unwrap().current > 0.0);
+        }
     }
 
     #[test]
@@ -1088,7 +1375,9 @@ mod copy_tests {
         app.world_mut()
             .resource_mut::<crate::navigation::Navigation>()
             .drain_until_idle();
-        super::super::release::update(app.world_mut());
+        let log = capture_release_update(&mut app);
+        assert!(log.contains("route_incomplete"), "{log}");
+        assert!(log.contains("error=Some("), "{log}");
         assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
         assert_eq!(*app.world().get::<Position>(member).unwrap(), corpse);
         assert_eq!(app.world().get::<Health>(member).unwrap().current, 0.0);
@@ -1157,9 +1446,149 @@ mod copy_tests {
         );
     }
 
+    fn brackenhide_release_fixture(
+        owner_position: shared::components::Position,
+    ) -> (
+        crate::spell_cast::test_harness::Harness,
+        Entity,
+        Entity,
+        shared::components::Position,
+    ) {
+        use shared::components::CombatStatus;
+        let (fixture_app, _, mut run) = fixture();
+        let store = fixture_app
+            .world()
+            .resource::<crate::maps::MapStore>()
+            .clone();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        run.dungeon = super::super::catalog::load_catalog(&db).unwrap().dungeons[&2439].clone();
+        let copy = InMap {
+            map_id: 2520,
+            instance_id: 1,
+        };
+        run.copy = Some(copy);
+        let entrance = run.dungeon.entrance.bevy_position();
+        let (mut h, caster) = super::super::kit_tests::level32(209072);
+        let target = super::super::utility_policy_tests::add_follower(&mut h, 215011);
+        run.members = vec![caster, target];
+        h.app.insert_resource(store);
+        h.app.insert_resource(crate::navigation::Navigation::new(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((run, copy, owner_position));
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert((copy, entrance));
+        h.app.world_mut().entity_mut(target).insert((
+            copy,
+            entrance,
+            crate::combat::CorpseDelay(60.0),
+        ));
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        crate::combat::combat_stop(h.app.world_mut(), h.caster);
+        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
+        (h, caster, target, entrance)
+    }
+
+    #[test]
+    fn follower_release_long_brackenhide_route_waits_for_resurrection() {
+        use shared::components::{Health, Position};
+        let owner_position = Position {
+            x: -3344.54,
+            y: 111.17662,
+            z: -3663.96,
+        };
+        let (mut h, caster, target, entrance) = brackenhide_release_fixture(owner_position);
+        let copy = *h.app.world().get::<InMap>(h.caster).unwrap();
+        let point = |position: Position| Vec3::new(position.x, position.y, position.z);
+        let query = ::navigation::worker::Query::CompleteRoute {
+            from: point(entrance),
+            to: point(owner_position),
+        };
+        let mut nav = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>();
+        nav.query_deferred(
+            target,
+            copy.map_id,
+            crate::navigation::Goal::FollowerRelease,
+            query.clone(),
+        );
+        nav.drain_until_idle();
+        let result = nav.query_deferred(
+            target,
+            copy.map_id,
+            crate::navigation::Goal::FollowerRelease,
+            query,
+        );
+        drop(nav);
+        let Some(Ok(Some(::navigation::worker::Output::CompleteRoute(route)))) = result else {
+            panic!("Brackenhide needs a complete entrance-to-boss route: {result:?}");
+        };
+        assert!(route.complete, "Brackenhide route: {:?}", route.reason);
+        let distance = route.distance;
+        let speed = crate::creature_ai::BASE_RUN_SPEED
+            * h.app
+                .world()
+                .get::<crate::auras::AuraStatMods>(target)
+                .map_or(1.0, |mods| mods.movement_speed);
+        assert!(distance > speed * 120.0, "{distance} yards at {speed} yd/s");
+        let log = capture_release_update(&mut h.app);
+        assert!(log.contains("route_too_long"), "{log}");
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
+    }
+
+    #[test]
+    fn follower_release_brackenhide_route_under_two_minutes_walks_back() {
+        use shared::components::{Health, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, _, target, entrance) = brackenhide_release_fixture(owner_position);
+        super::super::release::update(h.app.world_mut());
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+        let log = capture_release_update(&mut h.app);
+        assert!(log.contains("route_reachable"), "{log}");
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
+        crate::creature_ai::install_follow_fixture(&mut h.app);
+        h.advance(80);
+        let moved = *h.app.world().get::<Position>(target).unwrap();
+        let distance = |position: Position| {
+            (position.x - owner_position.x).hypot(position.z - owner_position.z)
+        };
+        assert!(
+            distance(moved) < distance(entrance) - 5.0,
+            "follower must walk back: {moved:?}"
+        );
+    }
+
     #[test]
     fn follower_release_distant_walkable_corpse_waits_for_real_resurrection() {
-        use shared::components::{Health, Position};
+        use shared::components::{CombatStatus, Health, Position};
         let (fixture_app, _, mut run) = fixture();
         let entrance = run.dungeon.entrance.bevy_position();
         let store = fixture_app
@@ -1200,7 +1629,11 @@ mod copy_tests {
             corpse,
             crate::combat::CorpseDelay(60.0),
         ));
+        h.app.world_mut().entity_mut(h.npc).insert(copy);
         crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::combat::combat_stop(h.app.world_mut(), h.npc);
+        crate::combat::combat_stop(h.app.world_mut(), h.caster);
+        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
         let mods = crate::auras::AuraStatMods {
             movement_speed: 0.01,
             ..Default::default()
@@ -1208,7 +1641,7 @@ mod copy_tests {
         h.app.world_mut().entity_mut(target).insert(mods);
         let start = Vec3::new(entrance.x, entrance.y, entrance.z);
         let end = Vec3::new(1403.56, 128.0, 173.39);
-        let query = ::navigation::worker::Query::FollowPath {
+        let query = ::navigation::worker::Query::CompleteRoute {
             from: start,
             to: end,
         };
@@ -1230,18 +1663,14 @@ mod copy_tests {
                 crate::navigation::Goal::FollowerRelease,
                 query,
             );
-            let Some(Ok(Some(::navigation::worker::Output::Path(path)))) = result else {
+            let Some(Ok(Some(::navigation::worker::Output::CompleteRoute(route)))) = result else {
                 panic!("expected a complete walkable path");
             };
-            assert!(path.complete);
-            let distance: f32 = path
-                .points
-                .windows(2)
-                .map(|pair| pair[0].distance(pair[1]))
-                .sum();
-            assert!(distance > 7.0 * 0.01 * 120.0);
+            assert!(route.complete, "{:?}", route.reason);
+            assert!(route.distance > 7.0 * 0.01 * 120.0);
         }
-        super::super::release::update(h.app.world_mut());
+        let log = capture_release_update(&mut h.app);
+        assert!(log.contains("route_too_long"), "{log}");
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
         crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
             .unwrap();
@@ -1416,6 +1845,7 @@ mod copy_tests {
         .unwrap();
         let store = crate::maps::store::load_map_store(&db).unwrap();
         let catalog = super::super::catalog::load_catalog(&db).unwrap();
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
         let now = crate::maps::instances::Now {
             elapsed: 0.0,
             unix: 1_790_510_400,
@@ -1442,6 +1872,8 @@ mod copy_tests {
             .insert_resource(store)
             .insert_resource(instances)
             .insert_resource(catalog)
+            .insert_resource(classes)
+            .insert_resource(spells)
             .init_resource::<GroupRegistry>();
         // Ruby's reciprocal exit safe-loc 100031, where the release revived Rubynew.
         let outside = WorldLocation {
@@ -1460,6 +1892,7 @@ mod copy_tests {
                 },
                 ClientId(30),
                 shared::components::Level(70),
+                shared::components::ActiveSpec(62),
                 UnitLevel(70),
                 outside.bevy_position(),
                 shared::components::Rotation {
@@ -1476,6 +1909,36 @@ mod copy_tests {
             .id();
         queue_player(app.world_mut(), player, GroupRole::Dps, 2436);
         assert!(app.world().get::<MapTransfer>(player).is_some());
+        let run = app
+            .world()
+            .get::<FollowerRun>(player)
+            .expect("accepted follower queue");
+        assert_eq!(run.class_profiles.len(), 4);
+        assert!(
+            !run.class_profiles
+                .iter()
+                .any(|profile| profile.spec_id == 62)
+        );
+        let available = super::super::class_profiles::read_profiles().unwrap();
+        let qualified = super::super::class_profiles::validate_profiles(
+            &available,
+            app.world().resource::<crate::spell_info::ClassSpells>(),
+            app.world().resource::<crate::spell_info::SpellStore>(),
+            70,
+        );
+        let replay =
+            super::super::class_profiles::select_profiles(&qualified, GroupRole::Dps, 62, run.seed)
+                .unwrap();
+        assert_eq!(
+            run.class_profiles
+                .iter()
+                .map(|profile| profile.spec_id)
+                .collect::<Vec<_>>(),
+            replay
+                .iter()
+                .map(|profile| profile.spec_id)
+                .collect::<Vec<_>>()
+        );
         let entrant = crate::maps::transfer::entrant_of(app.world(), player);
         let arrival = app.world_mut().resource_scope(
             |world, mut instances: Mut<crate::maps::InstanceManager>| {

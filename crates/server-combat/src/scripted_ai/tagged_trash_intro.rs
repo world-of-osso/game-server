@@ -36,6 +36,20 @@ const INTRO_STARTED: u32 = 1;
 const INTRO_DONE: u32 = 2;
 const INTRO_POINT: u32 = 1;
 
+// AVANOXX_INTRO_LOG_CORRELATED: the three named deaths precede the pull in
+// XCmNaPcWdFA4kJ8D/9 and qLNnp4x613mv2Ctz/28. LittleWigs records a 17.3 s
+// emote-to-nameplate interval; the death trigger and timer origin are inferred.
+const AVANOXX_MAP: u32 = 2660;
+const AVANOXX: u32 = 213179;
+const AVANOXX_ATTENDANTS: [u32; 3] = [217531, 218324, 217533];
+const AVANOXX_DEATHS_KEY: u32 = 2_131_790;
+const AVANOXX_STATE_KEY: u32 = 2_131_791;
+const AVANOXX_DELAY: f64 = 17.3;
+const AVANOXX_BLOCKED: u32 = UnitFlags::IMMUNE_TO_PC | UnitFlags::NOT_SELECTABLE;
+
+#[derive(Component)]
+struct AvanoxxIntro(f64);
+
 #[derive(Component, Clone, Copy)]
 enum IntroMovement {
     Waiting { rule: usize, until: f64 },
@@ -48,6 +62,7 @@ pub(crate) fn on_unit_death(world: &mut World, creature: Entity) {
     let Some(map) = world.get::<InMap>(creature).copied() else {
         return;
     };
+    record_avanoxx_death(world, creature, map);
     let Some(tags) = world.get::<CreatureStringIds>(creature) else {
         return;
     };
@@ -88,9 +103,52 @@ pub(crate) fn on_unit_death(world: &mut World, creature: Entity) {
     }
 }
 
-/// Advance the source 3 s pre-walk and 1 s post-arrival tasks.
+fn record_avanoxx_death(world: &mut World, creature: Entity, map: InMap) {
+    if map.map_id != AVANOXX_MAP || instance_script::get_data(world, map, AVANOXX_STATE_KEY) != 0 {
+        return;
+    }
+    let Some(npc) = world.get::<Npc>(creature) else {
+        return;
+    };
+    let Some(index) = AVANOXX_ATTENDANTS
+        .iter()
+        .position(|entry| *entry == npc.template_id)
+    else {
+        return;
+    };
+    let deaths = instance_script::get_data(world, map, AVANOXX_DEATHS_KEY) | (1 << index);
+    instance_script::set_data(world, map, AVANOXX_DEATHS_KEY, deaths);
+    if deaths != (1 << AVANOXX_ATTENDANTS.len()) - 1 {
+        return;
+    }
+    let boss = world
+        .query::<(Entity, &Npc, &InMap)>()
+        .iter(world)
+        .find_map(|(entity, npc, copy)| {
+            (*copy == map && npc.template_id == AVANOXX).then_some(entity)
+        });
+    let Some(boss) = boss else {
+        error!(?map, entry = AVANOXX, "Avanoxx intro boss is missing");
+        return;
+    };
+    instance_script::set_data(world, map, AVANOXX_STATE_KEY, INTRO_STARTED);
+    let until = world.resource::<Time>().elapsed_secs_f64() + AVANOXX_DELAY;
+    world.entity_mut(boss).insert(AvanoxxIntro(until));
+}
+
+/// Advance the source 3 s pre-walk and 1 s post-arrival tasks, and Avanoxx's inferred delay.
 pub(super) fn advance(world: &mut World) {
     let now = world.resource::<Time>().elapsed_secs_f64();
+    let ready: Vec<_> = world
+        .query::<(Entity, &InMap, &AvanoxxIntro)>()
+        .iter(world)
+        .filter_map(|(boss, map, intro)| (now >= intro.0).then_some((boss, *map)))
+        .collect();
+    for (boss, map) in ready {
+        release_avanoxx(world, boss);
+        instance_script::set_data(world, map, AVANOXX_STATE_KEY, INTRO_DONE);
+        world.entity_mut(boss).remove::<AvanoxxIntro>();
+    }
     let pending: Vec<_> = world
         .query::<(Entity, &InMap, &IntroMovement)>()
         .iter(world)
@@ -135,6 +193,12 @@ pub(super) fn on_appeared(world: &mut World, boss: Entity) {
         return;
     };
     let entry = npc.template_id;
+    if map.map_id == AVANOXX_MAP
+        && entry == AVANOXX
+        && instance_script::get_data(world, map, AVANOXX_STATE_KEY) == INTRO_DONE
+    {
+        release_avanoxx(world, boss);
+    }
     for rule in RULES
         .iter()
         .filter(|rule| rule.map == map.map_id && rule.boss == entry)
@@ -142,6 +206,12 @@ pub(super) fn on_appeared(world: &mut World, boss: Entity) {
         if instance_script::get_data(world, map, rule.state_key) == INTRO_DONE {
             release_boss(world, boss, rule.remove_aura);
         }
+    }
+}
+
+fn release_avanoxx(world: &mut World, boss: Entity) {
+    if let Some(mut flags) = world.get_mut::<UnitFlags>(boss) {
+        flags.0 &= !AVANOXX_BLOCKED;
     }
 }
 

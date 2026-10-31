@@ -128,6 +128,18 @@ impl NpcGrid {
         }
     }
 
+    /// Candidates within cells intersecting a center-distance radius.
+    pub(crate) fn within_cells(&self, map: InMap, position: &Position, radius: f32) -> Vec<Entity> {
+        let min_x = ((position.x - radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let max_x = ((position.x + radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let min_z = ((position.z - radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        let max_z = ((position.z + radius) / MAX_AGGRO_RADIUS).floor() as i32;
+        (min_x..=max_x)
+            .flat_map(|x| (min_z..=max_z).filter_map(move |z| self.cells.get(&(map, x, z))))
+            .flat_map(|cell| cell.npcs.iter().copied())
+            .collect()
+    }
+
     /// GetAttackDistance clamps before IsWithinDist adds both model reaches.
     /// A conservative per-copy maximum keeps large/scaled bodies in the search.
     fn near<'a>(

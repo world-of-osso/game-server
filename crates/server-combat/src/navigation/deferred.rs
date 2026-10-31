@@ -10,6 +10,7 @@ pub(super) struct PendingQuery {
     pub(super) goal: Goal,
     query: WorkerQuery,
     pub(super) result: Option<QueryResult>,
+    consumed: bool,
 }
 
 impl Navigation {
@@ -21,12 +22,20 @@ impl Navigation {
         goal: Goal,
         query: WorkerQuery,
     ) -> Option<QueryResult> {
-        if let Some(previous) = self.queries.get(&entity)
-            && previous.map_id == map_id
-            && previous.goal == goal
-            && same_query(goal, &previous.query, &query)
-        {
-            return previous.result.clone();
+        if let Some(previous) = self.queries.get_mut(&entity) {
+            if previous.map_id == map_id
+                && previous.goal == goal
+                && same_query(goal, &previous.query, &query)
+            {
+                previous.consumed |= previous.result.is_some();
+                return previous.result.clone();
+            }
+            if previous.map_id == map_id
+                && !previous.consumed
+                && previous.goal.query_priority() > goal.query_priority()
+            {
+                return None;
+            }
         }
         // A probe replaces an unfinished plan, never the route's current progress.
         self.pending.remove(&entity);
@@ -39,6 +48,7 @@ impl Navigation {
                 goal,
                 query: query.clone(),
                 result: None,
+                consumed: false,
             },
         );
         self.worker.submit(Request {
@@ -127,6 +137,7 @@ pub(super) fn query_from(query: &PendingQuery) -> Vec3 {
     match &query.query {
         WorkerQuery::Path { from, .. }
         | WorkerQuery::FollowPath { from, .. }
+        | WorkerQuery::CompleteRoute { from, .. }
         | WorkerQuery::FollowFormation { from, .. }
         | WorkerQuery::SmoothPath { from, .. }
         | WorkerQuery::Collision { from, .. }
@@ -137,6 +148,12 @@ pub(super) fn query_from(query: &PendingQuery) -> Vec3 {
 fn same_query(goal: Goal, previous: &WorkerQuery, next: &WorkerQuery) -> bool {
     match (previous, next) {
         (WorkerQuery::Path { from: a, to: b }, WorkerQuery::Path { from: c, to: d }) => {
+            horizontal(*a - *c) <= TELEPORT_DISTANCE && b.distance(*d) <= REPATH_DISTANCE
+        }
+        (
+            WorkerQuery::CompleteRoute { from: a, to: b },
+            WorkerQuery::CompleteRoute { from: c, to: d },
+        ) if goal != Goal::FollowerRelease => {
             horizontal(*a - *c) <= TELEPORT_DISTANCE && b.distance(*d) <= REPATH_DISTANCE
         }
         (
@@ -182,8 +199,11 @@ pub(super) fn prune_queries(
                 return Some((*entity, query.goal));
             };
             let wrong_map = map.is_none_or(|map| map.map_id != query.map_id);
-            let moved =
-                at.is_none_or(|at| horizontal(point(*at) - query_from(query)) > TELEPORT_DISTANCE);
+            // A release query starts at the resurrection point, not the corpse.
+            let moved = at.is_none_or(|at| {
+                query.goal != Goal::FollowerRelease
+                    && horizontal(point(*at) - query_from(query)) > TELEPORT_DISTANCE
+            });
             (wrong_map || moved).then_some((*entity, query.goal))
         })
         .collect();

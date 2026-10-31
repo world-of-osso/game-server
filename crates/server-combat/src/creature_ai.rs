@@ -17,6 +17,8 @@ use shared::casting::CastState;
 use shared::ground::STEP_UP_HEIGHT;
 use std::time::Duration;
 
+pub mod flight_follow;
+
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
 /// Run speed in world-units per second (AzerothCore `baseMoveSpeed[MOVE_RUN]`).
@@ -95,6 +97,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<crate::navigation::collision_drop::CollisionDropMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
     Without<crate::taxi::TaxiFlight>,
+    Without<flight_follow::FlightFollow>,
 );
 
 pub struct CreatureAiPlugin;
@@ -116,7 +119,7 @@ impl Plugin for CreatureAiPlugin {
                 )
                     .chain(),
                 confused_movement_system,
-                follow_owner_system,
+                (flight_follow::update, follow_owner_system).chain(),
                 pet_motion_system,
             ),
         );
@@ -356,13 +359,21 @@ pub(crate) fn follower_footprint_ground(
     map: Option<&InMap>,
     from: Position,
     to: Position,
-) -> f32 {
+) -> Option<f32> {
     let mut ground = ground;
     let direction = Vec2::new(to.x - from.x, to.z - from.z).normalize_or_zero();
-    if direction == Vec2::ZERO {
-        return from.y;
-    }
     let center = Vec3::new(to.x, from.y, to.z);
+    if let (Some(ground), Some(map)) = (ground.as_deref_mut(), map)
+        && let Some(liquid) = ground.liquid_at(map.map_id, Vec3::new(to.x, to.y, to.z))
+    {
+        let top = shared::movement::swim_top(liquid.level);
+        if liquid.depth_level <= top && to.y <= top + navigation::AGENT_CLIMB {
+            return Some(to.y.max(liquid.depth_level));
+        }
+    }
+    if direction == Vec2::ZERO {
+        return Some(from.y);
+    }
     let offset = Vec3::new(direction.x, 0.0, direction.y) * navigation::AGENT_RADIUS;
     let probes = [center, center - offset, center + offset];
     let supported = probes
@@ -374,10 +385,11 @@ pub(crate) fn follower_footprint_ground(
             },
         )
         .max_by(f32::total_cmp);
-    run_ground(
+    let height = run_ground(
         supported.map_or(GroundProbe::Unsupported, GroundProbe::Supported),
         from.y,
-    )
+    );
+    (height >= to.y - navigation::AGENT_CLIMB).then_some(height)
 }
 
 /// Exact runtime support for a routed foot position (Recast contours approximate it).
@@ -961,7 +973,13 @@ pub(crate) fn chase_system(
         }
         let target_pos = &targets[&entity].position;
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
-        let reach = follower_reach.map_or(CHASE_REACH, |reach| reach.0);
+        let reach = follower_reach.map_or(CHASE_REACH, |reach| {
+            if targets[&entity].visible {
+                reach.0
+            } else {
+                0.0
+            }
+        });
         let mut next_position = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -998,7 +1016,17 @@ pub(crate) fn chase_system(
         }
         if next_position != *pos {
             next_position.y = if follower_reach.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    let here = *pos;
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 let feet = Vec3::new(next_position.x, next_position.y, next_position.z);
                 run_ground(
@@ -1087,6 +1115,7 @@ type ChaseView = (
 );
 struct ChaseTarget {
     position: Position,
+    visible: bool,
     in_reach_and_visible: bool,
 }
 
@@ -1130,7 +1159,7 @@ fn read_chase_targets(
         .p0()
         .iter()
         .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _, _)| {
-            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0.min(CHASE_REACH));
+            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0);
             match *state {
                 CreatureState::Pursuing { target } => {
                     Some((entity, Entity::try_from_bits(target)?, stop_reach))
@@ -1156,15 +1185,15 @@ fn read_chase_targets(
             let from = Vec3::new(watcher.2.x, watcher.2.y, watcher.2.z);
             let to = Vec3::new(target.2.x, target.2.y, target.2.z);
             let in_reach = crate::navigation::within_reach(from, to, stop_reach);
-            let visible = in_reach
-                && los.zip(map).is_some_and(|(los, map)| {
-                    crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
-                });
+            let visible = los.zip(map).is_some_and(|(los, map)| {
+                crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
+            });
             Some((
                 entity,
                 ChaseTarget {
                     position: *target.2,
-                    in_reach_and_visible: visible,
+                    visible,
+                    in_reach_and_visible: in_reach && visible,
                 },
             ))
         })
@@ -1244,6 +1273,7 @@ pub(crate) fn install_follower_follow_fixture(app: &mut App) {
         (
             crate::followers::update_ai,
             chase_system,
+            flight_follow::update,
             follow_owner_system,
         )
             .chain(),
@@ -1359,8 +1389,19 @@ fn follow_owner_system(
         let (x, z) = (next_position.x, next_position.z);
         if next_position != *pos {
             let feet = Vec3::new(x, pos.y, z);
-            next_position.y = if companion.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+            next_position.y = if companion.is_some() || companion_pet.is_some() {
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    follow.moving = false;
+                    let here = *pos;
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 run_ground(probe_ground(ground.as_deref_mut(), map, feet), pos.y)
             };
@@ -1424,6 +1465,36 @@ pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32
         (rotation, motion, movement_speed),
         stride,
     );
+    state.apply(world);
+}
+
+fn move_flying_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
+    let mut state = bevy::ecs::system::SystemState::<(
+        MoveQueues,
+        Query<
+            (
+                &mut Position,
+                Option<&mut Rotation>,
+                Option<&mut CreatureMotion>,
+                Option<&mut MovementSpeed>,
+            ),
+            With<flight_follow::FlightFollow>,
+        >,
+    )>::new(world);
+    let (queues, mut units) = state.get_mut(world).expect("flight movement parameters");
+    if let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) {
+        let stride = if *position == to {
+            Stride::still(*position)
+        } else {
+            Stride::moving(*position, to, CreatureMotion::Run, speed)
+        };
+        queues.apply(
+            entity,
+            &mut position,
+            (rotation, motion, movement_speed),
+            stride,
+        );
+    }
     state.apply(world);
 }
 
@@ -1571,7 +1642,16 @@ fn pet_motion_system(
         let mut next = next_position;
         if next != here {
             next.y = if companion_pet.is_some() {
-                follower_footprint_ground(ground.as_deref_mut(), map, here, next)
+                let Some(height) =
+                    follower_footprint_ground(ground.as_deref_mut(), map, here, next)
+                else {
+                    if let Some(nav) = nav.as_deref_mut() {
+                        nav.cancel_route(entity);
+                    }
+                    queues.apply(entity, &mut pos, bearing, Stride::still(here));
+                    continue;
+                };
+                height
             } else {
                 let feet = Vec3::new(next.x, next.y, next.z);
                 run_ground(probe_ground(ground.as_deref_mut(), map, feet), next.y)

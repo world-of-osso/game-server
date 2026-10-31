@@ -327,6 +327,13 @@ impl AttackRules<'_, '_> {
             .unit_flags
             .get(victim)
             .is_ok_and(|flags| !flags.can_be_attacked_by(player_controlled));
+        let target_controlled = self.unit_faction(victim).is_some_and(|unit| unit.is_player);
+        let immune = crate::faction::immunity_blocks_attack(
+            self.unit_flags.get(attacker).ok(),
+            player_controlled,
+            self.unit_flags.get(victim).ok(),
+            target_controlled,
+        );
         let dueling = self
             .factions
             .get(attacker)
@@ -357,6 +364,7 @@ impl AttackRules<'_, '_> {
             && !evading
             && !self.dead(victim)
             && !blocked_by_flags
+            && !immune
             && permitted
             && detected
     }
@@ -670,7 +678,7 @@ impl SwingSight<'_, '_> {
     }
 
     fn send_blocked_swing(&self, commands: &mut Commands, attacker: Entity) {
-        let (_, _, _, _, _, _, player, _) = self.bodies.get(attacker).unwrap();
+        let (_, _, _, _, _, _, player, _, _) = self.bodies.get(attacker).unwrap();
         if player.is_none() {
             return;
         }
@@ -858,6 +866,9 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         else {
             continue;
         };
+        if crate::faction::world_immunity_blocks_attack(world, attacker, target) {
+            continue;
+        }
         let Some(melee_range) =
             crate::scripted_ai::model_reach::melee_range(world, attacker, target)
         else {
@@ -889,6 +900,9 @@ pub(crate) fn auto_attack_system(world: &mut World) {
 
 /// Repeat a landed white swing without advancing or resetting its normal timer.
 pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, hand: Hand) {
+    if crate::faction::world_immunity_blocks_attack(world, attacker, target) {
+        return;
+    }
     let Some(melee_range) = crate::scripted_ai::model_reach::melee_range(world, attacker, target)
     else {
         return;
@@ -1692,7 +1706,7 @@ fn creature_type_damage_multiplier(
     let Some(mods) = mods.filter(|mods| mods.has_damage_done_versus()) else {
         return 1.0;
     };
-    let (_, npc, _, _, _, _, player, _) =
+    let (_, npc, _, _, _, _, player, _, _) =
         context.sight.bodies.get(victim).expect("swing target body");
     let kind = context
         .creature_types
@@ -2856,6 +2870,11 @@ fn commit_melee_loss(
     }
     let before = health.current;
     outcome.health_before = before;
+    if world.get::<shared::components::Npc>(victim).is_some()
+        && !crate::combat_refs::has_active_reference_to(world, victim, attacker)
+    {
+        debug!(target: "game_server::aggro_acquisition", reason = "melee", creature = victim.to_bits(), attacker = attacker.to_bits(), "creature combat acquisition");
+    }
     crate::combat_refs::engage_attacked_target(world, attacker, victim);
     crate::creature_scripts::refresh_training_dummy_timer(world, victim, attacker);
     let health = world.get::<Health>(victim).expect("living melee victim");

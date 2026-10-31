@@ -58,6 +58,7 @@ struct Rule {
 pub struct Program {
     lists: BTreeMap<String, Vec<Rule>>,
     defaults: BTreeMap<String, f64>,
+    gcd_history_limit: usize,
 }
 
 impl Program {
@@ -66,6 +67,9 @@ impl Program {
         let mut program = Self {
             lists: BTreeMap::new(),
             defaults: BTreeMap::new(),
+            gcd_history_limit: super::gcd_history::required_lookback(
+                lines.iter().map(|(_, row)| *row),
+            )?,
         };
         for (source_row, &(list, literal)) in lines.iter().enumerate() {
             if list.is_empty() {
@@ -107,6 +111,10 @@ impl Program {
         self.lists
             .iter()
             .flat_map(|(list, rules)| rules.iter().map(move |rule| (list.as_str(), &rule.action)))
+    }
+
+    pub fn gcd_history_limit(&self) -> usize {
+        self.gcd_history_limit
     }
 
     pub fn state(&self) -> Variables {

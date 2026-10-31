@@ -16,6 +16,7 @@ use combat::spell_cast::{
     scripts::{AfterCastHook, script_effect_value},
 };
 use combat::spell_info::{SpellInfo, SpellStore};
+use combat::stats::{CharacterStats, StatModifiers, WeaponAttackType};
 
 const TALENT: u32 = 450508;
 const ACCUMULATOR: u32 = 450521;
@@ -25,6 +26,8 @@ const COALESCENCE: u32 = 450529;
 const THOUSAND_STRIKES: u32 = 450965;
 const PURIFIED_SPIRIT: u32 = 450867;
 const PURIFIED_DAMAGE: u32 = 450820;
+const CLARITY_OF_PURPOSE: u32 = 451017;
+const PURIFYING_BREW: u32 = 119582;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::MidAuraRegistration(register_spender),
@@ -129,7 +132,52 @@ fn apply(world: &mut World, caster: Entity, spell: u32) {
 }
 
 fn spender_hook(spell: u32) -> Option<AfterCastHook> {
-    matches!(spell, 322507 | 1241059).then_some(start_spender)
+    match spell {
+        322507 | 1241059 => Some(start_spender),
+        PURIFYING_BREW => Some(add_clarity),
+        _ => None,
+    }
+}
+
+fn add_clarity(world: &mut World, caster: Entity, _: &SpellInfo) {
+    if !selected(world, caster)
+        || !has_talent(world, caster, CLARITY_OF_PURPOSE)
+        || auras::has_aura(world, caster, SPENDER)
+    {
+        return;
+    }
+    let stats = world
+        .get::<CharacterStats>(caster)
+        .expect("Harmony caster stats");
+    let attack_power = stats.total_attack_power(
+        WeaponAttackType::MainHand,
+        world.get::<StatModifiers>(caster),
+    );
+    let versatility = 1.0 + stats.versatility_pct / 100.0;
+    let coefficient = script_effect_value(world, caster, CLARITY_OF_PURPOSE, 0) / 100.0;
+    add_accumulator(world, caster, attack_power * versatility * coefficient);
+}
+
+fn add_accumulator(world: &mut World, caster: Entity, amount: f32) {
+    let max = world
+        .get::<Health>(caster)
+        .expect("Harmony caster health")
+        .max;
+    let current = world
+        .get::<HarmonyPools>(caster)
+        .map_or(0.0, |pools| pools.accumulator);
+    let next = (current + amount).min(max);
+    if let Some(mut pools) = world.get_mut::<HarmonyPools>(caster) {
+        pools.accumulator = next;
+    } else {
+        world.entity_mut(caster).insert(HarmonyPools {
+            accumulator: next,
+            spender: 0.0,
+        });
+    }
+    if !auras::has_aura(world, caster, ACCUMULATOR) {
+        apply(world, caster, ACCUMULATOR);
+    }
 }
 
 fn start_spender(world: &mut World, caster: Entity, _: &SpellInfo) {
@@ -244,25 +292,7 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
                 .base_points;
             percent *= 1.0 + effect / 100.0;
         }
-        let max = world
-            .get::<Health>(caster)
-            .expect("Harmony caster health")
-            .max;
-        let current = world
-            .get::<HarmonyPools>(caster)
-            .map_or(0.0, |pools| pools.accumulator);
-        let next = (current + amount * percent).min(max);
-        if let Some(mut pools) = world.get_mut::<HarmonyPools>(caster) {
-            pools.accumulator = next;
-        } else {
-            world.entity_mut(caster).insert(HarmonyPools {
-                accumulator: next,
-                spender: 0.0,
-            });
-        }
-        if !auras::has_aura(world, caster, ACCUMULATOR) {
-            apply(world, caster, ACCUMULATOR);
-        }
+        add_accumulator(world, caster, amount * percent);
     }
 }
 

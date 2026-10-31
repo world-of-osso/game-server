@@ -109,6 +109,12 @@ fn begin_combat(world: &mut World, a: Entity, b: Entity, suppress_b: bool) {
     let existing = world
         .get::<CombatRefs>(a)
         .is_some_and(|refs| refs.0.contains_key(&b));
+    if !existing
+        && (world.get::<shared::components::Npc>(a).is_some()
+            || world.get::<shared::components::Npc>(b).is_some())
+    {
+        debug!(target: "game_server::aggro_acquisition", reason = "combat_reference", first = a.to_bits(), second = b.to_bits(), suppress_second = suppress_b, "combat reference created");
+    }
     let expires_at = read_reference_deadline(world, a, b);
     for (unit, other, suppressed) in [(a, b, false), (b, a, suppress_b && !existing)] {
         store_combat_reference(
@@ -257,15 +263,21 @@ pub(crate) fn expire_combat_refs_system(world: &mut World) {
         .filter(|(_, gone)| !gone.is_empty())
         .collect();
     for (unit, gone) in expired {
-        let mut refs = world.get_mut::<CombatRefs>(unit).expect("queried");
         for other in gone {
-            refs.0.remove(&other);
+            for (endpoint, opponent) in [(unit, other), (other, unit)] {
+                if let Some(mut threat) = world.get_mut::<ThreatTable>(endpoint) {
+                    threat.remove(opponent.to_bits());
+                }
+                if let Some(mut refs) = world.get_mut::<CombatRefs>(endpoint) {
+                    refs.0.remove(&opponent);
+                    update_combat_status(world, endpoint);
+                }
+            }
         }
-        update_combat_status(world, unit);
     }
 }
 
-fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
+pub(crate) fn can_begin_combat(world: &World, a: Entity, b: Entity) -> bool {
     let dead = |unit: Entity| {
         world
             .get::<Health>(unit)

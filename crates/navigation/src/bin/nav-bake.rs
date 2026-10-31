@@ -56,7 +56,7 @@ fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
     std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
     let mut report = String::from("tile\ttriangles\tbytes\tmilliseconds\n");
     if let Some(global) = baker.collect_global(wdt)? {
-        let all = los::bake::CollectedGeometry {
+        let mut all = los::bake::CollectedGeometry {
             triangles: global
                 .iter()
                 .flat_map(|(_, g)| g.triangles.iter().copied())
@@ -66,8 +66,11 @@ fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
                 .flat_map(|(_, g)| g.obstacles.iter().copied())
                 .collect(),
         };
+        let mut water = Vec::new();
+        let surfaces = baker.collect_global_wmo_water(wdt)?;
+        navigation::bake::add_wmo_swim_surfaces(&mut all, &mut water, &surfaces);
         for (tile, _) in &global {
-            write_tile(&dir, *tile, &all, &[], subdivisions, &mut report)?;
+            write_tile(&dir, *tile, &all, &water, subdivisions, &mut report)?;
         }
         // Global-WMO support is shared with the LOS collector. The test oracle remains
         // the existing LosMap runtime, not a navigation-specific raycaster.
@@ -80,10 +83,12 @@ fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
                 .ok_or("continent bake requires --los-tiles <existing LOS map directory>")?,
         )?;
         for tile in selected {
-            let (triangles, _) = baker
+            let (mut triangles, _) = baker
                 .collect_tile(&tiles, tile)?
                 .ok_or_else(|| format!("LOS tile {tile:?} has no terrain"))?;
-            let water = baker.collect_water(tiles[(tile.1 * 64 + tile.0) as usize])?;
+            let mut water = baker.collect_water(tiles[(tile.1 * 64 + tile.0) as usize])?;
+            let surfaces = baker.collect_wmo_water(&tiles, tile)?;
+            navigation::bake::add_wmo_swim_surfaces(&mut triangles, &mut water, &surfaces);
             write_tile(&dir, tile, &triangles, &water, subdivisions, &mut report)?;
         }
     }

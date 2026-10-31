@@ -90,19 +90,28 @@ pub fn read_registrations(
     }
     let passages = crate::scripted_ai::dungeon_passage::PASSAGES
         .iter()
-        .filter(|passage| passage.map == map);
+        .filter(|passage| {
+            passage.map == map
+                && matches!(
+                    passage.kind,
+                    crate::scripted_ai::dungeon_passage::PassageKind::Taxi(_)
+                )
+        });
     if passages.clone().next().is_some() {
         let network =
             crate::taxi::load_taxi_network(db).map_err(|error| format!("taxi network: {error}"))?;
         for passage in passages {
+            let crate::scripted_ai::dungeon_passage::PassageKind::Taxi(path) = passage.kind else {
+                unreachable!()
+            };
             let points = network
-                .scripted_path(passage.path)
-                .ok_or_else(|| format!("Dungeon TaxiPath {} unavailable", passage.path))?;
+                .scripted_path(path)
+                .ok_or_else(|| format!("Dungeon TaxiPath {path} unavailable"))?;
             let endpoint = *points
                 .last()
-                .ok_or_else(|| format!("Dungeon TaxiPath {} is empty", passage.path))?;
+                .ok_or_else(|| format!("Dungeon TaxiPath {path} is empty"))?;
             registrations.push(Registration {
-                entry: passage.path,
+                entry: path,
                 source_guid: None,
                 source: passage.source,
                 destination: landing_floor(db, map, endpoint)?,
