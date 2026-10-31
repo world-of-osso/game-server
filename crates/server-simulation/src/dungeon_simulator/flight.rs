@@ -96,8 +96,10 @@ fn flight_path(
                 .horizontal
                 .lerp(pair[1].horizontal, i as f32 / count as f32);
             let max_change = VERTICAL_BOUND * seconds / count as f32;
-            let height = surfaces(point, previous_height)?
-                .into_iter()
+            let candidates = surfaces(point, previous_height)?;
+            let height = candidates
+                .iter()
+                .copied()
                 .filter(|height| {
                     height.is_finite() && (height - previous_height).abs() <= max_change
                 })
@@ -106,7 +108,11 @@ fn flight_path(
                         .abs()
                         .total_cmp(&(b - previous_height).abs())
                 })
-                .ok_or_else(|| format!("no flight surface within continuity bound at {point:?}"))?;
+                .ok_or_else(|| {
+                    format!(
+                        "no flight surface within continuity bound at {point:?}: previous={previous_height}, max_change={max_change}, candidates={candidates:?}"
+                    )
+                })?;
             previous_height = height;
             path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
         }
