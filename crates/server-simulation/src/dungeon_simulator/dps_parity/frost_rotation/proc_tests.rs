@@ -205,6 +205,7 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
         stats.crit_pct = 100.0;
         stats.main_hand.kind = WeaponType::TwoHand;
     }
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app
         .world_mut()
         .get_mut::<Health>(primary)
@@ -214,6 +215,7 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
         .world_mut()
         .entity_mut(actor)
         .insert(crate::combat::AutoAttack::new(primary));
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     for _ in 0..200 {
         run.app.update();
         if run
@@ -225,7 +227,11 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
             break;
         }
     }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0),
+        "the primary must die"
+    );
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
     assert!(
         events
             .iter()
@@ -233,7 +239,8 @@ fn frost_icy_death_torrent_survives_lethal_critical_swing() {
                 && event.target == Some(primary.to_bits())
                 && event.kind == CombatLogKind::Damage
                 && event.spell_id.is_none()
-                && event.crit),
+                && event.crit
+                && event.amount > 0),
         "the primary must die to a critical white swing"
     );
     assert!(
@@ -398,6 +405,28 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
             "one actual spender consumes the earned use"
         );
     }
+}
+
+#[test]
+#[ignore = "native Echoing Fury refusal after caster death"]
+fn frost_echoing_fury_refusal_after_caster_death_does_not_panic() {
+    use shared::components::Health;
+
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 1265855));
+    let mut spell = run.app.world().resource::<crate::spell_info::SpellStore>()
+        .get(439843).unwrap().clone();
+    spell.cast_primary_target = Some(run.targets[0]);
+    run.app.world_mut().get_mut::<Health>(actor).unwrap().current = 0.0;
+    assert!(!crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(), actor, 441416, Some(actor), 1,
+    ), "the native self-targeted grant must refuse a dead caster");
+    crate::spell_cast::script_registry::after_elemental_launch(
+        run.app.world_mut(), actor, &spell, true,
+    );
+    assert!(!auras::has_aura(run.app.world(), actor, 441416));
 }
 
 #[test]
@@ -745,6 +774,41 @@ fn frost_soul_rupture_from_real_mark_explosion() {
     assert!(!events.iter().any(|event| event.spell_id == Some(439594)
         && event.kind == CombatLogKind::Damage
         && event.target == Some(run.targets[0].to_bits())));
+}
+
+#[test]
+#[ignore = "native Soul Rupture after a lethal Reaper's Mark explosion"]
+fn frost_soul_rupture_hits_survivor_after_lethal_mark() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::super::prepare_measurement(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    assert!(auras::has_aura(run.app.world(), actor, 437161));
+    cast(&mut run, 439843);
+    assert!(auras::has_aura(run.app.world(), primary, 434765));
+    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    auras::remove_auras(run.app.world_mut(), primary, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 434765 && aura.caster == actor
+    });
+    for _ in 0..30 { run.app.update(); }
+    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(primary.to_bits()) && event.spell_id == Some(436304)
+        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "the native Mark explosion must kill the primary");
+    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
+        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(439594)
+        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        "Soul Rupture must hit a living enemy around the dead primary");
 }
 
 #[test]

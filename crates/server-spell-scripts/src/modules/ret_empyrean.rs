@@ -72,7 +72,8 @@ fn schedule_empyrean_legacy(
     // schedule_execute() has no authored delay. Defer behind the foreground
     // action rather than introducing a timer or running a paid second spender.
     world.commands().queue(move |world: &mut World| {
-        if world.get_entity(caster).is_ok() && world.get_entity(target).is_ok() {
+        // SimC action/action.cpp:230–236 cancels instant actions on sleeping targets.
+        if world.get_entity(caster).is_ok() && combat::spell_cast::targets::is_alive(world, target) {
             cast_background_storm(world, caster, target, multiplier);
         }
     });

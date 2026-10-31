@@ -41,6 +41,10 @@ fn store_rime_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage
             .find(|aura| aura.spell_id == CHAMBER && aura.caster == ctx.caster)
             .map(|aura| aura.stacks)
     });
+    if !spell_cast::try_cast_triggered(world, ctx.caster, CHAMBER, Some(ctx.caster), 1) {
+        warn!(caster = ?ctx.caster, "native Cryogenic Chamber buff refused");
+        return;
+    }
     if stacks.is_none() {
         world
             .entity_mut(ctx.caster)
@@ -56,10 +60,6 @@ fn store_rime_hit(world: &mut World, ctx: &EffectCtx, _: Entity, _: bool, damage
             .into_mut()
             .0 += damage * fraction;
     }
-    assert!(
-        spell_cast::try_cast_triggered(world, ctx.caster, CHAMBER, Some(ctx.caster), 1),
-        "native Cryogenic Chamber buff refused"
-    );
 }
 
 fn release_on_winter(world: &mut World, caster: Entity, spell: u32, _: u8) {
@@ -76,18 +76,17 @@ fn release_on_winter(world: &mut World, caster: Entity, spell: u32, _: u8) {
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == CHAMBER && aura.caster == caster
     });
-    assert!(
-        spell_cast::cast_triggered_with_overrides(
-            world,
-            caster,
-            EXPLOSION,
-            Some(caster),
-            1,
-            TriggeredSpellOverrides {
-                effect0_amount: Some(amount),
-                ..Default::default()
-            }
-        ),
-        "native Cryogenic Chamber explosion refused"
-    );
+    if !spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        EXPLOSION,
+        None,
+        1,
+        TriggeredSpellOverrides {
+            effect0_amount: Some(amount),
+            ..Default::default()
+        },
+    ) {
+        warn!(?caster, "native Cryogenic Chamber explosion refused");
+    }
 }

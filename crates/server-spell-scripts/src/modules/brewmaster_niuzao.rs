@@ -53,10 +53,7 @@ fn blackout_hook(spell: u32) -> Option<AfterCastHook> {
     (spell == BLACKOUT_KICK).then_some(stomp_after_blackout)
 }
 
-fn stomp_after_blackout(world: &mut World, owner: Entity, spell: &SpellInfo) {
-    let Some(target) = spell.cast_primary_target else {
-        return;
-    };
+fn stomp_after_blackout(world: &mut World, owner: Entity, _spell: &SpellInfo) {
     let Some(pet) = active_niuzao(world, owner) else {
         return;
     };
@@ -74,7 +71,7 @@ fn stomp_after_blackout(world: &mut World, owner: Entity, spell: &SpellInfo) {
         damage_multiplier: Some(multiplier),
         ..Default::default()
     };
-    if !spell_cast::cast_triggered_with_overrides(world, pet, STOMP, Some(target), 1, values) {
-        warn!(?owner, ?pet, ?target, "Niuzao Stomp refused");
+    if !spell_cast::cast_triggered_with_overrides(world, pet, STOMP, None, 1, values) {
+        warn!(?owner, ?pet, "Niuzao Stomp refused");
     }
 }

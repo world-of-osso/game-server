@@ -50,7 +50,7 @@ fn command_ghouls(world: &mut World, caster: Entity, spell: &SpellInfo) {
         })
         .collect();
     for ghoul in ghouls {
-        if !spell_cast::try_cast_triggered(world, ghoul, order, Some(target), 1) {
+        if !super::unholy_eruption::cast_army_order(world, ghoul, order, target) {
             warn!(?ghoul, order, "Doomed Bidding Army order refused");
         }
     }

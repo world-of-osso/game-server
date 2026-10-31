@@ -88,10 +88,19 @@ fn command_army(world: &mut World, caster: Entity) {
     // SimC76f8118 sc_death_knight.cpp6766–6771: actual Army ghouls
     // execute Death Order or Epidemic Order, not a synthetic owner hit.
     for ghoul in ghouls {
-        if !spell_cast::try_cast_triggered(world, ghoul, order, Some(target), 1) {
+        if !cast_army_order(world, ghoul, order, target) {
             warn!(?ghoul, order, "Native Army order refused");
         }
     }
+}
+
+pub(super) fn cast_army_order(world: &mut World, ghoul: Entity, order: u32, target: Entity) -> bool {
+    let Some(spell) = spell_cast::load_triggered_spell(world, order, 1) else {
+        return false;
+    };
+    // SimC76f8118 sc_death_knight.cpp3758–3763 executes the ghoul's AoE around itself.
+    let explicit = (order != 1300330).then_some(target);
+    spell_cast::launch_triggered_spell_with_primary(world, ghoul, &spell, explicit, Some(target), 1)
 }
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {

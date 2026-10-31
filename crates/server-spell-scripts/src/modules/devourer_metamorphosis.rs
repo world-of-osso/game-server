@@ -182,6 +182,10 @@ fn update_voidsurge(world: &mut World) {
             ready
         };
         for (_, target) in due {
+            // SimC76f8118 sc_demon_hunter.cpp1534–1540 skips a dead delayed target.
+            if !spell_cast::targets::is_alive(world, target) {
+                continue;
+            }
             if !spell_cast::try_cast_triggered(world, caster, 1246160, Some(target), 1) {
                 error!(?caster, ?target, "native Voidsurge was refused");
             }

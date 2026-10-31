@@ -46,10 +46,7 @@ fn trigger_voidstep(world: &mut World, caster: Entity, spell: &SpellInfo, depth:
         return;
     }
     // SimC76f8118 cpp8542–8556,8610–8615 delivers Voidstep before Retreat consumes it.
-    let target = spell
-        .cast_primary_target
-        .expect("Retreat retains its target");
-    if !spell_cast::try_cast_triggered(world, caster, 1239526, Some(target), depth + 1) {
+    if !spell_cast::try_cast_triggered(world, caster, 1239526, None, depth + 1) {
         error!(?caster, "native Voidstep damage was refused");
     }
     combat::auras::remove_auras(

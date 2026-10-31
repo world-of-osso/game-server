@@ -257,6 +257,10 @@ fn queue_tempest(world: &mut World, caster: Entity, parent: &SpellInfo, target: 
         Some(script_effect_value(world, caster, TEMPEST_TALENT, 0) / 100.0);
     child.cast_damage_role = CastDamageRole::Secondary;
     world.commands().queue(move |world: &mut World| {
+        // SimC action/action.cpp:230–236 cancels the queued action if its target dies.
+        if !spell_cast::targets::is_alive(world, target) {
+            return;
+        }
         if !spell_cast::launch_triggered_spell(world, caster, &child, Some(target), depth + 1) {
             warn!("Ret Tempest native child refused");
         }
@@ -291,7 +295,9 @@ pub(super) fn sentence_init(world: &mut World, ctx: &EffectCtx, target: Entity) 
         return;
     };
     child.cast_destination = Some(position.to_array());
-    if !spell_cast::launch_triggered_spell(world, ctx.caster, &child, Some(target), ctx.depth + 1) {
+    if !spell_cast::launch_triggered_spell_with_primary(
+        world, ctx.caster, &child, None, Some(target), ctx.depth + 1,
+    ) {
         warn!("Execution Sentence initial child refused");
     }
 }
