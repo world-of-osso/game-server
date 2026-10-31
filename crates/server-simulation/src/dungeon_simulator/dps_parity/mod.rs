@@ -557,7 +557,7 @@ pub(crate) fn spawn_reference(
     count: usize,
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
-    let mut app = super::runtime::build_app();
+    let mut app = super::runtime::build_literal_app();
     app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
