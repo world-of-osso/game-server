@@ -16,15 +16,18 @@ impl NavigationMap {
             let mut tiles = HashSet::new();
             let max_tiles = (*self.mesh).getMaxTiles();
             let mut neighbors = vec![std::ptr::null(); max_tiles as usize];
-            for x in header.x - 1..=header.x + 1 {
-                for y in header.y - 1..=header.y + 1 {
-                    let count = (*self.mesh).getTilesAt(x, y, neighbors.as_mut_ptr(), max_tiles);
-                    tiles.extend(
-                        neighbors[..count as usize]
-                            .iter()
-                            .map(|tile| *tile as usize),
-                    );
-                }
+            for (dx, dy) in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)] {
+                let count = (*self.mesh).getTilesAt(
+                    header.x + dx,
+                    header.y + dy,
+                    neighbors.as_mut_ptr(),
+                    max_tiles,
+                );
+                tiles.extend(
+                    neighbors[..count as usize]
+                        .iter()
+                        .map(|tile| *tile as usize),
+                );
             }
             let mut rejected = HashSet::new();
             for &address in &tiles {
