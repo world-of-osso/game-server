@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Add the pinned ItemSpec tables to an existing world database."""
 import argparse
+from contextlib import closing
 import csv
 from pathlib import Path
 import re
@@ -23,7 +24,7 @@ def import_item_specs(database: Path, csv_dir: Path) -> dict[str, int]:
             reader = csv.DictReader(handle)
             rows = list(reader)
         prepared.append((table, match.group(), reader.fieldnames, rows))
-    with sqlite3.connect(database, isolation_level=None) as conn:
+    with closing(sqlite3.connect(database, isolation_level=None)) as conn:
         conn.execute("BEGIN IMMEDIATE")
         try:
             for table, _, _, _ in prepared:
