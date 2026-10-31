@@ -184,6 +184,9 @@ fn wait_for_tank_pull_back(world: &mut World, unit: Entity, follower: &Follower,
     } else {
         hold_combat(world, unit);
     }
+    if world.get::<AplControlled>(unit).is_some() {
+        return;
+    }
     if !super::kit_ai::update(world, unit, follower, party, None, &[])
         && follower.profile.heal_spell != 0
         && let Some(patient) = lowest_health(world, party, unit)

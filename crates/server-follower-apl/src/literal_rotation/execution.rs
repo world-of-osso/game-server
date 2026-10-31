@@ -245,7 +245,23 @@ impl Prepared {
         for item in equipment.uses() {
             read_item(world, actor, &targets, item, &mut prepared)?;
         }
+        prepared.suppress_pull_damage(world, actor)?;
         Ok(prepared)
+    }
+
+    fn suppress_pull_damage(&mut self, world: &World, actor: Entity) -> Result<(), String> {
+        if server::followers::holding_pull_damage(world, actor) {
+            let mut blocked = Vec::new();
+            for (key, execution) in &self.ready {
+                if super::pull_damage_execution(world, execution)? {
+                    blocked.push(key.clone());
+                }
+            }
+            for key in blocked {
+                self.ready.remove(&key);
+            }
+        }
+        Ok(())
     }
 
     /// Suppress every target context for a fixture-specific action policy.
@@ -308,6 +324,7 @@ impl Prepared {
                 }
             }
         }
+        self.suppress_pull_damage(world, actor)?;
         Ok(self)
     }
 

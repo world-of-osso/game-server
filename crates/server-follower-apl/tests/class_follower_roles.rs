@@ -288,6 +288,90 @@ fn class_follower_healer_casts_holy_priest_apl_heals_on_dummy_pull() {
 }
 
 #[test]
+fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
+    let mut pull = spawn(257);
+    let owner = pull.harness.caster;
+    let profiles = read_profiles().unwrap();
+    let tank = profiles
+        .iter()
+        .find(|profile| profile.spec_id == 66)
+        .unwrap();
+    let tank = spawn_class(
+        pull.harness.app.world_mut(),
+        owner,
+        tank,
+        1,
+        1,
+        GearSource::Journal,
+    )
+    .unwrap();
+    // Hold the tank's pull-back state fixed while testing the healer's controller.
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<server_combat::followers::Follower>();
+    server_combat::followers::set_test_pull_back(pull.harness.app.world_mut(), owner, tank);
+    assert!(server_combat::followers::holding_pull_damage(
+        pull.harness.app.world(),
+        pull.follower
+    ));
+    let before = pull.casts().len();
+    for _ in 0..5 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    assert_eq!(
+        pull.casts().len(),
+        before,
+        "follower brain cast a kit action"
+    );
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<shared::casting::CastState>(pull.follower)
+            .is_none(),
+        "follower brain started a kit cast"
+    );
+    for _ in 0..FRAMES {
+        assert!(server_combat::followers::holding_pull_damage(
+            pull.harness.app.world(),
+            pull.follower
+        ));
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    let heals = server_follower_apl::holy_priest_rotation::SPELLS
+        .iter()
+        .filter(|(name, _, _)| !matches!(*name, "holy_fire" | "smite"));
+    let apl = pull.resolved(heals.map(|&(_, spell, _)| spell));
+    assert!(
+        pull.landed(CombatLogKind::Heal, owner, &apl),
+        "no APL heal during pull-back; casts {:?}",
+        pull.casts()
+    );
+    let damage: Vec<_> = pull
+        .events()
+        .iter()
+        .filter(|event| {
+            event.source == Some(pull.follower.to_bits()) && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    assert!(
+        damage.is_empty(),
+        "healer damage {damage:?}; hold still active {}",
+        server_combat::followers::holding_pull_damage(pull.harness.app.world(), pull.follower)
+    );
+    assert!(
+        !pull.casts().contains(&19236),
+        "legacy defensive bridge ran"
+    );
+    assert!(!pull.apl_failed());
+}
+
+#[test]
 fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     let pull = pull(62);
     let table = server_follower_apl::arcane_rotation::ACTIONS;
