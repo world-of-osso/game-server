@@ -172,6 +172,8 @@ pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
 /// SPELL_AURA_ALLOW_MOUNT_IN_COMBAT.
 pub const ALLOW_MOUNT_IN_COMBAT: u32 = 539;
+/// SPELL_AURA_MOD_REQUIRED_MOUNT_CAPABILITY_FLAGS.
+pub const MOD_REQUIRED_MOUNT_CAPABILITY_FLAGS: u32 = 541;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
 pub const CONTROL_VEHICLE: u32 = 236;
 pub const TRANSFORM: u32 = 56;

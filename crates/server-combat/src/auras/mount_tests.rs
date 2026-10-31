@@ -365,6 +365,59 @@ fn radiant_light_allows_mounting_in_combat_only_while_active() {
 }
 
 #[test]
+fn radiant_light_requires_a_flying_mount_capability() {
+    let mut h = rider(150, true, &[449042]).expect("real mount and Radiant Light catalog");
+    let caster = h.caster;
+    let capability = |h: &Harness| {
+        super::mount::with_rider(h.app.world(), caster, |rider| {
+            h.app
+                .world()
+                .resource::<super::mount::MountStore>()
+                .capability(424, rider)
+        })
+    };
+    assert_eq!(capability(&h).unwrap().mod_spell_aura, EPIC_GROUND);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(449042)
+        .unwrap();
+    let effect_mask = aura_effect_mask(spell);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 449042,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(
+        capability(&h).is_none(),
+        "ground-only capability cannot satisfy flags 3"
+    );
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(caster)
+        .unwrap()
+        .lines[0]
+        .rank = 225;
+    assert_eq!(capability(&h).unwrap().mod_spell_aura, STANDARD_FLYING);
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 449042
+    });
+    h.app
+        .world_mut()
+        .get_mut::<PlayerProfessions>(caster)
+        .unwrap()
+        .lines[0]
+        .rank = 150;
+    assert_eq!(capability(&h).unwrap().mod_spell_aura, EPIC_GROUND);
+}
+
+#[test]
 fn a_mounted_player_cannot_cast_and_dismounts_with_cancel_mount_aura() {
     let Some(mut h) = rider(225, true, &[]) else {
         return;
