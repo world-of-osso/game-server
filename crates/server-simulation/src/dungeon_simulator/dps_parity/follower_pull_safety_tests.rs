@@ -66,7 +66,7 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     queue.apply(run.app.world_mut());
     run.app.insert_resource(ground);
     let here = Position {
-        x: 5316.415,
+        x: 5216.415,
         y: 127.7347,
         z: 3124.3594,
     };
@@ -95,9 +95,9 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     )
     .normalize();
     let cast_position = Position {
-        x: caller_position.x - direction.x * 3.0,
+        x: caller_position.x - direction.x * 8.0,
         y: caller_position.y,
-        z: caller_position.z - direction.y * 3.0,
+        z: caller_position.z - direction.y * 8.0,
     };
     run.app
         .world_mut()
@@ -175,6 +175,12 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     assert!(
         crate::combat_refs::has_active_reference_to(run.app.world(), helper, actor),
         "native assistance must dispatch"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), outside)
+            .next()
+            .is_none(),
+        "the outsider must remain idle after dispatch"
     );
     attempt(&mut apl, &mut run);
     assert!(
