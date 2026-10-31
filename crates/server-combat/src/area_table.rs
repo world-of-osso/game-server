@@ -33,9 +33,14 @@ pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 impl AreaTable {
     /// AreaTable MountFlags bit 0x2 permits flying mounts in this area.
     pub(crate) fn permits_flying(&self, area_id: u32, map_id: u32) -> bool {
+        self.flight_permission(area_id, map_id) == Some(true)
+    }
+
+    pub(crate) fn flight_permission(&self, area_id: u32, map_id: u32) -> Option<bool> {
         self.0
             .get(&area_id)
-            .is_some_and(|area| area.map_id == map_id && area.mount_flags & 0x2 != 0)
+            .filter(|area| area.map_id == map_id)
+            .map(|area| area.mount_flags & 0x2 != 0)
     }
 
     /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.

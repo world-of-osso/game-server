@@ -2,13 +2,14 @@
 use bevy::prelude::*;
 use std::path::Path;
 
-pub fn install(
-    app: &mut App,
-    db: &rusqlite::Connection,
-    nav_root: &Path,
-    data_root: &Path,
-) -> Result<(), String> {
-    if !app.world().contains_resource::<crate::ground::GroundMap>() {
+/// Native terrain area and AreaTable permissions for any map.
+pub struct Areas {
+    ground: crate::ground::GroundMap,
+    table: crate::area_table::AreaTable,
+}
+
+impl Areas {
+    pub fn open(db: &rusqlite::Connection, data_root: &Path) -> Result<Self, String> {
         let maps = crate::maps::store::load_map_store(db)
             .map_err(|error| format!("flight maps: {error}"))?;
         let wdts = maps
@@ -16,7 +17,33 @@ pub fn install(
             .values()
             .map(|entry| (entry.id, entry.wdt_file_data_id))
             .collect();
-        app.insert_resource(crate::ground::GroundMap::new(data_root, wdts));
+        Ok(Self {
+            ground: crate::ground::GroundMap::new(data_root, wdts),
+            table: crate::area_table::load_area_table(db)
+                .map_err(|error| format!("flight areas: {error}"))?,
+        })
+    }
+
+    pub fn permits(&mut self, map: u32, point: Vec2) -> Result<bool, String> {
+        let area = self
+            .ground
+            .area_at(map, Vec3::new(point.x, 0.0, point.y))
+            .ok_or_else(|| format!("flight area unavailable at {point:?} on map {map}"))?;
+        self.table
+            .flight_permission(area, map)
+            .ok_or_else(|| format!("flight area {area} is missing from map {map}'s AreaTable"))
+    }
+}
+
+pub fn install(
+    app: &mut App,
+    db: &rusqlite::Connection,
+    nav_root: &Path,
+    data_root: &Path,
+) -> Result<(), String> {
+    let areas = Areas::open(db, data_root)?;
+    if !app.world().contains_resource::<crate::ground::GroundMap>() {
+        app.insert_resource(areas.ground);
     }
     if !app
         .world()
@@ -24,9 +51,7 @@ pub fn install(
     {
         app.insert_resource(crate::navigation::Navigation::new(nav_root));
     }
-    app.insert_resource(
-        crate::area_table::load_area_table(db).map_err(|error| format!("flight areas: {error}"))?,
-    );
+    app.insert_resource(areas.table);
     app.insert_resource(
         crate::auras::mount::load_mount_store(db)
             .map_err(|error| format!("flight mount catalog: {error}"))?,

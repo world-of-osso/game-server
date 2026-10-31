@@ -247,7 +247,7 @@ fn extract(
         follower_encounter_actor_bits: BTreeMap::new(),
     };
     if map == 2662 {
-        let paths = super::super::flight::build_paths(&graph, &mut nav)?;
+        let paths = super::super::flight::build_paths(&graph, &mut nav, db)?;
         for path in paths {
             append_flight_path(&mut graph, &path, |from, to| {
                 complete_route(&mut nav, from, to)
