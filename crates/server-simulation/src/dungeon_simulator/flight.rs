@@ -5,6 +5,7 @@ use shared::los;
 // Fifteen yards separates the inferred path from the selected collision surface.
 const CLEARANCE: f32 = 15.0;
 const MAX_LOS_REPAIRS: usize = 8;
+const MAX_DESCENT_HOLD_SECONDS: f32 = super::campaign::STALL_SECONDS as f32;
 // FlightCapability 11 caps an impulse at 100 yd/s. Treating that as a vertical
 // continuity bound is inferred; dives may exceed the impulse speed.
 const VERTICAL_BOUND: f32 = shared::skyriding::SKYRIDING.add_impulse_max_speed;
@@ -123,7 +124,7 @@ fn flight_path(
             seconds: pair[1].seconds,
         });
     }
-    repair_flight_segments(&mut points, &mut hit)?;
+    repair_flight_segments(&mut points, ground_end, &mut hit)?;
     let mut path = vec![ground_start];
     path.extend(points.iter().map(|point| point.position));
     path.push(ground_end);
@@ -141,14 +142,21 @@ fn flight_path(
 /// A blocked descent holds its height; other hits get a clearance waypoint.
 fn repair_flight_segments(
     points: &mut Vec<FlightPoint>,
+    landing: Vec3,
     hit: &mut impl FnMut(Vec3, Vec3) -> Result<Option<f32>, String>,
 ) -> Result<(), String> {
     bound_flight_altitudes(points)?;
     let mut index = 0;
     let mut repairs = 0;
+    let mut holding_since = None::<f32>;
     while index + 1 < points.len() {
         let from = points[index];
         let to = points[index + 1];
+        if holding_since.is_some_and(|since| to.seconds - since > MAX_DESCENT_HOLD_SECONDS) {
+            return Err(format!(
+                "FLIGHT_DESCENT_HOLD_TIMEOUT: no clear descent within {MAX_DESCENT_HOLD_SECONDS}s"
+            ));
+        }
         let allowance = VERTICAL_BOUND * (to.seconds - from.seconds);
         if allowance <= 0.0 || (to.position.y - from.position.y).abs() > allowance {
             return Err(format!(
@@ -157,12 +165,18 @@ fn repair_flight_segments(
             ));
         }
         let Some(fraction) = hit(from.position, to.position)? else {
+            if holding_since.is_some_and(|since| from.seconds >= since)
+                && to.position.y < from.position.y
+            {
+                holding_since = None;
+            }
             index += 1;
             continue;
         };
         if to.position.y < from.position.y {
             let held = Vec3::new(to.position.x, from.position.y, to.position.z);
             if hit(from.position, held)?.is_none() {
+                holding_since.get_or_insert(from.seconds);
                 points[index + 1].position = held;
                 bound_flight_altitudes(points)?;
                 index = 0;
@@ -198,6 +212,9 @@ fn repair_flight_segments(
         );
         bound_flight_altitudes(points)?;
         index = 0;
+    }
+    if holding_since.is_some() && hit(points.last().unwrap().position, landing)?.is_some() {
+        return Err("FLIGHT_DESCENT_HOLD_UNCLEARED: no clear descent before landing".into());
     }
     Ok(())
 }
@@ -521,7 +538,7 @@ fn flight_holds_a_blocked_descent_until_the_floor_is_clear() {
         }
         Ok(None)
     };
-    repair_flight_segments(&mut points, &mut floor).unwrap();
+    repair_flight_segments(&mut points, Vec3::new(20.0, 0.0, 0.0), &mut floor).unwrap();
     assert_eq!(points[1].position, Vec3::new(1.0, 10.0, 0.0));
     assert_eq!(points[2].position, Vec3::new(20.0, 0.0, 0.0));
     assert!(
@@ -552,9 +569,25 @@ fn flight_can_hold_across_more_logged_waypoints_than_the_insertion_limit() {
         }
         Ok(None)
     };
-    repair_flight_segments(&mut points, &mut floor).unwrap();
+    repair_flight_segments(&mut points, Vec3::new(30.0, 0.0, 0.0), &mut floor).unwrap();
     assert!(points[1..=12].iter().all(|point| point.position.y == 10.0));
     assert_eq!(points[13].position.y, 0.0);
+}
+
+#[test]
+fn flight_descent_that_never_clears_fails_at_the_hold_timeout() {
+    let mut points: Vec<_> = (0..=4)
+        .map(|i| FlightPoint {
+            position: Vec3::new(i as f32, if i == 0 { 10.0 } else { 0.0 }, 0.0),
+            seconds: (i * 20) as f32,
+        })
+        .collect();
+    let mut floor = |a: Vec3, b: Vec3| -> Result<Option<f32>, String> {
+        Ok((a.y > 5.0 && b.y < 5.0).then(|| (a.y - 5.0) / (a.y - b.y)))
+    };
+    let error =
+        repair_flight_segments(&mut points, Vec3::new(4.0, 0.0, 0.0), &mut floor).unwrap_err();
+    assert!(error.contains("FLIGHT_DESCENT_HOLD_TIMEOUT"), "{error}");
 }
 
 #[test]
@@ -578,7 +611,7 @@ fn flight_inserts_clearance_above_a_blocking_wall() {
         }
         Ok(None)
     };
-    repair_flight_segments(&mut points, &mut wall).unwrap();
+    repair_flight_segments(&mut points, Vec3::new(10.0, 0.0, 0.0), &mut wall).unwrap();
     assert_eq!(points.len(), 3);
     assert_eq!(points[1].position, Vec3::new(5.0, 15.0, 0.0));
     assert!(

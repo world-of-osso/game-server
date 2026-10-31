@@ -6,7 +6,7 @@ use shared::components::{CombatStatus, Health, Mana, Position};
 use std::collections::BTreeMap;
 
 const MAX_TICKS: usize = 72_000;
-const STALL_SECONDS: f64 = 60.0;
+pub(super) const STALL_SECONDS: f64 = 60.0;
 const COHESION_CHECK_SECONDS: f64 = 1.0;
 
 #[path = "azure_positioning_tests.rs"]
