@@ -252,7 +252,6 @@ fn seed_native_lethal_owner_damage_explodes_on_survivors() {
     let primary = run.targets[0];
     run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
-    let actual = cast_native_action(&mut run, 686, primary);
     for _ in 0..100 {
         run.app.update();
         if run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0) {
@@ -264,8 +263,8 @@ fn seed_native_lethal_owner_damage_explodes_on_survivors() {
     assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
-        && event.target == Some(primary.to_bits()) && event.spell_id == Some(actual)
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "Shadow Bolt {actual} must kill the seeded target; primary events: {:?}", events.iter().filter(|event| event.target == Some(primary.to_bits())).map(|event| (event.source, event.spell_id, event.amount, event.kind)).collect::<Vec<_>>());
+        && event.target == Some(primary.to_bits()) && event.spell_id == Some(1259790)
+        && event.kind == CombatLogKind::Damage && event.amount > 0), "the owned periodic damage must kill the seeded target");
     for survivor in &run.targets[1..] {
         assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
             && event.target == Some(survivor.to_bits()) && event.spell_id == Some(EXPLOSION)
