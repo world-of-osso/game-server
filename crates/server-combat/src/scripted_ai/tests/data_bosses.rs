@@ -2320,6 +2320,12 @@ fn encounter_coverage_wailing_kresh_serpentis_generic_lifecycle() {
 #[test]
 fn encounter_coverage_wailing_disciple_sleep_and_conditional_potion() {
     let (mut h, enemy, map) = bound_boss_at_difficulty(3669, 43, 1, 1, None);
+    // Cobrahn stands in for an ordinary hostile: encounter bosses are sleep-immune.
+    h.app
+        .world_mut()
+        .resource_mut::<MapStore>()
+        .raid_creature_encounters
+        .remove(&(43, 3669));
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (disciple, _) = spawn_authored_actor(&mut h.app, &conn, 3678, map, 1);

@@ -14,8 +14,12 @@ const ENCOUNTER_BOSS_MECHANICS: u64 =
     1 << 2 | 1 << 5 | 1 << 7 | 1 << 10 | 1 << 12 | 1 << 13 | 1 << 14 | 1 << 17 | 1 << 30;
 
 /// A unit bound to a DungeonEncounter through the encounter-state catalog carries the
-/// retail boss immunity mask; every other unit has none from this source.
-fn encounter_boss_mask(world: &World, target: Entity) -> u64 {
+/// retail boss immunity mask against other casters; the logs measure only those, and
+/// boss scripts channel their own stun-mechanic spells (Landslide 21808).
+fn encounter_boss_mask(world: &World, caster: Entity, target: Entity) -> u64 {
+    if caster == target {
+        return 0;
+    }
     let (Some(map), Some(npc)) = (
         world.get::<crate::maps::InMap>(target),
         world.get::<shared::components::Npc>(target),
@@ -67,9 +71,6 @@ pub(crate) fn has_mechanic_immunity(world: &World, target: Entity, mechanic: u32
     if mechanic == 0 || mechanic >= u64::BITS {
         return false;
     }
-    if encounter_boss_mask(world, target) & (1u64 << mechanic) != 0 {
-        return true;
-    }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras
             .iter()
@@ -88,6 +89,7 @@ pub(crate) fn has_mechanic_immunity(world: &World, target: Entity, mechanic: u32
 /// Pass zero for category-only hit rejection; effect hits also supply their mechanic.
 pub(crate) fn blocks_mechanic(
     world: &World,
+    caster: Entity,
     target: Entity,
     spell: &SpellInfo,
     effect_mechanic: u32,
@@ -95,7 +97,11 @@ pub(crate) fn blocks_mechanic(
     if super::attributes(spell, 0) & ATTR0_NO_IMMUNITIES != 0 {
         return false;
     }
-    if mask_matches(spell, effect_mechanic, encounter_boss_mask(world, target)) {
+    if mask_matches(
+        spell,
+        effect_mechanic,
+        encounter_boss_mask(world, caster, target),
+    ) {
         return true;
     }
     world.get::<ActiveAuras>(target).is_some_and(|auras| {

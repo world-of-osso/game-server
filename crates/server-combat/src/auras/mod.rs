@@ -1623,7 +1623,13 @@ fn apply_aura_inner(
             }
         }
         let immune = effect_immunity::blocks_effect(world, target, spell, effect)
-            || mechanic_immunity::blocks_mechanic(world, target, spell, effect.mechanic);
+            || mechanic_immunity::blocks_mechanic(
+                world,
+                application.caster,
+                target,
+                spell,
+                effect.mechanic,
+            );
         if immune {
             let ctx = crate::spell_cast::effects::EffectCtx {
                 caster: application.caster,

@@ -1,7 +1,6 @@
 //! Encounter bosses reject retail-immune mechanics and still take snares.
 use crate::auras::ActiveAuras;
 use crate::spell_cast::test_harness::*;
-use bevy::prelude::Entity;
 
 const HALLS_OF_INFUSION: u32 = 2527;
 const KHAJIN: u32 = 189727;

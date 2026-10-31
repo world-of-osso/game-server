@@ -47,7 +47,7 @@ pub(super) fn remove_defended_targets(
             roll_defense(world, caster, spell, unit, negative).map(|kind| (unit, kind))
         })
         .collect();
-    let immune_units = remove_immune_effect_targets(world, spell, plan, negative, &misses);
+    let immune_units = remove_immune_effect_targets(world, caster, spell, plan, negative, &misses);
     let immune_misses = immune_units
         .into_iter()
         .map(|unit| (unit, MissKind::Immune));
@@ -70,6 +70,7 @@ pub(super) fn remove_defended_targets(
 
 fn remove_immune_effect_targets(
     world: &World,
+    caster: Entity,
     spell: &SpellInfo,
     plan: &mut TargetPlan,
     negative: u32,
@@ -96,7 +97,13 @@ fn remove_immune_effect_targets(
             }
             if crate::auras::effect_immunity::blocks_effect(world, *unit, spell, effect)
                 || harmful
-                    && mechanic_immunity::blocks_mechanic(world, *unit, spell, effect.mechanic)
+                    && mechanic_immunity::blocks_mechanic(
+                        world,
+                        caster,
+                        *unit,
+                        spell,
+                        effect.mechanic,
+                    )
             {
                 immune_units.push(*unit);
                 return false;
@@ -156,7 +163,7 @@ fn roll_defense(
     // before spending resources, not only when damage is finally applied.
     let school_immune = attributes(spell, 0) & ATTR0_NO_IMMUNITIES == 0
         && crate::auras::immune_to_school(world.get::<ActiveAuras>(unit), spell.school_mask());
-    if school_immune || mechanic_immunity::blocks_mechanic(world, unit, spell, 0) {
+    if school_immune || mechanic_immunity::blocks_mechanic(world, caster, unit, spell, 0) {
         return Some(MissKind::Immune);
     }
     // Object::SpellHitResult: ALWAYS_HIT bypasses avoidance, not immunity.
