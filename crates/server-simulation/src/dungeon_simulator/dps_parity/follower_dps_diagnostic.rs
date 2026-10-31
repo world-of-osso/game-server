@@ -52,6 +52,31 @@ fn follower_dps_loads_spell_and_item_catalogs_from_selected_database() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with ItemSpec data"]
+fn follower_vengeance_snapshot_equips_spec_eligible_weapon() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (app, actor, _, _) = prepare_class_follower(app, copy, 581, 90);
+    let items = &app
+        .world()
+        .get::<crate::stats::EquippedItems>(actor)
+        .unwrap()
+        .items;
+    let main = items
+        .iter()
+        .find(|(slot, _, _)| *slot == shared::protocol::EquipmentSlot::MainHand)
+        .unwrap();
+    assert_ne!(main.2, 251_128);
+    let template = app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>()
+        .get(main.1, main.2)
+        .unwrap();
+    assert!(matches!(template.scaling.subclass_id, 0 | 7 | 9 | 13));
+}
+
 fn prepare_follower(
     entry: u32,
     level: u8,
