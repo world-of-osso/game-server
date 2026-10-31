@@ -365,6 +365,7 @@ pub(crate) fn follower_footprint_ground(
     let center = Vec3::new(to.x, from.y, to.z);
     if let (Some(ground), Some(map)) = (ground.as_deref_mut(), map)
         && let Some(liquid) = ground.liquid_at(map.map_id, Vec3::new(to.x, to.y, to.z))
+        && !has_dry_step(ground, *map, center, liquid.level)
     {
         let top = shared::movement::swim_top(liquid.level);
         if liquid.depth_level <= top && to.y <= top + navigation::AGENT_CLIMB {
@@ -398,6 +399,20 @@ pub(crate) fn follower_footprint_ground(
     let own_floor_step =
         supported.is_some_and(|support| (support - from.y).abs() <= navigation::AGENT_CLIMB);
     (height >= to.y - navigation::AGENT_CLIMB || own_floor_step).then_some(height)
+}
+
+/// A floor in step reach of `from` (at `to`'s x/z) that stands out of the water, such as a
+/// ramp over a pool: the follower walks on it rather than swimming under it. TC 15e0ed76
+/// TerrainMgr.cpp:741 GetWaterOrGroundLevel takes the ground first and the liquid only
+/// when that ground is under water; players use the same `is_swimming` test.
+fn has_dry_step(ground: &mut GroundMap, map: InMap, from: Vec3, surface: f32) -> bool {
+    match ground.creature_ground_in(map, from) {
+        GroundProbe::Supported(floor) => {
+            (floor - from.y).abs() <= navigation::AGENT_CLIMB
+                && !shared::movement::is_swimming(floor, floor, Some(surface))
+        }
+        GroundProbe::Unloaded | GroundProbe::Unsupported => false,
+    }
 }
 
 /// Exact runtime support for a routed foot position (Recast contours approximate it).

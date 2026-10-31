@@ -211,6 +211,60 @@ fn wmo_surface_halls_swimming_follower_uses_navigation_height() {
 }
 
 #[test]
+#[ignore = "requires Halls of Infusion extracted WMO assets"]
+fn wmo_surface_halls_follower_walks_tsunami_ramp_over_the_pool() {
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data")
+        });
+    let mut ground = GroundMap::new(&data, HashMap::from([(2527, 4290690)]));
+    let map = InMap {
+        map_id: 2527,
+        instance_id: 1,
+    };
+    // Live Halls run: the tank stepped off the ramp to a route corner at swim height
+    // (water at -136.85) under the ramp and stayed on a disconnected swim component.
+    let swim_corner = Position {
+        x: -48.18,
+        y: -138.05,
+        z: -3.9,
+    };
+    let on_ramp = Position {
+        x: -46.3,
+        y: -136.2,
+        z: -4.4,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        on_ramp,
+        swim_corner,
+    )
+    .expect("ramp step");
+    assert!(
+        (height - -135.36).abs() < 0.05,
+        "ramp walker went to {height}"
+    );
+    let under_ramp = Position {
+        x: -47.2,
+        y: -138.05,
+        z: -4.2,
+    };
+    let height = crate::creature_ai::follower_footprint_ground(
+        Some(&mut ground),
+        Some(&map),
+        under_ramp,
+        swim_corner,
+    )
+    .expect("swim step");
+    assert!(
+        (height - swim_corner.y).abs() < 0.01,
+        "swimmer under the ramp went to {height}"
+    );
+}
+
+#[test]
 fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
     use crate::navigation::{Goal, MoveRequest, Navigation};
     for (floor, should_move) in [(-23.1, true), (-130.65, false)] {
