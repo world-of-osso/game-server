@@ -2014,6 +2014,11 @@ fn advance_deck_frame(
     now: f64,
 ) -> Result<bool, String> {
     let point = deck.position(now);
+    let position = Position {
+        x: point.x,
+        y: point.y,
+        z: point.z,
+    };
     let pets: Vec<_> = members
         .iter()
         .flat_map(|member| crate::hunter_pet::active_owned_pets(world, *member))
@@ -2022,22 +2027,19 @@ fn advance_deck_frame(
         if !crate::spell_cast::targets::is_alive(world, member) {
             return Err("deck replay party member died; recorded phase cannot continue".into());
         }
-        world.entity_mut(member).insert(Position {
-            x: point.x,
-            y: point.y,
-            z: point.z,
-        });
+        world.entity_mut(member).insert(position);
     }
     for pet in pets {
-        world.entity_mut(pet).insert(Position {
-            x: point.x,
-            y: point.y,
-            z: point.z,
-        });
+        world.entity_mut(pet).insert(position);
     }
     if !deck.grant_due(now) {
         return Ok(true);
     }
+    grant_deck_radiant_light(world, members)?;
+    Ok(false)
+}
+
+fn grant_deck_radiant_light(world: &mut World, members: &[Entity]) -> Result<(), String> {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(449042)
@@ -2058,7 +2060,7 @@ fn advance_deck_frame(
             return Err(format!("Radiant Light did not apply to {member}"));
         }
     }
-    Ok(false)
+    Ok(())
 }
 
 #[test]
