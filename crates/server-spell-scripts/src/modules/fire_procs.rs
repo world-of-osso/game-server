@@ -385,7 +385,9 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         // SimC76f8118 sc_mage.cpp:3531–3536 restores the native talent's
         // number of Fire Blast charges when Combustion is cast.
         let count = script_effect_value(world, caster, SPONTANEOUS_COMBUSTION, 0).max(0.0) as u8;
-        let category = world.resource::<SpellStore>().get(FIRE_BLAST)
+        let category = world
+            .resource::<SpellStore>()
+            .get(FIRE_BLAST)
             .and_then(|spell| spell.categories.as_ref())
             .expect("Fire Blast charge category")
             .charge_category;
