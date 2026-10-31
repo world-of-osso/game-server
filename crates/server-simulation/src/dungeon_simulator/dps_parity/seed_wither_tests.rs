@@ -265,7 +265,7 @@ fn seed_native_lethal_owner_damage_explodes_on_survivors() {
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
     assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
         && event.target == Some(primary.to_bits()) && event.spell_id == Some(actual)
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "Shadow Bolt must kill the seeded target");
+        && event.kind == CombatLogKind::Damage && event.amount > 0), "Shadow Bolt {actual} must kill the seeded target; primary events: {:?}", events.iter().filter(|event| event.target == Some(primary.to_bits())).map(|event| (event.source, event.spell_id, event.amount, event.kind)).collect::<Vec<_>>());
     for survivor in &run.targets[1..] {
         assert!(events.iter().any(|event| event.source == Some(run.actor.to_bits())
             && event.target == Some(survivor.to_bits()) && event.spell_id == Some(EXPLOSION)
