@@ -1,7 +1,7 @@
 //! Actual Explosive Shot ticks must drive cleave and the equipped MID2 cooldowns.
 use super::marksmanship_mechanics_tests::{cast, owned_buff, player};
 use super::*;
-use shared::protocol::CombatLogKind;
+use shared::{components::Health, protocol::CombatLogKind};
 
 fn hits(run: &Run, spell: u32, target: Entity) -> usize {
     run.app
