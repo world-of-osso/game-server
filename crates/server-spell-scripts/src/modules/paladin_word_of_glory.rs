@@ -13,10 +13,15 @@ pub(super) const HOOKS: &[SpellScriptHook] =
     &[SpellScriptHook::NamedHealingMultiplier(healing_multiplier)];
 
 fn healing_multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != WORD_OF_GLORY || caster != target || !combat::auras::has_aura(world, caster, RANK_TWO) {
+    if spell.id != WORD_OF_GLORY
+        || caster != target
+        || !combat::auras::has_aura(world, caster, RANK_TWO)
+    {
         return 1.0;
     }
-    let health = world.get::<Health>(target).expect("Word of Glory target health");
+    let health = world
+        .get::<Health>(target)
+        .expect("Word of Glory target health");
     let missing = 1.0 - (health.current / health.max).clamp(0.0, 1.0);
     let percent = combat::spell_cast::scripts::script_effect_value(world, caster, RANK_TWO, 0);
     1.0 + missing * percent / 100.0
