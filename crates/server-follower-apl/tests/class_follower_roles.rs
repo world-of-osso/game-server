@@ -56,6 +56,8 @@ fn dungeon_owner(h: &mut Harness) {
         .insert_resource(server_combat::item_proc_data::load(&db).unwrap());
     h.app
         .insert_resource(server_combat::hunter_pet::read_pet_catalog(&db).unwrap());
+    h.app
+        .insert_resource(server_combat::followers::load_catalog(&db).unwrap());
     let maps = server_combat::maps::store::load_map_store(&db).unwrap();
     let mut instances = server_combat::maps::InstanceManager::default();
     let entrant = InstanceEntrant {
