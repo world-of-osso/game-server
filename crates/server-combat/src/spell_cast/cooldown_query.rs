@@ -141,12 +141,13 @@ pub(crate) fn cooldown_value(
 }
 
 /// SimC76f8118 player.cpp12259–12268/cooldown.cpp528–615: a cooldown the actor
-/// never created reads as a never-started single-charge placeholder. Its
-/// duration is the `timespan_t::min()` sentinel, which no APL can use.
+/// never created reads as a never-started single-charge placeholder whose
+/// duration is the `timespan_t::min()` sentinel (Feral divides by it).
 pub(crate) fn placeholder_cooldown_value(property: &str) -> Result<f64, String> {
     match property {
         "remains" | "remains_expected" | "remains_guess" | "full_recharge_time" => Ok(0.0),
         "up" | "ready" | "charges" | "max_charges" | "charges_fractional" => Ok(1.0),
+        "duration" => Ok(i64::MIN as f64 / 1000.0),
         _ => Err(format!("native APL placeholder cooldown has no {property}")),
     }
 }

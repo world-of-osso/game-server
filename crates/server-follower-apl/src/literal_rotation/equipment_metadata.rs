@@ -20,21 +20,27 @@ const MASTERY: u32 = 1 << 25;
 const VERSATILITY: u32 = 0x7000_0000;
 const UTILITY_RATINGS: u32 = (1 << 13) | (1 << 16) | (1 << 20);
 
-// Pinned SimC76f8118 unique_gear_midnight.cpp: Gaze2020, Vaelgor2747,
-// Seastone3533, Vial3567, Heart3748, Font3806. These exact native drivers
-// build stat buffs without setting buff.default_value, or are disabled/damage
-// drivers with no matching stat buff. buff.hpp327's unset default is -DBL_MIN;
-// unique_gear.cpp3776 takes max with0. Freightrunner1250533 likewise shows
-// the unset -DBL_MIN value in the pinned 1480 SimC debug output. This is NOT
-// the stat magnitude. Gebbo1292291 creates its six stat buffs without setting
-// defaults (unique_gear_midnight.cpp3666–3734). Guillotine1291728 creates
-// only a damage proc, not a stat buff (unique_gear_midnight.cpp6325–6380).
-// Burgeoning Seed (journal gear): driver382108 is DISABLED_EFFECT and its
-// consume384636 builds brimming_life_pod/supernatural without defaults
-// (unique_gear_dragonflight.cpp970–1008/11501/11695).
-const SIMC_UNSET_PROC_DEFAULT_DRIVERS: &[u32] = &[
-    1250533, 1256896, 1259293, 1260459, 1292291, 1295058, 1293316, 1295179, 1297760, 1297761,
-    1297911, 1297908, 1291728, 382108, 384636,
+// SimC76f8118 buff.cpp620/buff.hpp327: a buff's default_value starts unset
+// (-DBL_MIN) and unique_gear.cpp3778–3788 takes max with0. Neither the
+// generic special-effect path (special_effect.cpp, unique_gear.cpp) nor any
+// stat_buff_t constructor/stat setter (buff.cpp3403–3601) sets it; only an
+// item's own callback does. These pinned unique_gear_* callbacks assign one,
+// which native does not compute, so their default stays an explicit gap.
+// Tome of Light's Devotion443535 is absent: it sets only radiance_tome, a
+// statless buff_t (unique_gear_thewarwithin.cpp7436–7447). In the 27 follower
+// dungeon Journal pools only Blazebinder's Hoof383926 and Idol of Trampling
+// Hooves386175 set an any_dps stat-buff default.
+const SIMC_SET_PROC_DEFAULT_DRIVERS: &[u32] = &[
+    // unique_gear_shadowlands.cpp
+    329840, 338477, 344662, 367236, 367951, 367953,
+    // unique_gear_dragonflight.cpp (371149/51/52 chilled_clarity, 402938 Gleaming Iron Stone)
+    371149, 371151, 371152, 371339, 373257, 377456, 377457, 377464, 377466, 383926, 386175, 394928,
+    395175, 397038, 401183, 401238, 401306, 402938, 403368, 406254, 415130, 417131, 418527, 422750,
+    423124, 423611, 429007, 432442, 433214,
+    // unique_gear_thewarwithin.cpp (Darkmoon Radiance, Best-in-Slots, Singing Citrines)
+    431914, 444301, 454558, 462527, 462528, 462534, 462536, 463108, 466681, 473400, 473401, 1214161,
+    1214787, 1235425, 1242326, 1244406, 1244410, // unique_gear_midnight.cpp
+    1259314, 1285139, 1292065, 1298023,
 ];
 
 #[derive(Clone, Default)]
@@ -104,14 +110,16 @@ impl Metadata {
         if self.stats.is_empty() {
             return Ok(0.0);
         }
-        for driver in &self.drivers {
-            if !SIMC_UNSET_PROC_DEFAULT_DRIVERS.contains(driver) {
-                return Err(format!(
-                    "NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED: native driver{driver} lacks a qualified pinned buff.default_value binding"
-                ));
-            }
+        match self
+            .drivers
+            .iter()
+            .find(|driver| SIMC_SET_PROC_DEFAULT_DRIVERS.contains(driver))
+        {
+            Some(driver) => Err(format!(
+                "NATIVE_ITEM_PROC_DEFAULT_VALUE_UNSOURCED: SimC sets driver{driver}'s buff.default_value; native does not compute it"
+            )),
+            None => Ok(0.0),
         }
-        Ok(0.0)
     }
 }
 
