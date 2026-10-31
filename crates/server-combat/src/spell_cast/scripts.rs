@@ -1380,6 +1380,11 @@ fn reduce_running_timers(
     seconds: f64,
 ) -> (Option<shared::protocol::SpellChargesUpdate>, Option<u32>) {
     let (charge_category, category) = categories;
+    let charged = if spell_id == super::WINDWALKER_RUSHING_WIND_KICK {
+        history.rwk_charges.is_some()
+    } else {
+        history.charges.contains_key(&charge_category)
+    };
     let charges = if spell_id == super::WINDWALKER_RUSHING_WIND_KICK {
         history.rwk_charges.as_mut()
     } else {
@@ -1390,6 +1395,11 @@ fn reduce_running_timers(
         charges.reduce_recovery(now, seconds);
         charges.snapshot(now)
     });
+    // SimC76f8118 action.cpp:711–719: charge recharge and the spell's
+    // internal cooldown are separate clocks; adjusting the former leaves the latter.
+    if charged {
+        return (charges, None);
+    }
     // SimC76f8118 sc_mage.cpp5404–5407 adjusts the ability's effective
     // cooldown. Native spells may store it solely in a category (e.g.84714),
     // so reducing only spell_ready_at leaves the actual ability unchanged.

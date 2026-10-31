@@ -226,6 +226,57 @@ fn follower_dummy_starts_measurement_after_precombat() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_fire_blast_recharge_refund_preserves_internal_cooldown() {
+    let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+    assert!(
+        app.world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 342344)
+    );
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 108853, Some(target), false).unwrap();
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("fire_blast".into(), 108853)].into(),
+        ..default()
+    };
+    let facts = crate::simc_apl_native::NativeFacts::new(
+        app.world(),
+        actor,
+        &bindings,
+        crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 120.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        1,
+    );
+    let charges =
+        server::simc_apl::Facts::value(&facts, "cooldown.fire_blast.charges_fractional").unwrap();
+    assert!(
+        charges > 2.01,
+        "the actual From the Ashes hit must advance recharge: {charges}"
+    );
+    let start = crate::spell_cast::history_now(app.world());
+    assert!(matches!(
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 108853, Some(target), false),
+        Err(crate::spell_cast::CastFailure::OnCooldown)
+    ));
+    while crate::spell_cast::history_now(app.world()) - start < 0.45 {
+        app.update();
+    }
+    assert!(matches!(
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 108853, Some(target), false),
+        Err(crate::spell_cast::CastFailure::OnCooldown)
+    ));
+    while crate::spell_cast::history_now(app.world()) - start < 0.55 {
+        app.update();
+    }
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 108853, Some(target), false).unwrap();
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_uses_class_apl_to_cast() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     assert!(
