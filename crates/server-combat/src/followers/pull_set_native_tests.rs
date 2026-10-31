@@ -220,7 +220,7 @@ fn windrunner_transitive_assistance_and_first_wave_discipline() {
         super::spell_safety::safe(h.app.world(), tank, caller, 62124),
         "single-target taunt remains available"
     );
-    crate::creature_assistance::call_assistance(h.app.world_mut(), caller, tank);
+    crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
     assert!(
         !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "AoE remains unsafe while assistance is pending"
