@@ -77,25 +77,28 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         .insert((map, Level(90), UnitLevel(90), here));
     h.app.world_mut().entity_mut(tank).insert((map, here));
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
-    let mut health = h.app.world_mut().get_mut::<Health>(tank).unwrap();
-    health.current = health.max;
-    drop(health);
+    for unit in [tank, caller, helpers[0], helpers[1]] {
+        let mut health = h.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.max = 1_000_000.0;
+        health.current = health.max;
+    }
     let planned = super::pull_set::members(h.app.world(), caller, tank);
     assert_eq!(planned.len(), 3);
     assert!(planned.contains(&caller));
     assert!(helpers.iter().all(|helper| planned.contains(helper)));
     assert!(
-        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "the tank may use its native chain against planned assistants"
+        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "area attacks wait for the first-wave dispatch"
     );
-    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
-        .expect("the tank's native Avenger's Shield must start against the planned pull");
-    for _ in 0..100 {
+    crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    for _ in 0..60 {
         h.advance(1);
-        if helpers
-            .iter()
-            .all(|&helper| crate::combat_refs::has_active_reference_to(h.app.world(), helper, tank))
-        {
+        if helpers.iter().all(|&helper| {
+            h.app
+                .world()
+                .get::<crate::creature_assistance::AssistanceCalled>(helper)
+                .is_some()
+        }) {
             break;
         }
     }
@@ -107,8 +110,26 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
                 helper,
                 tank
             )),
-        "planned assistants must actually join the tank's combat"
+        "planned assistants must join the tank's combat at dispatch"
     );
+    assert!(
+        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "the tank may use its native chain after planned assistants dispatch"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
+        .expect("the tank's native Avenger's Shield must start against the planned pull");
+    for _ in 0..100 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(31935)
+                && helpers
+                    .iter()
+                    .any(|helper| event.target == Some(helper.to_bits()))
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
+            break;
+        }
+    }
     assert!(
         h.inbox.log.iter().any(|event| {
             event.spell_id == Some(31935)
@@ -117,7 +138,13 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
                     .any(|helper| event.target == Some(helper.to_bits()))
                 && event.kind == shared::protocol::CombatLogKind::Damage
         }),
-        "native Avenger's Shield must actually damage a planned helper"
+        "native Avenger's Shield must actually damage a planned helper; events={:?}; positions={:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.spell_id == Some(31935))
+            .collect::<Vec<_>>(),
+        [caller, helpers[0], helpers[1]].map(|unit| h.app.world().get::<Position>(unit).copied())
     );
     let after = super::pull_set::members(h.app.world(), caller, tank);
     assert!(
@@ -271,6 +298,59 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         "single-target taunt remains available"
     );
     crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    let pet = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let faction = *h
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(tank)
+        .unwrap();
+    h.app.world_mut().entity_mut(pet).insert((
+        map,
+        here,
+        faction,
+        crate::hunter_pet::HunterPet {
+            owner: tank,
+            slot: 0,
+        },
+        crate::pet_control::PetCharm::new(Default::default(), shared::protocol::REACT_ASSIST),
+    ));
+    crate::pet_control::attack_start(h.app.world_mut(), pet, caller);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .unwrap()
+            .0,
+        Some(caller),
+        "the pet can attack the caller"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(caller)
+        .remove::<crate::combat::AutoAttack>();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::combat::AutoAttack::new(helper));
+    let selected = crate::pet_control::select_next_target(h.app.world_mut(), tank, pet);
+    assert_eq!(
+        selected, None,
+        "pet target selection must skip the pending helper"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<crate::combat::AutoAttack>();
+    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .unwrap()
+            .0,
+        Some(caller),
+        "a follower pet must not attack a pending helper"
+    );
     assert!(
         !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "AoE remains unsafe while assistance is pending"
@@ -291,6 +371,16 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
             .get::<crate::creature_assistance::AssistanceCalled>(helper)
             .is_some(),
         "the native delayed dispatch must join the helper"
+    );
+    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .unwrap()
+            .0,
+        Some(helper),
+        "the pet can attack the helper after dispatch"
     );
     assert!(
         super::pull_set::risky_pending_helpers(h.app.world(), caller, tank).is_empty(),

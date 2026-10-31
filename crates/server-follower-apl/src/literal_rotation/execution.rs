@@ -676,6 +676,9 @@ fn primary_in_native_range(
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
     let current = world.get::<crate::combat::AutoAttack>(actor);
     for (index, &target) in targets.iter().enumerate() {
+        if !server::followers::action_safe(world, actor, target, None) {
+            continue;
+        }
         // SimC76f8118 player.cpp10866–10889: retarget changes the actor's selected target.
         record_ready(
             ready,
@@ -910,6 +913,13 @@ fn native_readiness(
     item: Option<ItemUse>,
     after_channel: bool,
 ) -> Result<NativeReadiness, String> {
+    if !server::followers::action_safe(world, actor, target, Some(id)) {
+        return Ok(NativeReadiness {
+            ready: false,
+            limited: None,
+            queue_delay: None,
+        });
+    }
     let mut spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(id)
@@ -1016,6 +1026,23 @@ pub fn execute_row(
     row: &Action,
     execution: Execution,
 ) -> Result<(), String> {
+    let action_safe = match &execution {
+        Execution::Spell(spell, target, _) => {
+            server::followers::action_safe(world, actor, *target, Some(*spell))
+        }
+        Execution::Item(item, target) => {
+            server::followers::action_safe(world, actor, *target, Some(item.on_use.spell_id))
+        }
+        Execution::AutoAttack(target)
+        | Execution::RetargetAutoAttack(target)
+        | Execution::Retarget(target) => {
+            server::followers::action_safe(world, actor, *target, None)
+        }
+        _ => true,
+    };
+    if !action_safe {
+        return Ok(());
+    }
     if let Some(age) = row.options.get("pre_pot_time") {
         if row.name != "potion" {
             return Err("pre_pot_time requires a native potion row".into());
