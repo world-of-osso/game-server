@@ -865,13 +865,9 @@ fn follower_dps_production_dummy() {
         ]) {
             *sum += f64::from(value);
         }
-        let spell = world
-            .resource::<crate::spell_info::SpellStore>()
-            .get(profile.attack_spell)
-            .unwrap();
         let gcd = world
             .get::<crate::spell_cast::SpellHistory>(actor)
-            .is_some_and(|history| history.on_gcd(spell, now));
+            .is_some_and(|history| history.has_active_gcd(now));
         if gcd {
             gcd_total += 1;
         }
@@ -1039,6 +1035,12 @@ fn follower_dps_production_dummy() {
             *aura_applications.entry(id).or_default() += 1;
         }
     }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none(),
+        "follower APL failed during the dummy measurement"
+    );
     assert!(
         app.world()
             .get::<shared::components::Health>(actor)
