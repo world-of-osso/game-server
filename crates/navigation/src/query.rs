@@ -217,14 +217,25 @@ impl NavigationMap {
     ) -> Result<NavigationPath, String> {
         // TC 15e0ed76 FollowMovementGenerator.cpp:159 uses target GetNearPoint;
         // Object.cpp:2718–2752 checks collision and updates the ground height.
+        self.load_around(owner, offset)?;
+        let (_, owner_surface) = self.nearest_with_extents(
+            owner,
+            &filter(),
+            [
+                crate::AGENT_HEIGHT,
+                2.0 * crate::CELL_HEIGHT,
+                crate::AGENT_HEIGHT,
+            ],
+        )?;
+        let owner_surface = Vec3::from_array(owner_surface);
         for fraction in [1.0, 0.75, 0.5, 0.25, 0.0] {
             let candidate = owner.lerp(offset, fraction);
-            let projected = match self.first_collision(owner, candidate) {
+            let projected = match self.first_collision(owner_surface, candidate) {
                 Ok(point) => point,
                 Err(error) if error.starts_with("no walkable polygon near ") => continue,
                 Err(error) => return Err(error),
             };
-            match self.complete_walk_path(owner, projected) {
+            match self.complete_walk_path(owner_surface, projected) {
                 Ok(_) => return self.follow_path(start, projected, plan),
                 Err(error) if error.starts_with("unreachable target") => continue,
                 Err(error) => return Err(error),
@@ -402,6 +413,15 @@ impl NavigationMap {
         point: Vec3,
         filter: &dtQueryFilter,
     ) -> Result<(dtPolyRef, [f32; 3]), String> {
+        self.nearest_with_extents(point, filter, NEAREST_EXTENTS)
+    }
+
+    fn nearest_with_extents(
+        &self,
+        point: Vec3,
+        filter: &dtQueryFilter,
+        extents: [f32; 3],
+    ) -> Result<(dtPolyRef, [f32; 3]), String> {
         let mut reference = 0;
         let mut nearest = [0.0; 3];
         // SAFETY: fixed-size inputs/outputs, query initialized against owned mesh.
@@ -409,7 +429,7 @@ impl NavigationMap {
             status(
                 (*self.query).findNearestPoly(
                     point.to_array().as_ptr(),
-                    NEAREST_EXTENTS.as_ptr(),
+                    extents.as_ptr(),
                     filter,
                     &mut reference,
                     nearest.as_mut_ptr(),
