@@ -62,22 +62,64 @@ fn devastation_bombardments_cancels_after_marked_target_dies() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 434473, Some(primary), 1));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        434473,
+        Some(primary),
+        1
+    ));
     assert!(crate::auras::has_aura(run.app.world(), primary, 443788));
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 362969, Some(primary), 1));
-    for _ in 0..30 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(primary.to_bits()) && event.spell_id == Some(362969)
-        && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "the marked target must die to real damage");
-    assert!(!events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(434481)
-        && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "Bombardments must cancel when the marked target dies");
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        362969,
+        Some(primary),
+        1
+    ));
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(362969)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the marked target must die to real damage"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(434481)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Bombardments must cancel when the marked target dies"
+    );
 }
 
 fn cast_mass_source(run: &mut Run, primary: Entity, earned: bool) {

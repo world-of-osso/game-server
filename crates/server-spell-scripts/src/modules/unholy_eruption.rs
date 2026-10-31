@@ -94,7 +94,12 @@ fn command_army(world: &mut World, caster: Entity) {
     }
 }
 
-pub(super) fn cast_army_order(world: &mut World, ghoul: Entity, order: u32, target: Entity) -> bool {
+pub(super) fn cast_army_order(
+    world: &mut World,
+    ghoul: Entity,
+    order: u32,
+    target: Entity,
+) -> bool {
     let Some(spell) = spell_cast::load_triggered_spell(world, order, 1) else {
         return false;
     };

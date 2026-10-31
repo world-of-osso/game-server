@@ -73,7 +73,8 @@ fn schedule_empyrean_legacy(
     // action rather than introducing a timer or running a paid second spender.
     world.commands().queue(move |world: &mut World| {
         // SimC action/action.cpp:230–236 cancels instant actions on sleeping targets.
-        if world.get_entity(caster).is_ok() && combat::spell_cast::targets::is_alive(world, target) {
+        if world.get_entity(caster).is_ok() && combat::spell_cast::targets::is_alive(world, target)
+        {
             cast_background_storm(world, caster, target, multiplier);
         }
     });

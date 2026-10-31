@@ -28,19 +28,46 @@ fn dragonfire_cancels_after_lethal_breath() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115181, Some(primary), false)
         .unwrap();
-    for _ in 0..100 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(primary.to_bits())
-        && event.spell_id == Some(115181)
-        && event.kind == CombatLogKind::Damage
-        && event.amount > 0), "Breath of Fire must kill the primary");
-    assert_eq!(hits(&run, survivor), 0, "the delayed cone must cancel for a dead target");
+    for _ in 0..100 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(115181)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Breath of Fire must kill the primary"
+    );
+    assert_eq!(
+        hits(&run, survivor),
+        0,
+        "the delayed cone must cancel for a dead target"
+    );
 }
 
 #[test]

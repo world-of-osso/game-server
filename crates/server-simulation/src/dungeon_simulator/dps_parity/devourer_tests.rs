@@ -129,19 +129,38 @@ fn devourer_voidsurge_cancels_after_primary_dies() {
         }
         assert!(crate::auras::has_aura(run.app.world(), actor, 1217607));
         assert!(crate::spell_cast::try_cast_triggered(
-            run.app.world_mut(), actor, 1245483, Some(primary), 1,
+            run.app.world_mut(),
+            actor,
+            1245483,
+            Some(primary),
+            1,
         ));
         if target_dies {
-            run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
+            run.app
+                .world_mut()
+                .get_mut::<Health>(primary)
+                .unwrap()
+                .current = 0.0;
         }
         for _ in 0..100 {
             run.app.update();
         }
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        let landed = events.iter().any(|event| event.source == Some(actor.to_bits())
-            && event.target == Some(survivor.to_bits()) && event.spell_id == Some(1246160)
-            && event.kind == CombatLogKind::Damage && event.amount > 0);
-        assert_eq!(landed, !target_dies, "Voidsurge must cancel only for the dead primary");
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let landed = events.iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1246160)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        });
+        assert_eq!(
+            landed, !target_dies,
+            "Voidsurge must cancel only for the dead primary"
+        );
     }
 }
 
@@ -157,25 +176,50 @@ fn devourer_voidstep_hits_survivor_after_primary_dies() {
     let survivor = run.targets[1];
     engage(&mut run);
     assert!(crate::spell_cast::try_cast_triggered(
-        run.app.world_mut(), actor, 1223157, Some(actor), 1,
+        run.app.world_mut(),
+        actor,
+        1223157,
+        Some(actor),
+        1,
     ));
     assert!(crate::auras::has_aura(run.app.world(), actor, 1223157));
-    let mut retreat = run.app.world().resource::<crate::spell_info::SpellStore>()
-        .get(198793).unwrap().clone();
+    let mut retreat = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(198793)
+        .unwrap()
+        .clone();
     retreat.cast_primary_target = Some(primary);
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
     crate::spell_cast::script_registry::before_native_on_cast(
-        run.app.world_mut(), actor, &retreat, 0,
+        run.app.world_mut(),
+        actor,
+        &retreat,
+        0,
     );
     for _ in 0..30 {
         run.app.update();
     }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(survivor.to_bits())
-        && event.spell_id == Some(1239526)
-        && event.kind == CombatLogKind::Damage
-        && event.amount > 0), "Voidstep must hit a living enemy around the caster");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1239526)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Voidstep must hit a living enemy around the caster"
+    );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 1223157));
 }
 

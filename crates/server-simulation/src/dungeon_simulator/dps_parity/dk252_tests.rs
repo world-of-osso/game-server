@@ -1155,41 +1155,93 @@ fn dk252_army_epidemic_hits_survivors_after_primary_dies() {
     let primary = run.targets[0];
     let survivor = run.targets[1];
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor, literal_rotation::execution::Execution::Spell(42650, actor, None),
-    ).unwrap();
-    for _ in 0..100 { run.app.update(); }
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(42650, actor, None),
+    )
+    .unwrap();
+    for _ in 0..100 {
+        run.app.update();
+    }
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor, literal_rotation::execution::Execution::Spell(85948, primary, Some(primary)),
-    ).unwrap();
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(85948, primary, Some(primary)),
+    )
+    .unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let army: std::collections::HashSet<_> = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>().iter(world)
-            .filter_map(|(entity, summon)| (summon.owner == actor && summon.spell_id == 1294026).then_some(entity.to_bits()))
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .filter_map(|(entity, summon)| {
+                (summon.owner == actor && summon.spell_id == 1294026).then_some(entity.to_bits())
+            })
             .collect()
     };
     assert_eq!(army.len(), 8);
     // Army setup advances long enough for untouched fixture combat references to expire.
     // All four encounter targets must remain engaged when the lethal strike lands.
     engage_fixture_opponents(&mut run);
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     literal_rotation::execution::execute(
-        run.app.world_mut(), actor, literal_rotation::execution::Execution::Spell(55090, primary, Some(primary)),
-    ).unwrap();
-    for _ in 0..30 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(primary.to_bits()) && event.spell_id == Some(55090)
-        && event.kind == CombatLogKind::Damage && event.amount > 0), "Scourge Strike must kill the primary");
-    assert!(events.iter().any(|event| event.source.is_some_and(|source| army.contains(&source))
-        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(1300330)
-        && event.kind == CombatLogKind::Damage && event.amount > 0),
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(55090, primary, Some(primary)),
+    )
+    .unwrap();
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(55090)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Scourge Strike must kill the primary"
+    );
+    assert!(
+        events.iter().any(
+            |event| event.source.is_some_and(|source| army.contains(&source))
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1300330)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        ),
         "Army Epidemic must reach living enemies after the primary dies; selected={:?}, opponents={:?}, relevant events={:?}",
-        run.app.world().get::<crate::networking::CombatTarget>(actor),
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(actor),
         crate::combat_refs::active_opponents(run.app.world(), actor).collect::<Vec<_>>(),
-        events.iter().filter(|event| matches!(event.spell_id, Some(55090 | 1294264 | 1300330))).map(|event| (event.spell_id, event.source, event.target, event.amount)).collect::<Vec<_>>());
+        events
+            .iter()
+            .filter(|event| matches!(event.spell_id, Some(55090 | 1294264 | 1300330)))
+            .map(|event| (event.spell_id, event.source, event.target, event.amount))
+            .collect::<Vec<_>>()
+    );
 }
 
 #[test]

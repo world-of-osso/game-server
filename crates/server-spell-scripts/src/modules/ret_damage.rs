@@ -296,7 +296,12 @@ pub(super) fn sentence_init(world: &mut World, ctx: &EffectCtx, target: Entity) 
     };
     child.cast_destination = Some(position.to_array());
     if !spell_cast::launch_triggered_spell_with_primary(
-        world, ctx.caster, &child, None, Some(target), ctx.depth + 1,
+        world,
+        ctx.caster,
+        &child,
+        None,
+        Some(target),
+        ctx.depth + 1,
     ) {
         warn!("Execution Sentence initial child refused");
     }

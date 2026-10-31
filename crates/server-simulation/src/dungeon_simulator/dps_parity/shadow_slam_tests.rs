@@ -99,15 +99,30 @@ fn shadow_slam_hits_survivor_after_primary_dies() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
-    let registry = *run.app.world().resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
-    let hit = registry.effect_hit(SLAM, 0).expect("native Tentacle Slam impact hook");
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    let registry = *run
+        .app
+        .world()
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+    let hit = registry
+        .effect_hit(SLAM, 0)
+        .expect("native Tentacle Slam impact hook");
     hit(run.app.world_mut(), actor, primary, 0);
-    for _ in 0..30 { run.app.update(); }
-    assert!(damage_targets(&run).contains(&survivor),
-        "the saved Slam destination must hit a living enemy");
-    assert!(crate::auras::has_aura(run.app.world(), survivor, VT),
-        "the survivor must receive native Slam's VT before damage");
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        damage_targets(&run).contains(&survivor),
+        "the saved Slam destination must hit a living enemy"
+    );
+    assert!(
+        crate::auras::has_aura(run.app.world(), survivor, VT),
+        "the survivor must receive native Slam's VT before damage"
+    );
 }
 
 #[test]

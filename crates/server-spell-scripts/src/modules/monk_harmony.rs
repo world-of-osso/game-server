@@ -95,8 +95,9 @@ fn release_purified_spirit(world: &mut World, caster: Entity) {
         duration > 0 && effect.aura_period_ms > 0,
         "native Purified Spirit timing"
     );
-    let targets = spell_cast::targets::select_targets(world, caster, None, &spell, effect, 0, false)
-        .expect("native Purified Spirit target selection");
+    let targets =
+        spell_cast::targets::select_targets(world, caster, None, &spell, effect, 0, false)
+            .expect("native Purified Spirit target selection");
     if targets.is_empty() {
         return;
     }

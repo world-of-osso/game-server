@@ -66,19 +66,39 @@ fn ret_sentence_initial_area_hits_survivor_after_primary_dies() {
     let actor = run.actor;
     let primary = run.targets[0];
     let survivor = run.targets[1];
-    let spell = run.app.world().resource::<crate::spell_info::SpellStore>().get(343527).unwrap().clone();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(343527)
+        .unwrap()
+        .clone();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
     let ctx = crate::spell_cast::effects::EffectCtx {
-        caster: actor, spell: &spell, depth: 0, dest: None, chain_multiplier: 1.0,
+        caster: actor,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
     };
     let hook = crate::spell_cast::script_registry::context_hit(run.app.world(), 343527)
         .expect("native Execution Sentence context hook");
     hook(run.app.world_mut(), &ctx, primary);
     let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(survivor.to_bits())
-        && event.spell_id == Some(1260251) && event.kind == CombatLogKind::Damage
-        && event.amount > 0), "the saved area destination must hit a living enemy");
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(1260251)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the saved area destination must hit a living enemy"
+    );
 }
 
 #[test]

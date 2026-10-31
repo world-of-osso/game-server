@@ -33,20 +33,48 @@ fn survival_takedown_pet_cancels_after_owner_kills_primary() {
     engage(&mut run);
     let actor = run.actor;
     let primary = run.targets[0];
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     cast(&mut run, 1250646, false);
-    for _ in 0..40 { run.app.update(); }
-    assert!(run.app.world().get::<Health>(primary).is_none_or(|health| health.current <= 0.0));
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.target == Some(primary.to_bits()) && event.spell_id == Some(1253859)
-        && event.kind == CombatLogKind::Damage && event.amount > 0),
-        "the owner impact must kill the primary");
-    assert!(!events.iter().any(|event| event.source == Some(pet.to_bits())
-        && event.spell_id == Some(1253862)
-        && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))),
-        "the single-target pet impact must cancel after its primary dies");
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(1253859)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "the owner impact must kill the primary"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(pet.to_bits())
+                && event.spell_id == Some(1253862)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))),
+        "the single-target pet impact must cancel after its primary dies"
+    );
 }
 
 fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {

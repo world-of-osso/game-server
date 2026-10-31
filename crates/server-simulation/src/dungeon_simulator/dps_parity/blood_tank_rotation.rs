@@ -1417,23 +1417,44 @@ mod tests {
         super::super::engage(&mut run);
         crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
             .unwrap();
-        for _ in 0..100 { run.app.update(); }
+        for _ in 0..100 {
+            run.app.update();
+        }
         let beast = {
             let world = run.app.world_mut();
-            world.query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+            world
+                .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
                 .iter(world)
-                .find_map(|(entity, npc, summoned)|
-                    (npc.template_id == 217228 && summoned.0 == owner.to_bits()).then_some(entity))
+                .find_map(|(entity, npc, summoned)| {
+                    (npc.template_id == 217228 && summoned.0 == owner.to_bits()).then_some(entity)
+                })
                 .expect("real owned Blood Beast")
         };
-        run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
-        let registry = *run.app.world().resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+        run.app
+            .world_mut()
+            .get_mut::<Health>(primary)
+            .unwrap()
+            .current = 0.0;
+        let registry = *run
+            .app
+            .world()
+            .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
         registry.summon_expired(run.app.world_mut(), beast);
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        assert!(events.iter().any(|event| event.source == Some(owner.to_bits())
-            && event.target == Some(survivor.to_bits()) && event.spell_id == Some(434246)
-            && event.kind == CombatLogKind::Damage && event.amount > 0),
-            "the saved eruption destination must hit a living enemy");
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(owner.to_bits())
+                    && event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(434246)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "the saved eruption destination must hit a living enemy"
+        );
     }
 
     #[test]

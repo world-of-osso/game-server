@@ -3,8 +3,7 @@ use super::combat;
 use bevy::prelude::*;
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{
-    effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook,
-    scripts::AfterCastHook,
+    effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook, scripts::AfterCastHook,
 };
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;

@@ -86,7 +86,12 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
     apply_slam_dots(world, caster, units, depth);
     // sc_priest_shadow.cpp1853–1869: VT before damage, then weak Madness.
     spell_cast::launch_triggered_spell_with_primary(
-        world, caster, &damage, None, Some(primary), depth,
+        world,
+        caster,
+        &damage,
+        None,
+        Some(primary),
+        depth,
     );
     cast_maddening_tentacles(world, caster, primary, depth);
 }

@@ -257,18 +257,45 @@ fn purified_spirit_hits_survivor_after_combat_target_dies() {
     let survivor = run.targets[1];
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(primary), false)
         .unwrap();
-    for _ in 0..40 { run.app.update(); }
+    for _ in 0..40 {
+        run.app.update();
+    }
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1241059, Some(actor), false)
         .unwrap();
-    assert!(run.app.world().get::<crate::auras::harmony::HarmonyPools>(actor).unwrap().spender > 0.0);
-    run.app.world_mut().entity_mut(actor).remove::<crate::combat::AutoAttack>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
-    for _ in 0..400 { run.app.update(); }
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.kind == CombatLogKind::Damage
-        && event.spell_id == Some(450820)
-        && event.target == Some(survivor.to_bits())
-        && event.amount > 0), "the unpaid pool must damage a living enemy around the caster");
+    assert!(
+        run.app
+            .world()
+            .get::<crate::auras::harmony::HarmonyPools>(actor)
+            .unwrap()
+            .spender
+            > 0.0
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(450820)
+                && event.target == Some(survivor.to_bits())
+                && event.amount > 0),
+        "the unpaid pool must damage a living enemy around the caster"
+    );
 }
 
 #[test]

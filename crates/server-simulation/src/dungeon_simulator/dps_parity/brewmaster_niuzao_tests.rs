@@ -72,7 +72,8 @@ fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
         .unwrap();
     let pet = {
         let world = run.app.world_mut();
-        world.query::<(Entity, &SummonedCreature)>()
+        world
+            .query::<(Entity, &SummonedCreature)>()
             .iter(world)
             .find_map(|(entity, summon)| {
                 (summon.owner == actor && summon.spell_id == 132578).then_some(entity)
@@ -82,29 +83,52 @@ fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
     for _ in 0..300 {
         run.app.update();
     }
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 205523, Some(primary), false)
         .unwrap();
     for _ in 0..30 {
         run.app.update();
     }
     let health = run.app.world().get::<Health>(primary).unwrap().current;
-    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let kick_events: Vec<_> = events.iter().filter(|event| event.spell_id == Some(205523)).collect();
-    assert!(health <= 0.0, "primary health={health}, Blackout Kick events={kick_events:?}");
-    let lethal = events.iter().position(|event| {
-        event.source == Some(actor.to_bits())
-            && event.target == Some(primary.to_bits())
-            && event.kind == CombatLogKind::Damage
-            && event.spell_id == Some(205523)
-            && event.amount > 0
-    }).expect("Blackout Kick must deal the lethal hit");
-    assert!(events.iter().skip(lethal + 1).any(|event| {
-        event.source == Some(pet.to_bits())
-            && event.target == Some(survivor.to_bits())
-            && event.kind == CombatLogKind::Damage
-            && event.spell_id == Some(227291)
-            && event.amount > 0
-    }), "Niuzao must stomp a living enemy after the kick kills its primary");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let kick_events: Vec<_> = events
+        .iter()
+        .filter(|event| event.spell_id == Some(205523))
+        .collect();
+    assert!(
+        health <= 0.0,
+        "primary health={health}, Blackout Kick events={kick_events:?}"
+    );
+    let lethal = events
+        .iter()
+        .position(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(205523)
+                && event.amount > 0
+        })
+        .expect("Blackout Kick must deal the lethal hit");
+    assert!(
+        events.iter().skip(lethal + 1).any(|event| {
+            event.source == Some(pet.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(227291)
+                && event.amount > 0
+        }),
+        "Niuzao must stomp a living enemy after the kick kills its primary"
+    );
 }
