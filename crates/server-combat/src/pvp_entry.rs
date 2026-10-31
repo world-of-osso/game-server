@@ -278,9 +278,6 @@ fn create_match_map(
         .expect("validated match")
         .seething = seething;
     crate::maps::transfer::spawn_map_content(world, map);
-    if template.map_id == 1803 {
-        crate::transport::spawn_ships(world, map);
-    }
     if arena {
         super::arena_objects::prepare_map(world, map);
         super::arena_sight::prepare_map(world, map);
