@@ -23,6 +23,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterFireOutcomeHit(fire_meteorite_hit),
     SpellScriptHook::OnCast(on_fire_cast),
     SpellScriptHook::TargetDamageMultiplier(meteor_primary_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(master_of_flame_multiplier),
     SpellScriptHook::ResourceContext(&[2120, 1254851]),
     SpellScriptHook::TargetDamageMultiplier(fuel_damage_multiplier),
     SpellScriptHook::TargetDamageMultiplier(scald_damage_multiplier),
@@ -64,6 +65,8 @@ const SCORCH: u32 = 2948;
 const FUEL_THE_FIRE: u32 = 416094;
 const SCALD: u32 = 450746;
 const MOLTEN_FURY: u32 = 457803;
+const MASTER_OF_FLAME: u32 = 384174;
+const MASTER_OF_FLAME_FIREBALL: u32 = 1217750;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -382,6 +385,23 @@ fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
         let reduction = script_effect_value(world, caster, PYROCOSM, 3);
         reduce_cooldown(world, caster, 108853, f64::from(reduction) / 1000.0);
     }
+}
+
+/// SimC76f8118 sc_mage.cpp:3823–3824,3860–3865: Master of Flame
+/// increases Fireball and its Frostfire replacement outside Combustion.
+fn master_of_flame_multiplier(
+    world: &World,
+    caster: Entity,
+    _target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    if !matches!(spell.id, 133 | 431044)
+        || !selected(world, caster, MASTER_OF_FLAME)
+        || auras::has_aura(world, caster, COMBUSTION)
+    {
+        return 1.0;
+    }
+    1.0 + script_effect_value(world, caster, MASTER_OF_FLAME_FIREBALL, 0) / 100.0
 }
 
 /// SimC76f8118 sc_mage.cpp6821–6827: selected Molten Fury uses
