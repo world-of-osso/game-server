@@ -151,6 +151,11 @@ fn native_target_context_active_dot_counts_only_real_owned_instances() {
                 .any(|aura| aura.spell_id == REND && aura.caster == expected_caster)
         );
     }
+    // SimC76f8118 player.cpp10879–10884: the actor's own selection is current.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(third)));
     let facts = NativeFacts::new(
         h.app.world(),
         h.caster,

@@ -260,7 +260,7 @@ fn native_apl_facts_read_real_roll_charge_count_and_recharge_clock() {
 }
 
 #[test]
-fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
+fn native_apl_facts_fixture_clock_and_unobserved_dungeon_ttd_are_explicit() {
     let (mut h, actor) = monk();
     let b = bindings();
     let clock = fixture(h.app.world());
@@ -295,17 +295,16 @@ fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
     );
     // A dungeon pull's three engaged enemies are its SimC `enemies` count.
     assert_eq!(dungeon.value("enemies").unwrap(), 3.0);
-    assert!(
-        dungeon
-            .value("target.time_to_die")
-            .unwrap_err()
-            .contains("unavailable")
+    // No observed damage yet: a finite unknown TTD, not a fixture lifetime.
+    assert_eq!(
+        dungeon.value("target.time_to_die").unwrap(),
+        crate::followers::live_facts::UNKNOWN_TTD
     );
     assert!(
         dungeon
             .value("fight_remains")
             .unwrap_err()
-            .contains("unavailable")
+            .contains("NATIVE_APL_TARGETS_UNAVAILABLE")
     );
     assert!(
         f.value("buff.missing_alias.up")
