@@ -309,7 +309,150 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
     // Wait beyond another native 1.5-second delay to catch an unintended second wave.
     h.advance(80);
     assert!(
-        !crate::combat_refs::has_active_reference_to(h.app.world(), dragonhawk, tank),
-        "the second wave must not be pulled by the first-wave dispatch"
+        crate::combat_refs::active_opponents(h.app.world(), dragonhawk)
+            .next()
+            .is_none(),
+        "the second wave must not enter combat after the first-wave dispatch"
     );
+}
+
+#[test]
+#[ignore = "requires Windrunner native world, ground and LOS data"]
+fn windrunner_hammer_chain_guard_protects_outside_first_wave() {
+    let (mut h, tank, profile) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
+            app.insert_resource(crate::test_data::world_data().clone());
+            app.add_plugins((
+                crate::creature_ai::CreatureAiPlugin,
+                crate::creature_aggro::CreatureAggroPlugin,
+            ));
+        });
+    let owner = h.caster;
+    let map = crate::maps::InMap {
+        map_id: 2805,
+        instance_id: 73,
+    };
+    let source = crate::test_data::world_data();
+    let mut data = source.clone();
+    data.spawns = source
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.guid, 63805160 | 63805200 | 63805206))
+        .cloned()
+        .collect::<Vec<_>>()
+        .into();
+    assert_eq!(data.spawns.len(), 3);
+    data.spawns_by_map = crate::world_data::build_spawns_by_map(&data.spawns);
+    h.app.insert_resource(data.clone());
+    let root = std::path::PathBuf::from(
+        std::env::var_os("FOLLOWER_COMPONENT_ASSETS").expect("ground assets"),
+    );
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&root.join("los")).expect("native LOS"),
+    );
+    let mut ground = crate::ground::GroundMap::new(&root, HashMap::from([(2805, 6_099_383)]));
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    assert_eq!(
+        crate::zones::spawn_map_creatures(
+            &mut commands,
+            &data,
+            crate::zones::MapContent {
+                map,
+                difficulty_id: 1,
+                dead_bosses: vec![]
+            },
+            false,
+            Some(&mut ground)
+        ),
+        3
+    );
+    queue.apply(h.app.world_mut());
+    h.app.insert_resource(ground);
+    h.advance(2);
+    let units: HashMap<_, _> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin)>()
+        .iter(h.app.world())
+        .map(|(entity, origin)| (origin.guid, entity))
+        .collect();
+    let caller = units[&63805160];
+    let helper = units[&63805200];
+    let outside = units[&63805206];
+    let here = Position {
+        x: 5343.4077,
+        y: 101.11535,
+        z: 3201.2021,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((map, Level(90), UnitLevel(90), here));
+    h.app.world_mut().entity_mut(tank).insert((map, here));
+    super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
+    let mut health = h.app.world_mut().get_mut::<Health>(tank).unwrap();
+    health.current = health.max;
+    drop(health);
+    let first = super::pull_set::members(h.app.world(), caller, tank);
+    assert!(first.contains(&helper));
+    assert!(!first.contains(&outside));
+    crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    for _ in 0..60 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::creature_assistance::AssistanceCalled>(helper)
+            .is_some()
+        {
+            break;
+        }
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_assistance::AssistanceCalled>(helper)
+            .is_some()
+    );
+    assert!(!super::pull_set::members(h.app.world(), helper, tank).contains(&outside));
+    // Native Sweeping Verdict modifies Hammer of Wrath's chain target count.
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: tank,
+            target: tank,
+            spell_id: 1246488,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::KnownSpell,
+        },
+    );
+    let reach =
+        super::unintended_reach::spell_unintended_reach(h.app.world(), tank, 1241413, helper)
+            .unwrap();
+    assert!(
+        reach.1 >= 10.0,
+        "modified Hammer of Wrath must report chain reach: {reach:?}"
+    );
+    assert!(
+        !super::spell_safety::safe(h.app.world(), tank, helper, 1241413),
+        "the native Hammer chain must not reach a creature outside the first wave"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(h.app.world(), outside)
+            .next()
+            .is_none()
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 1241413, Some(helper), false)
+        .expect("native Hammer of Wrath must cast on the helper");
+    for _ in 0..100 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(1241413)
+                && event.target == Some(outside.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
+            return;
+        }
+    }
+    panic!("native Hammer of Wrath did not damage the outside creature");
 }
