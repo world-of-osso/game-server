@@ -81,7 +81,7 @@ pub(super) fn profile_for(
 ) -> Result<Profile, String> {
     Ok(Profile {
         entry: CLASS_FOLLOWER_ENTRY,
-        name: format!("Follower{}", slot + 1),
+        name: follower_name(slot),
         class_id: source.class_id,
         spec_id: source.spec_id,
         role: source.group_role()?,
@@ -294,6 +294,39 @@ pub fn spawn_class(
         .get::<Level>(owner)
         .ok_or("follower owner has no level")?
         .0;
+    let entity = spawn_neutral(world, owner, &follower_name(slot), level)?;
+    match install_class(world, owner, entity, source, sex, slot, gear) {
+        Ok(talent_source) => {
+            info!(
+                "class follower spec {} uses {}",
+                source.spec_id,
+                talent_source.label()
+            );
+            Ok(entity)
+        }
+        Err(error) => {
+            unsummon_members(world, &[entity]);
+            Err(error)
+        }
+    }
+}
+
+/// Give `entity` the class actor `source` at the owner's level: native
+/// progression and talents, base stats and pools, and real gear. `entity`
+/// follows `owner`; the owner itself is a valid entity for a headless leader.
+pub fn install_class(
+    world: &mut World,
+    owner: Entity,
+    entity: Entity,
+    source: &ClassProfile,
+    sex: u8,
+    slot: usize,
+    gear: GearSource,
+) -> Result<crate::trait_config::TalentSource, String> {
+    let level = world
+        .get::<Level>(owner)
+        .ok_or("follower owner has no level")?
+        .0;
     let faction = *world
         .get::<UnitFactionTemplate>(owner)
         .ok_or("follower owner has no faction")?;
@@ -321,7 +354,6 @@ pub fn spawn_class(
         profile.taunt_spell = taunt_spell(store, &known)?;
     }
     let (stats, pools, _) = class_stats(world, &profile, level, source.race)?;
-    let entity = spawn_neutral(world, owner, &profile.name, level)?;
     let passives: Vec<_> = known
         .iter()
         .filter(|spell| spell.passive)
@@ -334,7 +366,10 @@ pub fn spawn_class(
         .remove::<crate::creature_aggro::AggroRange>()
         .remove::<crate::level_scaling::CreatureArmor>()
         .insert((
-            Follower { owner, profile },
+            Follower {
+                owner,
+                profile: profile.clone(),
+            },
             super::AplControlled,
             CharacterVisual {
                 race: source.race,
@@ -375,25 +410,15 @@ pub fn spawn_class(
         crate::auras::AuraSource::KnownSpell,
         &passives,
     );
-    let profile = world
-        .get::<Follower>(entity)
-        .expect("spawned class follower")
-        .profile
-        .clone();
-    let equipped = match gear {
+    match gear {
         GearSource::Journal => super::gear::equip(world, entity, &profile),
     }
-    .and_then(|()| super::gear::publish_appearance(world, entity));
-    if let Err(error) = equipped {
-        unsummon_members(world, &[entity]);
-        return Err(error);
-    }
-    info!(
-        "class follower spec {} uses {}",
-        source.spec_id,
-        talent_source.label()
-    );
-    Ok(entity)
+    .and_then(|()| super::gear::publish_appearance(world, entity))?;
+    Ok(talent_source)
+}
+
+fn follower_name(slot: usize) -> String {
+    format!("Follower{}", slot + 1)
 }
 
 /// Native base stats and class power pools for `profile`'s class, spec, level and race.
