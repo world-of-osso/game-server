@@ -258,6 +258,8 @@ pub struct GroundMap {
     m2_solids: HashMap<u32, los::LosMap>,
     m2_solid_checks: HashMap<u32, Result<(), String>>,
     live_hulls: crate::game_objects::collision::LiveHulls,
+    transport_hulls:
+        HashMap<crate::maps::InMap, Vec<(Entity, std::sync::Arc<shared::los::LosTile>)>>,
     #[cfg(test)]
     entry_gate: Option<std::sync::mpsc::Sender<std::sync::mpsc::Sender<()>>>,
 }
@@ -283,6 +285,7 @@ impl GroundMap {
             m2_solids: HashMap::new(),
             m2_solid_checks: HashMap::new(),
             live_hulls: HashMap::new(),
+            transport_hulls: HashMap::new(),
             #[cfg(test)]
             entry_gate: None,
         }
@@ -426,6 +429,26 @@ impl GroundMap {
 
     pub(crate) fn set_live_hulls(&mut self, hulls: crate::game_objects::collision::LiveHulls) {
         self.live_hulls = hulls;
+    }
+
+    pub(crate) fn set_transport_hulls(
+        &mut self,
+        hulls: HashMap<crate::maps::InMap, Vec<(Entity, std::sync::Arc<shared::los::LosTile>)>>,
+    ) {
+        self.transport_hulls = hulls;
+    }
+
+    pub(crate) fn transport_at(&self, map: crate::maps::InMap, feet: Vec3) -> Option<Entity> {
+        self.transport_hulls
+            .get(&map)?
+            .iter()
+            .filter_map(|(entity, hull)| {
+                let height = hull.floor_height(feet)?;
+                let distance = (height - feet.y).abs();
+                (distance <= shared::movement::GROUND_SNAP_THRESHOLD).then_some((*entity, distance))
+            })
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|(entity, _)| entity)
     }
 
     /// Static ground plus enabled live GO collision in this exact map copy.

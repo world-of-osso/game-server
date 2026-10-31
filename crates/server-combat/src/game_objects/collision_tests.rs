@@ -81,27 +81,30 @@ fn transport_collision_loads_receipt_only_wmo_and_groups() {
     app.add_plugins(CollisionIndexPlugin);
     app.insert_resource(GroundMap::new(root, HashMap::new()));
     app.add_systems(FixedUpdate, sync_live_objects);
-    app.world_mut().spawn((
-        map,
-        GameObjectInfo {
-            entry: 278407,
-            go_type: 15,
-            display_id: 9002,
-            name: "ship".into(),
-            scale: 1.0,
-        },
-        Position {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        },
-        Rotation {
-            x: 0.0,
-            y: std::f32::consts::FRAC_PI_2,
-            z: 0.0,
-        },
-        GameObjectCollision(true),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            map,
+            GameObjectInfo {
+                entry: 278407,
+                go_type: 15,
+                display_id: 9002,
+                name: "ship".into(),
+                scale: 1.0,
+            },
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Rotation {
+                x: 0.0,
+                y: std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
+            GameObjectCollision(true),
+        ))
+        .id();
     app.world_mut().run_schedule(FixedUpdate);
     let height = app
         .world_mut()
@@ -110,6 +113,29 @@ fn transport_collision_loads_receipt_only_wmo_and_groups() {
     assert!(
         matches!(height, crate::ground::GroundProbe::Supported(value) if (value - 20.6032).abs() < 0.01),
         "{height:?}"
+    );
+    let feet = Vec3::new(-30.0, 20.6032, 0.0);
+    let other = InMap {
+        instance_id: 2,
+        ..map
+    };
+    assert_eq!(
+        app.world().resource::<GroundMap>().transport_at(map, feet),
+        Some(entity)
+    );
+    assert_eq!(
+        app.world()
+            .resource::<GroundMap>()
+            .transport_at(other, feet),
+        None
+    );
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(GameObjectCollision(false));
+    app.world_mut().run_schedule(FixedUpdate);
+    assert_eq!(
+        app.world().resource::<GroundMap>().transport_at(map, feet),
+        None
     );
 }
 

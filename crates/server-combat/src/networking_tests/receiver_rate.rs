@@ -82,6 +82,71 @@ fn run_north(frames: std::ops::RangeInclusive<usize>) -> Vec<PlayerInput> {
 }
 
 #[test]
+fn boarding_ignores_stale_world_input_until_ship_frame_then_disembarks() {
+    let (mut app, player, connection) = receiver_app();
+    let map = crate::maps::InMap {
+        map_id: 2662,
+        instance_id: 1,
+    };
+    app.world_mut()
+        .insert_resource(crate::transport_catalog::fixture_catalog());
+    crate::transport::spawn_ships(app.world_mut(), map);
+    let ship = app
+        .world_mut()
+        .query::<(Entity, &shared::components::TransportState)>()
+        .iter(app.world())
+        .find(|(_, state)| state.spawn_id == 409273)
+        .unwrap()
+        .0;
+    let position = *app.world().get::<Position>(ship).unwrap();
+    let frame = shared::components::TransportPassenger {
+        transport: ship.to_bits(),
+        position: [0.0; 3],
+        orientation: 0.0,
+    };
+    app.world_mut().entity_mut(player).insert((
+        map,
+        position,
+        frame,
+        crate::transport::AwaitingBoardAck,
+    ));
+    let stale = reporting(
+        [position.x, position.y, position.z],
+        make_input(0.0, 0.0, 0.0),
+    );
+    deliver_and_tick(&mut app, connection, vec![stale.clone()]);
+    assert_eq!(
+        app.world()
+            .get::<shared::components::TransportPassenger>(player),
+        Some(&frame)
+    );
+    assert!(
+        app.world()
+            .get::<crate::transport::AwaitingBoardAck>(player)
+            .is_some()
+    );
+    deliver_and_tick(
+        &mut app,
+        connection,
+        vec![PlayerInput {
+            transport: Some(frame),
+            ..stale.clone()
+        }],
+    );
+    assert!(
+        app.world()
+            .get::<crate::transport::AwaitingBoardAck>(player)
+            .is_none()
+    );
+    deliver_and_tick(&mut app, connection, vec![stale]);
+    assert!(
+        app.world()
+            .get::<shared::components::TransportPassenger>(player)
+            .is_none()
+    );
+}
+
+#[test]
 fn compass_facing_rejects_old_input_then_allows_a_new_player_turn() {
     let (mut app, player, connection) = receiver_app();
     let mut falling = FallTracker::grounded(20.0);
