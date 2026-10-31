@@ -112,6 +112,7 @@ pub mod retreat;
 mod rotation_dummy_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod simulator;
+#[cfg(any(test, feature = "test-support"))]
 mod spawning;
 pub mod spec_selection;
 mod spell_safety;
@@ -234,6 +235,7 @@ impl Follower {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn select_party(profiles: &[Profile], role: GroupRole) -> Result<Vec<Profile>, String> {
     let mut party = Vec::with_capacity(4);
     for (required, count) in [
