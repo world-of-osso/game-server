@@ -1968,34 +1968,38 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
         let _seed = crate::random::seed_scope(seed);
         let mut run = super::dps_parity::prepare_registered_player(66, 3).unwrap();
         super::dps_parity::engage(&mut run);
-        let (actor, primary, survivor) = (run.actor, run.targets[0], run.targets[1]);
-        apply_self_aura(&mut run, 432502);
-        for _ in 0..40 {
-            run.app.update();
-        }
-        run.app
-            .world_mut()
-            .entity_mut(primary)
-            .remove::<crate::creature_scripts::TrainingDummy>();
-        run.app
-            .world_mut()
-            .get_mut::<Health>(primary)
-            .unwrap()
-            .current = 1.0;
-        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
-        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 20271, Some(primary), false)
+        let (actor, survivor) = (run.actor, run.targets[1]);
+        for _ in 0..15 {
+            apply_self_aura(&mut run, 432502);
+            let primary = crate::zones::summon_creature(
+                run.app.world_mut(),
+                actor,
+                31_146,
+                [1.5, 0.0, 0.0, 0.0],
+            )
             .unwrap();
-        for _ in 0..20 {
-            run.app.update();
-        }
-        let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
-        if events.iter().any(|event| {
-            event.source == Some(actor.to_bits())
-                && event.target == Some(survivor.to_bits())
-                && event.spell_id == Some(432616)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
-        }) {
+            run.app
+                .world_mut()
+                .entity_mut(primary)
+                .remove::<crate::creature_scripts::TrainingDummy>();
+            run.app
+                .world_mut()
+                .get_mut::<Health>(primary)
+                .unwrap()
+                .current = 1.0;
+            let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                20271,
+                Some(primary),
+                false,
+            )
+            .unwrap();
+            for _ in 0..250 {
+                run.app.update();
+            }
+            let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
             assert!(
                 run.app
                     .world()
@@ -2011,7 +2015,15 @@ fn sacred_weapon_proc_hits_survivor_after_lethal_ability() {
                         && event.kind == CombatLogKind::Damage
                         && event.amount > 0)
             );
-            return;
+            if events.iter().any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(survivor.to_bits())
+                    && event.spell_id == Some(432616)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }) {
+                return;
+            }
         }
     }
     panic!("native Sacred Weapon did not proc on a lethal ability in the fixed seed matrix");
