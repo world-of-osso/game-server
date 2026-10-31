@@ -513,6 +513,9 @@ pub fn spawn_creature(
     insert_ai_components(&mut entity, spawn, template, addon, world_data);
     crate::pvp::insert_track_switch(&mut entity, spawn);
     crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
+    if template.entry == crate::creature_aggro::CRAWLER_EGG {
+        entity.insert(crate::scripted_ai::ReactState::Passive);
+    }
     if template.aggro_mode == crate::creature_aggro::AggroMode::Passive
         && template.static_flags[0] & crate::creature_static::IGNORE_COMBAT == 0
     {

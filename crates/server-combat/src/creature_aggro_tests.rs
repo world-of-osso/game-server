@@ -189,6 +189,66 @@ fn symmetric_immunity_stops_existing_melee_damage() {
 }
 
 #[test]
+fn crawler_egg_no_melee_log_correlated_native_spawn_stays_passive() {
+    let mut app = aggro_app();
+    let data = crate::test_data::world_data();
+    app.insert_resource(data.clone());
+    app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 30003801)
+        .unwrap();
+    assert_eq!(spawn.template_entry, CRAWLER_EGG);
+    let map = crate::maps::InMap {
+        map_id: 2660,
+        instance_id: 15,
+    };
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let egg = crate::zones::spawn_creature(
+        &mut commands,
+        data,
+        data.template_for(CRAWLER_EGG, 205).unwrap(),
+        &mut crate::zones::CreatureSpawnContext {
+            map,
+            difficulty_id: 205,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rand::thread_rng(),
+    )
+    .expect("native Crawler Egg spawn");
+    commands
+        .entity(egg)
+        .insert(crate::zones::CreatureDifficulty(205));
+    queue.apply(app.world_mut());
+    let position = *app.world().get::<Position>(egg).unwrap();
+    let player = spawn_player(&mut app, position, 77);
+    app.world_mut().entity_mut(player).insert(map);
+    assert_eq!(
+        app.world().get::<crate::scripted_ai::ReactState>(egg),
+        Some(&crate::scripted_ai::ReactState::Passive)
+    );
+    assert!(!read_player_proximity_candidate(
+        app.world_mut(),
+        egg,
+        player
+    ));
+    run(&mut app, 80);
+    assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
+    assert!(app.world().get::<AutoAttack>(egg).is_none());
+    // Control: the same sourced creature and player do fight without passive react.
+    app.world_mut()
+        .entity_mut(egg)
+        .remove::<crate::scripted_ai::ReactState>();
+    run(&mut app, 120);
+    assert!(app.world().get::<Health>(player).unwrap().current < 100.0);
+}
+
+#[test]
 fn symmetric_immunity_native_flyer_requires_unlock_before_combat() {
     let mut h = crate::spell_cast::test_harness::harness(vec![], &[30451], 8).unwrap();
     let data = crate::test_data::world_data();

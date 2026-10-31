@@ -1,4 +1,118 @@
 use super::*;
+use shared::protocol::GameObjectCollision;
+
+#[test]
+fn avanoxx_done_opens_spike_wall_only_in_its_instance() {
+    let (mut h, _, map) = bound_boss_at_difficulty(213179, 2660, 2, 205, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let spawns = crate::game_objects::load_game_object_spawns(&conn).unwrap();
+    let other = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let mut walls = Vec::new();
+    for entry in [455376, 455377, 455378, 467576] {
+        let source = spawns
+            .0
+            .iter()
+            .find(|spawn| spawn.map_id == 2660 && spawn.info.entry == entry)
+            .expect("authored Ara-Kara barrier");
+        let wall = h
+            .app
+            .world_mut()
+            .spawn((crate::game_objects::game_object_bundle(source), map))
+            .id();
+        let other_wall = h
+            .app
+            .world_mut()
+            .spawn((crate::game_objects::game_object_bundle(source), other))
+            .id();
+        walls.push((source, wall, other_wall));
+    }
+    let anub_source = spawns
+        .0
+        .iter()
+        .find(|spawn| spawn.map_id == 2660 && spawn.info.entry == 455375)
+        .expect("authored Anub'zekt wall");
+    let anub_wall = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(anub_source), map))
+        .id();
+    let other_anub_wall = h
+        .app
+        .world_mut()
+        .spawn((crate::game_objects::game_object_bundle(anub_source), other))
+        .id();
+    crate::scripted_ai::door_data::update_doors(h.app.world_mut(), map);
+    assert_eq!(
+        h.app.world().get::<GameObjectCollision>(anub_wall),
+        Some(&GameObjectCollision(true))
+    );
+    for (_, wall, other_wall) in &walls {
+        for object in [*wall, *other_wall] {
+            assert_eq!(
+                h.app.world().get::<GameObjectCollision>(object),
+                Some(&GameObjectCollision(true))
+            );
+        }
+    }
+    let world = h.app.world_mut();
+    let boss = instance_script::boss_id_for_encounter(world, map, 2926).unwrap();
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        boss,
+        EncounterState::Done
+    ));
+    assert_eq!(
+        world.get::<GameObjectCollision>(anub_wall),
+        Some(&GameObjectCollision(true)),
+        "Avanoxx must not open Anub'zekt's wall"
+    );
+    for (source, wall, other_wall) in walls {
+        assert_eq!(
+            world.get::<GameObjectCollision>(wall),
+            Some(&GameObjectCollision(false))
+        );
+        assert_eq!(
+            world.get::<GameObjectCollision>(other_wall),
+            Some(&GameObjectCollision(true))
+        );
+        let recreated = world
+            .spawn((crate::game_objects::game_object_bundle(source), map))
+            .id();
+        crate::scripted_ai::door_data::update_doors(world, map);
+        assert_eq!(
+            world.get::<GameObjectCollision>(recreated),
+            Some(&GameObjectCollision(false))
+        );
+    }
+    let anub = instance_script::boss_id_for_encounter(world, map, 2906).unwrap();
+    assert!(instance_script::set_boss_state(
+        world,
+        map,
+        anub,
+        EncounterState::Done
+    ));
+    assert_eq!(
+        world.get::<GameObjectCollision>(anub_wall),
+        Some(&GameObjectCollision(false))
+    );
+    assert_eq!(
+        world.get::<GameObjectCollision>(other_anub_wall),
+        Some(&GameObjectCollision(true))
+    );
+    let recreated = world
+        .spawn((crate::game_objects::game_object_bundle(anub_source), map))
+        .id();
+    crate::scripted_ai::door_data::update_doors(world, map);
+    assert_eq!(
+        world.get::<GameObjectCollision>(recreated),
+        Some(&GameObjectCollision(false))
+    );
+}
 
 #[test]
 fn avanoxx_requires_three_distinct_attendant_deaths_then_waits_in_its_copy() {

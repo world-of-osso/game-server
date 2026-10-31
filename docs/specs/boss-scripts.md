@@ -33,6 +33,14 @@
 - Damage that takes the actor below 55% sets 2788 DONE with copy-local credit and ENCOUNTER_END success. The actor then leaves the world without a corpse; leaving is ours. A done boss does not respawn.
 - `DARKNESS_CANDLE_MECHANICS_GAP`: candles, Massive Candle 212777 and the encounter's darkness abilities are not ported; the actor fights with its native template only.
 
+## Ara-Kara passage barriers
+
+- `AVANOXX_SPIKE_WALL_OPEN_LOG_CORRELATED`: Open game objects 455376, 455377, and 455378 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `qLNnp4x613mv2Ctz` fight 28, player 9's last cast during Avanoxx was at engine coordinates (-109.6, -398.47); 21.558 seconds after the encounter ended, their next recorded cast was at (-68.63, -590.77), beyond the wall near (-87.25, -521.23). This supports passage after the kill, not the exact retail trigger or door animation.
+
+- `AVANOXX_WEB_BARRIER_OPEN_LOG_CORRELATED`: Open game object 467576 without collision when encounter 2926 is Done, per instance copy, including on object reload. In WCL `XCmNaPcWdFA4kJ8D` fight 9 pull 4, actor 91 passes within 2 yards of the barrier at engine (-141, -811.5) after Avanoxx ends and 70.561 seconds before Anub'zekt starts. The exact retail trigger is unknown.
+
+- `ANUBZEKT_SPIKE_WALL_OPEN_LOG_CORRELATED`: Open game object 455375 without collision when encounter 2906 is Done, per instance copy, including on object reload. WCL `XCmNaPcWdFA4kJ8D` fight 9 has casts near the wall during Anub'zekt and a player beyond it 15.318 seconds after the encounter ends. The exact retail trigger is unknown.
+
 ## Stonevault E.D.N.A. intro
 
 - `AVANOXX_INTRO_LOG_CORRELATED`: In each map 2660 copy, deaths of Ixin 217531, Nakt 218324, and Atik 217533 start a 17.3-second timer; then remove Avanoxx 213179's PC immunity and not-selectable flags. Count each entry once and retain the unlocked state on reappearance. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 record all three deaths before Avanoxx's first damage, respectively 35.952 and 22.082 seconds after the last death. LittleWigs `WarWithin/AraKara/Avanoxx.lua` records 17.3 seconds between the attendant-silenced emote and nameplate. The three-death trigger and starting that delay at the last death are inferred, not directly observed.

@@ -12,6 +12,41 @@ struct Door {
 }
 
 const DOORS: &[Door] = &[
+    // AVANOXX_SPIKE_WALL_OPEN_LOG_CORRELATED: WCL qLNnp4x613mv2Ctz fight 28
+    // player 9 casts at (-398.47, -109.6) before Avanoxx ends, then at
+    // (-590.77, -68.63) 21.558s after it ends, beyond the wall at x=-521.234.
+    // WCL coordinates are (engine z, engine x); the exact door trigger is unknown.
+    Door {
+        map_id: 2660,
+        entry: 455376,
+        encounter: 2926,
+    },
+    Door {
+        map_id: 2660,
+        entry: 455377,
+        encounter: 2926,
+    },
+    Door {
+        map_id: 2660,
+        entry: 455378,
+        encounter: 2926,
+    },
+    // AVANOXX_WEB_BARRIER_OPEN_LOG_CORRELATED: WCL XCmNaPcWdFA4kJ8D fight 9,
+    // pull 4 actor 91 crosses within 2 yd of GO 467576 before Anub'zekt starts,
+    // after Avanoxx ends. The exact retail trigger is unknown.
+    Door {
+        map_id: 2660,
+        entry: 467576,
+        encounter: 2926,
+    },
+    // ANUBZEKT_SPIKE_WALL_OPEN_LOG_CORRELATED: WCL XCmNaPcWdFA4kJ8D fight 9
+    // pull 5 has casts near GO 455375 during Anub'zekt; pull 7 has a player
+    // beyond it 15.318s after the encounter ends. The exact trigger is unknown.
+    Door {
+        map_id: 2660,
+        entry: 455375,
+        encounter: 2906,
+    },
     // TC 15e0ed76 instance_the_stonevault.cpp doorData: both paths open when E.D.N.A. is Done.
     Door {
         map_id: 2652,

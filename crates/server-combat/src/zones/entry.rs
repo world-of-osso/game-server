@@ -439,7 +439,8 @@ impl EntryProjection {
     }
 
     fn update_react_state(&self, actor: &mut EntityWorldMut<'_>) {
-        let state = if self.template.trigger
+        let state = if self.template.entry == crate::creature_aggro::CRAWLER_EGG
+            || self.template.trigger
             || self.template.creature_type == CREATURE_TYPE_CRITTER
             || self.template.static_flags[0] & crate::creature_static::IGNORE_COMBAT != 0
         {
