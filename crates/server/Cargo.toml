@@ -77,6 +77,7 @@ name = "game-server-site-export"
 path = "src/bin/site_export.rs"
 
 [dev-dependencies]
+server-spell-scripts = { path = "../server-spell-scripts", features = ["test-support"] }
 server-combat = { path = "../server-combat", features = ["test-support"] }
 server-core = { path = "../server-core", features = ["test-support"] }
 server-follower-policy = { path = "../server-follower-policy", features = ["test-support"] }
