@@ -3198,6 +3198,7 @@ fn remove_casterless(world: &mut World, unit: Entity) {
 }
 
 /// Optional replay audit of auras removed on death, checked after the simulation tick.
+#[cfg(feature = "test-support")]
 #[derive(Resource, Default)]
 pub struct DeathAuraAudit(pub Vec<(Entity, Vec<u32>)>);
 
@@ -3221,6 +3222,7 @@ pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
                 .collect()
         })
         .unwrap_or_default();
+    #[cfg(feature = "test-support")]
     if world.contains_resource::<DeathAuraAudit>() {
         let removed: Vec<_> = world
             .get::<ActiveAuras>(unit)
