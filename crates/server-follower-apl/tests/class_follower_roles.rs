@@ -37,6 +37,8 @@ fn dungeon_owner(h: &mut Harness) {
     // Followers summon pets (the BM/Survival duck, warlock demons) from world templates.
     data.templates = source.templates.clone();
     drop(data);
+    // Production world startup inserts the armor constants Stagger and mitigation read.
+    h.app.insert_resource(source.armor_constants.clone());
     let path = server_combat::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let db2 = path.parent().unwrap().join("db2/active");
