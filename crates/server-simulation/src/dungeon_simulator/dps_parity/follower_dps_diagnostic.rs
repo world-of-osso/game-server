@@ -902,6 +902,18 @@ fn follower_sentinel_starts_full_and_decay_follows_simc() {
     assert_eq!(stacks(&app, actor), 14);
 }
 
+fn trace_sotr_removal(
+    world: &mut World,
+    _: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    eprintln!(
+        "FOLLOWER_SOTR_REMOVED {}",
+        json!({"reason": format!("{reason:?}"), "remaining_s": aura.expires_at.map(|expiry| expiry - crate::spell_cast::history_now(world))})
+    );
+}
+
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
@@ -917,6 +929,14 @@ fn follower_dps_production_dummy() {
     let seed: u64 = std::env::var("FOLLOWER_DPS_SEED").unwrap().parse().unwrap();
     let _seed = crate::random::seed_scope(seed);
     let (mut app, actor, target, profile) = prepare_follower(entry, level, map);
+    if std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some() {
+        let mut scripts = app
+            .world_mut()
+            .resource_mut::<crate::auras::scripts::AuraScripts>();
+        let script = scripts.0.entry(132403).or_default();
+        assert!(script.on_remove.is_none());
+        script.on_remove = Some(trace_sotr_removal);
+    }
     let armor = app
         .world()
         .get::<crate::level_scaling::CreatureArmor>(target)
