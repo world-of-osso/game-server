@@ -101,6 +101,10 @@ fn inventory_types(slot: EquipmentSlot) -> &'static [u8] {
     }
 }
 
+fn is_two_handed(inventory_type: u8) -> bool {
+    matches!(inventory_type, 17 | 15 | 26)
+}
+
 /// Select own-map loot first, then other same-tier loot; never repeat an item.
 /// Unknown Journal difficulty/faction masks are excluded rather than guessed.
 pub fn select_items(
@@ -129,14 +133,8 @@ pub fn select_items(
             .get(spell)
             .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
     });
-    for slot in [
-        Head, Neck, Shoulder, Back, Chest, Wrist, Hands, Waist, Legs, Feet, Finger1, Finger2,
-        Trinket1, Trinket2, MainHand, OffHand,
-    ] {
-        if slot == OffHand && two_handed {
-            continue;
-        }
-        let choice = candidates.iter().find_map(|row| {
+    let pick = |slot: EquipmentSlot, used: &BTreeSet<u32>, two_hand_only: bool| {
+        candidates.iter().find_map(|row| {
             let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
             let ranged_hunter =
                 class == 3 && slot == MainHand && !matches!(item.inventory_type, 15 | 26);
@@ -149,6 +147,7 @@ pub fn select_items(
                 spec_id == 269 && !can_dual_wield && slot == MainHand && item.inventory_type != 17;
             if used.contains(&row.item_id)
                 || !inventory_types(slot).contains(&item.inventory_type)
+                || (two_hand_only && !is_two_handed(item.inventory_type))
                 || ranged_hunter
                 || shield_tank
                 || no_dual_wield
@@ -158,13 +157,33 @@ pub fn select_items(
                 return None;
             }
             Some((row.item_id, item.inventory_type))
-        });
-        if let Some((item, inventory)) = choice {
+        })
+    };
+    for slot in [
+        Head, Neck, Shoulder, Back, Chest, Wrist, Hands, Waist, Legs, Feet, Finger1, Finger2,
+        Trinket1, Trinket2, MainHand, OffHand,
+    ] {
+        if slot == OffHand && two_handed {
+            continue;
+        }
+        if let Some((item, inventory)) = pick(slot, &used, false) {
             used.insert(item);
             if slot == MainHand {
-                two_handed = matches!(inventory, 17 | 15 | 26);
+                two_handed = is_two_handed(inventory);
             }
             chosen.push((slot, ItemDefinitionSource::Retail, item));
+        } else if let Some(main) = (slot == OffHand && !matches!(spec_id, 66 | 73))
+            .then(|| chosen.iter().position(|(slot, _, _)| *slot == MainHand))
+            .flatten()
+        {
+            // A one-hander with no usable off-hand (a druid: no shield, no dual
+            // wield): wield an eligible two-hander instead. Without one, the
+            // one-hander alone is a valid loadout; only shield tanks need the slot.
+            if let Some((item, _)) = pick(MainHand, &used, true) {
+                used.remove(&chosen[main].2);
+                used.insert(item);
+                chosen[main].2 = item;
+            }
         } else {
             missing.push(slot);
         }
