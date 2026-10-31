@@ -174,7 +174,9 @@ fn erupt_blood_beast(world: &mut World, beast: Entity) {
         .as_mut()
         .expect("Blood eruption attributes")
         .attributes[2] |= 0x2000_0000;
-    spell_cast::launch_triggered_spell(world, owner, &eruption, Some(target), 1);
+    spell_cast::launch_triggered_spell_with_primary(
+        world, owner, &eruption, None, Some(target), 1,
+    );
 }
 
 // SimC76f8118 sc_death_knight.cpp11325–11329: Blood's Vampiric Strike

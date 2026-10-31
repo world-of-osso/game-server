@@ -1404,6 +1404,39 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "native Blood Beast eruption after its owner's primary dies"]
+    fn blood_beast_eruption_hits_survivor_after_primary_dies() {
+        use shared::components::{Health, Npc, UnitSummonedBy};
+        use shared::protocol::CombatLogKind;
+
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = super::super::prepare_registered_player(250, 3).unwrap();
+        let owner = run.actor;
+        let primary = run.targets[0];
+        let survivor = run.targets[1];
+        super::super::engage(&mut run);
+        crate::spell_cast::creature_cast(run.app.world_mut(), owner, 49028, Some(owner), false)
+            .unwrap();
+        for _ in 0..100 { run.app.update(); }
+        let beast = {
+            let world = run.app.world_mut();
+            world.query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>()
+                .iter(world)
+                .find_map(|(entity, npc, summoned)|
+                    (npc.template_id == 217228 && summoned.0 == owner.to_bits()).then_some(entity))
+                .expect("real owned Blood Beast")
+        };
+        run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 0.0;
+        let registry = *run.app.world().resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+        registry.summon_expired(run.app.world_mut(), beast);
+        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        assert!(events.iter().any(|event| event.source == Some(owner.to_bits())
+            && event.target == Some(survivor.to_bits()) && event.spell_id == Some(434246)
+            && event.kind == CombatLogKind::Damage && event.amount > 0),
+            "the saved eruption destination must hit a living enemy");
+    }
+
+    #[test]
     #[ignore = "requires canonical world database and MID2 Blood inputs"]
     fn blood_beast_attacks_and_eruptions_use_real_owned_summon() {
         use shared::components::{Npc, UnitSummonedBy};
