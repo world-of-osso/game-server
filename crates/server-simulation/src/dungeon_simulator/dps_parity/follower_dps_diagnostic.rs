@@ -136,6 +136,10 @@ fn prepare_follower(
 /// SimC runs precombat before the fixed-time target-health timeline starts.
 fn finish_follower_precombat(app: &mut App, actor: Entity) {
     for _ in 0..800 {
+        let precombat_cast = app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .map(|cast| cast.spell_id);
         app.world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
@@ -152,6 +156,18 @@ fn finish_follower_precombat(app: &mut App, actor: Entity) {
             .get::<server_follower_apl::FollowerApl>(actor)
             .is_some_and(|apl| apl.in_combat())
         {
+            let mut events = app
+                .world_mut()
+                .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+            if let Some(spell) = precombat_cast
+                && let Some(index) = events.0.iter().position(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.kind == CombatLogKind::CastSuccess
+                        && event.spell_id == Some(spell)
+                })
+            {
+                events.0.remove(index);
+            }
             return;
         }
     }
