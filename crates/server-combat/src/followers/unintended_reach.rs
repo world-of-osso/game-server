@@ -172,6 +172,18 @@ fn spell_reach(
     depth: u8,
 ) -> DeclaredReach {
     let mut result = registry.declared_reach(world, caster, spell);
+    if depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
+        for rank in 1..=4 {
+            let Some(release) = crate::spell_cast::script_registry::empower_release_preview(
+                world, caster, spell.id, rank,
+            ) else {
+                break;
+            };
+            let reach = spell_reach(world, caster, &release, registry, depth + 1);
+            result.caster_radius = result.caster_radius.max(reach.caster_radius);
+            result.target_radius = result.target_radius.max(reach.target_radius);
+        }
+    }
     if let Some(radius) =
         crate::spell_cast::scripts::hostile_ground_pulse_radius(world, caster, spell.id)
     {

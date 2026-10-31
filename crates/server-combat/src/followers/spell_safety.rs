@@ -49,15 +49,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
     if caster_radius <= 0.0 && target_radius <= 0.0 {
         return true;
     }
-    let harmful = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .and_then(|store| {
-            store
-                .get(spell)
-                .map(|spell| crate::spell_info::positivity::negative_effects(store, spell) != 0)
-        })
-        .unwrap_or(true);
-    if harmful && !pending.is_empty() {
+    if !pending.is_empty() {
         return false;
     }
     let caster = actor;
