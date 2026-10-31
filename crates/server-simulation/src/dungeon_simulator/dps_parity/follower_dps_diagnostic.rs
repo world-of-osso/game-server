@@ -240,6 +240,58 @@ fn follower_warrior_precombat_casts_battle_stance() {
 }
 
 #[test]
+#[ignore = "requires MID2 Blood inputs and a Blood Death Knight SimC trace"]
+fn blood_tank_precombat_casts_deaths_caress() {
+    let (profile, traits) = super::read_reference(250).unwrap();
+    let race = super::inputs::read_reference_race(&profile.race).unwrap();
+    let mut run = super::spawn_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race },
+    )
+    .unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let actor = run.actor;
+    let target = run.targets[0];
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("Blood tank trace");
+    super::follower_tank_precombat::execute(
+        &mut run.app,
+        actor,
+        target,
+        std::path::Path::new(&trace),
+    )
+    .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(195292)
+                && event.kind == CombatLogKind::CastSuccess)
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(195292)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert!(crate::auras::has_aura(run.app.world(), target, 55078));
+}
+
+#[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB and FOLLOWER_DPS_TANK_TRACE"]
 fn follower_tank_replay_survives_lethal_hit_and_keeps_avoidance_procs() {
     use server::test_support::healer_intake::{Hit, HitKind};
