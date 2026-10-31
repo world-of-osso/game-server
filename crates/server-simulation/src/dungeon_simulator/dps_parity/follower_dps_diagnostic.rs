@@ -87,6 +87,96 @@ fn prepare_follower(
     (app, actor, target, profile)
 }
 
+fn flame_shock_mastery_sample(keep_mastery: bool) -> (f32, i32, bool, i32, bool) {
+    let _seed = crate::random::seed_scope(1);
+    let (mut app, actor, target, _) = prepare_follower(209053, 90, 2813);
+    for _ in 0..5 {
+        app.update();
+    }
+    let mastery = app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 168534 && aura.caster == actor)
+        .expect("Elemental follower mastery aura")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .expect("native direct mastery modifier")
+        .amount;
+    if !keep_mastery {
+        crate::auras::remove_auras(
+            app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 168534 && aura.caster == actor,
+        );
+    }
+    app.world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    assert!(crate::spell_cast::try_cast_triggered(
+        app.world_mut(),
+        actor,
+        188389,
+        Some(target),
+        1
+    ));
+    for _ in 0..80 {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hit = |periodic| {
+        events
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(188389)
+                    && event.periodic == periodic
+            })
+            .expect("actual Flame Shock damage")
+    };
+    let direct = hit(false);
+    let periodic = hit(true);
+    (
+        mastery,
+        direct.amount,
+        direct.crit,
+        periodic.amount,
+        periodic.crit,
+    )
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_elemental_flame_shock_uses_mastery_on_direct_and_periodic_damage() {
+    let (mastery, direct, direct_crit, periodic, periodic_crit) = flame_shock_mastery_sample(true);
+    let (_, plain_direct, plain_direct_crit, plain_periodic, plain_periodic_crit) =
+        flame_shock_mastery_sample(false);
+    assert_eq!(
+        (direct_crit, periodic_crit),
+        (plain_direct_crit, plain_periodic_crit)
+    );
+    let expected = 1.0 + f64::from(mastery) / 100.0;
+    let direct_ratio = direct as f64 / plain_direct as f64;
+    let periodic_ratio = periodic as f64 / plain_periodic as f64;
+    assert!(
+        (direct_ratio - expected).abs() < 0.02,
+        "direct {direct_ratio}, expected {expected}"
+    );
+    assert!(
+        (periodic_ratio - expected).abs() < 0.02,
+        "periodic {periodic_ratio}, expected {expected}"
+    );
+}
+
 /// SimC runs precombat before the fixed-time target-health timeline starts.
 fn finish_follower_precombat(app: &mut App, actor: Entity) {
     for _ in 0..800 {

@@ -162,6 +162,34 @@ fn elemental_ancestor_flame_shock_foreground_and_secondary_impacts_echo() {
     );
 }
 
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn elemental_ancestor_flame_shock_wrapper_echoes_once() {
+    let mut run = fixture();
+    let ancestor = stormkeeper(&mut run);
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    cast(&mut run, 470411);
+    let hits = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(ancestor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(447419)
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(hits, 1, "wrapper and child must not command two echoes");
+}
+
 fn ancestor_lava_damage(keep_fury: bool) -> (f64, f64, f64, f64) {
     let _seed = crate::random::seed_scope(70448);
     let mut run = fixture();
