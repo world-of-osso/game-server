@@ -37,7 +37,7 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         .collect::<Vec<_>>()
         .into();
     assert_eq!(data.spawns.len(), 3);
-    data.spawns_by_map = crate::world_data::build_spawns_by_map(&data.spawns);
+    data.spawns_by_map = HashMap::from([(2805, (0..data.spawns.len()).collect())]);
     run.app.insert_resource(data.clone());
     let root = std::path::PathBuf::from(
         std::env::var_os("FOLLOWER_COMPONENT_ASSETS").expect("ground assets"),
@@ -208,4 +208,21 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         run.app.world().get::<CastState>(actor).is_some(),
         "APL must cast when all reachable creatures are planned"
     );
+    for _ in 0..120 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(caller.to_bits())
+                && event.spell_id == Some(357209)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
+            return;
+        }
+    }
+    panic!("the admitted native Fire Breath did not damage its planned caller");
 }
