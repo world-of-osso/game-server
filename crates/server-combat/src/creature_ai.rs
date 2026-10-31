@@ -392,10 +392,9 @@ pub(crate) fn follower_footprint_ground(
     // The detail mesh samples every six cells and can bridge a narrow dip. A
     // follower standing in one sees the route above its own floor; a walkable
     // step along that floor is still real movement toward the route.
-    let under_route = from.y < to.y - navigation::AGENT_CLIMB;
     let own_floor_step =
         supported.is_some_and(|support| (support - from.y).abs() <= navigation::AGENT_CLIMB);
-    (height >= to.y - navigation::AGENT_CLIMB || under_route && own_floor_step).then_some(height)
+    (height >= to.y - navigation::AGENT_CLIMB || own_floor_step).then_some(height)
 }
 
 /// Exact runtime support for a routed foot position (Recast contours approximate it).
