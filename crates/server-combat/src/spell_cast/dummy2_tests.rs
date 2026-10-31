@@ -162,6 +162,40 @@ fn dummy2_monk_blackout_kick_reduces_fists_of_fury_cooldown_with_rank_two() {
 }
 
 #[test]
+fn dummy2_monk_fists_of_fury_ticks_damage_without_stunning_its_target() {
+    let mut h =
+        harness_with_native_enemy_dodge_reduction(Vec::new(), &[113656, 117418, 120086], 10)
+            .expect("real world.db required");
+    *h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(h.npc)
+        .unwrap() = shared::components::Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    h.set_power(PowerType::Chi, 6.0);
+    h.cast_and_deliver(113656, Some(h.npc));
+    h.advance(40); // Two seconds into the four-second channel.
+    let world = h.app.world();
+    assert!(
+        crate::auras::has_aura(world, h.caster, 113656),
+        "channel running"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(117418)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert!(
+        !crate::auras::has_aura(world, h.npc, 120086),
+        "retail Fists of Fury applies no stun"
+    );
+}
+
+#[test]
 fn dummy2_monk_blackout_kick_without_rank_two_does_not_reduce_recharge() {
     let mut h =
         harness_with_native_enemy_dodge_reduction(Vec::new(), &[100784, 107428, 185099], 10)

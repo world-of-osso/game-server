@@ -1809,6 +1809,13 @@ pub(crate) fn periodic_dummy_trigger(
     if effect.aura_period_ms == 0 || effect.trigger_spell == 0 {
         return Err("periodic dummy requires custom script (no trigger/period)");
     }
+    // Fists of Fury 113656 effect1 still names its pre-7.0.3 stun 120086. Retail
+    // ticks only its 117418 damage: WCL N8TLdfacxCbH1yr9 fight 1 has 3060
+    // 117418 hits and no 120086 debuff on any enemy.
+    const FISTS_OF_FURY_STUN: u32 = 120086;
+    if effect.trigger_spell == FISTS_OF_FURY_STUN {
+        return Err("retail Fists of Fury no longer stuns");
+    }
     let trigger = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(effect.trigger_spell))
