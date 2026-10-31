@@ -180,6 +180,45 @@ pub(super) fn engage(party: &mut ClassParty) {
     }
 }
 
+/// Hand `unit` to the test: neither its APL nor the follower brain casts, so
+/// the test's own casts are the only ones it makes.
+#[cfg(test)]
+pub(super) fn hold(party: &mut ClassParty, unit: Entity) {
+    party
+        .app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<crate::followers::AplControlled>()
+        .insert(server::test_support::LiteralParityFixture);
+}
+
+/// Equip `item_id` exactly as `spec`'s tracked APL profile lists it, replacing
+/// the class-built item in that slot.
+#[cfg(test)]
+pub(super) fn equip_profile_item(party: &mut ClassParty, unit: Entity, spec: u32, item_id: u32) {
+    let profile = server_follower_apl::profiles::profile(spec).unwrap();
+    let item = profile
+        .equipment
+        .iter()
+        .find(|item| item.item_id == item_id)
+        .unwrap_or_else(|| panic!("spec{spec} profile lacks item{item_id}"));
+    let slot = crate::followers::parity_profile::slot(&item.slot).unwrap();
+    let mut entity = party.app.world_mut().entity_mut(unit);
+    let mut items = entity.get_mut::<crate::stats::EquippedItems>().unwrap();
+    items.items.retain(|(equipped, _, _)| *equipped != slot);
+    items.items.push((
+        slot,
+        shared::item_data::ItemDefinitionSource::Retail,
+        item_id,
+    ));
+    let mut modifiers = entity
+        .get_mut::<crate::stats::EquippedItemModifiers>()
+        .unwrap();
+    modifiers.items.retain(|(equipped, _)| *equipped != slot);
+    modifiers.items.push((slot, item.modifiers()));
+    party.app.update();
+}
+
 /// Run the party's APL precombat until the tank and healer enter combat.
 pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
     for _ in 0..MAX_PRECOMBAT_TICKS {
