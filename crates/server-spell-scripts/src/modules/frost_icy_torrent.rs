@@ -4,7 +4,6 @@ use shared::components::{ActiveSpec, WeaponType};
 
 use super::combat;
 use combat::auras;
-use combat::combat::AutoAttack;
 use combat::random;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::script_effect_value;
@@ -26,9 +25,6 @@ fn roll_torrent(world: &mut World, caster: Entity, critical: bool) {
     {
         return;
     }
-    let Some(target) = world.get::<AutoAttack>(caster).map(|attack| attack.victim) else {
-        return;
-    };
     let two_hand = world
         .get::<CharacterStats>(caster)
         .is_some_and(|stats| stats.main_hand.kind == WeaponType::TwoHand);
@@ -52,7 +48,7 @@ fn roll_torrent(world: &mut World, caster: Entity, critical: bool) {
     );
     if random::random::<f32>() < chance / divisor {
         assert!(
-            try_cast_triggered(world, caster, DAMAGE, Some(target), 1),
+            try_cast_triggered(world, caster, DAMAGE, None, 1),
             "native Icy Death Torrent refused"
         );
     }
