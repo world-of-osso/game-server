@@ -301,7 +301,7 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
             owner: tank,
             slot: 0,
         },
-        crate::pet_control::PetCharm::new([0; 10], shared::protocol::REACT_ASSIST),
+        crate::pet_control::PetCharm::new(Default::default(), shared::protocol::REACT_ASSIST),
     ));
     crate::pet_control::attack_start(h.app.world_mut(), pet, caller);
     assert_eq!(
