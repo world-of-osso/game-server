@@ -44,6 +44,8 @@ fn schedule_dragonfire(world: &mut World, caster: Entity, parent: &SpellInfo) {
             .expect("native Dragonfire Brew misc")
             .launch_delay = 1.5 * index as f32;
         spell.cast_destination = Some(position.to_array());
-        spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+        spell_cast::launch_triggered_spell_with_primary(
+            world, caster, &spell, None, Some(target), 1,
+        );
     }
 }
