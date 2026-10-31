@@ -48,6 +48,22 @@ fn fixture_without_fellowship(targets: usize) -> Run {
     run
 }
 
+fn wait_for_cooldown(run: &mut Run, spell: u32) {
+    for _ in 0..1000 {
+        let world = run.app.world();
+        let info = world.resource::<crate::spell_info::SpellStore>().get(spell).unwrap();
+        let now = crate::spell_cast::history_now(world);
+        if world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_none_or(|history| !history.on_cooldown(info, now))
+        {
+            return;
+        }
+        run.app.update();
+    }
+    panic!("native spell{spell} cooldown did not recover");
+}
+
 fn assert_native_builder_deck(mut run: Run, spell: u32) {
     let (positive, total) = native_deck(&run);
     let traits = run
@@ -78,15 +94,8 @@ fn assert_native_builder_deck(mut run: Run, spell: u32) {
     }
     assert_eq!(count_summons(&run), 0, "background builders never summon");
     for _ in 0..total {
+        wait_for_cooldown(&mut run, spell);
         cast(&mut run, spell);
-        let recovery_ticks = match spell {
-            188389 => 120,
-            470057 => 200,
-            _ => 0,
-        };
-        for _ in 0..recovery_ticks {
-            run.app.update();
-        }
     }
     assert_eq!(
         count_summons(&run),
