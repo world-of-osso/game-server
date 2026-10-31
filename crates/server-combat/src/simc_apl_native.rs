@@ -1145,6 +1145,9 @@ impl Facts for NativeFacts<'_> {
             // SimC76f8118 action.cpp3886–3896: without distance targeting,
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
+            // SimC76f8118 sim.cpp3598–3599: the fight's configured enemy count; a
+            // dungeon pull's is the engaged enemy set this decision receives.
+            "enemies" => Ok(self.active_enemies as f64),
             "spell_haste" => self.spell_haste(),
             "main_hand.2h" => self.main_hand_is_two_handed(),
             "movement.distance" => self.movement_distance(),

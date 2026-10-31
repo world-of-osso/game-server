@@ -293,6 +293,8 @@ fn native_apl_facts_fixture_clock_and_unavailable_dungeon_ttd_are_explicit() {
         Encounter::Dungeon { started_at: 0.0 },
         3,
     );
+    // A dungeon pull's three engaged enemies are its SimC `enemies` count.
+    assert_eq!(dungeon.value("enemies").unwrap(), 3.0);
     assert!(
         dungeon
             .value("target.time_to_die")
