@@ -160,12 +160,6 @@ fn repair_flight_segments(
             index += 1;
             continue;
         };
-        if repairs == MAX_LOS_REPAIRS {
-            return Err(format!(
-                "flight LOS repair limit reached at segment {index}"
-            ));
-        }
-        repairs += 1;
         if to.position.y < from.position.y {
             let held = Vec3::new(to.position.x, from.position.y, to.position.z);
             if hit(from.position, held)?.is_none() {
@@ -175,6 +169,13 @@ fn repair_flight_segments(
                 continue;
             }
         }
+        if repairs == MAX_LOS_REPAIRS {
+            return Err(format!(
+                "flight LOS repair limit reached at segment {index}: {:?} -> {:?}",
+                from.position, to.position
+            ));
+        }
+        repairs += 1;
         if !(0.0..1.0).contains(&fraction) || fraction == 0.0 {
             return Err(format!(
                 "invalid flight LOS hit fraction {fraction} at segment {index}"
@@ -528,6 +529,32 @@ fn flight_holds_a_blocked_descent_until_the_floor_is_clear() {
             .windows(2)
             .all(|pair| floor(pair[0].position, pair[1].position).unwrap().is_none())
     );
+}
+
+#[test]
+fn flight_can_hold_across_more_logged_waypoints_than_the_insertion_limit() {
+    let mut points: Vec<_> = (0..=12)
+        .map(|i| FlightPoint {
+            position: Vec3::new(i as f32, if i == 0 { 10.0 } else { 0.0 }, 0.0),
+            seconds: i as f32,
+        })
+        .collect();
+    points.push(FlightPoint {
+        position: Vec3::new(30.0, 0.0, 0.0),
+        seconds: 13.0,
+    });
+    let mut floor = |a: Vec3, b: Vec3| -> Result<Option<f32>, String> {
+        if a.y > 5.0 && b.y < 5.0 {
+            let t = (a.y - 5.0) / (a.y - b.y);
+            if a.lerp(b, t).x <= 12.0 {
+                return Ok(Some(t));
+            }
+        }
+        Ok(None)
+    };
+    repair_flight_segments(&mut points, &mut floor).unwrap();
+    assert!(points[1..=12].iter().all(|point| point.position.y == 10.0));
+    assert_eq!(points[13].position.y, 0.0);
 }
 
 #[test]
