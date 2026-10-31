@@ -39,6 +39,14 @@ const DOORS: &[Door] = &[
         entry: 467576,
         encounter: 2926,
     },
+    // ANUBZEKT_SPIKE_WALL_OPEN_LOG_CORRELATED: WCL XCmNaPcWdFA4kJ8D fight 9
+    // pull 5 has casts near GO 455375 during Anub'zekt; pull 7 has a player
+    // beyond it 15.318s after the encounter ends. The exact trigger is unknown.
+    Door {
+        map_id: 2660,
+        entry: 455375,
+        encounter: 2906,
+    },
     // TC 15e0ed76 instance_the_stonevault.cpp doorData: both paths open when E.D.N.A. is Done.
     Door {
         map_id: 2652,
