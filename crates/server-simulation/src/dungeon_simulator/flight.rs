@@ -123,6 +123,12 @@ fn flight_path(
             path.push(Vec3::new(point.x, height + CLEARANCE, point.y));
         }
     }
+    if (previous_height - ground_end.y).abs() > navigation::AGENT_CLIMB {
+        return Err(format!(
+            "flight's final surface {previous_height} does not match projected landing {}",
+            ground_end.y
+        ));
+    }
     path.push(ground_end);
     for (index, pair) in path.windows(2).enumerate() {
         if !clear(pair[0], pair[1])? {
@@ -359,6 +365,16 @@ fn inferred_flight_rejects_missing_layers_impossible_changes_and_blocked_segment
     )
     .unwrap_err();
     assert!(impossible.contains("continuity bound"));
+    let other_layer = Vec3::new(end.x, 250.0, end.z);
+    let wrong_landing = flight_path(
+        start,
+        other_layer,
+        &samples,
+        |_, _| Ok(vec![0.0]),
+        |_, _| Ok(true),
+    )
+    .unwrap_err();
+    assert!(wrong_landing.contains("does not match projected landing"));
     let blocked = flight_path(
         start,
         end,
