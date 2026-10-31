@@ -11,7 +11,9 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
         .unwrap()
         .parent()
         .unwrap()
-        .join("db2/12.1.5.70448");
+        .parent()
+        .unwrap()
+        .join("game-engine/data/db2/12.1.5.70448");
     assert!(
         db2.join("receipt.json").is_file(),
         "prerequisite: authenticated local CASC build 12.1.5.70448 receipt and Map, MapDifficulty, LFGDungeons, AreaTrigger CSVs in {}; see docs/db2-active-inputs.md",
