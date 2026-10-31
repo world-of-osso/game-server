@@ -501,6 +501,10 @@ Dungeon release prefers a linked graveyard on the instance map, then the importe
 
 `NALORAKK_WATER_DOOR_OPENS_ON_HOARDMONGER_DONE_LOG_CORRELATED` opens Water Door 531150 (GO state 0, collision disabled) when encounter 3207 is Done in the same map copy. Retail `WoWCombatLog-102026_223255.txt` lines 65154, 65165 and 65364 show encounter success and the same player on opposite sides of the door 7.629 seconds later. The logs do not record the door state or its exact trigger; the encounter gate is inferred.
 
+### Nalorakk pre-pull immunity
+
+`NALORAKK_PROXIMITY_RELEASE_LOG_CORRELATED` retains Nalorakk's sourced Watchful Gaze aura 1254622 while his PC/NPC immunity remains. A living player within an inferred 20 yards in the same instance removes both the aura and those immunity flags. `WoWCombatLog-102026_223255.txt` lines 172137–172172 place a player about 18.7 yards away, then record the aura removal and first damage. The precise radius and the causal link to immunity are inferred. TC 15e0ed76's NPC 23576 is the older Zul'Aman Nalorakk, not Den NPC 246404; its four-wave trigger is not evidence for this encounter.
+
 ### Nalorakk cave door
 
 `NALORAKK_CAVE_DOOR_OPENS_ON_SENTINEL_DONE_LOG_CORRELATED` opens Cave Door 570512 (GO state 0, collision disabled) when encounter 3208 is Done in the same map copy. Retail `WoWCombatLog-102026_223255.txt` lines 136024, 136191 and 136205 show Sentinel success and the same player on opposite sides of the door 4.034 seconds apart. The log does not record the door state or exact trigger; the encounter gate is inferred. TC 15e0ed76 has no Den of Nalorakk instance script; its generic `InstanceScript::UpdateDoorState` supports OpenWhenDone.

@@ -219,6 +219,49 @@ fn hoardmonger_unblocked_attack_enters_combat_without_regeneration() {
 }
 
 #[test]
+fn nalorakk_nearby_player_releases_immunity_in_its_copy() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(246404, 2825, 2, 205, None);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (other_boss, _) = spawn_authored_actor(&mut h.app, &conn, 246404, other_map, 205);
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x - 25.0,
+        ..origin
+    });
+    h.advance(0.2);
+    let immunity = UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
+    let initial = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(initial & immunity, immunity);
+    assert!(crate::auras::has_aura(h.app.world(), boss, 1254622));
+    assert!(crate::auras::has_aura(h.app.world(), other_boss, 1254622));
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x - 18.0,
+        ..origin
+    });
+    h.advance(0.2);
+    let released = h.app.world().get::<UnitFlags>(boss).unwrap().0;
+    assert_eq!(released & immunity, 0, "the nearby player can attack");
+    assert!(!crate::auras::has_aura(h.app.world(), boss, 1254622));
+    assert!(crate::auras::has_aura(h.app.world(), other_boss, 1254622));
+    assert_eq!(
+        released & !immunity,
+        initial & !immunity,
+        "other flags stay intact"
+    );
+    assert_eq!(
+        h.app.world().get::<UnitFlags>(other_boss).unwrap().0 & immunity,
+        immunity,
+        "another copy stays protected"
+    );
+}
+
+#[test]
 fn nalorakk_credit_lethal_damage_completes_encounter_3209() {
     let (_directory, path) = prepare_encounter_database("nalorakk");
     let source = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
