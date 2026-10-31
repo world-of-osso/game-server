@@ -15,6 +15,48 @@ fn class_party_death_audit() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn dummy_pressure_uses_unscaled_same_level_units() {
+    for level in [70, 90] {
+        let run = super::snapshot_party(105, level, 1);
+        let world = run.app.world();
+        let source = run.sources[0];
+        assert_eq!(
+            world
+                .get::<shared::components::UnitLevel>(source)
+                .unwrap()
+                .0,
+            level
+        );
+        assert_eq!(
+            world
+                .get::<shared::components::UnitLevel>(run.tank)
+                .unwrap()
+                .0,
+            level
+        );
+        assert!(
+            world
+                .get::<shared::level_scaling::LevelScaling>(source)
+                .is_none()
+        );
+        assert!(
+            world
+                .get::<shared::level_scaling::LevelScaling>(run.tank)
+                .is_none()
+        );
+        assert_eq!(
+            crate::level_scaling::damage_to_hp_scale(world, source, run.tank),
+            1.0
+        );
+        eprintln!(
+            "REPLAY_SCALE level={level} source_damage_to_hp=1 tank_health={}",
+            world.get::<Health>(run.tank).unwrap().max
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn death_audit_records_real_aura_removals() {
     let mut run = super::snapshot_party(105, 70, 1);
     let actors = run.slots.to_vec();
