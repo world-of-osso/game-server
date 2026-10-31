@@ -376,15 +376,18 @@ pub(crate) fn follower_footprint_ground(
     }
     let offset = Vec3::new(direction.x, 0.0, direction.y) * navigation::AGENT_RADIUS;
     let probes = [center, center - offset, center + offset];
-    let supported = probes
-        .into_iter()
-        .filter_map(
-            |feet| match probe_ground(ground.as_deref_mut(), map, feet) {
-                GroundProbe::Supported(height) => Some(height),
-                GroundProbe::Unloaded | GroundProbe::Unsupported => None,
-            },
-        )
-        .max_by(f32::total_cmp);
+    let heights = probes.map(
+        |feet| match probe_ground(ground.as_deref_mut(), map, feet) {
+            GroundProbe::Supported(height) => Some(height),
+            GroundProbe::Unloaded | GroundProbe::Unsupported => None,
+        },
+    );
+    // TC 15e0ed76 Object.cpp:709 UpdateAllowedPositionZ takes GetMapHeight at the
+    // unit's own x/y. The footprint only bridges a narrow collision seam that
+    // leaves the center without a step-reachable floor.
+    let supported = heights[0]
+        .filter(|height| (height - from.y).abs() <= navigation::AGENT_CLIMB)
+        .or_else(|| heights.into_iter().flatten().max_by(f32::total_cmp));
     let height = run_ground(
         supported.map_or(GroundProbe::Unsupported, GroundProbe::Supported),
         from.y,
