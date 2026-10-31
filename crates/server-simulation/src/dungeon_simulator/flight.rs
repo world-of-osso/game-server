@@ -591,6 +591,26 @@ fn flight_descent_that_never_clears_fails_at_the_hold_timeout() {
 }
 
 #[test]
+fn flight_descent_without_a_clear_landing_fails_explicitly() {
+    let mut points = vec![
+        FlightPoint {
+            position: Vec3::new(0.0, 10.0, 0.0),
+            seconds: 0.0,
+        },
+        FlightPoint {
+            position: Vec3::new(1.0, 0.0, 0.0),
+            seconds: 1.0,
+        },
+    ];
+    let mut floor = |a: Vec3, b: Vec3| -> Result<Option<f32>, String> {
+        Ok((a.y > 5.0 && b.y < 5.0).then(|| (a.y - 5.0) / (a.y - b.y)))
+    };
+    let error =
+        repair_flight_segments(&mut points, Vec3::new(1.0, 0.0, 0.0), &mut floor).unwrap_err();
+    assert!(error.contains("FLIGHT_DESCENT_HOLD_UNCLEARED"), "{error}");
+}
+
+#[test]
 fn flight_inserts_clearance_above_a_blocking_wall() {
     let mut points = vec![
         FlightPoint {
