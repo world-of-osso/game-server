@@ -12,7 +12,7 @@ use combat::auras::{
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{
     self,
-    script_registry::SpellScriptHook,
+    script_registry::{ScriptReach, SpellScriptHook},
     scripts::{AfterCastHook, script_effect_value},
 };
 use combat::spell_info::{SpellInfo, SpellStore};
@@ -30,10 +30,25 @@ const CLARITY_OF_PURPOSE: u32 = 451017;
 const PURIFYING_BREW: u32 = 119582;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::MidAuraRegistration(register_spender),
     SpellScriptHook::HealthChangeObserved(observe),
     SpellScriptHook::AfterResourceValues(spender_hook),
 ];
+
+fn declared_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptReach {
+    if !matches!(spell.id, 322507 | 1241059)
+        || !selected(world, caster)
+        || !has_talent(world, caster, PURIFIED_SPIRIT)
+        || !auras::has_aura(world, caster, SPENDER)
+        || !world
+            .get::<HarmonyPools>(caster)
+            .is_some_and(|pools| pools.spender > 0.0)
+    {
+        return ScriptReach::None;
+    }
+    ScriptReach::Child(PURIFIED_DAMAGE)
+}
 
 fn register_spender(scripts: &mut AuraScripts) {
     scripts.0.insert(

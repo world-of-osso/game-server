@@ -241,6 +241,14 @@ fn spell_reach(
         }
     }
     if depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
+        for child_id in registry.declared_children(world, caster, spell) {
+            let Some(child) = world.resource::<SpellStore>().get(child_id) else {
+                continue;
+            };
+            let child = spell_reach(world, caster, child, registry, depth + 1);
+            result.caster_radius = result.caster_radius.max(child.caster_radius);
+            result.target_radius = result.target_radius.max(child.target_radius);
+        }
         let parent = result;
         for (child_id, caster_range, splash_radius) in
             crate::spell_cast::scripts::reach_children(world, caster, spell)
