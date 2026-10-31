@@ -131,7 +131,14 @@ fn wield_sacred_weapon(
         let Some(spell) = combat::spell_cast::load_triggered_spell(world, STRIKE, 1) else {
             return;
         };
-        combat::spell_cast::launch_triggered_spell_with_primary(world, unit, &spell, None, Some(target), 1);
+        combat::spell_cast::launch_triggered_spell_with_primary(
+            world,
+            unit,
+            &spell,
+            None,
+            Some(target),
+            1,
+        );
         super::paladin_armaments::roll_reflection_of_radiance(world, unit, REFLECTION_CHANCE);
     } else {
         combat::spell_cast::cast_triggered(world, unit, HEAL, Some(target), 1);
