@@ -110,15 +110,12 @@ fn prepare_follower(
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
-    assert_eq!(
-        app.world()
-            .get::<crate::followers::Follower>(actor)
-            .unwrap()
-            .profile
-            .entry,
-        entry
-    );
-    crate::followers::gear::equip(app.world_mut(), actor, &profile).unwrap();
+    let profile = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .profile
+        .clone();
     let target = spawn_dummy(&mut app, actor, 0).unwrap();
     let armor = app
         .world()
@@ -134,6 +131,53 @@ fn prepare_follower(
         .entity_mut(target)
         .remove::<shared::level_scaling::LevelScaling>();
     (app, actor, target, profile)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_dummy_uses_class_apl_to_cast() {
+    let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
+    assert!(
+        app.world()
+            .get::<crate::followers::AplControlled>(actor)
+            .is_some()
+    );
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::combat::AutoAttack::new(target));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    for _ in 0..400 {
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerApl>(actor)
+            .is_some()
+    );
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none()
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(133 | 11366)))
+    );
 }
 
 #[test]
