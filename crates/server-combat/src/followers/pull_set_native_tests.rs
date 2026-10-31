@@ -88,8 +88,9 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "the tank may use its native chain against planned assistants"
     );
-    crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
-    for _ in 0..60 {
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
+        .expect("the tank's native Avenger's Shield must start against the planned pull");
+    for _ in 0..100 {
         h.advance(1);
         if helpers
             .iter()
@@ -107,6 +108,16 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
                 tank
             )),
         "planned assistants must actually join the tank's combat"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(31935)
+                && helpers
+                    .iter()
+                    .any(|helper| event.target == Some(helper.to_bits()))
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }),
+        "native Avenger's Shield must actually damage a planned helper"
     );
     let after = super::pull_set::members(h.app.world(), caller, tank);
     assert!(
