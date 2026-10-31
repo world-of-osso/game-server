@@ -7,6 +7,27 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "private current native DB and exact spec71 inputs"]
+fn arms_sweeping_strikes_missing_aura_does_not_panic_or_reapply() {
+    let mut run = prepare_measurement(71, 1).unwrap();
+    let actor = run.actor;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(260708)
+        .unwrap()
+        .clone();
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 260708));
+    crate::spell_cast::script_registry::after_foreground_special(
+        run.app.world_mut(),
+        actor,
+        &spell,
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 260708));
+}
+
+#[test]
+#[ignore = "private current native DB and exact spec71 inputs"]
 fn arms_sweeping_strikes_grants_native_uses_and_one_secondary_mortal_strike() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(71, 3).unwrap();

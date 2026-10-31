@@ -30,12 +30,13 @@ fn grant_uses(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // the initial use count, not max_stacks or the default single application.
     let uses = script_effect_value(world, caster, SWEEPING_STRIKES, 3) as u8;
     assert!(uses > 0, "native Sweeping Strikes requires positive uses");
-    assert!(combat::auras::set_self_cast_stacks(
-        world,
-        caster,
-        SWEEPING_STRIKES,
-        uses
-    ));
+    if !combat::auras::set_self_cast_stacks(world, caster, SWEEPING_STRIKES, uses) {
+        warn!(
+            ?caster,
+            spell_id = SWEEPING_STRIKES,
+            "Sweeping Strikes aura missing when assigning uses"
+        );
+    }
 }
 
 fn read_affected_instance(world: &World, caster: Entity, spell: &SpellInfo) -> Option<u32> {
