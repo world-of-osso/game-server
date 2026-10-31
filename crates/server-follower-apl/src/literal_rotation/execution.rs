@@ -676,6 +676,9 @@ fn primary_in_native_range(
 fn read_attacks(world: &World, actor: Entity, targets: &[Entity], ready: &mut ReadyActions) {
     let current = world.get::<crate::combat::AutoAttack>(actor);
     for (index, &target) in targets.iter().enumerate() {
+        if !server::followers::action_safe(world, actor, target, None) {
+            continue;
+        }
         // SimC76f8118 player.cpp10866–10889: retarget changes the actor's selected target.
         record_ready(
             ready,
