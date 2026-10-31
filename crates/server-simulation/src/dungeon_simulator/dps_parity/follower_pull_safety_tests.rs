@@ -148,6 +148,28 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         target: Some(caller.to_bits()),
         options: BTreeMap::from([("empower_to".into(), "1".into())]),
     };
+    let ready = |run: &mut Run| {
+        let encounter = crate::simc_apl_native::Encounter::Dungeon {
+            started_at: crate::spell_cast::now(run.app.world()),
+        };
+        let rotation = server_follower_apl::devastation_rotation::Rotation::load(
+            run.app.world(),
+            actor,
+            encounter,
+        )
+        .unwrap();
+        let prepared = rotation
+            .prepare(run.app.world_mut(), actor, &[caller])
+            .unwrap();
+        prepared
+            .execution(&action, &rotation.equipment)
+            .unwrap()
+            .is_some()
+    };
+    assert!(
+        !ready(&mut run),
+        "APL selection must not offer Fire Breath while assistance is pending"
+    );
     let attempt = |apl: &mut server_follower_apl::FollowerApl, run: &mut Run| {
         apl.execute_plan(
             run.app.world_mut(),
@@ -182,6 +204,10 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
             .is_none(),
         "the outsider must remain idle after dispatch"
     );
+    assert!(
+        !ready(&mut run),
+        "APL selection must not offer a cone that reaches an outsider"
+    );
     attempt(&mut apl, &mut run);
     assert!(
         run.app.world().get::<CastState>(actor).is_none(),
@@ -208,6 +234,10 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
             .iter()
             .all(|unit| [caller, helper].contains(unit)),
         "all native cone recipients must be in the first wave"
+    );
+    assert!(
+        ready(&mut run),
+        "APL selection must offer Fire Breath when all recipients are planned"
     );
     attempt(&mut apl, &mut run);
     assert!(
