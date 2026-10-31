@@ -68,6 +68,25 @@ fn add_debt(world: &mut World, caster: Entity) {
     spell_cast::cast_triggered_with_effect0_amount(world, caster, DEBT, Some(caster), 1, amount);
 }
 
+fn cast_bloody_demise(world: &mut World, caster: Entity, target: Entity) {
+    if spell_cast::targets::is_alive(world, target) {
+        spell_cast::cast_triggered(world, caster, DEMISE, Some(target), 1);
+        return;
+    }
+    // SimC sc_death_knight.cpp11672–11692, 11743–11746 cancels the
+    // single-target hit but still executes the secondary-target area.
+    let Some(position) = spell_cast::targets::position(world, target) else {
+        warn!(?target, "Bloody Demise primary position unavailable");
+        return;
+    };
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, DEMISE, 1) else {
+        return;
+    };
+    spell.effects.retain(|effect| effect.index == 1);
+    spell.cast_destination = Some(position.to_array());
+    spell_cast::launch_triggered_spell_with_primary(world, caster, &spell, None, Some(target), 1);
+}
+
 fn spend_debt(world: &mut World, caster: Entity, target: Option<Entity>) {
     let max = world
         .resource::<SpellStore>()
@@ -110,7 +129,7 @@ fn spend_debt(world: &mut World, caster: Entity, target: Option<Entity>) {
             );
         }
         if let Some(target) = target {
-            spell_cast::cast_triggered(world, caster, DEMISE, Some(target), 1);
+            cast_bloody_demise(world, caster, target);
         }
     }
 }
