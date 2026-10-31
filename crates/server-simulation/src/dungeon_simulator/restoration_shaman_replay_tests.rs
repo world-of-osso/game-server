@@ -98,7 +98,7 @@ fn restoration_shaman_uses_chain_lightning_only_against_a_pack() {
     use shared::protocol::CombatLogKind;
     let mut run = super::healer_simc_replay::snapshot_party(264, 90, 2);
     super::healer_simc_replay::engage(&mut run);
-    let (tank, healer) = (run.tank, run.healer);
+    let healer = run.healer;
     let add = run.sources[1];
     run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
     for _ in 0..200 {
@@ -479,7 +479,6 @@ fn restoration_shaman_healing_stream_summon_applies_native_pulse() {
             .all(|event| event.target == Some(tank.to_bits())),
         "the only injured party member must receive each pulse"
     );
-    let _ = party;
 }
 
 #[test]

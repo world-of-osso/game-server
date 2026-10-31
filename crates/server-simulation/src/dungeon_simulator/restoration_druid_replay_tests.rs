@@ -8,7 +8,7 @@ fn restoration_druid_uses_innervate_at_low_mana() {
     use shared::protocol::CombatLogKind;
     let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
     super::healer_simc_replay::engage(&mut run);
-    let (tank, healer) = (run.tank, run.healer);
+    let healer = run.healer;
     {
         let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
         mana.current = mana.max * 0.5;

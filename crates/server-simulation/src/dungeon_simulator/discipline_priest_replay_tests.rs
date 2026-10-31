@@ -12,7 +12,7 @@ fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
 
     let _seed = crate::random::seed_scope(70448);
     let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
-    let (tank, healer) = (run.tank, run.healer);
+    let healer = run.healer;
     let equipment = Equipment::load(run.app.world(), healer, &mut Bindings::default()).unwrap();
     let item = equipment
         .uses()
@@ -255,7 +255,6 @@ fn discipline_apl_applies_pain_and_does_not_refresh_early() {
     let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
     super::healer_simc_replay::engage(&mut run);
     let (tank, healer) = (run.tank, run.healer);
-    let members = run.slots.to_vec();
     let enemy = run.sources[0];
     run.app
         .world_mut()
