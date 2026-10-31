@@ -264,6 +264,12 @@ fn replay(
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
     let mut party = spawn_class_party(&snapshot, spec, level, 1)?;
+    // SimC replays a fixed-length fight against a dummy that never dies.
+    party
+        .app
+        .insert_resource(server_follower_apl::registry::FixedLengthFight {
+            duration: f64::from(duration),
+        });
     engage(&mut party);
     let ClassParty {
         mut app,

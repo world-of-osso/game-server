@@ -408,28 +408,7 @@ fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
                 },
             );
         }
-        // Leave the shields as the only castable actions while the class
-        // build keeps its passives (Shield Discipline among them).
-        let competing = [
-            33206, 62618, 194509, 472433, 47540, 2061, 589, 32379, 8092, 585,
-        ];
-        let mut known: Vec<_> = run
-            .app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(healer)
-            .unwrap()
-            .iter()
-            .filter(|spell| !competing.contains(spell))
-            .collect();
-        for spell in [17, 1253593, 390691] {
-            if !known.contains(&spell) {
-                known.push(spell);
-            }
-        }
-        run.app
-            .world_mut()
-            .entity_mut(healer)
-            .insert(crate::class_progression::KnownSpells::fixture(known));
+        leave_only_shields(&mut run);
         // The plain shield needs fight_remains within mana.pct*6. A dungeon
         // reads it from the enemy's observed time to die, which a training
         // dummy never loses health to give: make this one mortal with a short
@@ -481,6 +460,76 @@ fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
             ) && event.target == Some(ally.to_bits())
                 && event.spell_id == Some(expected)),
             "shield must prefer the already Atoned ally: {events:?}"
+        );
+    }
+}
+
+/// Leave the shields as the healer's only castable actions while the class
+/// build keeps its passives (Shield Discipline among them).
+fn leave_only_shields(run: &mut super::healer_simc_replay::ClassParty) {
+    let healer = run.healer;
+    let competing = [
+        33206, 62618, 194509, 472433, 47540, 2061, 589, 32379, 8092, 585,
+    ];
+    let mut known: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap()
+        .iter()
+        .filter(|spell| !competing.contains(spell))
+        .collect();
+    for spell in [17, 1253593, 390691] {
+        if !known.contains(&spell) {
+            known.push(spell);
+        }
+    }
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::class_progression::KnownSpells::fixture(known));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_plain_shield_follows_the_replay_fight_length() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+    // Against a dummy that never dies, only the replay's fixed fight length
+    // gives fight_remains a value inside the shield's mana gate.
+    for fixed_length in [false, true] {
+        let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+        if fixed_length {
+            run.app
+                .insert_resource(server_follower_apl::registry::FixedLengthFight {
+                    duration: 300.0,
+                });
+        }
+        super::healer_simc_replay::engage(&mut run);
+        leave_only_shields(&mut run);
+        let healer = run.healer;
+        let shielded = |run: &super::healer_simc_replay::ClassParty| {
+            run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.kind == CombatLogKind::CastSuccess
+                        && event.source == Some(healer.to_bits())
+                        && event.spell_id == Some(17)
+                })
+        };
+        for _ in 0..400 {
+            if shielded(&run) {
+                break;
+            }
+            run.app.update();
+        }
+        assert_eq!(
+            shielded(&run),
+            fixed_length,
+            "plain shield with fixed_length={fixed_length}"
         );
     }
 }

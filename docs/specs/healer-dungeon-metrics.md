@@ -43,7 +43,7 @@ The standing healer benchmark replays recorded dungeon incoming hits in the head
 
 Every one of the seven healer specs spawns directly as its class follower (`class_spawn`, spec APL, real Journal gear) in the default party's healer slot. No actor is borrowed from another spec's follower profile and no kit policy is installed. The former `HEALER_BENCHMARK_ALTERNATE_SPEC_BRIDGE` and its `NATIVE_HEALER_POLICY_ABSENT` / `NATIVE_HEALER_PRIMARY_HEAL_ABSENT` rows are retired. Periodic-heal bookkeeping reads the healer's `KnownSpells`.
 
-APL encounter facts (`fight_remains`, `time_to_die`) are observed live from damage to the engaged enemies. A training dummy loses no health, so against SimC-replay dummies they read as unknown (10^9 s), and fight-length gates such as Discipline's plain Power Word: Shield and mana-gated Flash Heal stay closed. Dungeon runs against real creatures do not have this limit.
+In dungeons, APL encounter facts (`fight_remains`, `time_to_die`) are observed live from damage to the engaged enemies. A training dummy loses no health, so the SimC replay inserts `FixedLengthFight` with its configured duration: like SimC's `max_time`, `fight_remains` is then the duration minus elapsed time. Fight-length gates such as Discipline's plain Power Word: Shield read it.
 
 ## Out of scope
 
