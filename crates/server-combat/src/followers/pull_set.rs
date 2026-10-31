@@ -9,8 +9,17 @@ struct LoggedPull {
 }
 
 pub(super) fn log_admission(world: &mut World, tank: Entity, target: Entity) {
-    let count = members(world, target, tank).len();
+    let planned = members(world, target, tank);
+    let count = planned.len();
     let current = LoggedPull { target, count };
+    if world
+        .get::<LoggedPull>(tank)
+        .is_none_or(|previous| previous.target != target)
+    {
+        let mut member_ids: Vec<_> = planned.into_iter().map(Entity::to_bits).collect();
+        member_ids.sort_unstable();
+        debug!(target: "game_server::follower_pull", tank = tank.to_bits(), target = target.to_bits(), ?member_ids, "planned pull closure");
+    }
     if count > 1 && world.get::<LoggedPull>(tank) != Some(&current) {
         info!(target: "game_server::follower_pull", ?tank, ?target, count, "planned pull includes formation or assistance");
     }
