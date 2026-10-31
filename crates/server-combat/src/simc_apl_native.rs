@@ -661,15 +661,9 @@ impl<'a> NativeFacts<'a> {
             .classes
             .iter()
             .flat_map(|class| &class.traits.sub_trees)
-            // SimC76f8118 trait_data.cpp225–236 / util.cpp3250–3276:
-            // display-name hyphens are removed (native Fel-Scarred → felscarred).
-            .find(|tree| {
-                tree.name
-                    .to_ascii_lowercase()
-                    .replace(' ', "_")
-                    .replace('-', "")
-                    == alias
-            })
+            // SimC76f8118 trait_data.cpp225–236: names compare as util::tokenize
+            // output (Fel-Scarred → felscarred, Elune's Chosen → elunes_chosen).
+            .find(|tree| simc_tokenize(&tree.name) == alias)
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
         let traits = self
             .world
@@ -1261,6 +1255,22 @@ fn fixture_add_value(
         "count" => adds.map_or(0.0, |adds| adds.count as f64),
         _ => return Err(format!("unknown native add-event property {property}")),
     })
+}
+
+/// SimC76f8118 util.cpp3234–3279: strip leading `_`/`+`, lowercase letters,
+/// spaces become `_`, keep `_ + . %` and digits, drop everything else.
+fn simc_tokenize(name: &str) -> String {
+    name.trim_start_matches(['_', '+'])
+        .chars()
+        .filter_map(|c| match c {
+            _ if !c.is_ascii() => None,
+            c if c.is_ascii_alphabetic() => Some(c.to_ascii_lowercase()),
+            ' ' => Some('_'),
+            '_' | '+' | '.' | '%' => Some(c),
+            c if c.is_ascii_digit() => Some(c),
+            _ => None,
+        })
+        .collect()
 }
 
 fn bound_spell(bindings: &BTreeMap<String, u32>, alias: &str, kind: &str) -> Result<u32, String> {

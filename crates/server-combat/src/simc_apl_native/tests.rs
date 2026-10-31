@@ -337,3 +337,14 @@ fn native_apl_facts_convert_real_charge_rage_using_native_display_modifier() {
     );
     assert_eq!(f.value("rage").unwrap(), f64::from(raw) / 10.0);
 }
+
+#[test]
+fn simc_apl_native_hero_tree_names_tokenize_like_simc() {
+    // Native sub-tree display names; SimC76f8118 util.cpp3234–3279.
+    assert_eq!(super::simc_tokenize("Elune's Chosen"), "elunes_chosen");
+    assert_eq!(super::simc_tokenize("Fel-Scarred"), "felscarred");
+    assert_eq!(
+        super::simc_tokenize("Keeper of the Grove"),
+        "keeper_of_the_grove"
+    );
+}
