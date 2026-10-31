@@ -23,7 +23,7 @@ fn survival_native_takedown_dispatches_owner_and_owned_pet_damage() {
 
 #[test]
 #[ignore = "native Takedown pet impact after lethal owner damage"]
-fn survival_takedown_pet_hits_survivor_after_owner_kills_primary() {
+fn survival_takedown_pet_cancels_after_owner_kills_primary() {
     use shared::components::Health;
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 3).unwrap();
@@ -33,7 +33,6 @@ fn survival_takedown_pet_hits_survivor_after_owner_kills_primary() {
     engage(&mut run);
     let actor = run.actor;
     let primary = run.targets[0];
-    let survivor = run.targets[1];
     run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
     run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
     cast(&mut run, 1250646, false);
@@ -44,10 +43,10 @@ fn survival_takedown_pet_hits_survivor_after_owner_kills_primary() {
         && event.target == Some(primary.to_bits()) && event.spell_id == Some(1253859)
         && event.kind == CombatLogKind::Damage && event.amount > 0),
         "the owner impact must kill the primary");
-    assert!(events.iter().any(|event| event.source == Some(pet.to_bits())
-        && event.target == Some(survivor.to_bits()) && event.spell_id == Some(1253862)
+    assert!(!events.iter().any(|event| event.source == Some(pet.to_bits())
+        && event.spell_id == Some(1253862)
         && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))),
-        "the pet's native area must still reach a living enemy");
+        "the single-target pet impact must cancel after its primary dies");
 }
 
 fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
