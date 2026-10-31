@@ -45,14 +45,7 @@ fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32, 
     // sc_hunter.cpp5893–5900: the real primary tick supplies the budget;
     // native root effect3 owns the excluded share, child212680 owns the area.
     let excluded = script_effect_value(world, ctx.caster, EXPLOSIVE, 2) / 100.0;
-    combat::spell_cast::cast_triggered_with_effect0_amount(
-        world,
-        ctx.caster,
-        CLEAVE,
-        Some(primary),
-        ctx.depth + 1,
-        damage * (1.0 - excluded),
-    );
+    launch_cleave(world, ctx, primary, damage * (1.0 - excluded));
     // sc_hunter.cpp5901–5906: only the actual equipped four-piece supplies
     // effect2 milliseconds, once per primary tick rather than each cleave hit.
     if auras::has_aura(world, ctx.caster, MID2_FOUR_PIECE) {
@@ -64,15 +57,37 @@ fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32, 
     }
 }
 
+fn launch_cleave(world: &mut World, ctx: &EffectCtx, primary: Entity, amount: f32) {
+    let Some(mut cleave) = combat::spell_cast::load_triggered_spell(world, ctx.caster, CLEAVE)
+    else {
+        return;
+    };
+    let Some(effect) = cleave.effects.iter_mut().find(|effect| effect.index == 0) else {
+        return;
+    };
+    effect.base_points = amount;
+    cleave.cast_effect0_amount = Some(amount);
+    combat::spell_cast::launch_triggered_spell_with_primary(
+        world,
+        ctx.caster,
+        &cleave,
+        None,
+        Some(primary),
+        ctx.depth + 1,
+    );
+}
+
 /// sc_hunter.cpp5872–5878: only secondary recipients; root effect2 supplies
 /// the reduced-AoE cap. Coefficients and geometry remain native.
 pub(super) fn cleave_plan(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
-    explicit: Option<Entity>,
+    _explicit: Option<Entity>,
 ) -> TargetPlan {
-    let primary = explicit.expect("Explosive cleave retains its producing tick's primary");
+    let primary = spell
+        .cast_primary_target
+        .expect("Explosive cleave retains its producing tick's primary");
     let center = targets::position(world, primary).expect("actual Explosive primary position");
     let radius = targets::radius(&spell.effects[0], 1);
     let mut units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
