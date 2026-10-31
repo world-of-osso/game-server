@@ -67,6 +67,8 @@ const SCALD: u32 = 450746;
 const MOLTEN_FURY: u32 = 457803;
 const MASTER_OF_FLAME: u32 = 384174;
 const MASTER_OF_FLAME_FIREBALL: u32 = 1217750;
+const SPONTANEOUS_COMBUSTION: u32 = 451875;
+const FIRE_BLAST: u32 = 108853;
 
 #[derive(Component, Default)]
 struct FireProcState {
@@ -379,6 +381,16 @@ fn refund_from_the_ashes(world: &mut World, ctx: &EffectCtx, _target: Entity, _c
 }
 
 fn on_fire_cast(world: &mut World, caster: Entity, spell_id: u32, _depth: u8) {
+    if spell_id == COMBUSTION && selected(world, caster, SPONTANEOUS_COMBUSTION) {
+        // SimC76f8118 sc_mage.cpp:3531–3536 restores the native talent's
+        // number of Fire Blast charges when Combustion is cast.
+        let count = script_effect_value(world, caster, SPONTANEOUS_COMBUSTION, 0).max(0.0) as u8;
+        let category = world.resource::<SpellStore>().get(FIRE_BLAST)
+            .and_then(|spell| spell.categories.as_ref())
+            .expect("Fire Blast charge category")
+            .charge_category;
+        spell_cast::restore_charges(world, caster, category, count);
+    }
     if spell_id == METEORITE_IMPACT && selected(world, caster, PYROCOSM) {
         // SimC76f8118 sc_mage.cpp4783–4792: once per Meteorite execution,
         // not per recipient; the native effect4 value is milliseconds.
