@@ -35,13 +35,21 @@ fn cast_after_slam(world: &mut World, caster: Entity, spell: &SpellInfo, _: bool
         warn!(?primary, "Concussive Slam primary position unavailable");
         return;
     };
-    let Some(mut child) = combat::spell_cast::load_triggered_spell(world, CONCUSSIVE_SLAM, 1) else {
+    let Some(mut child) = combat::spell_cast::load_triggered_spell(world, CONCUSSIVE_SLAM, 1)
+    else {
         return;
     };
     child.cast_destination = Some(position.to_array());
     // SimC sc_warrior.cpp3443–3452, 3534–3535 executes the secondary area
     // after Slam even if the primary died, retaining it for exclusion.
-    if !combat::spell_cast::launch_triggered_spell_with_primary(world, caster, &child, None, Some(primary), 1) {
+    if !combat::spell_cast::launch_triggered_spell_with_primary(
+        world,
+        caster,
+        &child,
+        None,
+        Some(primary),
+        1,
+    ) {
         warn!(?caster, ?primary, "Native Concussive Slam payload refused");
     }
 }

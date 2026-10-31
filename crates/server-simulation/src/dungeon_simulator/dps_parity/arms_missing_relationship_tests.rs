@@ -156,14 +156,43 @@ fn arms_mid2_concussive_slam_hits_survivors_after_lethal_slam() {
     let survivor = run.targets[1];
     assert!(owned_stacks(&run, actor, 1296643) > 0);
     fund(&mut run);
-    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
-    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
-    execute(run.app.world_mut(), actor, Execution::Spell(1464, primary, Some(primary))).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(primary)
+        .remove::<crate::creature_scripts::TrainingDummy>();
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    execute(
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(1464, primary, Some(primary)),
+    )
+    .unwrap();
     advance(&mut run, 40);
-    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
-    assert!(damage(&run, 1464).iter().any(|event| event.target == Some(primary.to_bits()) && event.amount > 0));
-    assert!(damage(&run, 1300660).iter().any(|event| event.target == Some(survivor.to_bits()) && event.amount > 0));
-    assert!(!damage(&run, 1300660).iter().any(|event| event.target == Some(primary.to_bits())));
+    assert!(
+        run.app
+            .world()
+            .get::<Health>(primary)
+            .is_some_and(|health| health.current <= 0.0)
+    );
+    assert!(
+        damage(&run, 1464)
+            .iter()
+            .any(|event| event.target == Some(primary.to_bits()) && event.amount > 0)
+    );
+    assert!(
+        damage(&run, 1300660)
+            .iter()
+            .any(|event| event.target == Some(survivor.to_bits()) && event.amount > 0)
+    );
+    assert!(
+        !damage(&run, 1300660)
+            .iter()
+            .any(|event| event.target == Some(primary.to_bits()))
+    );
 }
 
 #[test]
