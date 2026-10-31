@@ -8,7 +8,7 @@ use crate::spell_cast::targets;
 
 pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
     let Some((caster_radius, target_radius)) =
-        super::unintended_reach::action_unintended_reach(world, caster, spell, target)
+        super::unintended_reach::spell_unintended_reach(world, caster, spell, target)
     else {
         return false;
     };
