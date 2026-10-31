@@ -13,6 +13,7 @@ enum Assignment {
         otherwise: Expression,
     },
     Reset,
+    Add(Expression),
     Max(Expression),
     Min(Expression),
 }
@@ -339,6 +340,10 @@ impl Program {
                 selected.evaluate(&bound)?
             }
             Assignment::Reset => *self.defaults.get(name).expect("declared variable default"),
+            // SimC76f8118 variable.cpp269–271.
+            Assignment::Add(expression) => {
+                selection.variables.values[name] + expression.evaluate(&bound)?
+            }
             Assignment::Max(expression) => {
                 selection.variables.values[name].max(expression.evaluate(&bound)?)
             }
@@ -691,6 +696,7 @@ fn parse_assignment(options: &BTreeMap<String, String>) -> Result<Assignment, St
             otherwise: option_expression(options, "value_else")?,
         }),
         "reset" => Ok(Assignment::Reset),
+        "add" => Ok(Assignment::Add(option_expression(options, "value")?)),
         "max" => Ok(Assignment::Max(option_expression(options, "value")?)),
         "min" => Ok(Assignment::Min(option_expression(options, "value")?)),
         _ => Err(format!("unsupported APL variable operation {operation}")),
