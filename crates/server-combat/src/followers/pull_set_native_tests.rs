@@ -108,10 +108,13 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         .expect("the tank's native Avenger's Shield must start against the planned pull");
     for _ in 0..100 {
         h.advance(1);
-        if helpers
-            .iter()
-            .all(|&helper| crate::combat_refs::has_active_reference_to(h.app.world(), helper, tank))
-        {
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(31935)
+                && helpers
+                    .iter()
+                    .any(|helper| event.target == Some(helper.to_bits()))
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
             break;
         }
     }
