@@ -58,7 +58,7 @@ fn after_tick(world: &mut World, ctx: &EffectCtx, primary: Entity, damage: f32, 
 }
 
 fn launch_cleave(world: &mut World, ctx: &EffectCtx, primary: Entity, amount: f32) {
-    let Some(mut cleave) = combat::spell_cast::load_triggered_spell(world, ctx.caster, CLEAVE)
+    let Some(mut cleave) = combat::spell_cast::load_triggered_spell(world, CLEAVE, ctx.depth + 1)
     else {
         return;
     };
