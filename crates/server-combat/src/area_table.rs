@@ -220,6 +220,10 @@ mod tests {
         assert!(areas.permits_flying(14971, 2662));
         assert!(!areas.permits_flying(15544, 2662));
         assert!(!areas.permits_flying(14971, 1));
+        assert_eq!(areas.flight_permission(14971, 2662), Some(true));
+        assert_eq!(areas.flight_permission(15544, 2662), Some(false));
+        assert_eq!(areas.flight_permission(14971, 1), None);
+        assert_eq!(areas.flight_permission(u32::MAX, 2662), None);
     }
 
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
