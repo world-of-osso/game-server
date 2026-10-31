@@ -156,6 +156,7 @@ fn record_consumed_orb_healing(
 fn orb_healing_multiplier(
     world: &World,
     caster: Entity,
+    _: Entity,
     spell: &combat::spell_info::SpellInfo,
 ) -> f32 {
     if spell.id != TRIGGER || world.get::<ConsumingOrbs>(caster).is_none() {

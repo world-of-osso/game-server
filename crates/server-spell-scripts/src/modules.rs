@@ -339,6 +339,7 @@ register_modules! {
     paladin_consecration: (9804, "modules/paladin_consecration.rs"),
     paladin_refining_fire: (9806, "modules/paladin_refining_fire.rs"),
     paladin_vengeful_wrath: (9807, "modules/paladin_vengeful_wrath.rs"),
+    paladin_word_of_glory: (9808, "modules/paladin_word_of_glory.rs"),
     paladin_edict: (1001, "modules/paladin_edict.rs"),
     paladin_masterwork: (9802, "modules/paladin_masterwork.rs"),
     paladin_sacred_weapon: (9803, "modules/paladin_sacred_weapon.rs"),
