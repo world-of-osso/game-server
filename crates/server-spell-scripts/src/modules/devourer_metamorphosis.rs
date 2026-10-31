@@ -26,7 +26,7 @@ struct VoidrushUntil(f64);
 #[derive(Component, Default)]
 struct VoidSurges {
     available: u8,
-    pending: Vec<f64>,
+    pending: Vec<(f64, Entity)>,
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -132,6 +132,9 @@ fn trigger_voidsurge(world: &mut World, caster: Entity, spell: &combat::spell_in
     if state.available & bit == 0 {
         return;
     }
+    let target = spell
+        .cast_primary_target
+        .expect("Voidsurge action retains primary target");
     let volatile = auras::has_aura(world, caster, 1272462);
     let delay = world
         .resource::<combat::spell_info::SpellStore>()
@@ -148,9 +151,9 @@ fn trigger_voidsurge(world: &mut World, caster: Entity, spell: &combat::spell_in
         .get_mut::<VoidSurges>(caster)
         .expect("active Voidsurge state");
     state.available &= !bit;
-    state.pending.push(due);
+    state.pending.push((due, target));
     if volatile {
-        state.pending.push(due);
+        state.pending.push((due, target));
     }
     if volatile {
         auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
@@ -174,15 +177,17 @@ fn update_voidsurge(world: &mut World) {
                 .expect("Voidsurge state");
             let (ready, later): (Vec<_>, Vec<_>) = std::mem::take(&mut state.pending)
                 .into_iter()
-                .partition(|at| *at <= now);
+                .partition(|(at, _)| *at <= now);
             state.pending = later;
             ready
         };
-        for _ in due {
-            // SimC76f8118 sc_demon_hunter.cpp5612–5659: Voidsurge is unlimited AoE.
-            // Native 1246160 selects enemies around the caster, not the earlier primary.
-            if !spell_cast::try_cast_triggered(world, caster, 1246160, None, 1) {
-                error!(?caster, "native Voidsurge was refused");
+        for (_, target) in due {
+            // SimC76f8118 sc_demon_hunter.cpp1534–1540 skips a dead delayed target.
+            if !spell_cast::targets::is_alive(world, target) {
+                continue;
+            }
+            if !spell_cast::try_cast_triggered(world, caster, 1246160, Some(target), 1) {
+                error!(?caster, ?target, "native Voidsurge was refused");
             }
         }
     }
