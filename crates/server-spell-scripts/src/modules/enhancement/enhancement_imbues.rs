@@ -50,9 +50,13 @@ pub(super) fn register(scripts: &mut AuraScripts) {
 
 fn apply_flametongue_modifier(world: &mut World, unit: Entity, aura: &AuraInstance) {
     super::enhancement_elemental_weapons::refresh(world, unit, aura);
-    let elemental = world.get::<ActiveSpec>(unit).is_some_and(|spec| spec.0 == 262);
+    let elemental = world
+        .get::<ActiveSpec>(unit)
+        .is_some_and(|spec| spec.0 == 262);
     let selected = world.get::<TraitLoadout>(unit).is_some_and(|traits| {
-        traits.active_talent_spells().any(|entry| entry.spell_id == FLAMETONGUE_TALENT)
+        traits
+            .active_talent_spells()
+            .any(|entry| entry.spell_id == FLAMETONGUE_TALENT)
     });
     // SimC76f8118 sc_shaman.cpp2814–2818/2855–2859: selected main-hand imbue.
     if elemental && selected {
