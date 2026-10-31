@@ -4,17 +4,19 @@ use std::path::Path;
 #[test]
 #[ignore = "native replay CLI entry point"]
 fn native_replay_cli_driver() {
-    let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
-        .canonicalize()
-        .unwrap();
-    assert_eq!(
-        crate::test_data::world_db_path().canonicalize().unwrap(),
-        canonical
-    );
     let path = std::env::var("HEALER_TANK_TIMELINE").expect("HEALER_TANK_TIMELINE is required");
     let spec = std::env::var("HEALER_TANK_SPEC").expect("HEALER_TANK_SPEC is required");
     let source = std::env::var("HEALER_TANK_SOURCE").expect("HEALER_TANK_SOURCE is required");
     let mode = std::env::var("HEALER_TANK_MODE").unwrap_or_else(|_| "tank".into());
+    if source != "simc" || mode != "tank" {
+        let canonical = Path::new("/home/osso/Projects/world-of-osso/game-server/data/world.db")
+            .canonicalize()
+            .unwrap();
+        assert_eq!(
+            crate::test_data::world_db_path().canonicalize().unwrap(),
+            canonical
+        );
+    }
     let report = match (source.as_str(), mode.as_str(), spec.as_str()) {
         ("simc", "healer", _) => {
             let duration = std::env::var("HEALER_TANK_DURATION")
