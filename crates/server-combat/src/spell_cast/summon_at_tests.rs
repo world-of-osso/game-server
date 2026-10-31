@@ -2,9 +2,64 @@
 //! Purging Breath supplies an authentic non-matrix trigger binding: all nine
 //! matrix roots lack such bindings; their lifecycle is tested without guessing one.
 use bevy::prelude::*;
-use shared::components::{Npc, Position, UnitSummonedBy};
+use shared::components::{Health, Npc, Position, UnitSummonedBy};
 
 use super::test_harness::*;
+
+#[test]
+fn party_area_spell_skips_native_summoned_trigger_and_hits_enemy() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use crate::persistence::ClientId;
+
+    let mut h = harness(Vec::new(), &[1122, 1449], 8).unwrap();
+    let db_path = &world_db().unwrap().powers_db;
+    h.app
+        .insert_resource(crate::world_data::load_world_data(db_path));
+    let owner = spawn_player(&mut h.app, 9, 1.0);
+    h.app.world_mut().entity_mut(h.caster).insert(ClientId(1));
+    h.app.world_mut().entity_mut(owner).insert(ClientId(2));
+    let online: OnlineView = [(1, h.caster), (2, owner)]
+        .into_iter()
+        .map(|(id, entity)| {
+            (
+                id,
+                OnlineMember {
+                    entity: entity.to_bits(),
+                    name: format!("Party{id}"),
+                    class: 8,
+                    level: 80,
+                    portrait: default(),
+                    dungeon_difficulty: 1,
+                    raid_difficulty: default(),
+                },
+            )
+        })
+        .collect();
+    let mut group = GroupRegistry::default();
+    group.invite(1, "Party2", &online);
+    group.respond_invite(2, true);
+    assert!(group.is_in_same_group(1, 2));
+    h.app.insert_resource(group);
+    let enemy_pos = *h.app.world().get::<Position>(h.npc).unwrap();
+    let position = [enemy_pos.x, -enemy_pos.z, enemy_pos.y, 0.0];
+    let summon = crate::zones::summon_creature(h.app.world_mut(), owner, 47319, position)
+        .expect("native Leap Target must spawn");
+    h.app
+        .world_mut()
+        .entity_mut(summon)
+        .insert(UnitSummonedBy(owner.to_bits()));
+    h.advance(1);
+    let world = h.app.world_mut();
+    let before = world.get::<Health>(summon).unwrap().current;
+    let enemy_before = world.get::<Health>(h.npc).unwrap().current;
+    h.cast_and_deliver(1449, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(h.health(summon), before, "party area damage hit the summon");
+    assert!(
+        h.health(h.npc) < enemy_before,
+        "party area spell must still hit the enemy"
+    );
+}
 
 #[test]
 fn summon_at_rune_weapon_is_owned_and_expires() {

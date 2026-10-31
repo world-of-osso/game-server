@@ -228,7 +228,11 @@ impl EntryProjection {
         } else {
             self.template.entry
         };
-        let flags = self.unit_flags_for(actor, initial_spawn);
+        let mut flags = self.unit_flags_for(actor, initial_spawn);
+        // TC Creature::InitEntry: trigger creatures are always uninteractible.
+        if self.template.trigger {
+            flags |= UnitFlags::NOT_SELECTABLE;
+        }
         actor.insert((
             Npc {
                 template_id: entry,
