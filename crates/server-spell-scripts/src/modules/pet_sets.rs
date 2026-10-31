@@ -121,16 +121,16 @@ pub(super) fn has_cast(parent: u32) -> bool {
 
 pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id == 19574 {
-        cast_thundering_hooves(world, caster, spell);
+        cast_thundering_hooves(world, caster);
     }
     for rule in CASTS.iter().filter(|rule| rule.parent == spell.id) {
-        cast_stomps(world, caster, spell, rule);
+        cast_stomps(world, caster, rule);
     }
 }
 
 // SimC76f8118 sc_hunter.cpp3335–3336,6753–6761: Bestial Wrath
 // triggers a scaled Stomp from the permanent pets, excluding Nature's Ally.
-fn cast_thundering_hooves(world: &mut World, caster: Entity, spell: &SpellInfo) {
+fn cast_thundering_hooves(world: &mut World, caster: Entity) {
     const TALENT: u32 = 459693;
     if !world
         .get::<KnownSpells>(caster)
@@ -138,13 +138,6 @@ fn cast_thundering_hooves(world: &mut World, caster: Entity, spell: &SpellInfo) 
     {
         return;
     }
-    let Some(target) = spell.cast_primary_target else {
-        warn!(
-            ?caster,
-            "Bestial Wrath lacks a target for Thundering Hooves"
-        );
-        return;
-    };
     let percent = spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
     let mut stomp = world
         .resource::<SpellStore>()
@@ -155,7 +148,7 @@ fn cast_thundering_hooves(world: &mut World, caster: Entity, spell: &SpellInfo) 
     let depth = spell_cast::next_trigger_depth(world);
     for pet in combat::hunter_pet::active_owned_pets(world, caster) {
         if !combat::hunter_pet::is_stabled_guardian(world, pet) {
-            spell_cast::launch_triggered_spell(world, pet, &stomp, Some(target), depth);
+            spell_cast::launch_triggered_spell(world, pet, &stomp, None, depth);
         }
     }
 }
@@ -175,7 +168,7 @@ fn read_echo(world: &World, caster: Entity, rule: &StompCast) -> Option<SpellInf
     Some(spell)
 }
 
-fn cast_stomps(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &StompCast) {
+fn cast_stomps(world: &mut World, caster: Entity, rule: &StompCast) {
     let selected = world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == rule.spec)
@@ -186,21 +179,13 @@ fn cast_stomps(world: &mut World, caster: Entity, spell: &SpellInfo, rule: &Stom
     if !selected && echo.is_none() {
         return;
     }
-    let Some(target) = spell.cast_primary_target else {
-        warn!(
-            ?caster,
-            spell = spell.id,
-            "Native pet Stomp lacks selected primary"
-        );
-        return;
-    };
     let depth = spell_cast::next_trigger_depth(world);
     for pet in combat::hunter_pet::active_owned_pets(world, caster) {
         if selected {
-            spell_cast::cast_triggered(world, pet, rule.payload, Some(target), depth);
+            spell_cast::cast_triggered(world, pet, rule.payload, None, depth);
         }
         if let Some(echo) = &echo {
-            spell_cast::launch_triggered_spell(world, pet, echo, Some(target), depth);
+            spell_cast::launch_triggered_spell(world, pet, echo, None, depth);
         }
     }
 }
