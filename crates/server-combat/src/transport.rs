@@ -242,6 +242,8 @@ pub(crate) fn sync_deck_passengers(world: &mut World) {
         &Rotation,
         Option<&TransportPassenger>,
         Option<&shared::components::Player>,
+        Option<&shared::components::PlayerMotion>,
+        Option<&crate::creature_ai::flight_follow::FlightFollow>,
         Option<&Disembarking>,
     ), Or<(
         With<shared::components::Player>,
@@ -250,7 +252,17 @@ pub(crate) fn sync_deck_passengers(world: &mut World) {
     let updates: Vec<_> = actors
         .iter(world)
         .map(
-            |(entity, map, position, rotation, passenger, player, disembarking)| {
+            |(
+                entity,
+                map,
+                position,
+                rotation,
+                passenger,
+                player,
+                motion,
+                flight_follow,
+                disembarking,
+            )| {
                 let feet = Vec3::new(position.x, position.y, position.z);
                 let ship = world
                     .get_resource::<crate::ground::GroundMap>()
@@ -262,13 +274,22 @@ pub(crate) fn sync_deck_passengers(world: &mut World) {
                     *rotation,
                     passenger.copied(),
                     player.is_some(),
+                    motion.is_some_and(|motion| {
+                        motion.contains(shared::components::PlayerMotion::FLYING)
+                    }) || flight_follow.is_some(),
                     disembarking.is_some(),
                     ship,
                 )
             },
         )
         .collect();
-    for (actor, map, position, rotation, passenger, player, disembarking, ship) in updates {
+    for (actor, map, position, rotation, passenger, player, flying, disembarking, ship) in updates {
+        if flying {
+            if passenger.is_some() {
+                disembark(world, actor);
+            }
+            continue;
+        }
         if disembarking {
             if ship.is_none() {
                 world.entity_mut(actor).remove::<Disembarking>();

@@ -50,7 +50,7 @@ fn spawn_druid(h: &mut crate::spell_cast::test_harness::Harness, position: Posit
 #[test]
 fn flying_follower_leaves_moving_ship_and_follows_owner() {
     use shared::components::{TransportPassenger, TransportState};
-    use std::time::Duration;
+    use std::{collections::HashMap, sync::Arc, time::Duration};
 
     let at = Position {
         x: 150.557,
@@ -94,11 +94,24 @@ fn flying_follower_leaves_moving_ship_and_follows_owner() {
             orientation: 0.0,
         },
     ));
-    h.app.insert_resource(GroundMap::with_area_samples(&[(
+    let mut ground = GroundMap::with_area_samples(&[(
         2662,
         Vec3::new(airborne.x, airborne.y, airborne.z),
         9001,
-    )]));
+    )]);
+    let origin = Vec3::new(deck.x, deck.y, deck.z);
+    let hull = Arc::new(shared::los::LosTile::build(
+        0,
+        0,
+        vec![
+            origin + Vec3::new(-4.0, 0.0, -4.0),
+            origin + Vec3::new(4.0, 0.0, -4.0),
+            origin + Vec3::new(0.0, 0.0, 4.0),
+        ],
+        vec![[0, 1, 2]],
+    ));
+    ground.set_transport_hulls(HashMap::from([(map, vec![(ship, hull)])]));
+    h.app.insert_resource(ground);
     let db = rusqlite::Connection::open_in_memory().unwrap();
     db.execute_batch("CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER, AreaName_lang TEXT, MountFlags INTEGER); INSERT INTO area_table VALUES (9001,0,2662,0,0,0,'Flight fixture',2);").unwrap();
     h.app
@@ -114,6 +127,25 @@ fn flying_follower_leaves_moving_ship_and_follows_owner() {
         following.y > deck.y,
         "follower must ascend toward its flying owner"
     );
+    h.app.world_mut().entity_mut(owner).insert((
+        deck,
+        TransportPassenger {
+            transport: ship.to_bits(),
+            position: [0.0; 3],
+            orientation: 0.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(follower).insert(deck);
+    crate::transport::sync_deck_passengers(h.app.world_mut());
+    crate::transport::sync_deck_passengers(h.app.world_mut());
+    assert!(
+        h.app.world().get::<TransportPassenger>(owner).is_none(),
+        "flying owner must detach"
+    );
+    assert!(
+        h.app.world().get::<TransportPassenger>(follower).is_none(),
+        "flying follower must not reboard on deck contact"
+    );
     h.app
         .world_mut()
         .resource_mut::<Time<Fixed>>()
@@ -121,7 +153,7 @@ fn flying_follower_leaves_moving_ship_and_follows_owner() {
     crate::transport::advance_ships(h.app.world_mut());
     assert_eq!(
         *h.app.world().get::<Position>(follower).unwrap(),
-        following,
+        deck,
         "ship movement must not pull the flying follower back"
     );
 }
