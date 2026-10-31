@@ -14,7 +14,8 @@ server-pet-battle = { path = "../server-pet-battle" }
 # Only explicit fixture consumers enable these; ordinary server builds stay unchanged.
 blake3 = { version = "1.8", optional = true }
 tempfile = { version = "3", optional = true }
-game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "21a30a47493d3609d7ad7ce64ddb248294f1cab5", default-features = false, optional = true }
+# Resolve shipped WMO collision assets using their product/build receipts.
+game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "21a30a47493d3609d7ad7ce64ddb248294f1cab5", default-features = false }
 # Projected runtime ground metadata; renderer-only modules stay disabled.
 wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
@@ -56,7 +57,7 @@ csv = "1.4"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [features]
-test-support = ["server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile", "dep:game-engine-core"]
+test-support = ["server-core/test-support", "server-map-rules/test-support", "dep:blake3", "dep:tempfile"]
 # Private debug-peer harness; release builds reject it and deploy never enables it.
 native-proof-hold-persistence = []
 # Diagnostic: log per-system wall time every 10 s (enables Bevy system spans).
@@ -68,8 +69,6 @@ server-follower-policy = { path = "../server-follower-policy", features = ["test
 server-map-rules = { path = "../server-map-rules", features = ["test-support"] }
 # Content-address frozen fixture inputs; already present in the workspace graph.
 blake3 = "1.8"
-# Frozen engine-free AssistedCombat catalog/predicates; parity reuses authored decisions verbatim.
-game-engine-core = { git = "ssh://git@github.com/world-of-osso/game-engine.git", rev = "21a30a47493d3609d7ad7ce64ddb248294f1cab5", default-features = false }
 # Measure publication bytes with the exact codec used by Lightyear messages.
 lightyear_serde = "0.28"
 # Bake concrete collision fixtures for fleeing's real Detour path boundary.
