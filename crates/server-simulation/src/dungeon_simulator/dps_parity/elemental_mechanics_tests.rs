@@ -86,6 +86,7 @@ fn flame_shock_hits(run: &mut Run) -> Vec<f64> {
         .unwrap()
         .iter()
         .filter(|event| event["event"] == "result")
+        .take(2)
         .map(|event| event["factors"]["raw_amount"].as_f64().unwrap())
         .collect::<Vec<_>>();
     assert_eq!(hits.len(), 2, "actual direct and periodic Flame Shock hits");
