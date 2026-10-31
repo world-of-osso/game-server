@@ -401,6 +401,28 @@ fn frost_reapers_mark_earns_echoing_fury_rune_discount() {
 }
 
 #[test]
+#[ignore = "native Echoing Fury refusal after caster death"]
+fn frost_echoing_fury_refusal_after_caster_death_does_not_panic() {
+    use shared::components::Health;
+
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    assert!(auras::has_aura(run.app.world(), actor, 1265855));
+    let mut spell = run.app.world().resource::<crate::spell_info::SpellStore>()
+        .get(439843).unwrap().clone();
+    spell.cast_primary_target = Some(run.targets[0]);
+    run.app.world_mut().get_mut::<Health>(actor).unwrap().current = 0.0;
+    assert!(!crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(), actor, 441416, Some(actor), 1,
+    ), "the native self-targeted grant must refuse a dead caster");
+    crate::spell_cast::script_registry::after_elemental_launch(
+        run.app.world_mut(), actor, &spell, true,
+    );
+    assert!(!auras::has_aura(run.app.world(), actor, 441416));
+}
+
+#[test]
 #[ignore = "real Exterminate second hit applies selected Wither Away Frost Fever"]
 fn frost_wither_away_real_exterminate_applies_fever() {
     let _seed = crate::random::seed_scope(251);
