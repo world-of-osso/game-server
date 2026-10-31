@@ -122,6 +122,14 @@ const DOORS: &[Door] = &[
         entry: 376640,
         encounter: 2558,
     },
+    // FLOODGATE_DAM_GATE_LOG_CORRELATED: WCL 67c3WanVygd4ZvCt fight 1
+    // crosses the gate plane between 1403282 and 1404540 ms, after Swampface
+    // ends at 1398410 ms. The exact retail trigger is not recorded.
+    Door {
+        map_id: 2773,
+        entry: 505620,
+        encounter: 3053,
+    },
     // TC a352b1fa instance_darkflame_cleft.cpp doorData: GO_CATACOMBS_GATE, The Candle King.
     Door {
         map_id: 2651,
@@ -151,18 +159,34 @@ pub(crate) fn update_doors(world: &mut World, map: InMap) {
     if !DOORS.iter().any(|door| door.map_id == map.map_id) {
         return;
     }
-    let objects: Vec<(Entity, u32)> = world
-        .query::<(Entity, &InMap, &shared::protocol::GameObjectInfo)>()
+    let objects: Vec<(Entity, u32, shared::components::Position)> = world
+        .query::<(
+            Entity,
+            &InMap,
+            &shared::protocol::GameObjectInfo,
+            &shared::components::Position,
+        )>()
         .iter(world)
-        .filter(|(_, copy, _)| **copy == map)
-        .map(|(object, _, info)| (object, info.entry))
+        .filter(|(_, copy, ..)| **copy == map)
+        .map(|(object, _, info, position)| (object, info.entry, *position))
         .collect();
-    for (object, entry) in objects {
-        let doors: Vec<u32> = DOORS
+    for (object, entry, position) in objects {
+        let mut doors: Vec<u32> = DOORS
             .iter()
             .filter(|door| door.map_id == map.map_id && door.entry == entry)
             .map(|door| door.encounter)
             .collect();
+        // Spawn 30001653 is the invisible collision proxy for the dam gate.
+        // The same entry also appears at the earlier M.O.M.M.A. location.
+        if map.map_id == 2773
+            && entry == 528436
+            && (Vec3::new(position.x, position.y, position.z)
+                - Vec3::new(1549.06, 335.489, 2745.15))
+            .length_squared()
+                < 0.01
+        {
+            doors.push(3053);
+        }
         if doors.is_empty() {
             continue;
         }

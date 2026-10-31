@@ -363,7 +363,18 @@ pub fn spawn_parity_attacker(
         },
         difficulty,
     )?;
-    let unit = spawning::spawn(world, owner, profile)?;
+    let source = super::class_profiles::read_profiles()?
+        .into_iter()
+        .find(|source| source.spec_id == spec_id)
+        .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
+    let unit = super::class_spawn::spawn_class(
+        world,
+        owner,
+        &source,
+        0,
+        0,
+        super::class_spawn::GearSource::Journal,
+    )?;
     // A living native owner can maintain /startattack without landing out-of-range swings.
     // No LeaderProfile is installed: the owner runs no follower rotation.
     world.entity_mut(owner).insert(Position {

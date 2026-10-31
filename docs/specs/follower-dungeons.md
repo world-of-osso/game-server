@@ -54,6 +54,8 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 `FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. The landing lies under WMO liquid type 941 at Y 278.167; a live-party water crossing remains untested. NPC fall damage remains unmodeled.
 
+`FLOODGATE_DAM_GATE_LOG_CORRELATED`: Swampface Done opens Dam Gate 505620 and its collision proxy 528436 at spawn 30001653. The other 528436 placement stays unchanged. WCL `67c3WanVygd4ZvCt`/1 crosses the gate plane after Swampface; the exact Retail trigger is unknown.
+
 ## Ara-Kara ambient flyers and eggs
 
 TDB's Jabbing Flyer 216341 spawns 30003831, 30003832, 30003838, 30003846, 30003848, 30003853 and 30003854 carry both PC and NPC immunity and the `[DNT] Cosmetic Spawn State Dead` aura 387851. Treat these authored spawns as ambient; do not infer an unlock from combat logs. Other Flyer spawns have no such immunity override. WCL `XCmNaPcWdFA4kJ8D` fight 9 and `qLNnp4x613mv2Ctz` fight 28 show attackable Flyers near unflagged placements, but do not identify their TDB spawn GUIDs.
@@ -94,9 +96,9 @@ Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` conta
 
 ## Dawnbreaker flight traversal
 
-`DAWNBREAKER_FLIGHT_TRAVERSAL` (planned, not implemented): native AreaTable 14971 on map 2662 has MountFlags 15, including the flying-mount bit 0x2. Subareas 15544–15547 have MountFlags 13, without that bit. TC 15e0ed76 `DBCEnums.h:162–170` defines these flags; `Unit.cpp:8405–8442` also permits mount-restriction auras to override them. Native spell 449208 carries aura 336 with mount flags 15, but its application in the sampled Shadowcrown-to-Anub'ikkaj transition is not established.
+`DAWNBREAKER_FLIGHT_TRAVERSAL`: native AreaTable 14971 on map 2662 has MountFlags 15, including the flying-mount bit 0x2. Subareas 15544–15547 have MountFlags 13, without that bit. TC 15e0ed76 `DBCEnums.h:162–170` defines these flags; `Unit.cpp:8405–8442` also permits mount-restriction auras to override them. Native spell 449208 carries aura 336 with mount flags 15, but its application in the sampled Shadowcrown-to-Anub'ikkaj transition is not established. WCL `67c3WanVygd4ZvCt` fight 17 records Ohn'ahra's Gusts 388367, Ground Skimming 404184 and Flight Style: Skyriding 404464 on party members. The dungeon's flight traversal uses player flight, not ship passenger placement.
 
-Where flying is allowed, an airborne leader on a flying mount leads followers that mount and fly-follow in three dimensions without the walking navmesh. Followers land on the navmesh floor connected to the leader's landing point. The simulator leader uses this rule for the Shadowcrown-to-Anub'ikkaj leg. This is an approved design, not evidence that follower flight works today.
+Where flying is allowed, an airborne leader leads followers that fly-follow in three dimensions without the walking navmesh, using their own form or flying mount. Followers land on a navmesh floor connected to the leader's landing point. Simulator leader flight legs remain separate work. The moving type-15 Dawnbreaker is a visual and collision object, not the traversal mechanism; boss placement stays on the sourced static collision floor.
 ## Uldaman live clear
 
 On 2026-10-30, Uldawalk entered map 2451, difficulty 205, through ordinary LFG 2465 with Garrick, Crenna, Shuja and Meredy. Instance 13 completed Lost Dwarves 2555, Bromach 2556, Sentinel Talondras 2557, Emberon 2558 and Chrono-Lord Deios 2559 without a server restart. All five were alive after Deios. The client reconnected during host load; the same server and copy continued. `list-achievements` shows character achievement 16278, Uldaman: Legacy of Tyr, earned after the genuine Deios kill.
