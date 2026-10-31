@@ -3,7 +3,7 @@ use shared::components::UnitFlags;
 
 #[test]
 fn eirich_proximity_unlock_is_copy_local_and_persists_on_reload() {
-    let (mut h, _, map) = bound_boss_at_difficulty(210108, 2652, 0, 205, None);
+    let (mut h, boss, map) = bound_boss_at_difficulty(213119, 2652, 2, 205, None);
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let player = h.player();
@@ -15,7 +15,6 @@ fn eirich_proximity_unlock_is_copy_local_and_persists_on_reload() {
             z: 0.0503472,
         },
     ));
-    let (boss, _) = spawn_authored_actor(&mut h.app, &conn, 213119, map, 205);
     let other = InMap {
         instance_id: map.instance_id + 1,
         ..map
