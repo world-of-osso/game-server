@@ -59,23 +59,27 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         .map(|primary| super::pull_set::pending_helpers(world, primary, actor))
         .unwrap_or_default();
     if enemy_target && pending.contains(&target) {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, ?spell, ?primary, ?pending, reason = "pending_target", "follower action refused");
         return false;
     }
     let Some(spell) = spell else { return true };
     let Some((caster_radius, target_radius)) =
         super::unintended_reach::spell_unintended_reach(world, actor, spell, target)
     else {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_unintended_reach", "follower action refused");
         return false;
     };
     if caster_radius <= 0.0 && target_radius <= 0.0 {
         return true;
     }
     if !pending.is_empty() {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "pending_helpers", "follower action refused");
         return false;
     }
     let Some((caster_radius, target_radius)) =
         super::unintended_reach::spell_reach_without_chain(world, actor, spell, target)
     else {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_nonchain_reach", "follower action refused");
         return false;
     };
     if caster_radius <= 0.0 && target_radius <= 0.0 {
@@ -83,21 +87,24 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
     }
     let caster = actor;
     let Some(map) = world.get::<InMap>(caster).copied() else {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_map", "follower action refused");
         return false;
     };
     let Some(caster_position) = targets::position(world, caster) else {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_caster_position", "follower action refused");
         return false;
     };
     let Some(target_position) = targets::position(world, target) else {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_target_position", "follower action refused");
         return false;
     };
     let planned = primary
         .map(|primary| super::pull_set::members(world, primary, caster))
         .unwrap_or_default();
-    !world
+    let outsider = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .any(|actor| {
+        .find(|&actor| {
             actor != target
                 && !planned.contains(&actor)
                 && targets::is_alive(world, actor)
@@ -116,5 +123,10 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                     (caster_radius > 0.0 && caster_position.distance(point) <= caster_radius)
                         || (target_radius > 0.0 && target_position.distance(point) <= target_radius)
                 })
-        })
+        });
+    if let Some(outsider) = outsider {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, caster_radius, target_radius, reason = "idle_outsider", "follower action refused");
+        return false;
+    }
+    true
 }
