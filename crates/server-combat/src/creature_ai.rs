@@ -1491,7 +1491,7 @@ pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32
         debug!("Follower {entity} escape movement held while externally controlled");
         return;
     };
-    let stride = if *position == to {
+    let stride = if *position == to || !queues.combat_step_safe(entity, *position, to) {
         Stride::still(*position)
     } else {
         Stride::moving(*position, to, CreatureMotion::Run, speed)
