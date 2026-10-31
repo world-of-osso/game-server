@@ -93,6 +93,30 @@ pub(super) fn profile_for(
     })
 }
 
+fn taunt_spell(
+    store: &crate::spell_info::SpellStore,
+    known: &[crate::class_progression::KnownSpell],
+) -> Result<u32, String> {
+    let taunts: Vec<_> = known
+        .iter()
+        .filter(|spell| !spell.passive)
+        .filter_map(|spell| store.get(spell.spell_id))
+        .filter(|spell| {
+            spell.effects.iter().any(|effect| {
+                effect.effect == crate::spell_cast::effects::EFFECT_ATTACK_ME
+                    && effect.implicit_targets[0] == 6 // TARGET_UNIT_TARGET_ENEMY
+            }) || spell.id == 115546 // Provoke's native dummy script casts the taunt 116189.
+        })
+        .map(|spell| spell.id)
+        .collect();
+    match taunts.as_slice() {
+        [spell] => Ok(*spell),
+        _ => Err(format!(
+            "tank follower requires one native taunt, found {taunts:?}"
+        )),
+    }
+}
+
 pub(super) fn attack_spell(
     classes: &crate::spell_info::ClassSpells,
     store: &crate::spell_info::SpellStore,
@@ -252,7 +276,10 @@ pub fn spawn_class(
         .get_resource::<crate::spell_info::SpellStore>()
         .ok_or("follower spell store unavailable")?;
     let attack_spell = attack_spell(classes, store, source, &known)?;
-    let profile = profile_for(source, slot, attack_spell)?;
+    let mut profile = profile_for(source, slot, attack_spell)?;
+    if profile.role == shared::group::GroupRole::Tank {
+        profile.taunt_spell = taunt_spell(store, &known)?;
+    }
     let (stats, pools, _) =
         super::spawning::class_stats_for_race(world, &profile, level, source.race)?;
     let entity = spawn_neutral(world, owner, &profile.name, level)?;
