@@ -12,6 +12,11 @@ use crate::networking::CombatTarget;
 #[derive(Component, Clone, Copy)]
 pub struct FollowerReach(pub f32);
 
+/// A class follower casts only through its spec APL; this brain keeps hazards,
+/// target selection, pursuit, pet orders and regrouping.
+#[derive(Component)]
+pub struct AplControlled;
+
 pub(super) const MELEE_REACH: f32 = 2.0;
 const AUTO_SHOT: u32 = 75;
 
@@ -94,6 +99,13 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     trace_target_selection(world, unit, follower.owner, &party, enemy);
+    if let Some(target) = enemy {
+        super::live_facts::track_target(world, target);
+    }
+    if world.get::<AplControlled>(unit).is_some() {
+        position_for_apl(world, unit, follower, selection);
+        return;
+    }
     update_auto_shot(world, unit, follower, enemy);
     if enemy.is_some() {
         use_freightrunners_flask(world, unit);
@@ -364,6 +376,39 @@ fn heal_party_member(
     true
 }
 
+fn position_for_apl(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    selection: EnemySelection,
+) {
+    match selection {
+        EnemySelection::Attack(enemy) => {
+            let profile = &follower.profile;
+            if pursue(world, unit, enemy, profile.attack_spell, profile.melee) {
+                order_pet_attack(world, unit, enemy);
+            } else {
+                regroup(world, unit, follower.owner);
+            }
+        }
+        EnemySelection::Hold => hold_combat(world, unit),
+        EnemySelection::None => regroup(world, unit, follower.owner),
+    }
+}
+
+/// Attackable enemies the follower's party is fighting, in this brain's priority order.
+pub fn engaged_targets(world: &mut World, unit: Entity) -> Vec<Entity> {
+    let Some(follower) = world.get::<Follower>(unit).cloned() else {
+        return Vec::new();
+    };
+    let party = party_units(world, follower.owner);
+    engaged_enemies(world, &follower, unit, &party)
+        .into_iter()
+        .map(|(enemy, _)| enemy)
+        .filter(|&enemy| !crate::auras::has_breakable_by_damage_cc(world, enemy))
+        .collect()
+}
+
 fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Entity) {
     if !pursue(
         world,
@@ -391,7 +436,8 @@ fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Ent
     }
 }
 
-pub(super) fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
+/// The owner and every follower in the owner's party.
+pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
     let mut units: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)
@@ -500,6 +546,9 @@ pub(super) fn engaged_enemies(
             follower.profile.role == GroupRole::Tank && victim.is_some_and(|victim| victim != unit);
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
+    for &(enemy, _) in &enemies {
+        super::live_facts::track_target(world, enemy);
+    }
     enemies
 }
 

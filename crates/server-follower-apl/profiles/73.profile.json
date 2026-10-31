@@ -1,0 +1,305 @@
+{
+  "equipment": [
+    {
+      "slot": "head",
+      "item_id": 271456,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7961,
+      "gems": [
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268229"
+      }
+    },
+    {
+      "slot": "neck",
+      "item_id": 268265,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [
+        240906,
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "shoulders",
+      "item_id": 271454,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 8031,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "159439"
+      }
+    },
+    {
+      "slot": "back",
+      "item_id": 268253,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "chest",
+      "item_id": 271459,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 7987,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "268222"
+      }
+    },
+    {
+      "slot": "wrists",
+      "item_id": 237834,
+      "bonus_list": [
+        8793,
+        8960,
+        12214,
+        12384,
+        13750,
+        13751,
+        13836,
+        9627
+      ],
+      "item_level_override": 331,
+      "enchant": 0,
+      "gems": [
+        240983
+      ],
+      "crafted_stats": [
+        49,
+        32
+      ],
+      "options": {}
+    },
+    {
+      "slot": "hands",
+      "item_id": 251214,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "waist",
+      "item_id": 268259,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "legs",
+      "item_id": 271455,
+      "bonus_list": [
+        13693,
+        13698,
+        13846,
+        13848
+      ],
+      "item_level_override": null,
+      "enchant": 8163,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {
+        "redirected_base_stats": "271878"
+      }
+    },
+    {
+      "slot": "feet",
+      "item_id": 237828,
+      "bonus_list": [
+        8793,
+        8960,
+        12214,
+        12384,
+        13751,
+        13836,
+        9627
+      ],
+      "item_level_override": null,
+      "enchant": 7963,
+      "gems": [],
+      "crafted_stats": [
+        49,
+        32
+      ],
+      "options": {}
+    },
+    {
+      "slot": "finger1",
+      "item_id": 252258,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "finger2",
+      "item_id": 273792,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 7967,
+      "gems": [
+        240906
+      ],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket1",
+      "item_id": 270173,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "trinket2",
+      "item_id": 270175,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "main_hand",
+      "item_id": 268209,
+      "bonus_list": [],
+      "item_level_override": 344,
+      "enchant": 8689,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    },
+    {
+      "slot": "off_hand",
+      "item_id": 268196,
+      "bonus_list": [],
+      "item_level_override": 334,
+      "enchant": 0,
+      "gems": [],
+      "crafted_stats": [],
+      "options": {}
+    }
+  ],
+  "actions": [
+    "actions.precombat=snapshot_stats",
+    "actions.precombat+=/battle_stance,toggle=on",
+    "actions.precombat+=/use_item,name=algethar_puzzle_box",
+    "actions=auto_attack",
+    "actions+=/call_action_list,name=variables",
+    "actions+=/charge,if=time=0",
+    "actions+=/use_item,name=tome_of_lights_devotion,if=buff.inner_resilience.up",
+    "actions+=/use_items",
+    "actions+=/avatar,if=buff.thunder_blast.down|buff.thunder_blast.stack<=2",
+    "actions+=/shield_wall",
+    "actions+=/blood_fury",
+    "actions+=/berserking",
+    "actions+=/arcane_torrent",
+    "actions+=/lights_judgment",
+    "actions+=/fireblood",
+    "actions+=/ancestral_call",
+    "actions+=/bag_of_tricks",
+    "actions+=/potion,if=buff.avatar.up|buff.avatar.up&target.health.pct<=20",
+    "actions+=/ignore_pain,if=target.health.pct>=20&(rage.deficit<=15&cooldown.shield_slam.ready|rage.deficit<=20&cooldown.shield_charge.ready|rage.deficit<=20&cooldown.demoralizing_shout.ready&talent.booming_voice.enabled|rage.deficit<=15|rage.deficit<=40&cooldown.shield_slam.ready&buff.violent_outburst.up&talent.heavy_repercussions.enabled&talent.practiced_strikes.enabled|rage.deficit<=17&cooldown.shield_slam.ready&talent.heavy_repercussions.enabled|rage.deficit<=18&cooldown.shield_slam.ready&talent.practiced_strikes.enabled)|(rage>=70|buff.seeing_red.stack=7&rage>=35)&cooldown.shield_slam.remains<=1&buff.shield_block.remains,use_off_gcd=1",
+    "actions+=/ravager",
+    "actions+=/thunder_blast,if=talent.booming_voice.enabled&buff.thunder_blast.stack=2&talent.snap_induction.enabled",
+    "actions+=/demoralizing_shout,if=talent.booming_voice.enabled",
+    "actions+=/champions_leap",
+    "actions+=/champions_spear",
+    "actions+=/thunder_blast,if=spell_targets.thunder_blast>=2&buff.thunder_blast.stack=2",
+    "actions+=/demolish,if=buff.colossal_might.stack>=5",
+    "actions+=/shield_charge",
+    "actions+=/shield_block,if=buff.shield_block.remains<=10",
+    "actions+=/run_action_list,name=colossus_aoe,if=hero_tree.colossus&spell_targets.thunder_clap>=3",
+    "actions+=/run_action_list,name=thane_aoe,if=hero_tree.mountain_thane&spell_targets.thunder_clap>=3",
+    "actions+=/run_action_list,name=colossus_st,if=talent.demolish",
+    "actions+=/run_action_list,name=thane_st,if=talent.lightning_strikes",
+    "actions.colossus_aoe=thunder_clap,if=buff.ravager.up&!dot.rend_dot.ticking",
+    "actions.colossus_aoe+=/revenge,if=buff.revenge.up",
+    "actions.colossus_aoe+=/shield_slam,if=buff.phalanx.up&(buff.violent_outburst.up|rage<30)",
+    "actions.colossus_aoe+=/thunder_clap,if=rage<30",
+    "actions.colossus_aoe+=/revenge,if=spell_targets.revenge>=3",
+    "actions.colossus_aoe+=/shield_slam",
+    "actions.colossus_aoe+=/thunder_clap",
+    "actions.colossus_aoe+=/revenge,if=rage>=30",
+    "actions.colossus_aoe+=/execute,if=spell_targets.execute>=2&(rage>=50|buff.sudden_death.up)&talent.heavy_handed.enabled",
+    "actions.colossus_st=shield_slam",
+    "actions.colossus_st+=/thunder_clap,if=!buff.phalanx.up",
+    "actions.colossus_st+=/execute",
+    "actions.colossus_st+=/revenge,if=buff.revenge.up",
+    "actions.colossus_st+=/thunder_clap",
+    "actions.colossus_st+=/revenge",
+    "actions.colossus_st+=/thunder_clap,if=(spell_targets.thunder_clap>=1|cooldown.shield_slam.remains)&hero_tree.mountain_thane&rage<=80",
+    "actions.colossus_st+=/revenge,if=rage>=80&!variable.execute_phase|buff.revenge.up&variable.execute_phase&rage<=18&cooldown.shield_slam.remains|buff.revenge.up&!variable.execute_phase",
+    "actions.colossus_st+=/wrecking_throw,if=talent.javelineer.enabled",
+    "actions.colossus_st+=/shattering_throw,if=talent.javelineer.enabled",
+    "actions.colossus_st+=/devastate",
+    "actions.colossus_st+=/thunder_clap,if=!buff.phalanx.up",
+    "actions.thane_aoe=thunder_blast",
+    "actions.thane_aoe+=/shield_slam,if=buff.phalanx.up",
+    "actions.thane_aoe+=/thunder_clap",
+    "actions.thane_aoe+=/revenge,if=buff.revenge.up",
+    "actions.thane_aoe+=/shield_slam",
+    "actions.thane_aoe+=/revenge",
+    "actions.thane_aoe+=/execute,if=spell_targets.execute=3&(rage>=50|buff.sudden_death.up)&talent.heavy_handed.enabled",
+    "actions.thane_st=thunder_blast",
+    "actions.thane_st+=/shield_slam",
+    "actions.thane_st+=/execute",
+    "actions.thane_st+=/revenge,if=buff.revenge.up",
+    "actions.thane_st+=/thunder_clap",
+    "actions.thane_st+=/thunder_blast,if=(spell_targets.thunder_clap>=1|cooldown.shield_slam.remains)",
+    "actions.thane_st+=/wrecking_throw,if=talent.javelineer.enabled",
+    "actions.thane_st+=/shattering_throw,if=talent.javelineer.enabled",
+    "actions.thane_st+=/revenge",
+    "actions.thane_st+=/devastate",
+    "actions.variables=variable,name=execute_phase,value=(talent.massacre.enabled&target.health.pct<35)|target.health.pct<20"
+  ],
+  "consumables": {
+    "potion": "liquid_luster_2",
+    "flask": "flask_of_the_shattered_sun_2",
+    "food": "harandar_celebration",
+    "augmentation": "void_touched",
+    "temporary_enchant": "main_hand:thalassian_phoenix_oil_2"
+  },
+  "class": "warrior",
+  "name": "MID2_Warrior_Protection",
+  "source": "default",
+  "spec": "protection",
+  "level": "90",
+  "race": "dwarf",
+  "role": "tank",
+  "position": "front",
+  "talents": "CkEAAAAAAAAAAAAAAAAAAAAAA02AAAzMDzMzMzMzmxsMjxYmGGDLzMzMDGzMAAAAYZAYGDAsYGDbwAzwCNmZBmxMDmNAAzMAgZgxA",
+  "omnium_talents": "136822:1/136817:1/136815:1/136814:1",
+  "spec_id": 73,
+  "profile": "profiles/MID2/MID2_Warrior_Protection.simc",
+  "profile_sha256": "8286b3e8802963e628c099db0de484c5a3ca47a32fa779a0e4d09c65739232ee",
+  "simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc"
+}

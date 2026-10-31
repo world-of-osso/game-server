@@ -1,6 +1,11 @@
 //! Read the same native cooldown, charge and GCD calculations used by casts.
 use super::*;
 
+/// Read the active ranged-repeat identity without changing its timer.
+pub fn auto_repeat_active(world: &World, caster: Entity, spell: u32) -> bool {
+    super::auto_repeat::active(world, caster, spell)
+}
+
 /// Caster-owned actual travel; scripted Meteor contributes its live native continuation.
 pub(crate) fn flight_value(
     world: &World,

@@ -170,6 +170,12 @@ fn feral_prev_gcd_tracks_successful_foreground_gcd_casts_only() {
     let mut run = prepare_literal(103, 1).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    let program = server::simc_apl::Program::parse(&[(
+        "default",
+        "shred,if=prev_gcd.1.shred|prev_gcd.2.shred",
+    )])
+    .unwrap();
+    server::simc_apl::gcd_history::initialize(run.app.world_mut(), actor, &program);
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
     preparation::finish_pending_setup(&mut run).unwrap();
     let bindings = crate::simc_apl_native::Bindings {

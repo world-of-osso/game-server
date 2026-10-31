@@ -678,7 +678,7 @@ impl SwingSight<'_, '_> {
     }
 
     fn send_blocked_swing(&self, commands: &mut Commands, attacker: Entity) {
-        let (_, _, _, _, _, _, player, _) = self.bodies.get(attacker).unwrap();
+        let (_, _, _, _, _, _, player, _, _) = self.bodies.get(attacker).unwrap();
         if player.is_none() {
             return;
         }
@@ -1706,7 +1706,7 @@ fn creature_type_damage_multiplier(
     let Some(mods) = mods.filter(|mods| mods.has_damage_done_versus()) else {
         return 1.0;
     };
-    let (_, npc, _, _, _, _, player, _) =
+    let (_, npc, _, _, _, _, player, _, _) =
         context.sight.bodies.get(victim).expect("swing target body");
     let kind = context
         .creature_types

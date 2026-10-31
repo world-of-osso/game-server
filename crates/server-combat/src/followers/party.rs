@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use rand::{Rng, SeedableRng};
 use shared::components::{Player, UnitLevel};
 use shared::group::GroupRole;
 use shared::protocol::{GroupChannel, LfgChannel, LfgSnapshot, LfgStateUpdate};
@@ -45,6 +46,9 @@ impl DisconnectedRuns {
 pub(crate) struct FollowerRun {
     dungeon: Dungeon,
     profiles: Vec<Profile>,
+    class_profiles: Vec<super::class_profiles::ClassProfile>,
+    seed: u64,
+    gear: super::class_spawn::GearSource,
     members: Vec<Entity>,
     copy: Option<InMap>,
     previous_difficulty: u32,
@@ -107,7 +111,33 @@ fn begin_run(
         .get(&dungeon_id)
         .cloned()
         .ok_or("follower dungeon lacks imported Normal spawns or an authored entrance")?;
-    let profiles = super::select_party(&catalog.profiles, role)?;
+    let player_spec = world
+        .get::<shared::components::ActiveSpec>(player)
+        .ok_or("follower queue requires an active specialization")?
+        .0;
+    if player_spec == 0 {
+        return Err("follower queue requires an active specialization".into());
+    }
+    let level = world
+        .get::<shared::components::Level>(player)
+        .ok_or("follower queue requires a level")?
+        .0;
+    let classes = world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .ok_or("follower classes unavailable")?;
+    let spells = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .ok_or("follower spell store unavailable")?;
+    let available = super::class_profiles::read_profiles()?;
+    let qualified = super::class_profiles::validate_profiles(&available, classes, spells, level);
+    let seed = rand::random::<u64>();
+    let class_profiles =
+        super::class_profiles::select_profiles(&qualified, role, player_spec, seed)?;
+    let profiles = class_profiles
+        .iter()
+        .enumerate()
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot, 0))
+        .collect::<Result<Vec<_>, _>>()?;
     let position = *world
         .get::<shared::components::Position>(player)
         .ok_or("player has no position")?;
@@ -163,9 +193,19 @@ fn begin_run(
             members: roster,
         }),
     });
+    info!(
+        "class follower queue seed {seed}, player spec {player_spec}, follower specs {:?}",
+        class_profiles
+            .iter()
+            .map(|profile| profile.spec_id)
+            .collect::<Vec<_>>()
+    );
     world.entity_mut(player).insert(FollowerRun {
         dungeon,
         profiles,
+        class_profiles,
+        seed,
+        gear: super::class_spawn::GearSource::Journal,
         members: Vec::new(),
         copy: None,
         previous_difficulty,
@@ -249,7 +289,26 @@ pub(super) fn advance_runs(world: &mut World) {
 }
 
 fn spawn_party(world: &mut World, owner: Entity, run: &FollowerRun) -> Result<(), String> {
-    let members = super::spawning::spawn_equipped_members(world, owner, &run.profiles)?;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(run.seed);
+    let mut members = Vec::with_capacity(run.class_profiles.len());
+    for (slot, profile) in run.class_profiles.iter().enumerate() {
+        let sex = rng.gen_range(0..2);
+        match super::class_spawn::spawn_class(world, owner, profile, sex, slot, run.gear) {
+            Ok(unit) => {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::creature_ai::PartyFollowSlot::new(
+                        slot,
+                        run.class_profiles.len(),
+                    ));
+                members.push(unit);
+            }
+            Err(error) => {
+                super::spawning::unsummon_members(world, &members);
+                return Err(error);
+            }
+        }
+    }
     if let Err(error) = join_party(world, owner, run, &members) {
         super::spawning::unsummon_members(world, &members);
         return Err(error);
@@ -308,18 +367,23 @@ pub(super) fn join_members_with_player(
         .iter()
         .map(|&unit| {
             let follower = world.get::<Follower>(unit).expect("spawned follower");
-            online.insert(
-                Follower::member_id(unit),
-                follower.online(
-                    unit,
-                    world.get::<UnitLevel>(unit).expect("follower level").0,
-                    difficulty,
-                    world
+            let level = world.get::<UnitLevel>(unit).expect("follower level").0;
+            let member =
+                if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
+                    follower.online_character(
+                        unit,
+                        level,
+                        difficulty,
+                        visual,
+                        world.get::<shared::components::EquipmentAppearance>(unit),
+                    )
+                } else {
+                    let display = world
                         .get::<shared::components::ModelDisplay>(unit)
-                        .expect("spawned follower display")
-                        .display_id,
-                ),
-            );
+                        .expect("spawned follower display");
+                    follower.online(unit, level, difficulty, display.display_id)
+                };
+            online.insert(Follower::member_id(unit), member);
             (Follower::member_id(unit), follower.profile.role)
         })
         .collect();
@@ -634,6 +698,9 @@ mod copy_tests {
         let run = FollowerRun {
             dungeon,
             profiles,
+            class_profiles: Vec::new(),
+            seed: 0,
+            gear: super::super::class_spawn::GearSource::Journal,
             members,
             copy: Some(copy),
             previous_difficulty: 1,
@@ -1778,6 +1845,7 @@ mod copy_tests {
         .unwrap();
         let store = crate::maps::store::load_map_store(&db).unwrap();
         let catalog = super::super::catalog::load_catalog(&db).unwrap();
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
         let now = crate::maps::instances::Now {
             elapsed: 0.0,
             unix: 1_790_510_400,
@@ -1804,6 +1872,8 @@ mod copy_tests {
             .insert_resource(store)
             .insert_resource(instances)
             .insert_resource(catalog)
+            .insert_resource(classes)
+            .insert_resource(spells)
             .init_resource::<GroupRegistry>();
         // Ruby's reciprocal exit safe-loc 100031, where the release revived Rubynew.
         let outside = WorldLocation {
@@ -1822,6 +1892,7 @@ mod copy_tests {
                 },
                 ClientId(30),
                 shared::components::Level(70),
+                shared::components::ActiveSpec(62),
                 UnitLevel(70),
                 outside.bevy_position(),
                 shared::components::Rotation {
@@ -1838,6 +1909,36 @@ mod copy_tests {
             .id();
         queue_player(app.world_mut(), player, GroupRole::Dps, 2436);
         assert!(app.world().get::<MapTransfer>(player).is_some());
+        let run = app
+            .world()
+            .get::<FollowerRun>(player)
+            .expect("accepted follower queue");
+        assert_eq!(run.class_profiles.len(), 4);
+        assert!(
+            !run.class_profiles
+                .iter()
+                .any(|profile| profile.spec_id == 62)
+        );
+        let available = super::super::class_profiles::read_profiles().unwrap();
+        let qualified = super::super::class_profiles::validate_profiles(
+            &available,
+            app.world().resource::<crate::spell_info::ClassSpells>(),
+            app.world().resource::<crate::spell_info::SpellStore>(),
+            70,
+        );
+        let replay =
+            super::super::class_profiles::select_profiles(&qualified, GroupRole::Dps, 62, run.seed)
+                .unwrap();
+        assert_eq!(
+            run.class_profiles
+                .iter()
+                .map(|profile| profile.spec_id)
+                .collect::<Vec<_>>(),
+            replay
+                .iter()
+                .map(|profile| profile.spec_id)
+                .collect::<Vec<_>>()
+        );
         let entrant = crate::maps::transfer::entrant_of(app.world(), player);
         let arrival = app.world_mut().resource_scope(
             |world, mut instances: Mut<crate::maps::InstanceManager>| {

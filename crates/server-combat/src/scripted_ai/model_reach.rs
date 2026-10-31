@@ -1,7 +1,7 @@
 //! Authored unit reach and the approved `MISSING_MODEL_INFO_TC_PLAYER_DEFAULTS_SCALED`
 //! project policy. TC a352b1fa supplies the default dimensions, not missing-row admission.
 use bevy::prelude::*;
-use shared::components::{ModelDisplay, Player, Position, UnitScale};
+use shared::components::{CharacterVisual, ModelDisplay, Player, Position, UnitScale};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -62,7 +62,7 @@ pub(crate) fn creature_combat_reach(models: &ModelReaches, display: u32, scale: 
 /// Missing display identity or an uninitialized source catalog remains unavailable.
 pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
-    if world.get::<Player>(unit).is_some() {
+    if world.get::<Player>(unit).is_some() || world.get::<CharacterVisual>(unit).is_some() {
         return Some(PLAYER_COMBAT_REACH * scale);
     }
     let display = world.get::<ModelDisplay>(unit)?.display_id;
@@ -81,7 +81,7 @@ pub fn melee_range(world: &World, attacker: Entity, target: Entity) -> Option<f3
 /// an unknown creature model does not supply a guessed radius.
 pub(crate) fn bounding_radius(world: &World, unit: Entity) -> Option<f32> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
-    if world.get::<Player>(unit).is_some() {
+    if world.get::<Player>(unit).is_some() || world.get::<CharacterVisual>(unit).is_some() {
         return Some(PLAYER_BOUNDING_RADIUS * scale);
     }
     let display = world.get::<ModelDisplay>(unit)?.display_id;

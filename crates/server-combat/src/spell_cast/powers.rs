@@ -488,7 +488,11 @@ pub(crate) fn max_power_percent_changes(
     stats: &crate::stats::StatModifiers,
     mods: &crate::auras::AuraStatMods,
 ) -> Vec<(PowerType, f32)> {
-    if world.get::<Player>(unit).is_none() {
+    if world.get::<Player>(unit).is_none()
+        && world
+            .get::<shared::components::CharacterVisual>(unit)
+            .is_none()
+    {
         return Vec::new();
     }
     mana_percent_change(world, unit, stats)
@@ -896,7 +900,6 @@ fn modified_regen_rates(
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
     read_creature_power_regeneration(
         world.get::<Npc>(unit),
@@ -908,7 +911,6 @@ fn unit_power_regen_enabled(world: &World, unit: Entity) -> bool {
         .is_some_and(|death| death.state != shared::death::DeathState::Alive)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u32) {
     let in_combat = world
         .get::<CombatStatus>(unit)
@@ -926,7 +928,6 @@ fn read_regen_phase(world: &World, unit: Entity, pools: &PowerPools) -> (bool, u
     (interrupted, out_of_combat_ms)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 /// Raw potential continuous regen, independent of the pool's cap and applied cache.
 /// Pet Focus reads its owner's rate; rune cooldowns have a separate producer.
 /// Reading this fact never advances clocks, grants power or updates wire state.

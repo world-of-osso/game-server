@@ -160,3 +160,122 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             .any(|member| member.name == "Captain Garrick" && member.health == 125)
     );
 }
+
+#[test]
+fn class_follower_roster_keeps_character_portrait_without_creature_display() {
+    use shared::components::{
+        CharacterAppearance, CharacterVisual, EquipmentAppearance, EquipmentVisualSlot,
+        EquippedAppearanceEntry,
+    };
+    use shared::group::GroupRole;
+    use shared::item_data::ItemDefinitionSource;
+
+    let mut app = setup_app();
+    let player = connect(&mut app, 1, "Alice");
+    app.world_mut()
+        .entity_mut(player.player)
+        .insert(crate::maps::DungeonDifficulty(205));
+    pump(&mut app);
+    let visual = CharacterVisual {
+        race: 3,
+        class: 2,
+        appearance: CharacterAppearance {
+            sex: 1,
+            hair_style: 2,
+            ..Default::default()
+        },
+    };
+    let head = EquippedAppearanceEntry {
+        slot: EquipmentVisualSlot::Head,
+        item_id: Some(271465),
+        definition_source: Some(ItemDefinitionSource::Retail),
+        display_info_id: Some(12345),
+        inventory_type: 1,
+        hidden: false,
+    };
+    let equipment = EquipmentAppearance {
+        entries: vec![head.clone()],
+    };
+    let mut online = OnlineView::from([(
+        1,
+        OnlineMember {
+            entity: player.player.to_bits(),
+            name: "Alice".into(),
+            class: 2,
+            level: 80,
+            portrait: Default::default(),
+            dungeon_difficulty: 205,
+            raid_difficulty: Default::default(),
+        },
+    )]);
+    let mut members = Vec::new();
+    for (slot, role) in [
+        GroupRole::Tank,
+        GroupRole::Healer,
+        GroupRole::Dps,
+        GroupRole::Dps,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let follower = crate::followers::Follower {
+            owner: player.player,
+            profile: crate::followers::Profile {
+                entry: u32::MAX - 1,
+                name: format!("Follower{slot}"),
+                class_id: 2,
+                spec_id: 66,
+                role,
+                attack_spell: 0,
+                cooldown_spell: 0,
+                heal_spell: 0,
+                taunt_spell: 0,
+                form_spell: 0,
+                melee: true,
+            },
+        };
+        let unit = app
+            .world_mut()
+            .spawn((
+                follower.clone(),
+                UnitLevel(80),
+                visual.clone(),
+                equipment.clone(),
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                Position {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ))
+            .id();
+        let id = crate::followers::Follower::member_id(unit);
+        online.insert(
+            id,
+            follower.online_character(unit, 80, 205, &visual, Some(&equipment)),
+        );
+        members.push((id, role));
+    }
+    app.world_mut()
+        .resource_mut::<GroupRegistry>()
+        .create_companion_party(1, GroupRole::Dps, &members, &online)
+        .unwrap();
+    pump(&mut app);
+    let roster = last_roster(&mut app, &player);
+    let followers: Vec<_> = roster
+        .members
+        .iter()
+        .filter(|member| member.character_id != 1)
+        .collect();
+    assert_eq!(followers.len(), 4);
+    for member in followers {
+        assert!(member.online);
+        assert_eq!(member.portrait.creature_display_id, None);
+        assert_eq!(member.portrait.race, 3);
+        assert_eq!(member.portrait.appearance, visual.appearance);
+        assert_eq!(member.portrait.head.as_ref(), Some(&head));
+    }
+}

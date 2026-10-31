@@ -49,7 +49,6 @@ impl PendingSpellHits {
         self.0.iter().any(|hit| hit.caster == caster)
     }
 
-    #[cfg(any(test, feature = "test-support"))]
     pub(super) fn count_matching(&self, caster: Entity, eligible: impl Fn(u32) -> bool) -> usize {
         self.0
             .iter()
@@ -57,7 +56,6 @@ impl PendingSpellHits {
             .count()
     }
 
-    #[cfg(any(test, feature = "test-support"))]
     pub(super) fn earliest_due(&self, caster: Entity, spell_id: u32) -> Option<f64> {
         self.0
             .iter()

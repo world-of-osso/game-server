@@ -4,6 +4,8 @@ mod action_knowledge_tests;
 mod ai;
 mod candlelight;
 mod catalog;
+pub mod class_profiles;
+pub mod class_spawn;
 #[cfg(test)]
 mod darkflame_drop_tests;
 mod empower_policy;
@@ -37,6 +39,7 @@ mod kit_hunter_policy_tests;
 mod kit_interrupt;
 #[cfg(test)]
 mod kit_light_of_titans_tests;
+pub(crate) mod live_facts;
 #[cfg(test)]
 mod native_action_override_tests;
 #[cfg(test)]
@@ -64,6 +67,7 @@ mod kit_rotation_tests;
 mod meteor_tests;
 mod owner_trail;
 mod pack_identity;
+pub mod parity_profile;
 pub(crate) mod party;
 mod positioning;
 mod pull_admission;
@@ -107,6 +111,7 @@ mod rotation_dummy_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod simulator;
 mod spawning;
+pub mod spec_selection;
 mod stockade_diagnostic;
 mod tank_defense;
 mod tank_frontal;
@@ -120,6 +125,7 @@ mod utility_buff_tests;
 mod utility_interrupt;
 #[cfg(test)]
 mod utility_policy_tests;
+pub mod visual;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
@@ -127,7 +133,7 @@ use shared::group::GroupRole;
 #[cfg(test)]
 mod group_buff_tests;
 
-pub use ai::FollowerReach;
+pub use ai::{AplControlled, FollowerReach, engaged_targets, party_units};
 pub use catalog::FollowerCatalog;
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 
@@ -157,6 +163,38 @@ impl Follower {
     /// they are not persisted characters and never enter auth/character storage.
     pub fn member_id(entity: Entity) -> u64 {
         entity.to_bits() | (1 << 63)
+    }
+
+    pub fn online_character(
+        &self,
+        entity: Entity,
+        level: u8,
+        dungeon_difficulty: u32,
+        visual: &shared::components::CharacterVisual,
+        equipment: Option<&shared::components::EquipmentAppearance>,
+    ) -> crate::group::OnlineMember {
+        let head = equipment
+            .and_then(|equipment| {
+                equipment
+                    .entries
+                    .iter()
+                    .find(|entry| entry.slot == shared::components::EquipmentVisualSlot::Head)
+            })
+            .cloned();
+        crate::group::OnlineMember {
+            entity: entity.to_bits(),
+            name: self.profile.name.clone(),
+            class: self.profile.class_id,
+            level,
+            portrait: shared::protocol::GroupPortraitAppearance {
+                creature_display_id: None,
+                race: visual.race,
+                appearance: visual.appearance.clone(),
+                head,
+            },
+            dungeon_difficulty,
+            raid_difficulty: Default::default(),
+        }
     }
 
     pub fn online(

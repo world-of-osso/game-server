@@ -127,6 +127,99 @@ pub fn build_config(
     Ok(entries)
 }
 
+/// Provenance of a follower talent build, supplied by whoever decoded it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TalentSource {
+    SimcProfile,
+    ParityProfile,
+    Wcl,
+    NativeStarterLoadout,
+}
+
+impl TalentSource {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::SimcProfile => "TALENTS_FROM_SIMC_PROFILE",
+            Self::ParityProfile => "TALENTS_FROM_PARITY_PROFILE",
+            Self::Wcl => "TALENTS_FROM_WCL",
+            Self::NativeStarterLoadout => "TALENTS_FROM_NATIVE_STARTER_LOADOUT",
+        }
+    }
+}
+
+/// Select authored level-appropriate starter talents below the level cap. At the cap,
+/// validate the supplied build under its supplied provenance; never truncate it.
+pub fn build_follower_config(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    source: TalentSource,
+    logged: &[(u32, u32)],
+) -> Result<(TalentSource, Vec<ConfigEntry>), String> {
+    let max_level = crate::spell_info::MAX_LEVEL;
+    if ctx.level == 0 || u32::from(ctx.level) > max_level {
+        return Err(format!("invalid follower talent level {}", ctx.level));
+    }
+    if u32::from(ctx.level) < max_level || source == TalentSource::NativeStarterLoadout {
+        let purchases = starter_purchases(tree, ctx)?;
+        return Ok((
+            TalentSource::NativeStarterLoadout,
+            build_config(tree, ctx, &purchases)?,
+        ));
+    }
+    if logged.is_empty() {
+        return Err(format!(
+            "max-level follower has no {} talent build",
+            source.label()
+        ));
+    }
+    Ok((source, build_logged_config(tree, ctx, logged)?))
+}
+
+/// Resolve logged entry IDs to native nodes and validate the same purchases as a player.
+/// Treat logged ranks as including native granted ranks; WCL semantics remain unverified.
+pub fn build_logged_config(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    entries: &[(u32, u32)],
+) -> Result<Vec<ConfigEntry>, String> {
+    let grants = granted_entries(tree, ctx);
+    let mut seen = std::collections::HashSet::new();
+    let mut purchases = Vec::new();
+    for &(entry_id, total) in entries {
+        if total == 0 || !seen.insert(entry_id) {
+            return Err(format!(
+                "invalid or duplicate logged trait entry {entry_id}"
+            ));
+        }
+        let nodes: Vec<_> = tree
+            .nodes
+            .iter()
+            .filter(|node| node.entry(entry_id).is_some())
+            .collect();
+        let [node] = nodes.as_slice() else {
+            return Err(format!(
+                "logged trait entry {entry_id} maps to {} nodes",
+                nodes.len()
+            ));
+        };
+        let granted = grants
+            .iter()
+            .find(|grant| grant.node_id == node.id && grant.entry_id == entry_id)
+            .map_or(0, |grant| grant.granted);
+        let ranks = total.checked_sub(granted).ok_or_else(|| {
+            format!("logged trait entry {entry_id} ranks {total} below native grant {granted}")
+        })?;
+        if ranks > 0 {
+            purchases.push(Purchase {
+                node_id: node.id,
+                entry_id,
+                ranks,
+            });
+        }
+    }
+    build_config(tree, ctx, &purchases)
+}
+
 /// SIMC_PARITY_ALLOCATIONS: pinned player.cpp2696–2860 decodes allocations
 /// without validating parent edges or currency gates. Only parity fixtures use
 /// this policy; native membership, ranks, non-hero spec, choice, subtree and budget remain.

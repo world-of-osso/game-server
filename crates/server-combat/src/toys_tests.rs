@@ -3954,6 +3954,7 @@ fn toyfx14_gaze_uses_authoritative_baked_sight() {
             None,
             unit.get::<shared::components::Player>(),
             unit.get::<shared::components::PlayerStandState>(),
+            unit.get::<shared::components::CharacterVisual>(),
         ))
         .unwrap()
     };
