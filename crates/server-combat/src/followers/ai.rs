@@ -431,6 +431,9 @@ fn position_for_apl(
             let profile = &follower.profile;
             if pursue(world, unit, enemy, profile.attack_spell, profile.melee) {
                 order_pet_attack(world, unit, enemy);
+                if needs_taunt(world, unit, enemy, follower) {
+                    cast(world, unit, enemy, profile.taunt_spell);
+                }
             } else {
                 regroup(world, unit, follower.owner);
             }

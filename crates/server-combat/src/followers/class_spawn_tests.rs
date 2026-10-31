@@ -50,6 +50,8 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
     drop(world_data);
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(super::super::catalog::load_catalog(&db).unwrap());
     h.app.insert_resource(
         super::super::gear::load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap(),
     );
@@ -87,7 +89,10 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         .entity_mut(h.caster)
         .insert((copy, Level(90)));
     let profiles = super::super::class_profiles::read_profiles().unwrap();
-    for (slot, spec) in [66, 257, 62].into_iter().enumerate() {
+    for (slot, spec) in [581, 73, 66, 250, 268, 104, 257, 62]
+        .into_iter()
+        .enumerate()
+    {
         let profile = profiles
             .iter()
             .find(|profile| profile.spec_id == spec)
@@ -121,7 +126,16 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         );
         assert_eq!(follower.profile.cooldown_spell, 0);
         assert_eq!(follower.profile.heal_spell, 0);
-        assert_eq!(follower.profile.taunt_spell, 0);
+        let expected_taunt = match spec {
+            581 => 185245,
+            73 => 355,
+            66 => 62124,
+            250 => 56222,
+            268 => 115546,
+            104 => 6795,
+            _ => 0,
+        };
+        assert_eq!(follower.profile.taunt_spell, expected_taunt);
         assert_eq!(follower.profile.form_spell, 0);
         assert_eq!(
             world.get::<shared::components::ActiveSpec>(unit).unwrap().0,
@@ -286,5 +300,88 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
             world.get::<shared::components::Health>(player)
         );
         assert_eq!(world.get::<Mana>(unit), world.get::<Mana>(player));
+        if spec == 581 {
+            assert!(crate::auras::has_aura(world, unit, 189926));
+            let enemy = h.npc;
+            let owner = h.caster;
+            let position = *world.get::<shared::components::Position>(unit).unwrap();
+            h.app.world_mut().entity_mut(enemy).insert((
+                copy,
+                position,
+                shared::components::ThreatTable::default(),
+            ));
+            h.app.update();
+            crate::creature_aggro::add_school_threat(h.app.world_mut(), enemy, unit, 100.0, 1);
+            let threat = h
+                .app
+                .world()
+                .get::<shared::components::ThreatTable>(enemy)
+                .unwrap();
+            let amount = threat
+                .entries()
+                .iter()
+                .find(|entry| entry.entity == unit.to_bits())
+                .unwrap()
+                .threat;
+            assert_eq!(
+                amount, 1050.0,
+                "Vengeance's passive must multiply native threat"
+            );
+            crate::combat::combat_stop(h.app.world_mut(), unit);
+            h.app
+                .world_mut()
+                .entity_mut(enemy)
+                .remove::<crate::creature_aggro::CurrentVictim>()
+                .insert((
+                    shared::components::ThreatTable::default(),
+                    crate::creature_ai::CreatureState::Idle,
+                ));
+            crate::creature_aggro::attack_start(h.app.world_mut(), enemy, owner);
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(enemy)
+                    .unwrap()
+                    .0,
+                Some(owner),
+                "enemy must first attack the owner"
+            );
+            let party = super::super::ai::party_units(h.app.world_mut(), owner);
+            let follower = h.app.world().get::<Follower>(unit).unwrap().clone();
+            let enemies =
+                super::super::ai::engaged_enemies(h.app.world_mut(), &follower, unit, &party);
+            assert!(
+                enemies.iter().any(|(candidate, _)| *candidate == enemy),
+                "owner's attacker must be available for pickup: {enemies:?}"
+            );
+            for _ in 0..100 {
+                super::super::update_ai(h.app.world_mut());
+                h.advance(1);
+                if h.app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(enemy)
+                    .and_then(|target| target.0)
+                    == Some(unit)
+                {
+                    break;
+                }
+            }
+            assert!(
+                h.inbox.go.iter().any(|event| event.caster == unit.to_bits()
+                    && event.spell_id == 185245
+                    && event.target == Some(enemy.to_bits())),
+                "Vengeance must cast native Torment against the owner's attacker: {:?}",
+                h.inbox.go
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(enemy)
+                    .unwrap()
+                    .0,
+                Some(unit),
+                "Torment must recover the enemy"
+            );
+        }
     }
 }
