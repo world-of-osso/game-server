@@ -596,6 +596,7 @@ type AutoAttackers<'w, 's> = Query<
             Has<Npc>,
             Has<shared::components::Player>,
             Has<crate::followers::Follower>,
+            Has<crate::followers::ClassCombatant>,
             Option<&'static crate::zones::CreatureFlagsExtra>,
             Option<&'static crate::zones::TempSummon>,
             Option<&'static CreatureAttackTime>,
@@ -619,7 +620,11 @@ type AutoAttackTargets<'w, 's> = Query<
         &'static Position,
         &'static mut Health,
         Option<&'static mut LastDamager>,
-        (Has<Npc>, Option<&'static crate::zones::CreatureFlagsExtra>),
+        (
+            Has<Npc>,
+            Has<crate::followers::ClassCombatant>,
+            Option<&'static crate::zones::CreatureFlagsExtra>,
+        ),
         Option<&'static AuraStatMods>,
         Has<TrainingDummy>,
         Option<&'static DuelOpponent>,
@@ -1075,13 +1080,7 @@ fn auto_attack_unit(
             });
     let attacker = Attacker {
         entity: attacker_entity,
-        player: params
-            .sight
-            .bodies
-            .get(attacker_entity)
-            .expect("attacker has position")
-            .6
-            .is_some(),
+        player: snapshot.player_like,
         position: &snapshot.position,
         mods: snapshot.mods.as_ref(),
         stats: snapshot.stats.as_ref(),
@@ -1221,6 +1220,7 @@ struct SwingSnapshot {
     enemy_dodge_pct: f32,
     expertise_pct: f32,
     creature: bool,
+    player_like: bool,
     authored_attack_time: Option<CreatureAttackTime>,
     form_attack_time: Option<crate::auras::shapeshift::FormAttackTiming>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
@@ -1319,7 +1319,7 @@ fn snapshot_attacker(
         mods,
         stats,
         (stat_mods, cast, auras),
-        (creature, player, parity_actor, flags, summon, attack_time),
+        (creature, player, parity_actor, class_combatant, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     let overshoot = [
         advance_swing_timer(&mut auto_attack.timer, dt),
@@ -1336,6 +1336,7 @@ fn snapshot_attacker(
         || stat_mods.map_or(0.0, |modifiers| modifiers.haste_pct),
         |stats| stats.haste_pct,
     );
+    let player_like = crate::followers::player_like_combatant(player, class_combatant);
     Some(SwingSnapshot {
         auto_attack: auto_attack.clone(),
         overshoot,
@@ -1356,11 +1357,12 @@ fn snapshot_attacker(
             player,
             parity_actor,
         ),
-        creature,
+        creature: creature && !player_like,
+        player_like,
         authored_attack_time: attack_time.copied(),
         form_attack_time: auras
             .and_then(crate::auras::shapeshift::current_form)
-            .and_then(|(_, form)| forms?.attack_timing(form, !creature)),
+            .and_then(|(_, form)| forms?.attack_timing(form, player_like)),
         creature_flags: flags.copied(),
         temp_summoner: summon.map(|summon| summon.summoner),
     })
@@ -2272,7 +2274,7 @@ fn resolve_swing(
         target_pos,
         health,
         _last_damager,
-        (is_npc, npc_flags),
+        (is_npc, class_combatant, npc_flags),
         target_mods,
         training_dummy,
         _duel,
@@ -2384,8 +2386,10 @@ fn resolve_swing(
     )
     .damage;
     let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
-    let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
-    if is_npc && npc_flags.is_none() {
+    let creature_victim =
+        is_npc && !crate::followers::player_like_combatant(false, class_combatant);
+    let victim = swing_victim(creature_victim, armor.1, level_difference, sitting);
+    if creature_victim && npc_flags.is_none() {
         report_missing_creature_flags(commands, target_entity);
     }
     let victim_position = Vec3::new(target_pos.x, target_pos.y, target_pos.z);
@@ -3161,7 +3165,8 @@ pub fn replay_healer_hit(
     )
     .damage;
     let victim_kind = swing_victim(
-        world.get::<Npc>(victim).is_some(),
+        world.get::<Npc>(victim).is_some()
+            && !crate::followers::is_player_like_combatant(world, victim),
         stats,
         level_difference,
         false,

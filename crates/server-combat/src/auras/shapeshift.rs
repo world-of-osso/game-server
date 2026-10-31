@@ -127,9 +127,10 @@ pub(crate) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> 
 
 pub fn attack_timing(world: &World, unit: Entity) -> Option<FormAttackTiming> {
     let (_, form) = current_form(world.get::<ActiveAuras>(unit)?)?;
-    world
-        .get_resource::<ShapeshiftForms>()?
-        .attack_timing(form, world.get::<Player>(unit).is_some())
+    world.get_resource::<ShapeshiftForms>()?.attack_timing(
+        form,
+        crate::followers::is_player_like_combatant(world, unit),
+    )
 }
 
 /// "remove other shapeshift before applying a new one":

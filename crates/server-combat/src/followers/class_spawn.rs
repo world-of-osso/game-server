@@ -371,6 +371,7 @@ pub fn install_class(
                 profile: profile.clone(),
             },
             super::AplControlled,
+            super::ClassCombatant,
             CharacterVisual {
                 race: source.race,
                 class: source.class_id,
