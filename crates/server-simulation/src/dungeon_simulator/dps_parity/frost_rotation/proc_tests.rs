@@ -182,6 +182,72 @@ fn frost_icy_death_torrent_follows_critical_white_swings() {
     }
 }
 
+#[test]
+#[ignore = "native251 selected Icy Death Torrent and real lethal critical swing"]
+fn frost_icy_death_torrent_survives_lethal_critical_swing() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::{Health, WeaponType};
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(251);
+    let mut run = super::super::prepare_literal(251, 3).unwrap();
+    super::super::engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let secondary = run.targets[1];
+    assert!(auras::has_aura(run.app.world(), actor, 435010));
+    {
+        let mut stats = run
+            .app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap();
+        stats.crit_pct = 100.0;
+        stats.main_hand.kind = WeaponType::TwoHand;
+    }
+    run.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::combat::AutoAttack::new(primary));
+    for _ in 0..200 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<Health>(primary)
+            .is_none_or(|health| health.current <= 0.0)
+        {
+            break;
+        }
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(primary.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()
+                && event.crit),
+        "the primary must die to a critical white swing"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(secondary.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(439539)
+                && event.amount > 0),
+        "the cone must still damage a living secondary enemy"
+    );
+}
+
 fn icebreaker_rime_damage(selected: bool) -> i32 {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
