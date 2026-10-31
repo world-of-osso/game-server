@@ -116,6 +116,33 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
         super::spell_safety::safe(h.app.world(), tank, caller, 31935),
         "the tank may use its native chain after planned assistants dispatch"
     );
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    let parameters =
+        crate::spell_cast::targets::chain_jump_parameters(h.app.world(), tank, &spell, effect);
+    let positions =
+        [caller, helpers[0], helpers[1]].map(|unit| h.app.world().get::<Position>(unit).copied());
+    let chain = crate::spell_cast::targets::chain_targets(
+        h.app.world_mut(),
+        tank,
+        &spell,
+        effect,
+        caller,
+        crate::spell_cast::targets::Relation::Enemy,
+    );
+    eprintln!(
+        "shield chain at launch: {parameters:?} positions={positions:?} chain={chain:?} helpers={helpers:?}"
+    );
     crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(caller), false)
         .expect("the tank's native Avenger's Shield must start against the planned pull");
     for _ in 0..100 {
