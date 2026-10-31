@@ -60,12 +60,6 @@ fn release_purified_spirit(world: &mut World, caster: Entity) {
     if amount <= 0.0 {
         return;
     }
-    let Some(target) = world
-        .get::<combat::networking::CombatTarget>(caster)
-        .and_then(|target| target.0)
-    else {
-        return;
-    };
     let spell = world
         .resource::<SpellStore>()
         .get(PURIFIED_DAMAGE)
@@ -86,9 +80,8 @@ fn release_purified_spirit(world: &mut World, caster: Entity) {
         duration > 0 && effect.aura_period_ms > 0,
         "native Purified Spirit timing"
     );
-    let targets =
-        spell_cast::targets::select_targets(world, caster, Some(target), &spell, effect, 0, false)
-            .expect("native Purified Spirit target selection");
+    let targets = spell_cast::targets::select_targets(world, caster, None, &spell, effect, 0, false)
+        .expect("native Purified Spirit target selection");
     if targets.is_empty() {
         return;
     }
@@ -97,7 +90,7 @@ fn release_purified_spirit(world: &mut World, caster: Entity) {
         world,
         caster,
         PURIFIED_DAMAGE,
-        Some(target),
+        None,
         1,
         amount / ticks / targets.len() as f32,
     );

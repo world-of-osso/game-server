@@ -88,7 +88,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Frost Bind in Darkness follows actual Rime acquisition and removal; it must not proc independently. Its active aura converts Howling Blast to Shadowfrost. Preserve other specializations' native proc behavior.
 - Icy Death Torrent triggered by a critical weapon swing uses its native caster-facing cone, including when the swing kills its target. A dead swing victim must not reject the cone or crash the server (SimC76f8118 `sc_death_knight.cpp:7073–7081,7715–7723`).
 - Devourer Voidstep and delayed Voidsurge hit enemies around the caster even if the preceding ability's primary target has died.
-- Niuzao's Stomp hits enemies around the summon even if Blackout Kick kills its primary target.
+- Niuzao's Stomp hits enemies around the summon even if Blackout Kick kills its primary target. Purified Spirit releases its remaining pool to nearby enemies without requiring a live combat target.
 
 ### Native Pandemic duration carry
 
