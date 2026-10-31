@@ -70,6 +70,7 @@ mod pack_identity;
 pub mod parity_profile;
 pub(crate) mod party;
 mod positioning;
+pub(crate) use positioning::CombatMovementExclusions;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;

@@ -13,6 +13,69 @@ use ::navigation::worker::{Output, Query as NavQuery};
 
 const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
 
+/// Live idle-hostile geometry used at the final combat-movement step.
+#[derive(Component)]
+pub(crate) struct CombatMovementExclusions(pub Option<Vec<(Vec3, f32)>>);
+
+impl CombatMovementExclusions {
+    pub(crate) fn permits(&self, from: Vec3, to: Vec3) -> bool {
+        self.0.as_ref().is_some_and(|watchers| {
+            watchers.iter().all(|(center, radius)| {
+                let start = from.distance_squared(*center);
+                let end = to.distance_squared(*center);
+                if start < radius * radius {
+                    end >= start
+                } else {
+                    pull_route::segment_distance_squared(*center, from, to) >= radius * radius
+                }
+            })
+        })
+    }
+}
+
+pub(super) fn update_combat_exclusions(
+    world: &mut World,
+    unit: Entity,
+    follower: &super::Follower,
+) {
+    let party = super::ai::party_units(world, follower.owner);
+    let enemies = super::ai::engaged_enemies(world, follower, unit, &party);
+    if enemies.is_empty() {
+        world.entity_mut(unit).remove::<CombatMovementExclusions>();
+        return;
+    }
+    let Some(map) = world.get::<InMap>(unit).copied() else {
+        world
+            .entity_mut(unit)
+            .insert(CombatMovementExclusions(None));
+        return;
+    };
+    let planned: std::collections::HashSet<_> = enemies
+        .iter()
+        .flat_map(|(target, _)| super::pull_set::members(world, *target, unit))
+        .collect();
+    let watchers: Vec<_> = world
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(map)
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
+        .collect();
+    let mut geometry = SystemState::<AggroDistance>::new(world);
+    let exclusions: Result<Vec<_>, String> = watchers
+        .into_iter()
+        .map(|watcher| {
+            let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
+            let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
+            Ok((center, radius))
+        })
+        .collect();
+    if let Err(error) = &exclusions {
+        warn!(?unit, %error, "Follower combat movement lacks native sight geometry");
+    }
+    world
+        .entity_mut(unit)
+        .insert(CombatMovementExclusions(exclusions.ok()));
+}
+
 #[derive(Component)]
 struct HoldTimeout {
     target: Entity,
@@ -100,13 +163,15 @@ fn approach_enters_unpulled_sight(
     let from = targets::position(world, unit).ok_or("Follower positioning lacks origin")?;
     let to =
         targets::position(world, target).ok_or("Follower positioning lacks target position")?;
+    let planned = if targets::relation_matches(world, unit, target, targets::Relation::Enemy) {
+        super::pull_set::members(world, target, unit)
+    } else {
+        Default::default()
+    };
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| {
-            is_unpulled_hostile(world, unit, *watcher)
-                && !in_target_formation(world, target, *watcher)
-        })
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
         .collect();
     if watchers.is_empty() {
         return Ok(Some(Vec::new()));
@@ -127,13 +192,15 @@ pub(super) fn route_enters_unpulled_sight(
     let map = *world
         .get::<InMap>(unit)
         .ok_or("Follower positioning lacks map")?;
+    let planned = if targets::relation_matches(world, unit, target, targets::Relation::Enemy) {
+        super::pull_set::members(world, target, unit)
+    } else {
+        Default::default()
+    };
     let watchers = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| {
-            is_unpulled_hostile(world, unit, *watcher)
-                && !in_target_formation(world, target, *watcher)
-        })
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
         .collect();
     Ok(!blockers_on_path(world, unit, path, watchers)?.is_empty())
 }

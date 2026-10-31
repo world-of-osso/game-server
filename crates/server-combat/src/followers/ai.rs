@@ -58,6 +58,9 @@ pub(super) fn update(world: &mut World) {
             }
         }
     }
+    for (unit, follower) in &followers {
+        super::positioning::update_combat_exclusions(world, *unit, follower);
+    }
     for (unit, follower) in followers {
         if crate::spell_cast::targets::is_alive(world, unit)
             && world
