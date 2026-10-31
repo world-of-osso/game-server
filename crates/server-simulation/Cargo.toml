@@ -11,7 +11,7 @@ server-spell-scripts = { path = "../server-spell-scripts", features = ["test-sup
 server-follower-apl = { path = "../server-follower-apl" }
 navigation = { path = "../navigation" }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
-shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "5fe2ff2ec050b0a1662c74f88f8a274964f264c9" }
+shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "cff29ac9376428fb298647d3899787a3d4033c6f" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 blake3 = "1.8"

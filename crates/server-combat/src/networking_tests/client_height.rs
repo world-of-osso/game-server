@@ -221,21 +221,25 @@ fn a_swimmer_reported_under_the_seabed_stays_on_it() {
     );
 }
 
-/// The Godot client's jump (`update_jump`: 7 yd/s up, shared `GRAVITY` down) from flat
-/// ground, sent at 60 fps; the server follows it and it lands where it took off.
+/// A 60 fps client jump uses the shared impulse and gravity; the server follows its
+/// reported arc through actual contact with the flat floor.
 #[test]
 fn a_jump_the_client_reports_is_the_server_height_through_the_arc() {
     let (mut app, player, connection) = flat_app(FLAT);
     let mut client = flat_spot(FLAT);
-    let mut velocity = 7.0_f32;
+    let mut velocity = shared::movement::JUMP_IMPULSE;
     let mut peak = FLAT;
+    let mut landed_at = None;
 
-    // 7 yd/s up lands after 0.71 s: 16 ticks cover the arc and the landing.
-    for _ in 0..16 {
+    // Three 60 Hz reports arrive per server tick, including the first floor contact.
+    for tick_index in 0..18 {
         let inputs = (0..3)
-            .map(|_| {
+            .map(|subframe| {
                 velocity -= GRAVITY * FRAME_SECS;
                 client.y = (client.y + velocity * FRAME_SECS).max(FLAT);
+                if client.y == FLAT && landed_at.is_none() {
+                    landed_at = Some(tick_index * 3 + subframe + 1);
+                }
                 frame_input(&client, false, client.y > FLAT)
             })
             .collect();
@@ -249,7 +253,8 @@ fn a_jump_the_client_reports_is_the_server_height_through_the_arc() {
             client.y
         );
     }
-    assert!(peak > FLAT + 1.0, "peak {peak}");
+    assert!(peak > FLAT + 1.5, "peak {peak}");
+    assert_eq!(landed_at, Some(49));
     assert_eq!(server_y(&app, player), FLAT);
     assert_eq!(app.world().get::<Health>(player).unwrap().current, 100.0);
 }
