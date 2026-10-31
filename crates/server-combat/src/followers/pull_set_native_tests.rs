@@ -442,4 +442,17 @@ fn windrunner_hammer_chain_guard_protects_outside_first_wave() {
             .next()
             .is_none()
     );
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 1241413, Some(helper), false)
+        .expect("native Hammer of Wrath must cast on the helper");
+    for _ in 0..100 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(1241413)
+                && event.target == Some(outside.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
+            return;
+        }
+    }
+    panic!("native Hammer of Wrath did not damage the outside creature");
 }
