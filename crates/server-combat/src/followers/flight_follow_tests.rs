@@ -49,7 +49,7 @@ fn spawn_druid(h: &mut crate::spell_cast::test_harness::Harness, position: Posit
 
 #[test]
 fn flying_follower_leaves_moving_ship_and_follows_owner() {
-    use shared::components::{TransportPassenger, TransportState};
+    use shared::components::{Rotation, TransportPassenger, TransportState};
     use std::{collections::HashMap, sync::Arc, time::Duration};
 
     let at = Position {
@@ -83,11 +83,21 @@ fn flying_follower_leaves_moving_ship_and_follows_owner() {
     h.app.world_mut().entity_mut(owner).insert((
         map,
         airborne,
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
         PlayerMotion(PlayerMotion::CAN_FLY | PlayerMotion::FLYING),
     ));
     h.app.world_mut().entity_mut(follower).insert((
         map,
         deck,
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
         TransportPassenger {
             transport: ship.to_bits(),
             position: [0.0; 3],
