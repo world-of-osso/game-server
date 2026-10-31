@@ -48,6 +48,7 @@
 
 - TC 15e0ed76 `instance_the_stonevault.cpp` doorData opens GO 440235 (Skarmorak route) and GO 440239 (Machinists route) when E.D.N.A. encounter 2854 is Done. Each copy retains its own state, including when doors reload.
 - `STONEVAULT_FINAL_DOOR_LOG_CORRELATED`: Open GO 440238 after both Master Machinists complete encounter 2888. WCL `8maLdvGchJ1MK97g` fight 1 records the encounter ending at 1,489,107 ms; actor 4 crosses the door plane between 1,541,613 and 1,543,860 ms. This is a log-correlated policy, not a verified Retail trigger.
+- `EIRICH_PROXIMITY_LOG_CORRELATED`: Clear only NOT_SELECTABLE on Eirich 213119 when a living player in the same copy is within 30.931856444393173 horizontal yards. The radius is the maximum of the nearest sampled player distances immediately before encounter start in WCL `8maLdvGchJ1MK97g` fight 1 (30.931856, 19 ms earlier), `v79xdVMArhKQt8jz` fight 3 (29.391743, 479 ms earlier), and `qLNnp4x613mv2Ctz` fight 10 (25.234049, 26 ms earlier). This policy is not a verified Retail trigger; WCL supplies no player Z. Preserve it for the copy lifetime when the actor reloads.
 
 ## TWW Skarmorak source admission
 

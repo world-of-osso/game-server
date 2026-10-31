@@ -64,6 +64,7 @@ mod neltharus_initial;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
 pub(crate) mod orator;
+mod proximity_unlock;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_final;
 pub(crate) mod ruby_life_pools;
@@ -155,6 +156,8 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, skarmorak::register_aura_scripts)
             .add_systems(Startup, neltharus_initial::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
+            .add_systems(FixedPreUpdate, proximity_unlock::register_actors)
+            .add_systems(FixedPostUpdate, proximity_unlock::update)
             .add_systems(FixedPostUpdate, tagged_trash_intro::advance)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
