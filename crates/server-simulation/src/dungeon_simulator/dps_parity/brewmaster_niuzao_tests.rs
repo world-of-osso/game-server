@@ -56,3 +56,43 @@ fn invoke_niuzao_creates_the_native_summon() {
         "Blackout Kick causes the pet's native Stomp"
     );
 }
+
+#[test]
+#[ignore = "native Niuzao Stomp after a lethal Blackout Kick"]
+fn niuzao_stomps_survivor_after_lethal_blackout_kick() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 132578, Some(primary), false)
+        .unwrap();
+    let pet = {
+        let world = run.app.world_mut();
+        world.query::<(Entity, &SummonedCreature)>()
+            .iter(world)
+            .find_map(|(entity, summon)| {
+                (summon.owner == actor && summon.spell_id == 132578).then_some(entity)
+            })
+            .expect("native Niuzao")
+    };
+    for _ in 0..300 {
+        run.app.update();
+    }
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 205523, Some(primary), false)
+        .unwrap();
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(run.app.world().get::<Health>(primary).unwrap().current <= 0.0);
+    let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+    assert!(events.iter().any(|event| event.source == Some(pet.to_bits())
+        && event.target == Some(survivor.to_bits())
+        && event.kind == CombatLogKind::Damage
+        && event.spell_id == Some(227291)
+        && event.amount > 0), "Niuzao must stomp a living enemy after the kick kills its primary");
+}
