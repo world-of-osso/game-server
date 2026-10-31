@@ -31,11 +31,26 @@ struct AreaEntry {
 pub(crate) struct AreaTable(HashMap<u32, AreaEntry>);
 
 impl AreaTable {
-    /// AreaTable MountFlags bit 0x2 permits flying mounts in this area.
-    pub(crate) fn permits_flying(&self, area_id: u32, map_id: u32) -> bool {
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn flight_permission(&self, area_id: u32, map_id: u32) -> Option<bool> {
+        self.flight_permission_with_required(area_id, map_id, 0)
+    }
+
+    pub(crate) fn flight_permission_with_required(
+        &self,
+        area_id: u32,
+        map_id: u32,
+        required_capabilities: u32,
+    ) -> Option<bool> {
         self.0
             .get(&area_id)
-            .is_some_and(|area| area.map_id == map_id && area.mount_flags & 0x2 != 0)
+            .filter(|area| area.map_id == map_id)
+            // TC 15e0ed76 does not model aura 541's area interaction. WCL
+            // x3HzDRn6yVjqCbt8 fight 7 shows Whirling Surge at 169530 ms and
+            // Ohn'ahra's Gusts at 170777 ms in area 15544 after Radiant Light
+            // 449042 applied at 166807 ms. Infer flight permission from the
+            // aura's required flying capability while retaining area validation.
+            .map(|area| (area.mount_flags | required_capabilities) & 0x2 != 0)
     }
 
     /// TC DB2Manager::IsInArea: the area itself or any ParentAreaID ancestor.
@@ -212,9 +227,10 @@ mod tests {
     fn flying_permission_uses_the_current_area_mount_flags() {
         let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
         let areas = load_area_table(&conn).unwrap();
-        assert!(areas.permits_flying(14971, 2662));
-        assert!(!areas.permits_flying(15544, 2662));
-        assert!(!areas.permits_flying(14971, 1));
+        assert_eq!(areas.flight_permission(14971, 2662), Some(true));
+        assert_eq!(areas.flight_permission(15544, 2662), Some(false));
+        assert_eq!(areas.flight_permission(14971, 1), None);
+        assert_eq!(areas.flight_permission(u32::MAX, 2662), None);
     }
 
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);

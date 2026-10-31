@@ -2300,7 +2300,17 @@ fn validate_caster_state(
     let in_combat = world
         .get::<shared::components::CombatStatus>(caster)
         .is_some_and(|status| status.0);
-    if in_combat && attributes(spell, 0) & SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0 {
+    let can_mount_in_combat = spell
+        .effects
+        .iter()
+        .any(|effect| effect.aura == crate::auras::handlers::MOUNTED)
+        && world
+            .get::<crate::auras::ActiveAuras>(caster)
+            .is_some_and(|auras| auras.has_type(crate::auras::handlers::ALLOW_MOUNT_IN_COMBAT));
+    if in_combat
+        && attributes(spell, 0) & SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0
+        && !can_mount_in_combat
+    {
         return Err(CastFailure::AffectingCombat);
     }
     let mounted_player = world.get::<Player>(caster).is_some()

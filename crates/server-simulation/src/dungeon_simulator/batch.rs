@@ -81,6 +81,7 @@ fn batch_summary_counts_wipes_per_reached_pack_and_retains_stalls() {
         simulated_seconds: 10.0,
         wall_seconds: 1.0,
         detail: String::new(),
+        deck_population_unsourced: None,
         samples: Vec::new(),
         performance: serde_json::Value::Null,
         terminal_units: serde_json::Value::Null,

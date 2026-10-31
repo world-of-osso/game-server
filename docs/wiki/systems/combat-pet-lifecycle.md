@@ -8,6 +8,10 @@ Verified: 2026-10-11, pet-lifecycle serverc4ba3ef/protocol203acd3; native runtim
 
 Family default specialization comes from the local `creature_family`/`chr_specialization` join, excluding PetOverrideSpec0x20 as in pinned TrinityCore DB2Stores. Demon records do not receive hunter specs. Changed pet health saves after combat ticks; the queued player logout/despawn boundary takes an immediate snapshot before marking the owner pending removal. Dismiss snapshots health before removing the world pet.
 
+## Player flight — 2026-10-30
+
+TC `MovementHandler.cpp:581–584` temporarily unsummons the controlled pet on player takeoff; `Unit.cpp:8374–8378` restores it on dismount. The flight lifecycle reuses taxi's saved slot and health, refuses Call Pet during flight, and requires a living non-flying owner before restoration. At `030b862342`, the real player-pet takeoff/dismount and existing follower taxi-pet regression tests both pass; a simulator seed remains pending. [Requirements](../../specs/pet-lifecycle.md).
+
 ## Missing-storage Call Pet — 2026-10-16
 
 Native BM character47/Bhunbeastm repeatedly received883 CastSuccess without a pet. A unit probe against a copied actual private redb confirms no stored pet record or active callslot1. On login `load_pet_stables` therefore inserts no `PetStable`; `check_summon_pet` incorrectly admitted that absence, while `effect_summon_pet` found no stored slot and returned without spawning/replicating a pet. e016950c rejects it before success with "You do not have a pet to summon". Actual native-target no-storage RED→GREEN plus empty-slot/dismiss/re-call controls pass4; an actual-character47 snapshot probe separately proves the storage and failure/spawn result. Diagnostic probe source/log stay in bot-harness evidence, not permanent environment-dependent tests. Fresh native `native-bm-no-storage1` on built server0f04b64f confirms five exact no-pet errors from five requests in10s, zero883 CastSuccess and no pet in37samples. Native refusal is proven; a functioning pet/rotation is still blocked by the named source gap.

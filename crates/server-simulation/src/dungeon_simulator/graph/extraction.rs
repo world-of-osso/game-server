@@ -228,7 +228,7 @@ fn extract(
     let entrance_pack =
         topology::append_entrance_route(&mut packs, &mut edges, entrance, opening, entrance_route)?;
     let unreachable = topology::unreachable(&packs, &edges, &teleports, entrance_pack);
-    let graph = Graph {
+    let mut graph = Graph {
         map_id: map,
         entrance: [entrance.x, entrance.z],
         entrance_height: entrance.y,
@@ -237,6 +237,7 @@ fn extract(
         edges,
         teleports,
         transports,
+        flights: Vec::new(),
         unreachable,
         route: Vec::new(),
         follower_difficulty: source.difficulty,
@@ -245,7 +246,157 @@ fn extract(
         follower_boss_bits: bits,
         follower_encounter_actor_bits: BTreeMap::new(),
     };
+    if map == 2662 {
+        let (paths, deck_start) = super::super::flight::build_paths(&graph, &mut nav, db)?;
+        let deck_end = *paths
+            .first()
+            .and_then(|path| path.first())
+            .ok_or("Dawnbreaker replay lacks a flight takeoff")?;
+        let deck_end_pack = append_dawnbreaker_deck(&mut graph, deck_start, deck_end)?;
+        for (index, path) in paths.into_iter().enumerate() {
+            append_flight_path(
+                &mut graph,
+                &path,
+                (index == 0).then_some(deck_end_pack),
+                |from, to| complete_route(&mut nav, from, to),
+            )?;
+        }
+        graph.unreachable = topology::unreachable(
+            &graph.packs,
+            &graph.edges,
+            &graph.teleports,
+            graph.entrance_pack,
+        );
+    }
     Ok((graph, route_bosses))
+}
+
+fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<u32, String> {
+    let id = graph
+        .packs
+        .iter()
+        .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
+        .max()
+        .unwrap_or(0)
+        .checked_add(1)
+        .ok_or("deck waypoint identifiers exhausted")?;
+    let destination = id
+        .checked_add(1)
+        .ok_or("deck waypoint identifiers exhausted")?;
+    for (id, point) in [(id, start), (destination, end)] {
+        graph.packs.push(Pack {
+            id,
+            position: [point.x, point.z],
+            height: point.y,
+            spawns: Vec::new(),
+        });
+    }
+    graph.entrance = [start.x, start.z];
+    graph.entrance_height = start.y;
+    graph.entrance_pack = id;
+    graph.teleports.push(Edge {
+        from: id,
+        to: destination,
+        yards: start.distance(end),
+    });
+    graph.transports.push(TransportEdge {
+        from: id,
+        to: destination,
+        source_guid: 0,
+        radius: 0.001,
+        departure: Some(start.to_array()),
+        landing: end.to_array(),
+        action: server::test_support::transport::Action::RecordedDawnbreakerDeck,
+    });
+    Ok(destination)
+}
+
+fn append_flight_path(
+    graph: &mut Graph,
+    path: &[Vec3],
+    from_anchor: Option<u32>,
+    mut walk: impl FnMut(Vec3, Vec3) -> Result<Vec<Vec3>, String>,
+) -> Result<(), String> {
+    let (Some(&start), Some(&end)) = (path.first(), path.last()) else {
+        return Err("empty flight path".into());
+    };
+    let mut anchor = |point: Vec3| -> Result<u32, String> {
+        let mut candidates: Vec<_> = graph
+            .packs
+            .iter()
+            .map(|pack| (point.distance_squared(pack.point()), pack.id, pack.point()))
+            .collect();
+        candidates.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+        let (pack, corners) = candidates
+            .into_iter()
+            .find_map(|(_, id, destination)| {
+                walk(point, destination).ok().map(|corners| (id, corners))
+            })
+            .ok_or_else(|| {
+                format!("flight endpoint {point:?} has no complete native walking route")
+            })?;
+        topology::append_entrance_route(&mut graph.packs, &mut graph.edges, point, pack, corners)
+    };
+    let from = match from_anchor {
+        Some(id) => id,
+        None => anchor(start)?,
+    };
+    let to = anchor(end)?;
+    let yards = path.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
+    graph.teleports.push(Edge { from, to, yards });
+    graph.flights.push(super::FlightEdge {
+        from,
+        to,
+        points: path.iter().map(|point| point.to_array()).collect(),
+    });
+    Ok(())
+}
+
+#[test]
+fn flight_path_connects_native_walk_components_in_one_direction() {
+    let pack = |id, x| Pack {
+        id,
+        position: [x, 0.0],
+        height: 0.0,
+        spawns: vec![],
+    };
+    let mut graph = Graph {
+        map_id: 2662,
+        entrance: [0.0, 0.0],
+        entrance_height: 0.0,
+        entrance_pack: 1,
+        packs: vec![pack(1, 0.0), pack(2, 100.0)],
+        edges: vec![],
+        teleports: vec![],
+        transports: vec![],
+        flights: vec![],
+        unreachable: vec![2],
+        route: vec![],
+        follower_difficulty: 0,
+        follower_boss_entries: vec![],
+        follower_boss_sources: Default::default(),
+        follower_boss_bits: Default::default(),
+        follower_encounter_actor_bits: Default::default(),
+    };
+    let start = Vec3::ZERO;
+    let end = Vec3::new(100.0, 0.0, 0.0);
+    let path = [start, Vec3::new(50.0, 15.0, 0.0), end];
+    append_flight_path(&mut graph, &path, None, |a, b| {
+        if a.distance(b) > 1.0 {
+            Err("disconnected".into())
+        } else {
+            Ok(vec![a, b])
+        }
+    })
+    .unwrap();
+    let flight = graph.flights[0].clone();
+    assert_eq!(flight.points, path.map(|point| point.to_array()));
+    let space = super::Space(graph);
+    assert_eq!(
+        space.next_translocation(start, end),
+        Ok(Some((flight.from, flight.to)))
+    );
+    assert!(space.next_translocation(end, start).is_err());
 }
 
 #[test]

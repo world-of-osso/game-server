@@ -1,5 +1,6 @@
 //! Opt-in real Forever build acceptance. Set GAME_SERVER_GROUND_DIR to its cache.
 use super::*;
+use shared::navmesh::TILE_SIZE;
 
 const ZEPHRAS_MAP: u32 = 2991;
 const ZEPHRAS_WDT: u32 = 7_198_644;

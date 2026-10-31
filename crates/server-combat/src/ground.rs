@@ -42,7 +42,6 @@ const GROUND_DIR_ENV: &str = "GAME_SERVER_GROUND_DIR";
 const KNOWN_GROUND_GAPS: &str = include_str!("ground_gaps.tsv");
 /// What `GroundMap::missing_files` reports for a map without a WDT.
 const NO_WDT: &str = "no WDT FileDataID";
-const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
 /// Bounded startup-only filesystem concurrency; never changes ECS scheduling.
 const GROUND_VALIDATION_WORKERS: usize = 4;
@@ -1160,10 +1159,15 @@ fn placed_wmos(obj0: &[u8]) -> Result<Vec<u32>, String> {
 /// `(row, col)` of the map tile containing Bevy `(x, z)`; the row comes from
 /// WoW Y (`-z`), the column from WoW X.
 pub(crate) fn bevy_to_tile(bx: f32, bz: f32) -> (u32, u32) {
-    let center = 32.0 * TILE_SIZE;
-    let row = ((center + bz) / TILE_SIZE).floor() as i32;
-    let col = ((center - bx) / TILE_SIZE).floor() as i32;
-    (row.clamp(0, 63) as u32, col.clamp(0, 63) as u32)
+    // Use the same chunk grid as TerrainHeightMap::find_chunk. Computing
+    // floor((center + coordinate) / tile_size) separately rounds an exact
+    // boundary into the preceding tile while the chunk lookup picks the next.
+    let tile = |wow_coordinate: f32| {
+        let chunk = (wow_coordinate / crate::terrain_height::CHUNK_SIZE).ceil() as i32;
+        let tiles_from_center = -(-chunk).div_euclid(16);
+        (32 - tiles_from_center).clamp(0, 63) as u32
+    };
+    (tile(-bz), tile(bx))
 }
 
 struct WmoPlacement {

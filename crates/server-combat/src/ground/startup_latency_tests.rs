@@ -6,6 +6,19 @@ use std::os::unix::fs::symlink;
 use std::sync::mpsc;
 use std::time::Duration;
 
+#[test]
+fn dawnbreaker_area_lookup_is_continuous_at_the_observed_tile_seam() {
+    let mut ground = GroundMap::new(&ground_data_dir(), HashMap::from([(2662, 5320716)]));
+    let point = Vec3::new(1942.5906, 0.0, -533.3333);
+    let before = ground.area_at(2662, point + Vec3::Z * -0.01);
+    let boundary = ground.area_at(2662, point);
+    let after = ground.area_at(2662, point + Vec3::Z * 0.01);
+    assert!(before.is_some(), "area immediately before seam");
+    assert!(after.is_some(), "area immediately after seam");
+    assert!(boundary.is_some(), "area exactly on seam");
+    assert!(boundary == before || boundary == after);
+}
+
 fn fifo(path: &Path) {
     assert!(
         std::process::Command::new("mkfifo")

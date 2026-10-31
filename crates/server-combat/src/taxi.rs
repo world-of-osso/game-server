@@ -352,8 +352,9 @@ fn process_activate_taxi(
             });
             let points = takeoff.network.flight_points(&route.nodes);
             let rider = link.0;
-            commands
-                .queue(move |world: &mut World| crate::hunter_pet::unsummon_for_taxi(world, rider));
+            commands.queue(move |world: &mut World| {
+                crate::hunter_pet::unsummon_temporarily(world, rider)
+            });
             commands.entity(link.0).insert((
                 TaxiFlight { points, next: 0 },
                 Mounted {
@@ -503,7 +504,7 @@ fn start_scripted_party_flight(
     }
     for rider in riders {
         if !carry_pets {
-            crate::hunter_pet::unsummon_for_taxi(world, rider);
+            crate::hunter_pet::unsummon_temporarily(world, rider);
         }
         world.entity_mut(rider).insert(TaxiFlight {
             points: points.clone(),
@@ -586,7 +587,7 @@ pub(crate) fn fly_taxis(
             commands.entity(entity).queue(finish_flight);
             commands.queue(move |world: &mut World| fall_after_flight(world, entity));
             commands.queue(move |world: &mut World| {
-                crate::hunter_pet::resummon_after_taxi(world, entity)
+                crate::hunter_pet::resummon_temporarily_unsummoned(world, entity)
             });
         }
     }

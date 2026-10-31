@@ -14,6 +14,58 @@ struct Travel {
     legs: std::collections::VecDeque<(Vec3, f32)>,
 }
 
+#[derive(Component)]
+struct FlightTravel {
+    phase: FlightPhase,
+    travel: Travel,
+}
+
+#[derive(Clone, Copy)]
+enum FlightPhase {
+    Mounting,
+    Flying,
+    Landing,
+}
+
+pub(super) fn flight_in_progress(world: &World, owner: Entity) -> bool {
+    world.get::<FlightTravel>(owner).is_some()
+}
+
+pub(super) fn begin_flight(
+    world: &mut World,
+    owner: Entity,
+    points: &[[f32; 3]],
+) -> Result<(), String> {
+    let position = point(
+        world
+            .get::<Position>(owner)
+            .ok_or("flight leader lacks position")?,
+    );
+    if points.len() < 2 {
+        return Err("flight path needs at least two points".into());
+    }
+    let first = Vec3::from_array(points[0]);
+    if position.distance(first) > 0.001 {
+        return Err(format!(
+            "flight leader is not at the validated takeoff: {position:?} vs {first:?}"
+        ));
+    }
+    let positions: Vec<_> = points.iter().copied().map(Vec3::from_array).collect();
+    let legs = positions
+        .windows(2)
+        .map(|pair| (pair[1], pair[0].distance(pair[1])))
+        .collect();
+    world.entity_mut(owner).remove::<(Travel, MoveIntent)>();
+    world.entity_mut(owner).insert(FlightTravel {
+        phase: FlightPhase::Mounting,
+        travel: Travel {
+            destination: *positions.last().unwrap(),
+            legs,
+        },
+    });
+    Ok(())
+}
+
 pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     let mut units: Vec<_> = world
         .query::<(Entity, &crate::followers::Follower)>()
@@ -28,7 +80,7 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
         .collect();
     units.extend(pets);
     for unit in units {
-        world.entity_mut(unit).remove::<Travel>();
+        world.entity_mut(unit).remove::<(Travel, FlightTravel)>();
     }
 }
 
@@ -39,6 +91,12 @@ pub(super) enum RouteGoal {
 }
 
 pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal, f32)> {
+    if let Some(flight) = world.get::<FlightTravel>(unit) {
+        return Some((
+            RouteGoal::Point(flight.travel.destination),
+            flight.travel.legs.iter().map(|(_, yards)| yards).sum(),
+        ));
+    }
     let travel = world.get::<Travel>(unit)?;
     let goal = if world.get::<MoveIntent>(unit).is_some()
         || world.get::<crate::creature_ai::CreatureState>(unit)
@@ -211,6 +269,15 @@ fn handle_unreachable_movement(
 }
 
 fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
+    if flight_in_progress(world, unit) {
+        return advance_flight(world, unit, dt);
+    }
+    if world
+        .get::<crate::creature_ai::flight_follow::FlightFollow>(unit)
+        .is_some()
+    {
+        return Ok(());
+    }
     if !can_move(world, unit) {
         return Ok(());
     }
@@ -277,6 +344,141 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         world.entity_mut(unit).insert(travel);
     }
     Ok(())
+}
+
+fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), String> {
+    if !world
+        .get::<Health>(owner)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return Ok(());
+    }
+    let mut flight = world.entity_mut(owner).take::<FlightTravel>().unwrap();
+    match flight.phase {
+        FlightPhase::Mounting => {
+            if world.get::<shared::components::Mounted>(owner).is_some() {
+                server::test_support::flight::enter_flight(world, owner)?;
+                flight.phase = FlightPhase::Flying;
+            } else if world.get::<shared::casting::CastState>(owner).is_none() {
+                server::test_support::flight::request_mount(world, owner)?;
+            }
+        }
+        FlightPhase::Flying => {
+            if !can_move(world, owner) {
+                world.entity_mut(owner).insert(flight);
+                return Ok(());
+            }
+            server::test_support::flight::enter_flight(world, owner)?;
+            let followers: Vec<_> = world
+                .query::<(Entity, &crate::followers::Follower, &Health)>()
+                .iter(world)
+                .filter(|(_, follower, health)| follower.owner == owner && health.current > 0.0)
+                .map(|(unit, _, _)| unit)
+                .collect();
+            if followers.iter().any(|unit| {
+                world
+                    .get::<crate::creature_ai::flight_follow::FlightFollow>(*unit)
+                    .is_none()
+            }) {
+                return Err("a living follower did not enter native flight".into());
+            }
+            let from = point(
+                world
+                    .get::<Position>(owner)
+                    .ok_or("flight leader lacks position")?,
+            );
+            let speed = shared::movement::FLIGHT_SPEED
+                * world
+                    .get::<crate::auras::AuraStatMods>(owner)
+                    .map_or(1.0, |mods| mods.flight_speed);
+            let next = advance(from, &mut flight.travel, speed * dt, 0.0);
+            world
+                .entity_mut(owner)
+                .insert(shared::components::MovementSpeed(speed));
+            crate::creature_ai::move_follower(
+                world,
+                owner,
+                Position {
+                    x: next.x,
+                    y: next.y,
+                    z: next.z,
+                },
+                speed,
+            );
+            if flight.travel.legs.is_empty() {
+                server::test_support::flight::land(world, owner)?;
+                flight.phase = FlightPhase::Landing;
+            }
+        }
+        FlightPhase::Landing => {
+            let flying = world
+                .query::<(
+                    &crate::followers::Follower,
+                    &crate::creature_ai::flight_follow::FlightFollow,
+                )>()
+                .iter(world)
+                .any(|(follower, _)| follower.owner == owner);
+            if !flying {
+                return Ok(());
+            }
+        }
+    }
+    world.entity_mut(owner).insert(flight);
+    Ok(())
+}
+
+#[test]
+fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
+    let mut world = World::new();
+    let leader = world
+        .spawn(Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let path = [[1.0, 0.0, 0.0], [1.0, 3.0, 0.0], [5.0, 3.0, 0.0]];
+    assert!(begin_flight(&mut world, leader, &path).is_err());
+    assert!(!flight_in_progress(&world, leader));
+    world.entity_mut(leader).insert(Position {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    begin_flight(&mut world, leader, &path).unwrap();
+    assert!(flight_in_progress(&world, leader));
+    let (goal, remaining) = remaining_route(&world, leader).unwrap();
+    assert!(goal == RouteGoal::Point(Vec3::new(5.0, 3.0, 0.0)));
+    assert_eq!(remaining, 7.0);
+}
+
+#[test]
+fn dead_flight_leader_waits_for_native_release() {
+    let mut world = World::new();
+    let position = Position {
+        x: 1.0,
+        y: 2.0,
+        z: 3.0,
+    };
+    let leader = world
+        .spawn((
+            position,
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            FlightTravel {
+                phase: FlightPhase::Flying,
+                travel: Travel {
+                    destination: Vec3::new(10.0, 20.0, 30.0),
+                    legs: [(Vec3::new(10.0, 20.0, 30.0), 30.0)].into(),
+                },
+            },
+        ))
+        .id();
+    advance_flight(&mut world, leader, 1.0).unwrap();
+    assert_eq!(*world.get::<Position>(leader).unwrap(), position);
+    assert!(flight_in_progress(&world, leader));
 }
 
 #[test]

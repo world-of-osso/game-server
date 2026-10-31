@@ -78,6 +78,12 @@ An NPC chase without a walking path must hold its actual position and use the ex
 
 Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
 
+## Dawnbreaker flight legs
+
+`DAWNBREAKER_FLIGHT_ALTITUDE_TERRAIN_CLEARANCE_INFERRED`: WCL report `x3HzDRn6yVjqCbt8` fight 7 supplies horizontal positions and times, not altitude. The logged deck transport phase is distinct from subsequent flight; see [deck replay](#dawnbreaker-deck-replay). Radiant Light 449042 applies after that phase. Aura 541 requiring a flying capability permits flight in a known area even when its MountFlags prohibit flight; this interaction is inferred from the report's Whirling Surge at 169530 ms and Ohn'ahra's Gusts at 170777 ms after the grant. Otherwise preserve AreaTable permissions, and fail explicitly for unknown areas. Check all crossed terrain-area cells.
+
+Infer the moving deck takeoff altitude from the first boss's static ship height; project other logged ground endpoints onto native geometry. Interpolate altitude by logged time between anchors. At each logged waypoint, raise it only as needed to clear the highest native navigation or collision surface at or below the interpolated height by 15 yards; ignore higher surfaces unless LOS finds them. Raise flight waypoints as needed to respect the elapsed-time vertical bound. The 100 yd/s bound is inferred from FlightCapability 11's impulse-speed cap; it is not a sourced universal vertical-speed limit. Check every resulting 3D segment against native LOS. For a blocked descent, hold altitude until a later segment can descend; for another hit, insert a waypoint 15 yards above it. Recheck segments and speed after each repair, with at most eight inserted collision waypoints per leg. Bound a continuous hold by the simulator's 60-second stall interval; report `FLIGHT_DESCENT_HOLD_TIMEOUT` if it exceeds that interval and `FLIGHT_DESCENT_HOLD_UNCLEARED` if no descent clears before landing. Fail explicitly on missing collision data, blocked takeoff or landing, or exhausted repairs. Inferred heights are not logged flight evidence. The leader uses the sourced Golden Gryphon 32235 and Expert Riding 225; production follower flight follows. Keep sourced boss placements. Integration and seed qualification remain pending.
+
 ## Native addon auras
 
 Apply source creature and template addon auras at spawn and on actual home return through the production addon system. Preserve native evade removal and restoration.
@@ -116,6 +122,11 @@ Production `HunterPetPlugin` and `PetControlPlugin` load native pet family/speci
 
 - `dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state`: exact spawn/spell allocation reuse with fresh clocks, actors and event queues (RED→GREEN6.39s).
 - `dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn`: actual kill→native corpse decay→absent actor sampling (RED→GREEN11.23s).
+
+## Dawnbreaker deck replay
+
+- [ ] Replay the party's transport-carried deck phase from WCL `x3HzDRn6yVjqCbt8` fight 7, 86,000–162,380 ms. Apply Radiant Light 449042 at 166,807 ms, after the logged commander death, and identify the replay in run output as `deck_population_unsourced`. Do not report simulated deaths or credit for the replayed deck enemies.
+- [ ] Replace the replay when transport-backed deck population is sourced and executable. Nightfall Ritualist 214761 and Nightfall Commander 214762 have no map-2662 `content_creature` rows; do not invent their spawns.
 
 ## Known gaps (current cycle)
 

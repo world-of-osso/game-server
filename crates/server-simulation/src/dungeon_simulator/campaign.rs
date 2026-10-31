@@ -6,8 +6,15 @@ use shared::components::{CombatStatus, Health, Mana, Position};
 use std::collections::BTreeMap;
 
 const MAX_TICKS: usize = 72_000;
-const STALL_SECONDS: f64 = 60.0;
+pub(super) const STALL_SECONDS: f64 = 60.0;
 const COHESION_CHECK_SECONDS: f64 = 1.0;
+pub(super) const DAWNBREAKER_DECK_START_MS: u32 = 86_000;
+pub(super) const DAWNBREAKER_COMMANDER_DEATH_MS: u32 = 162_380;
+pub(super) const DAWNBREAKER_RADIANT_GRANT_MS: u32 = 166_807;
+const DECK_CARRY_SECONDS: f64 =
+    (DAWNBREAKER_COMMANDER_DEATH_MS - DAWNBREAKER_DECK_START_MS) as f64 / 1000.0;
+const DECK_GRANT_SECONDS: f64 =
+    (DAWNBREAKER_RADIANT_GRANT_MS - DAWNBREAKER_DECK_START_MS) as f64 / 1000.0;
 
 #[path = "azure_positioning_tests.rs"]
 mod azure_positioning_tests;
@@ -57,6 +64,8 @@ pub(super) struct Report {
     pub simulated_seconds: f64,
     pub wall_seconds: f64,
     pub detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deck_population_unsourced: Option<serde_json::Value>,
     pub samples: Vec<Sample>,
     pub pulls: Vec<PullDecision>,
     pub performance: serde_json::Value,
@@ -1966,6 +1975,153 @@ fn alternate_roster_attackers_participate_in_the_first_native_fight() {
     );
 }
 
+fn deck_replay_provenance(replay_executed: bool) -> serde_json::Value {
+    serde_json::json!({
+        "report": "x3HzDRn6yVjqCbt8", "fight": 7, "replay_executed": replay_executed,
+        "transport_start_ms": DAWNBREAKER_DECK_START_MS,
+        "commander_death_ms": DAWNBREAKER_COMMANDER_DEATH_MS,
+        "radiant_light_ms": DAWNBREAKER_RADIANT_GRANT_MS, "altitude": "inferred",
+        "boundary_positions": "interpolated from logged cast positions",
+    })
+}
+
+struct DeckReplay {
+    started_at: f64,
+    start: Vec3,
+    end: Vec3,
+}
+
+impl DeckReplay {
+    fn position(&self, now: f64) -> Vec3 {
+        let elapsed = now - self.started_at;
+        self.start.lerp(
+            self.end,
+            (elapsed / DECK_CARRY_SECONDS).clamp(0.0, 1.0) as f32,
+        )
+    }
+
+    fn grant_due(&self, now: f64) -> bool {
+        now - self.started_at >= DECK_GRANT_SECONDS
+    }
+}
+
+/// Replay WCL XY/timing only; transport-backed deck population is not sourced.
+/// Replace this phase when server transport support lands and 214761/214762 are sourced.
+fn advance_deck_frame(
+    world: &mut World,
+    members: &[Entity],
+    deck: &DeckReplay,
+    now: f64,
+) -> Result<bool, String> {
+    let point = deck.position(now);
+    let position = Position {
+        x: point.x,
+        y: point.y,
+        z: point.z,
+    };
+    let pets: Vec<_> = members
+        .iter()
+        .flat_map(|member| crate::hunter_pet::active_owned_pets(world, *member))
+        .collect();
+    for &member in members {
+        if !crate::spell_cast::targets::is_alive(world, member) {
+            return Err("deck replay party member died; recorded phase cannot continue".into());
+        }
+        world.entity_mut(member).insert(position);
+    }
+    for pet in pets {
+        world.entity_mut(pet).insert(position);
+    }
+    if !deck.grant_due(now) {
+        return Ok(true);
+    }
+    grant_deck_radiant_light(world, members)?;
+    Ok(false)
+}
+
+fn grant_deck_radiant_light(world: &mut World, members: &[Entity]) -> Result<(), String> {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(449042)
+        .ok_or("Radiant Light 449042 is missing from the spell catalog")?;
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    for &member in members {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: member,
+                target: member,
+                spell_id: 449042,
+                effect_mask,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        if !crate::auras::has_aura(world, member, 449042) {
+            return Err(format!("Radiant Light did not apply to {member}"));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn deck_replay_preserves_logged_carry_and_grant_times() {
+    let deck = DeckReplay {
+        started_at: 5.0,
+        start: Vec3::new(1421.0, 3.0, 331.0),
+        end: Vec3::new(1973.0, 1104.0, -289.0),
+    };
+    assert_eq!(deck_replay_provenance(false)["replay_executed"], false);
+    assert_eq!(deck_replay_provenance(true)["commander_death_ms"], 162380);
+    assert_eq!(deck.position(5.0), deck.start);
+    assert!(
+        deck.position(43.19)
+            .distance(deck.start.lerp(deck.end, 0.5))
+            < 0.001
+    );
+    assert_eq!(deck.position(81.38), deck.end);
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[449042], 1)
+        .expect("real Radiant Light catalog");
+    let member = h.caster;
+    let pet = h
+        .app
+        .world_mut()
+        .spawn((
+            crate::hunter_pet::HunterPet {
+                owner: member,
+                slot: 0,
+            },
+            crate::maps::InMap::continent(0),
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            Position {
+                x: deck.start.x,
+                y: deck.start.y,
+                z: deck.start.z,
+            },
+        ))
+        .id();
+    assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 81.38).unwrap());
+    assert_eq!(
+        *h.app.world().get::<Position>(member).unwrap(),
+        Position {
+            x: deck.end.x,
+            y: deck.end.y,
+            z: deck.end.z
+        }
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(pet),
+        h.app.world().get::<Position>(member)
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), member, 449042));
+    assert!(advance_deck_frame(h.app.world_mut(), &[member], &deck, 85.806).unwrap());
+    assert!(!crate::auras::has_aura(h.app.world(), member, 449042));
+    assert!(!advance_deck_frame(h.app.world_mut(), &[member], &deck, 85.807).unwrap());
+    assert!(crate::auras::has_aura(h.app.world(), member, 449042));
+}
+
 struct Run {
     app: App,
     graph: Graph,
@@ -1975,6 +2131,7 @@ struct Run {
     report: Report,
     current_pack: Option<u32>,
     waiting_objective: Option<(u32, f64)>,
+    deck_replay: Option<DeckReplay>,
     /// Packs whose frozen route anchor the owner reached without engaging them.
     anchors_reached: std::collections::BTreeSet<u32>,
     last_progress: f64,
@@ -2113,6 +2270,7 @@ fn aborted_initialization(seed: u64, started: std::time::Instant, reason: String
         simulated_seconds: 0.0,
         wall_seconds: started.elapsed().as_secs_f64(),
         detail: format!("gameplay initialization aborted: {reason}"),
+        deck_population_unsourced: None,
         samples: Vec::new(),
         pulls: Vec::new(),
         performance: serde_json::json!({"combat_events": [], "initialization_complete": false}),
@@ -2133,6 +2291,9 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             z: graph.entrance[1],
         },
     )?;
+    if !graph.flights.is_empty() {
+        server::test_support::flight::configure_leader(app.world_mut(), party.owner)?;
+    }
     let actors = runtime::spawn_population(&mut app, copy);
     let object_guids: Vec<_> = graph
         .transports
@@ -2177,6 +2338,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         ));
     }
     let healer_metrics = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
+    let deck_provenance = (graph.map_id == 2662).then(|| deck_replay_provenance(false));
     Ok(Run {
         app,
         graph,
@@ -2185,6 +2347,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         objects,
         current_pack: None,
         waiting_objective: None,
+        deck_replay: None,
         anchors_reached: Default::default(),
         last_progress: 0.0,
         event_cursor: 0,
@@ -2205,6 +2368,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             simulated_seconds: 0.0,
             wall_seconds: 0.0,
             detail: String::new(),
+            deck_population_unsourced: deck_provenance,
             samples: Vec::new(),
             pulls: Vec::new(),
             performance: serde_json::Value::Null,
@@ -2493,7 +2657,24 @@ impl Run {
         Ok(self.waiting_for_tank)
     }
 
+    fn advance_deck_replay(&mut self) -> Result<bool, String> {
+        let Some(deck) = self.deck_replay.take() else {
+            return Ok(false);
+        };
+        let now = self.now();
+        let members: Vec<_> = self.members().collect();
+        let active = advance_deck_frame(self.app.world_mut(), &members, &deck, now)?;
+        self.last_progress = now;
+        if active {
+            self.deck_replay = Some(deck);
+        }
+        Ok(active)
+    }
+
     fn control(&mut self) -> Result<(), String> {
+        if self.advance_deck_replay()? {
+            return Ok(());
+        }
         self.refresh_population();
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
@@ -2506,6 +2687,9 @@ impl Run {
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
             }
+            return Ok(());
+        }
+        if super::movement::flight_in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
         if self.wait_for_tank()? {
@@ -2754,6 +2938,26 @@ impl Run {
         let Some((source, destination)) = edge else {
             return Ok(false);
         };
+        if let Some(flight) = self
+            .graph
+            .flights
+            .iter()
+            .find(|edge| edge.from == source && edge.to == destination)
+            .cloned()
+        {
+            let start = Vec3::from_array(*flight.points.first().ok_or("empty registered flight")?);
+            if Vec3::new(from.x, from.y, from.z).distance(start) > 0.001 {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(start));
+                return Ok(true);
+            }
+            super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+            super::movement::begin_flight(self.app.world_mut(), self.party.owner, &flight.points)?;
+            self.record_pull(source, format!("REGISTERED_FLIGHT {source}->{destination}"));
+            return Ok(true);
+        }
         if let Some(transport) = self
             .graph
             .transports
@@ -2761,6 +2965,24 @@ impl Run {
             .find(|edge| edge.from == source && edge.to == destination)
             .cloned()
         {
+            if transport.action == server::test_support::transport::Action::RecordedDawnbreakerDeck
+            {
+                let start =
+                    Vec3::from_array(transport.departure.ok_or("deck replay lacks departure")?);
+                let here = Vec3::new(from.x, from.y, from.z);
+                if here.distance(start) > transport.radius {
+                    return Err("deck replay party is not at its logged starting point".into());
+                }
+                super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.deck_replay = Some(DeckReplay {
+                    started_at: self.now(),
+                    start,
+                    end: Vec3::from_array(transport.landing),
+                });
+                self.report.deck_population_unsourced = Some(deck_replay_provenance(true));
+                self.record_pull(source, "deck_population_unsourced: WCL x3HzDRn6yVjqCbt8 fight 7, 86000–162380ms; grant 166807ms".into());
+                return Ok(true);
+            }
             let source_objects = matches!(
                 transport.action,
                 server::test_support::transport::Action::ObjectGossip

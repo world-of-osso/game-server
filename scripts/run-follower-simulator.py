@@ -29,6 +29,12 @@ def write_blocked_report(output, map_id, seed, reason):
     report = {'map_id': map_id, 'seed': seed, 'status': 'blocked', 'detail': str(reason),
               'encounters_killed': 0, 'encounters_total': None, 'deaths': 0,
               'simulated_seconds': 0.0}
+    if map_id == 2662:
+        report['deck_population_unsourced'] = {
+            'report': 'x3HzDRn6yVjqCbt8', 'fight': 7, 'replay_executed': False,
+            'transport_start_ms': 86000, 'commander_death_ms': 162380,
+            'radiant_light_ms': 166807,
+        }
     (output / f'run-{seed}.json').write_text(json.dumps(report, indent=2) + '\n')
 
 

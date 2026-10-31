@@ -296,7 +296,7 @@ fn position(p: Vec3) -> Position {
 #[derive(Resource)]
 struct NavigationPublicationInstalled;
 
-fn install_publication(app: &mut App) {
+pub(crate) fn install_publication(app: &mut App) {
     if app
         .world()
         .contains_resource::<NavigationPublicationInstalled>()

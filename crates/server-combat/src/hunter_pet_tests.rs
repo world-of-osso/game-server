@@ -80,6 +80,9 @@ fn hunter(db: &Path, entry: u32) -> Option<Harness> {
             DISMISS_PET,
             REVIVE_PET,
             MEND_PET,
+            32235,  // Golden Gryphon
+            86459,  // Standard Flying capability
+            404468, // Flight Style: Steady
         ],
         CLASS_HUNTER,
         false,
@@ -166,6 +169,73 @@ fn pet_out(h: &Harness) -> Entity {
 fn saved(h: &Harness) -> StoredPetStable {
     let db = h.app.world().resource::<GameDatabase>();
     load_pet_stable(&db.db, CHARACTER_ID).expect("stable saved")
+}
+
+#[test]
+fn flying_player_temporarily_unsummons_and_restores_real_pet_on_dismount() {
+    use shared::components::{CombatStatus, Mounted, PlayerMotion};
+    use shared::profession::ProfessionSkillLine;
+    let path = db_path();
+    seed_stable(&path, None);
+    let mut h = hunter(&path, DISEASED_YOUNG_WOLF).expect("real hunter catalog");
+    h.cast_and_deliver(CALL_PET_1, None);
+    h.advance(32);
+    let old_pet = pet_out(&h);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(old_pet)
+        .unwrap()
+        .current = 123.0;
+    let db = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::auras::mount::load_mount_store(&db).unwrap());
+    let owner = h.caster;
+    h.app.world_mut().entity_mut(owner).insert((
+        CombatStatus(false),
+        PlayerMotion::default(),
+        crate::profession::PlayerProfessions {
+            lines: vec![ProfessionSkillLine {
+                skill_line: crate::auras::mount::SKILL_RIDING,
+                step: 3,
+                rank: 225,
+                max_rank: 225,
+            }],
+            spells: Vec::new(),
+        },
+    ));
+    crate::auras::mount::set_flight_style(
+        h.app.world_mut(),
+        owner,
+        crate::auras::mount::FlightStyle::Steady,
+    );
+    h.cast_and_deliver(32235, None);
+    h.advance(32);
+    assert!(h.app.world().get::<Mounted>(owner).is_some());
+    assert!(
+        h.app
+            .world()
+            .get::<PlayerMotion>(owner)
+            .unwrap()
+            .contains(PlayerMotion::CAN_FLY)
+    );
+    let health_before = h.app.world().get::<Health>(old_pet).unwrap().current;
+    h.app.world_mut().get_mut::<PlayerMotion>(owner).unwrap().0 |= PlayerMotion::FLYING;
+    h.advance(2);
+    assert!(h.app.world().get_entity(old_pet).is_err());
+    assert!(summoned_pet(h.app.world(), owner).is_none());
+    assert_eq!(stable(&h).unwrap().stored.current, Some(0));
+    crate::auras::mount::cancel_mount_aura(h.app.world_mut(), owner);
+    let restored = pet_out(&h);
+    assert_ne!(restored, old_pet);
+    assert_eq!(
+        h.app.world().get::<Health>(restored).unwrap().current,
+        health_before
+    );
+    assert!(h.app.world().get::<Mounted>(owner).is_none());
 }
 
 #[test]

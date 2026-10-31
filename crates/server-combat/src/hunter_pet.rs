@@ -98,7 +98,10 @@ impl Plugin for HunterPetPlugin {
                 persist_changed_pet_health.after(crate::combat::auto_attack_system),
             )
             .add_systems(Update, guardians::remove_expired_guardians)
-            .add_systems(FixedUpdate, remove_ownerless_pets)
+            .add_systems(
+                FixedUpdate,
+                (remove_ownerless_pets, sync_player_flight_pets),
+            )
             .add_systems(
                 FixedUpdate,
                 remove_dead_summoned_pets.after(crate::combat::auto_attack_system),
@@ -337,9 +340,16 @@ fn check_summon_pet(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> Result<(), CastFailure> {
-    if world.get::<TaxiPetSlot>(caster).is_some() {
+    if world.get::<TemporaryPetSlot>(caster).is_some()
+        || world
+            .get::<shared::components::PlayerMotion>(caster)
+            .is_some_and(|motion| {
+                motion.contains(shared::components::PlayerMotion::FLYING)
+                    || motion.contains(shared::components::PlayerMotion::ADV_FLYING)
+            })
+    {
         return Err(CastFailure::Unsupported(
-            "pet cannot be summoned during taxi flight".into(),
+            "pet cannot be summoned during flight".into(),
         ));
     }
     if effect.misc_values[0] != 0 {
@@ -779,10 +789,24 @@ fn remove_pet_with_current(world: &mut World, pet: Entity, keep_current: bool) {
 }
 
 #[derive(Component)]
-struct TaxiPetSlot(u8);
+struct TemporaryPetSlot(u8);
+
+/// TC MovementHandler.cpp:581–584 temporarily removes the player's pet on takeoff.
+fn sync_player_flight_pets(world: &mut World) {
+    let players: Vec<_> = world
+        .query_filtered::<(Entity, &shared::components::PlayerMotion), With<shared::components::Player>>()
+        .iter(world)
+        .filter(|(_, motion)| motion.contains(shared::components::PlayerMotion::FLYING)
+            || motion.contains(shared::components::PlayerMotion::ADV_FLYING))
+        .map(|(entity, _)| entity)
+        .collect();
+    for player in players {
+        unsummon_temporarily(world, player);
+    }
+}
 
 /// TC Player::UnsummonPetTemporaryIfAny: save the controlled pet as current during flight.
-pub(crate) fn unsummon_for_taxi(world: &mut World, owner: Entity) {
+pub(crate) fn unsummon_temporarily(world: &mut World, owner: Entity) {
     let Some(pet) = summoned_pet(world, owner) else {
         return;
     };
@@ -790,27 +814,39 @@ pub(crate) fn unsummon_for_taxi(world: &mut World, owner: Entity) {
         return;
     };
     remove_pet_with_current(world, pet, true);
-    world.entity_mut(owner).insert(TaxiPetSlot(slot));
+    world.entity_mut(owner).insert(TemporaryPetSlot(slot));
 }
 
 /// TC Player::ResummonPetTemporaryUnSummonedIfAny restores that pet after landing.
-pub(crate) fn resummon_after_taxi(world: &mut World, owner: Entity) {
-    let Some(slot) = world.get::<TaxiPetSlot>(owner).map(|slot| slot.0) else {
+pub(crate) fn resummon_temporarily_unsummoned(world: &mut World, owner: Entity) {
+    if !crate::spell_cast::targets::is_alive(world, owner) {
+        return;
+    }
+    if world
+        .get::<shared::components::PlayerMotion>(owner)
+        .is_some_and(|motion| {
+            motion.contains(shared::components::PlayerMotion::FLYING)
+                || motion.contains(shared::components::PlayerMotion::ADV_FLYING)
+        })
+    {
+        return;
+    }
+    let Some(slot) = world.get::<TemporaryPetSlot>(owner).map(|slot| slot.0) else {
         return;
     };
     if summoned_pet(world, owner).is_some() {
         return;
     }
     let Some((at, facing)) = close_point(world, owner) else {
-        error!(?owner, "Taxi pet cannot return: owner has no position");
+        error!(?owner, "Temporary pet cannot return: owner has no position");
         return;
     };
     put_pet_out(world, owner, slot, at, facing);
     if summoned_pet(world, owner).is_none() {
-        error!(?owner, slot, "Taxi pet could not be restored");
+        error!(?owner, slot, "Temporary pet could not be restored");
         return;
     }
-    world.entity_mut(owner).remove::<TaxiPetSlot>();
+    world.entity_mut(owner).remove::<TemporaryPetSlot>();
 }
 
 /// Summon the pet of `slot` at `at` as the owner's current pet and save the stable.

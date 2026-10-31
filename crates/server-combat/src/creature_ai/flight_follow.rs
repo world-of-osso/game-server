@@ -19,7 +19,7 @@ pub struct FlightFollow {
     druid: bool,
 }
 
-pub(super) fn update(world: &mut World) {
+pub(crate) fn update(world: &mut World) {
     let followers: Vec<_> = world
         .query_filtered::<
             (Entity, &Follower, &Position, &InMap, &Health),
@@ -51,10 +51,16 @@ pub(super) fn update(world: &mut World) {
             let area = world
                 .get_resource_mut::<crate::ground::GroundMap>()
                 .and_then(|mut ground| ground.area_at(map.map_id, feet));
+            let required = crate::auras::mount::required_capability_flags(
+                world.get::<crate::auras::ActiveAuras>(unit),
+            );
             let allowed = area.is_some_and(|area| {
                 world
                     .get_resource::<crate::area_table::AreaTable>()
-                    .is_some_and(|table| table.permits_flying(area, map.map_id))
+                    .and_then(|table| {
+                        table.flight_permission_with_required(area, map.map_id, required)
+                    })
+                    == Some(true)
             });
             if !allowed || !start_flight(world, unit, &follower) {
                 continue;

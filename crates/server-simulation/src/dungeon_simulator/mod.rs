@@ -7,6 +7,7 @@ mod chain_heal_target_tests;
 mod diagnostics;
 mod discipline_priest_replay;
 pub(crate) mod dps_parity;
+mod flight;
 mod friendly_cone_tests;
 mod graph;
 mod healer_benchmark_tests;

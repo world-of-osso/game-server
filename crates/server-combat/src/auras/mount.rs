@@ -138,6 +138,7 @@ pub struct Rider<'a> {
     /// `MOVEMENTFLAG_SWIMMING`); else out of water. The water surface case is not modelled.
     pub submerged: bool,
     pub map_id: u32,
+    pub required_capability_flags: u32,
     pub aura_stacks: &'a dyn Fn(u32) -> u32,
     pub knows: &'a dyn Fn(u32) -> bool,
 }
@@ -192,6 +193,7 @@ impl MountStore {
         };
         rider.riding_skill >= capability.req_riding_skill
             && capability.flags & terrain != 0
+            && capability.flags & rider.required_capability_flags == rider.required_capability_flags
             && (capability.req_map == -1 || capability.req_map == rider.map_id as i32)
             && capability.req_area == 0
             && (capability.req_spell_aura == 0
@@ -309,6 +311,18 @@ fn mark_dirty(world: &World, unit: Entity) {
     }
 }
 
+pub(crate) fn required_capability_flags(auras: Option<&ActiveAuras>) -> u32 {
+    auras.map_or(0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .filter(|effect| {
+                effect.aura_type == super::handlers::MOD_REQUIRED_MOUNT_CAPABILITY_FLAGS
+            })
+            .fold(0, |flags, effect| flags | effect.misc_values[0] as u32)
+    })
+}
+
 /// The rider state `GetMountCapability` reads, handed to `read`.
 pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Rider) -> R) -> R {
     let swimming = world
@@ -340,6 +354,7 @@ pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Ride
         map_id: world
             .get::<crate::maps::InMap>(unit)
             .map_or(0, |map| map.map_id),
+        required_capability_flags: required_capability_flags(auras),
         aura_stacks: &aura_stacks,
         knows: &knows,
     };
@@ -465,6 +480,9 @@ pub(super) fn on_removed(world: &mut World, unit: Entity, aura: &AuraInstance) {
         super::remove_auras(world, unit, RemoveReason::Cancelled, |other| {
             other.spell_id == speed_aura && other.caster == unit
         });
+    }
+    if world.get::<shared::components::Player>(unit).is_some() {
+        crate::hunter_pet::resummon_temporarily_unsummoned(world, unit);
     }
 }
 
