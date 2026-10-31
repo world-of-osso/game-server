@@ -1199,6 +1199,17 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 
 ## Elemental Shaman fixture (262)
 
+### Class-follower single-target result — 2026-10-31
+
+The actual class-built follower209053 ran 120 seconds against one level-matched dummy for seeds1–10, using world snapshot SHA-256 `508f7974de7301766d2de692dd6be03ec5d9998654607061460c35027e1a2f09`, server `e98fed756bea558a4b3ccbf0d4380d5a610ee6e4`, and SimC `76f8118cf3f7f41dad20708e8328e1f4ab2deebc`. This is separate from the 300-second BiS fixture below. Intervals are 95% Student-t; delta uses paired-seed delta-method intervals.
+
+| Level | Native DPS ± CI | SimC DPS ± CI | Delta ± CI (percentage points) |
+|---|---:|---:|---:|
+| 90 | 40,103.57 ± 708.18 | 41,258.46 ± 1,532.30 | −2.799% ± 3.518 |
+| 70 | 4,004.57 ± 143.66 | 4,133.25 ± 133.04 | −3.113% ± 5.125 |
+
+Both point estimates are within ±5%; neither interval is wholly within that band. Logs and summaries are in `game-engine/data/diagnostics/elemental-follower-parity-2026-10-31/master-e98fed756b/`. See [implementation and landed commits](../wiki/systems/dungeon-simulator.md#elemental-class-follower-dps-parity--2026-10-31).
+
 - Both Player and follower measurements use the exact profile action rows through the shared literal SimC evaluator, native readiness and native spell execution. Player measurements must not also run AssistedCombat; the production follower kit is unchanged.
 - Precombat rows complete native casts and GCDs before engagement. Ancestral Swiftness replaces Nature's Swiftness when its talent is active (SimC76f8118 `sc_shaman.cpp`8132–8137).
 - Per-ability native output includes actual critical-hit count and damage, plus separate critical and noncritical mean damage. Zero critical hits produce a zero mean, not inferred criticals.
