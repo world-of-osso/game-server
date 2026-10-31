@@ -145,6 +145,29 @@ fn arms_fatality_execute_consumes_owned_mark_for_noncritical_stack_scaled_damage
 
 #[test]
 #[ignore = "private current native DB and exact spec71 player inputs"]
+fn arms_mid2_concussive_slam_hits_survivors_after_lethal_slam() {
+    use shared::components::Health;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(71, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let survivor = run.targets[1];
+    assert!(owned_stacks(&run, actor, 1296643) > 0);
+    fund(&mut run);
+    run.app.world_mut().entity_mut(primary).remove::<crate::creature_scripts::TrainingDummy>();
+    run.app.world_mut().get_mut::<Health>(primary).unwrap().current = 1.0;
+    execute(run.app.world_mut(), actor, Execution::Spell(1464, primary, Some(primary))).unwrap();
+    advance(&mut run, 40);
+    assert!(run.app.world().get::<Health>(primary).is_some_and(|health| health.current <= 0.0));
+    assert!(damage(&run, 1464).iter().any(|event| event.target == Some(primary.to_bits()) && event.amount > 0));
+    assert!(damage(&run, 1300660).iter().any(|event| event.target == Some(survivor.to_bits()) && event.amount > 0));
+    assert!(!damage(&run, 1300660).iter().any(|event| event.target == Some(primary.to_bits())));
+}
+
+#[test]
+#[ignore = "private current native DB and exact spec71 player inputs"]
 fn arms_mid2_concussive_slam_hits_only_secondary_targets_for_slam_and_heroic() {
     for action in [1464, 1269383] {
         let _seed = crate::random::seed_scope(70448);
