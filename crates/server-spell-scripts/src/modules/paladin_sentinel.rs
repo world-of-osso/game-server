@@ -55,7 +55,7 @@ fn initialize(world: &mut World, unit: Entity, aura: &AuraInstance) {
         world, unit, SENTINEL, 13,
     )) / 1000.0
         * f64::from(1.0 - reduction);
-    let now = combat::spell_cast::history_now(world);
+    let now = auras::aura_now(world);
     world.entity_mut(unit).insert(SentinelDecay {
         instance: aura.instance_id,
         due: now + (f64::from(aura.duration_ms) / 1000.0 - 15.0).max(1.0),
@@ -85,7 +85,7 @@ fn decay(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
     if effect != 9 {
         return;
     }
-    let now = combat::spell_cast::history_now(world);
+    let now = auras::aura_now(world);
     let Some(state) = world.get::<SentinelDecay>(unit) else {
         return;
     };
