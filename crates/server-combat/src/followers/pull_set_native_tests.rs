@@ -88,9 +88,80 @@ fn windrunner_assistance_snapshot_is_planned_and_tank_can_attack_it() {
     assert!(helpers.iter().all(|helper| planned.contains(helper)));
     assert!(
         !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "area attacks wait for the first-wave dispatch"
+        "area attacks wait until the first wave is committed"
     );
     crate::creature_aggro::attack_start(h.app.world_mut(), caller, tank);
+    let scheduled_at = crate::spell_cast::now(h.app.world());
+    let origin = *h.app.world().get::<Position>(caller).unwrap();
+    let outsider = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert((origin, crate::networking::CombatTarget(Some(caller))));
+    h.app.world_mut().entity_mut(helpers[0]).insert(Position {
+        x: origin.x + 2.0,
+        ..origin
+    });
+    h.app.world_mut().entity_mut(helpers[1]).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    h.app.world_mut().entity_mut(outsider).insert((
+        map,
+        Position {
+            x: origin.x + 4.0,
+            ..origin
+        },
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    h.advance(1);
+    assert!(super::pull_set::committed_helpers(h.app.world(), tank).contains(&helpers[0]));
+    assert!(
+        !super::spell_safety::safe(h.app.world(), tank, tank, 6343),
+        "Thunder Clap must refuse a reachable idle outsider"
+    );
+    h.app.world_mut().entity_mut(outsider).insert(Position {
+        x: origin.x + 100.0,
+        ..origin
+    });
+    assert!(
+        super::spell_safety::safe(h.app.world(), tank, tank, 6343),
+        "a committed pending helper must not block Thunder Clap"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 6343, Some(tank), true)
+        .expect("native Thunder Clap must start");
+    for _ in 0..20 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.spell_id == Some(6343)
+                && event.target == Some(helpers[0].to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        }) {
+            break;
+        }
+    }
+    assert!(
+        h.inbox.log.iter().any(|event| event.spell_id == Some(6343)
+            && event.target == Some(helpers[0].to_bits())
+            && event.kind == shared::protocol::CombatLogKind::Damage),
+        "the pending helper must actually take native Thunder Clap damage"
+    );
+    assert!(
+        crate::spell_cast::now(h.app.world()) - scheduled_at < 1.5,
+        "helper damage must land before the delayed assistance event"
+    );
+    assert!(
+        !h.inbox.log.iter().any(|event| event.spell_id == Some(6343)
+            && event.target == Some(outsider.to_bits())
+            && event.kind == shared::protocol::CombatLogKind::Damage),
+        "the idle outsider must take no damage"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(h.app.world(), outsider)
+            .next()
+            .is_none(),
+        "the idle outsider must remain out of combat"
+    );
     for _ in 0..60 {
         h.advance(1);
         if helpers.iter().all(|&helper| {
@@ -405,26 +476,21 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         .insert(crate::combat::AutoAttack::new(helper));
     let selected = crate::pet_control::select_next_target(h.app.world_mut(), tank, pet);
     assert_eq!(
-        selected, None,
-        "pet target selection must skip the pending helper"
+        selected,
+        Some(helper),
+        "a pet may select a committed helper"
     );
     h.app
         .world_mut()
         .entity_mut(tank)
         .remove::<crate::combat::AutoAttack>();
-    crate::pet_control::attack_start(h.app.world_mut(), pet, helper);
-    assert_eq!(
-        h.app
-            .world()
-            .get::<crate::networking::CombatTarget>(pet)
-            .unwrap()
-            .0,
-        Some(caller),
-        "a follower pet must not attack a pending helper"
+    assert!(
+        super::spell_safety::action_safe(h.app.world(), pet, helper, None),
+        "pet attacks on committed helpers are admitted"
     );
     assert!(
-        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "AoE remains unsafe while assistance is pending"
+        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "planned chain candidates remain safe during committed assistance"
     );
     for _ in 0..60 {
         h.advance(1);

@@ -42,7 +42,7 @@ pub fn chain_candidate_allowed(
         .and_then(|target| target.0)
         .unwrap_or(primary);
     super::pull_set::members(world, caller, actor).contains(&candidate)
-        && !super::pull_set::pending_helpers(world, caller, actor).contains(&candidate)
+        && !super::pull_set::uncommitted_helpers(world, caller, actor).contains(&candidate)
 }
 
 /// Shared admission for a follower spell or a follower-owned pet's direct attack.
@@ -56,7 +56,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         .and_then(|target| target.0)
         .or_else(|| enemy_target.then_some(target));
     let pending = primary
-        .map(|primary| super::pull_set::pending_helpers(world, primary, actor))
+        .map(|primary| super::pull_set::uncommitted_helpers(world, primary, actor))
         .unwrap_or_default();
     if enemy_target && pending.contains(&target) {
         debug!(target: "game_server::follower_safety", ?actor, ?target, ?spell, ?primary, ?pending, reason = "pending_target", "follower action refused");
@@ -73,7 +73,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         return true;
     }
     if !pending.is_empty() {
-        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "pending_helpers", "follower action refused");
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "uncommitted_helpers", "follower action refused");
         return false;
     }
     let Some((caster_radius, target_radius)) =
@@ -98,9 +98,10 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_target_position", "follower action refused");
         return false;
     };
-    let planned = primary
+    let mut planned = primary
         .map(|primary| super::pull_set::members(world, primary, caster))
         .unwrap_or_default();
+    planned.extend(super::pull_set::committed_helpers(world, caster));
     let outsider = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
