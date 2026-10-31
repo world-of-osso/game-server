@@ -44,6 +44,74 @@ fn missing_transport_collision_does_not_stop_updates() {
 }
 
 #[test]
+fn transport_collision_loads_receipt_only_wmo_and_groups() {
+    let source = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+    let data = tempfile::tempdir().unwrap();
+    let root = data.path();
+    let key = "d718abcc42604d8efbd35aecfa5bb75b";
+    let models = root.join(format!("products/wow/{key}/models"));
+    std::fs::create_dir_all(&models).unwrap();
+    std::fs::create_dir_all(root.join("cache")).unwrap();
+    std::fs::create_dir_all(root.join("db2/active")).unwrap();
+    std::fs::write(
+        root.join("db2/active/GameObjectDisplayInfo.csv"),
+        "ID,FileDataID\n9002,307812\n",
+    )
+    .unwrap();
+    let assets: Vec<_> = [307812, 318242, 318243, 318244, 318245, 318246]
+        .into_iter().map(|fdid| {
+            let path = format!("products/wow/{key}/models/{fdid}.wmo");
+            let bytes = std::fs::read(source.join(format!("models/{fdid}.wmo"))).unwrap();
+            std::fs::write(root.join(&path), &bytes).unwrap();
+            serde_json::json!({"product":"wow", "build_key":key, "build":"fixture", "fdid":fdid, "kind":"wmo", "path":path, "bytes":bytes.len(), "sha256":"a".repeat(64), "content_key":"b".repeat(32)})
+        }).collect();
+    std::fs::write(
+        root.join("cache/model-asset-index.json"),
+        serde_json::json!({"version":1,"assets":assets}).to_string(),
+    )
+    .unwrap();
+    assert!(!root.join("models/307812.wmo").exists());
+    let map = InMap {
+        map_id: 1803,
+        instance_id: 1,
+    };
+    let mut app = App::new();
+    app.add_plugins(CollisionIndexPlugin);
+    app.insert_resource(GroundMap::new(root, HashMap::new()));
+    app.add_systems(FixedUpdate, sync_live_objects);
+    app.world_mut().spawn((
+        map,
+        GameObjectInfo {
+            entry: 278407,
+            go_type: 15,
+            display_id: 9002,
+            name: "ship".into(),
+            scale: 1.0,
+        },
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+        GameObjectCollision(true),
+    ));
+    app.world_mut().run_schedule(FixedUpdate);
+    let height = app
+        .world_mut()
+        .resource_mut::<GroundMap>()
+        .ground_in(map, Vec3::new(-30.0, 21.0, 0.0));
+    assert!(
+        matches!(height, crate::ground::GroundProbe::Supported(value) if (value - 20.6032).abs() < 0.01),
+        "{height:?}"
+    );
+}
+
+#[test]
 fn source_ship_deck_collision_follows_the_transport_only_in_its_copy() {
     let data = PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
     let catalog = crate::transport_catalog::fixture_catalog();

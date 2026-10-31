@@ -74,6 +74,7 @@ struct Placement {
 pub(crate) struct HullCache {
     displays: Option<HashMap<u32, u32>>,
     models: HashMap<u32, Result<Vec<[Vec3; 3]>, String>>,
+    assets: Option<game_engine_core::model_asset_index::ModelAssetIndex>,
     placed: HashMap<Entity, (Placement, Arc<LosTile>)>,
     errors: HashMap<Entity, String>,
 }
@@ -143,18 +144,43 @@ fn place_hull(triangles: &[[Vec3; 3]], placement: &Placement) -> LosTile {
     LosTile::build(0, 0, vertices, indices)
 }
 
-fn read_model_triangles(data: &Path, fdid: u32, go_type: u8) -> Result<Vec<[Vec3; 3]>, String> {
+fn wmo_path(
+    data: &Path,
+    assets: Option<&game_engine_core::model_asset_index::ModelAssetIndex>,
+    fdid: u32,
+) -> std::path::PathBuf {
+    let receipt = assets.and_then(|index| {
+        index
+            .receipt(
+                game_engine_core::asset_product::AssetProduct::Retail,
+                fdid,
+                "wmo",
+            )
+            .ok()
+    });
+    receipt.map_or_else(
+        || data.join(format!("models/{fdid}.wmo")),
+        |receipt| data.join(&receipt.path),
+    )
+}
+
+fn read_model_triangles(
+    data: &Path,
+    assets: Option<&game_engine_core::model_asset_index::ModelAssetIndex>,
+    fdid: u32,
+    go_type: u8,
+) -> Result<Vec<[Vec3; 3]>, String> {
     if go_type != 15 {
         let path = data.join(format!("models/{fdid}.m2"));
         let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
         return los::bake::m2::M2File::parse(&bytes)?.collision_triangles();
     }
-    let path = data.join(format!("models/{fdid}.wmo"));
+    let path = wmo_path(data, assets, fdid);
     let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     let root = los::bake::wmo::WmoRoot::parse(&bytes)?;
     let mut triangles = Vec::new();
     for group in root.group_fdids {
-        let path = data.join(format!("models/{group}.wmo"));
+        let path = wmo_path(data, assets, group);
         let bytes = std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))?;
         let collision = shared::ground::WmoGroupCollision::parse(&bytes)?;
         triangles.extend(collision.collidable_triangles());
@@ -181,9 +207,15 @@ impl HullCache {
             .unwrap()
             .get(&display)
             .ok_or_else(|| format!("display {display} has no FileDataID"))?;
+        if self.assets.is_none() && data.join("cache/model-asset-index.json").is_file() {
+            self.assets = Some(game_engine_core::model_asset_index::ModelAssetIndex::load(
+                data,
+            )?);
+        }
+        let assets = self.assets.as_ref();
         self.models
             .entry(fdid)
-            .or_insert_with(|| read_model_triangles(data, fdid, go_type))
+            .or_insert_with(|| read_model_triangles(data, assets, fdid, go_type))
             .as_ref()
             .map(Vec::as_slice)
             .map_err(Clone::clone)
