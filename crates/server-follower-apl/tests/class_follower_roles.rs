@@ -232,8 +232,8 @@ fn class_rotation_reports_its_program_bound_spells() {
 }
 
 #[test]
-fn class_rotation_pure_metadata_matches_arcane_warrior_and_blood_programs() {
-    for spec in [62, 71, 72, 73, 250] {
+fn class_rotation_pure_metadata_matches_additional_programs() {
+    for spec in [62, 64, 71, 72, 73, 250, 251, 252, 260, 261] {
         let mut pull = spawn(spec);
         let rotation =
             server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)

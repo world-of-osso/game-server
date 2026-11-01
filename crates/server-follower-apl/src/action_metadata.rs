@@ -12,6 +12,10 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &arcane_rotation::bindings(),
         )),
         63 => fire_rotation::action_spells(&profile(spec)?, traits),
+        64 => Ok(program_action_spells(
+            &frost_mage_rotation::program(&profile(spec)?)?,
+            &frost_mage_rotation::bindings::build(),
+        )),
         66 => protection_paladin_rotation::action_spells(&profile(spec)?),
         71 => Ok(program_action_spells(
             &arms_rotation::program(&profile(spec)?)?,
@@ -29,7 +33,23 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &blood_tank_rotation::program()?,
             &blood_tank_rotation::bindings(),
         )),
+        251 => Ok(program_action_spells(
+            &frost_rotation::read_program(&profile(spec)?)?,
+            &frost_rotation::bindings::build(),
+        )),
+        252 => Ok(program_action_spells(
+            &unholy_rotation::load_program(&profile(spec)?)?,
+            &unholy_rotation::bindings(),
+        )),
         257 => holy_priest_rotation::action_spells(),
+        260 => Ok(program_action_spells(
+            &outlaw_rotation::load_program(&profile(spec)?)?,
+            &outlaw_rotation::bindings(),
+        )),
+        261 => Ok(program_action_spells(
+            &subtlety_rotation::load_program(&profile(spec)?)?,
+            &subtlety_rotation::bindings(),
+        )),
         _ => Err(format!("spec{spec} has no pure follower action metadata")),
     }
 }
