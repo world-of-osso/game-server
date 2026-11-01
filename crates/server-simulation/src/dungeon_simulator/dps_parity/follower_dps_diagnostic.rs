@@ -2214,8 +2214,13 @@ fn balance_touch_cosmos_makes_one_starsurge_free() {
         .unwrap()
         .current = 800.0;
     crate::spell_cast::cast_triggered(app.world_mut(), actor, 450360, Some(actor), 1);
-    crate::spell_cast::cast_for_player_with_target(app.world_mut(), actor, 78674, Some(target))
-        .unwrap();
+    let starsurge = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &starsurge, Some(target)).unwrap();
     let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
         .unwrap()
         .0;
@@ -2230,8 +2235,7 @@ fn balance_touch_cosmos_makes_one_starsurge_free() {
     let before = crate::spell_cast::powers::power_value(app.world(), actor, power)
         .unwrap()
         .0;
-    crate::spell_cast::cast_for_player_with_target(app.world_mut(), actor, 78674, Some(target))
-        .unwrap();
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &starsurge, Some(target)).unwrap();
     let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
         .unwrap()
         .0;
