@@ -383,6 +383,63 @@ fn rogue_literal_spend_cap_and_base_energy_ignore_temporary_capacity() {
 
 #[test]
 #[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_loaded_dice_is_earned_by_rush_and_spent_by_roll() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 256170));
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 256171));
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(315584, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "poison cannot earn Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(13750, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Adrenaline Rush earns Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(381989, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Keep It Rolling cannot spend Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1214909, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Roll the Bones spends Loaded Dice without regranting it"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1214933),
+        "Loaded Dice cannot roll the lowest state"
+    );
+}
+
+#[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
 fn outlaw_preparation_resets_five_running_cooldowns() {
     let mut run = prepare_literal(260, 1).unwrap();
     engage(&mut run);
