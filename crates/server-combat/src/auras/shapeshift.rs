@@ -28,6 +28,7 @@ struct ShapeshiftForm {
     flags: u32,
     creature_type: u32,
     combat_round_time_ms: u32,
+    preset_spells: [u32; 8],
 }
 
 /// Separate the authored swing clock from TC's AP-multiplier selection.
@@ -78,7 +79,7 @@ impl ShapeshiftForms {
 
 pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftForms> {
     let mut stmt = conn
-        .prepare("SELECT ID, CreatureDisplayID, Flags, CreatureType, CombatRoundTime FROM spell_shapeshift_form")?;
+        .prepare("SELECT ID, CreatureDisplayID, Flags, CreatureType, CombatRoundTime, PresetSpellID_0, PresetSpellID_1, PresetSpellID_2, PresetSpellID_3, PresetSpellID_4, PresetSpellID_5, PresetSpellID_6, PresetSpellID_7 FROM spell_shapeshift_form")?;
     let forms = stmt
         .query_map([], |r| {
             Ok((
@@ -88,6 +89,16 @@ pub fn load_shapeshift_forms(conn: &Connection) -> rusqlite::Result<ShapeshiftFo
                     flags: r.get::<_, i64>(2)? as u32,
                     creature_type: r.get(3)?,
                     combat_round_time_ms: r.get(4)?,
+                    preset_spells: [
+                        r.get(5)?,
+                        r.get(6)?,
+                        r.get(7)?,
+                        r.get(8)?,
+                        r.get(9)?,
+                        r.get(10)?,
+                        r.get(11)?,
+                        r.get(12)?,
+                    ],
                 },
             ))
         })?
@@ -125,6 +136,20 @@ pub(crate) fn current_form(auras: &ActiveAuras) -> Option<(&AuraInstance, i32)> 
         .find_map(|aura| aura_form(aura).map(|form| (aura, form)))
 }
 
+/// TC SpellAuraEffects.cpp:2086–2095 grants these actions only while a Player is shifted.
+pub(crate) fn grants_preset_spell(world: &World, unit: Entity, spell: u32) -> bool {
+    if spell == 0 || world.get::<Player>(unit).is_none() {
+        return false;
+    }
+    let Some((_, form)) = world.get::<ActiveAuras>(unit).and_then(current_form) else {
+        return false;
+    };
+    world
+        .get_resource::<ShapeshiftForms>()
+        .and_then(|forms| forms.0.get(&form))
+        .is_some_and(|row| row.preset_spells.contains(&spell))
+}
+
 pub fn attack_timing(world: &World, unit: Entity) -> Option<FormAttackTiming> {
     let (_, form) = current_form(world.get::<ActiveAuras>(unit)?)?;
     world.get_resource::<ShapeshiftForms>()?.attack_timing(
@@ -141,24 +166,42 @@ pub(super) fn remove_other_forms(world: &mut World, unit: Entity, keep_instance:
     });
 }
 
-/// TC a352b1fa SpellAuraEffects.cpp1513–1516/1570–1617: native form2 boosts.
-const TREE_OF_LIFE_FORM: i32 = 2;
-const TREE_BOOSTS: &[u32] = &[5420, 81097];
-// SimC76f8118 sc_druid.cpp3035–3044,3079–3085,14320 applies both on Bear entry.
-const BEAR_BOOSTS: &[u32] = &[1178, 17057];
-
-fn form_boosts(form: Option<i32>) -> &'static [u32] {
-    match form {
-        Some(TREE_OF_LIFE_FORM) => TREE_BOOSTS,
-        Some(FORM_BEAR | FORM_DIRE_BEAR) => BEAR_BOOSTS,
+/// TC a352b1fa SpellAuraEffects.cpp:1508–1574, including glyph-dependent boosts.
+fn form_boosts(world: &World, unit: Entity, form: Option<i32>) -> Vec<u32> {
+    let spells: &[u32] = match form {
+        Some(FORM_CAT) => &[3025, 48629, 106840, 113636],
+        Some(2) => &[5420, 81097],
+        Some(FORM_TRAVEL) => &[5419],
+        Some(4) => &[5421],
+        Some(FORM_BEAR | FORM_DIRE_BEAR) => &[1178, 21178, 106829, 106899],
+        Some(27) => &[40122, 40121],
+        Some(29) => &[33948, 34764],
+        Some(32) => &[27792, 27795, 62371],
         _ => &[],
+    };
+    let mut boosts = spells.to_vec();
+    if form == Some(28) {
+        boosts.push(if super::has_aura(world, unit, 107906) {
+            107904
+        } else if super::has_aura(world, unit, 126745) {
+            142024
+        } else {
+            107903
+        });
+    } else if form == Some(FORM_GHOST_WOLF) && super::has_aura(world, unit, 58135) {
+        boosts.push(160942);
     }
+    // SimC76f8118 sc_druid.cpp:3035–3044 grants initial Bear Rage on entry.
+    if matches!(form, Some(FORM_BEAR | FORM_DIRE_BEAR)) {
+        boosts.push(17057);
+    }
+    boosts
 }
 
 pub(super) fn apply_form_boosts(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    for &spell in form_boosts(aura_form(aura)) {
+    for spell in form_boosts(world, unit, aura_form(aura)) {
         if !crate::spell_cast::try_cast_triggered(world, unit, spell, Some(unit), 1) {
-            warn!(?unit, spell, "Native Tree of Life form boost refused");
+            warn!(?unit, spell, "Native form boost refused");
         }
     }
 }
@@ -172,7 +215,7 @@ pub(super) fn remove_form_boosts(world: &mut World, unit: Entity, aura: &AuraIns
             crate::spell_cast::powers::change_power(world, unit, PowerType::Rage, -rage);
         }
     }
-    let boosts = form_boosts(aura_form(aura));
+    let boosts = form_boosts(world, unit, aura_form(aura));
     super::remove_auras(world, unit, RemoveReason::Cancelled, |boost| {
         boost.caster == unit && boosts.contains(&boost.spell_id)
     });
