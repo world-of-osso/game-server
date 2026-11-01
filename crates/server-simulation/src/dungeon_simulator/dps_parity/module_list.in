@@ -396,6 +396,7 @@ mod rogue_vanish_tests;
 mod seed_absolute_tests;
 mod seed_wither_tests;
 mod shadow_apparition_tests;
+mod shadow_auspicious_follower_tests;
 mod shadow_collapse_tests;
 mod shadow_hallucinations_follower_tests;
 mod shadow_horizon_tests;

@@ -27,6 +27,14 @@ const VOID_BOLT: u32 = 1264177;
 const SHADEBURST_TALENT: u32 = 73510;
 const SHADEBURST: u32 = 1231479;
 const SPECTRAL_HORRORS: u32 = 407469;
+const AUSPICIOUS_SPIRITS: u32 = 155271;
+const AUSPICIOUS_GAIN: u32 = 405746;
+
+#[derive(Component)]
+struct AuspiciousProgress {
+    passive: u32,
+    accumulated: f64,
+}
 
 fn impact_hook(spell: u32) -> Option<ContextHitHook> {
     match spell {
@@ -54,9 +62,10 @@ fn spawn_cohort(world: &mut World, ctx: &EffectCtx<'_>, primary: Option<Entity>)
     }
     // SimC2628–2632: exactly one Yogg stack for this source cohort, not per VT.
     shadow_yogg::earn_cohort(world, ctx);
+    let count = recipients.len() as u32;
     for target in recipients {
         let parent = roll_missile(world, ctx.caster);
-        launch_apparition(world, ctx, primary, target, parent);
+        launch_apparition(world, ctx, primary, target, parent, count);
     }
 }
 
@@ -78,6 +87,7 @@ fn launch_apparition(
     primary: Option<Entity>,
     target: Entity,
     parent: u32,
+    cohort_size: u32,
 ) {
     let depth = source.depth + 1;
     let Some(mut missile) = spell_cast::load_triggered_spell(world, parent, depth) else {
@@ -87,6 +97,7 @@ fn launch_apparition(
     // is conditional Auspicious Spirits; E2 Shadeburst belongs only to the parent.
     missile.effects.retain(|effect| effect.index == 0);
     missile.cast_primary_target = primary;
+    missile.cast_projectile_cohort_size = Some(cohort_size);
     let Some(plan) = plan_apparition(world, source.caster, &missile, target, depth) else {
         return;
     };
@@ -127,6 +138,7 @@ fn plan_apparition(
 }
 
 fn burst_at_parent(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    earn_auspicious_spirits(world, ctx);
     let parent_hit = ctx.primary_target() == Some(target);
     if parent_hit && auras::has_aura(world, ctx.caster, SHADEBURST_TALENT) {
         // SimC sc_priest_shadow.cpp439–445 executes the area after impact,
@@ -149,6 +161,48 @@ fn burst_at_parent(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
             ctx.depth + 1,
         );
     }
+}
+
+fn earn_auspicious_spirits(world: &mut World, ctx: &EffectCtx<'_>) {
+    let passive = world
+        .get::<auras::ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.caster == ctx.caster && aura.spell_id == AUSPICIOUS_SPIRITS)
+                .map(|aura| aura.instance_id)
+        });
+    let Some(passive) = passive else { return };
+    let Some(count) = ctx.spell.cast_projectile_cohort_size else {
+        return;
+    };
+    if count == 0 {
+        return;
+    }
+    if world
+        .get::<AuspiciousProgress>(ctx.caster)
+        .is_none_or(|state| state.passive != passive)
+    {
+        world.entity_mut(ctx.caster).insert(AuspiciousProgress {
+            passive,
+            accumulated: combat::random::random::<f64>(),
+        });
+    }
+    // SimC76f8118 sc_priest_shadow.cpp415–424/2373–2386 snapshots cohort size.
+    let mut progress = world.get_mut::<AuspiciousProgress>(ctx.caster).unwrap();
+    progress.accumulated += 0.8 / f64::from(count).powf(0.8);
+    if progress.accumulated < 1.0 {
+        return;
+    }
+    progress.accumulated -= 1.0;
+    // Native155271 effect1 modifies 405746 via label2560.
+    spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        AUSPICIOUS_GAIN,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
 }
 
 fn shadeburst_scale(world: &World, ctx: &EffectCtx<'_>, _: Entity, _: bool) -> f32 {
