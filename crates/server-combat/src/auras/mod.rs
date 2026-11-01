@@ -304,6 +304,11 @@ impl AuraEffectState {
         self.periodic_ticks
     }
 
+    /// SPELL_ATTR5_EXTRA_INITIAL_PERIOD tick still owed by this application.
+    pub fn initial_tick_pending(&self) -> bool {
+        self.initial_period_pending
+    }
+
     fn pay_periodic_tick(&mut self) {
         self.next_tick_index += 1;
         if self.initial_period_pending {

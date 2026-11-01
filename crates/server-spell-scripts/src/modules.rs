@@ -459,6 +459,7 @@ register_modules! {
     unholy_blightburst: (2526, "modules/unholy_blightburst.rs"),
     unholy_aura: (2541, "modules/unholy_aura.rs"),
     swiftmend: (1000, "modules/swiftmend.rs"),
+    restoration_thriving_vegetation: (1000, "modules/restoration_thriving_vegetation.rs"),
     unholy_apocalypse_rune: (2530, "modules/unholy_apocalypse_rune.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_reaping: (2524, "modules/unholy_reaping.rs"),

@@ -470,3 +470,74 @@ fn restoration_druid_heals_the_simc_dummy_party() {
     );
     println!("RESTORATION_DRUID_REPORT={report}");
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_thriving_vegetation_heals_a_fifth_of_rejuvenation_up_front() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    // Settle equipped stats before the cast snapshots them.
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 447131));
+    {
+        let mut health = run.app.world_mut().get_mut::<Health>(tank).unwrap();
+        health.current = health.max * 0.1;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let own_heal = |spell| {
+        events
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(spell)
+                    && e.source == Some(healer.to_bits())
+                    && e.target == Some(tank.to_bits())
+            })
+            .collect::<Vec<_>>()
+    };
+    let instant = own_heal(447132);
+    let ticks = own_heal(774);
+    assert_eq!(
+        instant.len(),
+        1,
+        "one instant heal per Rejuvenation: {events:?}"
+    );
+    assert!(
+        !instant[0].crit,
+        "WCL: 717 of 717 447132 heals are noncritical"
+    );
+    assert!(
+        ticks.len() >= 6,
+        "initial tick plus 15s of ticks: {}",
+        ticks.len()
+    );
+    // Native heal crits double; express the delivered ticks as noncritical amounts.
+    let delivered: f32 = ticks
+        .iter()
+        .map(|e| e.amount as f32 / if e.crit { 2.0 } else { 1.0 })
+        .sum();
+    // 447131 s1 is 20 at rank 1 and 30 at the loadout's rank 2 (TraitDefinitionEffectPoints):
+    // that share of the HoT's total periodic effect, initial and partial final tick included.
+    let percent =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), healer, 447131, 0);
+    assert_eq!(percent, 30.0);
+    let ratio = instant[0].amount as f32 / (percent / 100.0 * delivered);
+    assert!(
+        (0.97..=1.03).contains(&ratio),
+        "instant {} vs {percent}% of {delivered} over {} ticks",
+        instant[0].amount,
+        ticks.len()
+    );
+}
