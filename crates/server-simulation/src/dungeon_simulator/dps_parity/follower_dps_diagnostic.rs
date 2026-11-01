@@ -2088,6 +2088,17 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(450360)),
+        "the real follower must proc Touch the Cosmos from generators"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -2241,8 +2252,8 @@ fn balance_touch_cosmos_makes_one_starsurge_free() {
         .0;
     assert_eq!(
         before - after,
-        400.0,
-        "the next Starsurge must pay its ordinary AP cost"
+        360.0,
+        "the next Starsurge must pay its modified native AP cost"
     );
 }
 
