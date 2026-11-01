@@ -959,15 +959,17 @@ fn divine_aegis(
     world: &mut World,
     ctx: &EffectCtx<'_>,
     target: Entity,
-    _raw: f32,
-    effective: f32,
+    raw: f32,
+    _effective: f32,
     crit: bool,
     _periodic: bool,
 ) {
-    // SimC76f8118 priest_heal_t triggers on critical direct priest heals, except Atonement.
+    // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: at 4502520, a fully
+    // overhealed 99550 Radiance yields 30760 Aegis; at 4465960, a 734133
+    // raw Shadow Mend yields 226337 Aegis. SimC76f8118 uses effective healing.
     if !is_discipline(world, ctx.caster)
         || !crit
-        || effective <= 0.0
+        || raw <= 0.0
         || !auras::has_aura(world, ctx.caster, 47515)
         || !matches!(
             ctx.spell.id,
@@ -983,7 +985,7 @@ fn divine_aegis(
         47753,
         Some(target),
         ctx.depth + 1,
-        effective * percent / 100.0,
+        raw * percent / 100.0,
     );
 }
 
