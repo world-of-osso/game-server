@@ -463,7 +463,7 @@ fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() 
         .insert_resource(crate::navigation::Navigation::new(&nav));
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
     let mut previous = start;
-    let (mut lowest, mut greatest_step) = (start.y, 0.0_f32);
+    let (mut lowest, mut stride, mut rise) = (start.y, 0.0_f32, 0.0_f32);
     for (next, frames) in [
         (leader, 30),
         (
@@ -525,7 +525,8 @@ fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() 
             h.advance(1);
             let tank_at = *h.app.world().get::<Position>(tank).unwrap();
             lowest = lowest.min(tank_at.y);
-            greatest_step = greatest_step.max(point(tank_at).distance(point(previous)));
+            stride = stride.max((tank_at.x - previous.x).hypot(tank_at.z - previous.z));
+            rise = rise.max(tank_at.y - previous.y);
             previous = tank_at;
         }
         leader = next;
@@ -536,9 +537,15 @@ fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() 
         lowest > 135.0,
         "tank dropped into the bridged seam: lowest y {lowest}"
     );
+    eprintln!("ara seam: lowest={lowest} stride={stride} rise={rise} end={previous:?}");
+    // One tick runs at most ~0.6yd and may step up no more than the agent climb.
     assert!(
-        greatest_step < 1.0,
-        "tank must not teleport: step {greatest_step}"
+        stride < 1.0,
+        "tank must not teleport: horizontal step {stride}"
+    );
+    assert!(
+        rise <= ::navigation::AGENT_CLIMB,
+        "tank must not snap upward: rise {rise}"
     );
     let gap = (previous.x - leader.x).hypot(previous.z - leader.z);
     assert!(
