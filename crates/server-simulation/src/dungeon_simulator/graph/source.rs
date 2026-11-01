@@ -8,8 +8,12 @@ pub(super) struct Source {
     pub bosses: Vec<(u32, u32)>,
 }
 
-pub(super) fn read_source(db: &Connection, map: u32) -> Result<Source, String> {
-    let difficulty = db
+pub(super) fn read_source(
+    db: &Connection,
+    map: u32,
+    requested_difficulty: Option<u32>,
+) -> Result<Source, String> {
+    let follower_difficulty = db
         .query_row(
             "SELECT difficulty_id FROM follower_lfg_dungeons WHERE map_id=?1 ORDER BY id LIMIT 1",
             [map],
@@ -18,6 +22,19 @@ pub(super) fn read_source(db: &Connection, map: u32) -> Result<Source, String> {
         .optional()
         .map_err(|error| format!("map{map} catalog: {error}"))?
         .ok_or_else(|| format!("map{map} missing follower catalog entry"))?;
+    let difficulty = requested_difficulty.unwrap_or(follower_difficulty);
+    if requested_difficulty.is_some() {
+        let supported: bool = db
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM map_difficulty WHERE MapID=?1 AND DifficultyID=?2)",
+                (map, difficulty),
+                |row| row.get(0),
+            )
+            .map_err(|error| format!("map{map} difficulty catalog: {error}"))?;
+        if !supported {
+            return Err(format!("map{map} does not support difficulty{difficulty}"));
+        }
+    }
     let mut entrances = db.prepare(
         "SELECT LocX, LocY, LocZ FROM tdb_world_safe_locs WHERE MapID=?1 AND lower(Comment) LIKE '%entrance%' ORDER BY ID",
     ).map_err(|error| format!("map{map} entrances: {error}"))?;
@@ -94,21 +111,21 @@ fn source_requires_real_entrance_population_and_bindings() {
         INSERT INTO follower_lfg_dungeons VALUES(1,2451,205);
         INSERT INTO dungeon_encounter VALUES(10,2451,0,0,0,'First'),(11,2451,0,1,-1000,'Earlier'),(12,2451,0,2,1000,'Last');").unwrap();
     assert!(
-        read_source(&db, 2451)
+        read_source(&db, 2451, None)
             .unwrap_err()
             .contains("missing entrance")
     );
     db.execute_batch("INSERT INTO tdb_world_safe_locs VALUES(1,2451,10,20,30,'Entrance');")
         .unwrap();
     assert!(
-        read_source(&db, 2451)
+        read_source(&db, 2451, None)
             .unwrap_err()
             .contains("missing population")
     );
     db.execute_batch("INSERT INTO content_creature VALUES(2451);")
         .unwrap();
     assert!(
-        read_source(&db, 2451)
+        read_source(&db, 2451, None)
             .unwrap_err()
             .contains("missing encounter binding for Earlier")
     );
@@ -117,14 +134,26 @@ fn source_requires_real_entrance_population_and_bindings() {
     )
     .unwrap();
     assert!(
-        read_source(&db, 2451)
+        read_source(&db, 2451, None)
             .unwrap_err()
             .contains("missing encounter binding for Last (encounter12, bit2)")
     );
     db.execute_batch("INSERT INTO raid_encounter_creature VALUES(2451,2,184124,12);")
         .unwrap();
-    let source = read_source(&db, 2451).unwrap();
+    let source = read_source(&db, 2451, None).unwrap();
     assert_eq!(source.difficulty, 205);
     assert_eq!(source.entrance, [10.0, 20.0, 30.0]);
     assert_eq!(source.bosses, [(1, 184018), (0, 184580), (2, 184124)]);
+
+    db.execute_batch(
+        "CREATE TABLE map_difficulty(MapID INTEGER, DifficultyID INTEGER);
+        INSERT INTO map_difficulty VALUES(2451,23);",
+    )
+    .unwrap();
+    assert_eq!(read_source(&db, 2451, Some(23)).unwrap().difficulty, 23);
+    assert!(
+        read_source(&db, 2451, Some(99))
+            .unwrap_err()
+            .contains("does not support difficulty99")
+    );
 }
