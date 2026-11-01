@@ -386,8 +386,21 @@ pub(crate) fn follower_footprint_ground(
     // TC 15e0ed76 Object.cpp:709 UpdateAllowedPositionZ takes GetMapHeight at the
     // unit's own x/y. The footprint only bridges a narrow collision seam that
     // leaves the center without a step-reachable floor.
+    // A center floor that falls out of the route's climb reach is a seam the
+    // detail mesh bridges; footprint support still within that reach crosses it
+    // instead of following the seam down (Ara-Kara tank, map 2660, 2026-11-01).
+    let on_step = |height: &f32| (height - from.y).abs() <= navigation::AGENT_CLIMB;
+    let near_route = |height: &f32| *height >= to.y - navigation::AGENT_CLIMB;
     let supported = heights[0]
-        .filter(|height| (height - from.y).abs() <= navigation::AGENT_CLIMB)
+        .filter(|height| on_step(height) && near_route(height))
+        .or_else(|| {
+            heights
+                .into_iter()
+                .flatten()
+                .filter(|height| on_step(height) && near_route(height))
+                .max_by(f32::total_cmp)
+        })
+        .or_else(|| heights[0].filter(on_step))
         .or_else(|| heights.into_iter().flatten().max_by(f32::total_cmp));
     let height = run_ground(
         supported.map_or(GroundProbe::Unsupported, GroundProbe::Supported),

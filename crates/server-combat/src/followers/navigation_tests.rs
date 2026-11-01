@@ -379,6 +379,180 @@ fn wow(x: f32, y: f32, z: f32) -> Position {
 fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
+#[test]
+#[ignore = "requires actual Ara-Kara navigation and ground assets"]
+fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() {
+    use crate::creature_ai::{FollowOwner, PartyFollowSlot};
+    use shared::components::{Level, Rotation};
+
+    let (mut h, placeholder, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    h.app.world_mut().despawn(placeholder);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut instances = crate::maps::InstanceManager::default();
+    let map = instances
+        .create_map(
+            &maps,
+            2660,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 1,
+                ..default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1_793_497_780,
+            },
+        )
+        .unwrap()
+        .map;
+    h.app.insert_resource(instances);
+    // Live rerun 2026-11-01 01:49:41-01:50:07 UTC: player and Guardian roster samples.
+    let mut leader = Position {
+        x: -81.8,
+        y: 137.1,
+        z: -348.5,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        leader,
+        map,
+        Level(78),
+        Rotation {
+            x: 0.0,
+            y: crate::creature_ai::facing_along(-1.4, -3.2).unwrap(),
+            z: 0.0,
+        },
+    ));
+    let tank = super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 104).unwrap();
+    let start = Position {
+        x: -83.1,
+        y: 137.0,
+        z: -344.0,
+    };
+    h.app.world_mut().entity_mut(tank).insert((
+        start,
+        map,
+        FollowOwner::new(h.caster),
+        PartyFollowSlot::new(0, 4),
+    ));
+    h.app.world_mut().entity_mut(h.caster).insert(Level(79));
+    h.app.insert_resource(GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
+    ));
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut previous = start;
+    let (mut lowest, mut stride, mut rise) = (start.y, 0.0_f32, 0.0_f32);
+    for (next, frames) in [
+        (leader, 30),
+        (
+            Position {
+                x: -82.5,
+                y: 137.1,
+                z: -349.9,
+            },
+            180,
+        ),
+        (
+            Position {
+                x: -82.8,
+                y: 137.0,
+                z: -350.9,
+            },
+            160,
+        ),
+        (
+            Position {
+                x: -83.3,
+                y: 136.9,
+                z: -351.8,
+            },
+            160,
+        ),
+        (
+            Position {
+                x: -84.7,
+                y: 136.8,
+                z: -355.0,
+            },
+            160,
+        ),
+        (
+            Position {
+                x: -87.3,
+                y: 136.5,
+                z: -360.9,
+            },
+            200,
+        ),
+        (
+            Position {
+                x: -90.0,
+                y: 136.5,
+                z: -367.2,
+            },
+            300,
+        ),
+    ] {
+        for frame in 1..=frames {
+            let at = point(leader).lerp(point(next), (frame as f32 / 5.0).min(1.0));
+            h.app.world_mut().entity_mut(h.caster).insert(Position {
+                x: at.x,
+                y: at.y,
+                z: at.z,
+            });
+            h.advance(1);
+            let tank_at = *h.app.world().get::<Position>(tank).unwrap();
+            lowest = lowest.min(tank_at.y);
+            stride = stride.max((tank_at.x - previous.x).hypot(tank_at.z - previous.z));
+            rise = rise.max(tank_at.y - previous.y);
+            previous = tank_at;
+        }
+        leader = next;
+    }
+    // The live Guardian followed a collision seam down to y133.6 under the 137.1 route
+    // and never left it; the route's own floor stays above 135.2 here.
+    assert!(
+        lowest > 135.0,
+        "tank dropped into the bridged seam: lowest y {lowest}"
+    );
+    // One tick runs at most ~0.6yd and may step up no more than the agent climb.
+    assert!(
+        stride < 1.0,
+        "tank must not teleport: horizontal step {stride}"
+    );
+    assert!(
+        rise <= ::navigation::AGENT_CLIMB,
+        "tank must not snap upward: rise {rise}"
+    );
+    let gap = (previous.x - leader.x).hypot(previous.z - leader.z);
+    assert!(
+        gap < 6.0,
+        "tank must regroup with its owner: {previous:?} gap {gap}"
+    );
+}
+
 pub(super) fn stockade_fixture(from: Position) -> (Harness, Entity, PathBuf) {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     h.app.world_mut().despawn(h.npc);
