@@ -744,7 +744,11 @@ fn released_leader_rejoins_party_through_azure_book() {
             .world()
             .get::<MoveIntent>(owner)
             .map(|intent| intent.0),
-        run.report.pulls
+        run.report
+            .pulls
+            .iter()
+            .map(|pull| &pull.decision)
+            .collect::<Vec<_>>()
     );
     let owner_position = *run.app.world().get::<Position>(owner).unwrap();
     let tank_position = *run.app.world().get::<Position>(tank).unwrap();
