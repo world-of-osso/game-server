@@ -55,10 +55,10 @@ fn read_proc_chance(world: &World, caster: Entity) -> Option<f32> {
             .expect("native Opportunity chance effect")
             .base_points
     };
-    // SimC76f8118 sc_rogue.cpp1286–1292 reads both spell-data values.
-    // Reading the active talent aura would count RtB's modifier twice.
+    // SimC76f8118 sc_rogue.cpp1286–1292 omits Dragon-Bone Dice's
+    // native label modifier. Apply it to RtB once, not to the already modified talent aura.
     let bonus = if auras::has_aura(world, caster, ROLL_THE_BONES) {
-        chance(JACKPOT)
+        script_effect_value(world, caster, JACKPOT, 0)
     } else {
         0.0
     };

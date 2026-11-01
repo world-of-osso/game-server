@@ -98,7 +98,7 @@ fn outlaw_roll_the_bones_adds_opportunity_chance_once() {
                 && event.amount > 0
         })
         .count();
-    // SimC76f8118 sc_rogue.cpp1286–1292: 30% plus the native 20% RtB bonus.
+    // Native 30% plus RtB 20% and selected Dragon-Bone Dice's 5%.
     assert!(
         (7..=22).contains(&extra_hits),
         "extra attacks: {extra_hits}"
