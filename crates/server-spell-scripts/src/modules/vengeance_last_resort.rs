@@ -4,7 +4,10 @@ use shared::components::Health;
 
 use super::combat;
 use combat::auras::{self, RemoveReason};
-use combat::spell_cast::{self, script_registry::{LethalAbsorbHook, SpellScriptHook}};
+use combat::spell_cast::{
+    self,
+    script_registry::{LethalAbsorbHook, SpellScriptHook},
+};
 
 const LAST_RESORT: u32 = 209258;
 const LOCKOUT: u32 = 209261;
@@ -29,7 +32,9 @@ fn rescue(world: &mut World, unit: Entity, loss: f32) -> Option<f32> {
     world.get_mut::<Health>(unit)?.current = 1.0;
     if !spell_cast::try_cast_triggered(world, unit, METAMORPHOSIS, Some(unit), 1) {
         world.get_mut::<Health>(unit)?.current = before;
-        auras::remove_auras(world, unit, RemoveReason::Cancelled, |aura| aura.spell_id == LOCKOUT);
+        auras::remove_auras(world, unit, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == LOCKOUT
+        });
         return None;
     }
     Some(absorbed)

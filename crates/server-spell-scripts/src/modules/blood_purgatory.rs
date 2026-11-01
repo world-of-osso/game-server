@@ -3,8 +3,14 @@ use bevy::prelude::*;
 use shared::components::Health;
 
 use super::combat;
-use combat::auras::{self, AuraInstance, scripts::{AuraScript, AuraScripts}};
-use combat::spell_cast::{self, script_registry::{LethalAbsorbHook, SpellScriptHook}};
+use combat::auras::{
+    self, AuraInstance,
+    scripts::{AuraScript, AuraScripts},
+};
+use combat::spell_cast::{
+    self,
+    script_registry::{LethalAbsorbHook, SpellScriptHook},
+};
 
 const PURGATORY: u32 = 114556;
 const SHROUD: u32 = 116888;
@@ -33,7 +39,9 @@ fn rescue(world: &mut World, unit: Entity, loss: f32) -> Option<f32> {
     }
     spell_cast::cast_triggered_with_effect0_amount(world, unit, SHROUD, Some(unit), 1, absorbed);
     if !auras::has_aura(world, unit, SHROUD) {
-        auras::remove_auras(world, unit, auras::RemoveReason::Cancelled, |aura| aura.spell_id == PERDITION);
+        auras::remove_auras(world, unit, auras::RemoveReason::Cancelled, |aura| {
+            aura.spell_id == PERDITION
+        });
         return None;
     }
     world.get_mut::<Health>(unit)?.current = 1.0;
@@ -41,11 +49,21 @@ fn rescue(world: &mut World, unit: Entity, loss: f32) -> Option<f32> {
 }
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(SHROUD, AuraScript { on_natural_end: Some(expire_shroud), ..default() });
+    scripts.0.insert(
+        SHROUD,
+        AuraScript {
+            on_natural_end: Some(expire_shroud),
+            ..default()
+        },
+    );
 }
 
 fn expire_shroud(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.effects.iter().any(|effect| effect.index == 0 && effect.amount > 0.0) {
+    if aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.amount > 0.0)
+    {
         spell_cast::cast_triggered(world, unit, EXPIRED_KILL, Some(unit), 1);
     }
 }
