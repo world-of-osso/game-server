@@ -76,6 +76,7 @@ actions+=/judgment,if=holy_power<5
             self.assertIn("fixed_time=1", arguments)
             self.assertIn("vary_combat_length=0", arguments)
             self.assertIn("threads=1", arguments)
+            self.assertIn("temporary_enchant=disabled", arguments)
             self.assertIn("target_level=93", arguments)
             self.assertNotIn("fight_style=DungeonSlice", arguments)
         self.assertIn("desired_targets=1", single)

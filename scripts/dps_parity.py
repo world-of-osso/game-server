@@ -161,7 +161,7 @@ def build_simc_arguments(profile, mode, output):
         raise ValueError(f"Unknown parity scenario: {mode}")
     arguments = [profile["profile"], "desired_targets=1",
                  "max_time=300", "fixed_time=1", "vary_combat_length=0",
-                 "iterations=1000", "threads=1", "optimal_raid=0", "seed=70448",
+                 "iterations=1000", "threads=1", "optimal_raid=0", "temporary_enchant=disabled", "seed=70448",
                  f'target_level={int(profile["level"]) + 3}', "report_details=1",
                  f"json={output}.{mode}.json", f"output={output}.{mode}.txt"]
     if mode == "single":
