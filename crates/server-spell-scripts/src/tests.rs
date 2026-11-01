@@ -143,6 +143,41 @@ fn wildfire_declaration_matches_its_target_centered_explosion() {
 }
 
 #[test]
+fn fury_of_elune_declares_its_field_offset_and_pulse_area() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let store = data.spell_store();
+    let spell = store.get(202770).expect("native Fury of Elune");
+    let mut world = World::new();
+    world.insert_resource(store.clone());
+    let caster = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, caster, spell);
+    // Native field 1.25 yd toward the caster plus the 6 yd 211545 pulse.
+    assert_eq!(reach.target_radius, 7.25);
+    assert_eq!(reach.caster_radius, 0.0);
+}
+
+#[test]
+fn ascendant_eclipses_declares_lunar_bolt_search_and_splash() {
+    let data = crate::test_support::world_db().expect("native world data");
+    let store = data.spell_store();
+    let alignment = store.get(194223).expect("native Celestial Alignment");
+    let mut world = World::new();
+    world.insert_resource(store.clone());
+    let without = world.spawn_empty().id();
+    let reach = crate::registry().declared_reach(&world, without, alignment);
+    assert_eq!((reach.caster_radius, reach.target_radius), (0.0, 0.0));
+    let caster = world
+        .spawn(combat::class_progression::KnownSpells::from_baseline(vec![
+            1261566,
+        ]))
+        .id();
+    let reach = crate::registry().declared_reach(&world, caster, alignment);
+    // Native 1261566 effect0 40 yd search plus the 8 yd 1263137 splash.
+    assert_eq!(reach.caster_radius, 48.0);
+    assert_eq!(reach.target_radius, 0.0);
+}
+
+#[test]
 fn hammer_of_the_righteous_declares_its_native_target_centered_wave() {
     let store = crate::test_support::world_db()
         .unwrap()

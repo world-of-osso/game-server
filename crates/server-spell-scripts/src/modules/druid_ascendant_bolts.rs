@@ -5,9 +5,13 @@ use combat::auras::{AuraInstance, scripts::AuraScripts};
 use combat::class_progression::KnownSpells;
 use combat::random::seq::SliceRandom;
 use combat::spell_cast::{
-    self, effects::EffectCtx, queued_triggers, script_registry::SpellScriptHook, targets,
+    self,
+    effects::EffectCtx,
+    queued_triggers,
+    script_registry::{ScriptReach, SpellScriptHook, reach_source_selected},
+    targets,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const TALENT: u32 = 1261566;
 const LUNAR: u32 = 48518;
@@ -17,6 +21,7 @@ const LUNAR_DAMAGE: u32 = 1263137;
 const SOLAR_BOLT: u32 = 1261573;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::CriticalChance(force_critical),
     SpellScriptHook::TargetContextDamageMultiplier(lunar_soft_cap),
@@ -31,6 +36,24 @@ fn register(scripts: &mut AuraScripts) {
         script.on_apply = Some(on_eclipse);
         script.on_refresh = Some(on_eclipse);
     }
+}
+
+/// An Eclipse launches Lunar bolts at random enemies within the talent's effect-0
+/// radius of the caster; each bolt's 1263137 splash reaches past its pick.
+fn declared_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptReach {
+    if !super::druid_eclipse::applies_eclipse(spell.id)
+        || !reach_source_selected(world, caster, TALENT)
+    {
+        return ScriptReach::None;
+    }
+    let splash = world
+        .resource::<SpellStore>()
+        .get(LUNAR_DAMAGE)
+        .expect("native Lunar bolt damage");
+    ScriptReach::caster(
+        spell_cast::scripts::script_effect_value(world, caster, TALENT, 0)
+            + targets::radius(&splash.effects[0], 1),
+    )
 }
 
 fn force_critical(_: &World, _: Entity, _: Entity, spell: u32) -> Option<f32> {
