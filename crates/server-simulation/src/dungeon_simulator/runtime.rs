@@ -391,8 +391,15 @@ fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
-    let graph = &app.world().resource::<super::Space>().0;
-    let (map_id, difficulty_id) = (graph.map_id, graph.difficulty_id());
+    let difficulty = app.world().resource::<super::Space>().0.difficulty_id();
+    create_copy_at_difficulty(app, difficulty).expect("native simulator copy")
+}
+
+pub(super) fn create_copy_at_difficulty(
+    app: &mut App,
+    difficulty_id: u32,
+) -> Result<crate::maps::InMap, String> {
+    let map_id = app.world().resource::<super::Space>().0.map_id;
     app.world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
             world
@@ -412,8 +419,8 @@ pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
                         unix: 1_792_454_400,
                     },
                 )
-                .unwrap()
-                .map
+                .map(|instance| instance.map)
+                .map_err(|error| format!("create simulator copy: {error:?}"))
         })
 }
 

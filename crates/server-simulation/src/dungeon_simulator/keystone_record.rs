@@ -50,8 +50,8 @@ pub(super) struct Pull {
 pub(super) struct Outcome {
     pub status: String,
     pub reason: String,
-    pub elapsed_ms: u64,
-    pub timer_ms: u64,
+    pub elapsed_ms: Option<u64>,
+    pub timer_ms: Option<u64>,
     pub in_time: Option<bool>,
     pub upgrade_levels: Option<u32>,
     pub resulting_key_level: Option<u32>,
@@ -60,16 +60,93 @@ pub(super) struct Outcome {
 #[derive(Debug, Serialize)]
 pub(super) struct RunRecord {
     pub schema_version: u32,
+    pub seed: u64,
+    pub requested_specs: [u32; 5],
     pub map_id: u32,
-    pub challenge_id: u32,
+    pub challenge_id: Option<u32>,
     pub key_level: u32,
-    pub affixes: Vec<u32>,
+    pub affixes: Option<Vec<u32>>,
     pub party: Vec<PartyMember>,
-    pub route: super::keystone_route::PlannedRoute,
+    pub route: Option<super::keystone_route::PlannedRoute>,
     pub outcome: Outcome,
     pub deaths: Vec<Death>,
     pub pulls: Vec<Pull>,
     pub actors: Vec<ActorMetrics>,
+}
+
+/// Read native item instances, resolving every equipped item's actual level.
+pub(super) fn read_party(
+    world: &bevy::prelude::World,
+    units: &[bevy::prelude::Entity],
+) -> Result<Vec<PartyMember>, String> {
+    let templates = world.resource::<crate::item_templates::ItemTemplates>();
+    let native = world.resource::<crate::stats::NativeItemInstances>();
+    let scaling = world.resource::<crate::item_stats::ItemScalingTables>();
+    units
+        .iter()
+        .map(|&unit| {
+            let spec_id = world
+                .get::<shared::components::ActiveSpec>(unit)
+                .ok_or("party member has no active specialization")?
+                .0;
+            let level = world
+                .get::<shared::components::Level>(unit)
+                .ok_or("party member has no level")?
+                .0;
+            let equipped = world
+                .get::<crate::stats::EquippedItems>(unit)
+                .ok_or("party member has no equipment")?;
+            let modifiers = world
+                .get::<crate::stats::EquippedItemModifiers>(unit)
+                .ok_or("party member has no item instances")?;
+            let item_levels = equipped
+                .items
+                .iter()
+                .map(|(slot, source, item_id)| {
+                    let template = templates
+                        .get(*source, *item_id)
+                        .ok_or_else(|| format!("equipped item {item_id} unavailable"))?;
+                    let instance = modifiers
+                        .items
+                        .iter()
+                        .find(|(candidate, _)| candidate == slot)
+                        .map(|(_, value)| value)
+                        .ok_or_else(|| format!("equipped item {item_id} has no instance"))?;
+                    let modified = server::item_instance::bonuses::apply_item_bonuses(
+                        &template.scaling,
+                        &instance.bonus_list,
+                        &native.bonuses,
+                        level,
+                    )?;
+                    let stats = server::item_instance::item_instance_stats(
+                        &modified.scaling,
+                        template.inventory_type,
+                        instance,
+                        scaling,
+                    )?;
+                    Ok(ItemLevel {
+                        slot: format!("{slot:?}"),
+                        item_id: *item_id,
+                        level: stats.item_level,
+                    })
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            if item_levels.is_empty() {
+                return Err(format!("spec{spec_id} has no equipped items"));
+            }
+            let mean_equipped_item_level = item_levels
+                .iter()
+                .map(|item| f64::from(item.level))
+                .sum::<f64>()
+                / item_levels.len() as f64;
+            Ok(PartyMember {
+                entity_id: unit.to_bits().to_string(),
+                spec_id,
+                item_levels,
+                mean_equipped_item_level,
+            })
+        })
+        .collect()
 }
 
 /// The caller supplies observed simulation time and actual controlled-unit ownership.
@@ -80,6 +157,8 @@ pub(super) struct Tracker {
     pulls: Vec<Pull>,
     active_pull: Option<u64>,
     cursor: usize,
+    owners: HashMap<u64, u64>,
+    npc_entries: HashMap<u64, u32>,
 }
 
 impl Tracker {
@@ -104,7 +183,13 @@ impl Tracker {
             pulls: Vec::new(),
             active_pull: None,
             cursor: 0,
+            owners: HashMap::new(),
+            npc_entries: HashMap::new(),
         }
+    }
+
+    pub fn skip_existing(&mut self, count: usize) {
+        self.cursor = count;
     }
 
     pub fn observe(
@@ -132,7 +217,14 @@ impl Tracker {
                 self.record_death(elapsed_ms, event, npc_entries);
             }
             let Some(source) = event.source else { continue };
-            let owner = owners.get(&source).copied().unwrap_or(source);
+            let mut owner = source;
+            let mut seen = std::collections::HashSet::new();
+            while !self.actor_indices.contains_key(&owner) && seen.insert(owner) {
+                let Some(next) = owners.get(&owner) else {
+                    break;
+                };
+                owner = *next;
+            }
             let Some(&index) = self.actor_indices.get(&owner) else {
                 continue;
             };
@@ -152,6 +244,55 @@ impl Tracker {
             }
         }
         self.cursor = events.len();
+    }
+
+    pub fn observe_world(&mut self, world: &mut bevy::prelude::World, elapsed_ms: u64) {
+        use shared::components::{CombatStatus, Npc, UnitSummonedBy};
+        self.owners.extend(
+            world
+                .query::<(bevy::prelude::Entity, &UnitSummonedBy)>()
+                .iter(world)
+                .filter(|(unit, _)| !self.actor_indices.contains_key(&unit.to_bits()))
+                .map(|(unit, owner)| (unit.to_bits(), owner.0)),
+        );
+        self.owners.extend(
+            world
+                .query::<(bevy::prelude::Entity, &crate::hunter_pet::HunterPet)>()
+                .iter(world)
+                .map(|(unit, pet)| (unit.to_bits(), pet.owner.to_bits())),
+        );
+        self.owners.extend(
+            world
+                .query::<(
+                    bevy::prelude::Entity,
+                    &crate::spell_cast::summon::SummonedCreature,
+                )>()
+                .iter(world)
+                .map(|(unit, summon)| (unit.to_bits(), summon.owner.to_bits())),
+        );
+        self.npc_entries.extend(
+            world
+                .query::<(bevy::prelude::Entity, &Npc)>()
+                .iter(world)
+                .map(|(unit, npc)| (unit.to_bits(), npc.template_id)),
+        );
+        let in_combat = self
+            .actor_indices
+            .keys()
+            .filter_map(|bits| bevy::prelude::Entity::try_from_bits(*bits))
+            .any(|unit| {
+                world
+                    .get::<CombatStatus>(unit)
+                    .is_some_and(|status| status.0)
+            });
+        let owners = std::mem::take(&mut self.owners);
+        let npcs = std::mem::take(&mut self.npc_entries);
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        self.observe(elapsed_ms, in_combat, events, &owners, &npcs);
+        self.owners = owners;
+        self.npc_entries = npcs;
     }
 
     fn record_death(
@@ -221,10 +362,12 @@ mod tests {
     fn serializes_complete_record_with_explicit_equipment_levels() {
         let record = RunRecord {
             schema_version: 1,
+            seed: 1,
+            requested_specs: [66, 105, 262, 63, 253],
             map_id: 2515,
-            challenge_id: 401,
+            challenge_id: Some(401),
             key_level: 2,
-            affixes: vec![],
+            affixes: Some(vec![]),
             party: vec![PartyMember {
                 entity_id: "11".into(),
                 spec_id: 253,
@@ -235,16 +378,16 @@ mod tests {
                 }],
                 mean_equipped_item_level: 334.0,
             }],
-            route: super::super::keystone_route::PlannedRoute {
+            route: Some(super::super::keystone_route::PlannedRoute {
                 steps: vec![],
                 added_packs: vec![10],
                 planned_forces: 410,
-            },
+            }),
             outcome: Outcome {
                 status: "completed".into(),
                 reason: String::new(),
-                elapsed_ms: 1000,
-                timer_ms: 2250000,
+                elapsed_ms: Some(1000),
+                timer_ms: Some(2250000),
                 in_time: Some(true),
                 upgrade_levels: Some(3),
                 resulting_key_level: Some(5),
