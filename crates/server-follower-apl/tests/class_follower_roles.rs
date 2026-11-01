@@ -530,9 +530,13 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
             },
         ));
         server_combat::creature_aggro::add_threat(world, enemy, healer, 100.0);
-        for _ in 0..20 {
+        for _ in 0..120 {
             server_combat::followers::update_ai(pull.harness.app.world_mut());
+            server_follower_apl::drive_followers(pull.harness.app.world_mut());
             pull.harness.app.update();
+            if pull.casts().contains(&taunt) {
+                break;
+            }
         }
         if !pull.casts().contains(&taunt) {
             let world = pull.harness.app.world_mut();
