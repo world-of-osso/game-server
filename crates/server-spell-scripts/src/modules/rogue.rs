@@ -43,9 +43,6 @@ const POLICIES: &[Policy] = &[
                 13750, 315341, 13877, 271877, 195457, 381989, 51690, 1214909, 2983,
             ],
             tenths_effect: 0,
-            bonus_states: &[1214935, 1214937],
-            bonus_spell: 1214937,
-            bonus_effect: 3,
         },
     },
 ];
