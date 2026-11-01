@@ -31,41 +31,56 @@ pub struct HolyPaladin {
     encounter: Encounter,
 }
 
+fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .map(|(name, spell, _)| ((*name).into(), *spell))
+            .collect(),
+        resources: [
+            ("mana".into(), PowerType::Mana),
+            ("holy_power".into(), PowerType::HolyPower),
+        ]
+        .into(),
+        global_cooldown_spell: 82326,
+        ..Default::default()
+    }
+}
+
+fn program() -> Result<Program, String> {
+    // SimC has no default Holy healer APL; these are native triage thresholds.
+    Program::parse(&[
+        (
+            "default",
+            "beacon_of_light,if=target.health.pct<95&target.beacon_up=0",
+        ),
+        ("default", "lay_on_hands,if=target.health.pct<20"),
+        ("default", "avenging_wrath"),
+        ("default", "light_of_dawn,if=party.injured>=2"),
+        ("default", "word_of_glory,if=target.health.pct<90"),
+        ("default", "holy_shock,if=target.health.pct<95"),
+        ("default", "flash_of_light,if=target.health.pct<50"),
+        ("default", "holy_light,if=target.health.pct<80"),
+        ("damage", "holy_shock"),
+        ("damage", "hammer_of_wrath"),
+        ("damage", "judgment"),
+        ("damage", "crusader_strike"),
+        ("damage", "consecration"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl HolyPaladin {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .map(|(name, spell, _)| ((*name).into(), *spell))
-                .collect(),
-            resources: [
-                ("mana".into(), PowerType::Mana),
-                ("holy_power".into(), PowerType::HolyPower),
-            ]
-            .into(),
-            global_cooldown_spell: 82326,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        // SimC has no default Holy healer APL; these are native triage thresholds.
-        let program = Program::parse(&[
-            (
-                "default",
-                "beacon_of_light,if=target.health.pct<95&target.beacon_up=0",
-            ),
-            ("default", "lay_on_hands,if=target.health.pct<20"),
-            ("default", "avenging_wrath"),
-            ("default", "light_of_dawn,if=party.injured>=2"),
-            ("default", "word_of_glory,if=target.health.pct<90"),
-            ("default", "holy_shock,if=target.health.pct<95"),
-            ("default", "flash_of_light,if=target.health.pct<50"),
-            ("default", "holy_light,if=target.health.pct<80"),
-            ("damage", "holy_shock"),
-            ("damage", "hammer_of_wrath"),
-            ("damage", "judgment"),
-            ("damage", "crusader_strike"),
-            ("damage", "consecration"),
-        ])?;
+        let program = program()?;
         Ok(Self {
             driver: Driver::new(program),
             bindings,

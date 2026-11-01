@@ -40,42 +40,57 @@ pub struct Restoration {
     encounter: Encounter,
 }
 
+fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .chain(DAMAGE_SPELLS.iter())
+            .map(|(name, spell, _)| ((*name).into(), *spell))
+            .collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        global_cooldown_spell: 77472,
+        ..Default::default()
+    }
+}
+
+fn program() -> Result<Program, String> {
+    Program::parse(&[
+        ("default", "earthliving_weapon,if=player.earthliving_up=0"),
+        ("default", "water_shield,if=player.water_shield_up=0"),
+        ("default", "mana_tide_totem,if=mana.pct<75"),
+        ("default", "spirit_link_totem,if=target.health.pct<35"),
+        ("default", "healing_tide_totem,if=party.injured>=3"),
+        ("default", "earth_shield,if=target.earth_shield_up=0"),
+        ("default", "surging_totem"),
+        ("default", "healing_rain,if=player.surging_totem=0"),
+        ("default", "healing_stream_totem,if=target.health.pct<90"),
+        ("default", "riptide"),
+        ("default", "healing_surge,if=target.health.pct<45"),
+        ("default", "unleash_life,if=target.health.pct<90"),
+        (
+            "default",
+            "chain_heal,if=party.chain_heal_worthwhile&mana.pct>35",
+        ),
+        ("default", "healing_wave,if=target.healing_wave_useful"),
+        ("damage", "flame_shock"),
+        ("damage", "lava_burst"),
+        ("damage", "chain_lightning,if=active_enemies>=2"),
+        ("damage", "lightning_bolt"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Restoration {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .chain(DAMAGE_SPELLS.iter())
-                .map(|(name, spell, _)| ((*name).into(), *spell))
-                .collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            global_cooldown_spell: 77472,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        let program = Program::parse(&[
-            ("default", "earthliving_weapon,if=player.earthliving_up=0"),
-            ("default", "water_shield,if=player.water_shield_up=0"),
-            ("default", "mana_tide_totem,if=mana.pct<75"),
-            ("default", "spirit_link_totem,if=target.health.pct<35"),
-            ("default", "healing_tide_totem,if=party.injured>=3"),
-            ("default", "earth_shield,if=target.earth_shield_up=0"),
-            ("default", "surging_totem"),
-            ("default", "healing_rain,if=player.surging_totem=0"),
-            ("default", "healing_stream_totem,if=target.health.pct<90"),
-            ("default", "riptide"),
-            ("default", "healing_surge,if=target.health.pct<45"),
-            ("default", "unleash_life,if=target.health.pct<90"),
-            (
-                "default",
-                "chain_heal,if=party.chain_heal_worthwhile&mana.pct>35",
-            ),
-            ("default", "healing_wave,if=target.healing_wave_useful"),
-            ("damage", "flame_shock"),
-            ("damage", "lava_burst"),
-            ("damage", "chain_lightning,if=active_enemies>=2"),
-            ("damage", "lightning_bolt"),
-        ])?;
+        let program = program()?;
         Ok(Restoration {
             driver: Driver::new(program),
             bindings,

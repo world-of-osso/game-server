@@ -16,6 +16,7 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &frost_mage_rotation::program(&profile(spec)?)?,
             &frost_mage_rotation::bindings::build(),
         )),
+        65 => holy_paladin_rotation::action_spells(),
         66 => protection_paladin_rotation::action_spells(&profile(spec)?),
         70 => Ok(program_action_spells(
             &ret_rotation::read_program()?,
@@ -37,6 +38,7 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &guardian_tank_rotation::program()?,
             &guardian_tank_rotation::bindings(),
         )),
+        105 => restoration_druid_rotation::action_spells(),
         250 => Ok(program_action_spells(
             &blood_tank_rotation::program()?,
             &blood_tank_rotation::bindings(),
@@ -61,6 +63,7 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &survival_rotation::program()?,
             &survival_rotation::bindings::build(),
         )),
+        256 => discipline_priest_rotation::action_spells(),
         257 => holy_priest_rotation::action_spells(),
         260 => Ok(program_action_spells(
             &outlaw_rotation::load_program(&profile(spec)?)?,
@@ -70,10 +73,12 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &subtlety_rotation::load_program(&profile(spec)?)?,
             &subtlety_rotation::bindings(),
         )),
+        264 => restoration_shaman_rotation::action_spells(),
         269 => Ok(program_action_spells(
             &windwalker_rotation::source::load()?,
             &windwalker_rotation::bindings::build(),
         )),
+        270 => mistweaver_rotation::action_spells(),
         577 => Ok(program_action_spells(
             &havoc_rotation::load_program()?,
             &havoc_rotation::bindings::build(),
@@ -86,6 +91,7 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &devastation_rotation::source::load()?,
             &devastation_rotation::bindings::build(),
         )),
+        1468 => preservation_evoker_rotation::action_spells(),
         1480 => Ok(program_action_spells(
             &devourer_rotation::load_program()?,
             &devourer_rotation::bindings::build(),
