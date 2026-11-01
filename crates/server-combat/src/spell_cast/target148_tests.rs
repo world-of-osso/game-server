@@ -9,7 +9,9 @@ const MAP: InMap = InMap {
     map_id: 2669,
     instance_id: 1,
 };
-const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480, 4336];
+const IDS: &[u32] = &[
+    330398, 196884, 1243638, 1281788, 1242814, 448480, 4336, 202770,
+];
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(Vec::new(), IDS, 1).expect("native spell fixture");
@@ -175,13 +177,75 @@ fn native_creature_original_destination_survives_normalization_and_landing() {
 }
 
 #[test]
-fn native_target148_force_location_has_named_geometry_gap() {
+fn native_target148_force_location_moves_fury_of_elune_without_collision_raycast() {
+    let (mut h, origin) = scene();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::line_of_sight::LineOfSight>();
+    let actual = destination(&mut h, 202770, 1);
+    assert_endpoint(&mut h, actual, origin, 1.25);
+}
+
+#[test]
+fn native_target148_force_location_uses_steep_solid_collision() {
     let (mut h, _) = scene();
-    let spell = world_db().unwrap().store.get(448480).unwrap().clone(); // Actual [138,148], force-location attribute.
-    let result = plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), false);
-    assert!(
-        matches!(result, Err(CastFailure::Unsupported(ref reason))
-        if reason.contains("SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT")),
-        "native force-location must not silently use direct-ray geometry: {result:?}"
-    );
+    let slope = std::sync::Arc::new(los::LosTile::build(
+        32,
+        32,
+        vec![
+            Vec3::new(0.5, 0.0, -5.0),
+            Vec3::new(1.5, 4.0, -5.0),
+            Vec3::new(1.5, 4.0, 5.0),
+            Vec3::new(0.5, 0.0, 5.0),
+        ],
+        vec![[0, 2, 1], [0, 3, 2]],
+    ));
+    let mut ground = crate::ground::GroundMap::flat_arena(-100.0);
+    ground.set_live_hulls(std::collections::HashMap::from([(MAP, vec![slope])]));
+    h.app.insert_resource(ground);
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 0.0,
+        y: 3.0,
+        z: 0.0,
+    });
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: 10.0,
+        y: 3.0,
+        z: 0.0,
+    });
+    let actual = destination(&mut h, 202770, 1);
+    assert!((actual.position.x - 1.25).abs() < 0.001, "{actual:?}");
+    assert!((actual.position.y - 3.0).abs() < 0.001, "{actual:?}");
+}
+
+#[test]
+fn native_target148_force_location_steps_back_from_deep_drop() {
+    let (mut h, _) = scene();
+    let floor = std::sync::Arc::new(los::LosTile::build(
+        32,
+        32,
+        vec![
+            Vec3::new(-10.0, 0.0, -5.0),
+            Vec3::new(0.9, 0.0, -5.0),
+            Vec3::new(0.9, 0.0, 5.0),
+            Vec3::new(-10.0, 0.0, 5.0),
+        ],
+        vec![[0, 2, 1], [0, 3, 2]],
+    ));
+    let mut ground = crate::ground::GroundMap::flat_arena(-100.0);
+    ground.set_live_hulls(std::collections::HashMap::from([(MAP, vec![floor])]));
+    h.app.insert_resource(ground);
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 0.0,
+        y: 0.01,
+        z: 0.0,
+    });
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: 10.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    let actual = destination(&mut h, 202770, 1);
+    assert!((actual.position.x - 0.875).abs() < 0.001, "{actual:?}");
+    assert!((actual.position.y - 0.0).abs() < 0.001, "{actual:?}");
 }

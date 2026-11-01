@@ -217,6 +217,13 @@ fn build_runtime_app(
     follower_apl: bool,
 ) -> App {
     let mut app = App::new();
+    #[cfg(test)]
+    if std::env::var_os("FOLLOWER_DPS_LOG_ERRORS").is_some() {
+        app.add_plugins(bevy::log::LogPlugin {
+            filter: "error".into(),
+            ..default()
+        });
+    }
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
