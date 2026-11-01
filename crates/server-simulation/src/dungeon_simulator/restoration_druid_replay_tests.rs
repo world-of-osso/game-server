@@ -644,3 +644,49 @@ fn restoration_druid_casts_wild_growth_on_a_lightly_injured_party() {
         "Wild Growth must heal a party-wide pulse"
     );
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn power_of_the_archdruid_spreads_the_soul_of_the_forest_regrowth() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    run.app.update();
+    assert!(crate::auras::has_aura(run.app.world(), healer, 392302));
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    let regrowth_targets = |run: &mut super::healer_simc_replay::ClassParty| {
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, 8936, Some(tank), true)
+            .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let mut targets: Vec<u64> = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(8936)
+                    && !e.periodic
+                    && e.source == Some(healer.to_bits())
+            })
+            .filter_map(|e| e.target)
+            .collect();
+        targets.sort_unstable();
+        targets
+    };
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 114108, Some(healer), 0);
+    let empowered = regrowth_targets(&mut run);
+    // 392302 s1: the tank plus two more allies, each healed once.
+    assert_eq!(empowered.len(), 3, "{empowered:?}");
+    assert!(empowered.windows(2).all(|pair| pair[0] != pair[1]));
+    assert!(empowered.contains(&tank.to_bits()));
+    assert!(!crate::auras::has_aura(run.app.world(), healer, 114108));
+    assert_eq!(regrowth_targets(&mut run), vec![tank.to_bits()]);
+}
