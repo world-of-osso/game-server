@@ -4,7 +4,7 @@ The runner executes a selected keystone dungeon and a five-spec class party in t
 
 ## What it must do
 
-- [ ] Accept a dungeon, keystone level and explicit tank, healer and three damage specialization IDs. Reject unsupported maps, profiles, roles and levels explicitly.
+- [ ] Accept a dungeon, keystone level and explicit tank, healer and three damage specialization IDs. Resolve the map's unique challenge and named challenge scenario from the imported catalog; reject unsupported or ambiguous maps, profiles, roles and levels explicitly.
 - [ ] Form the class party with the selected key-band equipment and talents, including recorded permanent and temporary enchants and gems; enter the Mythic copy, activate the owned key at its Font and run the native APL and dungeon systems. The route controller must wait for the native countdown to finish before admitting pulls.
 - [ ] Emit a record with `schema_version`, dungeon map and challenge IDs, key level and affixes, party members' specialization IDs and native equipped item levels, and terminal status and reason.
 - [ ] Record the timer limit, elapsed time including configured death penalties, in-time result and awarded upgrade when a run completes. Use null when the result is not established; do not report a failed run as a completion.
@@ -13,7 +13,7 @@ The runner executes a selected keystone dungeon and a five-spec class party in t
 - [ ] Choose an input route consisting of the authored boss route plus enough weighted trash packs to meet the challenge's force criterion. Count only source spawns hostile to the actual owner in the production copy. Greedily select reachable packs by additional native-graph travel distance per force point; include the chosen route and planned forces in the run record.
 - [ ] Record each pull's start and duration from actual party combat transitions, and per-actor damage and healing by specialization. Attribute controlled-unit output to its owner and state whether amounts are effective or raw.
 - [ ] Derive death and pull timestamps from the simulation clock, starting when the configured countdown ends, not from Font activation or wall-clock combat-log timestamps. Exclude countdown events from run statistics. Keep numeric challenge policy in the existing configuration.
-- [ ] Prove a complete low-key Azure run using real APLs and the landed key-level scaling. A timeout, wipe, blocked route or partial record is not a clear.
+- [ ] Prove a complete low-key Midnight Season 2 run using level-90 key-band gear, real APLs and the landed key-level scaling. Compare boss durations with same-dungeon, same-key WCL kills. The level-70 Azure run with level-90 gear is mechanics-only, not balance proof. A timeout, wipe, blocked route or partial record is not a clear.
 
 ## Run-record schema, version 1
 
