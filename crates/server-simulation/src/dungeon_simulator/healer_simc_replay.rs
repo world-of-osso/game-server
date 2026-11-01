@@ -440,6 +440,24 @@ fn replay(
                     "HEALER_REPLAY_EVENT {}",
                     json!({"tick":tick,"event":event,"tank_health":world.get::<Health>(tank).map(|health| (health.current, health.max))})
                 );
+                if event.spell_id == Some(194509)
+                    && event.kind == shared::protocol::CombatLogKind::Heal
+                {
+                    let positions: Vec<_> = slots
+                        .iter()
+                        .map(|&unit| {
+                            json!({"entity": unit.to_bits(),
+                                "position": world.get::<shared::components::Position>(unit)
+                                    .map(|p| [p.x, p.y, p.z]),
+                                "health": world.get::<Health>(unit)
+                                    .map(|health| (health.current, health.max))})
+                        })
+                        .collect();
+                    eprintln!(
+                        "HEALER_REPLAY_RADIANCE_PARTY {}",
+                        json!({"tick": tick, "slots": positions})
+                    );
+                }
                 if event.spell_id == Some(1253593)
                     && let Some(target) = event.target.and_then(Entity::try_from_bits)
                     && !slots.contains(&target)
