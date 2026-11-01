@@ -76,7 +76,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('world-db', 'resolver', 'geometry', 'navigation', 'routes', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--apply', action='store_true', help='apply guarded updates to world-db')
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument('--dry-run', action='store_true', help='write a report without changing world-db (default)')
+    action.add_argument('--apply', action='store_true', help='apply the existing report to world-db')
     args = parser.parse_args()
     mode = 'rw' if args.apply else 'ro'
     with sqlite3.connect(f'file:{args.world_db.resolve()}?mode={mode}', uri=True) as db:
