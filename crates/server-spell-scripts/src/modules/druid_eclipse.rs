@@ -20,6 +20,13 @@ const SOLSTICE_BUFF: u32 = 343648;
 const TOTAL_ECLIPSE: u32 = 1240206;
 const ASCENDANT_ECLIPSES: u32 = 1261564;
 const ASCENDANT_FIRES: u32 = 1263363;
+/// Celestial Alignment and both Incarnation: Chosen of Elune rows.
+const ALIGNMENTS: [u32; 3] = [194223, 102560, 390414];
+
+/// Successful casts of these apply a Solar or Lunar Eclipse (`after_cast`).
+pub(super) fn applies_eclipse(spell: u32) -> bool {
+    matches!(spell, SOLAR_ACTION | LUNAR_ACTION) || ALIGNMENTS.contains(&spell)
+}
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
@@ -78,7 +85,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             }
         }
         SOLAR_ACTION | LUNAR_ACTION => enter_eclipse(world, caster),
-        194223 | 102560 | 390414 => {
+        id if ALIGNMENTS.contains(&id) => {
             let duration = spell_cast::duration_ms(world, caster, spell);
             assert!(
                 duration > 0,
@@ -131,6 +138,7 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
         },
     );
     super::druid_balance_of_all_things::on_eclipse(world, caster, spell);
+    super::druid_sundered_firmament::on_eclipse(world, caster);
 }
 
 fn trigger_eclipse_benefits(world: &mut World, caster: Entity) {

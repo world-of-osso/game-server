@@ -202,7 +202,7 @@ pub(crate) fn open_game_object_loot(
         loot_id,
         world.resource::<ItemTemplates>(),
         |item| quest_needs_item(quests, &log, item, bag_count),
-        &mut rand::thread_rng(),
+        &mut crate::random::thread_rng(),
     );
     let slots = loot_slots(rolled, world.resource::<VendorCatalog>());
     let mut connections = world.query::<(Entity, &InWorld, &PlayerLink)>();
@@ -606,7 +606,7 @@ impl LootRolls<'_, '_> {
             difficulty_id,
             templates,
             needs,
-            &mut rand::thread_rng(),
+            &mut crate::random::thread_rng(),
         );
         if let Some(quest_only) = quest_only {
             rolled.items.retain(|item| item.needs_quest == quest_only);

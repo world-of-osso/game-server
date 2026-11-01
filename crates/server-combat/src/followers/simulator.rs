@@ -480,6 +480,12 @@ pub fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
     pull_history::has_uncleared_fight(world, owner)
 }
 
+pub fn active_enemies(world: &World, owner: Entity) -> Vec<Entity> {
+    pull_history::snapshot(world, owner)
+        .map(|history| history.active_enemies.into_iter().collect())
+        .unwrap_or_default()
+}
+
 pub fn pull(
     world: &mut World,
     tank: Entity,

@@ -388,6 +388,13 @@ def check(log):
         result = cargo(log, "check", "--locked", "-p", "server", "--bins")
     if result != 0:
         return False
+    # Standing audit, the one test every cycle runs (user, 2026-11-01): landings that add a
+    # target-selection site without a reach declaration broke it twice in one day.
+    with timed(log, "check", tree, scope="reach-audit"):
+        result = cargo(log, "test", "--locked", "-p", "server-spell-scripts", "--lib", "--",
+                       "reach_declaration_audit")
+    if result != 0:
+        return False
     with timed(log, "fmt", tree):
         if cargo(log, "fmt") != 0:
             return False

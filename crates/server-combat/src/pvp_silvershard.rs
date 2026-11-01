@@ -185,7 +185,7 @@ pub(super) fn spawn_source_cart(
             },
             true,
             &spawn,
-            &mut rand::thread_rng(),
+            &mut crate::random::thread_rng(),
         )
         .expect("temporary cart does not require ordinary level context")
     };
