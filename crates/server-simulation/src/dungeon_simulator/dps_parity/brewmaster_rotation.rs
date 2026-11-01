@@ -64,18 +64,22 @@ mod tests {
         );
         crate::spell_cast::creature_cast(run.app.world_mut(), actor, 100780, Some(target), false)
             .unwrap();
-        let event = run
-            .app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .find(|event| {
-                event.spell_id == Some(100780)
-                    && event.kind == shared::protocol::CombatLogKind::Damage
-            })
-            .expect("actual Tiger Palm damage");
-        let actual_damage = (event.amount - event.overflow) as f32;
+        let damage = |spell| {
+            let event = run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .find(|event| {
+                    event.spell_id == Some(spell)
+                        && event.kind == shared::protocol::CombatLogKind::Damage
+                })
+                .expect("actual damage");
+            (event.amount - event.overflow) as f32
+        };
+        let actual_damage = damage(100780);
+        let overwhelming_force = damage(452333);
         let deposited = run
             .app
             .world()
@@ -86,12 +90,15 @@ mod tests {
         let value = |spell, effect| {
             crate::spell_cast::scripts::script_effect_value(world, actor, spell, effect)
         };
-        // SimC reads Way's native effect directly; the selected MID2 row is 30%.
-        let expected =
-            actual_damage * value(450508, 0) / 100.0 * (1.0 + value(450529, 2) / 100.0) * 1.3;
+        let generation = value(450508, 0) / 100.0 * (1.0 + value(450529, 2) / 100.0);
+        // SimC reads Way's native effect directly; the selected MID2 row is 30%. Way
+        // whitelists Tiger Palm but not the Overwhelming Force proc 452333, which the
+        // driver 450567 still banks through CAN_PROC_FROM_PROCS (sc_monk.cpp4859–4867,
+        // 6789–6810; action_callback.cpp46–50).
+        let expected = generation * (actual_damage * 1.3 + overwhelming_force);
         assert!(
             (deposited - expected).abs() < 1.0,
-            "pool={deposited}, hit={actual_damage}, expected={expected}"
+            "pool={deposited}, hit={actual_damage}, overwhelming={overwhelming_force}, expected={expected}"
         );
         for _ in 0..40 {
             run.app.update();
