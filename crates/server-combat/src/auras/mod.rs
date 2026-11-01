@@ -2788,7 +2788,9 @@ pub(crate) fn finish_absorbs(
 ) {
     for (caster, spell_id, soaked) in result.contributions {
         #[cfg(any(test, feature = "test-support"))]
-        crate::test_support::healer_intake::record_absorb(world, caster, unit, spell_id, soaked);
+        crate::test_support::healer_intake::record_absorb(
+            world, caster, unit, attacker, spell_id, soaked,
+        );
         crate::damage_meter::record_absorb(world, caster, soaked);
         crate::spell_cast::script_registry::after_absorb_consumed(
             world, caster, unit, attacker, spell_id, soaked,

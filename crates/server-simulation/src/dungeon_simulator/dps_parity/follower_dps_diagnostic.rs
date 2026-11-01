@@ -1891,10 +1891,18 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
         app.world_mut(),
         actor,
         actor,
+        None,
         1_266_619,
         125.0,
     );
-    server::test_support::healer_intake::record_absorb(app.world_mut(), other, actor, 17, 50.0);
+    server::test_support::healer_intake::record_absorb(
+        app.world_mut(),
+        other,
+        actor,
+        None,
+        17,
+        50.0,
+    );
     let (spells, non_unit, unknown) = self_absorb_receipts(app.world(), actor);
     assert_eq!(spells, [(1_266_619, 125.0)].into());
     assert_eq!((non_unit, unknown), (0.0, 0.0));
