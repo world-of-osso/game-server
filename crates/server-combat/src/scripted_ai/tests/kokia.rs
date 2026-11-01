@@ -226,6 +226,24 @@ fn encounter_coverage_kokia_ritual_summons_after_success() {
 }
 
 #[test]
+fn encounter_coverage_kokia_death_removes_ritual_firestorm() {
+    let (mut h, boss, _) = kokia_copy(205);
+    h.engage(boss);
+    h.advance(14.5);
+    let firestorms = h.creatures_of(189886);
+    assert_eq!(firestorms.len(), 1, "ritual creates a living Firestorm");
+    let firestorm = firestorms[0];
+    assert!(h.health(firestorm).current > 0.0);
+
+    super::herald_intro::kill_actor(&mut h, boss);
+    h.advance(0.1);
+    assert!(
+        h.app.world().get_entity(firestorm).is_err(),
+        "Kokia's living Firestorm must despawn on her death"
+    );
+}
+
+#[test]
 fn encounter_coverage_kokia_missing_energy_pool_does_not_create_one() {
     let (mut h, boss, _) = kokia_copy(205);
     h.app
