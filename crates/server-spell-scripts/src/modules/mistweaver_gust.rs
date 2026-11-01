@@ -18,7 +18,11 @@ fn trigger_gust(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     let Some(target) = spell.cast_primary_target else {
-        warn!(?caster, spell = spell.id, "Gust of Mists lacks its primary target");
+        warn!(
+            ?caster,
+            spell = spell.id,
+            "Gust of Mists lacks its primary target"
+        );
         return;
     };
     // 117907 effect 3 modifies 191894's spell-power coefficient by mastery;
