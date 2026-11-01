@@ -252,10 +252,13 @@ fn native_level32_duck_is_summoned_via_call_pet() {
     check_native_duck(32);
 }
 
-/// Observe two completed swing clocks; misses also count as real attack attempts.
+/// Frames spanning `intervals` consecutive swing clocks; misses also count as real
+/// attack attempts. Each reset carries its overshoot (8d99a30ecf), so one interval
+/// quantizes to either neighboring frame count while a span stays within one frame.
 fn melee_swing_frames(
     h: &mut crate::spell_cast::test_harness::Harness,
     unit: bevy::prelude::Entity,
+    intervals: usize,
 ) -> usize {
     let start = h
         .app
@@ -265,7 +268,7 @@ fn melee_swing_frames(
         .len();
     let mut first = None;
     let mut observed = 0;
-    for frame in 0usize..200 {
+    for frame in 0usize..200 * intervals {
         h.advance(1);
         let log = h.app.world().resource::<crate::combat::CombatLog>();
         let count = log
@@ -275,19 +278,21 @@ fn melee_swing_frames(
             .filter(|entry| entry.event.attacker == unit.to_bits() && entry.event.spell_id == 0)
             .count();
         if count > observed {
-            if let Some(first) = first {
-                return frame - first;
-            }
-            first = Some(frame);
             observed = count;
+            match first {
+                Some(first) if observed > intervals => return frame - first,
+                Some(_) => {}
+                None => first = Some(frame),
+            }
         }
     }
-    panic!("native unit{unit} did not produce two melee attempts");
+    panic!("native unit{unit} did not produce {intervals} melee intervals");
 }
 
 #[test]
 fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
     const FRENZY: u32 = 1_264_934;
+    const OWNER_INTERVALS: usize = 10;
     let (mut h, caster, pet) = prepare_native_duck(90);
     assert!(crate::auras::has_aura(h.app.world(), caster, FRENZY));
     let world = h.app.world();
@@ -349,19 +354,20 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
         .world_mut()
         .entity_mut(caster)
         .insert(crate::combat::AutoAttack::new(target));
-    let owner_with_frenzy = melee_swing_frames(&mut h, caster);
-    let accelerated = melee_swing_frames(&mut h, pet);
+    let owner_with_frenzy = melee_swing_frames(&mut h, caster, OWNER_INTERVALS);
+    let accelerated = melee_swing_frames(&mut h, pet, 1);
     crate::auras::remove_auras(
         h.app.world_mut(),
         caster,
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == FRENZY,
     );
-    let ordinary = melee_swing_frames(&mut h, pet);
-    assert_eq!(
-        melee_swing_frames(&mut h, caster),
-        owner_with_frenzy,
-        "owner Frenzy must modify only the pet's attack clock"
+    let ordinary = melee_swing_frames(&mut h, pet, 1);
+    let owner_without_frenzy = melee_swing_frames(&mut h, caster, OWNER_INTERVALS);
+    assert!(
+        owner_without_frenzy.abs_diff(owner_with_frenzy) <= 1,
+        "owner Frenzy must modify only the pet's attack clock: {OWNER_INTERVALS} owner \
+         intervals {owner_with_frenzy} frames with Frenzy, {owner_without_frenzy} without"
     );
     let expected = ordinary as f32 / (1.0 + amount / 100.0);
     assert!(
