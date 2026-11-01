@@ -6,11 +6,11 @@ use rusqlite::{Connection, OpenFlags};
 fn follower_gear_selects_all_native_dragonflight_slots_for_every_spec() {
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    let pools =
-        super::super::read_dungeon_item_pools(&db, &path.parent().unwrap().join("db2/active"))
-            .unwrap();
+    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    let pools = super::super::read_dungeon_item_pools(&db, &db2).unwrap();
     let templates = crate::item_templates::load_item_templates(&path).unwrap();
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+    let item_specs = super::super::item_spec::ItemSpecs::load(&db).unwrap();
     let profiles = crate::followers::catalog::load_catalog(&db).unwrap();
     for profile in profiles.profiles.iter() {
         let class = classes
@@ -38,9 +38,12 @@ fn follower_gear_selects_all_native_dragonflight_slots_for_every_spec() {
             profile.class_id,
             primary,
             profile.spec_id,
+            70,
             &known,
             &spells,
             &templates,
+            &item_specs,
+            &[],
         );
         eprintln!(
             "GEAR spec={} items={:?} missing={:?}",
@@ -81,17 +84,107 @@ fn follower_gear_selects_all_native_dragonflight_slots_for_every_spec() {
     }
 }
 
+#[test]
+fn follower_weapons_follow_native_loot_specializations() {
+    let path = crate::test_data::world_db_path();
+    let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    let pools = super::super::read_dungeon_item_pools(&db, &db2).unwrap();
+    let templates = crate::item_templates::load_item_templates(&path).unwrap();
+    let item_specs = super::super::item_spec::ItemSpecs::load(&db).unwrap();
+    let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+    let profiles = crate::followers::class_profiles::read_profiles().unwrap();
+    let dagger = templates
+        .get(ItemDefinitionSource::Retail, 251_128)
+        .unwrap();
+    assert!(!item_specs.allows(251_128, dagger, 581, 90));
+    for level in [70, 90] {
+        let map = if level == 70 { 2515 } else { 2813 };
+        for profile in &profiles {
+            let class = classes
+                .classes
+                .iter()
+                .find(|class| class.class_id == profile.class_id)
+                .unwrap();
+            let spec = class
+                .specs
+                .iter()
+                .find(|spec| spec.spec_id == profile.spec_id)
+                .unwrap();
+            let (book, _, _) = crate::class_progression::evaluate_follower_progression(
+                &classes,
+                profile.class_id,
+                profile.race,
+                profile.spec_id,
+                level,
+                profile.talent_source().unwrap(),
+                profile.talent_entries.as_deref().unwrap(),
+            )
+            .unwrap();
+            let known =
+                KnownSpells::from_baseline(book.iter().map(|spell| spell.spell_id).collect());
+            let selection = select_items(
+                &pools[&map],
+                map,
+                profile.class_id,
+                PrimaryStat::from_priority(spec.primary_stat_priority),
+                profile.spec_id,
+                level,
+                &known,
+                &spells,
+                &templates,
+                &item_specs,
+                &[],
+            );
+            eprintln!(
+                "class{} spec{} level{level}: {:?}",
+                profile.class_id, profile.spec_id, selection.items
+            );
+            let main = selection
+                .items
+                .iter()
+                .find(|(slot, _, _)| *slot == EquipmentSlot::MainHand)
+                .expect("class follower has a main-hand item");
+            for (_, source, id) in selection.items.iter().filter(|(slot, _, _)| {
+                matches!(slot, EquipmentSlot::MainHand | EquipmentSlot::OffHand)
+            }) {
+                let item = templates.get(*source, *id).unwrap();
+                if item.scaling.class_id == 2 {
+                    assert!(
+                        item_specs.allows(*id, item, profile.spec_id, level),
+                        "spec{} level{level} item{id}",
+                        profile.spec_id
+                    );
+                }
+            }
+            if profile.spec_id == 255 {
+                let weapon = templates.get(main.1, main.2).unwrap();
+                assert!(
+                    !matches!(weapon.inventory_type, 15 | 26),
+                    "Survival uses ItemSpec-eligible melee weapons"
+                );
+            }
+            if profile.spec_id == 581 {
+                assert_ne!(
+                    main.2, 251_128,
+                    "Vengeance must not receive the Devourer dagger"
+                );
+            }
+        }
+    }
+}
+
 /// Druids neither dual wield nor use shields. In tiers whose first eligible
 /// weapon is a one-hander they wield a two-hander instead, never a missing slot.
 #[test]
 fn druid_followers_take_a_two_hander_when_no_off_hand_is_usable() {
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    let pools =
-        super::super::read_dungeon_item_pools(&db, &path.parent().unwrap().join("db2/active"))
-            .unwrap();
+    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    let pools = super::super::read_dungeon_item_pools(&db, &db2).unwrap();
     let templates = crate::item_templates::load_item_templates(&path).unwrap();
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+    let item_specs = super::super::item_spec::ItemSpecs::load(&db).unwrap();
     let druid = classes
         .classes
         .iter()
@@ -112,9 +205,12 @@ fn druid_followers_take_a_two_hander_when_no_off_hand_is_usable() {
                 11,
                 primary,
                 spec,
+                70,
                 &known,
                 &spells,
                 &templates,
+                &item_specs,
+                &[],
             );
             assert!(
                 gear.missing.is_empty(),

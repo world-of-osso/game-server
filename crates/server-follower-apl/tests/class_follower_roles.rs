@@ -19,7 +19,7 @@ struct Pull {
     follower: Entity,
 }
 
-fn dungeon_owner(h: &mut Harness) {
+fn dungeon_owner(h: &mut Harness, map: u32) {
     // Production world data, as the server loads it at startup, plus any
     // creature templates this harness authored for its own units.
     let source = server_combat::test_data::world_data();
@@ -71,7 +71,7 @@ fn dungeon_owner(h: &mut Harness) {
         elapsed: 0.0,
         unix: 1_792_454_400,
     };
-    let copy = instances.create_map(&maps, 2515, entrant, now).unwrap().map;
+    let copy = instances.create_map(&maps, map, entrant, now).unwrap().map;
     h.app.insert_resource(instances);
     let (owner, dummy) = (h.caster, h.npc);
     h.app
@@ -102,6 +102,10 @@ fn spawn(spec: u32) -> Pull {
 
 /// Spawn `spec` for an owner at `level`; followers take their owner's level.
 fn spawn_at(spec: u32, level: u8) -> Pull {
+    spawn_at_map(spec, level, 2515)
+}
+
+fn spawn_at_map(spec: u32, level: u8, map: u32) -> Pull {
     let mut harness = harness_with_plugins(vec![], &[], 8, false, |app| {
         app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
         app.add_plugins(server_combat::stats::StatsPlugin);
@@ -112,7 +116,7 @@ fn spawn_at(spec: u32, level: u8) -> Pull {
     harness.app.insert_resource(data.spell_store().clone());
     harness.app.insert_resource(data.class_spells().clone());
     harness.app.init_resource::<ObservedCombatEvents>();
-    dungeon_owner(&mut harness);
+    dungeon_owner(&mut harness, map);
     let owner = harness.caster;
     harness
         .app
@@ -206,6 +210,88 @@ impl Pull {
                 && event.spell_id.is_some_and(|spell| spells.contains(&spell))
         })
     }
+}
+
+#[test]
+fn follower_weapon_action_fury_satisfies_both_levels() {
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let mut pull = spawn_at_map(72, level, map);
+        let actor = pull.follower;
+        let world = pull.harness.app.world_mut();
+        let rotation = server_follower_apl::registry::load(world, actor, 72).unwrap();
+        let actions = rotation.action_spells();
+        for spell in [85288, 184367, 335097] {
+            assert!(
+                actions.contains(&spell),
+                "level {level} missing bound action {spell}"
+            );
+            let info = world
+                .resource::<server_combat::spell_info::SpellStore>()
+                .get(spell)
+                .unwrap();
+            server_combat::spell_cast::check_equipped_item_requirements(world, actor, info)
+                .unwrap_or_else(|error| panic!("level {level}, spell {spell}: {error:?}"));
+        }
+    }
+}
+
+#[test]
+fn follower_weapon_action_elemental_equips_shield() {
+    let mut pull = spawn_at_map(262, 90, 2813);
+    let actor = pull.follower;
+    let world = pull.harness.app.world_mut();
+    let rotation = server_follower_apl::registry::load(world, actor, 262).unwrap();
+    assert!(rotation.action_spells().contains(&462757));
+    let info = world
+        .resource::<server_combat::spell_info::SpellStore>()
+        .get(462757)
+        .unwrap();
+    server_combat::spell_cast::check_equipped_item_requirements(world, actor, info).unwrap();
+}
+
+#[test]
+#[ignore = "audits all class-follower action requirements against snapshot gear"]
+fn class_follower_gear_satisfies_all_bound_action_requirements() {
+    let mut failures = Vec::new();
+    let profiles = read_profiles().unwrap();
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        for profile in &profiles {
+            let mut pull = spawn_at_map(profile.spec_id, level, map);
+            let actor = pull.follower;
+            let world = pull.harness.app.world_mut();
+            let rotation = match server_follower_apl::registry::load(world, actor, profile.spec_id)
+            {
+                Ok(rotation) => rotation,
+                Err(error) => {
+                    failures.push((level, profile.spec_id, 0, error));
+                    continue;
+                }
+            };
+            for spell in rotation.action_spells() {
+                let Some(info) = world
+                    .resource::<server_combat::spell_info::SpellStore>()
+                    .get(spell)
+                else {
+                    failures.push((
+                        level,
+                        profile.spec_id,
+                        spell,
+                        "bound spell metadata absent".to_owned(),
+                    ));
+                    continue;
+                };
+                if let Err(error) =
+                    server_combat::spell_cast::check_equipped_item_requirements(world, actor, info)
+                {
+                    failures.push((level, profile.spec_id, spell, format!("{error:?}")));
+                }
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "bound action equipment refusals: {failures:?}"
+    );
 }
 
 #[test]

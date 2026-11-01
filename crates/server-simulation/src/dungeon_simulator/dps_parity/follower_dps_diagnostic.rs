@@ -52,6 +52,31 @@ fn follower_dps_loads_spell_and_item_catalogs_from_selected_database() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with ItemSpec data"]
+fn follower_vengeance_snapshot_equips_spec_eligible_weapon() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (app, actor, _, _) = prepare_class_follower(app, copy, 581, 90);
+    let items = &app
+        .world()
+        .get::<crate::stats::EquippedItems>(actor)
+        .unwrap()
+        .items;
+    let main = items
+        .iter()
+        .find(|(slot, _, _)| *slot == shared::protocol::EquipmentSlot::MainHand)
+        .unwrap();
+    assert_ne!(main.2, 251_128);
+    let template = app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>()
+        .get(main.1, main.2)
+        .unwrap();
+    assert!(matches!(template.scaling.subclass_id, 0 | 7 | 9 | 13));
+}
+
 fn prepare_follower(
     entry: u32,
     level: u8,
@@ -1467,6 +1492,46 @@ fn trace_sotr_removal(
     );
 }
 
+fn self_absorb_receipts(world: &World, actor: Entity) -> (BTreeMap<u32, f64>, f64, f64) {
+    let Some(capture) = world.get_resource::<server::test_support::healer_intake::Capture>() else {
+        return (BTreeMap::new(), 0.0, 0.0);
+    };
+    let spells = capture
+        .consumed_absorbs_by_spell
+        .iter()
+        .filter_map(|(&(caster, spell), &amount)| (caster == actor).then_some((spell, amount)))
+        .collect();
+    let usage = capture
+        .consumed_absorbs
+        .get(&actor)
+        .copied()
+        .unwrap_or_default();
+    (spells, usage.non_unit, usage.unknown_scale)
+}
+
+#[test]
+fn follower_tank_reports_only_the_actors_consumed_absorbs() {
+    let mut app = App::new();
+    let actor = app.world_mut().spawn_empty().id();
+    let other = app.world_mut().spawn_empty().id();
+    app.insert_resource(server::test_support::healer_intake::Capture {
+        members: vec![actor],
+        active_hit_scale: Some((actor, 1.0)),
+        ..Default::default()
+    });
+    server::test_support::healer_intake::record_absorb(
+        app.world_mut(),
+        actor,
+        actor,
+        1_266_619,
+        125.0,
+    );
+    server::test_support::healer_intake::record_absorb(app.world_mut(), other, actor, 17, 50.0);
+    let (spells, non_unit, unknown) = self_absorb_receipts(app.world(), actor);
+    assert_eq!(spells, [(1_266_619, 125.0)].into());
+    assert_eq!((non_unit, unknown), (0.0, 0.0));
+}
+
 #[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
@@ -1837,9 +1902,12 @@ fn follower_dps_production_dummy() {
     {
         println!("FOLLOWER_FACTORS {}", capture.export());
     }
+    let (self_absorbs, absorb_non_unit, absorb_unknown_scale) =
+        self_absorb_receipts(app.world(), actor);
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
+        "self_absorbs_by_spell":self_absorbs,"self_absorb_non_unit":absorb_non_unit,"self_absorb_unknown_scale":absorb_unknown_scale,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
         "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / 2400.0)).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,

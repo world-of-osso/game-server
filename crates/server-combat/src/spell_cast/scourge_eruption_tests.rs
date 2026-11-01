@@ -79,12 +79,14 @@ fn assert_eruption(h: &Harness, spell: u32, coefficient: f32, multiplier: f32) {
     let events = damage(&h.inbox.log, h.caster, spell);
     assert_eq!(events.len(), 1, "native eruption child {spell}");
     let event = events[0];
-    let ap = h
-        .app
-        .world()
+    let world = h.app.world();
+    let ap = world
         .get::<CharacterStats>(h.caster)
         .unwrap()
-        .attack_power;
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(h.caster),
+        );
     let critical = if event.crit { 2.0 } else { 1.0 };
     assert_eq!(
         event.amount as f32,
@@ -185,13 +187,19 @@ fn unholy_scourge_native_eruptions_preserve_expiry_phase_and_next_real_tick() {
     let ticks = damage(&h.inbox.log, caster, VIRULENT);
     assert_eq!(ticks.len(), 1);
     assert!(ticks[0].periodic);
-    let ap = h
-        .app
-        .world()
+    let world = h.app.world();
+    let ap = world
         .get::<CharacterStats>(caster)
         .unwrap()
-        .attack_power;
-    assert_eq!(ticks[0].amount as f32, (ap * VIRULENT_AP).round());
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(caster),
+        );
+    let critical = if ticks[0].crit { 2.0 } else { 1.0 };
+    assert_eq!(
+        ticks[0].amount as f32,
+        (ap * VIRULENT_AP * critical).round()
+    );
 }
 
 #[test]

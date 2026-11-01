@@ -165,6 +165,9 @@ fn class_completeness_native_restriction_removed_midcast_allows_completion() {
 fn class_completeness_native_ranged_slot_and_explicit_attribute_exceptions() {
     for (class, spell, target_enemy) in [(3, 75, true), (8, 277757, false)] {
         let mut h = harness(Vec::new(), &[BLADESTORM, spell], class).unwrap();
+        if class == 3 {
+            equip_for_spells(&mut h, &[spell]);
+        }
         apply_restriction(&mut h);
         let target = if target_enemy { h.npc } else { h.caster };
         h.cast_and_deliver(spell, Some(target));

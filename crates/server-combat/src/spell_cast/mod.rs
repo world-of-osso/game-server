@@ -30,6 +30,11 @@ pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 pub(crate) mod cooldown_query;
+pub(crate) mod equipped_items;
+#[cfg(any(test, feature = "test-support"))]
+pub use equipped_items::check_cast as check_equipped_item_requirements;
+#[cfg(test)]
+mod equipped_items_tests;
 #[cfg(test)]
 mod form_display_power_tests;
 #[cfg(any(test, feature = "test-support"))]
@@ -444,6 +449,8 @@ pub enum CastFailure {
     CasterAuraState,
     /// `SPELL_FAILED_TARGET_AURASTATE` (also covers required/excluded aura spells).
     TargetAuraState,
+    /// `SPELL_FAILED_EQUIPPED_ITEM_CLASS`.
+    EquippedItemClass,
     OutOfRange,
     TooClose,
     /// `SPELL_FAILED_UNIT_NOT_INFRONT`.
@@ -525,6 +532,10 @@ impl CastFailure {
             Self::TargetAuraState => (
                 R::InvalidTarget,
                 Some("SPELL_FAILED_TARGET_AURASTATE".into()),
+            ),
+            Self::EquippedItemClass => (
+                R::NotSupported,
+                Some("SPELL_FAILED_EQUIPPED_ITEM_CLASS".into()),
             ),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
@@ -2227,6 +2238,7 @@ fn validate_start_with_policy(
     casting_restriction::check_cast(world, caster, spell)?;
     shapeshift::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    equipped_items::check_cast(world, caster, spell)?;
     scripts::check_enhancement_cast(world, caster, spell)?;
     scripts::check_policy_cast(world, caster, spell)?;
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
@@ -2994,6 +3006,7 @@ fn execute_cast_with_primary(
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
+    equipped_items::check_cast(world, caster, spell)?;
     scripts::check_enhancement_cast(world, caster, spell)?;
     scripts::check_policy_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;

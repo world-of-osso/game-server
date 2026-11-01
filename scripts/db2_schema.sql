@@ -829,6 +829,25 @@ CREATE TABLE spec_set_member (
   SpecSet INTEGER NOT NULL DEFAULT 0
 );
 
+DROP TABLE IF EXISTS item_spec;
+CREATE TABLE item_spec (
+  ID INTEGER PRIMARY KEY,
+  MinLevel INTEGER NOT NULL,
+  MaxLevel INTEGER NOT NULL,
+  ItemType INTEGER NOT NULL,
+  PrimaryStat INTEGER NOT NULL,
+  SecondaryStat INTEGER NOT NULL,
+  SpecializationID INTEGER NOT NULL
+);
+
+DROP TABLE IF EXISTS item_spec_override;
+CREATE TABLE item_spec_override (
+  ID INTEGER PRIMARY KEY,
+  SpecID INTEGER NOT NULL,
+  ItemID INTEGER NOT NULL
+);
+CREATE INDEX item_spec_override_item_id ON item_spec_override(ItemID);
+
 DROP TABLE IF EXISTS item;
 CREATE TABLE item (
   ID INTEGER PRIMARY KEY,

@@ -2,6 +2,7 @@
 #[cfg(test)]
 #[path = "gear/equip_tests.rs"]
 mod equip_tests;
+mod item_spec;
 pub mod keystone;
 pub mod levels;
 pub mod select;
@@ -139,6 +140,7 @@ pub fn read_dungeon_item_pools(
 pub struct FollowerGearSource {
     pools: HashMap<u32, Vec<JournalGearCandidate>>,
     levels: levels::DungeonItemLevels,
+    item_specs: item_spec::ItemSpecs,
     database: std::path::PathBuf,
 }
 
@@ -148,6 +150,8 @@ pub fn load_source(database: &Path, db2: &Path) -> Result<FollowerGearSource, St
     Ok(FollowerGearSource {
         pools: read_dungeon_item_pools(&db, db2)?,
         levels: levels::DungeonItemLevels::read(db2)?,
+        item_specs: item_spec::ItemSpecs::load(&db)
+            .map_err(|error| format!("read follower item specializations: {error}"))?,
         database: database.to_owned(),
     })
 }
@@ -167,7 +171,12 @@ pub(super) fn load_startup(mut commands: Commands) {
 }
 
 /// Equip source items at the current dungeon loot level through normal item instances.
-pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Result<(), String> {
+pub fn equip(
+    world: &mut World,
+    actor: Entity,
+    profile: &super::Profile,
+    actions: &[u32],
+) -> Result<(), String> {
     let source = world
         .get_resource::<FollowerGearSource>()
         .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;
@@ -212,15 +221,26 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
     let spells = world
         .get_resource::<crate::spell_info::SpellStore>()
         .ok_or("follower gear spells unavailable")?;
+    let action_info = actions
+        .iter()
+        .map(|id| {
+            spells
+                .get(*id)
+                .ok_or_else(|| format!("follower gear action {id} missing spell data"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let selection = select::select_items(
         pool,
         copy.map_id,
         profile.class_id,
         crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority),
         profile.spec_id,
+        level,
         known,
         spells,
         templates,
+        &source.item_specs,
+        &action_info,
     );
     if !selection.missing.is_empty() {
         if copy.map_id == STOCKADE_SIMULATOR_MAP {

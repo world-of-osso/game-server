@@ -107,15 +107,18 @@ fn is_two_handed(inventory_type: u8) -> bool {
 
 /// Select own-map loot first, then other same-tier loot; never repeat an item.
 /// Unknown Journal difficulty/faction masks are excluded rather than guessed.
-pub fn select_items(
+pub(super) fn select_items(
     candidates: &[JournalGearCandidate],
     map: u32,
     class: u8,
     primary: PrimaryStat,
     spec_id: u32,
+    level: u8,
     known: &KnownSpells,
     spells: &crate::spell_info::SpellStore,
     templates: &ItemTemplates,
+    item_specs: &super::item_spec::ItemSpecs,
+    actions: &[&crate::spell_info::SpellInfo],
 ) -> GearSelection {
     use EquipmentSlot::*;
     let mut candidates: Vec<_> = candidates
@@ -126,67 +129,122 @@ pub fn select_items(
     let mut chosen = Vec::new();
     let mut missing = Vec::new();
     let mut used = BTreeSet::new();
-    let mut two_handed = false;
     // Inventory admission uses native SPELL_EFFECT_DUAL_WIELD40, not one spell ID.
     let can_dual_wield = known.iter().any(|spell| {
         spells
             .get(spell)
             .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
     });
-    let pick = |slot: EquipmentSlot, used: &BTreeSet<u32>, two_hand_only: bool| {
-        candidates.iter().find_map(|row| {
-            let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
-            let ranged_hunter =
-                class == 3 && slot == MainHand && !matches!(item.inventory_type, 15 | 26);
-            let shield_tank = matches!(spec_id, 66 | 73)
-                && ((slot == MainHand && !matches!(item.inventory_type, 13 | 21))
-                    || (slot == OffHand && item.inventory_type != 14));
-            let no_dual_wield =
-                slot == OffHand && matches!(item.inventory_type, 13 | 22) && !can_dual_wield;
-            let monk_two_hand =
-                spec_id == 269 && !can_dual_wield && slot == MainHand && item.inventory_type != 17;
-            if used.contains(&row.item_id)
-                || !inventory_types(slot).contains(&item.inventory_type)
-                || (two_hand_only && !is_two_handed(item.inventory_type))
-                || ranged_hunter
-                || shield_tank
-                || no_dual_wield
-                || monk_two_hand
-                || !equipment_eligible(item, class, primary, known, templates)
-            {
-                return None;
-            }
-            Some((row.item_id, item.inventory_type))
-        })
+    let titan_grip = crate::inventory::inventory_model::find_titan_grip(Some(known), Some(spells));
+    let eligible = |slot: EquipmentSlot, used: &BTreeSet<u32>| {
+        candidates
+            .iter()
+            .filter_map(|row| {
+                let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
+                let ranged_hunter = matches!(spec_id, 253 | 254)
+                    && slot == MainHand
+                    && !matches!(item.inventory_type, 15 | 26);
+                let shield_tank = matches!(spec_id, 66 | 73)
+                    && ((slot == MainHand && !matches!(item.inventory_type, 13 | 21))
+                        || (slot == OffHand && item.inventory_type != 14));
+                let grip_allows = can_dual_wield
+                    && item.inventory_type == 17
+                    && titan_grip.as_ref().is_some_and(|grip| grip.allows(item));
+                let valid_slot = inventory_types(slot).contains(&item.inventory_type)
+                    || (slot == OffHand && grip_allows);
+                let no_dual_wield =
+                    slot == OffHand && matches!(item.inventory_type, 13 | 22) && !can_dual_wield;
+                let monk_two_hand = spec_id == 269
+                    && !can_dual_wield
+                    && slot == MainHand
+                    && item.inventory_type != 17;
+                if used.contains(&row.item_id)
+                    || !valid_slot
+                    || ranged_hunter
+                    || shield_tank
+                    || no_dual_wield
+                    || monk_two_hand
+                    || (item.scaling.class_id == 2
+                        && !item_specs.allows(row.item_id, item, spec_id, level))
+                    || !equipment_eligible(item, class, primary, known, templates)
+                {
+                    return None;
+                }
+                Some((row.item_id, item.inventory_type, grip_allows))
+            })
+            .collect::<Vec<_>>()
     };
     for slot in [
         Head, Neck, Shoulder, Back, Chest, Wrist, Hands, Waist, Legs, Feet, Finger1, Finger2,
-        Trinket1, Trinket2, MainHand, OffHand,
+        Trinket1, Trinket2,
     ] {
-        if slot == OffHand && two_handed {
-            continue;
-        }
-        if let Some((item, inventory)) = pick(slot, &used, false) {
-            used.insert(item);
-            if slot == MainHand {
-                two_handed = is_two_handed(inventory);
-            }
-            chosen.push((slot, ItemDefinitionSource::Retail, item));
-        } else if let Some(main) = (slot == OffHand && !matches!(spec_id, 66 | 73))
-            .then(|| chosen.iter().position(|(slot, _, _)| *slot == MainHand))
-            .flatten()
-        {
-            // A one-hander with no usable off-hand (a druid: no shield, no dual
-            // wield): wield an eligible two-hander instead. Without one, the
-            // one-hander alone is a valid loadout; only shield tanks need the slot.
-            if let Some((item, _)) = pick(MainHand, &used, true) {
-                used.remove(&chosen[main].2);
-                used.insert(item);
-                chosen[main].2 = item;
-            }
+        if let Some((item, _, _)) = eligible(slot, &used).first() {
+            used.insert(*item);
+            chosen.push((slot, ItemDefinitionSource::Retail, *item));
         } else {
             missing.push(slot);
         }
+    }
+    let main_candidates = eligible(MainHand, &used);
+    let body: Vec<_> = chosen
+        .iter()
+        .filter_map(|&(slot, source, id)| templates.get(source, id).map(|item| (slot, item)))
+        .collect();
+    let mut pair = None;
+    let mut bare_one_hand = None;
+    for &(main, inventory, grip_allows) in &main_candidates {
+        let mut occupied = used.clone();
+        occupied.insert(main);
+        let blocks_offhand = is_two_handed(inventory) && !grip_allows;
+        let offhands = if blocks_offhand {
+            Vec::new()
+        } else {
+            eligible(OffHand, &occupied)
+        };
+        let options = offhands
+            .iter()
+            .map(|&(id, _, _)| Some(id))
+            .chain(std::iter::once(None));
+        for offhand in options {
+            if offhand.is_none() && matches!(spec_id, 66 | 73) {
+                continue;
+            }
+            let mut equipped = body.clone();
+            equipped.push((
+                MainHand,
+                templates.get(ItemDefinitionSource::Retail, main).unwrap(),
+            ));
+            if let Some(offhand) = offhand {
+                equipped.push((
+                    OffHand,
+                    templates
+                        .get(ItemDefinitionSource::Retail, offhand)
+                        .unwrap(),
+                ));
+            }
+            if actions.iter().all(|spell| {
+                crate::spell_cast::equipped_items::check_items(&equipped, spell).is_ok()
+            }) {
+                if offhand.is_none() && !is_two_handed(inventory) {
+                    bare_one_hand.get_or_insert((main, offhand));
+                } else {
+                    pair = Some((main, offhand));
+                }
+                break;
+            }
+        }
+        if pair.is_some() {
+            break;
+        }
+    }
+    if let Some((main, offhand)) = pair.or(bare_one_hand) {
+        chosen.push((MainHand, ItemDefinitionSource::Retail, main));
+        if let Some(offhand) = offhand {
+            chosen.push((OffHand, ItemDefinitionSource::Retail, offhand));
+        }
+    } else {
+        missing.push(MainHand);
+        missing.push(OffHand);
     }
     GearSelection {
         items: chosen,

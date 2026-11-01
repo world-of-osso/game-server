@@ -46,6 +46,7 @@ pub struct FiendSummonReceipt {
 }
 
 mod assisted_parity;
+mod equipment;
 pub use assisted_parity::{
     read_facts as read_assisted_parity_facts,
     read_facts_with_dots as read_assisted_parity_facts_with_dots,
@@ -176,6 +177,7 @@ pub fn collect_broadcast_swings(
 pub struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,
+    pub(crate) items: crate::item_templates::ItemTemplates,
     pub powers_db: PathBuf,
 }
 
@@ -259,9 +261,11 @@ pub fn world_db() -> Option<&'static WorldData> {
         let path = crate::test_data::world_db_path();
         let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
         let (store, classes) = load_spell_data(&conn).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
         Some(WorldData {
             store,
             classes,
+            items,
             powers_db: path,
         })
     })
@@ -478,7 +482,7 @@ pub fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
         .spawn((
             Player {
                 name: "Caster".into(),
-                race: 1,
+                race: if class == 12 { 4 } else { 1 },
                 class,
                 appearance: default(),
             },
@@ -721,7 +725,14 @@ pub fn harness_with_plugins(
         .map(|&id| data.store.get(id).expect("spell in world.db").clone())
         .collect();
     spells.extend(extra);
-    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
+    let fixture_items = equipment::select(data, class, &spells);
+    let known = KnownSpells::fixture(
+        spells
+            .iter()
+            .map(|spell| spell.id)
+            .chain(fixture_items.learned_skills.iter().copied())
+            .collect(),
+    );
     app.insert_resource(SpellStore::fixture_from_catalog(spells, &data.store));
     app.insert_resource(power_table(data));
     app.insert_resource(crate::item_stats::load_item_scaling_tables(&data.powers_db).unwrap());
@@ -736,6 +747,7 @@ pub fn harness_with_plugins(
     app.insert_resource(class_spells(data));
     app.insert_resource(crate::faction::world_db_faction_templates()?);
     let caster = spawn_player(&mut app, class, 0.0);
+    equipment::install(&mut app, caster, fixture_items);
     if computed_stats {
         app.world_mut()
             .entity_mut(caster)
@@ -765,6 +777,19 @@ pub fn harness_with_plugins(
         npc,
         inbox: Inbox::default(),
     })
+}
+
+/// Equip the native class-proficient items required by the specified fixture spells.
+#[cfg(test)]
+pub(crate) fn equip_for_spells(h: &mut Harness, spell_ids: &[u32]) {
+    let data = world_db().expect("fixture world database");
+    let class = h.app.world().get::<Player>(h.caster).unwrap().class;
+    let spells: Vec<_> = spell_ids
+        .iter()
+        .map(|id| data.store.get(*id).expect("fixture spell").clone())
+        .collect();
+    let items = equipment::select(data, class, &spells);
+    equipment::install(&mut h.app, h.caster, items);
 }
 
 /// Charge's target (its DUMMY effect, `TARGET_UNIT_TARGET_ENEMY`) must stand within

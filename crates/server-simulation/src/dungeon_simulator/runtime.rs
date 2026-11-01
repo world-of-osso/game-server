@@ -294,6 +294,11 @@ fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
     let data = crate::world_data::load_world_data(path);
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
+    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    app.insert_resource(
+        crate::followers::gear::load_source(path, &db2)
+            .expect("load follower gear from the selected world database"),
+    );
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
     app.insert_resource(spells);
     app.insert_resource(classes);
