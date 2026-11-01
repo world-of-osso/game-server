@@ -52,10 +52,6 @@ pub(super) fn update(world: &mut World) {
         super::owner_trail::record(world, owner);
     }
     for (unit, follower) in &followers {
-        super::utility::sample_health(world, *unit);
-        super::utility::sample_health(world, follower.owner);
-    }
-    for (unit, follower) in &followers {
         if follower.profile.role == GroupRole::Tank
             && crate::spell_cast::targets::is_alive(world, *unit)
         {
