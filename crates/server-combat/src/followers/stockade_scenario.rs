@@ -475,19 +475,28 @@ pub fn assert_existing_fight_defense_without_a_healer(engaged: (Scenario, Positi
             .get::<shared::casting::CastState>(s.tank)
             .map(|cast| cast.spell_id);
         let follower = world.get::<Follower>(s.tank).unwrap().clone();
-        let admission = combat_target.map(|victim| {
-            super::tank_planner::read_movement_admission(
-                s.h.app.world_mut(),
-                s.tank,
-                victim,
-                &follower,
-                None,
-            )
-        });
+        let probe: Vec<_> = combat_target
+            .map(|victim| {
+                (0..10)
+                    .map(|_| {
+                        s.h.advance(1);
+                        let world = s.h.app.world_mut();
+                        let at = world.get::<Position>(victim).copied();
+                        let nav = world.resource::<crate::navigation::Navigation>();
+                        let pending = nav.route_pending(s.tank);
+                        let owner = nav.query_owner(s.tank);
+                        let admission = super::tank_planner::read_movement_admission(
+                            world, s.tank, victim, &follower, None,
+                        );
+                        format!("{at:?} pending={pending} owner={owner:?} {admission:?}")
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         panic!(
             "existing-fight defense must still move without new-pull healer readiness: \
              target={combat_target:?} owner_victim={target:?} state={state:?} cast={cast:?} \
-             admission={admission:?}"
+             probe={probe:#?}"
         );
     }
 }
