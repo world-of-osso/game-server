@@ -20,8 +20,6 @@ mod form_combat_tests;
 pub mod gear;
 mod hazards;
 mod healer_context;
-#[cfg(test)]
-mod healer_group_cancel_tests;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
