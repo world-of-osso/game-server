@@ -161,6 +161,25 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
         .mana_cost as f32;
     assert_eq!(initial, 100.0, "native Energy pool and pinned Imp base100");
     assert_eq!(cost, 20.0, "native104318 Energy cost");
+    // e9c3671cbf: the Imp reads its owner's passive SpellMods, so the Demonology spec
+    // passive 334591 (aura108 PowerCost -20%) makes each bolt cost 16.
+    assert!(crate::auras::has_aura(h.app.world(), owner, 334591));
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap()
+        .clone();
+    let effective = crate::spell_cast::spell_costs(h.app.world(), imp, &spell)
+        .unwrap()
+        .into_iter()
+        .find(|(pool, _)| {
+            *pool == crate::spell_cast::CostPool::Power(shared::components::PowerType::Energy)
+        })
+        .unwrap()
+        .1;
+    assert_eq!(effective, 16.0, "native20 with the owner's 334591 discount");
     h.advance(500); //25s is before native104317's40s lifetime.
     let casts = h
         .inbox
@@ -170,8 +189,8 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
         .count();
     assert_eq!(
         casts,
-        (initial / cost) as usize,
-        "SimC disables Imp regen; exhaustion budget comes from native100/20, not guessed bolts"
+        (initial / effective) as usize,
+        "SimC disables Imp regen; exhaustion budget comes from native100/16, not guessed bolts"
     );
     assert!(
         h.app.world().get_entity(imp).is_err(),
