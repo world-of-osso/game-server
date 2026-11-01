@@ -5,6 +5,84 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn atonement_area_spells_preserve_explicit_pet_but_exclude_secondary_pets() {
+    use crate::hunter_pet::HunterPet;
+    use crate::spell_cast::summon::{SummonProperties, SummonedCreature};
+    use shared::components::UnitFactionTemplate;
+
+    for spell in [1253593, 194509] {
+        for pet_primary in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[1253593, 194509, 194384], 5).unwrap();
+            let caster = h.caster;
+            h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+            let player = spawn_player(&mut h.app, 5, 3.0);
+            let allies: Vec<_> = (0..4)
+                .map(|index| spawn_player(&mut h.app, 5, 4.0 + index as f32))
+                .collect();
+            let pet = spawn_npc(&mut h.app, 2.0);
+            let guardian = spawn_npc(&mut h.app, 2.5);
+            h.app.world_mut().entity_mut(pet).insert((
+                UnitFactionTemplate(1),
+                HunterPet {
+                    owner: caster,
+                    slot: 1,
+                },
+            ));
+            h.app.world_mut().entity_mut(guardian).insert((
+                UnitFactionTemplate(1),
+                SummonedCreature {
+                    owner: caster,
+                    spell_id: 157319,
+                    properties_id: 3490,
+                    properties: SummonProperties {
+                        control: 1,
+                        faction: 0,
+                        title: 3,
+                        slot: -1,
+                        flags: 0,
+                    },
+                    display_scale: 1.0,
+                    expires_at: None,
+                },
+            ));
+            for target in allies.iter().copied().chain([player, pet, guardian]) {
+                let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max * 0.1;
+            }
+            let primary = if pet_primary { pet } else { player };
+            assert!(crate::spell_cast::try_cast_triggered(
+                h.app.world_mut(),
+                caster,
+                spell,
+                Some(primary),
+                0
+            ));
+            h.advance(50);
+            let protected = |target| crate::auras::has_aura(h.app.world(), target, 194384);
+            assert!(
+                protected(primary),
+                "spell {spell} must keep its explicit primary, pet={pet_primary}"
+            );
+            assert!(
+                !protected(guardian),
+                "spell {spell} must exclude a secondary guardian"
+            );
+            if !pet_primary {
+                assert!(
+                    !protected(pet),
+                    "spell {spell} must exclude a secondary pet"
+                );
+            }
+            assert!(
+                allies.iter().copied().any(protected),
+                "spell {spell} must still reach player allies"
+            );
+        }
+    }
+}
+
+#[test]
 fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement() {
     use shared::components::CombatStatus;
 
