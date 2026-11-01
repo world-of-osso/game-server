@@ -10,6 +10,14 @@ pub use crate::line_of_sight::LineOfSight;
 pub use crate::navigation::within_reach;
 pub use graph::Space;
 
+/// Whether a creature has scheduled a delayed assistance wave.
+pub fn assistance_pending_from(
+    world: &bevy::prelude::World,
+    caller: bevy::prelude::Entity,
+) -> bool {
+    crate::creature_assistance::pending_callers(world).any(|pending| pending == caller)
+}
+
 /// Install the same player death transitions and release handling as the server.
 pub fn install_player_death(app: &mut bevy::prelude::App) {
     app.add_plugins(crate::death::DeathPlugin);

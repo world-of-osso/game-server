@@ -130,6 +130,210 @@ fn devastation_follower_commandos_do_not_pull_idle_outsider() {
     );
 }
 
+#[test]
+#[ignore = "requires MM profile and native Windrunner world, ground and LOS data"]
+fn windrunner_mm_volley_waits_for_assistance_dispatch() {
+    let (profile, traits) = read_reference(254).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    let actor = run.actor;
+    let owner = fixture_player(&run);
+    let map = crate::maps::InMap {
+        map_id: 2805,
+        instance_id: 73,
+    };
+    let source = crate::test_data::world_data();
+    let mut data = source.clone();
+    data.spawns = source
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.guid, 63805113 | 63805114 | 63805162))
+        .cloned()
+        .collect::<Vec<_>>()
+        .into();
+    assert_eq!(data.spawns.len(), 3);
+    data.spawns_by_map = HashMap::from([(2805, (0..data.spawns.len()).collect())]);
+    run.app.insert_resource(data.clone());
+    let root = std::path::PathBuf::from(
+        std::env::var_os("FOLLOWER_COMPONENT_ASSETS").expect("ground assets"),
+    );
+    run.app.insert_resource(
+        server::test_support::LineOfSight::load(&root.join("los")).expect("native LOS"),
+    );
+    let mut ground =
+        server::test_support::GroundMap::new(&root, HashMap::from([(2805, 6_099_383)]));
+    let mut queue = CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, run.app.world());
+    assert_eq!(
+        crate::zones::spawn_map_creatures(
+            &mut commands,
+            &data,
+            crate::zones::MapContent {
+                map,
+                difficulty_id: 1,
+                dead_bosses: vec![]
+            },
+            false,
+            Some(&mut ground),
+        ),
+        3
+    );
+    queue.apply(run.app.world_mut());
+    run.app.insert_resource(ground);
+    crate::followers::simulator::relocate_parity_follower(run.app.world_mut(), actor, map);
+    let away = Position {
+        x: 5216.415,
+        y: 127.7347,
+        z: 3124.3594,
+    };
+    run.app.world_mut().entity_mut(owner).insert(away);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert((away, crate::followers::AplControlled));
+    run.app.update();
+    run.app.update();
+    let units: HashMap<_, _> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin)>()
+        .iter(run.app.world())
+        .map(|(entity, origin)| (origin.guid, entity))
+        .collect();
+    let caller = units[&63805113];
+    let helper = units[&63805114];
+    let outside = units[&63805162];
+    let caller_position = *run.app.world().get::<Position>(caller).unwrap();
+    let helper_position = *run.app.world().get::<Position>(helper).unwrap();
+    let cast_position = Position {
+        x: caller_position.x - 8.0,
+        ..caller_position
+    };
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert((cast_position, crate::networking::CombatTarget(Some(caller))));
+    run.app.world_mut().entity_mut(owner).insert(cast_position);
+    face_actor_toward_primary(run.app.world_mut(), actor, caller);
+    let (_, radius) =
+        crate::followers::spell_unintended_reach(run.app.world(), actor, 260243, caller).unwrap();
+    let distance = Vec3::new(caller_position.x, caller_position.y, caller_position.z).distance(
+        Vec3::new(helper_position.x, helper_position.y, helper_position.z),
+    );
+    assert!(
+        distance <= radius,
+        "native Volley must reach the pending helper"
+    );
+    crate::creature_aggro::attack_start(run.app.world_mut(), caller, actor);
+    assert!(server::test_support::assistance_pending_from(
+        run.app.world(),
+        caller
+    ));
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
+    let rotation = server_follower_apl::marksmanship_rotation::Rotation::load(
+        run.app.world_mut(),
+        actor,
+        encounter,
+        &run.profile,
+    )
+    .unwrap();
+    let action = server::simc_apl::Action {
+        source_row: None,
+        name: "volley".into(),
+        target: Some(caller.to_bits()),
+        options: BTreeMap::new(),
+    };
+    let prepare = |run: &mut Run| {
+        server_follower_apl::literal_rotation::execution::Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &[caller],
+            &rotation.equipment,
+            server_follower_apl::marksmanship_rotation::bindings::actions(),
+            true,
+        )
+        .unwrap()
+    };
+    run.app.world_mut().entity_mut(helper).insert(Position {
+        x: helper_position.x + 100.0,
+        ..helper_position
+    });
+    assert!(
+        prepare(&mut run)
+            .execution(&action, &rotation.equipment)
+            .unwrap()
+            .is_some(),
+        "the MM APL can select Volley when the pending helper is out of reach"
+    );
+    run.app
+        .world_mut()
+        .entity_mut(helper)
+        .insert(helper_position);
+    assert!(
+        prepare(&mut run)
+            .execution(&action, &rotation.equipment)
+            .unwrap()
+            .is_none(),
+        "the real MM APL must not select Volley before dispatch"
+    );
+    let mut apl = server_follower_apl::FollowerApl::new(Box::new(rotation));
+    apl.execute_plan(
+        run.app.world_mut(),
+        actor,
+        action,
+        server_follower_apl::literal_rotation::execution::Execution::Spell(
+            260243,
+            actor,
+            Some(caller),
+        ),
+    )
+    .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(helper.to_bits())
+                && event.spell_id == Some(260243)
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "Volley must not hit the pending helper"
+    );
+    assert!(
+        !server::test_support::assistance_pending_from(run.app.world(), helper),
+        "the helper must not schedule the outside Dragonhawk"
+    );
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert!(
+        crate::combat_refs::has_active_reference_to(run.app.world(), helper, actor),
+        "native assistance must dispatch the helper"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), outside)
+            .next()
+            .is_none(),
+        "the outside Dragonhawk must remain idle"
+    );
+    assert!(!server::test_support::assistance_pending_from(
+        run.app.world(),
+        helper
+    ));
+}
+
 use super::*;
 use bevy::ecs::world::CommandQueue;
 use shared::casting::CastState;
