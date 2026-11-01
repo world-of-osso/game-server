@@ -662,6 +662,7 @@ fn released_leader_rejoins_party_through_azure_book() {
         .clone();
     server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
         .unwrap();
+    super::movement::forget_party_travel(run.app.world_mut(), owner);
     let attacker = *run.actors.values().next().unwrap();
     crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
     for _ in 0..10 {
