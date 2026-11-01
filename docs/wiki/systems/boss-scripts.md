@@ -143,6 +143,8 @@ Dummy children for1214325/474018,444034-driven Torrent phase/repeat, and Dash419
 
 [Contract](../../specs/boss-scripts.md#kokia-current-retail-partial-boundary). User-approved four-kill logs supersede the earlier LittleWigs-only Ritual/timer approximation: native372863 completion triggers native1309540 summon189886, with log-median timers and actor-scoped observed Energy refill. Native372858 retains actual372859 weapon damage; Boulder retains native2.5s casting. The unknown383804 periodic-dummy Energy relationship remains unproved.
 
+Firestorm cleanup: WCL [WPB7b2ZJarQ1DmvN fight 6 pull 5](https://www.warcraftlogs.com/reports/WPB7b2ZJarQ1DmvN#fight=6), [xtGY7CAgR2yJLPXd fight 7 pull 6](https://www.warcraftlogs.com/reports/xtGY7CAgR2yJLPXd#fight=7), and [2QwHtKvcGNCBbJak fight 13 pull 6](https://www.warcraftlogs.com/reports/2QwHtKvcGNCBbJak#fight=13) show a living Firestorm near Kokia's death, no subsequent damage or casts, and no Firestorm death event. Debuff removal at the boundary supports despawn; WCL does not provide an explicit despawn marker. Kokia registers summons with `BossAi`, whose death cleanup unsummons them without death rewards.
+
 Earlier d1af8bded proof covered the superseded Lua-clock approximation. Local targeted10/10 tests cover Normal/projected205 successful and interrupted Ritual, summon, Energy refill, ongoing lanes, damage, reset and isolated credit. The combined train gate landed in d15d8bcf3342e3127df58d87d8f0c9b00381be3e, including the missing-Energy-pool safety test. Boulder projectile, Wounds behavior and full-fight proof remain open.
 
 ## Melidrussa current Retail partial — 2026-10-21
