@@ -123,9 +123,17 @@ fn before_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) 
     let Some(target) = spell.cast_primary_target else {
         return;
     };
-    if spell.id == 255937 && selected(world, caster, 405355) {
-        // Native self-targeted delayed flames retain the Wake cast's enemy target.
-        world.entity_mut(caster).insert(WakePrimary(target));
+    if spell.id == 255937 {
+        // SimC76f8118 sc_paladin_retribution.cpp848–850: Wrath precedes Wake damage.
+        if selected(world, caster, 458359) && selected(world, caster, 31884) {
+            if !spell_cast::try_cast_triggered(world, caster, 454351, Some(caster), depth + 1) {
+                warn!(?caster, "Radiant Glory background Avenging Wrath refused");
+            }
+        }
+        if selected(world, caster, 405355) {
+            // Native self-targeted delayed flames retain the Wake cast's enemy target.
+            world.entity_mut(caster).insert(WakePrimary(target));
+        }
     }
     if spell.id == BLADE {
         schedule_light_within(world, caster, spell, target, depth);

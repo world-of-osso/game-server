@@ -3,12 +3,18 @@ use bevy::prelude::*;
 use shared::components::ActiveSpec;
 
 use super::combat;
-use combat::auras::{ActiveAuras, RemoveReason};
+use combat::auras::{ActiveAuras, RemoveReason, procs};
 use combat::spell_cast::effects::EffectCtx;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
-pub(super) const HOOKS: &[SpellScriptHook] =
-    &[SpellScriptHook::AfterPolicyDirectDamage(resolve_fatality)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterPolicyDirectDamage(resolve_fatality),
+    SpellScriptHook::OwnsPolicyProc(owns_proc),
+];
+
+fn owns_proc(spell: u32) -> bool {
+    spell == FATALITY
+}
 
 const FATALITY: u32 = 383703;
 const FATAL_MARK: u32 = 383704;
@@ -24,6 +30,7 @@ fn resolve_fatality(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: b
         return;
     }
     match ctx.spell.id {
+        12294 => roll_fatal_mark(world, ctx, target),
         260798 => cast_mark_damage(world, ctx, target),
         // SimC76f8118 sc_warrior.cpp4420–4423: expire on Fatality impact,
         // not before its snapshotted stack-scaled native damage resolves.
@@ -33,6 +40,31 @@ fn resolve_fatality(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: b
             });
         }
         _ => {}
+    }
+}
+
+fn roll_fatal_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
+    let Some((instance, chance)) = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        let aura = auras
+            .iter()
+            .find(|aura| aura.spell_id == FATALITY && aura.caster == ctx.caster)?;
+        let effect = aura.effects.iter().find(|effect| effect.index == 0)?;
+        Some((aura.instance_id, effect.amount))
+    }) else {
+        return;
+    };
+    // SimC76f8118 sc_warrior.cpp3119–3120: each Mortal Strike impact rolls
+    // the selected talent's native effect1 chance to apply Fatal Mark.
+    if procs::try_policy_proc(world, ctx.caster, instance, chance)
+        && !combat::spell_cast::try_cast_triggered(
+            world,
+            ctx.caster,
+            FATAL_MARK,
+            Some(target),
+            ctx.depth + 1,
+        )
+    {
+        warn!(caster = ?ctx.caster, ?target, "Native Fatal Mark cast refused");
     }
 }
 

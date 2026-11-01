@@ -1858,7 +1858,7 @@ fn confused_step(
     if reached || next_y.is_none() {
         confused.destination = None;
         confused.wait_secs = rand::Rng::gen_range(
-            &mut rand::thread_rng(),
+            &mut crate::random::thread_rng(),
             CONFUSED_PAUSE_SECS.0..=CONFUSED_PAUSE_SECS.1,
         );
     }
@@ -1867,7 +1867,7 @@ fn confused_step(
 
 /// `4 * frand(0, 1) - 2` yards at a random angle from `reference`.
 fn confused_point(reference: (f32, f32)) -> (f32, f32) {
-    let mut rng = rand::thread_rng();
+    let mut rng = crate::random::thread_rng();
     let distance = rand::Rng::gen_range(&mut rng, -CONFUSED_REACH..=CONFUSED_REACH);
     let angle = rand::Rng::gen_range(&mut rng, 0.0..std::f32::consts::TAU);
     (

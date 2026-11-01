@@ -72,7 +72,7 @@ impl CreatureAi for Omor {
         match spell_id {
             SUMMON_HOUND => {
                 // TC OnSpellCast: roll_chance(30), independent of summon lifetime.
-                let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..100);
                 if roll < 30 {
                     ctx.talk(0);
                 }

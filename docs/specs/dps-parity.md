@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
 - Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`) and starts Corrupted Blood on cooldown (`sc_death_knight.cpp:4754–4758`). Rune Weapon Blood Plague continues through its remaining duration after the weapon is dismissed; a dismissed weapon cannot mirror further attacks. Blood's disease ticks can apply the selected Brittle debuff (`sc_death_knight.cpp:7809–7821`). Rune Weapon Death Strike copies execute before the owner heals and consumes Hemostasis (`sc_death_knight.cpp:10116–10130`).
@@ -170,6 +171,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Registered literal drivers apply to both Player and Follower identities unless the spec explicitly opts out. Preserve native actor identity, ordered precombat and existing report labels and keys, including null inactive reports.
 
 ### Retribution literal fixture
+
+- Selected Radiant Glory and Avenging Wrath cause Wake of Ashes to cast background Avenging Wrath before Wake damage (SimC76f8118 `sc_paladin_retribution.cpp:848–850`).
+- Selected Hammer of Wrath talent exposes Retribution action 24275 without adding it to the native spellbook (SimC76f8118 `sc_paladin.cpp:3407–3412`).
 
 Instrument of Retribution 404752 grants the native Avenging Wrath 31884 aura for nine seconds when another player in the paladin's party or raid dies within 40 yards in the same map instance. The paladin must be alive and know the passive. Pet, non-group and own deaths do not trigger it. Reapplication follows the native aura refresh rules, including Crusade's existing no-duration-refresh rule; Radiant Glory does not replace the proc aura. The 2026-10-17 Sszorak log records five nine-second 31884 applications near player deaths; it does not establish overlapping-proc or Crusade behavior.
 
@@ -642,6 +646,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
+- Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
+- Selected Battlelord rolls its native proc chance on Overpower execution, resets Mortal Strike's cooldown and grants its native buff; only a foreground Mortal Strike consumes that buff (`sc_warrior.cpp:3108–3109,5478–5487`).
+- Selected Arms Imminent Demise adds Bladestorm ticks within its hasted duration and expires its earned stacks when Bladestorm ends (`sc_warrior.cpp:3279–3299,3344–3349`).
+
 - With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
 
 - Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).
@@ -660,7 +669,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Slayer's Malice444779 applies its first native effect for Arms and its second for Fury, not both overlapping damage modifiers (`sc_warrior.cpp7877–7879`).
 
-- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 remains the separate Execute producer and Fury's native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
+- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 supplies one Deep Wounds deposit per Execute damage impact, not on the zero-damage parent; Fury's separate native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
 
 - Selected Arms Anger Management reduces only running Avatar and Colossus Smash native endpoints from actual paid Rage and native effect0's displayed-Rage divisor. Ignore Pain and zero-payment casts do not contribute (`sc_warrior.cpp1450–1455,1519–1527`). Fury's separate effect2 policy is unchanged.
 - Selected Tactician rolls its native effect0 chance once per positive foreground Rage payment. Selected Brute Force adds its native chance only for Slam/Heroic Strike. A success restores one Overpower charge and grants selected native Opportunist456120 (`sc_warrior.cpp1458–1471`).
@@ -835,6 +844,9 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 - Other ritual spenders and Destruction remain unimplemented.
 
 ### Demonology literal execution and alternative Tyrant
+
+- Selected Mark of F'harg gives each actual Charhound its native Infernal Presence aura; its periodic damage belongs to that pet and ends with its lifetime. Source: SimC 76f8118 `sc_warlock_pets.cpp:1430–1485`.
+- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. A Demonbolt that consumes Demonic Core reduces the running Doomguard cooldown by native1276672 effect2 seconds; an ordinary hardcast does not. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`, `sc_warlock_actions.cpp:2960–2961`.
 
 - Dreadbite271971 hits only its selected primary unless Dreadlash264078 is selected; a landed Dreadbite triggers the owner's Blighted Maw1276960 using the native1276956 percentage of the actual damage. The Felguard prioritizes its native Felstorm89751 and its89753 ticks when ready (`sc_warlock_pets.cpp536–601,1068–1110`).
 - Selected Flametouched453699 applies native Ferocity453704 to each actual Dreadstalker; its owner-sourced native modifiers supply the melee-haste and critical-chance amounts (`sc_warlock_pets.cpp146–162,1223–1226,1269–1286`).
@@ -1151,9 +1163,9 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 ## Marksmanship literal controller
 
 - A successful Steady Shot reduces running Aimed Shot charge recovery by its native effect2 time, scaled by Trueshot's recharge-rate multiplier. It does not start a recharge when charges are full. Source: SimC 76f8118 `sc_hunter.cpp:4092–4096,5599–5607` and `cooldown.cpp:254–260`.
-- L70, map 2515, 120 seconds, seeds 70448 and 1–9, temporary enchants disabled: after Bullseye and Lock and Load fixes, native averages 5,264 DPS versus tree-only SimC 5,520; mean paired delta is −4.52% ± 4.02 percentage points (95% t interval). The point estimate is within 5%, but the interval is not. Aimed Shot casts are 15–21 native versus 21–24 SimC; Lock and Load applications are 9–17 versus 11–17 SimC starts plus refreshes. Haste recovery uses the active native Marksmanship aura; Trueshot recovery and Precise Shots have existing behavioral coverage. The remaining cast gap has not been resolved.
-- L90, map 2813, same seeds and duration: before the Take Aim rank-3 mark fix, native averages 30,233 DPS versus matching SimC 36,332; mean paired delta is −16.43% ± 5.13 percentage points. Gear matches the reference. This remains outside the point threshold and requires remeasurement.
-- A selected Take Aim rank 3 grants the native Rapid Fire mark whenever a Sentinel mark is earned. Selected Arcane Talons adds its native crit chance to actual Aimed Shots against that owned mark. Rapid Fire consumes the mark when a tick launches and snapshots its native damage increase for that target through the channel. A mark earned after launch survives the delayed hit; other casters and later channels do not inherit it. Source: SimC 76f8118 `sc_hunter.cpp:3656–3662,5354–5358,5689–5731`.
+- L70, map 2515, 120 seconds, seeds 70448 and 1–9, temporary enchants disabled: native averages 5,385 DPS versus tree-only SimC 5,520; mean paired delta is −2.31% ± 3.10 percentage points (95% t interval).
+- L90, map 2813, same seeds and duration: native averages 35,670 DPS versus matching SimC 36,332; mean paired delta is −1.58% ± 3.88 percentage points (95% t interval). Gear matches the reference. Both point estimates meet the ±5% rule; neither interval lies entirely within ±5%.
+- A selected Take Aim rank 3 grants the native Rapid Fire mark whenever a Sentinel mark is earned. Selected Arcane Talons adds its native crit chance to actual Aimed Shots against that owned mark. Rapid Fire consumes the mark when a tick launches and snapshots its native damage increase, including selected Arcane Talons and Avian Specialization modifiers, for that target through the channel. A mark earned after launch survives the delayed hit; other casters and later channels do not inherit it. Source: SimC 76f8118 `sc_hunter.cpp:3656–3662,5354–5358,5689–5731`.
 
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
 - [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.

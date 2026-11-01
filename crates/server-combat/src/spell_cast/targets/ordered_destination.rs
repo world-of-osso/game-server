@@ -134,7 +134,7 @@ fn sample_caster_radius_destination(
     slot: usize,
 ) -> Result<Dest, super::super::CastFailure> {
     let distance = sample_caster_radius_extent(world, caster, spell, effect, slot);
-    let angle = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..std::f32::consts::TAU);
+    let angle = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0.0..std::f32::consts::TAU);
     move_caster_destination(world, caster, distance, angle, 73)
 }
 
@@ -233,7 +233,7 @@ fn sample_caster_radius_extent(
     let extent = extent + bonus;
     if matches!(effect.implicit_targets[source_slot], 72 | 74 | 86) {
         let minimum = (entry.radius_min - bonus).max(0.0);
-        let fraction = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0_f32..1.0);
+        let fraction = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0.0_f32..1.0);
         (extent - minimum) * fraction.sqrt()
     } else {
         extent

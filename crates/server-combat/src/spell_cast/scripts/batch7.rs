@@ -2,7 +2,6 @@
 //! and local 12.1.0.69933 descriptions/effects (see spell-dummy-scripts contract).
 use crate::random as rand;
 use bevy::prelude::*;
-use shared::components::Health;
 
 use super::script_effect_value;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
@@ -67,7 +66,7 @@ pub(super) fn energize_heartbreaker(world: &mut World, caster: Entity, _target: 
 }
 
 /// SimC76f8118 sc_priest.cpp:2082–2165 and sc_priest_discipline.cpp:57–118
-/// preserve the explicit target but exclude ordinary pets from secondary selection.
+/// preserve the explicit target and party followers but exclude other summoned units.
 fn select_secondary_atonement_allies(
     world: &mut World,
     caster: Entity,
@@ -87,15 +86,17 @@ fn select_secondary_atonement_allies(
     .expect("Atonement spell catalog area selectors");
     units.retain(|&unit| {
         unit != primary
-            && world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
-            && !world
-                .get::<spell_cast::summon::SummonedCreature>(unit)
-                .is_some_and(|summon| summon.properties.is_pet_or_guardian())
+            && (world.get::<crate::followers::Follower>(unit).is_some()
+                || (world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
+                    && world
+                        .get::<spell_cast::summon::SummonedCreature>(unit)
+                        .is_none()
+                    && world.get::<crate::zones::TempSummon>(unit).is_none()))
     });
     units
 }
 
-///194509s3: primary plus four injured allies. TC radiance priority first
+///194509s3: primary plus four allies, including full-health allies. Priority first
 /// favors allies without THIS priest's Atonement. Keep native radius/order;
 /// raid/pet priority and actual Atonement application are separate contracts.
 pub(super) fn radiance_plan(
@@ -196,11 +197,6 @@ fn select_radiance_allies(
     index: usize,
 ) -> Vec<Entity> {
     let mut units = select_secondary_atonement_allies(world, caster, spell, primary, index);
-    units.retain(|&unit| {
-        world
-            .get::<Health>(unit)
-            .is_some_and(|health| health.current < health.max)
-    });
     // Stable sorting retains native nearest-first ordering within each priority.
     units.sort_by_key(|&unit| {
         world.get::<ActiveAuras>(unit).is_some_and(|auras| {

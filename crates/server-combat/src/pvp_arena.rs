@@ -163,7 +163,7 @@ pub(super) fn create_match(
     if weight == 0 {
         return None;
     }
-    let mut roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..weight);
+    let mut roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..weight);
     let source = maps
         .into_iter()
         .find(|map| {

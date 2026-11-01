@@ -2721,6 +2721,12 @@ pub(super) fn run_keystone(
     };
     let diagnostics = serde_json::json!({
         "current_pack": run.current_pack,
+        "active_enemies": crate::followers::simulator::active_enemies(run.app.world(), run.party.owner).into_iter().map(Entity::to_bits).collect::<Vec<_>>(),
+        "uncleared_fight": crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "tank_transport_pending": server::test_support::transport::follower_routing(run.app.world(), run.party.tank),
+        "returning_to_party": run.returning_to_party,
+        "waiting_for_tank": run.waiting_for_tank,
+        "owner_move_intent": run.app.world().get::<MoveIntent>(run.party.owner).map(|intent| intent.0.to_array()),
         "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
         "terminal_units": run.inspect_units(),
         "pull_decisions": &run.report.pulls,
