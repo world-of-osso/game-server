@@ -6,6 +6,7 @@ mod item_spec;
 pub mod keystone;
 pub mod levels;
 pub mod select;
+pub(super) mod wcl;
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 

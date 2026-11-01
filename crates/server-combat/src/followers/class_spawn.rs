@@ -15,10 +15,11 @@ use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 // Runtime-only identity. It is not a story creature or a catalog creature kit.
 const CLASS_FOLLOWER_ENTRY: u32 = u32::MAX - 1;
 
-/// Normal dungeons use Journal gear. Keystone bands are not yet implemented.
+/// Select real equipment and talents for the dungeon difficulty.
 #[derive(Clone, Copy)]
 pub enum GearSource {
     Journal,
+    KeystoneBand(u32),
 }
 
 fn neutral_template(name: &str, level: u8) -> crate::world_data::CreatureTemplate {
@@ -328,6 +329,11 @@ pub fn install_class(
     slot: usize,
     gear: GearSource,
 ) -> Result<crate::trait_config::TalentSource, String> {
+    let keystone_profile = match gear {
+        GearSource::Journal => None,
+        GearSource::KeystoneBand(level) => Some(super::gear::wcl::class_profile(source, level)?),
+    };
+    let source = keystone_profile.as_ref().unwrap_or(source);
     let provider = *world
         .get_resource::<super::FollowerActionProvider>()
         .ok_or("class follower action metadata provider unavailable")?;
@@ -435,6 +441,9 @@ pub fn install_class(
     let mut spells = (provider.source_actions)(world, entity, source.spec_id)?;
     match gear {
         GearSource::Journal => super::gear::equip(world, entity, &profile, &spells),
+        GearSource::KeystoneBand(level) => {
+            super::gear::wcl::equip(world, entity, source.spec_id, level)
+        }
     }
     .and_then(|()| super::gear::publish_appearance(world, entity))?;
     spells.extend((provider.equipped_actions)(world, entity, source.spec_id)?);
