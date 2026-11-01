@@ -814,7 +814,23 @@ mod tests {
         // because the actual Azure population uses explicit creature tuning.
         let mut data = crate::zones::context_tuning_tests::sourced_nazan_fixture();
         data.spawns[0].map = 2515;
-        data.spawns_by_map = HashMap::from([(2515, vec![0])]);
+        let production = crate::test_data::world_data();
+        let boss_spawn = production
+            .spawns
+            .iter()
+            .find(|spawn| spawn.map == 2515 && spawn.template_entry == 186644)
+            .unwrap()
+            .clone();
+        data.templates
+            .insert(186644, production.templates[&186644].clone());
+        for difficulty in [8, 23] {
+            data.difficulty_templates.insert(
+                (186644, difficulty),
+                production.difficulty_templates[&(186644, difficulty)].clone(),
+            );
+        }
+        data.spawns.push(boss_spawn.clone());
+        data.spawns_by_map = HashMap::from([(2515, vec![0, 1])]);
         let spawn = data.spawns[0].clone();
         let template = data.template_for(spawn.template_entry, 23).unwrap().clone();
         let mut queue = bevy::ecs::world::CommandQueue::default();
@@ -834,7 +850,30 @@ mod tests {
             &mut crate::random::thread_rng(),
         )
         .unwrap();
+        let boss = crate::zones::spawn_creature(
+            &mut commands,
+            &data,
+            data.template_for(186644, 23).unwrap(),
+            &mut crate::zones::CreatureSpawnContext {
+                map,
+                difficulty_id: 23,
+                ground: None,
+                temporary: false,
+            },
+            false,
+            &boss_spawn,
+            &mut crate::random::thread_rng(),
+        )
+        .unwrap();
         queue.apply(h.app.world_mut());
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::level_scaling::LevelScaling>(boss)
+                .unwrap()
+                .content_tuning_id,
+            2157
+        );
         assert_eq!(
             h.app
                 .world()
@@ -863,6 +902,14 @@ mod tests {
             .get::<shared::level_scaling::LevelScaling>(npc)
             .unwrap();
         assert_eq!((scaling.content_tuning_id, scaling.max_level), (1279, 90));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::level_scaling::LevelScaling>(boss)
+                .unwrap()
+                .content_tuning_id,
+            2157
+        );
         let health = h.app.world().get::<Health>(npc).unwrap();
         assert!(health.max > before);
         assert!((health.current / health.max - 0.5).abs() < 0.0001);
