@@ -1152,6 +1152,7 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 
 ### Marksmanship native cast relationships
 
+- Selected Bullseye204089 grants its native204090 critical-strike stacks only when an eligible hit damages a target below the native effect1 health threshold (`sc_hunter.cpp8552–8579`). Healthy targets must not grant stacks.
 - [x] Active Sentinel Moonlight Chakram is shared by Hunter specializations: only actual Trueshot or Takedown enables it. A Chakram cast consumes that enabler and delivers the existing native bounce count, delay and selected ramp to actual targets. Unrelated harmful casts cannot produce the enabler. Gate shared relationships by active hero talent, not specialization lists.
 - [x] Actual Aimed Shot and selected No Scope Rapid Fire produce native Precise Shots. Real spenders consume it, preserve its damage through projectile arrival and trigger selected Stargazer.
 - [x] Selected Unstable Trigger permits exactly one native-duration, Focus-free Explosive Shot recast inside its existing cooldown; that recast does not create another window.

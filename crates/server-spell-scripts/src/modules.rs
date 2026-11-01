@@ -308,6 +308,7 @@ register_modules! {
     enhancement_converging: (2635, "modules/enhancement_converging.rs"),
     hunter_bear: (2532, "modules/hunter_bear.rs"),
     hunter_bounces: (440, "modules/hunter_bounces.rs"),
+    hunter_bullseye: (2540, "modules/hunter_bullseye.rs"),
     hunter_command_wildspeaker: (2530, "modules/hunter_wildspeaker.rs"),
     hunter_dire_command: (2536, "modules/hunter_dire_command.rs"),
     hunter_howl: (2530, "modules/hunter_howl.rs"),
