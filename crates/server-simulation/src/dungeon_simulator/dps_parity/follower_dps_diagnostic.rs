@@ -1968,6 +1968,59 @@ fn follower_attacks_with_its_equipped_weapon_type() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 70);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    for _ in 0..5 {
+        app.update();
+    }
+    start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    for frame in 0..FIXED_FIGHT_FRAMES {
+        let mut health = app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current =
+            health.max * (FIXED_FIGHT_FRAMES - frame) as f32 / FIXED_FIGHT_FRAMES as f32;
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none()
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let fury = events
+        .iter()
+        .position(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id == Some(202770)
+        })
+        .expect("the actual follower must cast Fury of Elune");
+    assert!(
+        events[fury + 1..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id != Some(202770)),
+        "the rotation must continue after Fury of Elune"
+    );
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")

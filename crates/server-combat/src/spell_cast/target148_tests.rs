@@ -185,3 +185,35 @@ fn native_target148_force_location_moves_fury_of_elune_without_collision_raycast
     let actual = destination(&mut h, 202770, 1);
     assert_endpoint(&mut h, actual, origin, 1.25);
 }
+
+#[test]
+fn native_target148_force_location_steps_back_from_deep_drop() {
+    let (mut h, _) = scene();
+    let floor = std::sync::Arc::new(los::LosTile::build(
+        32,
+        32,
+        vec![
+            Vec3::new(-10.0, 0.0, -5.0),
+            Vec3::new(0.9, 0.0, -5.0),
+            Vec3::new(0.9, 0.0, 5.0),
+            Vec3::new(-10.0, 0.0, 5.0),
+        ],
+        vec![[0, 2, 1], [0, 3, 2]],
+    ));
+    let mut ground = crate::ground::GroundMap::flat_arena(-100.0);
+    ground.set_live_hulls(std::collections::HashMap::from([(MAP, vec![floor])]));
+    h.app.insert_resource(ground);
+    h.app.world_mut().entity_mut(h.npc).insert(Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: 10.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    let actual = destination(&mut h, 202770, 1);
+    assert!((actual.position.x - 0.875).abs() < 0.001, "{actual:?}");
+    assert!((actual.position.y - 0.0).abs() < 0.001, "{actual:?}");
+}
