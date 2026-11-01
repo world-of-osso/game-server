@@ -649,11 +649,19 @@ fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
     assert_eq!(run.graph.map_id, 2515);
     let owner = run.party.owner;
-    let tank = run.party.tank().unwrap();
+    let tank = run.party.tank;
     let book = run.actors[&29001868];
     let position = *run.app.world().get::<Position>(book).unwrap();
     run.app.world_mut().entity_mut(owner).insert(position);
-    server::test_support::azure_translocation::traverse(run.app.world_mut(), owner, book).unwrap();
+    let transport = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.source_guid == 29001868)
+        .unwrap()
+        .clone();
+    server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
+        .unwrap();
     let attacker = *run.actors.values().next().unwrap();
     crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
     for _ in 0..10 {
