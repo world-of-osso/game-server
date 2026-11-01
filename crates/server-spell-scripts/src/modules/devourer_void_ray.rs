@@ -39,9 +39,20 @@ fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstan
     if actor != aura.caster {
         return;
     }
+    super::devourer_voidfall::complete_ray(world, actor);
     let known = world.get::<KnownSpells>(actor);
     let final_breath = known.is_some_and(|known| known.contains(1266500));
     let moment = known.is_some_and(|known| known.contains(1238488));
+    let eradicate = known.is_some_and(|known| known.contains(1226033));
+    let voidglare = known.is_some_and(|known| known.contains(1240202));
+    // SimC76f8118 cpp6407–6412: a completed Ray grants native Voidglare Fury.
+    if voidglare && !spell_cast::try_cast_triggered(world, actor, 1241922, Some(actor), 1) {
+        error!(?actor, "native Voidglare Boon energize was refused");
+    }
+    // SimC76f8118 cpp6392–6401: completed Void Ray grants Eradicate.
+    if eradicate && !spell_cast::try_cast_triggered(world, actor, 1239524, Some(actor), 1) {
+        error!(?actor, "native Eradicate buff was refused");
+    }
     if final_breath {
         // SimC76f8118 cpp3282–3325: a completed channel executes an additional
         // native tick at Final Breath effect1's percentage.
@@ -120,7 +131,19 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
     let ray = matches!(ctx.spell.id, 1213649 | 1214595);
     if !matches!(
         ctx.spell.id,
-        1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432
+        1213649
+            | 1214595
+            | 1221162
+            | 473662
+            | 1217610
+            | 1245455
+            | 1225823
+            | 1225827
+            | 1279200
+            | 1239127
+            | 1297432
+            | 1256305
+            | 1256619
     ) || !world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(1227619))
