@@ -20,6 +20,7 @@ const ELIGIBLE: &[u32] = &[
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
+    SpellScriptHook::OnCast(record_hunt_origin),
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::ResolvedDamage(after_damage),
 ];
@@ -32,13 +33,31 @@ fn declared_reach(
     if !matches!(spell.id, 370965 | 370966 | 1246168) {
         return Default::default();
     }
+    // Secondaries lie on the charge path, bounded by the Hunt's own hostile range.
     let store = world.resource::<SpellStore>();
-    let radius = [370969, 1246168]
+    let radius = HUNT_CASTS
         .into_iter()
         .filter_map(|id| store.get(id))
-        .map(|dot| combat::spell_cast::targets::spell_range(dot, true).1)
+        .map(|hunt| combat::spell_cast::targets::spell_range(hunt, true).1)
         .fold(0.0, f32::max);
     combat::spell_cast::script_registry::ScriptReach::caster(radius)
+}
+
+const HUNT_CASTS: [u32; 2] = [370965, 1246167];
+
+/// Where the caster started its latest Hunt charge.
+#[derive(Component)]
+struct HuntOrigin(Vec3);
+
+fn record_hunt_origin(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
+    if !HUNT_CASTS.contains(&spell) {
+        return;
+    }
+    let Some(origin) = combat::spell_cast::targets::position(world, caster) else {
+        error!(?caster, "Native Hunt caster position absent");
+        return;
+    };
+    world.entity_mut(caster).insert(HuntOrigin(origin));
 }
 
 #[derive(Component, Default)]
@@ -86,6 +105,10 @@ fn after_damage(world: &mut World, ctx: &EffectCtx, target: Entity, _crit: bool,
 
 // SimC76f8118 sc_demon_hunter.cpp5488–5495,5505–5511: Hunt's
 // impact applies its native DoT to up to the native370967 effect0 targets.
+// DB2 370965/1246167 place them "in your path".
+// HUNT_PATH_WIDTH_INFERRED: an enemy is on the path when its distance to the
+// origin→primary segment is within caster + enemy combat reach. Retire on a
+// sniff or client decomp source for the path query.
 pub(super) fn apply_hunt_secondary_dots(
     world: &mut World,
     ctx: &EffectCtx,
@@ -95,6 +118,19 @@ pub(super) fn apply_hunt_secondary_dots(
     let cap = combat::spell_cast::scripts::script_effect_value(world, ctx.caster, 370967, 0) as u32;
     let Some(center) = combat::spell_cast::targets::position(world, ctx.caster) else {
         error!("Native Hunt caster position absent");
+        return;
+    };
+    let Some(HuntOrigin(origin)) = world.entity_mut(ctx.caster).take::<HuntOrigin>() else {
+        error!("Native Hunt impact lacks its charge origin");
+        return;
+    };
+    let Some(end) = combat::spell_cast::targets::position(world, primary) else {
+        error!("Native Hunt primary position absent");
+        return;
+    };
+    let Some(caster_reach) = combat::scripted_ai::model_reach::combat_reach(world, ctx.caster)
+    else {
+        error!("Native Hunt caster combat reach absent");
         return;
     };
     let Some(dot) = world.resource::<SpellStore>().get(dot_id) else {
@@ -114,13 +150,30 @@ pub(super) fn apply_hunt_secondary_dots(
         combat::spell_cast::targets::Relation::Enemy,
         0,
     );
-    for target in targets
+    let on_path: Vec<_> = targets
         .into_iter()
         .filter(|target| *target != primary)
+        .filter(|&target| {
+            let (Some(point), Some(reach)) = (
+                combat::spell_cast::targets::position(world, target),
+                combat::scripted_ai::model_reach::combat_reach(world, target),
+            ) else {
+                error!(?target, "Native Hunt path candidate lacks position or combat reach");
+                return false;
+            };
+            distance_to_segment(point, origin, end) <= caster_reach + reach
+        })
         .take(cap as usize - 1)
-    {
+        .collect();
+    for target in on_path {
         combat::spell_cast::cast_triggered(world, ctx.caster, dot_id, Some(target), ctx.depth + 1);
     }
+}
+
+fn distance_to_segment(point: Vec3, from: Vec3, to: Vec3) -> f32 {
+    let path = to - from;
+    let along = (point - from).dot(path) / path.length_squared().max(f32::EPSILON);
+    point.distance(from + path * along.clamp(0.0, 1.0))
 }
 
 fn proc_marked_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
