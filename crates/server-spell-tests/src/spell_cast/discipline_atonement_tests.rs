@@ -67,7 +67,7 @@ fn atonement_area_spells_preserve_explicit_summon_but_exclude_secondary_summons(
             ));
             h.app.world_mut().entity_mut(temp_summon).insert((
                 UnitFactionTemplate(1),
-                crate::zones::TempSummon { summoner: caster },
+                server::zones::TempSummon { summoner: caster },
             ));
             let targets = [player, pet, guardian, wyvern, temp_summon];
             for target in allies.iter().copied().chain(targets) {
