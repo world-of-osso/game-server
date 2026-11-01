@@ -41,6 +41,18 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &unholy_rotation::load_program(&profile(spec)?)?,
             &unholy_rotation::bindings(),
         )),
+        253 => Ok(program_action_spells(
+            &beast_mastery_rotation::program()?,
+            &beast_mastery_rotation::bindings::build(),
+        )),
+        254 => Ok(program_action_spells(
+            &marksmanship_rotation::program()?,
+            &marksmanship_rotation::bindings::build(),
+        )),
+        255 => Ok(program_action_spells(
+            &survival_rotation::program()?,
+            &survival_rotation::bindings::build(),
+        )),
         257 => holy_priest_rotation::action_spells(),
         260 => Ok(program_action_spells(
             &outlaw_rotation::load_program(&profile(spec)?)?,
@@ -49,6 +61,14 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
         261 => Ok(program_action_spells(
             &subtlety_rotation::load_program(&profile(spec)?)?,
             &subtlety_rotation::bindings(),
+        )),
+        577 => Ok(program_action_spells(
+            &havoc_rotation::load_program()?,
+            &havoc_rotation::bindings::build(),
+        )),
+        1480 => Ok(program_action_spells(
+            &devourer_rotation::load_program()?,
+            &devourer_rotation::bindings::build(),
         )),
         _ => Err(format!("spec{spec} has no pure follower action metadata")),
     }
