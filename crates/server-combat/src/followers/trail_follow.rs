@@ -291,10 +291,10 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
         });
     let mut native_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
-    assert!(
-        native_map.complete_walk_path(start, trail[0]).is_ok(),
-        "first trail point must be reachable on the real navmesh"
-    );
+    let first_route = native_map
+        .complete_walk_path(start, trail[0])
+        .expect("first trail point must be reachable on the real navmesh");
+    eprintln!("first trail route: {first_route:?}");
     crate::navigation::install_fixture(&mut h.app, Navigation::new(&nav));
     h.app
         .world_mut()
@@ -352,6 +352,13 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
             break;
         }
     }
+    let state = h.app.world().get::<TrailFollow>(follower);
+    eprintln!(
+        "hostile={} destination={:?} candidates={:?}",
+        positioning::is_unpulled_hostile(h.app.world(), follower, watcher),
+        state.and_then(|s| s.destination),
+        state.map(|s| &s.candidates)
+    );
     assert!(
         previous.distance(*trail.last().unwrap()) < 5.0,
         "follower stopped at {previous:?} instead of reaching owner {:?}",
