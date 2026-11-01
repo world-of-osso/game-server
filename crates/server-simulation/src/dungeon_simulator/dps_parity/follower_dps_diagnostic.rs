@@ -255,11 +255,21 @@ fn blood_follower_spends_runic_power_inside_a_fixed_fights_last_ten_seconds() {
             .unwrap()
             .owner;
         start_fixed_time_fight(&mut app, owner, actor, target, seconds);
+        for _ in 0..200 {
+            app.update();
+        }
         app.world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
             .clear();
+        // Hold 60 Runic Power (deficit 65) so only fight_remains can select Death Strike
+        // over the following heart_strike,if=rune>=2 / blood_boil lines.
         for _ in 0..160 {
+            let power = shared::components::PowerType::RunicPower;
+            let current = crate::spell_cast::powers::power_value(app.world(), actor, power)
+                .unwrap()
+                .0;
+            crate::spell_cast::powers::change_power(app.world_mut(), actor, power, 600.0 - current);
             app.update();
         }
         app.world()
@@ -273,7 +283,7 @@ fn blood_follower_spends_runic_power_inside_a_fixed_fights_last_ten_seconds() {
             })
             .count()
     };
-    let ending = death_strikes(9.0);
+    let ending = death_strikes(20.0);
     let long = death_strikes(300.0);
     assert!(
         ending > long,
