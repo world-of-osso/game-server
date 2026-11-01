@@ -435,6 +435,46 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
     let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
         .map(PathBuf::from)
         .unwrap();
+    let angle = crate::creature_ai::facing_along(-1.4, -3.2).unwrap() - std::f32::consts::FRAC_PI_2
+        + PartyFollowSlot::new(0, 4).angle();
+    let target = Position {
+        x: owner_at.x + 4.0 * angle.cos(),
+        y: owner_at.y,
+        z: owner_at.z - 4.0 * angle.sin(),
+    };
+    let mut probe = Navigation::new(&nav);
+    let request = crate::navigation::MoveRequest {
+        map_id: 2660,
+        goal: crate::navigation::Goal::FollowFormation(h.caster.to_bits(), point(owner_at)),
+        from,
+        to: target,
+        distance: 0.1,
+        reach: 0.0,
+    };
+    let _ = probe.advance(tank, request);
+    probe.drain_until_idle();
+    match probe.advance(tank, request) {
+        crate::navigation::Step::Moved { position, .. } => {
+            let support = crate::creature_ai::follower_footprint_ground(
+                Some(&mut h.app.world_mut().resource_mut::<GroundMap>()),
+                Some(&map),
+                from,
+                position,
+            );
+            eprintln!(
+                "formation target={target:?} navigation step={position:?} footprint={support:?}"
+            );
+        }
+        crate::navigation::Step::Pending => {
+            eprintln!("formation target={target:?} navigation pending")
+        }
+        crate::navigation::Step::Blocked => {
+            eprintln!("formation target={target:?} navigation blocked")
+        }
+        crate::navigation::Step::Unbaked => {
+            eprintln!("formation target={target:?} navigation unbaked")
+        }
+    }
     h.app.insert_resource(Navigation::new(&nav));
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
     let mut previous = from;
@@ -451,8 +491,9 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
             .current_destination(tank));
         previous = at;
     }
+    let following = h.app.world().get::<FollowOwner>(tank).is_some();
     eprintln!(
-        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} end={previous:?} greatest_step={greatest_step}"
+        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} following={following} end={previous:?} greatest_step={greatest_step}"
     );
     assert!(
         greatest_step < 1.0,
