@@ -4,10 +4,10 @@ use super::pull_endpoint_tests::{
     require_zero_measured_healing,
 };
 use super::pull_goal_tests::{Fixture, damage, physical_measured_fixture};
-use super::{Follower, FollowerCatalog, ai, kit, kit_ai, pull_history, pull_sources};
+use super::{Follower, ai, pull_history, pull_sources};
 use bevy::prelude::*;
 use serde_json::{Value, json};
-use shared::components::{Level, Mana};
+use shared::components::Mana;
 use std::collections::{BTreeMap, BTreeSet};
 
 const TARGET_GUID: u32 = 20375689;
@@ -78,50 +78,27 @@ fn collect_baked_corners(
     (corners.into_values().collect(), errors)
 }
 
-fn available_offensive_action(
-    f: &mut Fixture,
-    target: Entity,
-    party: &[Entity],
-) -> (Option<u32>, Vec<Value>) {
-    let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
-    let level = f.h.app.world().get::<Level>(f.tank).unwrap().0;
-    let entries: Vec<_> =
-        f.h.app
-            .world()
-            .resource::<FollowerCatalog>()
-            .kits
-            .iter()
-            .filter(|entry| {
-                entry.available(follower.profile.spec_id, level)
-                    && matches!(entry.slot, kit::Slot::Attack | kit::Slot::Aoe)
-                    && entry.conditions.target == kit::Target::Enemy
-            })
-            .cloned()
-            .collect();
+fn available_offensive_action(f: &mut Fixture, target: Entity) -> (Option<u32>, Vec<Value>) {
+    let actions = super::action_spells::available(f.h.app.world(), f.tank)
+        .expect("physical fixture requires available class actions");
     assert!(
-        !entries.is_empty(),
-        "physical fixture requires sourced available offensive kit actions"
+        !actions.is_empty(),
+        "physical fixture requires sourced class actions"
     );
-    let enemies = ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, party);
     let mut refusals = Vec::new();
-    for entry in entries {
-        if !kit_ai::conditions_met(f.h.app.world_mut(), f.tank, target, party, &enemies, &entry) {
-            refusals.push(json!({"spell":entry.spell_id,"refusal":"actual kit conditions"}));
+    for id in actions {
+        let store = f.h.app.world().resource::<crate::spell_info::SpellStore>();
+        let Some(spell) = store
+            .get(id)
+            .filter(|spell| crate::spell_info::positivity::negative_effects(store, spell) != 0)
+            .cloned()
+        else {
             continue;
-        }
-        let spell =
-            f.h.app
-                .world()
-                .resource::<crate::spell_info::SpellStore>()
-                .get(entry.spell_id)
-                .expect("source kit spell metadata must exist")
-                .clone();
+        };
         match crate::spell_cast::read_native_cast_start(f.h.app.world_mut(), f.tank, &spell, target)
         {
-            Ok(Some(actual)) if actual == target => return (Some(entry.spell_id), refusals),
-            result => {
-                refusals.push(json!({"spell":entry.spell_id,"refusal":format!("{result:?}")}))
-            }
+            Ok(Some(actual)) if actual == target => return (Some(id), refusals),
+            result => refusals.push(json!({"spell":id,"refusal":format!("{result:?}")})),
         }
     }
     (None, refusals)
@@ -255,7 +232,7 @@ fn read_corner(
         row["rejection"] = json!("target-self origin has no real horizontal approach");
         return row;
     }
-    let (spell, refusals) = available_offensive_action(f, target, party);
+    let (spell, refusals) = available_offensive_action(f, target);
     row["native_cast_refusals"] = json!(refusals);
     let Some(spell) = spell else {
         row["rejection"] =
