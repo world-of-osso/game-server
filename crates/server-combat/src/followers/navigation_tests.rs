@@ -373,6 +373,14 @@ fn halls_follower_reaches_ramp_from_recorded_swim_exit() {
     );
 }
 
+/// These tests exercise follow movement only; the spawned follower never casts.
+fn install_movement_only_actions(app: &mut App) {
+    app.insert_resource(super::FollowerActionProvider {
+        source_actions: |_, _, _| Ok(Vec::new()),
+        equipped_actions: |_, _, _| Ok(Vec::new()),
+    });
+}
+
 fn wow(x: f32, y: f32, z: f32) -> Position {
     Position { x, y: z, z: -y }
 }
@@ -437,6 +445,7 @@ fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() 
             z: 0.0,
         },
     ));
+    install_movement_only_actions(&mut h.app);
     let tank = super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 104).unwrap();
     let start = Position {
         x: -83.1,
