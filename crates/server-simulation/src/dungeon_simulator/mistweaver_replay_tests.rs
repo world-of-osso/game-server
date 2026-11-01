@@ -177,7 +177,7 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
         healer,
         100784,
         Some(run.sources[0]),
-        false,
+        true,
     )
     .unwrap();
     for _ in 0..80 {
