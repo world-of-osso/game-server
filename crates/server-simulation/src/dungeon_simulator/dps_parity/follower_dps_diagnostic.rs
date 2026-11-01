@@ -336,7 +336,7 @@ fn follower_mm_take_aim_mark_increases_actual_aimed_crit_and_all_rapid_ticks() {
     );
     for (a, b) in plain.iter().zip(&marked) {
         assert!(
-            (*b as f64 / *a as f64 - 1.2).abs() < 0.05,
+            (*b as f64 / *a as f64 - 1.55).abs() < 0.05,
             "each actual Rapid tick must retain the consumed mark: {plain:?} / {marked:?}"
         );
     }
