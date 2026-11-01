@@ -86,6 +86,25 @@ def decode_profiles(profiles, decoder, db2):
     return profiles
 
 
+def apply_healer_wcl_loadouts(profiles, path):
+    """Healers have no SimC reference build: use the most common WCL key loadout."""
+    payload = path.read_bytes()
+    loadouts = json.loads(payload)["specs"]
+    by_spec = {profile['spec_id']: profile for profile in profiles}
+    for spec_id, source in sorted(loadouts.items()):
+        profile = by_spec[int(spec_id)]
+        if profile['role'] != 1:
+            raise ValueError(f'WCL loadout for non-healer spec {spec_id}')
+        profile['talents'] = 'TALENTS_FROM_WCL'
+        profile['talents_source'] = 'TALENTS_FROM_WCL'
+        profile['talent_entries'] = source['talent_entries']
+        profile['rejection'] = None
+        profile['source'] = path.name
+        profile['sha256'] = hashlib.sha256(payload).hexdigest()
+        profile.pop('talents_sha256', None)
+    return profiles
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--world-db", type=Path, required=True)
@@ -95,11 +114,13 @@ def main():
     parser.add_argument("--decoder", type=Path, required=True)
     parser.add_argument("--db2", type=Path, required=True)
     parser.add_argument("--mid2-overrides", type=Path, default=Path(__file__).resolve().parent / 'reference/class-follower-mid2')
+    parser.add_argument("--healer-loadouts", type=Path, default=Path(__file__).resolve().parent / 'reference/healer-wcl-loadouts.json')
     args = parser.parse_args()
     with sqlite3.connect(f"file:{args.world_db}?mode=ro", uri=True) as db:
         profiles = generate(db, args.simc, args.parity)
     profiles = apply_mid2_overrides(profiles, args.mid2_overrides)
     profiles = decode_profiles(profiles, args.decoder, args.db2)
+    profiles = apply_healer_wcl_loadouts(profiles, args.healer_loadouts)
     args.output.write_text(json.dumps(profiles, indent=2) + "\n")
 
 

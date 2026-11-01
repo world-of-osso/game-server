@@ -296,17 +296,23 @@ pub(super) fn absorb_amount(
         let amount = crate::spell_cast::effects::scaled_amount(world, caster, spell, effect);
         return Some(amount * crate::spell_cast::effects::versatility_multiplier(world, caster));
     }
-    // TC a352b1fa spell_monk.cpp:224–228; native DescriptionVariables 260:
-    // caster max health * effect 3 / 100 * (1 + versatility).
-    if (spell.id, effect.index) == (116849, 0) {
+    // Caster max health * percentage / 100 * (1 + versatility): TC a352b1fa spell_monk.cpp:224–228
+    // and DescriptionVariables 260 for Life Cocoon (effect 3); DescriptionVariables 813
+    // `$newshield` for the Chi Cocoons (effect 2).
+    let cocoon_percent = match (spell.id, effect.index) {
+        (116849, 0) => Some(2),
+        (406139 | 406220 | 1260681, 0) => Some(1),
+        _ => None,
+    };
+    if let Some(index) = cocoon_percent {
         let percent = spell
             .effects
             .iter()
-            .find(|e| e.index == 2)
-            .expect("Life Cocoon shield percentage");
+            .find(|e| e.index == index)
+            .expect("cocoon shield percentage");
         let health = world
             .get::<shared::components::Health>(caster)
-            .expect("Life Cocoon caster health");
+            .expect("cocoon caster health");
         return Some(
             health.max
                 * crate::spell_cast::effects::modded_base_points(world, caster, spell, percent)
