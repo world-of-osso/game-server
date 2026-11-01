@@ -29,9 +29,8 @@ fn devastation_follower_commandos_do_not_pull_idle_outsider() {
     ));
     assert!(crate::auras::has_aura(run.app.world(), actor, 1260745));
     face_actor_toward_primary(run.app.world_mut(), actor, primary);
-    let encounter = crate::simc_apl_native::Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     let rotation = server_follower_apl::devastation_rotation::Rotation::load(
         run.app.world(),
         actor,
