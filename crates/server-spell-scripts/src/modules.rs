@@ -325,6 +325,7 @@ register_modules! {
     soulcoiler_ritual: (1000, "modules/soulcoiler_ritual.rs"),
     midnight_tendril: (1000, "modules/midnight_tendril.rs"),
     mistweaver_ancient_teachings: (2700, "modules/mistweaver_ancient_teachings.rs"),
+    mistweaver_gust: (2700, "modules/mistweaver_gust.rs"),
     mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
     preservation_empower: (2700, "modules/preservation_empower.rs"),
     enhancement_imbue_mask: (2636, "modules/enhancement_imbue_mask.rs"),

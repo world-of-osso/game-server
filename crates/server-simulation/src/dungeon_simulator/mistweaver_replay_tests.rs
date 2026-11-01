@@ -1,6 +1,76 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    assert!(crate::auras::has_aura(run.app.world(), healer, 117907));
+    let cast = |run: &mut super::healer_simc_replay::ClassParty, spell| {
+        let world = run.app.world_mut();
+        let max = world.get::<Health>(tank).unwrap().max;
+        world.get_mut::<Health>(tank).unwrap().current = max * 0.1;
+        world
+            .get_mut::<crate::stats::CharacterStats>(healer)
+            .unwrap()
+            .crit_pct = 0.0;
+        let start = world.resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::creature_cast(world, healer, spell, Some(tank), true).unwrap();
+        let events = &world.resource::<ObservedCombatEvents>().0[start..];
+        let gusts: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(191894)
+                    && event.target == Some(tank.to_bits())
+            })
+            .collect();
+        assert_eq!(gusts.len(), 1, "{events:?}");
+        gusts[0].amount
+    };
+    let high_rating = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .ratings
+        .mastery;
+    let high = cast(&mut run, 124682);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        healer,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1235108,
+    );
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let low_rating = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .ratings
+        .mastery;
+    assert!(
+        high_rating > low_rating,
+        "flask must increase mastery rating: {high_rating} <= {low_rating}"
+    );
+    let low = cast(&mut run, 124682);
+    assert!(
+        high > low && low > 0,
+        "Gust must scale with mastery rating: {high} vs {low}"
+    );
+    let renewing = cast(&mut run, 115151);
+    assert!(renewing > 0);
+}
+
+#[test]
 #[ignore = "checks 70448 Ancient Teachings from an actual Monk attack"]
 fn mistweaver_ancient_teachings_splits_damage_and_preserves_critical_result() {
     use shared::components::Health;
