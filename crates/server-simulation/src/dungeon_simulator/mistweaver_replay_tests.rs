@@ -2,6 +2,39 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_selected_chiji_is_invoked_under_tank_pressure() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(healer)
+            .unwrap()
+            .contains(325197)
+    );
+    super::healer_simc_replay::engage(&mut run);
+    let mut tank = run.app.world_mut().get_mut::<Health>(run.tank).unwrap();
+    tank.current = tank.max * 0.5;
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && event.spell_id == Some(325197)
+                && event.kind == CombatLogKind::CastSuccess),
+        "selected Chi-Ji must be invoked during tank pressure"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_rushing_wind_heals_only_own_misted_allies() {
     use crate::auras::{AuraApplication, AuraSource};
     use crate::spell_cast::test_harness::ObservedCombatEvents;
