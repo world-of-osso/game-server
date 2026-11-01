@@ -4,7 +4,7 @@ use shared::item_data::ItemDefinitionSource::Retail;
 use shared::protocol::EquipmentSlot;
 
 use super::WorldData;
-use crate::item_templates::{ItemTemplate, ItemTemplates};
+use crate::item_templates::ItemTemplates;
 use crate::spell_info::SpellInfo;
 use crate::stats::EquippedItems;
 

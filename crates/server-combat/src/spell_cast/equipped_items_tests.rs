@@ -9,10 +9,38 @@ fn weapon_fixture_uses_native_class_proficiency_for_casts() {
     for (class, spell) in [(3, 19_434), (12, 263_642)] {
         let mut h = harness(Vec::new(), &[spell], class).unwrap();
         let result = creature_cast(h.app.world_mut(), h.caster, spell, Some(h.npc), false);
+        let data = super::test_harness::world_db().unwrap();
+        let info = data
+            .classes
+            .classes
+            .iter()
+            .find(|info| info.class_id == class)
+            .unwrap();
+        let (known, _) = crate::class_progression::evaluate_npc_starter(
+            &data.classes,
+            class,
+            info.specs[0].spec_id,
+            10,
+        )
+        .unwrap();
+        eprintln!(
+            "class {class} proficiency {:?}, dual {}",
+            known
+                .iter()
+                .filter_map(|s| data
+                    .items
+                    .loot_need
+                    .weapon_proficiencies
+                    .get(&s.spell_id)
+                    .map(|mask| (s.spell_id, mask)))
+                .collect::<Vec<_>>(),
+            known.iter().any(|s| s.spell_id == 674)
+        );
         assert_ne!(
             result,
             Err(CastFailure::EquippedItemClass),
-            "class {class}: {result:?}"
+            "class {class}: {result:?}; equipped {:?}",
+            h.app.world().get::<EquippedItems>(h.caster)
         );
     }
 }
