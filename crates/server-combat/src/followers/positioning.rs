@@ -40,24 +40,18 @@ impl CombatMovementExclusions {
 pub(super) fn update_combat_exclusions(
     world: &mut World,
     unit: Entity,
-    follower: &super::Follower,
+    _follower: &super::Follower,
 ) {
-    let party = super::ai::party_units(world, follower.owner);
-    let enemies = super::ai::engaged_enemies(world, follower, unit, &party);
     let Some(map) = world.get::<InMap>(unit).copied() else {
         world
             .entity_mut(unit)
             .insert(CombatMovementExclusions(None));
         return;
     };
-    let planned: std::collections::HashSet<_> = enemies
-        .iter()
-        .flat_map(|(target, _)| super::pull_set::members(world, *target, unit))
-        .collect();
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
         .collect();
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let exclusions: Result<Vec<_>, String> = watchers
