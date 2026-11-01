@@ -14,6 +14,8 @@ fn follower_arms_wild_strikes_requires_critical_auto_attack() {
             app.update();
         }
         assert!(crate::auras::has_aura(app.world(), actor, 382946));
+        face_actor_toward_primary(app.world_mut(), actor, target);
+        crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
         crate::combat::start_attack_now(app.world_mut(), actor, crate::combat::AutoAttack::new(target));
         for _ in 0..300 {
             app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = if critical { 100.0 } else { 0.0 };
