@@ -28,6 +28,7 @@ pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> s
         "health": health.map(|health| [health.current, health.max]),
         "position": position.map(|position| [position.x, position.y, position.z]),
         "state": format!("{:?}", world.get::<crate::creature_ai::CreatureState>(actor)),
+        "death_state": format!("{:?}", world.get::<crate::combat::DeathState>(actor)),
         "target": world.get::<crate::networking::CombatTarget>(actor).and_then(|target| target.0).map(Entity::to_bits),
         "auto_attack": format!("{:?}", world.get::<crate::combat::AutoAttack>(actor)),
         "in_combat": world.get::<shared::components::CombatStatus>(actor).map(|status| status.0),

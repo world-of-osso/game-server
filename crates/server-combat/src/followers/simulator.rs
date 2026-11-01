@@ -468,6 +468,10 @@ pub fn update_leader(world: &mut World) {
     }
 }
 
+pub fn observed_cleared_sources(world: &World, owner: Entity) -> Option<Vec<u32>> {
+    pull_history::snapshot(world, owner).map(|history| history.cleared_spawns.into_iter().collect())
+}
+
 pub fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
     pull_history::has_uncleared_fight(world, owner)
 }

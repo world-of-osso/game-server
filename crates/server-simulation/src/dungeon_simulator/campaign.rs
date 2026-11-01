@@ -5,7 +5,7 @@ use serde::Serialize;
 use shared::components::{CombatStatus, Health, Mana, Position};
 use std::collections::BTreeMap;
 
-const MAX_TICKS: usize = 72_000;
+pub(super) const MAX_TICKS: usize = 72_000;
 pub(super) const STALL_SECONDS: f64 = 60.0;
 const COHESION_CHECK_SECONDS: f64 = 1.0;
 pub(super) const DAWNBREAKER_DECK_START_MS: u32 = 86_000;
@@ -2139,6 +2139,7 @@ struct Run {
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
+    keystone: Option<super::keystone::State>,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -2160,6 +2161,114 @@ pub(super) fn run_cached(
     };
     let setup = started.elapsed();
     run_prepared(run, catalogs, started, setup)
+}
+
+pub(super) fn run_keystone(
+    seed: u64,
+    options: super::keystone::Options,
+) -> super::keystone_record::RunRecord {
+    let _rng_scope = crate::random::seed_scope(seed);
+    let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        spawn_run_mode(seed, &mut None, Some(options))
+    }));
+    let mut run = match initialized {
+        Ok(Ok(run)) => run,
+        Ok(Err(error)) => return failed_keystone_record(seed, options, error),
+        Err(panic) => return failed_keystone_record(seed, options, panic_reason(panic)),
+    };
+    run.last_progress = run.now();
+    let outcome =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
+            for _ in 0..MAX_TICKS {
+                if run.finished() {
+                    break;
+                }
+                if let Err(error) = run.control() {
+                    run.report.status = "blocked".into();
+                    run.report.detail = error;
+                    break;
+                }
+                run.app.update();
+                run.healer_metrics.observe_frame(run.app.world());
+                let mut key = run.keystone.take().ok_or("keystone state disappeared")?;
+                let result = key.update(run.app.world_mut());
+                run.keystone = Some(key);
+                result?;
+                if run.stalled() {
+                    break;
+                }
+            }
+            Ok(())
+        }));
+    let error = match outcome {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(error),
+        Err(panic) => Some(panic_reason(panic)),
+    };
+    if error.is_none() && run.report.status == "running" {
+        run.finished();
+    }
+    if let Some(error) = error {
+        run.report.status = "aborted".into();
+        run.report.detail = error;
+    } else if run.report.status == "running" {
+        run.report.status = "timeout".into();
+        run.report.detail = "one-hour simulated bound reached".into();
+    }
+    let status = if run.report.status == "cleared" {
+        "completed".into()
+    } else {
+        run.report.status.clone()
+    };
+    let diagnostics = serde_json::json!({
+        "current_pack": run.current_pack,
+        "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
+        "terminal_units": run.inspect_units(),
+        "pull_decisions": &run.report.pulls,
+        "native_combat_events_wall_timestamps": &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0,
+    });
+    let state = run.keystone.take().expect("keystone state after run");
+    state
+        .finish(
+            run.app.world(),
+            seed,
+            options,
+            status,
+            run.report.detail,
+            diagnostics,
+        )
+        .unwrap_or_else(|error| failed_keystone_record(seed, options, error))
+}
+
+fn failed_keystone_record(
+    seed: u64,
+    options: super::keystone::Options,
+    reason: String,
+) -> super::keystone_record::RunRecord {
+    super::keystone_record::RunRecord {
+        schema_version: 1,
+        seed,
+        requested_specs: options.specs,
+        map_id: options.map_id,
+        challenge_id: None,
+        key_level: options.level,
+        affixes: None,
+        party: Vec::new(),
+        route: None,
+        outcome: super::keystone_record::Outcome {
+            status: "aborted".into(),
+            reason,
+            elapsed_ms: None,
+            timer_ms: None,
+            in_time: None,
+            upgrade_levels: None,
+            resulting_key_level: None,
+        },
+        deaths: Vec::new(),
+        pulls: Vec::new(),
+        actors: Vec::new(),
+        diagnostics: serde_json::Value::Null,
+    }
 }
 
 fn run_prepared(
@@ -2276,18 +2385,52 @@ fn aborted_initialization(seed: u64, started: std::time::Instant, reason: String
 }
 
 fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Result<Run, String> {
-    let graph = super::graph::read_graph()?;
+    spawn_run_mode(seed, catalogs, None)
+}
+
+fn spawn_run_mode(
+    seed: u64,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    options: Option<super::keystone::Options>,
+) -> Result<Run, String> {
+    let mut graph = super::graph::read_graph()?;
+    if let Some(options) = options
+        && options.map_id != graph.map_id
+    {
+        return Err(format!(
+            "selected map{} does not match graph map{}",
+            options.map_id, graph.map_id
+        ));
+    }
+    let planned = if options.is_some() {
+        Some(super::keystone::prepare_graph(&mut graph)?)
+    } else {
+        None
+    };
     let mut app = runtime::build_cached_app(catalogs);
-    let copy = runtime::create_copy(&mut app);
-    let party = crate::followers::simulator::spawn_party(
-        app.world_mut(),
-        copy,
-        Position {
-            x: graph.entrance[0],
-            y: graph.entrance_height,
-            z: graph.entrance[1],
-        },
-    )?;
+    app.insert_resource(super::Space(graph.clone()));
+    let copy = if options.is_some() {
+        runtime::create_copy_at_difficulty(&mut app, 23)?
+    } else {
+        runtime::create_copy(&mut app)
+    };
+    let entrance = Position {
+        x: graph.entrance[0],
+        y: graph.entrance_height,
+        z: graph.entrance[1],
+    };
+    let party = match (options, planned.as_ref()) {
+        (Some(options), Some((_, level))) => crate::followers::simulator::spawn_keystone_party(
+            app.world_mut(),
+            copy,
+            entrance,
+            *level,
+            options.specs,
+            options.level,
+        )?,
+        (None, None) => crate::followers::simulator::spawn_party(app.world_mut(), copy, entrance)?,
+        _ => return Err("keystone planning state is inconsistent".into()),
+    };
     if !graph.flights.is_empty() {
         server::test_support::flight::configure_leader(app.world_mut(), party.owner)?;
     }
@@ -2323,7 +2466,11 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             !super::graph::corridor_inputs::source_is_withheld(
                 app.world().resource::<crate::world_data::WorldData>(),
                 copy,
-                graph.difficulty_id(),
+                app.world()
+                    .resource::<crate::maps::InstanceManager>()
+                    .copy_difficulty(copy)
+                    .expect("simulator copy")
+                    .difficulty_id,
                 spawn.guid,
             )
         })
@@ -2331,9 +2478,37 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         .collect();
     if !missing.is_empty() {
         return Err(format!(
-            "frozen graph contains sources absent from production Normal population: {missing:?}"
+            "frozen graph contains sources absent from the selected production population: {missing:?}"
         ));
     }
+    if options.is_some() {
+        let source_ids: std::collections::BTreeSet<_> = graph
+            .packs
+            .iter()
+            .flat_map(|pack| pack.spawns.iter().map(|spawn| spawn.guid))
+            .collect();
+        let extra: Vec<_> = actors
+            .keys()
+            .filter(|guid| !source_ids.contains(guid))
+            .copied()
+            .collect();
+        if !extra.is_empty() {
+            return Err(format!(
+                "selected Mythic population is absent from the frozen graph: {extra:?}"
+            ));
+        }
+    }
+    let keystone = match (options, planned) {
+        (Some(options), Some((plan, _))) => {
+            let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
+            app.insert_resource(server::navigation::Navigation::new(&nav));
+            Some(super::keystone::start(&mut app, &party, plan, options)?)
+        }
+        (None, None) => None,
+        _ => return Err("keystone planning state is inconsistent".into()),
+    };
     let healer_metrics = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
     let deck_provenance = (graph.map_id == 2662).then(|| deck_replay_provenance(false));
     Ok(Run {
@@ -2354,6 +2529,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         last_resources: Vec::new(),
         healer_metrics,
         pet_recorder: Default::default(),
+        keystone,
         report: Report {
             seed,
             status: "running".into(),
@@ -2557,7 +2733,17 @@ impl Run {
             self.report.encounters_killed = killed.len();
             self.report.encounters_total = all.len();
         }
-        if self.report.encounters_total > 0
+        if self
+            .keystone
+            .as_ref()
+            .is_some_and(|key| key.completed(world))
+        {
+            self.report.status = "cleared".into();
+            self.report.detail = "native keystone criteria completed".into();
+            return true;
+        }
+        if self.keystone.is_none()
+            && self.report.encounters_total > 0
             && self.report.encounters_killed == self.report.encounters_total
         {
             self.report.status = "cleared".into();
@@ -2574,9 +2760,10 @@ impl Run {
             };
             return true;
         }
-        if self
-            .members()
-            .all(|member| !crate::spell_cast::targets::is_alive(world, member))
+        if self.keystone.is_none()
+            && self
+                .members()
+                .all(|member| !crate::spell_cast::targets::is_alive(world, member))
         {
             self.report.status = "wiped".into();
             self.report.detail = "all five bots died".into();
@@ -2707,9 +2894,11 @@ impl Run {
                     .remove::<MoveIntent>();
                 return Ok(());
             }
-            return Err(
-                "no living hostile source pack remains, but boss deaths are incomplete".into(),
-            );
+            return Err(if self.keystone.is_some() {
+                "planned route exhausted before native keystone criteria completed".into()
+            } else {
+                "no living hostile source pack remains, but boss deaths are incomplete".into()
+            });
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();

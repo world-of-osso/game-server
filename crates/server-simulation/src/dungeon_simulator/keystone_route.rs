@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap};
 use super::graph::{Graph, RouteStep};
 use serde::Serialize;
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub(super) struct PlannedRoute {
     pub steps: Vec<RouteStep>,
     pub added_packs: Vec<u32>,

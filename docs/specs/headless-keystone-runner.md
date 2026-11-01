@@ -16,9 +16,9 @@ The runner executes a selected keystone dungeon and a five-spec class party in t
 
 ## Run-record schema, version 1
 
-The JSON object has `schema_version`, `map_id`, `challenge_id`, `key_level`, `affixes`, `party`, `route`, `outcome`, `deaths`, `pulls` and `actors`. Entity IDs are decimal strings. Each party member carries `spec_id`, per-slot item IDs and native `level`, plus their arithmetic mean; that mean is not a Retail UI item-level calculation. `route` contains ordered `steps`, `added_packs` and `planned_forces`.
+The JSON object has `schema_version`, `seed`, `requested_specs`, `map_id`, `challenge_id`, `key_level`, `affixes`, `party`, `route`, `outcome`, `deaths`, `pulls` and `actors`. Unavailable values are null when initialization fails. Entity IDs are decimal strings. Each party member carries `spec_id`, per-slot item IDs and native `level`, plus their arithmetic mean; that mean is not a Retail UI item-level calculation. `route` contains ordered `steps`, `added_packs` and `planned_forces`.
 
-`outcome` contains `status`, `reason`, `elapsed_ms`, `timer_ms`, `in_time`, `upgrade_levels` and `resulting_key_level`; completion-only values are null for non-completions. A death contains simulated `elapsed_ms`, victim ID and spec, and nullable `killer_npc_entry` and `killer_spell_id`. Pulls contain simulated `start_ms`, `duration_ms` and `ended`; an open terminal pull has `ended: false`. Actor totals contain raw and effective damage and healing. Effective amounts subtract overkill or overhealing. Controlled-unit amounts are attributed to the owning party member.
+`diagnostics` retains terminal native unit state, observed cleared source IDs, pull decisions and ordered combat events; those events' own timestamps are wall-clock values, not simulation time. `outcome` contains `status`, `reason`, `elapsed_ms`, `timer_ms`, `in_time`, `upgrade_levels` and `resulting_key_level`; `in_time` and `upgrade_levels` are null for non-completions; `resulting_key_level` is present only when the persisted key was observed. A death contains simulated `elapsed_ms`, victim ID and spec, and nullable `killer_npc_entry` and `killer_spell_id`. Pulls contain simulated `start_ms`, `duration_ms` and `ended`; an open terminal pull has `ended: false`. Actor totals contain raw and effective damage and healing. Effective amounts subtract overkill or overhealing. Controlled-unit amounts are attributed to the owning party member.
 
 ## How it works
 
@@ -32,6 +32,8 @@ The JSON object has `schema_version`, `map_id`, `challenge_id`, `key_level`, `af
 - `crates/server-combat/src/spell_cast/test_harness.rs` — opt-in fatal-spell capture for observed death events, without changing wire combat logs.
 - `crates/server-simulation/src/dungeon_simulator/keystone_route.rs` — deterministic weighted force-pack route planner.
 - `crates/server-simulation/src/dungeon_simulator/keystone_record.rs` — schema and event-based simulation-time aggregation.
+- `crates/server-simulation/src/dungeon_simulator/keystone.rs` — authored-route planning, Font approach and challenge session.
+- `scripts/run-keystone-simulator.py` — explicit inputs and invocation of the headless test executable.
 
 ## Tests asserting this spec
 
@@ -40,6 +42,8 @@ The JSON object has `schema_version`, `map_id`, `challenge_id`, `key_level`, `af
 - `dungeon_simulator::runtime::keystone_simulator_spawns_selected_class_party_with_real_apls` checks the selected specs, equipped items and actual APL registration.
 - `dungeon_simulator::keystone_route::tests` checks greedy route choice and the Azure source-force threshold.
 - `dungeon_simulator::keystone_record::tests` checks the record shape, event timing, raw/effective amounts and controlled-unit attribution.
+- `dungeon_simulator::keystone::tests` checks explicit input parsing and failure-record behavior; its ignored full-run test executes the native keystone.
+- `scripts/tests/test_run_keystone_simulator.py` checks CLI input forwarding and validation.
 
 ## Known gaps (current cycle)
 
