@@ -52,6 +52,82 @@ pub struct Rotation {
     pub coatings: Vec<NativeAction<'static>>,
 }
 
+pub(crate) fn program(source: &str) -> Result<Program, String> {
+    // SimC76f8118 apl_rogue.cpp73–129: preserve every source row, order and predicate.
+    let rows = source
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let (key, value) = line.split_once('=').ok_or("invalid literal profile row")?;
+            let key = key.trim_end_matches('+');
+            let list = if key == "actions" {
+                "default"
+            } else {
+                key.strip_prefix("actions.")
+                    .ok_or("invalid literal action list")?
+            };
+            Ok((list, value.trim_start_matches('/')))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    Program::parse(&rows)
+}
+
+pub(crate) fn bindings() -> Bindings {
+    let mut bindings = Bindings {
+        actions: ACTIONS
+            .iter()
+            .map(|&(name, id, _)| (name.into(), id))
+            .collect(),
+        buffs: [
+            ("garrote", 703),
+            ("rupture", 1943),
+            ("deathmark", 360194),
+            ("kingsbane", 385627),
+            ("envenom", 32645),
+            ("improved_garrote", 392401),
+            ("darkest_night", 457280),
+            ("scent_of_blood", 394080),
+            ("lingering_darkness", 457273),
+            ("bloodlust", 2825),
+        ]
+        .into_iter()
+        .map(|(name, id)| (name.into(), id))
+        .collect(),
+        talents: TALENTS
+            .iter()
+            .map(|&(name, id)| (name.into(), id))
+            .collect(),
+        resources: [
+            ("energy".into(), PowerType::Energy),
+            ("combo_points".into(), PowerType::ComboPoints),
+        ]
+        .into(),
+        global_cooldown_spell: 1329,
+        ..default()
+    };
+    for alias in ["garrote", "rupture"] {
+        bindings.dot_refresh.insert(
+            alias.into(),
+            DotRefresh {
+                resolve: crate::simc_apl_native::native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        );
+    }
+    bindings
+}
+
+pub fn action_spells(source: &str, coatings: &[u32]) -> Result<Vec<u32>, String> {
+    Ok(
+        crate::literal_rotation::program_action_spells_with_composite(
+            &program(source)?,
+            &bindings(),
+            "apply_poison",
+            coatings.iter().copied(),
+        ),
+    )
+}
+
 impl Rotation {
     pub fn load(
         world: &mut World,
@@ -59,67 +135,11 @@ impl Rotation {
         encounter: Encounter,
         source: &str,
     ) -> Result<Self, String> {
-        // SimC76f8118 apl_rogue.cpp73–129: preserve every source row, order and predicate.
-        let rows = source
-            .lines()
-            .filter(|line| !line.is_empty())
-            .map(|line| {
-                let (key, value) = line.split_once('=').ok_or("invalid literal profile row")?;
-                let key = key.trim_end_matches('+');
-                let list = if key == "actions" {
-                    "default"
-                } else {
-                    key.strip_prefix("actions.")
-                        .ok_or("invalid literal action list")?
-                };
-                Ok((list, value.trim_start_matches('/')))
-            })
-            .collect::<Result<Vec<_>, String>>()?;
-        let mut bindings = Bindings {
-            actions: ACTIONS
-                .iter()
-                .map(|&(name, id, _)| (name.into(), id))
-                .collect(),
-            buffs: [
-                ("garrote", 703),
-                ("rupture", 1943),
-                ("deathmark", 360194),
-                ("kingsbane", 385627),
-                ("envenom", 32645),
-                ("improved_garrote", 392401),
-                ("darkest_night", 457280),
-                ("scent_of_blood", 394080),
-                ("lingering_darkness", 457273),
-                ("bloodlust", 2825),
-            ]
-            .into_iter()
-            .map(|(name, id)| (name.into(), id))
-            .collect(),
-            talents: TALENTS
-                .iter()
-                .map(|&(name, id)| (name.into(), id))
-                .collect(),
-            resources: [
-                ("energy".into(), PowerType::Energy),
-                ("combo_points".into(), PowerType::ComboPoints),
-            ]
-            .into(),
-            global_cooldown_spell: 1329,
-            ..default()
-        };
-        for alias in ["garrote", "rupture"] {
-            bindings.dot_refresh.insert(
-                alias.into(),
-                DotRefresh {
-                    resolve: crate::simc_apl_native::native_dot_spell,
-                    policy: DotRefreshPolicy::Pandemic,
-                },
-            );
-        }
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let coatings = read_coatings(world, actor);
         Ok(Self {
-            driver: Driver::new(Program::parse(&rows)?),
+            driver: Driver::new(program(source)?),
             bindings,
             equipment,
             encounter,
@@ -431,7 +451,11 @@ pub fn action_source(
 
 impl crate::follower::SpecRotation for Rotation {
     fn action_spells(&self) -> Vec<u32> {
-        self.driver.action_spells(&self.bindings)
+        self.driver.action_spells_with_composite(
+            &self.bindings,
+            "apply_poison",
+            self.coatings.iter().map(|action| action.spell),
+        )
     }
 
     fn poll_precombat(

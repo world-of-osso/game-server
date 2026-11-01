@@ -34,48 +34,63 @@ pub struct Restoration {
     encounter: Encounter,
 }
 
+pub(crate) fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .chain(DAMAGE_SPELLS.iter())
+            .map(|(name, spell, _)| ((*name).into(), *spell))
+            .collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        global_cooldown_spell: 8936,
+        ..Default::default()
+    }
+}
+
+pub(crate) fn program() -> Result<Program, String> {
+    // Pinned SimC has no supported Restoration healing APL; these are explicit
+    // native triage decisions, not a claim of a SimC healer rotation.
+    Program::parse(&[
+        ("default", "innervate,if=mana.pct<75"),
+        (
+            "default",
+            "tranquility,if=target.health.pct<35&party.injured>=2",
+        ),
+        ("default", "ironbark,if=target.health.pct<35"),
+        ("default", "swiftmend,if=target.health.pct<100"),
+        ("default", "wild_growth,if=party.injured>=2"),
+        (
+            "default",
+            "efflorescence,if=party.injured>=2&party.efflorescence_up=0",
+        ),
+        ("default", "grove_guardians,if=target.health.pct<95"),
+        ("default", "convoke_the_spirits,if=party.injured>=2"),
+        (
+            "default",
+            "lifebloom,if=target.health.pct<95&target.lifebloom_up=0",
+        ),
+        (
+            "default",
+            "rejuvenation,if=target.health.pct<95&target.rejuvenation_covered=0",
+        ),
+        ("default", "regrowth,if=target.health.pct<90"),
+        ("damage", "moonfire,if=target.moonfire_up=0"),
+        ("damage", "wrath"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Restoration {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .chain(DAMAGE_SPELLS.iter())
-                .map(|(name, spell, _)| ((*name).into(), *spell))
-                .collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            global_cooldown_spell: 8936,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        // Pinned SimC has no supported Restoration healing APL; these are explicit
-        // native triage decisions, not a claim of a SimC healer rotation.
-        let program = Program::parse(&[
-            ("default", "innervate,if=mana.pct<75"),
-            (
-                "default",
-                "tranquility,if=target.health.pct<35&party.injured>=2",
-            ),
-            ("default", "ironbark,if=target.health.pct<35"),
-            ("default", "swiftmend,if=target.health.pct<100"),
-            ("default", "wild_growth,if=party.injured>=2"),
-            (
-                "default",
-                "efflorescence,if=party.injured>=2&party.efflorescence_up=0",
-            ),
-            ("default", "grove_guardians,if=target.health.pct<95"),
-            ("default", "convoke_the_spirits,if=party.injured>=2"),
-            (
-                "default",
-                "lifebloom,if=target.health.pct<95&target.lifebloom_up=0",
-            ),
-            (
-                "default",
-                "rejuvenation,if=target.health.pct<95&target.rejuvenation_covered=0",
-            ),
-            ("default", "regrowth,if=target.health.pct<90"),
-            ("damage", "moonfire,if=target.moonfire_up=0"),
-            ("damage", "wrath"),
-        ])?;
+        let program = program()?;
         Ok(Restoration {
             driver: Driver::new(program),
             bindings,

@@ -32,40 +32,55 @@ pub struct Preservation {
     encounter: Encounter,
 }
 
+pub(crate) fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .map(|(name, spell, _)| ((*name).into(), *spell))
+            .collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        global_cooldown_spell: 361469,
+        ..Default::default()
+    }
+}
+
+pub(crate) fn program() -> Result<Program, String> {
+    // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
+    Program::parse(&[
+        ("default", "emerald_communion,if=mana.pct<65"),
+        ("default", "rewind,if=party.injured>=3"),
+        ("default", "temporal_anomaly,if=party.injured>=2"),
+        ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
+        ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
+        (
+            "default",
+            "spiritbloom,empower_to=1,if=target.health.pct<55",
+        ),
+        ("default", "verdant_embrace,if=target.health.pct<85"),
+        ("default", "emerald_blossom,if=party.injured>=2"),
+        (
+            "default",
+            "reversion,if=target.health.pct<95&target.reversion_up=0",
+        ),
+        ("default", "living_flame,if=target.health.pct<95"),
+        ("damage", "fire_breath,empower_to=1"),
+        ("damage", "disintegrate"),
+        ("damage", "living_flame"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Preservation {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .map(|(name, spell, _)| ((*name).into(), *spell))
-                .collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            global_cooldown_spell: 361469,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
-        let program = Program::parse(&[
-            ("default", "emerald_communion,if=mana.pct<65"),
-            ("default", "rewind,if=party.injured>=3"),
-            ("default", "temporal_anomaly,if=party.injured>=2"),
-            ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
-            ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
-            (
-                "default",
-                "spiritbloom,empower_to=1,if=target.health.pct<55",
-            ),
-            ("default", "verdant_embrace,if=target.health.pct<85"),
-            ("default", "emerald_blossom,if=party.injured>=2"),
-            (
-                "default",
-                "reversion,if=target.health.pct<95&target.reversion_up=0",
-            ),
-            ("default", "living_flame,if=target.health.pct<95"),
-            ("damage", "fire_breath,empower_to=1"),
-            ("damage", "disintegrate"),
-            ("damage", "living_flame"),
-        ])?;
+        let program = program()?;
         Ok(Preservation {
             driver: Driver::new(program),
             bindings,

@@ -27,6 +27,10 @@ impl ConfiguredPet {
         read_known_summon(world, actor, name).map(Some)
     }
 
+    pub fn spell_id(&self) -> u32 {
+        self.spell
+    }
+
     pub fn bind(&self, bindings: &mut Bindings) -> Result<(), String> {
         if bindings
             .actions

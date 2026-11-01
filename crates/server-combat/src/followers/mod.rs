@@ -169,6 +169,19 @@ pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
         .insert(tank_pull_back::WaitingForPullBack(tank));
 }
 
+/// Program-bound class actions and selected equipped on-use spells.
+#[derive(Component, Clone, Debug, PartialEq, Eq)]
+pub struct FollowerActionSpells(pub Vec<u32>);
+
+/// Installed by the class APL host before any class follower spawns.
+#[derive(Resource, Clone, Copy)]
+pub struct FollowerActionProvider {
+    /// Program-bound class actions, available after class progression and before gear.
+    pub source_actions: fn(&mut World, Entity, u32) -> Result<Vec<u32>, String>,
+    /// Program-selected equipped on-use actions, available after gear is equipped.
+    pub equipped_actions: fn(&mut World, Entity, u32) -> Result<Vec<u32>, String>,
+}
+
 /// Whether this class follower must hold damage while its tank repositions a pull.
 pub fn holding_pull_damage(world: &World, unit: Entity) -> bool {
     world.get::<AplControlled>(unit).is_some()

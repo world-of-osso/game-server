@@ -37,44 +37,59 @@ pub struct Mistweaver {
     last_tank_heal: f32,
 }
 
+pub(crate) fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS
+            .iter()
+            .map(|(name, spell, _)| ((*name).into(), *spell))
+            .collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        global_cooldown_spell: 116670,
+        ..Default::default()
+    }
+}
+
+pub(crate) fn program() -> Result<Program, String> {
+    // SimC76f8118 apl_monk.cpp supplies only Brewmaster and Windwalker defaults.
+    Program::parse(&[
+        ("default", "life_cocoon,if=target.health.pct<35"),
+        ("default", "revival,if=party.injured>=3"),
+        (
+            "default",
+            "mana_tea,if=mana.pct<65&player.mana_tea_stacks>=4",
+        ),
+        ("default", "thunder_focus_tea,if=target.health.pct<75"),
+        (
+            "default",
+            "renewing_mist,if=target.health.pct<95&target.renewing_mist_up=0",
+        ),
+        (
+            "default",
+            "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
+        ),
+        ("default", "sheiluns_gift,if=party.heal_worthwhile"),
+        ("default", "vivify,if=party.heal_worthwhile"),
+        ("default", "soothing_mist,if=target.health.pct<90"),
+        ("priority_damage", "rising_sun_kick"),
+        ("damage", "rising_sun_kick"),
+        ("damage", "spinning_crane_kick,if=active_enemies>=2"),
+        ("damage", "blackout_kick"),
+        ("damage", "tiger_palm"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Mistweaver {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS
-                .iter()
-                .map(|(name, spell, _)| ((*name).into(), *spell))
-                .collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            global_cooldown_spell: 116670,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        // SimC76f8118 apl_monk.cpp supplies only Brewmaster and Windwalker defaults.
-        let program = Program::parse(&[
-            ("default", "life_cocoon,if=target.health.pct<35"),
-            ("default", "revival,if=party.injured>=3"),
-            (
-                "default",
-                "mana_tea,if=mana.pct<65&player.mana_tea_stacks>=4",
-            ),
-            ("default", "thunder_focus_tea,if=target.health.pct<75"),
-            (
-                "default",
-                "renewing_mist,if=target.health.pct<95&target.renewing_mist_up=0",
-            ),
-            (
-                "default",
-                "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
-            ),
-            ("default", "sheiluns_gift,if=party.heal_worthwhile"),
-            ("default", "vivify,if=party.heal_worthwhile"),
-            ("default", "soothing_mist,if=target.health.pct<90"),
-            ("priority_damage", "rising_sun_kick"),
-            ("damage", "rising_sun_kick"),
-            ("damage", "spinning_crane_kick,if=active_enemies>=2"),
-            ("damage", "blackout_kick"),
-            ("damage", "tiger_palm"),
-        ])?;
+        let program = program()?;
         Ok(Mistweaver {
             driver: Driver::new(program),
             bindings,

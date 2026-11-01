@@ -105,6 +105,7 @@ fn spawn_at(spec: u32, level: u8) -> Pull {
     let mut harness = harness_with_plugins(vec![], &[], 8, false, |app| {
         app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
         app.add_plugins(server_combat::stats::StatsPlugin);
+        server_follower_apl::action_metadata::install_provider(app);
     })
     .expect("native world database");
     let data = world_db().unwrap();
@@ -208,37 +209,131 @@ impl Pull {
 }
 
 #[test]
-fn class_rotation_reports_its_program_bound_spells() {
-    for (spec, spell) in [(63, 133), (257, 2061), (66, 31935)] {
+fn pure_action_metadata_matches_every_class_rotation() {
+    for &spec in server_follower_apl::registry::SPECS {
         let mut pull = spawn(spec);
         let rotation =
             server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
                 .unwrap();
-        let actions = rotation.action_spells();
-        let pure = match spec {
-            63 => server_follower_apl::fire_rotation::action_spells(
-                &server_follower_apl::profiles::profile(spec).unwrap(),
-                pull.harness
-                    .app
-                    .world()
-                    .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-                    .unwrap(),
+        let input = server_follower_apl::action_metadata::read_inputs(
+            pull.harness.app.world(),
+            pull.follower,
+            spec,
+        )
+        .unwrap();
+        let pure = server_follower_apl::action_metadata::action_spells(spec, &input).unwrap();
+        let (program, mut bindings) =
+            server_follower_apl::action_metadata::parse(spec, &input).unwrap();
+        let mut expected = pure.clone();
+        expected.extend(
+            server_follower_apl::action_metadata::equipped_action_spells(
+                pull.harness.app.world(),
+                pull.follower,
+                &program,
+                &mut bindings,
             )
             .unwrap(),
-            257 => server_follower_apl::holy_priest_rotation::action_spells().unwrap(),
-            66 => server_follower_apl::protection_paladin_rotation::action_spells(
-                &server_follower_apl::profiles::profile(spec).unwrap(),
-            )
-            .unwrap(),
-            _ => unreachable!(),
-        };
-        assert_eq!(pure, actions, "spec{spec} pure and runtime actions differ");
-        assert!(
-            actions.contains(&spell),
-            "spec{spec} missing {spell}: {actions:?}"
         );
-        assert!(actions.windows(2).all(|pair| pair[0] < pair[1]));
+        expected.sort_unstable();
+        expected.dedup();
+        assert_eq!(
+            pull.harness
+                .app
+                .world()
+                .get::<server_combat::followers::FollowerActionSpells>(pull.follower)
+                .unwrap()
+                .0,
+            expected,
+            "spec{spec} spawn metadata differs"
+        );
+        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
+        assert_eq!(
+            pure,
+            rotation.action_spells(),
+            "spec{spec} pure and runtime actions differ"
+        );
+        assert!(pure.windows(2).all(|pair| pair[0] < pair[1]));
+        if let Some(spell) = [(63, 133), (257, 2061), (66, 31935)]
+            .into_iter()
+            .find_map(|(id, spell)| (id == spec).then_some(spell))
+        {
+            assert!(
+                pure.contains(&spell),
+                "spec{spec} missing {spell}: {pure:?}"
+            );
+        }
     }
+}
+
+#[test]
+fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_items() {
+    let mut pull = spawn(63);
+    let world = pull.harness.app.world_mut();
+    let mut items = world
+        .get_mut::<server_combat::stats::EquippedItems>(pull.follower)
+        .unwrap();
+    items
+        .items
+        .retain(|(slot, _, _)| *slot != shared::protocol::EquipmentSlot::Trinket1);
+    items.items.push((
+        shared::protocol::EquipmentSlot::Trinket1,
+        shared::item_data::ItemDefinitionSource::Retail,
+        204736,
+    ));
+    let provider = *world.resource::<server_combat::followers::FollowerActionProvider>();
+    let mut action_spells = (provider.source_actions)(world, pull.follower, 63).unwrap();
+    action_spells.extend((provider.equipped_actions)(world, pull.follower, 63).unwrap());
+    action_spells.sort_unstable();
+    action_spells.dedup();
+    world
+        .entity_mut(pull.follower)
+        .insert(server_combat::followers::FollowerActionSpells(
+            action_spells,
+        ));
+    assert!(
+        world
+            .get::<server_combat::followers::FollowerActionSpells>(pull.follower)
+            .unwrap()
+            .0
+            .contains(&407512)
+    );
+    let input =
+        server_follower_apl::action_metadata::read_inputs(world, pull.follower, 63).unwrap();
+    let (program, mut bindings) = server_follower_apl::action_metadata::parse(63, &input).unwrap();
+    let spells = server_follower_apl::action_metadata::equipped_action_spells(
+        world,
+        pull.follower,
+        &program,
+        &mut bindings,
+    )
+    .unwrap();
+    assert!(
+        spells.contains(&407512),
+        "equipped hostile item spell missing: {spells:?}"
+    );
+    let reach = server_combat::followers::spell_unintended_reach(
+        world,
+        pull.follower,
+        407512,
+        pull.follower,
+    )
+    .unwrap();
+    assert!(
+        reach.0 > 0.0 || reach.1 > 0.0,
+        "item must have real hostile area reach: {reach:?}"
+    );
+    let no_items = server_combat::simc_apl::Program::parse(&[("default", "fireball")]).unwrap();
+    let absent = server_follower_apl::action_metadata::equipped_action_spells(
+        world,
+        pull.follower,
+        &no_items,
+        &mut bindings,
+    )
+    .unwrap();
+    assert!(
+        absent.is_empty(),
+        "item not named by program must not enter metadata: {absent:?}"
+    );
 }
 
 #[test]

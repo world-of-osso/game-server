@@ -34,53 +34,68 @@ pub struct Discipline {
     /// them, not the heal or shield target.
     enemies: Vec<Entity>,
 }
+pub(crate) fn bindings() -> Bindings {
+    Bindings {
+        actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
+        resources: [("mana".into(), PowerType::Mana)].into(),
+        buffs: [("shadow_word_pain".into(), 589)].into(),
+        dot_refresh: [(
+            "shadow_word_pain".into(),
+            DotRefresh {
+                resolve: native_dot_spell,
+                policy: DotRefreshPolicy::Pandemic,
+            },
+        )]
+        .into(),
+        global_cooldown_spell: 17,
+        ..Default::default()
+    }
+}
+
+pub(crate) fn program() -> Result<Program, String> {
+    Program::parse(&[
+        (
+            "item",
+            "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
+        ),
+        ("dot", "shadow_word_pain,if=refreshable"),
+        ("default", "pain_suppression,if=target.health.pct<35"),
+        ("default", "barrier,if=party.injured>=3"),
+        ("ramp", "evangelism"),
+        ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
+        ("radiance_fallback", "radiance"),
+        (
+            "shield",
+            "void_shield,if=party.darkness_up&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)",
+        ),
+        (
+            "shield",
+            "shield,if=party.darkness_up=0&party.borrowed_time&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)&(mana.pct*2.5>=fight_remains|party.shield_discipline&mana.pct*6>=fight_remains)",
+        ),
+        ("heal", "penance,if=target.health.pct<45"),
+        (
+            "heal",
+            "flash_heal,if=target.atonement_remains<=gcd.max&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
+        ),
+        ("damage", "mind_blast"),
+        ("damage", "penance"),
+        ("damage", "shadow_word_death,if=target.health.pct<=20"),
+        ("filler", "smite"),
+    ])
+}
+
+pub fn action_spells() -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program()?,
+        &bindings(),
+    ))
+}
+
 impl Discipline {
     pub fn load(world: &mut World, healer: Entity, encounter: Encounter) -> Result<Self, String> {
-        let mut bindings = Bindings {
-            actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
-            resources: [("mana".into(), PowerType::Mana)].into(),
-            buffs: [("shadow_word_pain".into(), 589)].into(),
-            dot_refresh: [(
-                "shadow_word_pain".into(),
-                DotRefresh {
-                    resolve: native_dot_spell,
-                    policy: DotRefreshPolicy::Pandemic,
-                },
-            )]
-            .into(),
-            global_cooldown_spell: 17,
-            ..Default::default()
-        };
+        let mut bindings = bindings();
         let equipment = Equipment::load(world, healer, &mut bindings)?;
-        let program = Program::parse(&[
-            (
-                "item",
-                "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
-            ),
-            ("dot", "shadow_word_pain,if=refreshable"),
-            ("default", "pain_suppression,if=target.health.pct<35"),
-            ("default", "barrier,if=party.injured>=3"),
-            ("ramp", "evangelism"),
-            ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
-            ("radiance_fallback", "radiance"),
-            (
-                "shield",
-                "void_shield,if=party.darkness_up&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)",
-            ),
-            (
-                "shield",
-                "shield,if=party.darkness_up=0&party.borrowed_time&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)&(mana.pct*2.5>=fight_remains|party.shield_discipline&mana.pct*6>=fight_remains)",
-            ),
-            ("heal", "penance,if=target.health.pct<45"),
-            (
-                "heal",
-                "flash_heal,if=target.atonement_remains<=gcd.max&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
-            ),
-            ("damage", "mind_blast"),
-            ("damage", "penance"),
-            ("damage", "shadow_word_death,if=target.health.pct<=20"),
-            ("filler", "smite"),
-        ])?;
+        let program = program()?;
         Ok(Discipline {
             driver: Driver::new(program),
             bindings,
