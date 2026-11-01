@@ -2533,13 +2533,16 @@ pub(super) fn run_keystone(
     options: super::keystone::Options,
 ) -> super::keystone_record::RunRecord {
     let _rng_scope = crate::random::seed_scope(seed);
+    let mut planned_route = None;
     let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        spawn_run_mode(seed, &mut None, Some(options))
+        spawn_run_mode_record(seed, &mut None, Some(options), &mut planned_route)
     }));
     let mut run = match initialized {
         Ok(Ok(run)) => run,
-        Ok(Err(error)) => return failed_keystone_record(seed, options, error),
-        Err(panic) => return failed_keystone_record(seed, options, panic_reason(panic)),
+        Ok(Err(error)) => return failed_keystone_record(seed, options, error, planned_route),
+        Err(panic) => {
+            return failed_keystone_record(seed, options, panic_reason(panic), planned_route);
+        }
     };
     run.last_progress = run.now();
     let outcome =
@@ -2601,13 +2604,47 @@ pub(super) fn run_keystone(
             run.report.detail,
             diagnostics,
         )
-        .unwrap_or_else(|error| failed_keystone_record(seed, options, error))
+        .unwrap_or_else(|error| failed_keystone_record(seed, options, error, planned_route))
+}
+
+fn start_with_recorded_route<T>(
+    saved: &mut Option<super::keystone_route::PlannedRoute>,
+    plan: super::keystone_route::PlannedRoute,
+    start: impl FnOnce(super::keystone_route::PlannedRoute) -> Result<T, String>,
+) -> Result<T, String> {
+    *saved = Some(plan.clone());
+    start(plan)
+}
+
+#[test]
+fn font_initialization_failure_retains_the_planned_force_route() {
+    let options = super::keystone::Options {
+        map_id: 2825,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let plan = super::keystone_route::PlannedRoute {
+        steps: Vec::new(),
+        added_packs: vec![17, 21],
+        planned_forces: 734,
+    };
+    let mut saved = None;
+    let error =
+        start_with_recorded_route(&mut saved, plan, |_| Err::<(), _>("missing Font".into()))
+            .unwrap_err();
+    let record = failed_keystone_record(1, options, error, saved);
+    let json = serde_json::to_value(record).unwrap();
+    assert_eq!(json["outcome"]["status"], "aborted");
+    assert_eq!(json["outcome"]["reason"], "missing Font");
+    assert_eq!(json["route"]["planned_forces"], 734);
+    assert_eq!(json["route"]["added_packs"], serde_json::json!([17, 21]));
 }
 
 fn failed_keystone_record(
     seed: u64,
     options: super::keystone::Options,
     reason: String,
+    planned_route: Option<super::keystone_route::PlannedRoute>,
 ) -> super::keystone_record::RunRecord {
     super::keystone_record::RunRecord {
         schema_version: 1,
@@ -2618,7 +2655,7 @@ fn failed_keystone_record(
         key_level: options.level,
         affixes: None,
         party: Vec::new(),
-        route: None,
+        route: planned_route,
         scaling: None,
         outcome: super::keystone_record::Outcome {
             status: "aborted".into(),
@@ -2761,6 +2798,15 @@ fn spawn_run_mode(
     catalogs: &mut Option<super::catalogs::Catalogs>,
     options: Option<super::keystone::Options>,
 ) -> Result<Run, String> {
+    spawn_run_mode_record(seed, catalogs, options, &mut None)
+}
+
+fn spawn_run_mode_record(
+    seed: u64,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    options: Option<super::keystone::Options>,
+    planned_route: &mut Option<super::keystone_route::PlannedRoute>,
+) -> Result<Run, String> {
     let mut graph = super::graph::read_graph()?;
     if let Some(options) = options
         && options.map_id != graph.map_id
@@ -2887,7 +2933,9 @@ fn spawn_run_mode(
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
             app.insert_resource(server::navigation::Navigation::new(&nav));
-            Some(super::keystone::start(&mut app, &party, plan, options)?)
+            Some(start_with_recorded_route(planned_route, plan, |plan| {
+                super::keystone::start(&mut app, &party, plan, options)
+            })?)
         }
         (None, None) => None,
         _ => return Err("keystone planning state is inconsistent".into()),
