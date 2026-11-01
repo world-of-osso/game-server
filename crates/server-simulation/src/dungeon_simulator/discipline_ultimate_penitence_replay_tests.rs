@@ -8,7 +8,6 @@ fn discipline_follower_channels_ultimate_penitence_at_the_enemy() {
 
     let _seed = crate::random::seed_scope(1);
     let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
-    super::healer_simc_replay::engage(&mut run);
     let (tank, healer, enemy) = (run.tank, run.healer, run.sources[0]);
     assert!(
         run.app
@@ -17,8 +16,9 @@ fn discipline_follower_channels_ultimate_penitence_at_the_enemy() {
             .is_some_and(|known| known.contains(421453)),
         "selected loadout entry 116182 must teach Ultimate Penitence"
     );
-    super::healer_simc_replay::finish_precombat(&mut run.app, &[tank, healer]).unwrap();
     let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    super::healer_simc_replay::engage(&mut run);
+    super::healer_simc_replay::finish_precombat(&mut run.app, &[tank, healer]).unwrap();
     // 40 s at 20 ticks per second.
     for _ in 0..800 {
         run.app.update();
