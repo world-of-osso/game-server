@@ -9,7 +9,8 @@ use combat::spell_cast::{
     targets::{self, Relation},
 };
 use combat::spell_info::{SpellInfo, SpellStore};
-use shared::components::{Health, UnitSummonedBy};
+use combat::spell_cast::summon::SummonedCreature;
+use shared::components::{Health, UnitIsPet};
 
 const INVOKE: u32 = 325197;
 const PRESENCE: u32 = 343818;
@@ -60,8 +61,12 @@ fn select_allies(world: &mut World, caster: Entity) -> Vec<Entity> {
         .get(PRESENCE)
         .expect("Chi-Ji presence missing");
     let radius = targets::radius(&presence.effects[0], 0);
-    let mut allies = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
-    allies.retain(|&unit| world.get::<UnitSummonedBy>(unit).is_none());
+    let mut allies = targets::area_units(world, caster, center, radius, Relation::Raid, 0);
+    // Followers carry UnitSummonedBy too; only spell-created creatures and pets are excluded.
+    allies.retain(|&unit| {
+        world.get::<SummonedCreature>(unit).is_none()
+            && !world.get::<UnitIsPet>(unit).is_some_and(|pet| pet.0)
+    });
     allies.shuffle(&mut rand::thread_rng());
     allies.sort_by_key(|&unit| {
         world
