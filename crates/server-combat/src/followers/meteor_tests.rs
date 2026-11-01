@@ -103,8 +103,10 @@ fn fire_meteor_native70_delay_burn_entry_exit_and_expiry_use_native_clocks() {
     }
 }
 
+/// SimC76f8118 sc_mage.cpp4721/4741–4744 (ae3d0a1d93): the delay field's expiry
+/// impact is unconditional travel, not a foreground cast an admitted hardcast rejects.
 #[test]
-fn fire_meteor_native70_tc_expiry_rejects_impact_while_follower_hardcasts() {
+fn fire_meteor_native70_simc_expiry_impacts_while_follower_hardcasts() {
     let (mut h, caster, targets) = prepare_meteor(1);
     let target = targets[0];
     h.app
@@ -146,12 +148,14 @@ fn fire_meteor_native70_tc_expiry_rejects_impact_while_follower_hardcasts() {
         "the original Fireball completes normally"
     );
     assert!(
-        !h.inbox.log[start..].iter().any(|event| {
+        h.inbox.log[start..].iter().any(|event| {
             event.source == Some(caster.to_bits())
-                && matches!(event.spell_id, Some(IMPACT | BURN))
+                && event.spell_id == Some(IMPACT)
+                && event.target == Some(target.to_bits())
                 && event.kind == CombatLogKind::Damage
+                && event.amount > 0
         }),
-        "TC ordinary153564 admission must reject the concurrent hardcast, not FULL_MASK through it"
+        "the scheduled impact lands despite the concurrent hardcast"
     );
 }
 
