@@ -286,23 +286,16 @@ fn native_apl_facts_fixture_clock_and_unobserved_dungeon_ttd_are_explicit() {
     assert_eq!(f.value("active_enemies").unwrap(), 3.0);
     assert_eq!(f.value("fight_style.patchwerk").unwrap(), 1.0);
     assert_eq!(f.value("fight_style.dungeonslice").unwrap(), 0.0);
-    let dungeon = NativeFacts::new(
-        h.app.world(),
-        actor,
-        &b,
-        Encounter::Dungeon { started_at: 0.0 },
-        3,
-    );
+    let dungeon = NativeFacts::new(h.app.world(), actor, &b, Encounter::dungeon(0.0), 3);
     // A dungeon pull's three engaged enemies are its SimC `enemies` count.
     assert_eq!(dungeon.value("enemies").unwrap(), 3.0);
-    // No observed damage yet: a finite unknown TTD, not a fixture lifetime.
-    assert_eq!(
-        dungeon.value("target.time_to_die").unwrap(),
-        crate::followers::live_facts::UNKNOWN_TTD
-    );
+    // SimC76f8118 DungeonRoute: the 45-minute route, not a fixture lifetime.
+    let route_elapsed = dungeon.value("time").unwrap();
+    assert!((dungeon.value("fight_remains").unwrap() + route_elapsed - 2700.0).abs() < 0.001);
+    // The per-wave estimate needs the pull's engaged enemies.
     assert!(
         dungeon
-            .value("fight_remains")
+            .value("target.time_to_die")
             .unwrap_err()
             .contains("NATIVE_APL_TARGETS_UNAVAILABLE")
     );

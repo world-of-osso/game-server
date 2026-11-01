@@ -57,9 +57,8 @@ fn shadow_follower_slam_refuses_idle_outsider_and_hits_engaged_secondary() {
         selected.contains(&second),
         "native child targeting must actually reach the engaged secondary"
     );
-    let encounter = crate::simc_apl_native::Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     let rotation =
         server_follower_apl::shadow_rotation::Rotation::load(run.app.world_mut(), actor, encounter)
             .unwrap();

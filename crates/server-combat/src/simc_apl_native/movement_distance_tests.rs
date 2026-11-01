@@ -126,15 +126,9 @@ fn class_follower_movement_predicates_keep_missing_configuration_explicit() {
             missing.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
             "{missing}"
         );
-        let dungeon = NativeFacts::new(
-            &world,
-            actor,
-            &bindings,
-            Encounter::Dungeon { started_at: 0.0 },
-            1,
-        )
-        .value(operand)
-        .unwrap();
+        let dungeon = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1)
+            .value(operand)
+            .unwrap();
         if operand == "movement.remains" {
             assert_eq!(dungeon, 0.0);
         } else {
@@ -150,7 +144,7 @@ fn class_follower_movement_distance_does_not_borrow_fixture_configuration() {
         distance_to_move: 12.5,
     });
     assert_eq!(
-        read_distance(&world, actor, Encounter::Dungeon { started_at: 0.0 }).unwrap(),
+        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap(),
         0.0
     );
 }

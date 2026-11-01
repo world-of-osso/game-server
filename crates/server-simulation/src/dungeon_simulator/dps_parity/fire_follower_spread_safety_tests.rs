@@ -44,9 +44,8 @@ fn fire_follower_blast_refuses_idle_neighbour_and_spreads_onto_passive_one() {
         crate::networking::CombatTarget(Some(primary)),
     ));
     face_actor_toward_primary(run.app.world_mut(), actor, primary);
-    let encounter = crate::simc_apl_native::Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     let rotation = server_follower_apl::fire_rotation::Rotation::load(
         run.app.world_mut(),
         actor,

@@ -231,7 +231,7 @@ fn class_follower_dungeon_has_no_scheduled_add_event() {
         h.app.world(),
         h.caster,
         &binding,
-        Encounter::Dungeon { started_at: 0.0 },
+        Encounter::dungeon(0.0),
         1,
     );
     assert_eq!(facts.value("raid_event.adds.exists").unwrap(), 0.0);

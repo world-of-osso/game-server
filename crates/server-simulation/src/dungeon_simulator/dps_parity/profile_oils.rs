@@ -57,9 +57,7 @@ fn condition_active(world: &World, actor: Entity, expression: &Expression) -> Re
         world,
         actor,
         &bindings,
-        Encounter::Dungeon {
-            started_at: crate::spell_cast::now(world),
-        },
+        Encounter::dungeon(crate::spell_cast::now(world)),
         0,
     );
     Ok(expression.evaluate(&facts)? != 0.0)

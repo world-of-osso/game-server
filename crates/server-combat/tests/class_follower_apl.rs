@@ -30,14 +30,8 @@ fn class_follower_live_apl_reads_real_target_health_distance_and_count() {
         .id();
     let targets = [target];
     let bindings = Bindings::default();
-    let facts = NativeFacts::new(
-        &world,
-        actor,
-        &bindings,
-        Encounter::Dungeon { started_at: 0.0 },
-        1,
-    )
-    .with_targets(Some(target), &targets);
+    let facts = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1)
+        .with_targets(Some(target), &targets);
     assert_eq!(facts.value("target.health.pct").unwrap(), 25.0);
     assert_eq!(facts.value("target.distance").unwrap(), 5.0);
     assert_eq!(facts.value("active_enemies").unwrap(), 1.0);

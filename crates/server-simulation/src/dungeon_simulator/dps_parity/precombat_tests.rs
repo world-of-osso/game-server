@@ -260,9 +260,8 @@ fn literal_precombat_stops_after_the_first_ready_harmful_native_action() {
 fn literal_precombat_uncaptured_follower_still_follows_its_native_owner() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(269, 1).unwrap();
-    let encounter = crate::simc_apl_native::Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter).unwrap();
     assert!(
         run.app

@@ -374,6 +374,10 @@ fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
     use shared::protocol::CombatLogKind;
     for darkness in [false, true] {
         let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+        // The plain shield needs fight_remains within mana.pct*6: the 300 s
+        // fixture the decision was tuned on, not a 45-minute dungeon route.
+        run.app
+            .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 300.0 });
         super::healer_simc_replay::engage(&mut run);
         let (tank, healer) = (run.tank, run.healer);
         let members = run.slots.to_vec();
@@ -409,25 +413,7 @@ fn discipline_shield_apl_prefers_atoned_ally_and_uses_void_proc() {
             );
         }
         leave_only_shields(&mut run);
-        // The plain shield needs fight_remains within mana.pct*6. A dungeon
-        // reads it from the enemy's observed time to die; a training dummy
-        // keeps its whole pool, so make this one mortal with a short fight
-        // left, like the 300 s fixture the decision was tuned on.
-        let enemy = run.sources[0];
-        run.app
-            .world_mut()
-            .entity_mut(enemy)
-            .remove::<crate::creature_scripts::TrainingDummy>();
-        {
-            let mut health = run
-                .app
-                .world_mut()
-                .get_mut::<shared::components::Health>(enemy)
-                .unwrap();
-            health.current = health.max * 0.2;
-        }
         let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
-        // Wait for the party's damage to give the dummy a finite time to die.
         let shielded = |run: &super::healer_simc_replay::ClassParty| {
             run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
                 .iter()
