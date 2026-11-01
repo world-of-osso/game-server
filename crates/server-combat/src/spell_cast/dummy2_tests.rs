@@ -698,3 +698,51 @@ fn dummy2_rogue_backstab_level_curve_reaches_unity_at_twenty() {
         assert!(varied(107.31 * multiplier).contains(&damage));
     }
 }
+
+/// SimC76f8118 sc_demon_hunter.cpp2559–2573: Feed the Demon accumulates each paid
+/// spender's native base Fury and shortens Demon Spikes per threshold crossed.
+#[test]
+fn dummy2_dh_feed_the_demon_paid_base_fury_shortens_demon_spikes_recharge() {
+    for talented in [false, true] {
+        // Soul Cleave's fragment consumption reads native Vengeance soul spells.
+        let mut ids = vec![203720, 203819, 228477, 228478, 210042, 204255, 203981];
+        if talented {
+            ids.push(218612);
+        }
+        let mut h = harness_with(Vec::new(), &ids, 12, true).expect("real world.db required");
+        // Soul Cleave consumes fragments through the Vengeance specialization.
+        let caster = h.caster;
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(shared::components::ActiveSpec(581));
+        h.cast_and_deliver(203720, Some(h.caster));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let ready = |h: &Harness| {
+            h.app
+                .world()
+                .get::<super::SpellHistory>(h.caster)
+                .unwrap()
+                .charges[&1586]
+                .next_ready_at()
+        };
+        let mut reductions = Vec::new();
+        for _ in 0..2 {
+            h.advance(40); // Soul Cleave's 1.5s GCD has elapsed; Demon Spikes still recharges.
+            h.set_power(PowerType::Fury, 100.0);
+            let before = ready(&h);
+            h.cast_and_deliver(228477, Some(h.npc));
+            assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+            reductions.push(before - ready(&h));
+        }
+        // Native Soul Cleave base cost35; Feed the Demon218612 effect0 20 Fury, effect1 1000ms:
+        // 35 crosses one threshold (15 carried), then 15+35 crosses two.
+        let expected = if talented { [1.0, 2.0] } else { [0.0, 0.0] };
+        for (got, want) in reductions.iter().zip(expected) {
+            assert!(
+                (got - want).abs() < 1e-6,
+                "talented={talented}: reductions {reductions:?}"
+            );
+        }
+    }
+}
