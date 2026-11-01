@@ -165,6 +165,19 @@ pub(super) fn trick_plan(
         chain_multipliers.extend(extras.iter().map(|&target| (target, multiplier)));
         units.extend(extras);
     }
+    if spell.id == RAPID_FIRE_SHOT {
+        for &unit in &units {
+            let multiplier = super::marksmanship_sentinel::snapshot_rapid_mark(world, caster, unit);
+            if let Some((_, existing)) = chain_multipliers
+                .iter_mut()
+                .find(|(target, _)| *target == unit)
+            {
+                *existing *= multiplier;
+            } else if multiplier != 1.0 {
+                chain_multipliers.push((unit, multiplier));
+            }
+        }
+    }
     vec![PlannedEffect {
         index: 0,
         units,

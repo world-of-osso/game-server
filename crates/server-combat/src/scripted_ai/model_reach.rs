@@ -60,7 +60,7 @@ pub(crate) fn creature_combat_reach(models: &ModelReaches, display: u32, scale: 
 
 /// A player's default reach, or a creature's authored/project-default reach.
 /// Missing display identity or an uninitialized source catalog remains unavailable.
-pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
+pub fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
     if world.get::<Player>(unit).is_some() || world.get::<CharacterVisual>(unit).is_some() {
         return Some(PLAYER_COMBAT_REACH * scale);

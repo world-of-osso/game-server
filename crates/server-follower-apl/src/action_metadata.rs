@@ -29,9 +29,17 @@ struct ActionCache(BTreeMap<CacheKey, Arc<CachedActions>>);
 pub fn install_provider(app: &mut App) {
     app.init_resource::<ActionCache>()
         .insert_resource(server::followers::FollowerActionProvider {
+            before_passives: configure_before_passives,
             source_actions: provide_source_actions,
             equipped_actions: provide_equipped_actions,
         });
+}
+
+fn configure_before_passives(world: &mut World, actor: Entity, spec: u32) -> Result<(), String> {
+    if spec == 64 {
+        crate::frost_mage_rotation::configure_actor_reactions(world, actor)?;
+    }
+    Ok(())
 }
 
 fn cached_actions(

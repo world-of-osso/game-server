@@ -278,7 +278,9 @@ fn run_periodic_tick(world: &mut World, unit: Entity, mut tick: Tick, scheduled:
     if !alive || !crate::spell_cast::targets::is_alive(world, unit) {
         return;
     }
-    if end_aura_at_full_health(world, unit, &tick) {
+    if end_aura_at_full_health(world, unit, &tick)
+        || !scripts::allow_periodic_tick(world, unit, tick.instance_id)
+    {
         return;
     }
     let Some(mut spell) = world

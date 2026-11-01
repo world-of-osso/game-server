@@ -376,6 +376,7 @@ fn halls_follower_reaches_ramp_from_recorded_swim_exit() {
 /// These tests exercise follow movement only; the spawned follower never casts.
 fn install_movement_only_actions(app: &mut App) {
     app.insert_resource(super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
         source_actions: |_, _, _| Ok(Vec::new()),
         equipped_actions: |_, _, _| Ok(Vec::new()),
     });
