@@ -74,7 +74,13 @@ fn reduce_secondary_targets(world: &World, ctx: &EffectCtx, target: Entity, _: b
     if ctx.spell.id != DAMAGE {
         return 1.0;
     }
-    let targets = spell_cast::resolving_targets(world, ctx).expect("Fury pulse targets");
+    // Native child effect 1 also targets the caster; it is not an AoE damage recipient.
+    let targets: Vec<_> = spell_cast::resolving_targets(world, ctx)
+        .expect("Fury pulse targets")
+        .iter()
+        .copied()
+        .filter(|unit| *unit != ctx.caster)
+        .collect();
     let full = ctx
         .spell
         .cast_primary_target
