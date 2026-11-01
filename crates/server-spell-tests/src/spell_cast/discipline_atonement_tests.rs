@@ -974,14 +974,22 @@ fn ultimate_penitence_channels_bolts_extends_pain_and_transfers_atonement() {
                 && event.target == Some(enemy.to_bits())
         })
         .count();
-    let transfers = events
+    for (index, _) in events
         .iter()
-        .filter(|event| {
-            event.spell_id == Some(94472)
-                && event.kind == CombatLogKind::Heal
-                && event.target == Some(ally.to_bits())
-        })
-        .count();
+        .enumerate()
+        .filter(|(_, event)| event.spell_id == Some(421543) && event.kind == CombatLogKind::Damage)
+    {
+        assert!(
+            events[index + 1..]
+                .iter()
+                .take_while(|event| event.kind != CombatLogKind::Damage
+                    || event.source != Some(caster.to_bits()))
+                .any(|event| event.spell_id == Some(94472)
+                    && event.kind == CombatLogKind::Heal
+                    && event.target == Some(ally.to_bits())),
+            "each bolt transfers Atonement"
+        );
+    }
     assert_eq!(
         damage,
         25,
@@ -991,7 +999,6 @@ fn ultimate_penitence_channels_bolts_extends_pain_and_transfers_atonement() {
             .filter(|event| matches!(event.spell_id, Some(421453 | 421434 | 421543)))
             .collect::<Vec<_>>()
     );
-    assert_eq!(transfers, damage, "each landed bolt transfers Atonement");
     let pain = h
         .app
         .world()
