@@ -82,6 +82,24 @@ impl SummonLevels {
         })
     }
 
+    /// Active Keystone health uses the map difficulty's tuning and the creature's source delta.
+    pub(crate) fn keystone_range(
+        &self,
+        template: &CreatureTemplate,
+        map: u32,
+        difficulty: u32,
+    ) -> Option<GuardianLevelRange> {
+        let content_tuning_id = *self.maps.get(&(map, difficulty))?;
+        if content_tuning_id == 0 {
+            return None;
+        }
+        Some(GuardianLevelRange {
+            content_tuning_id,
+            range: *self.ranges.get(&content_tuning_id)?,
+            delta: self.delta(template.entry, difficulty)?,
+        })
+    }
+
     /// Creature::ApplyLevelScaling: template, then map, then actual area ancestry.
     /// Critters never acquire regional tuning. Missing terrain remains unknown.
     fn content_tuning(

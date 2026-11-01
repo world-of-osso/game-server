@@ -36,6 +36,8 @@ struct Week {
 #[derive(Debug, Deserialize)]
 pub struct AffixSchedule {
     season: String,
+    pub season_id: u32,
+    season_id_citation: String,
     region: String,
     reset_citation: String,
     bands: CitedBands,
@@ -55,7 +57,11 @@ impl AffixSchedule {
         if schedule.season != "Midnight Season 2" || schedule.region != "US" {
             return Err("expected Midnight Season 2 US policy".into());
         }
-        if schedule.reset_citation.is_empty() || schedule.bands.citation.is_empty() {
+        if schedule.season_id == 0
+            || schedule.season_id_citation.is_empty()
+            || schedule.reset_citation.is_empty()
+            || schedule.bands.citation.is_empty()
+        {
             return Err("missing policy citation".into());
         }
         for week in &schedule.weeks {
