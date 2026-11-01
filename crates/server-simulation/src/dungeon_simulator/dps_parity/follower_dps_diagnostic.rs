@@ -463,7 +463,7 @@ fn blood_follower_death_strike_counts_damage_beyond_current_health() {
         finish_follower_precombat(&mut app, actor);
         app.world_mut()
             .entity_mut(actor)
-            .insert(crate::test_support::SimcInfiniteHealth);
+            .insert(server::test_support::SimcInfiniteHealth);
         let max = app.world().get::<Health>(actor).unwrap().max;
         app.world_mut().get_mut::<Health>(actor).unwrap().current = max * start_health_fraction;
         let hit = Hit {
