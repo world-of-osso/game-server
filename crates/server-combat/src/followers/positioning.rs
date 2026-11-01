@@ -14,6 +14,8 @@ use ::navigation::worker::{Output, Query as NavQuery};
 const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
 /// Extra clearance for movement and sight updates between ticks, in yards.
 const AGGRO_STEP_MARGIN: f32 = 0.5;
+/// Spacing of the sight samples along a path leg inside a watcher's radius, in yards.
+const SIGHT_SAMPLE_SPACING: f32 = 0.5;
 
 /// Live idle-hostile geometry used at the final combat-movement step.
 #[derive(Component)]
@@ -214,9 +216,10 @@ fn blockers_on_path(
     for watcher in watchers {
         let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
         let center = targets::position(world, watcher).ok_or("Unpulled watcher lacks position")?;
-        if path.windows(2).any(|leg| {
-            pull_route::segment_distance_squared(center, leg[0], leg[1]) < radius * radius
-        }) {
+        if path
+            .windows(2)
+            .any(|leg| leg_enters_sight(world, unit, watcher, (center, radius), leg[0], leg[1]))
+        {
             debug!(
                 ?unit,
                 ?watcher,
@@ -228,6 +231,39 @@ fn blockers_on_path(
         }
     }
     Ok(blockers)
+}
+
+/// The one idle-hostile exclusion predicate for a path leg. TC ea5113cce
+/// Creature.cpp:2107 `Creature::CanStartAttack` ends `return IsWithinLOSInMap(who);`
+/// (:2143): a leg enters a watcher's sight only where it is inside the radius and the
+/// watcher sees the unit standing there.
+pub(super) fn leg_enters_sight(
+    world: &World,
+    unit: Entity,
+    watcher: Entity,
+    (center, radius): (Vec3, f32),
+    from: Vec3,
+    to: Vec3,
+) -> bool {
+    if pull_route::segment_distance_squared(center, from, to) >= radius * radius {
+        return false;
+    }
+    let leg = to - from;
+    let closest = from
+        + leg * ((center - from).dot(leg) / leg.length_squared().max(f32::EPSILON)).clamp(0.0, 1.0);
+    let steps = (leg.length() / SIGHT_SAMPLE_SPACING).ceil().max(1.0) as usize;
+    (0..=steps)
+        .map(|step| from.lerp(to, step as f32 / steps as f32))
+        .chain([closest])
+        .filter(|point| point.distance_squared(center) < radius * radius)
+        .any(|point| {
+            let feet = shared::components::Position {
+                x: point.x,
+                y: point.y,
+                z: point.z,
+            };
+            crate::line_of_sight::sees_at(world, watcher, unit, feet)
+        })
 }
 
 pub(super) fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {

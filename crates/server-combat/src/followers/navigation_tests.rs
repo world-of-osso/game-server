@@ -1073,3 +1073,129 @@ fn follower_chase_crosses_ruby_raised_path_seam_without_dropping_into_floor_pock
         assert!(reached, "offset{offset}: follower never reached its target");
     }
 }
+
+/// Live instance 15, 2026-11-01 10:13-11:30 UTC: Reinforced Drones (216363) on a ledge
+/// above the Ki'katal slope held every follower above the slope for over an hour, though
+/// native aggro (`Creature::CanStartAttack` -> `IsWithinLOSInMap`) never sees that path.
+#[test]
+#[ignore = "requires actual Ara-Kara navigation, ground and line-of-sight assets"]
+fn ara_kara_regroup_holds_only_for_watchers_that_see_the_path() {
+    let hidden_drone = Vec3::new(-319.188, 128.86, -1004.71);
+    // On the route between the owner and the slope bottom, in plain view of the path.
+    let visible_watcher = Vec3::new(-344.8, 116.1, -1011.5);
+    for (watcher_at, held) in [(hidden_drone, false), (visible_watcher, true)] {
+        let (mut h, tank) = spawn_ara_kara_slope_follower();
+        let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+        let map = *h.app.world().get::<InMap>(tank).unwrap();
+        h.app.world_mut().entity_mut(watcher).insert((
+            position(watcher_at),
+            map,
+            shared::components::ModelDisplay {
+                display_id: super::native_fixture::template_display(216363),
+            },
+            shared::components::UnitScale(0.8),
+            shared::components::UnitFactionTemplate(16),
+            shared::components::UnitLevel(80),
+            crate::creature_aggro::AggroRange,
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        h.advance(1);
+        let mut hold = None;
+        for _ in 0..4 {
+            hold = Some(super::positioning::hold_unsafe_approach(
+                h.app.world_mut(),
+                tank,
+                h.caster,
+            ));
+            crate::navigation::drain_fixture(&mut h.app);
+        }
+        assert_eq!(hold, Some(held), "watcher at {watcher_at:?}");
+    }
+}
+
+fn spawn_ara_kara_slope_follower() -> (Harness, Entity) {
+    use crate::creature_ai::{FollowOwner, PartyFollowSlot};
+    use shared::components::Level;
+
+    let (mut h, placeholder, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    h.app.world_mut().despawn(placeholder);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    // The watcher is test template 6; native aggro geometry reads its native template.
+    let watcher_templates = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(watcher_templates.templates);
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut instances = crate::maps::InstanceManager::default();
+    let map = instances
+        .create_map(
+            &maps,
+            2660,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 1,
+                ..default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1_793_497_780,
+            },
+        )
+        .unwrap()
+        .map;
+    h.app.insert_resource(instances);
+    // Live roster samples: the owner below the slope, the tank held above it.
+    h.app.world_mut().entity_mut(h.caster).insert((
+        position(Vec3::new(-340.7, 117.5, -1007.4)),
+        map,
+        Level(79),
+    ));
+    install_movement_only_actions(&mut h.app);
+    let tank = super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 104).unwrap();
+    h.app.world_mut().entity_mut(tank).insert((
+        position(Vec3::new(-330.4164, 125.511375, -992.28613)),
+        map,
+        FollowOwner::new(h.caster),
+        PartyFollowSlot::new(0, 4),
+    ));
+    let data = crate::ground::ground_data_dir();
+    h.app.insert_resource(GroundMap::new(
+        &data,
+        HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
+    ));
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&data.join("los")).unwrap());
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    crate::navigation::install_fixture(&mut h.app, crate::navigation::Navigation::new(&nav));
+    (h, tank)
+}
+
+fn position(point: Vec3) -> Position {
+    Position {
+        x: point.x,
+        y: point.y,
+        z: point.z,
+    }
+}
