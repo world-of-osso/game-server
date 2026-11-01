@@ -11,8 +11,8 @@ use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::summon::SummonedCreature;
 use combat::spell_cast::targets::{self, Relation};
-use shared::components::Health;
 use combat::spell_info::{SpellEffect, SpellInfo};
+use shared::components::Health;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealingMultiplier(direct_multiplier),
@@ -111,7 +111,13 @@ pub(super) fn consume_after_heal(
     });
 }
 
-fn recast_on_nearby_allies(world: &mut World, caster: Entity, target: Entity, spell: u32, depth: u8) {
+fn recast_on_nearby_allies(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) {
     let Some(center) = targets::position(world, target) else {
         return;
     };
