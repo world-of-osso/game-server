@@ -49,30 +49,32 @@ fn action(target: Option<Entity>) -> Action {
 
 #[test]
 fn native_target_context_current_and_explicit_row_are_distinct() {
-    let (h, targets, b) = enemies();
-    let facts = NativeFacts::new(
-        h.app.world(),
-        h.caster,
-        &b,
-        encounter(h.app.world()),
-        targets.len(),
-    )
-    .with_targets(Some(targets[0]), &targets);
-    assert_eq!(facts.value("target.health.pct").unwrap(), 25.0);
-    assert_eq!(
-        facts
-            .value_for(&action(Some(h.npc)), "target.health.pct")
-            .unwrap(),
-        80.0
-    );
-    assert_eq!(
-        h.app
-            .world()
-            .get::<crate::networking::CombatTarget>(h.caster)
-            .unwrap()
-            .0,
-        Some(h.npc)
-    );
+    let (mut h, targets, b) = enemies();
+    let read = |h: &Harness, row: Entity| {
+        let facts = NativeFacts::new(
+            h.app.world(),
+            h.caster,
+            &b,
+            encounter(h.app.world()),
+            targets.len(),
+        )
+        .with_targets(Some(targets[0]), &targets);
+        (
+            facts.value("target.health.pct").unwrap(),
+            facts
+                .value_for(&action(Some(row)), "target.health.pct")
+                .unwrap(),
+        )
+    };
+    // SimC76f8118 player.cpp10879–10884: the actor's own selection in the
+    // candidates is its current target, over the controller's.
+    assert_eq!(read(&h, targets[0]), (80.0, 25.0));
+    // Without one, the controller's current and an explicit row stay distinct.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(None));
+    assert_eq!(read(&h, h.npc), (25.0, 80.0));
 }
 
 #[test]
@@ -114,6 +116,12 @@ fn native_target_context_expired_or_absent_current_never_redirects() {
     let (mut h, targets, b) = enemies();
     let stale = targets[0];
     assert!(h.app.world_mut().despawn(stale));
+    // The actor's own selection is outside the candidates, so retarget
+    // (player.cpp10879–10884) has nothing to adopt either.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(stale)));
     for current in [Some(stale), None] {
         let facts = NativeFacts::new(h.app.world(), h.caster, &b, encounter(h.app.world()), 1)
             .with_targets(current, &targets[1..]);
