@@ -55,6 +55,21 @@ pub(crate) fn spawn_profile_fixture_with_plugins(
     spawning::initialize(h.app.world_mut(), h.caster, unit, profile.clone()).unwrap();
     h.app
         .world_mut()
+        .entity_mut(unit)
+        .insert(super::FollowerActionSpells(
+            [
+                profile.attack_spell,
+                profile.cooldown_spell,
+                profile.heal_spell,
+                profile.taunt_spell,
+                profile.form_spell,
+            ]
+            .into_iter()
+            .filter(|&spell| spell != 0)
+            .collect(),
+        ));
+    h.app
+        .world_mut()
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = Some(h.npc);

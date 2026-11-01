@@ -1,10 +1,8 @@
 //! Budget capability, not a cast command or a default-heal substitute.
 use bevy::prelude::*;
-use shared::components::Level;
 use shared::group::GroupRole;
 
-use super::kit::{Slot, Target};
-use super::{Follower, FollowerCatalog};
+use super::{Follower, FollowerActionSpells};
 use crate::spell_cast::{self, CastFailure};
 use crate::spell_info::SpellStore;
 
@@ -30,9 +28,9 @@ pub(super) fn read_ready_heal(
 }
 
 fn read_heal_candidates(world: &World, party: &[Entity]) -> Result<Vec<(Entity, u32)>, String> {
-    let catalog = world
-        .get_resource::<FollowerCatalog>()
-        .ok_or("Tank heal readiness requires the sourced follower kit catalog")?;
+    let store = world
+        .get_resource::<SpellStore>()
+        .ok_or("Tank heal readiness requires the spell store")?;
     let mut candidates = Vec::new();
     for &unit in party {
         let Some(follower) = world.get::<Follower>(unit) else {
@@ -41,15 +39,38 @@ fn read_heal_candidates(world: &World, party: &[Entity]) -> Result<Vec<(Entity, 
         if follower.profile.role != GroupRole::Healer {
             continue;
         }
-        let level = world.get::<Level>(unit).map_or(0, |level| level.0);
-        let heals = catalog.kits.iter().filter(|entry| {
-            let heals_tank = matches!(entry.conditions.target, Target::Tank | Target::Party);
-            let healing_slot = matches!(entry.slot, Slot::Heal | Slot::Hot);
-            entry.available(follower.profile.spec_id, level) && heals_tank && healing_slot
-        });
-        candidates.extend(heals.map(|entry| (unit, entry.spell_id)));
+        let actions = world.get::<FollowerActionSpells>(unit).ok_or_else(|| {
+            format!("Tank heal readiness lacks action metadata for healer {unit}")
+        })?;
+        for &action in &actions.0 {
+            let spell_id = match spell_cast::knowledge::resolve_actor_action(world, unit, action) {
+                Ok(spell_id) => spell_id,
+                Err(CastFailure::UnknownSpell | CastFailure::NotKnown) => continue,
+                Err(error) => {
+                    return Err(format!("Tank heal readiness action {action}: {error:?}"));
+                }
+            };
+            let spell = store
+                .get(spell_id)
+                .ok_or_else(|| format!("Tank heal readiness lacks spell {spell_id}"))?;
+            if has_healing_effect(store, spell, 0) {
+                candidates.push((unit, spell_id));
+            }
+        }
     }
     Ok(candidates)
+}
+
+fn has_healing_effect(store: &SpellStore, spell: &crate::spell_info::SpellInfo, depth: u8) -> bool {
+    spell.effects.iter().any(|effect| {
+        effect.effect == 10
+            || effect.aura == crate::auras::handlers::PERIODIC_HEAL
+            || (depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH
+                && effect.trigger_spell != 0
+                && store
+                    .get(effect.trigger_spell)
+                    .is_some_and(|child| has_healing_effect(store, child, depth + 1)))
+    })
 }
 
 fn read_spell_readiness(

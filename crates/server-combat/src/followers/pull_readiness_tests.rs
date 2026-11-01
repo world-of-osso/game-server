@@ -1,6 +1,6 @@
-//! Real level32 Crenna, sourced kit rows and native resource/cast-state boundaries.
+//! Real level32 Crenna, selected actions and native resource/cast-state boundaries.
 use super::pull_forecast_tests::{add_native_healer, source_fixture};
-use super::{Follower, FollowerCatalog, pull_readiness};
+use super::{Follower, FollowerActionSpells, pull_readiness};
 use crate::maps::InMap;
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_cast::{CostPool, applicable_costs, creature_cast, spell_costs};
@@ -26,13 +26,11 @@ fn fixture(spells: &[u32]) -> (Harness, Entity, Entity) {
     let profile = h.app.world().get::<Follower>(tank).unwrap().profile.clone();
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
     let healer = add_native_healer(&mut h);
-    h.advance(3);
-    // Bound the fixture to real kit rows, not invented spells or costs.
     h.app
         .world_mut()
-        .resource_mut::<FollowerCatalog>()
-        .kits
-        .retain(|entry| entry.spec_id == 105 && spells.contains(&entry.spell_id));
+        .entity_mut(healer)
+        .insert(FollowerActionSpells(spells.to_vec()));
+    h.advance(3);
     (h, tank, healer)
 }
 
@@ -229,7 +227,7 @@ fn swiftmend_charge_count(h: &Harness, healer: Entity) -> usize {
 }
 
 #[test]
-fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
+fn tank_pull_healer_ready_requires_known_spell_and_honors_native_cooldown() {
     let (mut h, tank, healer) = fixture(&[18562]);
     let party = [h.caster, tank, healer];
     creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
@@ -240,29 +238,22 @@ fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
             .unwrap()
             .is_some()
     );
-    let minimum = h
+    let known = h
         .app
         .world()
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .map(|entry| entry.min_level)
-        .min()
-        .unwrap();
-    assert!(minimum > 0);
+        .get::<crate::class_progression::KnownSpells>(healer)
+        .unwrap()
+        .clone();
     h.app
         .world_mut()
         .entity_mut(healer)
-        .insert((Level(minimum - 1), UnitLevel(minimum - 1)));
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
             .is_none()
     );
-    h.app
-        .world_mut()
-        .entity_mut(healer)
-        .insert((Level(32), UnitLevel(32)));
+    h.app.world_mut().entity_mut(healer).insert(known);
     let charges = swiftmend_charge_count(&h, healer);
     assert!(charges > 0);
     for _ in 0..charges {
@@ -313,15 +304,7 @@ fn tank_pull_healer_ready_does_not_ignore_school_lockout() {
 #[test]
 fn tank_pull_healer_area_ready_requires_tank_in_native_tranquility_area() {
     let (mut h, tank, healer) = fixture(&[740]);
-    let source_level = h
-        .app
-        .world()
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .find(|entry| entry.spell_id == 740)
-        .unwrap()
-        .min_level;
+    let source_level = 90;
     let owner = h.caster;
     h.app
         .world_mut()
@@ -353,9 +336,12 @@ fn tank_pull_healer_area_ready_requires_tank_in_native_tranquility_area() {
 }
 
 #[test]
-fn tank_pull_healer_ready_missing_kit_does_not_substitute_default_profile_heal() {
+fn tank_pull_healer_ready_missing_actions_does_not_substitute_default_profile_heal() {
     let (mut h, tank, healer) = fixture(&[774, 8936]);
     let party = [h.caster, tank, healer];
-    h.app.world_mut().remove_resource::<FollowerCatalog>();
+    h.app
+        .world_mut()
+        .entity_mut(healer)
+        .remove::<FollowerActionSpells>();
     assert!(pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party).is_err());
 }

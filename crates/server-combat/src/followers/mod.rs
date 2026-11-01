@@ -171,6 +171,16 @@ pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
         .insert(tank_pull_back::WaitingForPullBack(tank));
 }
 
+#[cfg(feature = "test-support")]
+pub fn test_ready_heal(
+    world: &mut World,
+    tank: Entity,
+    party: &[Entity],
+) -> Result<Option<(Entity, u32)>, String> {
+    Ok(pull_readiness::read_ready_heal(world, tank, party)?
+        .map(|ready| (ready.healer, ready.spell_id)))
+}
+
 /// Program-bound class actions and selected equipped on-use spells.
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct FollowerActionSpells(pub Vec<u32>);

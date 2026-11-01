@@ -4,7 +4,6 @@ use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 use ::navigation::worker::{Output, Query};
 use bevy::prelude::*;
-use shared::components::Level;
 
 #[derive(Component)]
 struct TargetPaths {
@@ -96,27 +95,54 @@ pub(super) fn retain_reachable(
     false
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hostile_range_comes_from_action_metadata_not_the_kit_catalog() {
+        let (mut harness, unit) = super::super::kit_tests::at_level_unengaged(209059, 32, |_| {});
+        let world = harness.app.world_mut();
+        let follower = world.get::<Follower>(unit).unwrap().clone();
+        let expected = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(108853)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .range
+            .unwrap()
+            .max_hostile;
+        world
+            .entity_mut(unit)
+            .insert(super::super::FollowerActionSpells(vec![108853]));
+        world.remove_resource::<super::super::FollowerCatalog>();
+        assert_eq!(attack_range(world, unit, &follower), Some(expected));
+        world
+            .entity_mut(unit)
+            .insert(super::super::FollowerActionSpells(Vec::new()));
+        assert_eq!(attack_range(world, unit, &follower), None);
+    }
+}
+
 fn attack_range(world: &World, unit: Entity, follower: &Follower) -> Option<f32> {
     let store = world.get_resource::<crate::spell_info::SpellStore>()?;
-    let level = world.get::<Level>(unit).map_or(0, |level| level.0);
-    let kit = world
-        .get_resource::<super::FollowerCatalog>()
-        .into_iter()
-        .flat_map(|catalog| &catalog.kits)
-        .filter(|entry| entry.available(follower.profile.spec_id, level))
-        .cloned()
-        .map(super::utility::normalize_entry)
-        .filter(|entry| entry.conditions.target == super::kit::Target::Enemy)
-        .map(|entry| entry.spell_id);
-    std::iter::once(follower.profile.attack_spell)
-        .chain(kit)
+    let actions = &world
+        .get::<super::FollowerActionSpells>(unit)
+        .expect("follower action metadata unavailable")
+        .0;
+    actions
+        .iter()
+        .copied()
+        .flat_map(|id| {
+            let resolved = crate::spell_cast::knowledge::resolve_actor_action(world, unit, id).ok();
+            std::iter::once(id).chain(resolved)
+        })
         .filter_map(|id| {
-            store
-                .get(id)?
-                .misc
-                .as_ref()?
-                .range
-                .map(|range| range.max_hostile)
+            let spell = store.get(id)?;
+            (crate::spell_info::positivity::negative_effects(store, spell) != 0)
+                .then_some(spell.misc.as_ref()?.range?.max_hostile)
         })
         .chain(follower.profile.melee.then_some(super::ai::MELEE_REACH))
         .filter(|range| *range > 0.0)

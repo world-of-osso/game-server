@@ -58,18 +58,12 @@ pub(super) fn stop_damage(world: &mut World, unit: Entity) {
     if world.get::<CastState>(unit).is_some_and(|cast| {
         let hostile = Entity::try_from_bits(cast.target)
             .is_some_and(|target| crate::spell_cast::targets::is_hostile(world, unit, target));
-        let damage_slot = world.get::<Follower>(unit).is_some_and(|follower| {
-            world
-                .resource::<super::FollowerCatalog>()
-                .kits
-                .iter()
-                .any(|entry| {
-                    entry.spec_id == follower.profile.spec_id
-                        && entry.spell_id == cast.spell_id
-                        && matches!(entry.slot, super::kit::Slot::Attack | super::kit::Slot::Aoe)
-                })
-        });
-        hostile || damage_slot
+        let store = world.resource::<crate::spell_info::SpellStore>();
+        let spell = store
+            .get(cast.spell_id)
+            .expect("pull-back cast spell unavailable");
+        let damaging = crate::spell_info::positivity::negative_effects(store, spell) != 0;
+        hostile || damaging
     }) {
         crate::spell_cast::cancel_cast(world, unit);
     }

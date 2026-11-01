@@ -423,6 +423,68 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
 }
 
 #[test]
+fn fire_follower_reach_uses_program_actions_without_the_kit_catalog() {
+    let mut pull = spawn(63);
+    let actor = pull.follower;
+    let world = pull.harness.app.world_mut();
+    let actions = &world
+        .get::<server_combat::followers::FollowerActionSpells>(actor)
+        .unwrap()
+        .0;
+    assert!(
+        actions.contains(&108853),
+        "Fire Blast must be a selected APL action"
+    );
+    let blast =
+        server_combat::followers::spell_unintended_reach(world, actor, 108853, actor).unwrap();
+    assert!(
+        blast.0 > 0.0,
+        "native Fire Blast spread reach must be visible"
+    );
+    world.remove_resource::<server_combat::followers::FollowerCatalog>();
+    let reaches = server_combat::followers::party_unintended_reach(world, &[actor]);
+    assert!(
+        reaches
+            .iter()
+            .any(|&(unit, caster, _)| unit == actor && caster >= blast.0)
+    );
+}
+
+#[test]
+fn class_healer_pull_readiness_uses_program_heals_without_the_kit_catalog() {
+    let mut pull = spawn(257);
+    let healer = pull.follower;
+    let tank = pull.harness.caster;
+    let world = pull.harness.app.world_mut();
+    let actions = world
+        .get::<server_combat::followers::FollowerActionSpells>(healer)
+        .unwrap()
+        .0
+        .clone();
+    assert!(
+        actions.contains(&2061),
+        "Holy Flash Heal must be a selected APL action"
+    );
+    world.remove_resource::<server_combat::followers::FollowerCatalog>();
+    let (ready_healer, spell) = server_combat::followers::test_ready_heal(world, tank, &[healer])
+        .unwrap()
+        .expect("a sourced APL heal must be ready");
+    assert_eq!(ready_healer, healer);
+    assert!(
+        actions.contains(&spell),
+        "ready heal {spell} not in APL actions {actions:?}"
+    );
+    world
+        .entity_mut(healer)
+        .insert(server_combat::followers::FollowerActionSpells(Vec::new()));
+    assert!(
+        server_combat::followers::test_ready_heal(world, tank, &[healer])
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;
