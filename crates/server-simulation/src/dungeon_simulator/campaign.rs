@@ -2914,13 +2914,8 @@ fn spawn_run_mode_record(
     }
     let keystone = match (options, planned) {
         (Some(options), Some((definition, _))) => {
-            let hostile_sources = actors
-                .iter()
-                .filter_map(|(guid, actor)| {
-                    crate::spell_cast::targets::is_hostile(app.world(), party.owner, *actor)
-                        .then_some(*guid)
-                })
-                .collect();
+            let hostile_sources =
+                super::keystone_route::attackable_sources(app.world(), party.owner, &actors);
             let plan = super::keystone_route::plan(
                 &graph,
                 &definition.creature_weights,

@@ -5,6 +5,28 @@ use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet};
 use super::graph::{Graph, RouteStep};
 use serde::Serialize;
 
+/// Count only living hostile sources the owner can attack when planning starts.
+pub(super) fn attackable_sources(
+    world: &bevy::prelude::World,
+    owner: bevy::prelude::Entity,
+    actors: &BTreeMap<u32, bevy::prelude::Entity>,
+) -> HashSet<u32> {
+    actors
+        .iter()
+        .filter_map(|(&guid, &actor)| {
+            (crate::spell_cast::targets::is_alive(world, actor)
+                && crate::spell_cast::targets::is_hostile(world, owner, actor)
+                && crate::spell_cast::targets::relation_matches(
+                    world,
+                    owner,
+                    actor,
+                    crate::spell_cast::targets::Relation::Enemy,
+                ))
+            .then_some(guid)
+        })
+        .collect()
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub(super) struct PlannedRoute {
     pub steps: Vec<RouteStep>,
@@ -279,6 +301,68 @@ mod tests {
             retained,
             graph.route.iter().map(|step| step.pack).collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn planning_excludes_immune_hostiles_but_keeps_attackable_hostiles() {
+        use bevy::prelude::World;
+        use shared::components::{Health, Npc, Player, UnitFactionTemplate, UnitFlags};
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let mut world = World::new();
+        world.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
+        let map = crate::maps::InMap {
+            map_id: 2825,
+            instance_id: 1,
+        };
+        let owner = world
+            .spawn((
+                map,
+                Player {
+                    name: "Hunter".into(),
+                    race: 1,
+                    class: 3,
+                    appearance: Default::default(),
+                },
+                UnitFactionTemplate(3),
+            ))
+            .id();
+        let make_npc = |world: &mut World, entry, flags| {
+            world
+                .spawn((
+                    map,
+                    Npc {
+                        template_id: entry,
+                        name: "Den enemy".into(),
+                    },
+                    UnitFactionTemplate(14),
+                    UnitFlags(flags),
+                    Health {
+                        current: 100.0,
+                        max: 100.0,
+                    },
+                ))
+                .id()
+        };
+        let nanea = make_npc(&mut world, 244889, 0x340);
+        let enemy = make_npc(&mut world, 241813, 0);
+        assert!(crate::spell_cast::targets::is_hostile(&world, owner, nanea));
+        let selected = attackable_sources(
+            &world,
+            owner,
+            &BTreeMap::from([(31000461, nanea), (31000462, enemy)]),
+        );
+        assert_eq!(selected, HashSet::from([31000462]));
+        world.entity_mut(nanea).insert(UnitFlags(0));
+        let selected = attackable_sources(
+            &world,
+            owner,
+            &BTreeMap::from([(31000461, nanea), (31000462, enemy)]),
+        );
+        assert_eq!(selected, HashSet::from([31000461, 31000462]));
     }
 
     #[test]
