@@ -2088,6 +2088,37 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let umbral_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(393763)
+        })
+        .count();
+    let generators = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(194153 | 190984))
+        })
+        .count();
+    assert!(
+        umbral_applications > 0 && umbral_applications < generators,
+        "Umbral procs {umbral_applications} must be intermittent across {generators} generators"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::AuraRemoved
+                && event.spell_id == Some(393763)),
+        "a generator must consume Umbral Embrace"
+    );
     let fires_applications = events
         .iter()
         .filter(|event| {
