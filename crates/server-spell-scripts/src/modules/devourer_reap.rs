@@ -11,9 +11,15 @@ const REAP: u32 = 1226019;
 const REAP_DAMAGE: u32 = 1225823;
 const CULL: u32 = 1245453;
 const CULL_DAMAGE: u32 = 1245455;
+const ERADICATE: u32 = 1225826;
+const ERADICATE_BUFF: u32 = 1239524;
+const ERADICATE_REAP_DAMAGE: u32 = 1225827;
+const ERADICATE_CULL_DAMAGE: u32 = 1279200;
 const SHATTERED_SOULS: u32 = 1227619;
 const MOMENT_OF_CRAVING: u32 = 1238495;
 const SOULSHAPER: u32 = 1238739;
+const SCYTHES_EMBRACE: u32 = 1246558;
+const REAP_ENERGIZE: u32 = 1261679;
 
 #[derive(Component, Default)]
 struct SoulburstFailures(u32);
@@ -39,6 +45,8 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     let damage = match spell.id {
         REAP => REAP_DAMAGE,
         CULL => CULL_DAMAGE,
+        ERADICATE if combat::auras::has_aura(world, caster, 1217607) => ERADICATE_CULL_DAMAGE,
+        ERADICATE => ERADICATE_REAP_DAMAGE,
         _ => return,
     };
     let target = spell
@@ -59,6 +67,24 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
     )
     .expect("native Reap fragment consumption");
     trigger_soulburst(world, caster, consumed);
+    // SimC76f8118 sc_demon_hunter.cpp6003–6007,6145–6149: selected Scythe's
+    // Embrace executes native Reap energize on each Reap, Cull and Eradicate.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(SCYTHES_EMBRACE))
+        && !spell_cast::try_cast_triggered(world, caster, REAP_ENERGIZE, Some(caster), 1)
+    {
+        error!(?caster, "native Scythe's Embrace energize was refused");
+    }
+    // SimC76f8118 cpp6231–6251 consumes Eradicate after choosing its damage child.
+    if spell.id == ERADICATE {
+        combat::auras::remove_auras(
+            world,
+            caster,
+            combat::auras::RemoveReason::Consumed,
+            |aura| aura.caster == caster && aura.spell_id == ERADICATE_BUFF,
+        );
+    }
     // SimC76f8118 cpp6083–6107 consumes Moment after using its fragment limit.
     combat::auras::remove_auras(
         world,
