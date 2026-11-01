@@ -39,6 +39,7 @@ fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstan
     if actor != aura.caster {
         return;
     }
+    super::devourer_voidfall::complete_ray(world, actor);
     let known = world.get::<KnownSpells>(actor);
     let final_breath = known.is_some_and(|known| known.contains(1266500));
     let moment = known.is_some_and(|known| known.contains(1238488));
@@ -141,6 +142,8 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
             | 1279200
             | 1239127
             | 1297432
+            | 1256305
+            | 1256619
     ) || !world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(1227619))

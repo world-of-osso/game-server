@@ -153,6 +153,54 @@ fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn annihilator_metamorphosis_builds_voidfall_and_reap_fires_meteors() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.extend([1253304, 1256295, 1253391, 1256353]);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..20 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), actor, 1256302) {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1256302),
+        "Meta creates the Voidfall spending buff"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1245453, Some(target), 1);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(
+        observed(&run, 1256305, CombatLogKind::Damage, true),
+        "Voidfall meteor lands"
+    );
+    assert!(
+        observed(&run, 1256619, CombatLogKind::Damage, true),
+        "World Killer lands"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1256302),
+        "Meteoric Fall spends the buff"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn eradicate_consumes_fragments_buff_and_deals_damage() {
     let mut run = prepare(1480, 1).expect("native Devourer profile");
     let actor = run.actor;
