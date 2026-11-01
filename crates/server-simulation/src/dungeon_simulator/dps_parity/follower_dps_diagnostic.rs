@@ -1757,15 +1757,6 @@ fn follower_attacks_with_its_equipped_weapon_type() {
         let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
         let copy = create_open_follower_copy(&mut app, 2515).unwrap();
         let (mut app, actor, target, _) = prepare_class_follower(app, copy, spec, 70);
-        let stats = app
-            .world()
-            .get::<crate::stats::CharacterStats>(actor)
-            .unwrap();
-        assert_eq!(
-            stats.main_hand.kind == shared::components::WeaponType::Ranged,
-            ranged,
-            "spec {spec} must use the expected DB2 weapon type"
-        );
         let owner = app
             .world()
             .get::<crate::followers::Follower>(actor)
@@ -1780,6 +1771,15 @@ fn follower_attacks_with_its_equipped_weapon_type() {
         ));
         crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
         finish_follower_precombat(&mut app, actor);
+        let stats = app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap();
+        assert_eq!(
+            stats.main_hand.kind == shared::components::WeaponType::Ranged,
+            ranged,
+            "spec {spec} must use the expected DB2 weapon type"
+        );
         app.world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
