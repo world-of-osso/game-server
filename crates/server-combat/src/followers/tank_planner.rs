@@ -9,6 +9,41 @@ pub(super) struct AdmittedPosition(pub Vec3);
 #[derive(Component)]
 struct AppliedMovementAt(f64);
 
+/// The last hold reported for a tank; a persistent hold repeats once per interval.
+#[derive(Component)]
+struct ReportedHold {
+    reason: &'static str,
+    target: Option<Entity>,
+    at: f64,
+}
+
+const HOLD_REPORT_INTERVAL_SECS: f64 = 10.0;
+
+/// Report why the tank is held, at info level: on every new reason or target, then
+/// once per interval while the same hold lasts. `detail` runs only when it logs.
+pub(super) fn report_hold(
+    world: &mut World,
+    tank: Entity,
+    target: Option<Entity>,
+    reason: &'static str,
+    detail: impl FnOnce(&World) -> Option<String>,
+) {
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    if world.get::<ReportedHold>(tank).is_some_and(|last| {
+        last.reason == reason && last.target == target && now - last.at < HOLD_REPORT_INTERVAL_SECS
+    }) {
+        return;
+    }
+    let position = world.get::<shared::components::Position>(tank).copied();
+    let detail = detail(world);
+    info!(?tank, ?target, ?position, reason, detail, "Tank held");
+    world.entity_mut(tank).insert(ReportedHold {
+        reason,
+        target,
+        at: now,
+    });
+}
+
 /// A budget-admitted existing-fight caster, consumed by ordinary native chase.
 #[derive(Component)]
 struct AdmittedCasterTarget(Entity);
@@ -113,16 +148,13 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
         return false;
     }
     // Existing but incomplete run records still go through fail-closed admission.
-    match read_route_admission(world, tank, target, &follower, None, true) {
+    let (reason, error) = match read_route_admission(world, tank, target, &follower, None, true) {
         Ok(Some(true)) => return false,
-        Ok(None) => debug!(
-            ?tank,
-            ?target,
-            "Tank pursuit awaits published admission route"
-        ),
-        Ok(Some(false)) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
-        Err(error) => debug!(?tank, ?target, %error, "Tank pursuit admission unavailable"),
-    }
+        Ok(None) => ("pursuit awaits published admission route", None),
+        Ok(Some(false)) => ("pursuit held by pull budget", None),
+        Err(error) => ("pursuit admission unavailable", Some(error)),
+    };
+    report_hold(world, tank, Some(target), reason, |_| error);
     world
         .entity_mut(tank)
         .remove::<crate::creature_ai::FollowOwner>()
@@ -328,4 +360,63 @@ pub(super) fn read_engaged_caster_candidates(
         })
         .map(|(enemy, _)| enemy)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::followers::hazard_reaction_tests::TraceBuffer;
+    use std::time::Duration;
+
+    #[test]
+    fn tank_hold_reports_at_info_on_change_and_once_per_interval() {
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let tank = world
+            .spawn(shared::components::Position {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            })
+            .id();
+        let target = world.spawn_empty().id();
+        let buffer = TraceBuffer::default();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(buffer.clone())
+            .without_time()
+            .with_ansi(false)
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            let mut tick = |world: &mut World, millis: u64, reason| {
+                world
+                    .resource_mut::<Time>()
+                    .advance_by(Duration::from_millis(millis));
+                report_hold(world, tank, Some(target), reason, |_| {
+                    Some("watcher (0, 0, 0) r=20".into())
+                });
+            };
+            // 20 s of one hold at 20 ticks/s, then a new reason.
+            tick(&mut world, 0, "pull-back has no admitted safe point");
+            for _ in 0..400 {
+                tick(&mut world, 50, "pull-back has no admitted safe point");
+            }
+            tick(&mut world, 50, "pursuit held by pull budget");
+        });
+        let text = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+        let held: Vec<_> = text
+            .lines()
+            .filter(|line| line.contains("Tank held"))
+            .collect();
+        assert_eq!(held.len(), 4, "{text}");
+        assert!(held.iter().all(|line| line.contains("INFO")), "{text}");
+        assert_eq!(
+            held.iter()
+                .filter(|line| line.contains("no admitted safe point"))
+                .count(),
+            3
+        );
+        assert!(held[3].contains("pursuit held by pull budget"));
+        assert!(held[0].contains("x: 1.0") && held[0].contains("watcher (0, 0, 0) r=20"));
+    }
 }
