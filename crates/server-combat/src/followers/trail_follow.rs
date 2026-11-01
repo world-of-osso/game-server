@@ -178,6 +178,7 @@ fn choose_route(
     paths: Vec<Result<Vec<Vec3>, String>>,
 ) -> Option<(usize, Vec3, Vec<Vec3>)> {
     let exclusions = world.get::<positioning::CombatMovementExclusions>(unit)?;
+    let los = world.get_resource::<crate::line_of_sight::LineOfSight>();
     candidates
         .into_iter()
         .zip(paths)
@@ -188,12 +189,19 @@ fn choose_route(
             if origin.distance(to) <= ARRIVAL_DISTANCE {
                 return None;
             }
+            let projected_start = path
+                .first()
+                .is_some_and(|point| (point.x - origin.x).hypot(point.z - origin.z) < 0.001);
             let mut previous = origin;
-            let safe = path.iter().copied().all(|point| {
-                let permitted = exclusions.permits(previous, point);
-                previous = point;
-                permitted
-            });
+            let safe = path
+                .iter()
+                .copied()
+                .skip(usize::from(projected_start))
+                .all(|point| {
+                    let permitted = exclusions.permits(los, previous, point);
+                    previous = point;
+                    permitted
+                });
             safe.then_some((index, to, path))
         })
 }
@@ -218,10 +226,15 @@ fn log_hold(world: &mut World, unit: Entity, owner: Entity, now: f64, reason: &s
 #[test]
 fn trail_route_uses_all_movement_exclusions() {
     let mut world = World::new();
+    let exclusion = |center| positioning::SightExclusion {
+        center,
+        radius: 1.5,
+        sight: crate::line_of_sight::ProjectedSight::Open,
+    };
     let unit = world
         .spawn(positioning::CombatMovementExclusions(Some(vec![
-            (Vec3::new(5.0, 0.0, 0.0), 1.5),
-            (Vec3::new(5.0, 0.0, 3.0), 1.5),
+            exclusion(Vec3::new(5.0, 0.0, 0.0)),
+            exclusion(Vec3::new(5.0, 0.0, 3.0)),
         ])))
         .id();
     let origin = Vec3::ZERO;
@@ -320,21 +333,24 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
             .insert(as_position(point));
         super::owner_trail::record(h.app.world_mut(), owner);
     }
+    let exclusion = positioning::SightExclusion {
+        center,
+        radius: 17.0,
+        sight: crate::line_of_sight::ProjectedSight::Open,
+    };
     h.app
         .world_mut()
         .entity_mut(follower)
-        .insert(positioning::CombatMovementExclusions(Some(vec![(
-            center, 17.0,
-        )])));
+        .insert(positioning::CombatMovementExclusions(Some(vec![exclusion])));
     assert!(
         positioning::is_unpulled_hostile(h.app.world(), follower, watcher),
         "fixture watcher must be idle and hostile"
     );
-    let exclusions = positioning::CombatMovementExclusions(Some(vec![(center, 17.0)]));
+    let exclusions = positioning::CombatMovementExclusions(Some(vec![exclusion]));
     assert!(
         trail
             .windows(2)
-            .all(|leg| exclusions.permits(leg[0], leg[1])),
+            .all(|leg| exclusions.permits(None, leg[0], leg[1])),
         "recorded owner trail must stay outside the watcher margin"
     );
     let mut previous = start;
@@ -344,7 +360,7 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         let at = h.app.world().get::<Position>(follower).copied().unwrap();
         let at = Vec3::new(at.x, at.y, at.z);
         assert!(
-            positioning::CombatMovementExclusions(Some(vec![(center, 17.0)])).permits(previous, at),
+            exclusions.permits(None, previous, at),
             "unsafe step {previous:?} -> {at:?}"
         );
         previous = at;

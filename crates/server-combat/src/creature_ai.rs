@@ -497,6 +497,7 @@ pub(crate) struct MoveQueues<'w, 's> {
     replication: Option<Res<'w, ReplicationDirtyQueue>>,
     flags2: Query<'w, 's, &'static shared::components::UnitFlags2>,
     combat_exclusions: Query<'w, 's, &'static crate::followers::CombatMovementExclusions>,
+    los: Option<Res<'w, crate::line_of_sight::LineOfSight>>,
 }
 
 impl MoveQueues<'_, '_> {
@@ -505,6 +506,7 @@ impl MoveQueues<'_, '_> {
             .get(entity)
             .map_or(true, |exclusions| {
                 exclusions.permits(
+                    self.los.as_deref(),
                     Vec3::new(from.x, from.y, from.z),
                     Vec3::new(to.x, to.y, to.z),
                 )
