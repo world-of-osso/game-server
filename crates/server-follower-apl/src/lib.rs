@@ -12,6 +12,7 @@ use server::{
     scripted_ai, simc_apl_native, spell_cast, spell_info, stats,
 };
 
+pub mod action_metadata;
 mod follower;
 pub mod hunter_facts;
 pub mod literal_rotation;
