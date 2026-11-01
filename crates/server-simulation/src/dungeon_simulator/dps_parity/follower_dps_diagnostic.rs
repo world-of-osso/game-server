@@ -670,6 +670,222 @@ fn blood_draw_triggers_only_once_during_its_cooldown() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn form_override_guardian_swipe_and_form_switch() {
+    let _seed = crate::random::seed_scope(1);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 104, 70);
+    for _ in 0..5 {
+        app.update();
+    }
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("Guardian pressure trace");
+    let mut scenario = super::follower_tank_scenario::TankScenario::read(
+        std::path::Path::new(&trace),
+        app.world_mut(),
+        target,
+        actor,
+        70,
+    )
+    .unwrap();
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::combat::AutoAttack::new(target));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    finish_follower_precombat(&mut app, actor);
+    for _ in 0..60 {
+        app.update();
+        if crate::auras::has_aura(app.world(), actor, 5487) {
+            break;
+        }
+    }
+    assert!(
+        app.world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(213764)
+    );
+    assert!(crate::auras::has_aura(app.world(), actor, 106829));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 213764).unwrap(),
+        213771
+    );
+    for tick in 0..1000 {
+        scenario.advance(app.world_mut(), tick * 50).unwrap();
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(213771)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Guardian APL must cast Bear Swipe"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(213771)
+                && event.kind == CombatLogKind::Damage
+                && event.target == Some(target.to_bits())
+                && event.amount > 0),
+        "Guardian APL must land Bear Swipe; actor events: {:?}; APL failure: {:?}",
+        events
+            .iter()
+            .filter(|event| event.source == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::CastSuccess | CombatLogKind::Damage
+                ))
+            .map(|event| (event.spell_id, event.kind, event.target, event.amount))
+            .collect::<Vec<_>>(),
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_some()
+    );
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 768,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(!crate::auras::has_aura(app.world(), actor, 106829));
+    assert!(crate::auras::has_aura(app.world(), actor, 48629));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 213764).unwrap(),
+        106785
+    );
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 213771).is_err()
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn form_override_warrior_aura_grants_and_revokes_replacement() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, _, _) = prepare_class_follower(app, copy, 72, 70);
+    app.world_mut()
+        .get_mut::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .grant_fixture_spell(23881);
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 335096).is_err()
+    );
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 1719,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 23881).unwrap(),
+        335096
+    );
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 335096).unwrap(),
+        335096
+    );
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1719 && aura.caster == actor,
+    );
+    assert!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 335096).is_err()
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn form_override_player_presets_end_with_form() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let actor = crate::followers::simulator::spawn_parity_attacker(
+        app.world_mut(),
+        250,
+        70,
+        copy,
+        crate::followers::simulator::ParityActor::Player { race: 6 },
+    )
+    .unwrap();
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<shared::components::Player>(actor)
+            .is_some()
+    );
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+    assert!(
+        !app.world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(50799)
+    );
+    assert!(crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 50799).is_err());
+    crate::auras::apply_aura(
+        app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 52509,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 50799).unwrap(),
+        50799
+    );
+    assert!(
+        !app.world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(50799)
+    );
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 52509 && aura.caster == actor,
+    );
+    assert!(crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 50799).is_err());
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_starts_measurement_after_precombat() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     let owner = app

@@ -1,7 +1,5 @@
 //! Native action permission shared by follower kits and literal fixture casts.
 //! Selected trait metadata wins; named parent projections cover missing DB2 links.
-mod form;
-
 use bevy::prelude::*;
 use std::collections::HashSet;
 
@@ -40,7 +38,10 @@ pub fn resolve_actor_action(
     if crate::auras::is_passive(spell) {
         return Err(CastFailure::NotKnown);
     }
-    if known.contains(resolved) || triggered_action_is_known(world, actor, known, resolved) {
+    if known.contains(resolved)
+        || crate::auras::shapeshift::grants_preset_spell(world, actor, resolved)
+        || triggered_action_is_known(world, actor, known, resolved)
+    {
         return Ok(resolved);
     }
     for parent in known.iter() {
@@ -94,7 +95,7 @@ fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, 
         }
         let selected = selected_trait_action(world, actor, current);
         let projected = project_known_parent(world, actor, selected);
-        let resolved = form::resolve_action(world, actor, projected)?;
+        let resolved = crate::auras::overrides::resolve_spell(world, actor, projected);
         if resolved == current {
             return Ok(resolved);
         }
