@@ -58,6 +58,7 @@ pub(super) struct State {
     tracker: Tracker,
     party: Vec<PartyMember>,
     route: PlannedRoute,
+    scaling: super::keystone_record::Scaling,
     start_seconds: f64,
 }
 
@@ -128,6 +129,29 @@ pub(super) fn start(
         .entity_mut(party.owner)
         .remove::<MoveIntent>();
     session.activate(app.world_mut())?;
+    let copy = *app
+        .world()
+        .get::<crate::maps::InMap>(party.owner)
+        .ok_or("keystone owner left its copy")?;
+    let scaled: Vec<_> = app
+        .world_mut()
+        .query::<(
+            &crate::maps::InMap,
+            &server::mythic_plus_scaling::KeystoneCreatureScale,
+        )>()
+        .iter(app.world())
+        .filter_map(|(map, scale)| (*map == copy).then_some(scale.damage))
+        .collect();
+    if scaled.is_empty() {
+        return Err("keystone activation scaled no native creatures".into());
+    }
+    let mut damage_multipliers = scaled.clone();
+    damage_multipliers.sort_by(f32::total_cmp);
+    damage_multipliers.dedup_by(|left, right| left.to_bits() == right.to_bits());
+    let scaling = super::keystone_record::Scaling {
+        scaled_creatures: scaled.len(),
+        damage_multipliers,
+    };
     let units: Vec<_> = std::iter::once(party.owner)
         .chain(party.members.iter().copied())
         .collect();
@@ -151,6 +175,7 @@ pub(super) fn start(
         tracker,
         party: members,
         route: plan,
+        scaling,
         start_seconds,
     })
 }
@@ -202,6 +227,7 @@ impl State {
             affixes: Some(snapshot.key.affixes),
             party: self.party,
             route: Some(self.route),
+            scaling: Some(self.scaling),
             outcome: super::keystone_record::Outcome {
                 status,
                 reason,

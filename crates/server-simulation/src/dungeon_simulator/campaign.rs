@@ -2255,6 +2255,7 @@ fn failed_keystone_record(
         affixes: None,
         party: Vec::new(),
         route: None,
+        scaling: None,
         outcome: super::keystone_record::Outcome {
             status: "aborted".into(),
             reason,
