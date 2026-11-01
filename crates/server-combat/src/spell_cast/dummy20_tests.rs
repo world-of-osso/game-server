@@ -130,21 +130,7 @@ fn stormkeeper_fixture(ids: &[u32]) -> Harness {
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
-    let profile = crate::followers::class_profiles::read_profiles()
-        .unwrap()
-        .into_iter()
-        .find(|profile| profile.spec_id == 262)
-        .unwrap();
-    let (_, traits, _) = crate::class_progression::evaluate_follower_progression(
-        &classes,
-        profile.class_id,
-        profile.race,
-        profile.spec_id,
-        90,
-        crate::trait_config::TalentSource::SimcProfile,
-        profile.talent_entries.as_deref().unwrap(),
-    )
-    .unwrap();
+    let (_, traits) = crate::class_progression::evaluate_npc_starter(&classes, 7, 262, 70).unwrap();
     assert!(
         traits
             .active_talent_spells()
@@ -152,7 +138,7 @@ fn stormkeeper_fixture(ids: &[u32]) -> Harness {
     );
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::class_progression::ActiveSpec(262),
-        shared::components::Level(90),
+        shared::components::Level(70),
         traits,
     ));
     h
