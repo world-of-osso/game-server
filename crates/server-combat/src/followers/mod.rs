@@ -23,6 +23,7 @@ mod holy_policy_native_tests;
 mod holy_priest_tests;
 #[cfg(test)]
 mod holy_threat_tests;
+#[cfg(test)]
 mod kit;
 #[cfg(test)]
 mod kit_empower_tests;
