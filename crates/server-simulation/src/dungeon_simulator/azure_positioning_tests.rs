@@ -109,7 +109,7 @@ fn native_rune_unreachable_chase_after_book_hop_evades_without_crossing_componen
     run.app.world_mut().entity_mut(owner).insert(source);
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
-        Ok(5)
+        Ok(1)
     );
     movement::forget_party_travel(run.app.world_mut(), owner);
     let target = *run.app.world().get::<Position>(owner).unwrap();

@@ -96,42 +96,44 @@ fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
         reach.caster_radius = reach.caster_radius.max(caster_radius);
         reach.target_radius = reach.target_radius.max(target_radius);
     }
-    reach.caster_radius = reach.caster_radius.max(active_field_extent(world, unit));
+    let fields = attached_field_reach(world, unit);
+    reach.caster_radius = reach.caster_radius.max(fields.caster_radius);
+    reach.target_radius = reach.target_radius.max(fields.target_radius);
     reach
 }
 
-fn active_field_extent(world: &mut World, unit: Entity) -> f32 {
-    let Some(origin) = targets::position(world, unit) else {
-        return 0.0;
-    };
-    let mut fields = crate::spell_cast::scripts::owned_hostile_ground_fields(world, unit);
+/// Active hostile fields attached to a unit move with it to the fight position.
+/// Fields fixed in place cover the same ground wherever the party fights, so
+/// they add no reach around the fight position.
+fn attached_field_reach(world: &mut World, unit: Entity) -> DeclaredReach {
+    use crate::spell_cast::area_trigger;
     let map = world.get::<crate::maps::InMap>(unit).copied();
     let now = crate::auras::aura_now(world);
-    let triggers: Vec<_> = world
-        .query::<(
-            Entity,
-            &crate::spell_cast::area_trigger::SpellAreaTrigger,
-            &shared::components::Position,
-            &crate::maps::InMap,
-        )>()
+    let fields: Vec<_> = world
+        .query::<(Entity, &area_trigger::SpellAreaTrigger, &crate::maps::InMap)>()
         .iter(world)
-        .filter(|(_, field, _, field_map)| {
+        .filter(|(_, field, field_map)| {
             field.caster == unit
                 && field.relation == targets::Relation::Enemy
                 && field.expires_at.is_none_or(|expiry| expiry > now)
                 && Some(**field_map) == map
         })
-        .map(|(entity, _, center, _)| (entity, Vec3::new(center.x, center.y, center.z)))
+        .map(|(entity, _, _)| entity)
         .collect();
-    for (entity, center) in triggers {
-        let radius = crate::spell_cast::area_trigger::maximum_field_radius(world, entity)
+    let mut reach = DeclaredReach::default();
+    for field in fields {
+        let Some(attached) = area_trigger::attached_unit(world, field) else {
+            continue;
+        };
+        let radius = area_trigger::maximum_field_radius(world, field)
             .expect("active hostile area requires its native maximum radius");
-        fields.push((center, radius));
+        if attached == unit {
+            reach.caster_radius = reach.caster_radius.max(radius);
+        } else {
+            reach.target_radius = reach.target_radius.max(radius);
+        }
     }
-    fields
-        .into_iter()
-        .map(|(center, radius)| origin.distance(center) + radius)
-        .fold(0.0, f32::max)
+    reach
 }
 
 fn unit_spells(world: &World, unit: Entity) -> Vec<u32> {

@@ -1133,6 +1133,48 @@ fn havoc_hunt_applies_native_dot_to_each_nearby_enemy() {
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
+fn havoc_hunt_secondary_dot_lands_only_on_the_charge_path() {
+    use shared::components::Position;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_literal(577, 3).unwrap();
+    let (primary, on_path, off_path) = (run.targets[0], run.targets[1], run.targets[2]);
+    let world = run.app.world_mut();
+    let origin = *world.get::<Position>(run.actor).unwrap();
+    let toward = *world.get::<Position>(primary).unwrap();
+    let forward = Vec3::new(toward.x - origin.x, 0.0, toward.z - origin.z).normalize();
+    let side = Vec3::new(-forward.z, 0.0, forward.x);
+    let at = |offset: Vec3| Position {
+        x: origin.x + offset.x,
+        y: origin.y,
+        z: origin.z + offset.z,
+    };
+    *world.get_mut::<Position>(primary).unwrap() = at(forward * 20.0);
+    *world.get_mut::<Position>(on_path).unwrap() = at(forward * 10.0);
+    *world.get_mut::<Position>(off_path).unwrap() = at(forward * 10.0 + side * 12.0);
+    advance(&mut run, 1);
+    cast(&mut run, 370965, false);
+    preparation::finish_pending_setup(&mut run).unwrap();
+    advance(&mut run, 160);
+    let dotted: Vec<_> = damage(&run, Some(370969))
+        .iter()
+        .filter_map(|event| event.target)
+        .collect();
+    assert!(
+        dotted.contains(&primary.to_bits()),
+        "Hunt must DoT its primary"
+    );
+    assert!(
+        dotted.contains(&on_path.to_bits()),
+        "an enemy on the charge path receives the Hunt DoT"
+    );
+    assert!(
+        !dotted.contains(&off_path.to_bits()),
+        "an enemy 12 yd off the charge path receives no Hunt DoT"
+    );
+}
+
+#[test]
+#[ignore = "requires prepared native spec577 player profile"]
 fn havoc_volatile_instinct_explodes_on_hard_meta_and_new_demonic_entry() {
     for spell in [191427, 198013] {
         let _seed = crate::random::seed_scope(70_448);

@@ -872,9 +872,6 @@ fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo
         resource,
         cooldowns,
         tenths_effect,
-        bonus_states,
-        bonus_spell,
-        bonus_effect,
         ..
     } = policy.relationship
     else {
@@ -903,22 +900,10 @@ fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo
     if points <= 0.0 {
         return;
     }
-    // sc_rogue.cpp8286–8294: native tenths of a second per effective point;
-    // the high roll states amplify it using native Jackpot effect3.
+    // SimC76f8118 sc_rogue.cpp8284–8295: cooldown reduction is per
+    // effective point. Native spell modifiers already apply the RtB bonus.
     let per_point = super::script_effect_value(world, caster, policy.talent, tenths_effect) / 10.0;
-    let mut seconds = f64::from(points * per_point);
-    if bonus_states
-        .iter()
-        .any(|&aura| crate::auras::has_aura(world, caster, aura))
-    {
-        seconds *= 1.0
-            + f64::from(super::script_effect_value(
-                world,
-                caster,
-                bonus_spell,
-                bonus_effect,
-            )) / 100.0;
-    }
+    let seconds = f64::from(points * per_point);
     for &cooldown in cooldowns {
         super::reduce_cooldown(world, caster, cooldown, seconds);
     }

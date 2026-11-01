@@ -1,6 +1,5 @@
 //! User pacing policy at real kit/AI/chase boundaries, not injected admitted points.
 use super::pull_budget::{Decision, Reason};
-use super::pull_movement_tests::load_native_kit;
 use super::pull_route_tests::route_fixture_with_plugins;
 use super::{pull_admission, pull_history, pull_route};
 use crate::maps::InMap;
@@ -79,7 +78,6 @@ fn fixture() -> Fixture {
     let (mut h, tank) = route_fixture_with_plugins(|app| {
         app.add_plugins(crate::stats::StatsPlugin);
     });
-    load_native_kit(&mut h, tank);
     let from = place_at_authored_entrance(&mut h, tank);
     let healer = super::pull_forecast_tests::add_native_healer(&mut h);
     let map = *h.app.world().get::<InMap>(tank).unwrap();

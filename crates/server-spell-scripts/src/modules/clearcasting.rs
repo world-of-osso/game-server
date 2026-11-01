@@ -21,7 +21,7 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn hit_hook(spell: u32) -> Option<HitHook> {
-    (spell == super::soul_of_the_forest::REGROWTH).then_some(regrowth_hit)
+    (spell == REGROWTH).then_some(regrowth_hit)
 }
 use bevy::prelude::*;
 
@@ -30,6 +30,7 @@ use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, spend_stack};
 pub(crate) const OMEN: u32 = 113043;
 const CLEARCASTING: u32 = 16870;
 const LIFEBLOOM: u32 = 33763;
+const REGROWTH: u32 = super::soul_of_the_forest::REGROWTH;
 const TRANQUIL_MIND: u32 = 403521;
 
 pub(crate) fn check_omen_proc(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
@@ -65,7 +66,10 @@ fn tranquil_mind_chance(world: &World, caster: Entity) -> Option<f32> {
 }
 
 pub(super) fn regrowth_hit(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    super::soul_of_the_forest::consume_after_heal(world, caster, target, depth);
+    if super::soul_of_the_forest::is_archdruid_copy(world, caster) {
+        return;
+    }
+    super::soul_of_the_forest::consume_after_heal(world, caster, target, REGROWTH, depth);
     let instance = world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| {

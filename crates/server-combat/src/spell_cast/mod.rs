@@ -152,7 +152,7 @@ mod dummy8_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
-pub(crate) mod efflorescence;
+pub mod efflorescence;
 mod elemental_resource;
 mod empower;
 #[cfg(test)]
@@ -4358,9 +4358,12 @@ pub fn launch_triggered_spell_with_primary(
             scripts::before_ret_damage_cast(world, caster, spell, depth);
             scripts::before_arcane_cast(world, caster, spell, depth);
             scripts::on_cast(world, caster, spell.id, depth);
+            let previous_efflo_summons =
+                efflorescence::read_previous_summons(world, caster, spell.id);
             scripts::spawn_ravager_field(world, caster, spell, explicit, depth);
             missiles::launch(world, caster, spell, plan, depth);
             scripts::finish_scripted_launch(world, caster, spell, consumed_damage, depth, false);
+            efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
             scripts::apply_triggered_cast_policies(world, caster, spell, depth);
             druid_transform::after_cast(world, caster, spell);
             true

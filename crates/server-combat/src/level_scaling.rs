@@ -102,6 +102,57 @@ impl ExpectedStats {
             .fold(row.get(stat), |value, mods| value * mods.get(stat))
     }
 
+    /// Evaluate creature health with the active Mythic+ season's DB2 tuning rows.
+    fn keystone_health(
+        &self,
+        level: u8,
+        expansion: i32,
+        tuning: u32,
+        unit_class: u8,
+        season: u32,
+    ) -> Result<f32, String> {
+        let milestone = *self
+            .season_milestones
+            .get(&season)
+            .ok_or_else(|| format!("missing MythicPlusSeason {season}"))?;
+        let row = self
+            .by_level
+            .get(&(level, expansion))
+            .or_else(|| self.by_level.get(&(level, DEFAULT_EXPANSION)))
+            .ok_or_else(|| {
+                format!("missing ExpectedStat for level {level}, expansion {expansion}")
+            })?;
+        let rows = self
+            .armor_tuning_mods
+            .get(&tuning)
+            .ok_or_else(|| format!("missing ContentTuningXExpected {tuning}"))?;
+        let mut health = row.health;
+        for &(id, min, max) in rows {
+            let bound = |id| {
+                self.season_milestones
+                    .get(&id)
+                    .copied()
+                    .ok_or_else(|| format!("missing MythicPlusSeason {id}"))
+            };
+            if (min != 0 && milestone < bound(min)?) || (max != 0 && milestone >= bound(max)?) {
+                continue;
+            }
+            health *= self
+                .mods
+                .get(&id)
+                .ok_or_else(|| format!("missing ExpectedStatMod {id}"))?
+                .health;
+        }
+        if let Some(id) = class_mod_id(unit_class) {
+            health *= self
+                .mods
+                .get(&id)
+                .ok_or_else(|| format!("missing class ExpectedStatMod {id}"))?
+                .health;
+        }
+        Ok(health)
+    }
+
     /// Source base health and armor before template modifiers, including tuning/class mods.
     pub fn creature_health_armor(
         &self,
@@ -294,7 +345,7 @@ pub struct TuningInputs {
 
 /// A tuned template's max health and base auto-attack DPS at every level
 /// 0..=MAX_LEVEL + 3 (index = level).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LevelStats {
     max_health: Vec<f32>,
     base_damage: Vec<f32>,
@@ -303,6 +354,24 @@ pub struct LevelStats {
 }
 
 impl LevelStats {
+    /// Keep native damage/armor inputs but use the active Keystone map's seasonal health tuning.
+    pub fn apply_keystone_health(
+        &mut self,
+        stats: &ExpectedStats,
+        inputs: &TuningInputs,
+        map_tuning: u32,
+        season: u32,
+    ) -> Result<(), String> {
+        let expansion = resolve_health_expansion(inputs.health_scaling_expansion);
+        for level in 1..=TOP_LEVEL {
+            self.max_health[level as usize] =
+                (stats.keystone_health(level, expansion, map_tuning, inputs.unit_class, season)?
+                    * inputs.health_modifier)
+                    .ceil();
+        }
+        Ok(())
+    }
+
     pub fn build(stats: &ExpectedStats, inputs: &TuningInputs) -> Self {
         let expansion = resolve_health_expansion(inputs.health_scaling_expansion);
         let eval = |stat, level| {

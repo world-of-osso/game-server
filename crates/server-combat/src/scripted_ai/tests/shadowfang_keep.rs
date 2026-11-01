@@ -120,10 +120,15 @@ fn encounter_coverage_silverlaine_normal_progress_reopens_and_filters_only_its_p
         instance_script::get_boss_state(h.app.world_mut(), map, SILVERLAINE_BIT),
         Some(EncounterState::Done)
     );
+    // TC Creature::setDeathState (Creature.cpp:2219-2227): a killed dungeon boss stays
+    // DEAD with a never-expiring respawn time, past its 0.2s spawn delay.
+    assert_eq!(h.creatures_of(SILVERLAINE), bosses);
+    let death = h.app.world().get::<crate::combat::DeathState>(bosses[0]);
     assert!(
-        h.creatures_of(SILVERLAINE).is_empty(),
+        death.is_some_and(|death| death.respawn_timer == f32::INFINITY),
         "a completed boss must not respawn in its live copy"
     );
+    assert_eq!(h.health(bosses[0]).current, 0.0);
     let directory = tempfile::tempdir().unwrap();
     let file = directory.path().join("shadowfang.redb");
     {

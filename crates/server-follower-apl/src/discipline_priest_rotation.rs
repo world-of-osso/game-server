@@ -73,6 +73,7 @@ pub(crate) fn program() -> Result<Program, String> {
             "shield,if=party.darkness_up=0&party.borrowed_time&(party.darkness_up|cooldown.penance.remains<=gcd.max|party.active_atonements<=5)&(mana.pct*2.5>=fight_remains|party.shield_discipline&mana.pct*6>=fight_remains)",
         ),
         ("heal", "penance,if=target.health.pct<45"),
+        ("emergency", "flash_heal,if=target.health.pct<33"),
         (
             "heal",
             "flash_heal,if=target.atonement_remains<=gcd.max&(mana.pct*7.5>=fight_remains|party.shield_discipline&mana.pct*18>=fight_remains|mana.pct>=90)",
@@ -250,8 +251,10 @@ impl Discipline {
             .iter()
             .filter(|(unit, _)| atonement_remaining(world, healer, *unit) > 0.0)
             .count();
-        // SimC76f8118 apl_priest.cpp:234: refresh Pain before other actions.
-        if let Some(enemy) = enemy
+        let critical = ratio < 0.33;
+        // SimC76f8118 apl_priest.cpp:234: refresh Pain unless an ally needs triage.
+        if !critical
+            && let Some(enemy) = enemy
             && self.select(
                 world,
                 healer,
@@ -295,6 +298,60 @@ impl Discipline {
             "heal",
             &["penance"],
         )? {
+            return Ok(());
+        }
+        // INFERRED: 20 key-17 Disc actors had a 32.92% median post-hit
+        // health at recipient-confirmed saves; see healer-tank-replay/256.md.
+        if critical
+            && self.select(
+                world,
+                healer,
+                lowest,
+                injured,
+                active_atonements,
+                "shield",
+                &["void_shield"],
+            )?
+        {
+            return Ok(());
+        }
+        if critical
+            && injured >= 3
+            && self.select(
+                world,
+                healer,
+                lowest,
+                injured,
+                active_atonements,
+                "radiance_fallback",
+                &["radiance"],
+            )?
+        {
+            return Ok(());
+        }
+        if self.select(
+            world,
+            healer,
+            lowest,
+            injured,
+            active_atonements,
+            "emergency",
+            &["flash_heal"],
+        )? {
+            return Ok(());
+        }
+        if critical
+            && let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "dot",
+                &["shadow_word_pain"],
+            )?
+        {
             return Ok(());
         }
         if let Some(enemy) = enemy {

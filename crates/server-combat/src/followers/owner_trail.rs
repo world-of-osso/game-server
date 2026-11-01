@@ -35,10 +35,9 @@ pub(super) fn record(world: &mut World, owner: Entity) {
             };
             world.entity_mut(owner).insert(snapshot);
         }
-        world.entity_mut(owner).remove::<OwnerTrail>();
-        return;
+    } else {
+        world.entity_mut(owner).remove::<CombatTrail>();
     }
-    world.entity_mut(owner).remove::<CombatTrail>();
     let Some(map) = world.get::<InMap>(owner).copied() else {
         return;
     };

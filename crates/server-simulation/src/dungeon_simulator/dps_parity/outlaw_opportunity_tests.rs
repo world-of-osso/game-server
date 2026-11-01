@@ -46,6 +46,66 @@ fn outlaw_background_sinister_extra_cannot_earn_fang_strike() {
 }
 
 #[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_roll_the_bones_adds_opportunity_chance_once() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1214909, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
+    for _ in 0..32 {
+        {
+            let mut pools = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap();
+            let energy = pools.get_mut(PowerType::Energy).unwrap();
+            energy.current = energy.max;
+        }
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                193315,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let extra_hits = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(run.targets[0].to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(197834)
+                && event.amount > 0
+        })
+        .count();
+    // Native 30% plus RtB 20% and selected Dragon-Bone Dice's 5%.
+    assert!(
+        (7..=22).contains(&extra_hits),
+        "extra attacks: {extra_hits}"
+    );
+}
+
+#[test]
 #[ignore = "requires private native260 profile/traits and player actor"]
 fn outlaw_sinister_strike_earns_opportunity_and_delayed_extra_attack() {
     let _seed = crate::random::seed_scope(70448);

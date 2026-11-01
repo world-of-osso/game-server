@@ -11,27 +11,43 @@ use crate::navigation::{Goal, Navigation};
 use crate::spell_cast::targets;
 use ::navigation::worker::{Output, Query as NavQuery};
 
-const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
+const HOLD_LOG_INTERVAL_SECONDS: f64 = 10.0;
 /// Extra clearance for movement and sight updates between ticks, in yards.
 const AGGRO_STEP_MARGIN: f32 = 0.5;
 /// Spacing of the sight samples along a path leg inside a watcher's radius, in yards.
 const SIGHT_SAMPLE_SPACING: f32 = 0.5;
 
 /// Live idle-hostile geometry used at the final combat-movement step.
+#[derive(Clone, Copy)]
+pub(crate) struct SightExclusion {
+    pub center: Vec3,
+    pub radius: f32,
+    pub sight: crate::line_of_sight::ProjectedSight,
+}
+
 #[derive(Component)]
-pub(crate) struct CombatMovementExclusions(pub Option<Vec<(Vec3, f32)>>);
+pub(crate) struct CombatMovementExclusions(pub Option<Vec<SightExclusion>>);
 
 impl CombatMovementExclusions {
-    pub(crate) fn permits(&self, from: Vec3, to: Vec3) -> bool {
+    pub(crate) fn permits(
+        &self,
+        los: Option<&crate::line_of_sight::LineOfSight>,
+        from: Vec3,
+        to: Vec3,
+    ) -> bool {
         self.0.as_ref().is_some_and(|watchers| {
-            watchers.iter().all(|(center, radius)| {
-                let start = from.distance_squared(*center);
-                let end = to.distance_squared(*center);
-                if start < radius * radius {
-                    end >= start
-                } else {
-                    pull_route::segment_distance_squared(*center, from, to) >= radius * radius
+            watchers.iter().all(|watcher| {
+                let start = from.distance_squared(watcher.center);
+                let end = to.distance_squared(watcher.center);
+                if start < watcher.radius * watcher.radius
+                    && end >= start
+                    && watcher.sight.sees(los, from)
+                {
+                    return true;
                 }
+                !leg_enters_sight((watcher.center, watcher.radius), from, to, |point| {
+                    watcher.sight.sees(los, point)
+                })
             })
         })
     }
@@ -40,24 +56,18 @@ impl CombatMovementExclusions {
 pub(super) fn update_combat_exclusions(
     world: &mut World,
     unit: Entity,
-    follower: &super::Follower,
+    _follower: &super::Follower,
 ) {
-    let party = super::ai::party_units(world, follower.owner);
-    let enemies = super::ai::engaged_enemies(world, follower, unit, &party);
     let Some(map) = world.get::<InMap>(unit).copied() else {
         world
             .entity_mut(unit)
             .insert(CombatMovementExclusions(None));
         return;
     };
-    let planned: std::collections::HashSet<_> = enemies
-        .iter()
-        .flat_map(|(target, _)| super::pull_set::members(world, *target, unit))
-        .collect();
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
         .collect();
     let mut geometry = SystemState::<AggroDistance>::new(world);
     let exclusions: Result<Vec<_>, String> = watchers
@@ -65,7 +75,11 @@ pub(super) fn update_combat_exclusions(
         .map(|watcher| {
             let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
             let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
-            Ok((center, radius + AGGRO_STEP_MARGIN))
+            Ok(SightExclusion {
+                center,
+                radius: radius + AGGRO_STEP_MARGIN,
+                sight: crate::line_of_sight::ProjectedSight::capture(world, watcher, unit),
+            })
         })
         .collect();
     if let Err(error) = &exclusions {
@@ -77,27 +91,22 @@ pub(super) fn update_combat_exclusions(
 }
 
 #[derive(Component)]
-struct HoldTimeout {
+struct HoldLog {
     target: Entity,
-    since: f64,
+    last: f64,
 }
 
-fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
+fn hold_unresolved_approach(world: &mut World, unit: Entity, target: Entity, reason: &str) -> bool {
     let now = world.resource::<Time>().elapsed_secs_f64();
     if world
-        .get::<HoldTimeout>(unit)
-        .is_none_or(|hold| hold.target != target)
+        .get::<HoldLog>(unit)
+        .is_none_or(|hold| hold.target != target || now - hold.last >= HOLD_LOG_INTERVAL_SECONDS)
     {
-        world
-            .entity_mut(unit)
-            .insert(HoldTimeout { target, since: now });
+        warn!(?unit, ?target, reason, "Follower approach held");
+        world.entity_mut(unit).insert(HoldLog { target, last: now });
     }
-    let hold =
-        now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
-    if hold {
-        hold_position(world, unit);
-    }
-    hold
+    hold_position(world, unit);
+    true
 }
 
 fn hold_position(world: &mut World, unit: Entity) {
@@ -105,14 +114,6 @@ fn hold_position(world: &mut World, unit: Entity) {
         .entity_mut(unit)
         .remove::<crate::creature_ai::FollowOwner>()
         .insert(crate::creature_ai::CreatureState::Idle);
-}
-
-fn hold_pending_approach(world: &mut World, unit: Entity, target: Entity, is_owner: bool) -> bool {
-    if is_owner {
-        return bounded_hold(world, unit, target);
-    }
-    hold_position(world, unit);
-    true
 }
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -127,22 +128,16 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     }
     let blockers = match approach_enters_unpulled_sight(world, unit, target) {
         Ok(None) => {
-            debug!(
-                ?unit,
-                ?target,
-                "Follower approach waiting for a navigation result"
-            );
-            return hold_pending_approach(world, unit, target, is_owner);
+            return hold_unresolved_approach(world, unit, target, "waiting for navigation");
         }
         Ok(Some(blockers)) => blockers,
         Err(error) => {
-            warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            return hold_pending_approach(world, unit, target, is_owner);
+            return hold_unresolved_approach(world, unit, target, &error);
         }
     };
     if blockers.is_empty() {
         super::trail_follow::clear(world, unit);
-        world.entity_mut(unit).remove::<HoldTimeout>();
+        world.entity_mut(unit).remove::<HoldLog>();
         return false;
     }
     hold_position(world, unit);
@@ -216,17 +211,16 @@ fn blockers_on_path(
     for watcher in watchers {
         let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
         let center = targets::position(world, watcher).ok_or("Unpulled watcher lacks position")?;
-        if path
-            .windows(2)
-            .any(|leg| leg_enters_sight(world, unit, watcher, (center, radius), leg[0], leg[1]))
-        {
-            debug!(
-                ?unit,
-                ?watcher,
-                ?center,
-                radius,
-                "Follower approach held by unpulled watcher"
-            );
+        let sight = crate::line_of_sight::ProjectedSight::capture(world, watcher, unit);
+        let los = world.get_resource::<crate::line_of_sight::LineOfSight>();
+        if path.windows(2).any(|leg| {
+            leg_enters_sight(
+                (center, radius + AGGRO_STEP_MARGIN),
+                leg[0],
+                leg[1],
+                |point| sight.sees(los, point),
+            )
+        }) {
             blockers.push(watcher);
         }
     }
@@ -238,12 +232,10 @@ fn blockers_on_path(
 /// (:2143): a leg enters a watcher's sight only where it is inside the radius and the
 /// watcher sees the unit standing there.
 pub(super) fn leg_enters_sight(
-    world: &World,
-    unit: Entity,
-    watcher: Entity,
     (center, radius): (Vec3, f32),
     from: Vec3,
     to: Vec3,
+    sees: impl Fn(Vec3) -> bool,
 ) -> bool {
     if pull_route::segment_distance_squared(center, from, to) >= radius * radius {
         return false;
@@ -256,14 +248,7 @@ pub(super) fn leg_enters_sight(
         .map(|step| from.lerp(to, step as f32 / steps as f32))
         .chain([closest])
         .filter(|point| point.distance_squared(center) < radius * radius)
-        .any(|point| {
-            let feet = shared::components::Position {
-                x: point.x,
-                y: point.y,
-                z: point.z,
-            };
-            crate::line_of_sight::sees_at(world, watcher, unit, feet)
-        })
+        .any(sees)
 }
 
 pub(super) fn in_target_formation(world: &World, target: Entity, watcher: Entity) -> bool {

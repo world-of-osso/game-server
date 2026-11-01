@@ -1,9 +1,31 @@
 //! Add the least-cost authored force packs to the retained boss route.
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet};
 
 use super::graph::{Graph, RouteStep};
 use serde::Serialize;
+
+/// Count only living hostile sources the owner can attack when planning starts.
+pub(super) fn attackable_sources(
+    world: &bevy::prelude::World,
+    owner: bevy::prelude::Entity,
+    actors: &BTreeMap<u32, bevy::prelude::Entity>,
+) -> HashSet<u32> {
+    actors
+        .iter()
+        .filter_map(|(&guid, &actor)| {
+            (crate::spell_cast::targets::is_alive(world, actor)
+                && crate::spell_cast::targets::is_hostile(world, owner, actor)
+                && crate::spell_cast::targets::relation_matches(
+                    world,
+                    owner,
+                    actor,
+                    crate::spell_cast::targets::Relation::Enemy,
+                ))
+            .then_some(guid)
+        })
+        .collect()
+}
 
 #[derive(Clone, Debug, Serialize)]
 pub(super) struct PlannedRoute {
@@ -81,12 +103,52 @@ fn distances(paths: &BTreeMap<u32, Vec<(u32, f32)>>, start: u32) -> BTreeMap<u32
     best
 }
 
+fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
+    let mut bosses = Vec::new();
+    for entry in graph.boss_entries() {
+        let source = graph
+            .follower_boss_sources
+            .get(entry)
+            .copied()
+            .unwrap_or(*entry);
+        let packs: Vec<_> = graph
+            .packs
+            .iter()
+            .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == source))
+            .collect();
+        let [pack] = packs.as_slice() else {
+            return Err(format!("boss{entry} has {} source packs", packs.len()));
+        };
+        bosses.push(RouteStep {
+            pack: pack.id,
+            anchor: pack.point().to_array(),
+        });
+    }
+    if graph.route.is_empty() {
+        if bosses.is_empty() {
+            return Err("graph has no authored boss route or encounter bindings".into());
+        }
+        return Ok(bosses);
+    }
+    let mut remaining = graph.route.iter();
+    for boss in bosses {
+        if !remaining.any(|step| step.pack == boss.pack) {
+            return Err(format!(
+                "authored route omits or reorders boss pack{}",
+                boss.pack
+            ));
+        }
+    }
+    Ok(graph.route.clone())
+}
+
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
 /// A candidate may be inserted between boss-route steps or appended at the end.
 pub(super) fn plan(
     graph: &Graph,
     weights: &HashMap<u32, u64>,
     required: u64,
+    hostile_sources: &HashSet<u32>,
 ) -> Result<PlannedRoute, String> {
     let paths = adjacency(graph)?;
     let distances: BTreeMap<_, _> = graph
@@ -98,16 +160,27 @@ pub(super) fn plan(
     let points = |pack: &super::graph::Pack| {
         pack.spawns
             .iter()
+            .filter(|spawn| hostile_sources.contains(&spawn.guid))
             .map(|spawn| weights.get(&spawn.entry).copied().unwrap_or(0))
             .sum::<u64>()
     };
-    let mut steps = graph.route.clone();
+    let mut steps = boss_route(graph)?;
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
         .any(|id| !graph.packs.iter().any(|pack| pack.id == *id))
     {
         return Err("boss route references an absent pack".into());
+    }
+    let mut previous = graph.entrance_pack;
+    for step in &steps {
+        if distance(previous, step.pack).is_none() {
+            return Err(format!(
+                "boss route cannot reach pack{} from pack{previous}",
+                step.pack
+            ));
+        }
+        previous = step.pack;
     }
     let mut total = graph
         .packs
@@ -209,6 +282,11 @@ mod tests {
             &graph,
             &definition.creature_weights,
             definition.forces_required,
+            &graph
+                .packs
+                .iter()
+                .flat_map(|pack| pack.spawns.iter().map(|spawn| spawn.guid))
+                .collect(),
         )
         .unwrap();
         assert!(selected.planned_forces >= definition.forces_required);
@@ -226,6 +304,98 @@ mod tests {
     }
 
     #[test]
+    fn planning_excludes_immune_hostiles_but_keeps_attackable_hostiles() {
+        use bevy::prelude::World;
+        use shared::components::{Health, Npc, Player, UnitFactionTemplate, UnitFlags};
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let mut world = World::new();
+        world.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
+        let map = crate::maps::InMap {
+            map_id: 2825,
+            instance_id: 1,
+        };
+        let owner = world
+            .spawn((
+                map,
+                Player {
+                    name: "Hunter".into(),
+                    race: 1,
+                    class: 3,
+                    appearance: Default::default(),
+                },
+                UnitFactionTemplate(3),
+            ))
+            .id();
+        let make_npc = |world: &mut World, entry, flags| {
+            world
+                .spawn((
+                    map,
+                    Npc {
+                        template_id: entry,
+                        name: "Den enemy".into(),
+                    },
+                    UnitFactionTemplate(14),
+                    UnitFlags(flags),
+                    Health {
+                        current: 100.0,
+                        max: 100.0,
+                    },
+                ))
+                .id()
+        };
+        let nanea = make_npc(&mut world, 244889, 0x340);
+        let enemy = make_npc(&mut world, 241813, 0);
+        assert!(crate::spell_cast::targets::is_hostile(&world, owner, nanea));
+        let selected = attackable_sources(
+            &world,
+            owner,
+            &BTreeMap::from([(31000461, nanea), (31000462, enemy)]),
+        );
+        assert_eq!(selected, HashSet::from([31000462]));
+        world.entity_mut(nanea).insert(UnitFlags(0));
+        let selected = attackable_sources(
+            &world,
+            owner,
+            &BTreeMap::from([(31000461, nanea), (31000462, enemy)]),
+        );
+        assert_eq!(selected, HashSet::from([31000461, 31000462]));
+    }
+
+    #[test]
+    fn derives_boss_order_when_extracted_graph_has_no_route() {
+        let mut graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2825, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[1,0],"height":0,"spawns":[{"guid":2,"entry":100,"position":[1,0]}]},
+                {"id":3,"position":[2,0],"height":0,"spawns":[{"guid":3,"entry":200,"position":[2,0]}]},
+                {"id":4,"position":[3,0],"height":0,"spawns":[{"guid":4,"entry":300,"position":[3,0]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":1},{"from":2,"to":3,"yards":1},{"from":3,"to":4,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],"follower_boss_entries":[100,200,300]
+        })).unwrap();
+        let result = plan(&graph, &HashMap::new(), 0, &HashSet::new()).unwrap();
+        assert_eq!(
+            result
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [2, 3, 4]
+        );
+        graph.packs.retain(|pack| pack.id != 3);
+        assert!(
+            plan(&graph, &HashMap::new(), 0, &HashSet::new())
+                .unwrap_err()
+                .contains("boss200 has 0 source packs")
+        );
+    }
+
+    #[test]
     fn adds_lowest_detour_per_force_without_reordering_boss_route() {
         let graph: Graph = serde_json::from_value(serde_json::json!({
             "map_id": 1, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
@@ -238,7 +408,8 @@ mod tests {
             "edges":[{"from":1,"to":4,"yards":10},{"from":1,"to":2,"yards":1},{"from":2,"to":4,"yards":10},{"from":1,"to":3,"yards":4},{"from":3,"to":4,"yards":7}],
             "teleports":[],"unreachable":[],"route":[{"pack":1,"anchor":[0,0,0]},{"pack":4,"anchor":[10,0,0]}]
         })).unwrap();
-        let selected = plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 10).unwrap();
+        let eligible = HashSet::from([2, 3]);
+        let selected = plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 10, &eligible).unwrap();
         assert_eq!(selected.added_packs, vec![3]);
         assert_eq!(selected.planned_forces, 10);
         assert_eq!(
@@ -250,9 +421,28 @@ mod tests {
             vec![1, 3, 4]
         );
         assert!(
-            plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 16)
+            plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 16, &eligible)
                 .unwrap_err()
                 .contains("15 of 16")
+        );
+        let hostile_only = plan(
+            &graph,
+            &HashMap::from([(20, 5), (30, 10)]),
+            5,
+            &HashSet::from([2]),
+        )
+        .unwrap();
+        assert_eq!(hostile_only.added_packs, vec![2]);
+        assert_eq!(hostile_only.planned_forces, 5);
+        assert!(
+            plan(
+                &graph,
+                &HashMap::from([(20, 5), (30, 10)]),
+                6,
+                &HashSet::from([2])
+            )
+            .unwrap_err()
+            .contains("5 of 6")
         );
     }
 }

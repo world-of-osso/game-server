@@ -18,6 +18,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(apply_residual),
     SpellScriptHook::AfterDirectDamageBeforeItems(roll_auto_lock),
     SpellScriptHook::AfterNativeOnCast(roll_surging_shots),
+    SpellScriptHook::AfterNativeOnCast(grant_cast_lock_and_load),
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == 1301406),
 ];
 
 fn declared_reach(
@@ -38,9 +40,11 @@ fn declared_reach(
 }
 
 fn register(scripts: &mut AuraScripts) {
+    scripts.0.entry(194594).or_default().on_apply = Some(restore_aimed_charge);
     scripts.0.insert(
         RAPID_FIRE,
         AuraScript {
+            on_apply: Some(begin_rapid_fire),
             on_periodic: Some(cast_rapid_fire_tick),
             on_remove: Some(expire_focus_fire),
             on_natural_end: Some(finish_rapid),
@@ -71,6 +75,71 @@ pub(super) fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     is_marksmanship(world, caster) && has_talent(world, caster, talent)
 }
 
+fn restore_aimed_charge(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster != unit {
+        return;
+    }
+    // SimC76f8118 sc_hunter.cpp8058–8063: gaining a new Lock and Load
+    // stack restores one Aimed Shot charge; refreshing an active stack does not.
+    let category = world
+        .resource::<SpellStore>()
+        .get(AIMED_SHOT)
+        .and_then(|spell| spell.categories.as_ref())
+        .expect("native Aimed Shot charge category")
+        .charge_category;
+    spell_cast::restore_charges(world, unit, category, 1);
+}
+
+fn grant_cast_lock_and_load(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if depth != 0 {
+        return;
+    }
+    match spell {
+        56641 if is_marksmanship(world, caster) => reduce_aimed_from_steady(world, caster),
+        212431 => grant_tactical_reload(world, caster),
+        RAPID_FIRE if selected(world, caster, 473523) => {
+            // sc_hunter.cpp5811–5814: Rapid Fire rolls Windrunner Quiver's
+            // native effect2 chance once on execution, not once per tick.
+            let chance = script_effect_value(world, caster, 473523, 1);
+            if combat::random::random::<f32>() * 100.0 < chance {
+                spell_cast::cast_triggered(world, caster, 194594, Some(caster), 1);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn reduce_aimed_from_steady(world: &mut World, caster: Entity) {
+    // SimC76f8118 sc_hunter.cpp4092–4096: the native Steady Shot effect2
+    // reduces running Aimed Shot recharge, scaled by Trueshot's recharge rate.
+    let steady = world
+        .resource::<SpellStore>()
+        .get(56641)
+        .expect("native Steady Shot");
+    let seconds = f64::from(
+        steady
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .expect("native Steady Shot cooldown reduction")
+            .base_points,
+    ) / 1000.0;
+    let rate = if auras::has_aura(world, caster, 288613) {
+        1.0 + f64::from(script_effect_value(world, caster, 288613, 1)) / 100.0
+    } else {
+        1.0
+    };
+    reduce_cooldown(world, caster, AIMED_SHOT, seconds / rate);
+}
+
+pub(super) fn grant_tactical_reload(world: &mut World, caster: Entity) {
+    // sc_hunter.cpp5938–5943/6956–6964: foreground Explosive Shot
+    // or one actual Salvo pulse grants the selected native buff.
+    if selected(world, caster, 1301406) {
+        spell_cast::cast_triggered(world, caster, 194594, Some(caster), 1);
+    }
+}
+
 /// sc_hunter.cpp5315–5318/5371–5374 and5629–5647: primary is full
 /// damage; native Trick Shots effect0/2 caps extras, effect3/4 scales extras.
 pub(super) fn trick_plan(
@@ -95,6 +164,19 @@ pub(super) fn trick_plan(
         let extras = select_trick_targets(world, caster, primary, count);
         chain_multipliers.extend(extras.iter().map(|&target| (target, multiplier)));
         units.extend(extras);
+    }
+    if spell.id == RAPID_FIRE_SHOT {
+        for &unit in &units {
+            let multiplier = super::marksmanship_sentinel::snapshot_rapid_mark(world, caster, unit);
+            if let Some((_, existing)) = chain_multipliers
+                .iter_mut()
+                .find(|(target, _)| *target == unit)
+            {
+                *existing *= multiplier;
+            } else if multiplier != 1.0 {
+                chain_multipliers.push((unit, multiplier));
+            }
+        }
     }
     vec![PlannedEffect {
         index: 0,
@@ -160,6 +242,10 @@ fn roll_surging_shots(world: &mut World, caster: Entity, spell: u32, depth: u8) 
     if selected(world, caster, FOCUS_FIRE) {
         spell_cast::cast_triggered(world, caster, FOCUS_BUFF, Some(caster), 1);
     }
+}
+
+fn begin_rapid_fire(world: &mut World, _unit: Entity, aura: &AuraInstance) {
+    super::marksmanship_sentinel::clear_rapid_marks(world, aura.caster);
 }
 
 fn expire_focus_fire(

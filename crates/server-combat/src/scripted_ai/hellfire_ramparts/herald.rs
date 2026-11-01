@@ -424,7 +424,8 @@ fn morph_to_nazan(ctx: &mut Ctx) -> bool {
     let Some(projection) = projection else {
         return false;
     };
-    // TC305–310: gravity is enabled before entry projection and the normal30717 cast.
+    // TC305–310 enables gravity, then UpdateEntry re-applies Nazan's FLOATING static
+    // flag (Creature.cpp:709), so the normal 30717 cast comes from a flying caster.
     ctx.world.entity_mut(ctx.me).remove::<GravityDisabled>();
     projection.apply(ctx.world.entity_mut(ctx.me), false)
 }

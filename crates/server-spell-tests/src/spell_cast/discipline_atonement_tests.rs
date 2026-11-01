@@ -5,6 +5,340 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn atonement_area_spells_preserve_explicit_pet_but_exclude_secondary_pets() {
+    use crate::spell_cast::summon::{SummonProperties, SummonedCreature};
+    use server::hunter_pet::HunterPet;
+    use shared::components::UnitFactionTemplate;
+
+    for spell in [1253593, 194509] {
+        for pet_primary in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[1253593, 194509, 194384], 5).unwrap();
+            let caster = h.caster;
+            h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+            let player = spawn_player(&mut h.app, 5, 3.0);
+            let allies: Vec<_> = (0..4)
+                .map(|index| spawn_player(&mut h.app, 5, 4.0 + index as f32))
+                .collect();
+            let pet = spawn_npc(&mut h.app, 2.0);
+            let guardian = spawn_npc(&mut h.app, 2.5);
+            h.app.world_mut().entity_mut(pet).insert((
+                UnitFactionTemplate(1),
+                HunterPet {
+                    owner: caster,
+                    slot: 1,
+                },
+            ));
+            h.app.world_mut().entity_mut(guardian).insert((
+                UnitFactionTemplate(1),
+                SummonedCreature {
+                    owner: caster,
+                    spell_id: 157319,
+                    properties_id: 3490,
+                    properties: SummonProperties {
+                        control: 1,
+                        faction: 0,
+                        title: 3,
+                        slot: -1,
+                        flags: 0,
+                    },
+                    display_scale: 1.0,
+                    expires_at: None,
+                },
+            ));
+            for target in allies.iter().copied().chain([player, pet, guardian]) {
+                let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max * 0.1;
+            }
+            let primary = if pet_primary { pet } else { player };
+            assert!(crate::spell_cast::try_cast_triggered(
+                h.app.world_mut(),
+                caster,
+                spell,
+                Some(primary),
+                0
+            ));
+            h.advance(50);
+            let protected = |target| crate::auras::has_aura(h.app.world(), target, 194384);
+            assert!(
+                protected(primary),
+                "spell {spell} must keep its explicit primary, pet={pet_primary}"
+            );
+            assert!(
+                !protected(guardian),
+                "spell {spell} must exclude a secondary guardian"
+            );
+            if !pet_primary {
+                assert!(
+                    !protected(pet),
+                    "spell {spell} must exclude a secondary pet"
+                );
+            }
+            assert!(
+                allies.iter().copied().any(protected),
+                "spell {spell} must still reach player allies"
+            );
+        }
+    }
+}
+
+#[test]
+fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement() {
+    use shared::components::CombatStatus;
+
+    for (selected, engaged, friendly, expected) in [
+        (false, true, true, 0),
+        (true, false, true, 0),
+        (true, true, true, 3),
+        (true, true, false, 0),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[
+                47540, 47758, 47757, 47666, 47750, 440742, 1232571, 194384, 81749, 94472,
+            ],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![47540, 440742]
+            } else {
+                vec![47540]
+            }),
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert(CombatStatus(engaged));
+        for unit in [caster, ally, enemy] {
+            *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+                current: 50_000.0,
+                max: 100_000.0,
+            };
+        }
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(if friendly { ally } else { enemy }));
+        h.advance(100);
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(1232571))
+            .collect();
+        assert_eq!(
+            hits.len(),
+            expected,
+            "selected={selected}, engaged={engaged}, friendly={friendly}, events={:?}",
+            events
+                .iter()
+                .filter(|event| matches!(event.spell_id, Some(47540 | 47750 | 47757 | 1232571)))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            hits.iter()
+                .all(|event| event.target == Some(enemy.to_bits()) && event.amount > 0)
+        );
+        if expected > 0 {
+            let transfers = events
+                .iter()
+                .filter(|event| {
+                    event.kind == CombatLogKind::Heal
+                        && event.spell_id == Some(94472)
+                        && event.target == Some(caster.to_bits())
+                })
+                .count();
+            assert_eq!(transfers, 3, "each Twinsight hit transfers Atonement");
+        }
+    }
+}
+
+#[test]
+fn encroaching_shadows_spreads_owned_pain_from_real_penance() {
+    for (selected, marked, revel, expected) in [
+        (false, true, false, 0),
+        (true, false, false, 0),
+        (true, true, false, 1),
+        (true, true, true, 2),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[589, 47540, 47758, 47757, 47666, 47750, 472568, 373003],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let primary = h.npc;
+        let near_a = spawn_npc(&mut h.app, 4.0);
+        let near_b = spawn_npc(&mut h.app, 5.0);
+        let already_marked = spawn_npc(&mut h.app, 6.0);
+        let far = spawn_npc(&mut h.app, 12.0);
+        let mut known = vec![589, 47540];
+        if selected {
+            known.push(472568);
+        }
+        if revel {
+            known.push(373003);
+        }
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(known),
+        ));
+        if marked {
+            for target in [primary, already_marked] {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target,
+                        spell_id: 589,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+        }
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(primary));
+        h.advance(40);
+        let count = [near_a, near_b]
+            .into_iter()
+            .filter(|&target| crate::auras::has_aura(h.app.world(), target, 589))
+            .count();
+        assert_eq!(
+            count, expected,
+            "talent={selected}, primary marked={marked}, revel={revel}"
+        );
+        assert!(
+            !crate::auras::has_aura(h.app.world(), far, 589),
+            "Pain must not spread beyond eight yards"
+        );
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            !events.iter().any(|event| event.spell_id == Some(589)
+                && event.target == Some(already_marked.to_bits())
+                && event.kind == CombatLogKind::AuraRefreshed),
+            "unmarked enemies take priority"
+        );
+    }
+}
+
+#[test]
+fn searing_light_banks_real_penance_bolts_and_transfers_atonement() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[47540, 47758, 47666, 1280131, 1280134, 194384, 81749, 94472],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![47540, 1280131]
+            } else {
+                vec![47540]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+            current: 10_000.0,
+            max: 100_000.0,
+        };
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        };
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(enemy));
+        h.advance(400);
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let bolts: Vec<_> = events
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(47666))
+            .collect();
+        let ticks: Vec<_> = events
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(1280134))
+            .collect();
+        assert!(!bolts.is_empty(), "Penance must land real damage bolts");
+        if !selected {
+            assert!(ticks.is_empty(), "Searing Light requires its talent");
+            continue;
+        }
+        assert!(
+            !ticks.is_empty(),
+            "Penance must produce the rolling residual"
+        );
+        assert!(
+            ticks.iter().all(|event| !event.crit),
+            "the residual must not crit again"
+        );
+        let bolt_damage: i64 = bolts.iter().map(|event| i64::from(event.amount)).sum();
+        let dot_damage: i64 = ticks.iter().map(|event| i64::from(event.amount)).sum();
+        assert!(
+            (dot_damage * 5 - bolt_damage).abs() <= 25,
+            "20% of all overlapping bolt damage: bolts={bolt_damage}, ticks={dot_damage}"
+        );
+        let transfers = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(94472)
+                    && event.target == Some(caster.to_bits())
+            })
+            .count();
+        assert_eq!(
+            transfers,
+            bolts.len() + ticks.len(),
+            "each bolt and residual tick must transfer Atonement"
+        );
+    }
+}
+
+#[test]
 fn dark_indulgence_grants_dark_side_from_real_mind_blast() {
     for selected in [false, true] {
         let mut h = harness(Vec::new(), &[8092, 372972, 198069], 5).unwrap();
@@ -1418,6 +1752,88 @@ fn atonement_shadow_word_pain_uses_native_abyssal_reverie() {
         (transfer.amount - expected).abs() <= 1,
         "native Shadow transfer bonus: {damage:?} {transfer:?}"
     );
+}
+
+#[test]
+fn atonement_smite_applies_matching_direct_heal_talent_modifiers() {
+    for (auras, multiplier) in [
+        (vec![], 1.0_f32),
+        (vec![415416], 1.03),
+        (vec![1253845], 1.03),
+        (vec![415416, 1253845], 1.03 * 1.03),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[17, 194384, 81749, 94472, 585, 415416, 1253845],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(vec![17, 585]),
+        ));
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            caster,
+            crate::auras::RemoveReason::Consumed,
+            |aura| matches!(aura.spell_id, 415416 | 1253845),
+        );
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        for aura in auras {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: aura,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: 1_000.0,
+            max: 10_000.0,
+        };
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(17, Some(ally));
+        h.advance(35);
+        h.inbox.log.clear();
+        h.cast_and_deliver(585, Some(enemy));
+        h.advance(60);
+        let damage = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(585))
+            .unwrap();
+        let transfer = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(94472)
+                    && event.target == Some(ally.to_bits())
+            })
+            .unwrap();
+        let expected = (damage.amount as f32 * 0.46 * multiplier).round() as i32;
+        assert!(
+            (transfer.amount - expected).abs() <= 1,
+            "multiplier={multiplier}: {damage:?} {transfer:?}"
+        );
+    }
 }
 
 #[test]

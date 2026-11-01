@@ -138,22 +138,42 @@ fn encounter_coverage_deios_rp_warmup_is_copy_local_and_opens_after_cast() {
     );
 }
 
+fn wing_damaged_player(h: &Harness, boss: Entity) -> bool {
+    let player = h.player();
+    h.inbox(0).log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.amount > 0
+            && event.spell_id == Some(WING)
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(player.to_bits())
+    })
+}
+
+/// TC a352b1fa `WorldObject::IsValidAttackTarget`: the source's own IMMUNE_TO_PC
+/// excludes players from Wing's area; Wing lacks SPELL_ATTR8_CAN_ATTACK_IMMUNE_PC.
 #[test]
-fn encounter_coverage_deios_native_wing_damage_qualifies_without_unlock() {
+fn encounter_coverage_deios_native_wing_damage_requires_warmup_unlock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = deios_copy(difficulty);
-        let player = h.player();
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, WING, Some(boss), false)
-            .expect("ordinary native376049; no immunity mutation");
+            .expect("ordinary native376049");
         h.advance(3.0);
         assert!(
-            h.inbox(0).log.iter().any(|event| {
-                event.kind == CombatLogKind::Damage
-                    && event.amount > 0
-                    && event.spell_id == Some(WING)
-                    && event.source == Some(boss.to_bits())
-                    && event.target == Some(player.to_bits())
-            }),
+            !wing_damaged_player(&h, boss),
+            "source immunity blocks Wing difficulty{difficulty}"
+        );
+
+        let (mut h, boss, _) = deios_copy(difficulty);
+        // The warmup timer's exact unlock, proven by the rp_warmup test above.
+        h.app
+            .world_mut()
+            .entity_mut(boss)
+            .insert(UnitFlags(SOURCE_FLAGS & !0x100));
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, WING, Some(boss), false)
+            .expect("ordinary native376049 after unlock");
+        h.advance(3.0);
+        assert!(
+            wing_damaged_player(&h, boss),
             "native outgoing damage difficulty{difficulty}, not engagement proof"
         );
         assert!(
@@ -161,10 +181,6 @@ fn encounter_coverage_deios_native_wing_damage_qualifies_without_unlock() {
                 .log
                 .iter()
                 .all(|event| event.source != Some(boss.to_bits()))
-        );
-        assert_eq!(
-            h.app.world().get::<UnitFlags>(boss).unwrap().0,
-            SOURCE_FLAGS
         );
     }
 }

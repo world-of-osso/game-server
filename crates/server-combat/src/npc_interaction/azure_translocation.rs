@@ -1,5 +1,5 @@
 //! AZURE_TRANSLOCATION_BOOK_ENDPOINTS; ActionSet bindings/endpoints remain unsourced.
-use crate::maps::{InMap, TeleportOptions, WorldLocation};
+use crate::maps::{InMap, WorldLocation};
 use bevy::prelude::*;
 use shared::components::Npc;
 
@@ -76,12 +76,14 @@ pub fn traverse(world: &mut World, player: Entity, book: Entity) -> Result<usize
         .find(|link| link.entry == entry)
         .ok_or("Azure book has no qualified endpoint")?;
     let destination = read_endpoint(world, link.destination)?;
-    let recipients = read_party(world, player, copy);
-    if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
-        return Err("Azure reader near teleport refused".into());
-    }
-    for unit in recipients.iter().copied().filter(|unit| *unit != player) {
-        teleport_member(world, unit, destination)?;
+    crate::maps::transfer::teleport_transport_user(world, player, destination)?;
+    if world.get::<shared::components::Player>(player).is_some() {
+        crate::followers::transport_follow::record_use(
+            world,
+            player,
+            book,
+            crate::followers::transport_follow::TransportKind::AzureBook,
+        );
     }
     info!(
         ?player,
@@ -89,51 +91,5 @@ pub fn traverse(world: &mut World, player: Entity, book: Entity) -> Result<usize
         endpoint = link.destination,
         "AZURE_TRANSLOCATION_BOOK_ENDPOINTS"
     );
-    Ok(recipients.len())
-}
-
-fn teleport_member(
-    world: &mut World,
-    unit: Entity,
-    destination: WorldLocation,
-) -> Result<(), String> {
-    if world.get::<shared::components::Player>(unit).is_some() {
-        if !crate::maps::teleport_to(world, unit, destination, TeleportOptions::default()) {
-            return Err(format!("Azure party member{unit:?} near teleport refused"));
-        }
-        return Ok(());
-    }
-    crate::maps::transfer::teleport_creature_with_companions(world, unit, &destination);
-    Ok(())
-}
-
-fn read_party(world: &mut World, player: Entity, copy: InMap) -> Vec<Entity> {
-    let members = world
-        .get::<crate::persistence::ClientId>(player)
-        .and_then(|id| {
-            world
-                .get_resource::<crate::group::GroupRegistry>()
-                .map(|groups| groups.group_members(id.0))
-        })
-        .unwrap_or_default();
-    let mut owners: Vec<_> = world
-        .query::<(Entity, &crate::persistence::ClientId, &InMap)>()
-        .iter(world)
-        .filter(|(_, id, map)| **map == copy && members.contains(&id.0))
-        .map(|(unit, _, _)| unit)
-        .collect();
-    if !owners.contains(&player) {
-        owners.push(player);
-    }
-    let followers: Vec<_> = world
-        .query::<(Entity, &crate::followers::Follower, &InMap)>()
-        .iter(world)
-        .filter(|(_, follower, map)| **map == copy && owners.contains(&follower.owner))
-        .map(|(unit, _, _)| unit)
-        .collect();
-    owners.extend(followers);
-    owners.retain(|unit| crate::spell_cast::targets::is_alive(world, *unit));
-    owners.sort();
-    owners.dedup();
-    owners
+    Ok(1)
 }

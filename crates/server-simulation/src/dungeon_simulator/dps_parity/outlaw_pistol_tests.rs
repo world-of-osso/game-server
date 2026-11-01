@@ -118,4 +118,21 @@ fn outlaw_earned_opportunity_pays_native_fan_shots_and_consumes_each_use() {
         quick_draw, expected,
         "each earned shot must pay native Quick Draw combo points"
     );
+    let base_points = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(185763)
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        base_points, 1,
+        "only the foreground shot grants base points"
+    );
 }

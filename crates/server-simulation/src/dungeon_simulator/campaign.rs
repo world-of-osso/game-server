@@ -127,18 +127,65 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
             )
         })
         .collect();
-    run.app.world_mut().entity_mut(owner).insert(source);
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for &unit in &members {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
-        Ok(5)
+        Ok(1)
     );
-    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+    for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
         let world = run.app.world();
-        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
         assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
         assert_eq!(world.get::<Health>(unit).unwrap().current, health);
         assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
     }
+    for &unit in &run.party.members {
+        assert_eq!(
+            run.app.world().get::<Position>(unit),
+            Some(&source),
+            "owner interaction must not teleport followers"
+        );
+    }
+    let mut arrived = std::collections::HashSet::new();
+    for _ in 0..2000 {
+        run.app.update();
+        for (&unit, &(copy, _, _)) in members.iter().zip(&before) {
+            let world = run.app.world();
+            let position = world.get::<Position>(unit).unwrap();
+            if Vec3::new(position.x, position.y, position.z)
+                .distance(Vec3::new(endpoint.x, endpoint.y, endpoint.z))
+                < 3.0
+            {
+                arrived.insert(unit);
+            }
+            assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        }
+        if arrived.len() == members.len() {
+            break;
+        }
+    }
+    assert_eq!(
+        arrived.len(),
+        members.len(),
+        "each follower must independently use the book"
+    );
 }
 
 #[test]
@@ -687,6 +734,220 @@ fn keystone_death_time_starts_after_native_countdown() {
 }
 
 #[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_two_pulls_do_not_repeat_precombat_setup() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    let mage = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<shared::components::ActiveSpec>(*unit)
+                .is_some_and(|spec| spec.0 == 63)
+        })
+        .unwrap();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..2000 {
+        run.control().unwrap();
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        let kills = events
+            .iter()
+            .filter(|event| {
+                event.kind == shared::protocol::CombatLogKind::Death
+                    && event.target.is_some_and(|target| {
+                        run.actors.values().any(|actor| actor.to_bits() == target)
+                    })
+            })
+            .count();
+        let pulls = run
+            .report
+            .pulls
+            .iter()
+            .filter(|pull| pull.decision.starts_with("Allow"))
+            .count();
+        if kills >= 5 && pulls >= 5 {
+            let casts = |actor: Entity, spell| {
+                events
+                    .iter()
+                    .filter(|event| {
+                        event.kind == shared::protocol::CombatLogKind::CastSuccess
+                            && event.source == Some(actor.to_bits())
+                            && event.spell_id == Some(spell)
+                    })
+                    .count()
+            };
+            assert_eq!(
+                casts(owner, 883),
+                1,
+                "Call Pet must not repeat between pulls"
+            );
+            assert_eq!(
+                casts(mage, 1459),
+                1,
+                "Arcane Intellect must not repeat between pulls"
+            );
+            assert_eq!(
+                casts(run.party.tank, 465),
+                1,
+                "Devotion Aura must not repeat when Consecration expires"
+            );
+            return;
+        }
+    }
+    panic!("five native source deaths and pulls were not observed");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_driver_waits_for_countdown_before_pulling() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let initial_deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    while run
+        .keystone
+        .as_ref()
+        .unwrap()
+        .waiting_for_start(run.app.world())
+        .unwrap()
+    {
+        run.control().unwrap();
+        assert!(
+            run.report.pulls.is_empty(),
+            "route admitted a pull during countdown"
+        );
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    let deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    assert_eq!(deaths, initial_deaths, "creature died during countdown");
+    for _ in 0..800 {
+        run.control().unwrap();
+        if run
+            .report
+            .pulls
+            .iter()
+            .any(|pull| pull.decision.starts_with("Allow"))
+        {
+            return;
+        }
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    panic!("driver never admitted a pull after countdown");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn azure_rune_does_not_attack_owner_while_hostile_does() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    crate::followers::simulator::stop_leader_driver(run.app.world_mut(), owner);
+    let rune = run.actors[&29001892];
+    // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
+    let hostile = run.actors[&29001878];
+    let location = *run.app.world().get::<Position>(rune).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(location);
+    run.app.world_mut().entity_mut(hostile).insert(Position {
+        x: location.x + 2.0,
+        ..location
+    });
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        run.app.update();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::components::CombatStatus>(rune)
+                .is_none_or(|state| !state.0),
+            "rune entered combat"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let melee = |source: Entity| {
+        events.iter().any(|event| {
+            matches!(
+                event.kind,
+                shared::protocol::CombatLogKind::Damage | shared::protocol::CombatLogKind::Miss(_)
+            ) && event.source == Some(source.to_bits())
+                && event.target == Some(owner.to_bits())
+                && event.spell_id.is_none()
+        })
+    };
+    assert!(!melee(rune), "rune attempted to melee the owner");
+    assert!(melee(hostile), "nearby hostile did not melee the owner");
+    let observed = super::diagnostics::inspect_unit(run.app.world(), Some(29001878), hostile);
+    assert!(
+        observed["creature_swing_range"].is_array(),
+        "missing native swing range: {observed}"
+    );
+    assert_eq!(observed["keystone_damage_multiplier"], 1.0);
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -705,6 +966,15 @@ fn released_leader_rejoins_party_through_azure_book() {
         .clone();
     server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
         .unwrap();
+    for member in run.party.members.clone() {
+        server::test_support::transport::activate(
+            run.app.world_mut(),
+            member,
+            Some(book),
+            &transport,
+        )
+        .unwrap();
+    }
     super::movement::forget_party_travel(run.app.world_mut(), owner);
     let cleared: Vec<_> = run
         .actors
@@ -726,14 +996,28 @@ fn released_leader_rejoins_party_through_azure_book() {
     for _ in 0..10 {
         run.app.update();
     }
+    let target = *run.app.world().get::<Position>(tank).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(MoveIntent(Vec3::new(target.x, target.y, target.z)));
     run.control().unwrap();
     assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    assert!(
+        run.app.world().get::<MoveIntent>(owner).is_none(),
+        "release must discard the pre-death movement target"
+    );
     let positions_before_return: Vec<_> = run
         .party
         .members
         .iter()
         .map(|member| (*member, *run.app.world().get::<Position>(*member).unwrap()))
         .collect();
+    // The normal run loop advances once immediately after release, before the next control call.
+    run.app.update();
+    for (member, position) in &positions_before_return {
+        assert_eq!(run.app.world().get::<Position>(*member).unwrap(), position);
+    }
     let mut reunited = false;
     for _ in 0..7000 {
         assert!(
@@ -746,19 +1030,12 @@ fn released_leader_rejoins_party_through_azure_book() {
             break;
         }
         run.app.update();
-        if !run
-            .report
-            .pulls
-            .iter()
-            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
-        {
-            for (member, position) in &positions_before_return {
-                assert_eq!(
-                    *run.app.world().get::<Position>(*member).unwrap(),
-                    *position,
-                    "living followers must hold until the leader uses the book"
-                );
-            }
+        for (member, position) in &positions_before_return {
+            assert_eq!(
+                *run.app.world().get::<Position>(*member).unwrap(),
+                *position,
+                "living followers must hold throughout the leader's return"
+            );
         }
     }
     assert!(
@@ -2319,13 +2596,16 @@ pub(super) fn run_keystone(
     options: super::keystone::Options,
 ) -> super::keystone_record::RunRecord {
     let _rng_scope = crate::random::seed_scope(seed);
+    let mut planned_route = None;
     let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        spawn_run_mode(seed, &mut None, Some(options))
+        spawn_run_mode_record(seed, &mut None, Some(options), &mut planned_route)
     }));
     let mut run = match initialized {
         Ok(Ok(run)) => run,
-        Ok(Err(error)) => return failed_keystone_record(seed, options, error),
-        Err(panic) => return failed_keystone_record(seed, options, panic_reason(panic)),
+        Ok(Err(error)) => return failed_keystone_record(seed, options, error, planned_route),
+        Err(panic) => {
+            return failed_keystone_record(seed, options, panic_reason(panic), planned_route);
+        }
     };
     run.last_progress = run.now();
     let outcome =
@@ -2376,7 +2656,6 @@ pub(super) fn run_keystone(
         "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
         "terminal_units": run.inspect_units(),
         "pull_decisions": &run.report.pulls,
-        "native_combat_events_wall_timestamps": &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0,
     });
     let state = run.keystone.take().expect("keystone state after run");
     state
@@ -2388,13 +2667,47 @@ pub(super) fn run_keystone(
             run.report.detail,
             diagnostics,
         )
-        .unwrap_or_else(|error| failed_keystone_record(seed, options, error))
+        .unwrap_or_else(|error| failed_keystone_record(seed, options, error, planned_route))
+}
+
+fn start_with_recorded_route<T>(
+    saved: &mut Option<super::keystone_route::PlannedRoute>,
+    plan: super::keystone_route::PlannedRoute,
+    start: impl FnOnce(super::keystone_route::PlannedRoute) -> Result<T, String>,
+) -> Result<T, String> {
+    *saved = Some(plan.clone());
+    start(plan)
+}
+
+#[test]
+fn font_initialization_failure_retains_the_planned_force_route() {
+    let options = super::keystone::Options {
+        map_id: 2825,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let plan = super::keystone_route::PlannedRoute {
+        steps: Vec::new(),
+        added_packs: vec![17, 21],
+        planned_forces: 734,
+    };
+    let mut saved = None;
+    let error =
+        start_with_recorded_route(&mut saved, plan, |_| Err::<(), _>("missing Font".into()))
+            .unwrap_err();
+    let record = failed_keystone_record(1, options, error, saved);
+    let json = serde_json::to_value(record).unwrap();
+    assert_eq!(json["outcome"]["status"], "aborted");
+    assert_eq!(json["outcome"]["reason"], "missing Font");
+    assert_eq!(json["route"]["planned_forces"], 734);
+    assert_eq!(json["route"]["added_packs"], serde_json::json!([17, 21]));
 }
 
 fn failed_keystone_record(
     seed: u64,
     options: super::keystone::Options,
     reason: String,
+    planned_route: Option<super::keystone_route::PlannedRoute>,
 ) -> super::keystone_record::RunRecord {
     super::keystone_record::RunRecord {
         schema_version: 1,
@@ -2405,7 +2718,7 @@ fn failed_keystone_record(
         key_level: options.level,
         affixes: None,
         party: Vec::new(),
-        route: None,
+        route: planned_route,
         scaling: None,
         outcome: super::keystone_record::Outcome {
             status: "aborted".into(),
@@ -2415,6 +2728,9 @@ fn failed_keystone_record(
             in_time: None,
             upgrade_levels: None,
             resulting_key_level: None,
+            forces: None,
+            forces_required: None,
+            bosses: None,
         },
         deaths: Vec::new(),
         pulls: Vec::new(),
@@ -2545,6 +2861,15 @@ fn spawn_run_mode(
     catalogs: &mut Option<super::catalogs::Catalogs>,
     options: Option<super::keystone::Options>,
 ) -> Result<Run, String> {
+    spawn_run_mode_record(seed, catalogs, options, &mut None)
+}
+
+fn spawn_run_mode_record(
+    seed: u64,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    options: Option<super::keystone::Options>,
+    planned_route: &mut Option<super::keystone_route::PlannedRoute>,
+) -> Result<Run, String> {
     let mut graph = super::graph::read_graph()?;
     if let Some(options) = options
         && options.map_id != graph.map_id
@@ -2555,7 +2880,7 @@ fn spawn_run_mode(
         ));
     }
     let planned = if options.is_some() {
-        Some(super::keystone::prepare_graph(&mut graph)?)
+        Some(super::keystone::prepare_challenge(&graph)?)
     } else {
         None
     };
@@ -2651,12 +2976,24 @@ fn spawn_run_mode(
         }
     }
     let keystone = match (options, planned) {
-        (Some(options), Some((plan, _))) => {
+        (Some(options), Some((definition, _))) => {
+            let hostile_sources =
+                super::keystone_route::attackable_sources(app.world(), party.owner, &actors);
+            let plan = super::keystone_route::plan(
+                &graph,
+                &definition.creature_weights,
+                definition.forces_required,
+                &hostile_sources,
+            )?;
+            graph.route = plan.steps.clone();
+            app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
             app.insert_resource(server::navigation::Navigation::new(&nav));
-            Some(super::keystone::start(&mut app, &party, plan, options)?)
+            Some(start_with_recorded_route(planned_route, plan, |plan| {
+                super::keystone::start(&mut app, &party, plan, options)
+            })?)
         }
         (None, None) => None,
         _ => return Err("keystone planning state is inconsistent".into()),
@@ -3059,6 +3396,11 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if let Some(keystone) = &self.keystone
+            && keystone.waiting_for_start(self.app.world())?
+        {
+            return Ok(());
+        }
         if self.advance_deck_replay()? {
             return Ok(());
         }
@@ -3073,6 +3415,10 @@ impl Run {
                     self.party.owner,
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
                 self.returning_to_party = true;
             }
             return Ok(());

@@ -431,10 +431,12 @@ fn holy_echo_of_light_native90_reheal_preserves_unpaid_pool_and_tick_phase() {
     );
     finish_echo(&mut group, &refreshed);
     let remaining_ticks = echo_ticks(&group, patient, after_refresh);
+    // SimC76f8118 action.cpp4614-4617 (74c8add1ad): a rolling refresh keeps the pending
+    // original-phase tick and adds Echo's fresh native two-tick duration.
     assert_eq!(
         remaining_ticks.len(),
-        2,
-        "refresh retains the native two-tick future window"
+        3,
+        "pending tick plus the fresh native two-tick window"
     );
     let paid: i32 = remaining_ticks.iter().map(|event| event.amount).sum();
     assert!(

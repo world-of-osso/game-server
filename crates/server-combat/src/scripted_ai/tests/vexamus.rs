@@ -34,10 +34,10 @@ fn projected_vexamus(difficulty: u32) -> (Harness, Entity, InMap) {
     h.app.world_mut().entity_mut(other_player).insert(other_map);
     let position = *h.app.world().get::<Position>(boss).unwrap();
     for (player, _, _) in &h.players {
-        *h.app.world_mut().get_mut::<Position>(*player).unwrap() = Position {
+        h.app.world_mut().entity_mut(*player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
     }
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
@@ -153,7 +153,9 @@ fn encounter_coverage_vexamus_projected_evade_rearms_first_expulsion() {
         // Native add_threat refuses Returning actors; wait for actual home arrival.
         // Move only the projected player, not the boss's pose/state/health.
         let player = h.player();
-        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 500.0;
+        let mut away = *h.app.world().get::<Position>(player).unwrap();
+        away.x += 500.0;
+        h.app.world_mut().entity_mut(player).insert(away);
         for _ in 0..100 {
             if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
                 != Some(&crate::creature_ai::CreatureState::Returning)
@@ -168,10 +170,10 @@ fn encounter_coverage_vexamus_projected_evade_rearms_first_expulsion() {
             "real home arrival"
         );
         let position = *h.app.world().get::<Position>(boss).unwrap();
-        *h.app.world_mut().get_mut::<Position>(player).unwrap() = Position {
+        h.app.world_mut().entity_mut(player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
         h.engage(boss);
         h.advance(4.8);
         assert!(h.app.world().get::<CastState>(boss).is_none());

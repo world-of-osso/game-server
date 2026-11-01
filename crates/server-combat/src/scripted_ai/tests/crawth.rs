@@ -27,7 +27,26 @@ fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
         .count()
 }
 
+/// TC a352b1fa `WorldObject::IsValidAttackTarget`: the source's own IMMUNE_TO_PC
+/// rejects a player target; Peck lacks SPELL_ATTR8_CAN_ATTACK_IMMUNE_PC.
 #[test]
+fn encounter_coverage_crawth_source_pc_immunity_rejects_native_peck() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = crawth_copy(difficulty);
+        let player = h.player();
+        assert_eq!(
+            crate::spell_cast::creature_cast(h.app.world_mut(), boss, PECK, Some(player), false),
+            Err(crate::spell_cast::CastFailure::InvalidTarget),
+            "difficulty{difficulty}"
+        );
+        h.advance(3.0);
+        assert_eq!(cast_count(&h, boss, PECK), 0);
+        assert!(!h.has_aura(player, PECK));
+    }
+}
+
+#[test]
+#[ignore = "CRAWTH_PC_IMMUNITY_INGRESS_UNSOURCED: source IMMUNE_TO_PC rejects Peck until a sourced unlock"]
 fn encounter_coverage_crawth_native_peck_damage_qualifies() {
     for difficulty in [1, 205] {
         let _rng = crate::random::seed_scope(u64::from(PECK) + u64::from(difficulty));

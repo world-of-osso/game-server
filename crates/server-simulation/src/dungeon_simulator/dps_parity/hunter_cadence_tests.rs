@@ -15,6 +15,44 @@ fn stacks(run: &Run, spell: u32) -> Option<(u8, u8)> {
 
 #[test]
 #[ignore = "requires private exact254 profile/traits and native world data"]
+fn native_bullseye_only_procs_below_target_health_threshold() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = player(1);
+    assert!(owned_buff(&run, 204089), "selected Bullseye talent");
+    {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(run.targets[0])
+            .unwrap();
+        health.max = 1_000_000.0;
+        health.current = 500_000.0;
+    }
+    cast(&mut run, 185358, false);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        !owned_buff(&run, 204090),
+        "healthy damage must not earn Bullseye"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(run.targets[0])
+        .unwrap()
+        .current = 190_000.0;
+    cast(&mut run, 185358, false);
+    for _ in 0..30 {
+        run.app.update();
+    }
+    assert!(
+        owned_buff(&run, 204090),
+        "damage below 20% must earn Bullseye"
+    );
+}
+
+#[test]
+#[ignore = "requires private exact254 profile/traits and native world data"]
 fn native_stalk_and_strike_chakram_grants_lock_and_load() {
     // SimC76f8118 sc_hunter.cpp4482–4485.
     let mut run = player(1);

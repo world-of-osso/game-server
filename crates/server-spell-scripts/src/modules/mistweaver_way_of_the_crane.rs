@@ -56,7 +56,15 @@ fn strike_again(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 /// 389328 when the hit crits) for about 280% (388779 s1) of the hit's damage.
 fn heal_from_kick(world: &mut World, ctx: &EffectCtx<'_>, crit: bool, damage: f32) {
     let caster = ctx.caster;
-    let Some(ally) = select_ally(world, caster) else {
+    let radius = targets::radius(
+        &world
+            .resource::<SpellStore>()
+            .get(NEARBY_RADIUS_SPELL)
+            .expect("Ancient Teachings heal missing")
+            .effects[0],
+        1,
+    );
+    let Some(ally) = select_ally(world, caster, radius) else {
         return;
     };
     let spell = world
@@ -75,18 +83,10 @@ fn heal_from_kick(world: &mut World, ctx: &EffectCtx<'_>, crit: bool, damage: f3
     effects::apply_heal(world, &heal, ally, amount, crit, false);
 }
 
-/// One living party member (no summons or pets) within the nearby radius, injured first,
+/// One living party member (no summons or pets) within `radius`, injured first,
 /// in random order.
-fn select_ally(world: &mut World, caster: Entity) -> Option<Entity> {
+pub(super) fn select_ally(world: &mut World, caster: Entity, radius: f32) -> Option<Entity> {
     let center = targets::position(world, caster)?;
-    let radius = targets::radius(
-        &world
-            .resource::<SpellStore>()
-            .get(NEARBY_RADIUS_SPELL)
-            .expect("Ancient Teachings heal missing")
-            .effects[0],
-        1,
-    );
     let mut allies = targets::area_units(world, caster, center, radius, Relation::Raid, 0);
     allies.retain(|&unit| {
         world.get::<SummonedCreature>(unit).is_none()

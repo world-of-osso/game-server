@@ -12,7 +12,15 @@ pub(crate) enum Kind {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct MeleeTable {
     pub(crate) miss: f32,
+    pub(crate) dodge: f32,
+    pub(crate) parry: f32,
     pub(crate) crit: f32,
+}
+
+impl MeleeTable {
+    pub(crate) fn expected_landed(self) -> f32 {
+        1.0 - (self.miss + self.dodge + self.parry).min(1.0)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -344,7 +352,10 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
                 let value: f32 = raw
                     .parse()
                     .map_err(|error| format!("invalid {name}: {error}"))?;
-                if !value.is_finite() || value > 1.0 || (name != "miss" && value < 0.0) {
+                if !value.is_finite()
+                    || (matches!(name, "miss" | "crit") && value > 1.0)
+                    || (name != "miss" && value < 0.0)
+                {
                     return Err(format!("invalid {name} in SimC attack table: {line}"));
                 }
                 // SimC attack.cpp197–211 omits nonpositive miss entries.
@@ -352,6 +363,8 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
             };
             melee_table = Some(MeleeTable {
                 miss: value("miss")?,
+                dodge: value("dodge")?,
+                parry: value("parry")?,
                 crit: value("crit")?,
             });
         }
@@ -543,6 +556,8 @@ fn reads_each_dummy_attacker_table_and_rejects_missing_tables() {
         hits[0].melee_table,
         Some(MeleeTable {
             miss: 0.1,
+            dodge: 0.0,
+            parry: 0.0,
             crit: 0.2
         })
     );
@@ -550,10 +565,19 @@ fn reads_each_dummy_attacker_table_and_rejects_missing_tables() {
         hits[1].melee_table,
         Some(MeleeTable {
             miss: 0.0,
+            dodge: 0.0,
+            parry: 0.0,
             crit: 0.3
         })
     );
     assert!(parse_trace("1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=100", "Tank_Dummy_Dungeon").is_err());
+}
+
+#[test]
+fn expected_landed_caps_simc_avoidance_at_one() {
+    let trace = "1.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_main_hand_tank' (0)\n1.000 attack_t::build_table: miss=0.03 dodge=1.2 parry=0.03 glance=0 crit=0\n1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=100";
+    let hits = parse_trace(trace, "Tank_Dummy_Dungeon").unwrap();
+    assert_eq!(hits[0].melee_table.unwrap().expected_landed(), 0.0);
 }
 
 #[test]
@@ -570,6 +594,8 @@ fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
                 kind: Kind::Swing,
                 melee_table: Some(MeleeTable {
                     miss: 0.0,
+                    dodge: 0.1,
+                    parry: 0.0,
                     crit: 0.0
                 })
             },
@@ -579,6 +605,8 @@ fn reads_simc_dummy_raw_melee_and_bleed_without_tank_heals() {
                 kind: Kind::Strike,
                 melee_table: Some(MeleeTable {
                     miss: 0.0,
+                    dodge: 0.0,
+                    parry: 0.0,
                     crit: 0.0
                 })
             },
