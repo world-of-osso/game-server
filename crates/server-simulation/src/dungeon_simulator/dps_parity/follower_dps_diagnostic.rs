@@ -2002,6 +2002,22 @@ fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(1233272 | 1233346))),
+        "the actual Balance follower must cast its Eclipse action"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::AuraApplied
+                && matches!(event.spell_id, Some(48517 | 48518))),
+        "Eclipse must apply a real Solar or Lunar buff"
+    );
     let fury = events
         .iter()
         .position(|event| {

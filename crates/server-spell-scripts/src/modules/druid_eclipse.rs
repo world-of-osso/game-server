@@ -1,0 +1,134 @@
+//! SimC76f8118 sc_druid.cpp:3210–3290, 7183–7262, 8555–8561, 9117–9125.
+use bevy::prelude::*;
+use shared::components::ActiveSpec;
+
+use super::combat;
+use combat::auras::{self, AuraInstance, RemoveReason, procs::AuraEvent, scripts::AuraScripts};
+use combat::class_progression::KnownSpells;
+use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_info::SpellInfo;
+
+const ECLIPSE: u32 = 1239669;
+const SOLAR_ACTION: u32 = 1233346;
+const LUNAR_ACTION: u32 = 1233272;
+const SOLAR: u32 = 48517;
+const LUNAR: u32 = 48518;
+const OVERRIDE: u32 = 1233353;
+const LUNAR_CALLING: u32 = 429523;
+const SOLSTICE: u32 = 343647;
+const SOLSTICE_BUFF: u32 = 343648;
+const TOTAL_ECLIPSE: u32 = 1240206;
+
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::ActionAvailable(action_available),
+    SpellScriptHook::SuccessfulCastRelationships(after_cast),
+];
+
+fn selected(world: &World, caster: Entity, spell: u32) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 102)
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(spell))
+}
+
+fn register(scripts: &mut AuraScripts) {
+    scripts.0.entry(SOLSTICE).or_default().check_proc = Some(block_generated_solstice);
+    scripts.0.entry(LUNAR_CALLING).or_default().on_apply = Some(start_lunar_calling);
+}
+
+fn block_generated_solstice(_: &World, _: &AuraInstance, _: &AuraEvent) -> bool {
+    false
+}
+
+fn start_lunar_calling(world: &mut World, caster: Entity, _: &AuraInstance) {
+    if selected(world, caster, ECLIPSE) {
+        spell_cast::cast_triggered(world, caster, OVERRIDE, Some(caster), 1);
+    }
+}
+
+fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
+    if !matches!(spell, SOLAR_ACTION | LUNAR_ACTION) || !selected(world, caster, ECLIPSE) {
+        return true;
+    }
+    let lunar = auras::has_aura(world, caster, OVERRIDE);
+    !auras::has_aura(world, caster, if lunar { LUNAR } else { SOLAR })
+}
+
+fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !selected(world, caster, ECLIPSE) {
+        return;
+    }
+    match spell.id {
+        194153 => {
+            spell_cast::cast_triggered(world, caster, OVERRIDE, Some(caster), 1);
+        }
+        190984 if !selected(world, caster, LUNAR_CALLING) => {
+            auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+                aura.spell_id == OVERRIDE && aura.caster == caster
+            });
+        }
+        SOLAR_ACTION | LUNAR_ACTION => enter_eclipse(world, caster),
+        194223 | 102560 | 390414 => {
+            let duration = spell_cast::duration_ms(world, caster, spell);
+            assert!(
+                duration > 0,
+                "Celestial Alignment must have a native duration"
+            );
+            apply_eclipse(world, caster, SOLAR, Some(duration as u32));
+            apply_eclipse(world, caster, LUNAR, Some(duration as u32));
+            trigger_solstice(world, caster);
+        }
+        _ => {}
+    }
+}
+
+fn enter_eclipse(world: &mut World, caster: Entity) {
+    let lunar = auras::has_aura(world, caster, OVERRIDE);
+    let (current, opposite) = if lunar {
+        (LUNAR, SOLAR)
+    } else {
+        (SOLAR, LUNAR)
+    };
+    auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == opposite && aura.caster == caster
+    });
+    apply_eclipse(world, caster, current, None);
+    if selected(world, caster, TOTAL_ECLIPSE) {
+        let chance = spell_cast::scripts::script_effect_value(world, caster, TOTAL_ECLIPSE, 0);
+        if combat::random::random::<f32>() * 100.0 < chance {
+            apply_eclipse(world, caster, opposite, None);
+        }
+    }
+    trigger_solstice(world, caster);
+}
+
+fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option<u32>) {
+    spell_cast::cast_triggered_with_overrides(
+        world,
+        caster,
+        spell,
+        Some(caster),
+        1,
+        spell_cast::TriggeredSpellOverrides {
+            fixed_aura_duration_ms: duration,
+            ..Default::default()
+        },
+    );
+}
+
+fn trigger_solstice(world: &mut World, caster: Entity) {
+    if selected(world, caster, SOLSTICE) {
+        let amount = spell_cast::scripts::script_effect_value(world, caster, SOLSTICE, 0);
+        spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            caster,
+            SOLSTICE_BUFF,
+            Some(caster),
+            1,
+            amount,
+        );
+    }
+}
