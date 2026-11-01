@@ -92,14 +92,14 @@ fn follower_weapons_follow_native_loot_specializations() {
     let templates = crate::item_templates::load_item_templates(&path).unwrap();
     let item_specs = super::super::item_spec::ItemSpecs::load(&db).unwrap();
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
-    let profiles = crate::followers::catalog::load_catalog(&db).unwrap();
+    let profiles = crate::followers::class_profiles::read_profiles().unwrap();
     let dagger = templates
         .get(ItemDefinitionSource::Retail, 251_128)
         .unwrap();
     assert!(!item_specs.allows(251_128, dagger, 581, 90));
     for level in [70, 90] {
         let map = if level == 70 { 2515 } else { 2813 };
-        for profile in &profiles.profiles {
+        for profile in &profiles {
             let class = classes
                 .classes
                 .iter()
@@ -110,11 +110,14 @@ fn follower_weapons_follow_native_loot_specializations() {
                 .iter()
                 .find(|spec| spec.spec_id == profile.spec_id)
                 .unwrap();
-            let (book, _) = crate::class_progression::evaluate_npc_starter(
+            let (book, _, _) = crate::class_progression::evaluate_follower_progression(
                 &classes,
                 profile.class_id,
+                profile.race,
                 profile.spec_id,
                 level,
+                profile.talent_source().unwrap(),
+                profile.talent_entries.as_deref().unwrap(),
             )
             .unwrap();
             let known =
@@ -130,6 +133,10 @@ fn follower_weapons_follow_native_loot_specializations() {
                 &spells,
                 &templates,
                 &item_specs,
+            );
+            eprintln!(
+                "class{} spec{} level{level}: {:?}",
+                profile.class_id, profile.spec_id, selection.items
             );
             let main = selection
                 .items
