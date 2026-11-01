@@ -27,6 +27,8 @@ def write_anchor_database(source, path, routes):
             if table != 'content_creature':
                 target.executemany(f'INSERT INTO {table} VALUES (?,?,?,?,?,NULL)',
                     source.execute(f'SELECT guid,map,position_x,position_y,position_z FROM {table}'))
+        if target.execute('SELECT 1 FROM tdb_gameobject WHERE guid < 0 LIMIT 1').fetchone():
+            raise ValueError('negative gameobject GUIDs conflict with route anchor IDs')
         target.executemany('INSERT INTO tdb_gameobject VALUES (?,?,?,?,?,NULL)',
             ((-index-1, row['map'], row['x'], row['y'], row['z'])
              for index, row in enumerate(routes)))
@@ -51,9 +53,11 @@ def resolve_spawns(source, executable, geometry, navigation, routes):
             gaps.append(dict(guid=row[0], result=result))
             continue
         if abs(result['z'] - row[5]) > AGENT_CLIMB:
+            anchors = [dict(table='route', index=-anchor['guid']-1)
+                       if anchor['table'] == 'tdb_gameobject' and anchor['guid'] < 0 else anchor
+                       for anchor in result['anchor_rows']]
             changes.append(dict(guid=row[0], entry=row[1], map=row[2], x=row[3], y=row[4],
-                                old_z=row[5], new_z=result['z'], comment=row[6],
-                                anchor_rows=result['anchor_rows']))
+                                old_z=row[5], new_z=result['z'], comment=row[6], anchor_rows=anchors))
     return dict(scanned=len(rows), changes=changes, unresolved=gaps)
 
 
@@ -74,13 +78,15 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--apply', action='store_true', help='apply guarded updates to world-db')
     args = parser.parse_args()
-    routes = json.loads(args.routes.read_text())
     mode = 'rw' if args.apply else 'ro'
     with sqlite3.connect(f'file:{args.world_db.resolve()}?mode={mode}', uri=True) as db:
-        report = resolve_spawns(db, args.resolver, args.geometry, args.navigation, routes)
-        args.output.write_text(json.dumps(report, indent=2) + '\n')
         if args.apply:
+            report = json.loads(args.output.read_text())
             apply_changes(db, report['changes'])
+        else:
+            routes = json.loads(args.routes.read_text())
+            report = resolve_spawns(db, args.resolver, args.geometry, args.navigation, routes)
+            args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(f"scanned {report['scanned']}, changes {len(report['changes'])}, unresolved {len(report['unresolved'])}")
 
 
