@@ -28,7 +28,10 @@ fn periodic(spell: u32, effect: u8) -> Option<ContextHitHook> {
 
 fn pulse(world: &mut World, ctx: &EffectCtx<'_>, _: Entity) {
     let caster = ctx.caster;
-    if !world.get::<ActiveSpec>(caster).is_some_and(|spec| spec.0 == 270) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 270)
+    {
         return;
     }
     for spell in [HEAL, DAMAGE] {

@@ -2,6 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::random::{self as rand, seq::SliceRandom};
+use combat::spell_cast::summon::SummonedCreature;
 use combat::spell_cast::{
     self,
     effects::{self, EffectCtx},
@@ -9,7 +10,6 @@ use combat::spell_cast::{
     scripts::script_effect_value,
     targets::{self, Relation},
 };
-use combat::spell_cast::summon::SummonedCreature;
 use combat::spell_info::SpellStore;
 use shared::components::{Health, UnitIsPet};
 
