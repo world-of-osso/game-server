@@ -308,7 +308,7 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
     h.app.world_mut().entity_mut(watcher).insert((
         map,
         as_position(center),
-        UnitFactionTemplate(25),
+        UnitFactionTemplate(16),
         UnitLevel(80),
         crate::creature_aggro::AggroRange,
         crate::creature_ai::CreatureState::Idle,
