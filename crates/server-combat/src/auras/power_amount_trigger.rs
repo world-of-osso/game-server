@@ -40,7 +40,9 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
         .effects
         .iter()
         .filter_map(|effect| {
-            if effect.aura_type != handlers::TRIGGER_SPELL_ON_POWER_AMOUNT {
+            if effect.aura_type != handlers::TRIGGER_SPELL_ON_POWER_AMOUNT
+                || aura.spell_id == 469779
+            {
                 return None;
             }
             let power = PowerType::from_db(effect.misc_values[0])?;
@@ -71,7 +73,11 @@ fn collect_children(auras: &ActiveAuras, power: PowerType, old: f32, new: f32) -
                 .iter()
                 .filter(|effect| matches_power(effect, power))
                 .filter(|effect| {
-                    reaches_threshold(effect.misc_values[1], Some(old), new, effect.amount)
+                    if aura.spell_id == 469779 {
+                        old > new && new < effect.amount
+                    } else {
+                        reaches_threshold(effect.misc_values[1], Some(old), new, effect.amount)
+                    }
                 })
                 .map(|effect| (aura.spell_id, effect.trigger_spell))
         })

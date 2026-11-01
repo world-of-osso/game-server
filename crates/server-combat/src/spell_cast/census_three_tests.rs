@@ -207,6 +207,8 @@ fn census_three_396_native_loss_casts_authored_energy_child() {
     super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -69.0).unwrap();
     assert_eq!(h.power(PowerType::Energy), 31.0);
     super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();
+    assert_eq!(h.power(PowerType::Energy), 30.0);
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();
     assert_eq!(h.power(PowerType::Energy), 100.0); // Actual child381623 restores100 raw.
 }
 
@@ -215,13 +217,13 @@ fn thistle_tea_automatic_trigger_spends_charges() {
     let mut h = fixture(4, &[469779, 381623]);
     apply(&mut h, 469779, 1);
     for _ in 0..3 {
-        super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -70.0).unwrap();
+        super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -71.0).unwrap();
         assert_eq!(h.power(PowerType::Energy), 100.0);
     }
-    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -70.0).unwrap();
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -71.0).unwrap();
     assert_eq!(
         h.power(PowerType::Energy),
-        30.0,
+        29.0,
         "a depleted charge pool cannot restore energy"
     );
 }
