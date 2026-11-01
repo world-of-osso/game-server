@@ -27,6 +27,54 @@ fn floor_resolver_missing_geometry_is_not_a_single_floor() {
 }
 
 #[test]
+#[ignore = "requires local Windrunner geometry and navigation assets"]
+fn floor_resolver_windrunner_route_selects_upper_floor() {
+    let geometry = Path::new("/home/osso/Projects/world-of-osso/game-engine/data");
+    let nav = Path::new("/home/osso/Projects/world-of-osso/game-server/data/ground/navmesh");
+    let db = rusqlite::Connection::open_with_flags(
+        "/home/osso/Projects/world-of-osso/game-server/data/world.db",
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let wdt: u32 = db
+        .query_row("SELECT WdtFileDataID FROM map WHERE ID=2805", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut resolver = FloorResolver::new(geometry, nav, HashMap::from([(2805, wdt)]));
+    let request = Request {
+        file: String::new(),
+        run_start: String::new(),
+        guid: String::new(),
+        map: 2805,
+        x: 5326.72,
+        y: -3218.82,
+        ui_map_id: None,
+        neighbor_hints: Vec::new(),
+    };
+    assert!(matches!(
+        resolver.resolve(&request),
+        Resolution::Gap {
+            gap: Gap::NamedGap { .. }
+        }
+    ));
+    let route = AuthoredAnchor {
+        row: AnchorRow {
+            table: "tdb_gameobject",
+            guid: -1,
+        },
+        x: 5328.386,
+        y: -3216.4063,
+        z: 101.156075,
+    };
+    let result = resolver.resolve_with_hints(&request, &[], &[route]);
+    assert!(
+        matches!(result, Resolution::Resolved { z, method: "authored_neighbor_anchor", .. } if (z - 101.281906).abs() < 0.001),
+        "{result:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires local Neltharus geometry and navigation assets"]
 fn floor_resolver_neltharus_real_data() {
     let geometry = Path::new("/home/osso/Projects/world-of-osso/game-engine/data");
