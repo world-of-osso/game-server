@@ -11,8 +11,17 @@ fn follower_demonology_hand_of_guldan_draws_rank_two_demonic_knowledge_deck() {
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
     let copy = create_open_follower_copy(&mut app, 2515).unwrap();
     let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
+    // Other Imp-fade Core procs would obscure the observed deck draws.
+    let known: Vec<_> = app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .filter(|&spell| spell != 426115)
+        .collect();
     app.world_mut()
         .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(known))
         .remove::<crate::followers::Follower>();
     let hp = app
         .world_mut()
