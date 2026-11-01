@@ -154,6 +154,17 @@ fn follower_subtlety_danse_macabre_once_per_distinct_action_per_dance() {
             .count()
     };
     let cast = |app: &mut App, spell, unit| {
+        if unit == target {
+            let mut position = app
+                .world()
+                .get::<shared::components::Position>(actor)
+                .unwrap()
+                .clone();
+            position.x += 2.0;
+            *app.world_mut()
+                .get_mut::<shared::components::Position>(target)
+                .unwrap() = position;
+        }
         crate::spell_cast::creature_cast(app.world_mut(), actor, spell, Some(unit), false)
             .unwrap_or_else(|error| {
                 panic!(
