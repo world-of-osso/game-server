@@ -465,6 +465,32 @@ fn simc_party_pulse_hits_all_five_class_party_members() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn simc_party_pulse_replays_two_engaged_damageable_dummies() {
+    let report = super::replay_simc_party_with_targets(
+        256,
+        90,
+        &fixture("healer_simc_fixture.log"),
+        &fixture("healer_simc_party_fixture.log"),
+        12,
+        70448,
+        2,
+    )
+    .unwrap();
+    assert_eq!(report["target_count"], 2);
+    assert_eq!(report["party_incoming_events"], 5);
+    let targets = report["damage_by_dummy"].as_object().unwrap();
+    assert_eq!(
+        targets.len(),
+        2,
+        "both engaged dummies must take damage: {report}"
+    );
+    assert!(targets.values().all(|value| value.as_u64().unwrap() > 0));
+    assert!(report["pain_target_seconds"].as_f64().unwrap() > 0.0);
+    assert!(report["atonement_target_seconds"].as_f64().unwrap() > 0.0);
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
     let trace = fixture("healer_simc_fixture.log");

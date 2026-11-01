@@ -113,7 +113,7 @@ pub(super) fn replay_simc(
     duration: u32,
     seed: u64,
 ) -> Result<Value, String> {
-    replay(spec, level, trace, None, duration, seed)
+    replay(spec, level, trace, None, duration, seed, 1)
 }
 
 pub(super) fn replay_simc_party(
@@ -124,7 +124,27 @@ pub(super) fn replay_simc_party(
     duration: u32,
     seed: u64,
 ) -> Result<Value, String> {
-    replay(spec, level, trace, Some(party_trace), duration, seed)
+    replay_simc_party_with_targets(spec, level, trace, party_trace, duration, seed, 1)
+}
+
+pub(super) fn replay_simc_party_with_targets(
+    spec: u32,
+    level: u8,
+    trace: &Path,
+    party_trace: &Path,
+    duration: u32,
+    seed: u64,
+    targets: usize,
+) -> Result<Value, String> {
+    replay(
+        spec,
+        level,
+        trace,
+        Some(party_trace),
+        duration,
+        seed,
+        targets,
+    )
 }
 
 /// A class party (tank, `spec` healer, two DPS and the leader DPS), each in
@@ -273,9 +293,13 @@ fn replay(
     party_trace: Option<&Path>,
     duration: u32,
     seed: u64,
+    targets: usize,
 ) -> Result<Value, String> {
     if duration == 0 {
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
+    }
+    if targets == 0 {
+        return Err("SIMC_REPLAY_TARGETS_ZERO".into());
     }
     let ticks = duration
         .checked_mul(TICKS_PER_SECOND)
@@ -287,7 +311,7 @@ fn replay(
         .transpose()?
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
-    let mut party = spawn_class_party(&snapshot, spec, level, 1)?;
+    let mut party = spawn_class_party(&snapshot, spec, level, targets)?;
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();
@@ -308,10 +332,24 @@ fn replay(
     } = party;
     let source = sources[0];
     apply_optimal_raid_environment(&mut app, source, &slots)?;
+    let debuffs = [("chaos_brand", 1490), ("mystic_touch", 113746)].map(|(name, spell_id)| {
+        crate::simc_tank_timeline::RaidBuff {
+            name: name.into(),
+            spell_id,
+        }
+    });
+    for &extra in &sources[1..] {
+        super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
+    }
     finish_precombat(&mut app, &[tank, healer])?;
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
-    super::healer_replay::freeze_sources(app.world_mut(), &[(0, source)].into());
+    let frozen_sources = sources
+        .iter()
+        .enumerate()
+        .map(|(index, &source)| (index as u32, source))
+        .collect();
+    super::healer_replay::freeze_sources(app.world_mut(), &frozen_sources);
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     app.insert_resource(Capture {
         members: slots.to_vec(),
@@ -329,6 +367,10 @@ fn replay(
     let mut mitigation_ticks = 0_u32;
     let mut next = 0;
     let mut next_party = 0;
+    let mut pain_target_ticks = 0_u64;
+    let mut atonement_target_ticks = 0_u64;
+    let mut pain_periodic_hits = 0_u64;
+    let mut damage_by_dummy = std::collections::BTreeMap::<u64, u64>::new();
     let alive = |world: &World, unit: Entity| {
         world
             .get::<Health>(unit)
@@ -360,6 +402,17 @@ fn replay(
         report_death_audit(&mut app, &slots);
         let world = app.world();
         recorder.observe_frame(world, tick);
+        let marked = |unit: &Entity, spell| {
+            world
+                .get::<crate::auras::ActiveAuras>(*unit)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == spell && aura.caster == healer)
+                })
+        };
+        pain_target_ticks += sources.iter().filter(|unit| marked(unit, 589)).count() as u64;
+        atonement_target_ticks += slots.iter().filter(|unit| marked(unit, 194384)).count() as u64;
         // The default party's tank is a Protection Paladin.
         if super::dps_parity::PROTECTION_ACTIVE_MITIGATION_AURAS
             .iter()
@@ -371,6 +424,14 @@ fn replay(
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            if event.kind == shared::protocol::CombatLogKind::Damage
+                && event
+                    .target
+                    .is_some_and(|target| sources.iter().any(|source| source.to_bits() == target))
+            {
+                *damage_by_dummy.entry(event.target.unwrap()).or_default() +=
+                    event.amount.max(0) as u64;
+            }
             #[cfg(test)]
             if std::env::var_os("HEALER_TANK_TRACE_EVENTS").is_some()
                 && (event.source == Some(healer.to_bits()) || event.target == Some(tank.to_bits()))
@@ -379,6 +440,13 @@ fn replay(
                     "HEALER_REPLAY_EVENT {}",
                     json!({"tick":tick,"event":event,"tank_health":world.get::<Health>(tank).map(|health| (health.current, health.max))})
                 );
+            }
+            if event.source == Some(healer.to_bits())
+                && event.spell_id == Some(589)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.periodic
+            {
+                pain_periodic_hits += 1;
             }
             if event.kind != shared::protocol::CombatLogKind::CastSuccess {
                 continue;
@@ -397,7 +465,10 @@ fn replay(
     Ok(
         json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
         "world_db_sha256":snapshot_sha256,
-        "duration_seconds":duration,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":crate::followers::simulator::DEFAULT_PARTY[0],
+        "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":crate::followers::simulator::DEFAULT_PARTY[0],
+        "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
+        "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
+        "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
         "metrics":recorder.report(app.world(), duration)}),
