@@ -81,6 +81,45 @@ fn distances(paths: &BTreeMap<u32, Vec<(u32, f32)>>, start: u32) -> BTreeMap<u32
     best
 }
 
+fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
+    let mut bosses = Vec::new();
+    for entry in graph.boss_entries() {
+        let source = graph
+            .follower_boss_sources
+            .get(entry)
+            .copied()
+            .unwrap_or(*entry);
+        let packs: Vec<_> = graph
+            .packs
+            .iter()
+            .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == source))
+            .collect();
+        let [pack] = packs.as_slice() else {
+            return Err(format!("boss{entry} has {} source packs", packs.len()));
+        };
+        bosses.push(RouteStep {
+            pack: pack.id,
+            anchor: pack.point().to_array(),
+        });
+    }
+    if graph.route.is_empty() {
+        if bosses.is_empty() {
+            return Err("graph has no authored boss route or encounter bindings".into());
+        }
+        return Ok(bosses);
+    }
+    let mut remaining = graph.route.iter();
+    for boss in bosses {
+        if !remaining.any(|step| step.pack == boss.pack) {
+            return Err(format!(
+                "authored route omits or reorders boss pack{}",
+                boss.pack
+            ));
+        }
+    }
+    Ok(graph.route.clone())
+}
+
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
 /// A candidate may be inserted between boss-route steps or appended at the end.
 pub(super) fn plan(
@@ -103,13 +142,23 @@ pub(super) fn plan(
             .map(|spawn| weights.get(&spawn.entry).copied().unwrap_or(0))
             .sum::<u64>()
     };
-    let mut steps = graph.route.clone();
+    let mut steps = boss_route(graph)?;
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
         .any(|id| !graph.packs.iter().any(|pack| pack.id == *id))
     {
         return Err("boss route references an absent pack".into());
+    }
+    let mut previous = graph.entrance_pack;
+    for step in &steps {
+        if distance(previous, step.pack).is_none() {
+            return Err(format!(
+                "boss route cannot reach pack{} from pack{previous}",
+                step.pack
+            ));
+        }
+        previous = step.pack;
     }
     let mut total = graph
         .packs
@@ -229,6 +278,36 @@ mod tests {
         assert_eq!(
             retained,
             graph.route.iter().map(|step| step.pack).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn derives_boss_order_when_extracted_graph_has_no_route() {
+        let mut graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2825, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[1,0],"height":0,"spawns":[{"guid":2,"entry":100,"position":[1,0]}]},
+                {"id":3,"position":[2,0],"height":0,"spawns":[{"guid":3,"entry":200,"position":[2,0]}]},
+                {"id":4,"position":[3,0],"height":0,"spawns":[{"guid":4,"entry":300,"position":[3,0]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":1},{"from":2,"to":3,"yards":1},{"from":3,"to":4,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],"follower_boss_entries":[100,200,300]
+        })).unwrap();
+        let result = plan(&graph, &HashMap::new(), 0, &HashSet::new()).unwrap();
+        assert_eq!(
+            result
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [2, 3, 4]
+        );
+        graph.packs.retain(|pack| pack.id != 3);
+        assert!(
+            plan(&graph, &HashMap::new(), 0, &HashSet::new())
+                .unwrap_err()
+                .contains("boss200 has 0 source packs")
         );
     }
 
