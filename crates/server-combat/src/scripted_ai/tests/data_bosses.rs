@@ -365,6 +365,39 @@ fn run_preparation_script(script: &str, args: &[&std::ffi::OsStr]) {
     );
 }
 
+/// Inputs of a caster's native enemy area selection of `target`, for failure messages.
+fn describe_enemy_selection(h: &mut Harness, caster: Entity, target: Entity) -> String {
+    let world = h.app.world_mut();
+    let from = crate::spell_cast::targets::position(world, caster).unwrap();
+    let distance = crate::spell_cast::targets::position(world, target).map(|to| from.distance(to));
+    let maps = (
+        world.get::<InMap>(caster).copied(),
+        world.get::<InMap>(target).copied(),
+    );
+    let indexed = maps
+        .0
+        .is_some_and(|map| crate::maps::units::nearby(world, map, from, 60.0).contains(&target));
+    format!(
+        "distance={distance:?} maps={maps:?} indexed={indexed} enemy={} detect={} flags={:?}/{:?} factions={:?}/{:?} player={}",
+        crate::spell_cast::targets::relation_matches(
+            world,
+            caster,
+            target,
+            crate::spell_cast::targets::Relation::Enemy
+        ),
+        crate::auras::invisibility::can_detect(world, caster, target),
+        world.get::<UnitFlags>(caster).map(|flags| flags.0),
+        world.get::<UnitFlags>(target).map(|flags| flags.0),
+        world
+            .get::<UnitFactionTemplate>(caster)
+            .map(|faction| faction.0),
+        world
+            .get::<UnitFactionTemplate>(target)
+            .map(|faction| faction.0),
+        world.get::<Player>(target).is_some(),
+    )
+}
+
 fn bound_boss_at_difficulty(
     entry: u32,
     map_id: u32,
@@ -748,8 +781,12 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), player, book)
             .unwrap(),
-        5
+        1
     );
+    for unit in &followers {
+        crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), *unit, book)
+            .unwrap();
+    }
     assert_eq!(h.app.world().get::<InMap>(player), Some(&map));
     assert!(
         h.app

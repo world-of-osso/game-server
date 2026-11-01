@@ -71,7 +71,8 @@ impl ScalingPolicy {
         fortified: bool,
         tyrannical: bool,
     ) -> Multipliers {
-        let base = self.coefficient(level) / self.coefficient(self.per_level.value.reference_level);
+        let health = self.coefficient(level);
+        let damage = health / self.coefficient(self.per_level.value.reference_level);
         let affix = if boss && tyrannical {
             self.tyrannical.value
         } else if !boss && fortified {
@@ -83,8 +84,8 @@ impl ScalingPolicy {
             }
         };
         Multipliers {
-            health: base * affix.health,
-            damage: base * affix.damage,
+            health: health * affix.health,
+            damage: damage * affix.damage,
         }
     }
 }
@@ -107,6 +108,26 @@ pub(crate) fn scale_copy(world: &mut World, map: crate::maps::InMap, level: u32,
     }
 }
 
+pub(crate) fn is_eligible(world: &World, creature: Entity) -> bool {
+    if world.get::<KeystoneCreatureScale>(creature).is_some()
+        || world.get::<crate::followers::Follower>(creature).is_some()
+    {
+        return false;
+    }
+    if let Some(summon) = world.get::<crate::zones::TempSummon>(creature)
+        && crate::followers::is_player_like_combatant(world, summon.summoner)
+    {
+        return false;
+    }
+    if let Some(owner) = world.get::<shared::components::UnitSummonedBy>(creature)
+        && let Some(owner) = Entity::try_from_bits(owner.0)
+        && crate::followers::is_player_like_combatant(world, owner)
+    {
+        return false;
+    }
+    true
+}
+
 pub(crate) fn scale_creature(
     world: &mut World,
     creature: Entity,
@@ -114,20 +135,7 @@ pub(crate) fn scale_creature(
     affixes: &[u32],
     policy: &ScalingPolicy,
 ) {
-    if world.get::<KeystoneCreatureScale>(creature).is_some()
-        || world.get::<crate::followers::Follower>(creature).is_some()
-    {
-        return;
-    }
-    if let Some(summon) = world.get::<crate::zones::TempSummon>(creature)
-        && crate::followers::is_player_like_combatant(world, summon.summoner)
-    {
-        return;
-    }
-    if let Some(owner) = world.get::<shared::components::UnitSummonedBy>(creature)
-        && let Some(owner) = Entity::try_from_bits(owner.0)
-        && crate::followers::is_player_like_combatant(world, owner)
-    {
+    if !is_eligible(world, creature) {
         return;
     }
     let dungeon_boss = world
@@ -195,7 +203,7 @@ mod tests {
             .entity_mut(boss)
             .insert(crate::zones::CreatureFlagsExtra(0x1000_0000));
         scale_copy(&mut world, map, 12, &[10, 9]);
-        let multiplier = (2.22_f32 / 1.07) * 1.2;
+        let multiplier = 2.22_f32 * 1.2;
         for entity in [before, after] {
             let health = world.get::<Health>(entity).unwrap();
             assert!((health.max - 100.0 * multiplier).abs() < 0.001);
@@ -204,13 +212,13 @@ mod tests {
             let target = crate::level_scaling::UnitScaling::from_item((None, None, None));
             assert_eq!(
                 crate::level_scaling::damage_dealt(&attacker, &target, 100.0),
-                (100.0 * multiplier).trunc()
+                (100.0_f32 * (2.22 / 1.07) * 1.2).trunc()
             );
         }
         assert_eq!(world.get::<Health>(pet).unwrap().max, 100.0);
         assert!(world.get::<KeystoneCreatureScale>(pet).is_none());
         let health = world.get::<Health>(boss).unwrap();
-        assert!((health.max - 100.0 * (2.22_f32 / 1.07) * 1.25).abs() < 0.001);
+        assert!((health.max - 100.0 * 2.22_f32 * 1.25).abs() < 0.001);
         let boss_scale = crate::level_scaling::UnitScaling::of(&world, boss);
         let target = crate::level_scaling::UnitScaling::from_item((None, None, None));
         assert_eq!(
@@ -223,13 +231,13 @@ mod tests {
     fn mythic_scaling_fitted_level_and_affixes() {
         let policy = ScalingPolicy::retail();
         let trash = policy.multipliers(12, false, true, true);
-        assert!((trash.health - 2.22 / 1.07 * 1.2).abs() < 1e-12);
+        assert!((trash.health - 2.22 * 1.2).abs() < 1e-12);
         assert!((trash.damage - 2.22 / 1.07 * 1.2).abs() < 1e-12);
         let boss = policy.multipliers(12, true, true, true);
-        assert!((boss.health - 2.22 / 1.07 * 1.25).abs() < 1e-12);
+        assert!((boss.health - 2.22 * 1.25).abs() < 1e-12);
         assert!((boss.damage - 2.22 / 1.07 * 1.15).abs() < 1e-12);
         let reference = policy.multipliers(2, false, false, false);
-        assert_eq!(reference.health, 1.0);
+        assert_eq!(reference.health, 1.07);
         assert_eq!(reference.damage, 1.0);
     }
 }

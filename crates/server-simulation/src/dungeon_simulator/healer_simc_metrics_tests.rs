@@ -5,6 +5,58 @@ use shared::components::Health;
 
 #[test]
 #[ignore = "requires native spell data"]
+fn healer_report_records_each_actual_party_death() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+
+    let mut h = harness(Vec::new(), &[133], 5).unwrap();
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    let caster = h.caster;
+    let source = h.npc;
+    for target in [caster, ally] {
+        *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+            current: 100.0,
+            max: 100.0,
+        };
+    }
+    let mut recorder = Recorder::start(h.app.world(), caster, caster, vec![caster, ally]);
+    let spell = crate::spell_cast::test_harness::world_db()
+        .unwrap()
+        .spell_store()
+        .get(133)
+        .unwrap()
+        .clone();
+    for (index, target) in [caster, ally].into_iter().enumerate() {
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &crate::spell_cast::effects::EffectCtx {
+                caster: source,
+                spell: &spell,
+                depth: 0,
+                dest: None,
+                chain_multiplier: 1.0,
+            },
+            target,
+            1_000.0,
+            false,
+            false,
+        );
+        h.advance(1);
+        recorder.observe_frame(h.app.world(), (index as u32 + 1) * 20);
+    }
+    let report = recorder.report(h.app.world(), 2);
+    assert_eq!(report["first_death_seconds"], 1.0);
+    assert_eq!(
+        report["party_death_times"][caster.to_bits().to_string()],
+        1.0
+    );
+    assert_eq!(report["party_death_times"][ally.to_bits().to_string()], 2.0);
+    assert_eq!(report["party_death_times"].as_object().unwrap().len(), 2);
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn healer_report_records_real_mana_payment_by_spell() {
     let mut h = crate::spell_cast::test_harness::harness_with(Vec::new(), &[2061, 137032], 5, true)
         .unwrap();

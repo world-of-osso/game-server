@@ -470,3 +470,223 @@ fn restoration_druid_heals_the_simc_dummy_party() {
     );
     println!("RESTORATION_DRUID_REPORT={report}");
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_thriving_vegetation_heals_a_fifth_of_rejuvenation_up_front() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    // Settle equipped stats before the cast snapshots them.
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 447131));
+    {
+        let mut health = run.app.world_mut().get_mut::<Health>(tank).unwrap();
+        health.current = health.max * 0.1;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let own_heal = |spell| {
+        events
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(spell)
+                    && e.source == Some(healer.to_bits())
+                    && e.target == Some(tank.to_bits())
+            })
+            .collect::<Vec<_>>()
+    };
+    let instant = own_heal(447132);
+    let ticks = own_heal(774);
+    assert_eq!(
+        instant.len(),
+        1,
+        "one instant heal per Rejuvenation: {events:?}"
+    );
+    assert!(
+        !instant[0].crit,
+        "WCL: 717 of 717 447132 heals are noncritical"
+    );
+    assert!(
+        ticks.len() >= 6,
+        "initial tick plus 15s of ticks: {}",
+        ticks.len()
+    );
+    // Native heal crits double; express the delivered ticks as noncritical amounts.
+    let delivered: f32 = ticks
+        .iter()
+        .map(|e| e.amount as f32 / if e.crit { 2.0 } else { 1.0 })
+        .sum();
+    // 447131 s1 is 20 at rank 1 and 30 at the loadout's rank 2 (TraitDefinitionEffectPoints):
+    // that share of the HoT's total periodic effect, initial and partial final tick included.
+    let percent =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), healer, 447131, 0);
+    assert_eq!(percent, 30.0);
+    let ratio = instant[0].amount as f32 / (percent / 100.0 * delivered);
+    assert!(
+        (0.97..=1.03).contains(&ratio),
+        "instant {} vs {percent}% of {delivered} over {} ticks",
+        instant[0].amount,
+        ticks.len()
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_lifetreading_grows_efflorescence_and_lifebloom_blooms_verdancy() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    for aura in [1217941, 392325] {
+        assert!(crate::auras::has_aura(run.app.world(), healer, aura));
+    }
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33763, Some(tank), false)
+        .unwrap();
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let mut summons = run.app.world_mut().query::<&SummonedCreature>();
+    let blossoms = summons
+        .iter(run.app.world())
+        .filter(|summon| summon.owner == healer && summon.spell_id == 1232285)
+        .count();
+    assert_eq!(
+        blossoms, 1,
+        "Lifebloom grows one Lifetreading Efflorescence"
+    );
+    let healer_heals = |events: &[shared::protocol::CombatLogEvent], spell| {
+        events
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(spell)
+                    && e.source == Some(healer.to_bits())
+            })
+            .filter_map(|e| e.target)
+            .collect::<Vec<_>>()
+    };
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        !healer_heals(events, 81269).is_empty(),
+        "the blossom pulses Efflorescence heals"
+    );
+    // A second Lifebloom keeps one blossom.
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33763, Some(tank), true).unwrap();
+    run.app.update();
+    let blossoms = summons
+        .iter(run.app.world())
+        .filter(|summon| summon.owner == healer && summon.spell_id == 1232285)
+        .count();
+    assert_eq!(blossoms, 1, "Efflorescence is limited to one");
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33778, Some(tank), true).unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let verdancy = healer_heals(events, 392329);
+    // 392325 s1: up to three allies inside the blossom, all injured here.
+    assert_eq!(verdancy.len(), 3, "{events:?}");
+    assert!(
+        verdancy
+            .iter()
+            .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target))
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_druid_casts_wild_growth_on_a_lightly_injured_party() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let healer = run.healer;
+    // A party-wide pulse leaves every member at ~93%, as the SimC party trace does.
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.93;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.spell_id == Some(48438)
+            && e.kind == CombatLogKind::CastSuccess),
+        "Wild Growth must heal a party-wide pulse"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn power_of_the_archdruid_spreads_the_soul_of_the_forest_regrowth() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    run.app.update();
+    assert!(crate::auras::has_aura(run.app.world(), healer, 392302));
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    let regrowth_targets = |run: &mut super::healer_simc_replay::ClassParty| {
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, 8936, Some(tank), true)
+            .unwrap();
+        for _ in 0..3 {
+            run.app.update();
+        }
+        let mut targets: Vec<u64> = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(8936)
+                    && !e.periodic
+                    && e.source == Some(healer.to_bits())
+            })
+            .filter_map(|e| e.target)
+            .collect();
+        targets.sort_unstable();
+        targets
+    };
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 114108, Some(healer), 0);
+    let empowered = regrowth_targets(&mut run);
+    // 392302 s1: the tank plus two more allies, each healed once.
+    assert_eq!(empowered.len(), 3, "{empowered:?}");
+    assert!(empowered.windows(2).all(|pair| pair[0] != pair[1]));
+    assert!(empowered.contains(&tank.to_bits()));
+    assert!(!crate::auras::has_aura(run.app.world(), healer, 114108));
+    assert_eq!(regrowth_targets(&mut run), vec![tank.to_bits()]);
+}

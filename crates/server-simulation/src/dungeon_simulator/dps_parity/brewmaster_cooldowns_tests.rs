@@ -34,6 +34,42 @@ fn selected_fortifying_brew_uses_talent_health_increase() {
         .get::<shared::components::Health>(actor)
         .unwrap()
         .max;
+    let enemy = run.targets[0];
+    let strike = |run: &mut Run| {
+        let health = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        crate::spell_cast::effects::replay_simc_dummy_strike(
+            run.app.world_mut(),
+            enemy,
+            actor,
+            10_000.0,
+            false,
+            false,
+        );
+        let remaining = run
+            .app
+            .world()
+            .get::<shared::components::Health>(actor)
+            .unwrap()
+            .current;
+        health - remaining + crate::auras::stagger::pool_size(run.app.world(), actor)
+    };
+    let unprotected = strike(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 124255,
+    );
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor)
+        .unwrap()
+        .current = before;
     crate::spell_cast::creature_cast(run.app.world_mut(), actor, 115203, Some(actor), false)
         .unwrap();
     let after = run
@@ -43,8 +79,13 @@ fn selected_fortifying_brew_uses_talent_health_increase() {
         .unwrap()
         .max;
     assert!(
-        (after - before * 1.10).abs() < 20.0,
+        (after - before * 1.10).abs() < 1.0,
         "Fortifying Brew max health {before} -> {after}"
+    );
+    let protected = strike(&mut run);
+    assert!(
+        (protected - unprotected * 0.8).abs() < 3.0,
+        "Fortifying Brew direct plus deferred damage {unprotected} -> {protected}"
     );
 }
 

@@ -233,6 +233,56 @@ fn higher_priority_approach_completes_before_competing_regroup_query() {
 }
 
 #[test]
+fn abandoned_higher_priority_result_stops_deferring_a_stationary_regroup() {
+    // Live Ara-Kara 2026-11-01 16:51 UTC: the tank's approach to an enemy completed after
+    // the enemy died; nothing asked for it again and the tank, never moving, never pruned
+    // it, so its regroup to the owner stayed pending indefinitely.
+    let (mut nav, _dir) = fixture();
+    let entity = Entity::from_bits(41);
+    let from = point(start());
+    let approach = ::navigation::worker::Query::Path {
+        from,
+        to: Vec3::new(140.0, 0.2, 100.0),
+    };
+    let regroup = ::navigation::worker::Query::Path {
+        from,
+        to: Vec3::new(100.0, 0.2, 140.0),
+    };
+    assert!(
+        nav.query_deferred(entity, 0, Goal::Approach(99), approach)
+            .is_none()
+    );
+    nav.drain_until_idle();
+    let mut tick = 0.0;
+    let mut result = None;
+    // 20 ticks per second for 3 s, asking only for the regroup.
+    for _ in 0..60 {
+        tick += 0.05;
+        nav.observe_clock(tick);
+        result = nav.query_deferred(entity, 0, Goal::RegroupApproach(100), regroup.clone());
+        if result.is_some() {
+            break;
+        }
+        nav.drain_until_idle();
+    }
+    let Some(Ok(Some(::navigation::worker::Output::Path(path)))) = result else {
+        panic!("the regroup must complete once the approach is abandoned: {result:?}");
+    };
+    assert!(path.complete);
+    assert!(
+        path.points
+            .last()
+            .unwrap()
+            .distance(Vec3::new(100.0, 0.2, 140.0))
+            < 1.0
+    );
+    assert!(
+        tick > deferred::ABANDONED_QUERY_SECS,
+        "a fresh higher-priority result still defers the regroup: completed at {tick} s"
+    );
+}
+
+#[test]
 fn navigation_chase_cancel_does_not_strand_an_unrelated_probe() {
     let (mut nav, _dir) = fixture();
     let entity = Entity::from_bits(41);

@@ -6,7 +6,6 @@ use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
 use shared::components::{Level, ModelDisplay, Position, UnitLevel};
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 const TARGET_GUID: u32 = 20375682;
 const INTERVENING_GUID: u32 = 20375688;
@@ -51,37 +50,8 @@ pub(super) fn route_fixture_with_plugins(configure: impl FnOnce(&mut App)) -> (H
         },
         shared::components::UnitScale(model.display_scale),
     ));
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
     let map = *h.app.world().get::<InMap>(tank).unwrap();
-    let mut ground = crate::ground::GroundMap::new(
-        &crate::ground::ground_data_dir(),
-        std::collections::HashMap::from([(34, 791060)]),
-    );
-    let mut queue = bevy::ecs::world::CommandQueue::default();
-    let mut commands = Commands::new(&mut queue, h.app.world());
-    let count = crate::zones::spawn_map_creatures(
-        &mut commands,
-        data,
-        crate::zones::MapContent {
-            map,
-            difficulty_id: 1,
-            dead_bosses: vec![],
-        },
-        false,
-        Some(&mut ground),
-    );
-    assert!(count > 2, "actual full Normal Stockade population");
-    queue.apply(h.app.world_mut());
-    h.app.insert_resource(ground);
-    h.app.insert_resource(crate::navigation::Navigation::new(
-        &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
-    ));
+    super::stockade_scenario::install_population(&mut h, map);
     (h, tank)
 }
 

@@ -382,6 +382,202 @@ fn rogue_literal_spend_cap_and_base_energy_ignore_temporary_capacity() {
 }
 
 #[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_loaded_dice_is_earned_by_rush_and_spent_by_roll() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 256170));
+    assert!(!crate::auras::has_aura(run.app.world(), run.actor, 256171));
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(315584, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "poison cannot earn Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(13750, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Adrenaline Rush earns Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(381989, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Keep It Rolling cannot spend Loaded Dice"
+    );
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1214909, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 256171),
+        "Roll the Bones spends Loaded Dice without regranting it"
+    );
+    assert!(
+        !crate::auras::has_aura(run.app.world(), run.actor, 1214933),
+        "Loaded Dice cannot roll the lowest state"
+    );
+}
+
+#[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_preparation_resets_five_running_cooldowns() {
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    let cooldowns = [13750, 315341, 13877, 271877, 51690];
+    for id in cooldowns.into_iter().chain([381989]) {
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            run.app.world_mut(),
+            run.actor,
+            id,
+            90_000.0,
+        );
+    }
+    let remaining = |run: &Run, id| {
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+    };
+    assert!(cooldowns.into_iter().all(|id| remaining(&run, id) > 0));
+    let unrelated = remaining(&run, 381989);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1277933, run.actor, None),
+    )
+    .unwrap();
+    assert!(cooldowns.into_iter().all(|id| remaining(&run, id) == 0));
+    assert_eq!(remaining(&run, 381989), unrelated);
+}
+
+#[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_restless_blades_counts_high_roll_bonus_once() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(381989, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1214935,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1214937, 3);
+    {
+        let mut pools = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+            .unwrap();
+        pools.get_mut(PowerType::Energy).unwrap().current = 200.0;
+        pools.get_mut(PowerType::ComboPoints).unwrap().current = 5.0;
+    }
+    let cooldown = |run: &Run| {
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(381989)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+    };
+    let before = cooldown(&run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(2098, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    let reduction = before - cooldown(&run);
+    let expected = (5000.0 * (1.0 + bonus / 100.0)) as u64;
+    assert_eq!(
+        reduction, expected,
+        "high-roll cooldown reduction must apply once"
+    );
+}
+
+#[test]
+#[ignore = "requires native Outlaw260 profile and DPS_PARITY_ACTOR=player"]
+fn outlaw_fatal_flourish_uses_earned_hit_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(260, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 35551));
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..400 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let gains = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Energize
+                && event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(35546)
+        })
+        .count();
+    let eligible_upper_bound = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(run.actor.to_bits())
+                && matches!(event.spell_id, None | Some(0 | 185763 | 86392))
+        })
+        .count();
+    assert!(gains > 0, "eligible hits must earn Fatal Flourish");
+    assert!(
+        gains * 2 < eligible_upper_bound,
+        "{gains} gains from at most {eligible_upper_bound} eligible hits"
+    );
+}
+
+#[test]
 #[ignore = "requires private native260 profile/traits and DPS_PARITY_ACTOR=player"]
 fn outlaw_literal_driver_coats_and_executes_profile_opener() {
     let _seed = crate::random::seed_scope(70448);

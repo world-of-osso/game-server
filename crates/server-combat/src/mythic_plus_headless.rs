@@ -35,9 +35,10 @@ impl Session {
         let db =
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
                 .map_err(|error| format!("open keystone catalog: {error}"))?;
-        let definition = load_azure(&db)
+        let start_positions = load_start_positions(&db)
+            .map_err(|error| format!("load challenge start positions: {error}"))?;
+        let definition = ::server::mythic_plus_catalog::load_by_map(&db, map.map_id)
             .map_err(|error| format!("read keystone challenge: {error}"))?
-            .filter(|definition| definition.map_id == map.map_id)
             .ok_or("selected dungeon has no qualified keystone challenge")?;
         let difficulty = world
             .resource::<InstanceManager>()
@@ -98,6 +99,7 @@ impl Session {
         world.insert_resource(GameDatabase::new(database));
         world.insert_resource(Challenges {
             definition: Some(definition),
+            start_positions,
             ..Default::default()
         });
         let epoch = crate::maps::ServerClock::default().unix();

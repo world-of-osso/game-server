@@ -1,0 +1,13 @@
+[
+  {
+    "entry": 195638,
+    "react_state": "passive",
+    "evidence": [
+      "Warcraft Logs 3fZmXV6TjPhCLwqg fight 5: absent from enemy NPC roster",
+      "Warcraft Logs KZRC6PmWrHfjT91M fight 87: absent from enemy NPC roster",
+      "Warcraft Logs XTnx4jJCFdWMLYfk fight 7: absent from enemy NPC roster"
+    ],
+    "source_gap": "TC 15e0ed76 has no passive react flag or script for Polymorphic Rune; its addon aura 386362 is cosmetic.",
+    "retire_when": "The TC or DB2 creature data supplies the rune's passive react state."
+  }
+]

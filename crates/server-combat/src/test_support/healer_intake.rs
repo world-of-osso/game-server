@@ -243,17 +243,24 @@ pub fn record_absorb(
     world: &mut World,
     caster: Entity,
     target: Entity,
+    attacker: Option<Entity>,
     spell_id: u32,
     amount: f32,
 ) {
+    // Self-inflicted periodic damage does not pass through a recorded enemy hit.
+    let self_scale = attacker
+        .filter(|&source| source == target)
+        .map(|source| crate::level_scaling::damage_to_hp_scale(world, source, target));
     let Some(mut capture) = world.get_resource_mut::<Capture>() else {
         return;
     };
     if capture.members.contains(&target) {
-        let scale = capture
-            .active_hit_scale
-            .filter(|(unit, _)| *unit == target)
-            .map(|(_, scale)| scale);
+        let scale = self_scale.or_else(|| {
+            capture
+                .active_hit_scale
+                .filter(|(unit, _)| *unit == target)
+                .map(|(_, scale)| scale)
+        });
         let points = f64::from(amount);
         *capture
             .consumed_absorbs_by_spell

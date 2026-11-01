@@ -1,4 +1,4 @@
-//! Azure Vault qualification from the imported catalog and existing criteria trees.
+//! Challenge qualification from the imported catalog and existing criteria trees.
 use crate::mythic_plus_runtime::ChallengeDefinition;
 use rusqlite::{Connection, OptionalExtension};
 use std::collections::HashMap;
@@ -43,6 +43,11 @@ pub fn load_summaries(conn: &Connection) -> rusqlite::Result<HashMap<u32, Challe
 }
 
 pub fn load_azure(conn: &Connection) -> rusqlite::Result<Option<ChallengeDefinition>> {
+    load_by_map(conn, 2515)
+}
+
+/// Qualify the challenge and its unique named challenge scenario for a map.
+pub fn load_by_map(conn: &Connection, map: u32) -> rusqlite::Result<Option<ChallengeDefinition>> {
     let exists: bool = conn.query_row(
         "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='map_challenge_mode')",
         [],
@@ -51,12 +56,33 @@ pub fn load_azure(conn: &Connection) -> rusqlite::Result<Option<ChallengeDefinit
     if !exists {
         return Ok(None);
     }
-    let (name, map_id, timers): (String,u32,[u64;3]) = conn.query_row("SELECT Name_lang,MapID,CriteriaCount_0,CriteriaCount_1,CriteriaCount_2 FROM map_challenge_mode WHERE ID=401 AND MaxMedals=3",[],|r| Ok((r.get(0)?,r.get(1)?,[r.get::<_,u64>(2)?*1000,r.get::<_,u64>(3)?*1000,r.get::<_,u64>(4)?*1000])))?;
-    let tree: u32 = conn.query_row(
-        "SELECT CriteriatreeID FROM scenario_step WHERE ID=5383 AND ScenarioID=2133",
-        [],
-        |r| r.get(0),
-    )?;
+    let mut statement = conn.prepare("SELECT ID,Name_lang,CriteriaCount_0,CriteriaCount_1,CriteriaCount_2 FROM map_challenge_mode WHERE MapID=?1 AND MaxMedals=3")?;
+    let rows = statement
+        .query_map([map], |r| {
+            Ok((
+                r.get::<_, u32>(0)?,
+                r.get::<_, String>(1)?,
+                [
+                    r.get::<_, u64>(2)? * 1000,
+                    r.get::<_, u64>(3)? * 1000,
+                    r.get::<_, u64>(4)? * 1000,
+                ],
+            ))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let (challenge_id, name, timers) = match rows.as_slice() {
+        [] => return Ok(None),
+        [row] => row.clone(),
+        _ => return Err(rusqlite::Error::InvalidQuery),
+    };
+    let mut statement = conn.prepare("SELECT st.CriteriatreeID FROM scenario s JOIN scenario_step st ON st.ScenarioID=s.ID WHERE s.Name_lang=?1 AND s.Type=1")?;
+    let trees = statement
+        .query_map([&name], |r| r.get::<_, u32>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let [tree] = trees.as_slice() else {
+        return Err(rusqlite::Error::InvalidQuery);
+    };
+    let tree = *tree;
     let (force_tree, forces_required): (u32, u64) = conn.query_row(
         "SELECT ID,Amount FROM criteria_tree WHERE Parent=?1 AND Operator=9",
         [tree],
@@ -84,9 +110,9 @@ pub fn load_azure(conn: &Connection) -> rusqlite::Result<Option<ChallengeDefinit
             _ => return Err(rusqlite::Error::InvalidQuery),
         }
     }
-    let mut statement=conn.prepare("SELECT c.Asset,e.Name_lang FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID JOIN dungeon_encounter e ON e.ID=c.Asset WHERE t.Parent=?1 AND c.Type=165 ORDER BY t.ID")?;
+    let mut statement=conn.prepare("SELECT c.Asset,e.Name_lang FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID JOIN dungeon_encounter e ON e.ID=c.Asset WHERE t.Parent=?1 AND c.Type=165 AND e.MapID=?2 ORDER BY t.ID")?;
     let bosses = statement
-        .query_map([tree], |r| {
+        .query_map((tree, map), |r| {
             Ok(shared::protocol::ChallengeBoss {
                 encounter_id: r.get(0)?,
                 name: r.get(1)?,
@@ -94,12 +120,21 @@ pub fn load_azure(conn: &Connection) -> rusqlite::Result<Option<ChallengeDefinit
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    if bosses.is_empty() || forces_required == 0 || timers.contains(&0) {
+    let boss_count: usize = conn.query_row(
+        "SELECT COUNT(*) FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID WHERE t.Parent=?1 AND c.Type=165",
+        [tree],
+        |row| row.get(0),
+    )?;
+    if bosses.is_empty()
+        || bosses.len() != boss_count
+        || forces_required == 0
+        || timers.contains(&0)
+    {
         return Err(rusqlite::Error::InvalidQuery);
     }
     Ok(Some(ChallengeDefinition {
-        challenge_id: 401,
-        map_id,
+        challenge_id,
+        map_id: map,
         name,
         timers_ms: timers,
         forces_required,
@@ -145,6 +180,27 @@ pub fn validate_font(c: FontContext) -> Result<(), &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn challenge_catalog_loads_den_from_source() {
+        let path =
+            std::env::var("MYTHIC_PLUS_WORLD_COPY").expect("private imported SQLite copy required");
+        let conn =
+            Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let den = load_by_map(&conn, 2825).unwrap().expect("Den challenge");
+        assert_eq!(den.challenge_id, 586);
+        assert_eq!(den.timers_ms, [1_920_000, 1_536_000, 1_152_000]);
+        assert_eq!(den.forces_required, 729);
+        assert_eq!(den.creature_weights.get(&245855), Some(&25));
+        assert_eq!(
+            den.bosses
+                .iter()
+                .map(|boss| boss.encounter_id)
+                .collect::<Vec<_>>(),
+            [3207, 3208, 3209]
+        );
+        assert!(load_by_map(&conn, u32::MAX).unwrap().is_none());
+    }
+
     #[test]
     fn mythic_catalog_authored_azure_and_slot_authority() {
         let path =

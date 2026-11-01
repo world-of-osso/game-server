@@ -175,7 +175,7 @@ pub struct SpellInfo {
     /// Scripted effectiveness on this cast's damage only, retained through flight.
     #[serde(skip)]
     pub cast_damage_multiplier: Option<f32>,
-    /// Scripted effectiveness on this cast's direct healing only.
+    /// Scripted effectiveness on this cast's direct healing and Chi Cocoon shields.
     #[serde(skip)]
     pub cast_healing_multiplier: Option<f32>,
     /// Flat bonus to each direct school-damage effect before critical damage.

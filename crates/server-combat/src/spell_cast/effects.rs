@@ -2746,6 +2746,9 @@ pub fn apply_critical_transfer_heal(
     amount: f32,
     crit: bool,
 ) {
+    // SimC76f8118 sc_priest.cpp:2226-2231 retains matching direct-heal
+    // modifiers while excluding a second versatility snapshot or crit roll.
+    let amount = modded_amount(world, ctx, amount, false);
     apply_resolved_heal(world, ctx, target, amount.max(0.0).round(), crit, false);
 }
 

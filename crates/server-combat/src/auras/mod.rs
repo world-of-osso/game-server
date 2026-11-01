@@ -304,6 +304,11 @@ impl AuraEffectState {
         self.periodic_ticks
     }
 
+    /// SPELL_ATTR5_EXTRA_INITIAL_PERIOD tick still owed by this application.
+    pub fn initial_tick_pending(&self) -> bool {
+        self.initial_period_pending
+    }
+
     fn pay_periodic_tick(&mut self) {
         self.next_tick_index += 1;
         if self.initial_period_pending {
@@ -914,9 +919,9 @@ fn build_effect(
     effect: &SpellEffect,
     now: f64,
 ) -> AuraEffectState {
-    // SimC76f8118 sc_death_knight.cpp17164–17169 applies Gift dynamically;
-    // do not snapshot its label modifiers into Essence's haste and apply them twice.
-    let amount = if spell.id == 433925 && effect.index == 0 {
+    // Essence's haste is dynamic; Fortifying Brew's health is already snapshotted.
+    // Neither amount should receive its label modifiers a second time.
+    let amount = if (spell.id == 433925 || spell.id == 120954) && effect.index == 0 {
         effect.base_points
     } else if spell.id == 132403
         && effect.index == 1
@@ -938,13 +943,13 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
-    let cast_multiplier = if matches!(
-        effect.aura,
-        handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH
-    ) {
-        spell.cast_damage_multiplier.unwrap_or(1.0)
-    } else {
-        1.0
+    let cast_multiplier = match effect.aura {
+        handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH => {
+            spell.cast_damage_multiplier.unwrap_or(1.0)
+        }
+        // A scaled cast's periodic healing shares its direct heal's effectiveness.
+        handlers::PERIODIC_HEAL => spell.cast_healing_multiplier.unwrap_or(1.0),
+        _ => 1.0,
     };
     let snapshot = |value| {
         let value =
@@ -2788,7 +2793,9 @@ pub(crate) fn finish_absorbs(
 ) {
     for (caster, spell_id, soaked) in result.contributions {
         #[cfg(any(test, feature = "test-support"))]
-        crate::test_support::healer_intake::record_absorb(world, caster, unit, spell_id, soaked);
+        crate::test_support::healer_intake::record_absorb(
+            world, caster, unit, attacker, spell_id, soaked,
+        );
         crate::damage_meter::record_absorb(world, caster, soaked);
         crate::spell_cast::script_registry::after_absorb_consumed(
             world, caster, unit, attacker, spell_id, soaked,

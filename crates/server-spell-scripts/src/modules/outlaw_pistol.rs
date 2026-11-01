@@ -89,6 +89,9 @@ fn snapshot_background_modifiers(
         // A triggered shot must freeze the same native charged modifiers as
         // its foreground root before consuming its own Opportunity use.
         spell.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(world, caster, spell));
+        // SimC76f8118 sc_rogue.cpp10510–10515: Fan shots earn Quick Draw,
+        // but must not replay Pistol Shot's native base Combo Point effect.
+        spell.effects.retain(|effect| effect.index != 1);
     }
     None
 }

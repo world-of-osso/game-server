@@ -1,5 +1,7 @@
 {
   "season": "Midnight Season 2",
+  "season_id": 120,
+  "season_id_citation": "DB2 MythicPlusSeason ID 120, StartTimeEvent 1552, Midnight Season 2",
   "region": "US",
   "reset_citation": "https://www.wowhead.com/guide/lockouts-and-resets-in-world-of-warcraft-6072",
   "bands": {

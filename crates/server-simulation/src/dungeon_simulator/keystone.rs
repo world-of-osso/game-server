@@ -64,13 +64,14 @@ pub(super) struct State {
 }
 
 /// Plan from the actual challenge criteria and the selected dungeon's native level cap.
-pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), String> {
+pub(super) fn prepare_challenge(
+    graph: &Graph,
+) -> Result<(server::mythic_plus_runtime::ChallengeDefinition, u8), String> {
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|error| format!("open keystone catalog: {error}"))?;
-    let definition = server::mythic_plus_catalog::load_azure(&db)
+    let definition = server::mythic_plus_catalog::load_by_map(&db, graph.map_id)
         .map_err(|error| format!("load challenge criteria: {error}"))?
-        .filter(|definition| definition.map_id == graph.map_id)
         .ok_or("selected dungeon has no qualified keystone challenge")?;
     let mut statement = db.prepare("SELECT DISTINCT t.MaxLevelSquish FROM follower_lfg_dungeons d JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.map_id=? AND d.difficulty_id=205")
         .map_err(|error| format!("read follower level range: {error}"))?;
@@ -92,13 +93,7 @@ pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), Str
             graph.map_id
         ));
     }
-    let plan = super::keystone_route::plan(
-        graph,
-        &definition.creature_weights,
-        definition.forces_required,
-    )?;
-    graph.route = plan.steps.clone();
-    Ok((plan, *level))
+    Ok((definition, *level))
 }
 
 pub(super) fn start(
@@ -212,6 +207,14 @@ impl State {
         Ok(())
     }
 
+    pub fn waiting_for_start(&self, world: &World) -> Result<bool, String> {
+        let run = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        Ok(run.phase == shared::protocol::ChallengePhase::Countdown)
+    }
+
     pub fn completed(&self, world: &World) -> bool {
         self.session
             .snapshot(world)
@@ -225,7 +228,7 @@ impl State {
         options: Options,
         status: String,
         reason: String,
-        diagnostics: serde_json::Value,
+        mut diagnostics: serde_json::Value,
     ) -> Result<RunRecord, String> {
         let elapsed = self.elapsed_ms(world);
         let snapshot = self
@@ -234,9 +237,15 @@ impl State {
             .ok_or("active keystone snapshot unavailable")?;
         let completed = snapshot.phase == shared::protocol::ChallengePhase::Completed;
         let resulting_key = self.session.resulting_key(world)?;
-        let (actors, deaths, pulls) = self
+        let (actors, deaths, pulls, timeline) = self
             .tracker
             .finish(elapsed.saturating_sub(self.countdown_ms));
+        if let Some(diagnostics) = diagnostics.as_object_mut() {
+            diagnostics.insert(
+                "native_combat_events".into(),
+                serde_json::to_value(timeline).map_err(|error| error.to_string())?,
+            );
+        }
         Ok(RunRecord {
             schema_version: 1,
             seed,
@@ -256,6 +265,9 @@ impl State {
                 in_time: completed.then_some(snapshot.elapsed_ms <= snapshot.time_limit_ms),
                 upgrade_levels: completed.then_some(snapshot.upgrade_levels),
                 resulting_key_level: Some(resulting_key.level),
+                forces: Some(snapshot.forces),
+                forces_required: Some(snapshot.forces_required),
+                bosses: Some(snapshot.bosses),
             },
             deaths,
             pulls,
