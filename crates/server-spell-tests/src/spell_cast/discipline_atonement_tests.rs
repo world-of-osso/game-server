@@ -1693,7 +1693,16 @@ fn atonement_smite_applies_matching_direct_heal_talent_modifiers() {
         .unwrap();
         let caster = h.caster;
         let enemy = h.npc;
-        h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(vec![17, 585]),
+        ));
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            caster,
+            crate::auras::RemoveReason::Consumed,
+            |aura| matches!(aura.spell_id, 415416 | 1253845),
+        );
         h.app
             .world_mut()
             .get_mut::<crate::stats::CharacterStats>(caster)
