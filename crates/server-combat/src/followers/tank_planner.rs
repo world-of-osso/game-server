@@ -388,7 +388,7 @@ mod tests {
             .with_ansi(false)
             .finish();
         bevy::log::tracing::subscriber::with_default(subscriber, || {
-            let mut tick = |world: &mut World, millis: u64, reason| {
+            let tick = |world: &mut World, millis: u64, reason| {
                 world
                     .resource_mut::<Time>()
                     .advance_by(Duration::from_millis(millis));
