@@ -60,7 +60,7 @@ fn select_allies(world: &mut World, caster: Entity) -> Vec<Entity> {
         .get(PRESENCE)
         .expect("Chi-Ji presence missing");
     let radius = targets::radius(&presence.effects[0], 0);
-    let mut allies = targets::area_units(world, caster, center, radius, Relation::Raid, 0);
+    let mut allies = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
     allies.retain(|&unit| world.get::<UnitSummonedBy>(unit).is_none());
     allies.shuffle(&mut rand::thread_rng());
     allies.sort_by_key(|&unit| {
