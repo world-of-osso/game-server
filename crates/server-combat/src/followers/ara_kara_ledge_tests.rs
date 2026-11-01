@@ -36,6 +36,7 @@ fn ara_kara_tank_regroups_past_ledge_drones_without_pulling() {
         .entity_mut(owner)
         .insert((map, Level(79), CombatStatus(false)));
     world.insert_resource(super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
         source_actions: |_, _, _| Ok(Vec::new()),
         equipped_actions: |_, _, _| Ok(Vec::new()),
     });
