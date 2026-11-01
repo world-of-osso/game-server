@@ -35,9 +35,48 @@ const EFFECT_TITAN_GRIP: u32 = 155;
 
 /// TC Player::SetCanTitanGrip keeps independent weapon/armor subclass masks.
 #[derive(Default)]
-struct TitanGrip {
+pub(crate) struct TitanGrip {
     weapon_subclasses: u32,
     armor_subclasses: u32,
+}
+
+impl TitanGrip {
+    pub(crate) fn allows(&self, template: &ItemTemplate) -> bool {
+        let mask = match template.scaling.class_id {
+            2 => self.weapon_subclasses,
+            4 => self.armor_subclasses,
+            _ => 0,
+        };
+        mask == 0 || mask & (1 << template.scaling.subclass_id) != 0
+    }
+}
+
+pub(crate) fn find_titan_grip(
+    known: Option<&crate::class_progression::KnownSpells>,
+    spells: Option<&crate::spell_info::SpellStore>,
+) -> Option<TitanGrip> {
+    let (Some(known), Some(spells)) = (known, spells) else {
+        return None;
+    };
+    let mut grip: Option<TitanGrip> = None;
+    for spell in known.iter().filter_map(|id| spells.get(id)) {
+        if !spell
+            .effects
+            .iter()
+            .any(|effect| effect.effect == EFFECT_TITAN_GRIP)
+        {
+            continue;
+        }
+        let grip = grip.get_or_insert_with(TitanGrip::default);
+        if let Some(required) = spell.equipped_items.as_deref() {
+            match required.item_class {
+                2 => grip.weapon_subclasses = required.item_subclass,
+                4 => grip.armor_subclasses = required.item_subclass,
+                _ => {}
+            }
+        }
+    }
+    grip
 }
 
 pub(crate) struct InventoryModel {
@@ -966,40 +1005,15 @@ impl InventoryModel {
     ) {
         self.can_dual_wield =
             crate::stats::knows_effect(known, spells, crate::stats::EFFECT_DUAL_WIELD);
-        self.titan_grip = None;
-        let (Some(known), Some(spells)) = (known, spells) else {
-            return;
-        };
-        for spell in known.iter().filter_map(|id| spells.get(id)) {
-            if !spell
-                .effects
-                .iter()
-                .any(|effect| effect.effect == EFFECT_TITAN_GRIP)
-            {
-                continue;
-            }
-            let grip = self.titan_grip.get_or_insert_with(TitanGrip::default);
-            if let Some(required) = spell.equipped_items.as_deref() {
-                match required.item_class {
-                    2 => grip.weapon_subclasses = required.item_subclass,
-                    4 => grip.armor_subclasses = required.item_subclass,
-                    _ => {}
-                }
-            }
-        }
+        self.titan_grip = find_titan_grip(known, spells);
     }
 
     /// TC Player.cpp13142–13163: zero mask means unrestricted, not no subclasses.
     fn can_titan_grip(&self, item: &InventoryItemData) -> bool {
-        let (Some(grip), Some(template)) = (&self.titan_grip, self.template(item)) else {
-            return false;
-        };
-        let mask = match template.scaling.class_id {
-            2 => grip.weapon_subclasses,
-            4 => grip.armor_subclasses,
-            _ => 0,
-        };
-        mask == 0 || mask & (1 << template.scaling.subclass_id) != 0
+        self.titan_grip
+            .as_ref()
+            .zip(self.template(item))
+            .is_some_and(|(grip, template)| grip.allows(template))
     }
 
     /// TC a352b1fa `Player::CanEquipItem` off-hand weapons (Player.cpp:10866-10886).

@@ -213,6 +213,29 @@ impl Pull {
 }
 
 #[test]
+fn fury_follower_gear_satisfies_bound_actions_at_both_levels() {
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let mut pull = spawn_at_map(72, level, map);
+        let actor = pull.follower;
+        let world = pull.harness.app.world_mut();
+        let rotation = server_follower_apl::registry::load(world, actor, 72).unwrap();
+        let actions = rotation.action_spells();
+        for spell in [85288, 184367, 335097] {
+            assert!(
+                actions.contains(&spell),
+                "level {level} missing bound action {spell}"
+            );
+            let info = world
+                .resource::<server_combat::spell_info::SpellStore>()
+                .get(spell)
+                .unwrap();
+            server_combat::spell_cast::check_equipped_item_requirements(world, actor, info)
+                .unwrap_or_else(|error| panic!("level {level}, spell {spell}: {error:?}"));
+        }
+    }
+}
+
+#[test]
 #[ignore = "audits all class-follower action requirements against snapshot gear"]
 fn class_follower_gear_satisfies_all_bound_action_requirements() {
     let mut failures = Vec::new();

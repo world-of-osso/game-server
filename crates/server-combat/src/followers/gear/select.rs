@@ -128,13 +128,14 @@ pub(super) fn select_items(
     let mut chosen = Vec::new();
     let mut missing = Vec::new();
     let mut used = BTreeSet::new();
-    let mut two_handed = false;
+    let mut blocks_offhand = false;
     // Inventory admission uses native SPELL_EFFECT_DUAL_WIELD40, not one spell ID.
     let can_dual_wield = known.iter().any(|spell| {
         spells
             .get(spell)
             .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
     });
+    let titan_grip = crate::inventory_model::find_titan_grip(Some(known), Some(spells));
     let pick = |slot: EquipmentSlot, used: &BTreeSet<u32>, two_hand_only: bool| {
         candidates.iter().find_map(|row| {
             let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
@@ -144,12 +145,17 @@ pub(super) fn select_items(
             let shield_tank = matches!(spec_id, 66 | 73)
                 && ((slot == MainHand && !matches!(item.inventory_type, 13 | 21))
                     || (slot == OffHand && item.inventory_type != 14));
+            let grip_allows = can_dual_wield
+                && item.inventory_type == 17
+                && titan_grip.as_ref().is_some_and(|grip| grip.allows(item));
+            let valid_slot = inventory_types(slot).contains(&item.inventory_type)
+                || (slot == OffHand && grip_allows);
             let no_dual_wield =
                 slot == OffHand && matches!(item.inventory_type, 13 | 22) && !can_dual_wield;
             let monk_two_hand =
                 spec_id == 269 && !can_dual_wield && slot == MainHand && item.inventory_type != 17;
             if used.contains(&row.item_id)
-                || !inventory_types(slot).contains(&item.inventory_type)
+                || !valid_slot
                 || (two_hand_only && !is_two_handed(item.inventory_type))
                 || ranged_hunter
                 || shield_tank
@@ -161,20 +167,20 @@ pub(super) fn select_items(
             {
                 return None;
             }
-            Some((row.item_id, item.inventory_type))
+            Some((row.item_id, item.inventory_type, grip_allows))
         })
     };
     for slot in [
         Head, Neck, Shoulder, Back, Chest, Wrist, Hands, Waist, Legs, Feet, Finger1, Finger2,
         Trinket1, Trinket2, MainHand, OffHand,
     ] {
-        if slot == OffHand && two_handed {
+        if slot == OffHand && blocks_offhand {
             continue;
         }
-        if let Some((item, inventory)) = pick(slot, &used, false) {
+        if let Some((item, inventory, grip_allows)) = pick(slot, &used, false) {
             used.insert(item);
             if slot == MainHand {
-                two_handed = is_two_handed(inventory);
+                blocks_offhand = is_two_handed(inventory) && !grip_allows;
             }
             chosen.push((slot, ItemDefinitionSource::Retail, item));
         } else if let Some(main) = (slot == OffHand && !matches!(spec_id, 66 | 73))
@@ -184,7 +190,7 @@ pub(super) fn select_items(
             // A one-hander with no usable off-hand (a druid: no shield, no dual
             // wield): wield an eligible two-hander instead. Without one, the
             // one-hander alone is a valid loadout; only shield tanks need the slot.
-            if let Some((item, _)) = pick(MainHand, &used, true) {
+            if let Some((item, _, _)) = pick(MainHand, &used, true) {
                 used.remove(&chosen[main].2);
                 used.insert(item);
                 chosen[main].2 = item;
