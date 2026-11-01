@@ -391,6 +391,7 @@ register_modules! {
     unholy_infected_claws: (2532, "modules/unholy_infected_claws.rs"),
     restoration_ancestral_awakening: (2640, "modules/restoration_ancestral_awakening.rs"),
     restoration_earthliving: (2640, "modules/restoration_earthliving.rs"),
+    restoration_bursting_growth: (1050, "modules/restoration_bursting_growth.rs"),
     restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),
     restoration_grove_guardians: (1050, "modules/restoration_grove_guardians.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
