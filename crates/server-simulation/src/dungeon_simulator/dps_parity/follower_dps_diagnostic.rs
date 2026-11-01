@@ -712,6 +712,7 @@ fn form_override_guardian_swipe_and_form_switch() {
             .collect::<Vec<_>>(),
         app.world()
             .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_some()
     );
     crate::auras::apply_aura(
         app.world_mut(),
