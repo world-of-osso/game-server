@@ -131,6 +131,7 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
         },
     );
     super::druid_balance_of_all_things::on_eclipse(world, caster, spell);
+    super::druid_sundered_firmament::on_eclipse(world, caster);
 }
 
 fn trigger_eclipse_benefits(world: &mut World, caster: Entity) {
