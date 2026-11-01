@@ -216,17 +216,9 @@ fn blockers_on_path(
     for watcher in watchers {
         let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
         let center = targets::position(world, watcher).ok_or("Unpulled watcher lacks position")?;
-        if path
-            .windows(2)
-            .any(|leg| leg_enters_sight(world, unit, watcher, (center, radius), leg[0], leg[1]))
-        {
-            debug!(
-                ?unit,
-                ?watcher,
-                ?center,
-                radius,
-                "Follower approach held by unpulled watcher"
-            );
+        if path.windows(2).any(|leg| {
+            leg_enters_sight(world, unit, watcher, (center, radius + AGGRO_STEP_MARGIN), leg[0], leg[1])
+        }) {
             blockers.push(watcher);
         }
     }

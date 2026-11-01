@@ -1338,6 +1338,7 @@ pub(crate) fn install_follower_follow_fixture(app: &mut App) {
 
 fn follow_owner_system(
     time: Res<Time>,
+    mut refusal_logs: Local<EntityHashMap<f64>>,
     queues: MoveQueues,
     mut ground: Option<ResMut<GroundMap>>,
     mut nav: Option<ResMut<Navigation>>,
@@ -1347,6 +1348,8 @@ fn follow_owner_system(
     )>,
 ) {
     let dt = time.delta_secs();
+    let now = time.elapsed_secs_f64();
+    refusal_logs.retain(|_, last| now - *last < 60.0);
     let owners: Vec<Entity> = units
         .p0()
         .iter()
@@ -1449,6 +1452,14 @@ fn follow_owner_system(
                 let Some(height) =
                     follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
                 else {
+                    log_follow_refusal(
+                        &mut refusal_logs,
+                        now,
+                        entity,
+                        *pos,
+                        next_position,
+                        "ground",
+                    );
                     if let Some(nav) = nav.as_deref_mut() {
                         nav.cancel_route(entity);
                     }
@@ -1463,6 +1474,14 @@ fn follow_owner_system(
             };
         }
         if !queues.combat_step_safe(entity, *pos, next_position) {
+            log_follow_refusal(
+                &mut refusal_logs,
+                now,
+                entity,
+                *pos,
+                next_position,
+                "idle hostile",
+            );
             if let Some(nav) = nav.as_deref_mut() {
                 nav.cancel_route(entity);
             }
@@ -1478,6 +1497,24 @@ fn follow_owner_system(
             stride.facing = Some(leader.rotation_y);
         }
         queues.apply(entity, &mut pos, bearing, stride);
+    }
+}
+
+fn log_follow_refusal(
+    logs: &mut EntityHashMap<f64>,
+    now: f64,
+    entity: Entity,
+    from: Position,
+    to: Position,
+    reason: &str,
+) {
+    const LOG_INTERVAL_SECONDS: f64 = 10.0;
+    if logs
+        .get(&entity)
+        .is_none_or(|last| now - *last >= LOG_INTERVAL_SECONDS)
+    {
+        warn!(?entity, ?from, ?to, reason, "Follower follow step refused");
+        logs.insert(entity, now);
     }
 }
 
