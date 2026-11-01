@@ -2194,6 +2194,56 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_touch_cosmos_makes_one_starsurge_free() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let power = shared::components::PowerType::LunarPower;
+    app.world_mut()
+        .get_mut::<shared::components::PowerPools>(actor)
+        .unwrap()
+        .get_mut(power)
+        .unwrap()
+        .current = 800.0;
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 450360, Some(actor), 1);
+    crate::spell_cast::cast_for_player_with_target(app.world_mut(), actor, 78674, Some(target))
+        .unwrap();
+    let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    assert_eq!(after, 800.0, "Touch the Cosmos must make Starsurge free");
+    assert!(
+        !crate::auras::has_aura(app.world(), actor, 450360),
+        "the free cast consumes the buff"
+    );
+    for _ in 0..40 {
+        app.update();
+    }
+    let before = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    crate::spell_cast::cast_for_player_with_target(app.world_mut(), actor, 78674, Some(target))
+        .unwrap();
+    let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    assert_eq!(
+        before - after,
+        400.0,
+        "the next Starsurge must pay its ordinary AP cost"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn balance_umbral_starfire_amplifies_only_during_eclipse() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
