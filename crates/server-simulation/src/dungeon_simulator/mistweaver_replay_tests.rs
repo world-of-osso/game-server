@@ -11,6 +11,10 @@ fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
     let healer = run.healer;
     let tank = run.tank;
     assert!(crate::auras::has_aura(run.app.world(), healer, 117907));
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 1235108));
     let cast = |run: &mut super::healer_simc_replay::ClassParty, spell| {
         let world = run.app.world_mut();
         let max = world.get::<Health>(tank).unwrap().max;
