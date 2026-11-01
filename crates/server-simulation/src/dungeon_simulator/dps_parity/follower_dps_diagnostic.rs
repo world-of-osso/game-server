@@ -2247,6 +2247,10 @@ fn balance_ascendant_stars_boosts_three_starsurges() {
     let power = shared::components::PowerType::LunarPower;
     let fire = |app: &mut App| {
         app.world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -100.0;
+        app.world_mut()
             .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
             .unwrap()
             .get_mut(power)
@@ -2269,8 +2273,16 @@ fn balance_ascendant_stars_boosts_three_starsurges() {
             ..Default::default()
         },
     );
-    for _ in 0..3 {
+    for remaining in (0..3).rev() {
         fire(&mut app);
+        let stacks = app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1263382)
+            .map_or(0, |aura| aura.stacks);
+        assert_eq!(stacks, remaining, "one stack must be consumed per cast");
     }
     assert!(
         !crate::auras::has_aura(app.world(), actor, 1263382),
