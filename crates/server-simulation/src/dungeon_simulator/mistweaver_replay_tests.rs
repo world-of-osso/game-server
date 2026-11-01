@@ -186,7 +186,11 @@ fn mistweaver_chiji_blackout_kick_heals_injured_party_members() {
         .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
         .filter_map(|event| event.target)
         .collect();
-    assert_eq!(full.len(), 6, "a full party still receives Gusts");
+    // The live follower policy may add its own Chi-Ji kicks; each yields six Gusts.
+    assert!(
+        full.len() >= 6 && full.len() % 6 == 0,
+        "a full party still receives Gusts: {full:?}"
+    );
     assert!(
         full.iter()
             .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target)),
