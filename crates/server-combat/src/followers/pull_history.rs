@@ -231,7 +231,28 @@ pub(super) fn has_attackable_combat(world: &World, party: &[Entity]) -> bool {
     party
         .iter()
         .flat_map(|member| crate::combat_refs::active_opponents(world, *member))
-        .any(|enemy| party_can_attack(world, party, enemy))
+        .any(|enemy| {
+            crate::spell_cast::targets::is_alive(world, enemy)
+                && party_can_attack(world, party, enemy)
+        })
+}
+
+fn party_fights_enemy(world: &World, party: &[Entity], enemy: Entity) -> bool {
+    if !crate::spell_cast::targets::is_alive(world, enemy) || !party_can_attack(world, party, enemy)
+    {
+        return false;
+    }
+    crate::combat_refs::active_opponents(world, enemy)
+        .any(|opponent| party.contains(&party_source(world, opponent)))
+        || world
+            .get::<shared::components::ThreatTable>(enemy)
+            .is_some_and(|threat| {
+                threat
+                    .entries()
+                    .iter()
+                    .filter_map(|entry| Entity::try_from_bits(entry.entity))
+                    .any(|opponent| party.contains(&party_source(world, opponent)))
+            })
 }
 
 #[cfg(any(test, feature = "test-support"))]
@@ -241,7 +262,7 @@ pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
             || history
                 .active_enemies
                 .iter()
-                .any(|enemy| party_can_attack(world, &history.members, *enemy))
+                .any(|enemy| party_fights_enemy(world, &history.members, *enemy))
     })
 }
 
@@ -260,7 +281,7 @@ pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
             .active_enemies
             .iter()
             .copied()
-            .filter(|enemy| party_can_attack(world, &history.members, *enemy))
+            .filter(|enemy| party_fights_enemy(world, &history.members, *enemy))
             .collect(),
     })
 }
