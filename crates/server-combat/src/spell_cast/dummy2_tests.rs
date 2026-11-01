@@ -704,7 +704,8 @@ fn dummy2_rogue_backstab_level_curve_reaches_unity_at_twenty() {
 #[test]
 fn dummy2_dh_feed_the_demon_paid_base_fury_shortens_demon_spikes_recharge() {
     for talented in [false, true] {
-        let mut ids = vec![203720, 203819, 228477, 228478];
+        // Soul Cleave's fragment consumption reads native Vengeance soul spells.
+        let mut ids = vec![203720, 203819, 228477, 228478, 210042, 204255, 203981];
         if talented {
             ids.push(218612);
         }
