@@ -11,6 +11,7 @@ use crate::stats::EquippedItems;
 pub(super) struct FixtureEquipment {
     items: EquippedItems,
     templates: ItemTemplates,
+    pub(super) learned_skills: Vec<u32>,
 }
 
 pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> FixtureEquipment {
@@ -24,12 +25,19 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
                 .map(|item| (item, super::super::attributes(spell, 3)))
         })
         .collect();
+    let shield_required = spells.iter().any(|spell| {
+        spell
+            .equipped_items
+            .as_deref()
+            .is_some_and(|item| item.item_class == 4 && item.item_subclass & (1 << 6) != 0)
+    });
     let mut selected = EquippedItems::default();
     let mut templates = ItemTemplates::default();
-    if requirements.is_empty() {
+    if requirements.is_empty() && !shield_required {
         return FixtureEquipment {
             items: selected,
             templates,
+            learned_skills: Vec::new(),
         };
     }
     let Some(class_info) = data
@@ -41,12 +49,14 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
         return FixtureEquipment {
             items: selected,
             templates,
+            learned_skills: Vec::new(),
         };
     };
     let Some(spec) = class_info.specs.first() else {
         return FixtureEquipment {
             items: selected,
             templates,
+            learned_skills: Vec::new(),
         };
     };
     let (mut known, _) =
@@ -65,12 +75,24 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
                 .get(&spell.spell_id)
         })
         .fold(0, |mask, value| mask | value);
-    let offhand_required = requirements.iter().any(|(_, flags)| flags & (1 << 24) != 0);
-    let can_dual_wield = known.iter().any(|spell| {
-        data.store
-            .get(spell.spell_id)
-            .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
-    });
+    let offhand_required =
+        shield_required || requirements.iter().any(|(_, flags)| flags & (1 << 24) != 0);
+    let dual_wield = known
+        .iter()
+        .map(|spell| spell.spell_id)
+        .chain(
+            class_info
+                .specs
+                .iter()
+                .flat_map(|spec| &spec.spells)
+                .filter(|spell| spell.required_level <= 10)
+                .map(|spell| spell.spell_id),
+        )
+        .find(|spell| {
+            data.store
+                .get(*spell)
+                .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
+        });
     let choose = |offhand: bool| {
         data.items
             .retail
@@ -81,7 +103,9 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
                     && item.allows(class, race)
                     && proficiency & (1_u32 << item.scaling.subclass_id) != 0
                     && if offhand {
-                        can_dual_wield && matches!(item.inventory_type, 13 | 22)
+                        !shield_required
+                            && dual_wield.is_some()
+                            && matches!(item.inventory_type, 13 | 22)
                     } else {
                         matches!(item.inventory_type, 13 | 15 | 17 | 21 | 26)
                             && (!offhand_required || !matches!(item.inventory_type, 15 | 17 | 26))
@@ -115,9 +139,40 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
             templates.retail.insert(id, item.clone());
         }
     }
+    if shield_required
+        && data
+            .items
+            .loot_need
+            .armor_masks
+            .get(&class)
+            .is_some_and(|mask| mask & (1 << 6) != 0)
+        && let Some((&id, item)) = data
+            .items
+            .retail
+            .iter()
+            .filter(|(_, item)| {
+                item.scaling.class_id == 4
+                    && item.scaling.subclass_id == 6
+                    && item.inventory_type == 14
+                    && item.required_level <= 10
+                    && item.allows(class, race)
+            })
+            .min_by_key(|(id, _)| *id)
+    {
+        selected.items.push((EquipmentSlot::OffHand, Retail, id));
+        templates.retail.insert(id, item.clone());
+    }
+    let learned_skills = if selected.items.iter().any(|(slot, _, id)| {
+        *slot == EquipmentSlot::OffHand && templates.retail[id].scaling.class_id == 2
+    }) {
+        dual_wield.into_iter().collect()
+    } else {
+        Vec::new()
+    };
     FixtureEquipment {
         items: selected,
         templates,
+        learned_skills,
     }
 }
 

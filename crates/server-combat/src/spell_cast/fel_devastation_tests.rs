@@ -360,12 +360,14 @@ fn periodic_heals<'a>(h: &'a Harness, start: usize) -> Vec<&'a CombatLogEvent> {
 fn assert_native_heals(h: &Harness, start: usize, count: usize) {
     let heals = periodic_heals(h, start);
     assert_eq!(heals.len(), count, "native scheduled212106 heals");
-    let ap = h
-        .app
-        .world()
+    let world = h.app.world();
+    let ap = world
         .get::<CharacterStats>(h.caster)
         .unwrap()
-        .attack_power;
+        .total_attack_power(
+            crate::stats::WeaponAttackType::MainHand,
+            world.get::<crate::stats::StatModifiers>(h.caster),
+        );
     for heal in heals {
         let critical = if heal.crit { 2.0 } else { 1.0 };
         assert_eq!(heal.target, Some(h.caster.to_bits()));

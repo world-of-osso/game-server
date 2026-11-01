@@ -115,16 +115,20 @@ fn protection_producers_item_native_inputs_resolve_equipped_counts_spec_and_role
         0.66
     );
     assert!(!crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1291726).unwrap());
-    h.app
+    let mut equipped = h
+        .app
         .world_mut()
         .get_mut::<crate::stats::EquippedItems>(h.caster)
-        .unwrap()
+        .unwrap();
+    equipped
         .items
-        .push((
-            EquipmentSlot::MainHand,
-            shared::item_data::ItemDefinitionSource::Retail,
-            268209,
-        ));
+        .retain(|(slot, _, _)| *slot != EquipmentSlot::MainHand);
+    equipped.items.push((
+        EquipmentSlot::MainHand,
+        shared::item_data::ItemDefinitionSource::Retail,
+        268209,
+    ));
+    drop(equipped);
     h.app
         .world_mut()
         .get_mut::<crate::stats::EquippedItemModifiers>(h.caster)

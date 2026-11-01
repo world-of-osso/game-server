@@ -6,7 +6,13 @@ use shared::protocol::EquipmentSlot::{MainHand, OffHand};
 
 #[test]
 fn weapon_fixture_uses_native_class_proficiency_for_casts() {
-    for (class, spell) in [(3, 19_434), (12, 263_642)] {
+    for (class, spell) in [
+        (3, 19_434),
+        (12, 263_642),
+        (1, 315_720),
+        (7, 60_103),
+        (2, 31_935),
+    ] {
         let mut h = harness(Vec::new(), &[spell], class).unwrap();
         let result = creature_cast(h.app.world_mut(), h.caster, spell, Some(h.npc), false);
         let data = super::test_harness::world_db().unwrap();

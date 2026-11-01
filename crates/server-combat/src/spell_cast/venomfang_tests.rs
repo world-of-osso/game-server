@@ -13,6 +13,12 @@ fn equip_venomfang(h: &mut Harness) {
         .get_mut::<crate::stats::EquippedItems>(h.caster)
         .unwrap()
         .items
+        .retain(|(slot, _, _)| *slot != EquipmentSlot::MainHand);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(h.caster)
+        .unwrap()
+        .items
         .push((
             EquipmentSlot::MainHand,
             shared::item_data::ItemDefinitionSource::Retail,
@@ -61,6 +67,16 @@ fn unequip_venomfang(h: &mut Harness) {
         .unwrap()
         .items
         .retain(|(slot, _, _)| *slot != EquipmentSlot::MainHand);
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::EquippedItems>(h.caster)
+        .unwrap()
+        .items
+        .push((
+            EquipmentSlot::MainHand,
+            shared::item_data::ItemDefinitionSource::Retail,
+            37,
+        ));
     h.app
         .world_mut()
         .get_mut::<crate::stats::EquippedItemModifiers>(h.caster)

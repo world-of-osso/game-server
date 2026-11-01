@@ -31,6 +31,9 @@ fn shield_duel_for_class(mastery_points: f32, caster_class: u8) -> (Harness, Ent
         caster_class,
     )
     .unwrap();
+    if caster_class == 3 {
+        equip_for_spells(&mut h, &[19434]);
+    }
     let defender = spawn_player(&mut h.app, 1, 3.0);
     h.app.world_mut().entity_mut(h.caster).insert((
         crate::duel::DuelOpponent(defender),

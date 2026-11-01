@@ -726,7 +726,13 @@ pub fn harness_with_plugins(
         .collect();
     spells.extend(extra);
     let fixture_items = equipment::select(data, class, &spells);
-    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.id).collect());
+    let known = KnownSpells::fixture(
+        spells
+            .iter()
+            .map(|spell| spell.id)
+            .chain(fixture_items.learned_skills.iter().copied())
+            .collect(),
+    );
     app.insert_resource(SpellStore::fixture_from_catalog(spells, &data.store));
     app.insert_resource(power_table(data));
     app.insert_resource(crate::item_stats::load_item_scaling_tables(&data.powers_db).unwrap());
@@ -771,6 +777,19 @@ pub fn harness_with_plugins(
         npc,
         inbox: Inbox::default(),
     })
+}
+
+/// Equip the native class-proficient items required by the specified fixture spells.
+#[cfg(test)]
+pub(crate) fn equip_for_spells(h: &mut Harness, spell_ids: &[u32]) {
+    let data = world_db().expect("fixture world database");
+    let class = h.app.world().get::<Player>(h.caster).unwrap().class;
+    let spells: Vec<_> = spell_ids
+        .iter()
+        .map(|id| data.store.get(*id).expect("fixture spell").clone())
+        .collect();
+    let items = equipment::select(data, class, &spells);
+    equipment::install(&mut h.app, h.caster, items);
 }
 
 /// Charge's target (its DUMMY effect, `TARGET_UNIT_TARGET_ENEMY`) must stand within

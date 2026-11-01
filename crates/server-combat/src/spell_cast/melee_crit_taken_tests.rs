@@ -172,6 +172,7 @@ fn class_completeness_native_melee_crit_reduction_does_not_change_ranged_or_magi
             .unwrap()
             .crit_pct = 100.0;
         if spell == 75 {
+            equip_for_spells(&mut h, &[spell]);
             charge_range(&mut h);
         }
         h.cast_and_deliver(spell, Some(h.npc));

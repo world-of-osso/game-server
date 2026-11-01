@@ -58,11 +58,18 @@ fn fixture(rend: bool) -> Harness {
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::stats::EquippedItems {
-            items: vec![(
-                EquipmentSlot::OffHand,
-                shared::item_data::ItemDefinitionSource::Retail,
-                2362,
-            )],
+            items: vec![
+                (
+                    EquipmentSlot::MainHand,
+                    shared::item_data::ItemDefinitionSource::Retail,
+                    37,
+                ),
+                (
+                    EquipmentSlot::OffHand,
+                    shared::item_data::ItemDefinitionSource::Retail,
+                    2362,
+                ),
+            ],
         });
     h.advance(3);
     h.inbox = Inbox::default();
