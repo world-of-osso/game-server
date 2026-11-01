@@ -251,6 +251,15 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         .aura_period_ms;
     let ticks = dot.misc.as_ref().unwrap().duration.unwrap().duration_ms as u32 / period;
     assert_eq!((period, ticks), (1000, 9), "native12654 clock");
+    h.app.insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            caster,
+            target,
+            12654,
+            "ignite_tick",
+            12,
+        ),
+    );
     let start = h.inbox.log.len();
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
         .unwrap();
@@ -297,7 +306,15 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         ticks as usize,
         "one earned9tick bank, no self-proc cascade"
     );
-    assert!(hits.iter().all(|event| event.amount > 0));
+    assert!(
+        hits.iter().all(|event| event.amount == amount as i32),
+        "base={amount}, hits={:?}, factors={}",
+        hits.iter().map(|event| event.amount).collect::<Vec<_>>(),
+        h.app
+            .world()
+            .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+            .export()
+    );
     assert!(!crate::auras::has_aura(h.app.world(), target, 12654));
 }
 
