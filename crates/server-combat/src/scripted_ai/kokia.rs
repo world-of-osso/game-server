@@ -60,6 +60,14 @@ impl CreatureAi for Kokia {
         }
     }
 
+    fn just_summoned(&mut self, ctx: &mut Ctx, summon: Entity) {
+        self.boss.just_summoned(ctx, summon);
+    }
+
+    fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, summon: Entity) {
+        self.boss.summoned_creature_despawn(summon);
+    }
+
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         self.boss.just_died(ctx);
     }
