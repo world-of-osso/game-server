@@ -97,7 +97,7 @@ fn prepare_follower(
     prepare_class_follower(app, copy, profile.spec_id, level)
 }
 
-fn prepare_class_follower(
+pub(super) fn prepare_class_follower(
     mut app: App,
     copy: crate::maps::InMap,
     spec: u32,
@@ -119,122 +119,6 @@ fn prepare_class_follower(
         .clone();
     let target = spawn_level_dummy(&mut app, actor, level, 0).unwrap();
     (app, actor, target, profile)
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
-fn follower_shadow_slam_applies_pain_through_misery() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    for selected in [true, false] {
-        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-        let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 258, 70);
-        assert!(
-            app.world()
-                .get::<crate::class_progression::TraitLoadout>(actor)
-                .unwrap()
-                .active_talent_spells()
-                .any(|spell| spell.spell_id == 238558)
-        );
-        app.world_mut()
-            .entity_mut(actor)
-            .remove::<crate::followers::Follower>();
-        crate::spell_cast::creature_cast(app.world_mut(), actor, 1227280, Some(target), false)
-            .unwrap();
-        if !selected {
-            app.world_mut()
-                .entity_mut(actor)
-                .remove::<crate::class_progression::TraitLoadout>();
-        }
-        for _ in 0..20 {
-            app.update();
-        }
-        assert!(crate::auras::has_aura(app.world(), target, 34914));
-        assert_eq!(crate::auras::has_aura(app.world(), target, 589), selected);
-    }
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
-fn follower_shadow_hallucinations_restricts_insanity_to_listed_combat_casts() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 258, 70);
-    app.world_mut()
-        .entity_mut(actor)
-        .remove::<crate::followers::Follower>();
-    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 8092, Some(target), false).unwrap();
-    for _ in 0..80 {
-        app.update();
-    }
-    let gains = |app: &App| {
-        app.world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| event.kind == CombatLogKind::Energize && event.spell_id == Some(199579))
-            .map(|event| event.amount)
-            .sum::<i32>()
-    };
-    assert_eq!(gains(&app), 0, "Mind Blast must not trigger Hallucinations");
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 17, Some(actor), false).unwrap();
-    for _ in 0..10 {
-        app.update();
-    }
-    assert_eq!(
-        gains(&app),
-        600,
-        "Power Word: Shield grants native Hallucinations Insanity"
-    );
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
-fn follower_shadow_maddening_touch_generates_insanity_from_vt_ticks() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    for selected in [true, false] {
-        let _seed = crate::random::seed_scope(70448);
-        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-        let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 258, 70);
-        app.world_mut()
-            .entity_mut(actor)
-            .remove::<crate::followers::Follower>();
-        assert!(crate::auras::has_aura(app.world(), actor, 391228));
-        if !selected {
-            crate::auras::remove_auras(
-                app.world_mut(),
-                actor,
-                crate::auras::RemoveReason::Cancelled,
-                |aura| aura.spell_id == 391228 && aura.caster == actor,
-            );
-        }
-        crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
-        for cycle in 0..40 {
-            if cycle % 8 == 0 {
-                crate::spell_cast::cast_triggered(app.world_mut(), actor, 34914, Some(target), 1);
-            }
-            for _ in 0..30 {
-                app.update();
-            }
-        }
-        let gains: i32 = app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| event.kind == CombatLogKind::Energize && event.spell_id == Some(391232))
-            .map(|event| event.amount)
-            .sum();
-        assert_eq!(
-            gains > 0,
-            selected,
-            "VT ticks grant Insanity only with Maddening Touch"
-        );
-        assert_eq!(gains % 100, 0, "native talent effect grants whole Insanity");
-    }
 }
 
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
