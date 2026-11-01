@@ -93,6 +93,17 @@ pub(super) fn provoke_plan(
 ///264178 names two whole shards;280127 carries20 raw units. TDB binds
 ///spell_warl_demonbolt's AfterCast, not each weapon/proc child or enemy hit.
 pub(super) fn demonbolt(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    const DEMONIC_CORE: u32 = 264173;
+    const SUMMON_DOOMGUARD: u32 = 1276672;
+    let knows_doomguard = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(SUMMON_DOOMGUARD));
+    if knows_doomguard && crate::auras::has_aura(world, caster, DEMONIC_CORE) {
+        // SimC76f8118 sc_warlock_actions.cpp2960–2961: only a Core-powered
+        // Demonbolt reduces the selected Doomguard's running cooldown.
+        let seconds = f64::from(script_effect_value(world, caster, SUMMON_DOOMGUARD, 1));
+        super::reduce_cooldown(world, caster, SUMMON_DOOMGUARD, seconds);
+    }
     spell_cast::cast_triggered(world, caster, DEMONBOLT_ENERGIZE, Some(caster), 1);
     spell_cast::guardian::core::consume_core(world, caster, spell);
 }

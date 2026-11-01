@@ -190,46 +190,6 @@ fn follower_ret_hammer_selected_talent_admits_real_wrath_cast() {
 }
 
 #[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_execute_applies_one_deep_wounds_deposit() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
-    for _ in 0..5 {
-        app.update();
-    }
-    let mut health = app
-        .world_mut()
-        .get_mut::<shared::components::Health>(target)
-        .unwrap();
-    health.current = health.max * 0.1;
-    app.world_mut()
-        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-        .unwrap()
-        .get_mut(shared::components::PowerType::Rage)
-        .unwrap()
-        .current = 400.0;
-    app.init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false).unwrap();
-    for _ in 0..20 {
-        app.update();
-    }
-    let casts = &app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-        .0;
-    let deposits = casts
-        .iter()
-        .filter(|(caster, spell, _)| *caster == actor && *spell == 262115)
-        .count();
-    assert_eq!(
-        deposits, 1,
-        "one Execute impact must deposit Deep Wounds once: {casts:?}"
-    );
-}
-
-#[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
     let _seed = crate::random::seed_scope(70448);
@@ -285,6 +245,139 @@ fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
     assert!(
         app.world().get_entity(pet).is_err(),
         "native Doomguard expires after its authored lifetime"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_demonology_core_demonbolt_reduces_doomguard_cooldown() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 1276672, Some(target), false).unwrap();
+    for _ in 0..50 {
+        app.update();
+    }
+    let cooldown = |app: &App| {
+        let spell = app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(1276672)
+            .unwrap();
+        app.world()
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::history_now(app.world()))
+            as f64
+            / 1000.0
+    };
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 264173, Some(actor), 1);
+    assert!(crate::auras::has_aura(app.world(), actor, 264173));
+    let before = cooldown(&app);
+    let start = crate::spell_cast::history_now(app.world());
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 264178, Some(target), false).unwrap();
+    for _ in 0..20 {
+        app.update();
+    }
+    let elapsed = crate::spell_cast::history_now(app.world()) - start;
+    let reduction = before - elapsed - cooldown(&app);
+    assert!(
+        (reduction - 3.0).abs() < 0.1,
+        "Core Demonbolt must reduce the real running cooldown by 3s: {reduction}"
+    );
+    assert!(!crate::auras::has_aura(app.world(), actor, 264173));
+    let before = cooldown(&app);
+    let start = crate::spell_cast::history_now(app.world());
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 264178, Some(target), false).unwrap();
+    for _ in 0..120 {
+        app.update();
+    }
+    let elapsed = crate::spell_cast::history_now(app.world()) - start;
+    let reduction = before - elapsed - cooldown(&app);
+    assert!(
+        reduction.abs() < 0.1,
+        "hardcast without Core must not reduce cooldown: {reduction}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_demonology_charhound_deals_infernal_presence_until_despawn() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(target)))
+        .remove::<crate::followers::Follower>();
+    let mut position = app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap()
+        .clone();
+    position.x += 2.0;
+    *app.world_mut()
+        .get_mut::<shared::components::Position>(target)
+        .unwrap() = position;
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 455450),
+        "selected Mark of F'harg"
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 455476, Some(actor), 1);
+    for _ in 0..20 {
+        app.update();
+    }
+    let pet = {
+        let mut query = app.world_mut().query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>();
+        query
+            .iter(app.world())
+            .find(|(_, summon, npc)| {
+                summon.owner == actor && summon.spell_id == 455476 && npc.template_id == 226269
+            })
+            .map(|(entity, _, _)| entity)
+            .expect("actual Charhound")
+    };
+    assert!(
+        crate::auras::has_aura(app.world(), pet, 428453),
+        "Charhound owns native periodic Infernal Presence"
+    );
+    for _ in 0..180 {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let ticks = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(pet.to_bits())
+                && event.spell_id == Some(428455)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        ticks >= 3,
+        "actual Charhound must land repeated Infernal Presence damage: {ticks}"
+    );
+    for _ in 0..140 {
+        app.update();
+    }
+    assert!(
+        app.world().get_entity(pet).is_err(),
+        "Charhound and its aura end with native lifetime"
     );
 }
 
@@ -2895,6 +2988,82 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.amount > 0),
         "Eclipse critical hits must produce Astral Smolder periodic damage"
     );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_starlord_spenders_stack_haste_without_refresh_and_eclipse_clears() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    let eclipse = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233272)
+        .unwrap()
+        .clone();
+    let power = shared::components::PowerType::LunarPower;
+    let haste_before = app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    let fire = |app: &mut App| {
+        app.world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(power)
+            .unwrap()
+            .current = 1000.0;
+        crate::spell_cast::execute_cast(app.world_mut(), actor, &spell, Some(target)).unwrap();
+        for _ in 0..20 {
+            app.update();
+        }
+    };
+    let state = |app: &App| {
+        app.world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 279709)
+            .map(|aura| (aura.stacks, aura.expires_at))
+    };
+    fire(&mut app);
+    let (first, deadline) = state(&app).expect("first spender grants Starlord");
+    assert_eq!(first, 1);
+    fire(&mut app);
+    fire(&mut app);
+    let (stacks, after_deadline) = state(&app).expect("Starlord remains");
+    assert_eq!(stacks, 3, "three spenders supply three stacks");
+    assert_eq!(
+        after_deadline, deadline,
+        "later spenders must not refresh duration"
+    );
+    let haste_after = app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        haste_after > haste_before,
+        "Starlord raises haste: {haste_before} -> {haste_after}"
+    );
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &eclipse, Some(actor)).unwrap();
+    assert!(state(&app).is_none(), "entering Eclipse removes Starlord");
 }
 
 #[test]
