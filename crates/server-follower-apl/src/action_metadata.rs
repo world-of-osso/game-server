@@ -17,6 +17,10 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &frost_mage_rotation::bindings::build(),
         )),
         66 => protection_paladin_rotation::action_spells(&profile(spec)?),
+        70 => Ok(program_action_spells(
+            &ret_rotation::read_program()?,
+            &ret_rotation::bindings(),
+        )),
         71 => Ok(program_action_spells(
             &arms_rotation::program(&profile(spec)?)?,
             &arms_rotation::bindings(),
@@ -28,6 +32,10 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
         73 => Ok(program_action_spells(
             &protection_warrior_rotation::program(&profile(spec)?)?,
             &protection_warrior_rotation::bindings(),
+        )),
+        104 => Ok(program_action_spells(
+            &guardian_tank_rotation::program()?,
+            &guardian_tank_rotation::bindings(),
         )),
         250 => Ok(program_action_spells(
             &blood_tank_rotation::program()?,
@@ -62,9 +70,21 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &subtlety_rotation::load_program(&profile(spec)?)?,
             &subtlety_rotation::bindings(),
         )),
+        269 => Ok(program_action_spells(
+            &windwalker_rotation::source::load()?,
+            &windwalker_rotation::bindings::build(),
+        )),
         577 => Ok(program_action_spells(
             &havoc_rotation::load_program()?,
             &havoc_rotation::bindings::build(),
+        )),
+        581 => Ok(program_action_spells(
+            &vengeance_tank_rotation::program()?,
+            &vengeance_tank_rotation::bindings(),
+        )),
+        1467 => Ok(program_action_spells(
+            &devastation_rotation::source::load()?,
+            &devastation_rotation::bindings::build(),
         )),
         1480 => Ok(program_action_spells(
             &devourer_rotation::load_program()?,
