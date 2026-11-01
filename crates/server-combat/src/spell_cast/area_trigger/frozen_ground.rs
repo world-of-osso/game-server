@@ -44,6 +44,7 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
     let duration = crate::spell_cast::duration_ms(world, ctx.caster, ctx.spell);
     Ok(SpellAreaTrigger {
         caster: ctx.caster,
+        primary_target: ctx.spell.cast_primary_target,
         spell_id: ctx.spell.id,
         trigger_spell: definition.trigger_spell,
         radius: definition.radius_at(0.0),

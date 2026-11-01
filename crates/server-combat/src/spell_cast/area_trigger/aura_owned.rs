@@ -68,6 +68,7 @@ fn create_field(
 fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition, now: f64) -> SpellAreaTrigger {
     SpellAreaTrigger {
         caster: aura.caster,
+        primary_target: aura.cast_primary_target,
         spell_id: aura.spell_id,
         trigger_spell: definition.trigger_spell,
         radius: definition.radius_at(0.0),

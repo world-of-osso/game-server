@@ -2018,6 +2018,16 @@ fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
                 && event.spell_id != Some(202770)),
         "the rotation must continue after Fury of Elune"
     );
+    assert!(
+        events[fury + 1..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(211545)
+                && event.amount > 0),
+        "the real Fury field must damage its target with native child 211545"
+    );
 }
 
 #[test]
