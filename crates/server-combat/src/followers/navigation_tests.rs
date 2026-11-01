@@ -510,6 +510,64 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
     eprintln!(
         "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} following={following} active={active} health={health:?} cast_movable={cast:?} speed={speed:?} elapsed={elapsed} end={previous:?} greatest_step={greatest_step}"
     );
+    let approach_start = Position {
+        x: -83.1,
+        y: 137.0,
+        z: -344.0,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert((approach_start, FollowOwner::new(h.caster)));
+    h.app
+        .world_mut()
+        .resource_mut::<Navigation>()
+        .cancel_route(tank);
+    let mut minimum_y = approach_start.y;
+    for (leader, frames) in [
+        (
+            Position {
+                x: -82.5,
+                y: 137.1,
+                z: -349.9,
+            },
+            180,
+        ),
+        (
+            Position {
+                x: -82.8,
+                y: 137.0,
+                z: -350.9,
+            },
+            160,
+        ),
+        (
+            Position {
+                x: -83.3,
+                y: 136.9,
+                z: -351.8,
+            },
+            160,
+        ),
+        (
+            Position {
+                x: -84.7,
+                y: 136.8,
+                z: -355.0,
+            },
+            160,
+        ),
+    ] {
+        h.app.world_mut().entity_mut(h.caster).insert(leader);
+        for _ in 0..frames {
+            h.advance(1);
+            minimum_y = minimum_y.min(h.app.world().get::<Position>(tank).unwrap().y);
+        }
+        eprintln!(
+            "recorded approach leader={leader:?} tank={:?} min_y={minimum_y}",
+            h.app.world().get::<Position>(tank)
+        );
+    }
     assert!(
         greatest_step < 1.0,
         "tank must not teleport during recovery"
