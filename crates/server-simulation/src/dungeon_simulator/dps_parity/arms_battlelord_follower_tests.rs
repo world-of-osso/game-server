@@ -36,6 +36,7 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         .get_mut(shared::components::PowerType::Rage)
         .unwrap()
         .current = 1000.0;
+    app.world_mut().get_mut::<crate::spell_cast::SpellHistory>(actor).unwrap().clear_fixture_precombat_gcd();
     crate::spell_cast::creature_cast(app.world_mut(), actor, 12294, Some(target), false).unwrap();
     let on_cooldown = |app: &App| {
         let world = app.world();
@@ -81,6 +82,7 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         .get_mut(shared::components::PowerType::Rage)
         .unwrap()
         .current = 1000.0;
+    app.world_mut().get_mut::<crate::spell_cast::SpellHistory>(actor).unwrap().clear_fixture_precombat_gcd();
     crate::spell_cast::creature_cast(app.world_mut(), actor, 12294, Some(target), false).unwrap();
     assert!(
         !crate::auras::has_aura(app.world(), actor, 386631),
