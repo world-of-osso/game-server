@@ -58,6 +58,15 @@ pub use assisted_parity::{
 #[derive(Resource, Default)]
 pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 
+#[derive(Component)]
+pub(crate) struct ObservedLethalSpell(pub u32);
+
+pub(crate) fn capture_lethal_spell(world: &mut World, target: Entity, spell: u32) {
+    if world.contains_resource::<ObservedCombatEvents>() {
+        world.entity_mut(target).insert(ObservedLethalSpell(spell));
+    }
+}
+
 /// Opt-in applied resource changes, including periodic costs and ordinary casts.
 #[derive(Resource, Default)]
 pub struct ObservedPowerChanges(pub Vec<(Entity, shared::components::PowerType, f32)>);

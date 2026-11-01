@@ -178,6 +178,53 @@ fn follower_party_threat_engages_without_selection_or_owner_auto_attack() {
 }
 
 #[test]
+fn native_follower_lethal_spell_is_captured_without_changing_wire_death() {
+    let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .get_mut::<Health>(follower)
+        .unwrap()
+        .current = 1.0;
+    let attacker = h.npc;
+    crate::combat::deal_health_damage(
+        h.app.world_mut(),
+        attacker,
+        follower,
+        1000.0,
+        1,
+        Some(12345),
+        0.0,
+    );
+    let captured = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let death = captured
+        .iter()
+        .find(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(follower.to_bits())
+        })
+        .unwrap();
+    assert_eq!(death.source, Some(attacker.to_bits()));
+    assert_eq!(death.spell_id, Some(12345));
+    h.advance(1);
+    let wire = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(follower.to_bits())
+        })
+        .unwrap();
+    assert_eq!(wire.spell_id, None);
+}
+
+#[test]
 fn follower_lethal_melee_delivers_one_native_death_to_party_owner() {
     let (mut h, tank, _) = spawn_profile_fixture(209057);
     h.app.world_mut().get_mut::<Health>(tank).unwrap().current = 1.0;
