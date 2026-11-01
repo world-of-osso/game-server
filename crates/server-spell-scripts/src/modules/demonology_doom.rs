@@ -25,14 +25,19 @@ fn register(scripts: &mut AuraScripts) {
 }
 
 fn snapshot_core(world: &World, caster: Entity, spell: &mut SpellInfo) {
-    if spell.id == DEMONBOLT {
-        eprintln!(
-            "doom snapshot core={} time={}",
-            auras::has_aura(world, caster, CORE),
-            auras::aura_now(world)
-        );
+    if spell.id != DEMONBOLT {
+        return;
     }
-    if spell.id == DEMONBOLT && auras::has_aura(world, caster, CORE) {
+    // Native effect2 unconditionally triggers Doom. SimC only admits it
+    // after a landed Core-powered Demonbolt and does not refresh active Doom.
+    if let Some(effect) = spell
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 2 && effect.trigger_spell == DOOM)
+    {
+        effect.effect = 0;
+    }
+    if auras::has_aura(world, caster, CORE) {
         spell.cast_launch_auras.push(CORE);
     }
 }
@@ -52,13 +57,6 @@ fn apply_doom(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, damag
             .any(|aura| aura.spell_id == DOOM && aura.caster == ctx.caster)
     });
     if !present {
-        eprintln!(
-            "doom apply caster={:?} target={:?} launch={:?} time={}",
-            ctx.caster,
-            target,
-            ctx.spell.cast_launch_auras,
-            auras::aura_now(world)
-        );
         spell_cast::cast_triggered(world, ctx.caster, DOOM, Some(target), 1);
     }
 }
