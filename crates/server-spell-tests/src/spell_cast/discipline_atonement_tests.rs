@@ -70,7 +70,11 @@ fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement(
         assert_eq!(
             hits.len(),
             expected,
-            "selected={selected}, engaged={engaged}, friendly={friendly}"
+            "selected={selected}, engaged={engaged}, friendly={friendly}, events={:?}",
+            events
+                .iter()
+                .filter(|event| matches!(event.spell_id, Some(47540 | 47750 | 47757 | 1232571)))
+                .collect::<Vec<_>>()
         );
         assert!(
             hits.iter()
