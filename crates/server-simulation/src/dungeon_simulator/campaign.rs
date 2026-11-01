@@ -721,6 +721,11 @@ fn released_leader_rejoins_party_through_azure_book() {
         .collect();
     let mut reunited = false;
     for _ in 0..7000 {
+        assert!(
+            crate::spell_cast::targets::is_alive(run.app.world(), owner),
+            "leader died again while returning at {:?}",
+            run.app.world().get::<Position>(owner)
+        );
         run.control().unwrap();
         if !run.returning_to_party {
             reunited = true;
