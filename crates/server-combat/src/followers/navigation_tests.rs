@@ -386,7 +386,11 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
     use crate::navigation::Navigation;
     use shared::components::Rotation;
 
-    let (mut h, tank, _) = spawn_profile_fixture(209057);
+    let (mut h, placeholder, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    h.app.world_mut().despawn(placeholder);
     h.app.world_mut().despawn(h.npc);
     h.app
         .world_mut()
@@ -403,31 +407,52 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         y: 136.5,
         z: -367.2,
     };
-    let map = InMap {
-        map_id: 2660,
-        instance_id: 16,
-    };
-    h.app.world_mut().entity_mut(h.caster).insert((
-        owner_at,
-        map,
-        Rotation {
-            x: 0.0,
-            y: crate::creature_ai::facing_along(-1.4, -3.2).unwrap(),
-            z: 0.0,
-        },
-    ));
-    h.app.world_mut().entity_mut(tank).insert((
-        from,
-        map,
-        FollowOwner::new(h.caster),
-        PartyFollowSlot::new(0, 4),
-    ));
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
     let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut instances = crate::maps::InstanceManager::default();
+    let map = instances
+        .create_map(
+            &maps,
+            2660,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 1,
+                ..default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1_793_497_780,
+            },
+        )
+        .unwrap()
+        .map;
+    h.app.insert_resource(instances);
+    h.app.world_mut().entity_mut(h.caster).insert((
+        owner_at,
+        map,
+        shared::components::Level(78),
+        Rotation {
+            x: 0.0,
+            y: crate::creature_ai::facing_along(-1.4, -3.2).unwrap(),
+            z: 0.0,
+        },
+    ));
+    let tank = super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 104).unwrap();
+    h.app.world_mut().entity_mut(tank).insert((
+        from,
+        map,
+        FollowOwner::new(h.caster),
+        PartyFollowSlot::new(0, 4),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::Level(79));
     h.app.insert_resource(GroundMap::new(
         &crate::ground::ground_data_dir(),
         HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
