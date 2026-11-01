@@ -33,8 +33,6 @@ pub(crate) mod equipped_items;
 #[cfg(any(test, feature = "test-support"))]
 pub use equipped_items::check_cast as check_equipped_item_requirements;
 #[cfg(test)]
-mod equipped_items_tests;
-#[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
 mod base_armor_tests;
@@ -62,6 +60,8 @@ mod census_tail_tests;
 mod census_three_tests;
 pub(crate) mod charge;
 pub(crate) mod cooldown_query;
+#[cfg(test)]
+mod equipped_items_tests;
 #[cfg(test)]
 mod form_display_power_tests;
 #[cfg(any(test, feature = "test-support"))]

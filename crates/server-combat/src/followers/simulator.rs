@@ -231,11 +231,8 @@ pub fn spawn_keystone_party(
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
-    let spells = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .ok_or("follower spells unavailable")?;
     let profiles = super::gear::wcl::class_profiles(classes, key_level)?;
-    let qualified = class_profiles::validate_profiles(&profiles, classes, spells, level);
+    let qualified = class_profiles::validate_profiles(&profiles, classes, level);
     let selected = select_party_profiles(specs, &qualified)?;
     spawn_profiled_party(
         world,

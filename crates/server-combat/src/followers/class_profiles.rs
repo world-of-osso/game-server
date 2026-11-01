@@ -120,11 +120,8 @@ pub(super) fn select_keystone_party_profiles(
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
-    let spells = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .ok_or("follower spell store unavailable")?;
     let profiles = super::gear::wcl::class_profiles(classes, key_level)?;
-    let qualified = validate_profiles(&profiles, classes, spells, level);
+    let qualified = validate_profiles(&profiles, classes, level);
     select_profiles(&qualified, role, player_spec, seed)
 }
 
