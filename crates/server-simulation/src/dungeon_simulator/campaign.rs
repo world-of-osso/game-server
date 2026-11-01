@@ -713,9 +713,14 @@ fn released_leader_rejoins_party_through_azure_book() {
     }
     run.control().unwrap();
     assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
-    let tank_before_return = *run.app.world().get::<Position>(tank).unwrap();
+    let positions_before_return: Vec<_> = run
+        .party
+        .members
+        .iter()
+        .map(|member| (*member, *run.app.world().get::<Position>(*member).unwrap()))
+        .collect();
     let mut reunited = false;
-    for _ in 0..3000 {
+    for _ in 0..7000 {
         run.control().unwrap();
         if !run.returning_to_party {
             reunited = true;
@@ -728,11 +733,13 @@ fn released_leader_rejoins_party_through_azure_book() {
             .iter()
             .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
         {
-            assert_eq!(
-                *run.app.world().get::<Position>(tank).unwrap(),
-                tank_before_return,
-                "the living tank must hold until the leader uses the book"
-            );
+            for (member, position) in &positions_before_return {
+                assert_eq!(
+                    *run.app.world().get::<Position>(*member).unwrap(),
+                    *position,
+                    "living followers must hold until the leader uses the book"
+                );
+            }
         }
     }
     assert!(
