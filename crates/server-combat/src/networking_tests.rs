@@ -155,5 +155,7 @@ mod stockade_run;
 mod terrain;
 #[path = "networking_tests/vignette.rs"]
 mod vignette;
+#[path = "networking_tests/windrunner_step.rs"]
+mod windrunner_step;
 #[path = "networking_tests/world_entry.rs"]
 mod world_entry;

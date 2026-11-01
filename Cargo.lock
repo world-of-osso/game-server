@@ -3181,7 +3181,7 @@ dependencies = [
 [[package]]
 name = "game-engine-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/world-of-osso/game-engine.git?rev=21a30a47493d3609d7ad7ce64ddb248294f1cab5#21a30a47493d3609d7ad7ce64ddb248294f1cab5"
+source = "git+ssh://git@github.com/world-of-osso/game-engine.git?rev=9ef2efe2d317b837d352fe8c5227086a4fdcd490#9ef2efe2d317b837d352fe8c5227086a4fdcd490"
 dependencies = [
  "bincode",
  "binrw",
@@ -3205,7 +3205,7 @@ dependencies = [
 [[package]]
 name = "game-engine-core"
 version = "0.1.0"
-source = "git+ssh://git@github.com/world-of-osso/game-engine.git?rev=9ef2efe2d317b837d352fe8c5227086a4fdcd490#9ef2efe2d317b837d352fe8c5227086a4fdcd490"
+source = "git+ssh://git@github.com/world-of-osso/game-engine.git?rev=d39210394448439112c08b9183006e8355758677#d39210394448439112c08b9183006e8355758677"
 dependencies = [
  "bincode",
  "binrw",
@@ -6688,7 +6688,7 @@ dependencies = [
  "blake3",
  "chrono",
  "csv",
- "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=21a30a47493d3609d7ad7ce64ddb248294f1cab5)",
+ "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=d39210394448439112c08b9183006e8355758677)",
  "lightyear",
  "lightyear_link",
  "lightyear_serde",
@@ -6785,7 +6785,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "blake3",
- "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=21a30a47493d3609d7ad7ce64ddb248294f1cab5)",
+ "game-engine-core 0.1.0 (git+ssh://git@github.com/world-of-osso/game-engine.git?rev=d39210394448439112c08b9183006e8355758677)",
  "navigation",
  "rusqlite",
  "serde",
