@@ -104,7 +104,7 @@ fn taunt_spell(
         .filter(|spell| !crate::auras::is_passive(spell))
         .filter(|spell| {
             let scripted = crate::spell_cast::scripts::scripted_enemy_trigger(spell.id);
-            std::iter::once(spell)
+            std::iter::once(*spell)
                 .chain(
                     spell
                         .effects
