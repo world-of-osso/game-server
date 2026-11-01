@@ -463,10 +463,33 @@ pub fn assert_existing_fight_defense_without_a_healer(engaged: (Scenario, Positi
         );
     }
     let positions = s.sample_attacking_positions();
-    assert!(
-        positions.iter().any(|at| *at != from),
-        "existing-fight defense must still move without new-pull healer readiness"
-    );
+    if positions.iter().all(|at| *at == from) {
+        let world = s.h.app.world();
+        let combat_target = world
+            .get::<crate::networking::CombatTarget>(s.tank)
+            .and_then(|current| current.0);
+        let state = world
+            .get::<crate::creature_ai::CreatureState>(s.tank)
+            .copied();
+        let cast = world
+            .get::<shared::casting::CastState>(s.tank)
+            .map(|cast| cast.spell_id);
+        let follower = world.get::<Follower>(s.tank).unwrap().clone();
+        let admission = combat_target.map(|victim| {
+            super::tank_planner::read_movement_admission(
+                s.h.app.world_mut(),
+                s.tank,
+                victim,
+                &follower,
+                None,
+            )
+        });
+        panic!(
+            "existing-fight defense must still move without new-pull healer readiness: \
+             target={combat_target:?} owner_victim={target:?} state={state:?} cast={cast:?} \
+             admission={admission:?}"
+        );
+    }
 }
 
 fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u32) -> bool {
