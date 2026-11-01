@@ -5,6 +5,8 @@ use shared::components::ActiveSpec;
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
+#[path = "arms_battlelord.rs"]
+mod battlelord;
 #[path = "arms_bloodletting.rs"]
 mod bloodletting;
 #[path = "arms_heroic_might.rs"]
@@ -22,6 +24,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(heroic_might::after_heroic),
     SpellScriptHook::BeforeNativeOnCast(heroic_might::before_smash),
     SpellScriptHook::OwnsPolicyProc(winding::owns_proc),
+    SpellScriptHook::OwnsPolicyProc(battlelord::owns_proc),
+    SpellScriptHook::AfterElementalLaunch(battlelord::after_cast),
     SpellScriptHook::AfterElementalLaunch(winding::after_cast),
     SpellScriptHook::AfterElementalLaunch(consume_executioners_precision),
     SpellScriptHook::AfterPolicyDirectDamage(bloodletting::after_mortal),
