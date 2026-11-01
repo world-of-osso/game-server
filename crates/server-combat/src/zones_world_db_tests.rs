@@ -919,6 +919,11 @@ fn retail_polymorphic_rune_does_not_enter_combat_or_melee() {
     });
     let owner = spawn_human_near(&mut app, RUNE);
     let control = spawn_human_near(&mut app, FOREST_SPIDER);
+    for player in [owner, control] {
+        app.world_mut()
+            .entity_mut(player)
+            .insert(crate::maps::InMap::continent(0));
+    }
     let rune = entity_of(&app, RUNE);
     for _ in 0..100 {
         app.update();
