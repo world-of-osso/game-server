@@ -65,7 +65,10 @@ fn follower_arms_sudden_death_execute_reduces_bladestorm() {
         .get_mut(PowerType::Rage)
         .unwrap()
         .current = 1000.0;
-    crate::spell_cast::SpellHistory::clear_fixture_precombat_gcd(app.world_mut(), actor);
+    app.world_mut()
+        .get_mut::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
+        .clear_fixture_precombat_gcd();
     let before = cooldown_ms(&app, actor, spin);
     assert!(before > 0, "the follower's actual Bladestorm started its cooldown");
     let execute =
