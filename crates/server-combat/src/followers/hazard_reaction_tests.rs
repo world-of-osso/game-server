@@ -18,7 +18,7 @@ fn at(world: &World, unit: Entity) -> Position {
 }
 
 #[derive(Clone, Default)]
-struct TraceBuffer(Arc<Mutex<Vec<u8>>>);
+pub(super) struct TraceBuffer(pub(super) Arc<Mutex<Vec<u8>>>);
 
 impl Write for TraceBuffer {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
