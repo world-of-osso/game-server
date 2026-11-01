@@ -14,23 +14,27 @@ pub struct Rotation {
     pub encounter: Encounter,
 }
 
+pub fn program() -> Result<Program, String> {
+    let rows = include_str!("shadow_rotation/76f8118.simc")
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+        .map(|line| {
+            let (head, literal) = line
+                .split_once('=')
+                .ok_or("invalid Shadow APL assignment")?;
+            let list = head
+                .trim_end_matches('+')
+                .strip_prefix("actions.")
+                .ok_or("invalid Shadow APL list")?;
+            Ok((list, literal.trim_start_matches('/')))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    Program::parse(&rows)
+}
+
 impl Rotation {
     pub fn load(world: &mut World, actor: Entity, encounter: Encounter) -> Result<Self, String> {
-        let rows = include_str!("shadow_rotation/76f8118.simc")
-            .lines()
-            .filter(|line| !line.starts_with('#') && !line.is_empty())
-            .map(|line| {
-                let (head, literal) = line
-                    .split_once('=')
-                    .ok_or("invalid Shadow APL assignment")?;
-                let list = head
-                    .trim_end_matches('+')
-                    .strip_prefix("actions.")
-                    .ok_or("invalid Shadow APL list")?;
-                Ok((list, literal.trim_start_matches('/')))
-            })
-            .collect::<Result<Vec<_>, String>>()?;
-        let program = Program::parse(&rows)?;
+        let program = program()?;
         let mut bindings = bindings::build();
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         // Exact258.reference.single.json reaction fields; player.cpp1017–1020.

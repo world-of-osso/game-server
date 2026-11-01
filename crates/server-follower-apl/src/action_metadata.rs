@@ -65,6 +65,10 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
         )),
         256 => discipline_priest_rotation::action_spells(),
         257 => holy_priest_rotation::action_spells(),
+        258 => Ok(program_action_spells(
+            &shadow_rotation::program()?,
+            &shadow_rotation::bindings::build(),
+        )),
         260 => Ok(program_action_spells(
             &outlaw_rotation::load_program(&profile(spec)?)?,
             &outlaw_rotation::bindings(),
@@ -73,7 +77,19 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &subtlety_rotation::load_program(&profile(spec)?)?,
             &subtlety_rotation::bindings(),
         )),
+        262 => Ok(program_action_spells(
+            &elemental_rotation::read_program(&profile(spec)?)?,
+            &elemental_rotation::bindings::build(),
+        )),
+        263 => Ok(program_action_spells(
+            &enhancement_rotation::read_program()?,
+            &enhancement_rotation::bindings::build(),
+        )),
         264 => restoration_shaman_rotation::action_spells(),
+        268 => Ok(program_action_spells(
+            &brewmaster_rotation::program(&profile(spec)?)?,
+            &brewmaster_rotation::bindings(),
+        )),
         269 => Ok(program_action_spells(
             &windwalker_rotation::source::load()?,
             &windwalker_rotation::bindings::build(),

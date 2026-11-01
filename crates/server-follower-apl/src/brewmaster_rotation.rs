@@ -69,7 +69,7 @@ pub fn bindings() -> Bindings {
     }
 }
 
-fn program(profile: &server::followers::parity_profile::Profile) -> Result<Program, String> {
+pub fn program(profile: &server::followers::parity_profile::Profile) -> Result<Program, String> {
     let actions = profile
         .options
         .get("actions")
