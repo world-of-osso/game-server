@@ -943,13 +943,13 @@ fn build_effect(
     } else {
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
-    let cast_multiplier = if matches!(
-        effect.aura,
-        handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH
-    ) {
-        spell.cast_damage_multiplier.unwrap_or(1.0)
-    } else {
-        1.0
+    let cast_multiplier = match effect.aura {
+        handlers::PERIODIC_DAMAGE | handlers::PERIODIC_LEECH => {
+            spell.cast_damage_multiplier.unwrap_or(1.0)
+        }
+        // A scaled cast's periodic healing shares its direct heal's effectiveness.
+        handlers::PERIODIC_HEAL => spell.cast_healing_multiplier.unwrap_or(1.0),
+        _ => 1.0,
     };
     let snapshot = |value| {
         let value =
