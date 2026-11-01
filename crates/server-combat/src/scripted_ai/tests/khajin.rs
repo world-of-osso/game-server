@@ -35,10 +35,10 @@ fn projected_khajin(difficulty: u32) -> (Harness, Entity, InMap) {
     h.app.world_mut().entity_mut(peer).insert(other_map);
     let position = *h.app.world().get::<Position>(boss).unwrap();
     for (player, _, _) in &h.players {
-        *h.app.world_mut().get_mut::<Position>(*player).unwrap() = Position {
+        h.app.world_mut().entity_mut(*player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
     }
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
@@ -174,7 +174,9 @@ fn encounter_coverage_khajin_projected_evade_rearms_first_shock() {
             Some(EncounterState::NotStarted)
         );
         let player = h.player();
-        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 500.0;
+        let mut away = *h.app.world().get::<Position>(player).unwrap();
+        away.x += 500.0;
+        h.app.world_mut().entity_mut(player).insert(away);
         for _ in 0..100 {
             if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
                 != Some(&crate::creature_ai::CreatureState::Returning)
@@ -188,10 +190,10 @@ fn encounter_coverage_khajin_projected_evade_rearms_first_shock() {
             Some(&crate::creature_ai::CreatureState::Returning)
         );
         let position = *h.app.world().get::<Position>(boss).unwrap();
-        *h.app.world_mut().get_mut::<Position>(player).unwrap() = Position {
+        h.app.world_mut().entity_mut(player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
         h.engage(boss);
         h.advance(5.8);
         assert_eq!(completed_casts(&h, boss, SHOCK), 1);
