@@ -393,8 +393,17 @@ fn follower_arms_imminent_demise_adds_bladestorm_ticks_and_expires() {
         for _ in 0..stacks {
             crate::spell_cast::cast_triggered(app.world_mut(), actor, 445606, Some(actor), 1);
         }
-        crate::spell_cast::creature_cast(app.world_mut(), actor, 227847, Some(actor), false)
-            .unwrap();
+        let spin =
+            crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 227847).unwrap();
+        assert_eq!(
+            spin, 446035,
+            "the selected native Slayer action must resolve"
+        );
+        crate::spell_cast::creature_cast(app.world_mut(), actor, spin, Some(actor), false).unwrap();
+        assert!(
+            crate::auras::has_aura(app.world(), actor, 446035),
+            "the native spin must start"
+        );
         for _ in 0..500 {
             app.update();
             if !crate::auras::has_aura(app.world(), actor, 446035) {
