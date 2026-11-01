@@ -125,6 +125,7 @@ fn dummy20_barbed_completed_cast_grants_native_periodic_focus_child() {
 }
 fn stormkeeper_fixture(ids: &[u32]) -> Harness {
     let mut h = fixture(ids, 7);
+    h.app.insert_resource(world_db().unwrap().store.clone());
     let path = crate::test_data::world_db_path();
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
