@@ -66,6 +66,35 @@ pub(super) fn energize_heartbreaker(world: &mut World, caster: Entity, _target: 
     }
 }
 
+/// SimC76f8118 sc_priest.cpp:2082–2165 and sc_priest_discipline.cpp:57–118
+/// preserve the explicit target but exclude ordinary pets from secondary selection.
+fn select_secondary_atonement_allies(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    primary: Entity,
+    index: usize,
+) -> Vec<Entity> {
+    let mut units = targets::select_targets(
+        world,
+        caster,
+        Some(primary),
+        spell,
+        &spell.effects[index],
+        0,
+        false,
+    )
+    .expect("Atonement spell catalog area selectors");
+    units.retain(|&unit| {
+        unit != primary
+            && world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
+            && !world
+                .get::<spell_cast::summon::SummonedCreature>(unit)
+                .is_some_and(|summon| summon.properties.is_pet_or_guardian())
+    });
+    units
+}
+
 ///194509s3: primary plus four injured allies. TC radiance priority first
 /// favors allies without THIS priest's Atonement. Keep native radius/order;
 /// raid/pet priority and actual Atonement application are separate contracts.
@@ -114,17 +143,7 @@ pub(super) fn void_shield_plan(
         .iter()
         .position(|effect| effect.index == 0)
         .expect("Void Shield absorb effect");
-    let mut units = targets::select_targets(
-        world,
-        caster,
-        Some(primary),
-        spell,
-        &spell.effects[index],
-        0,
-        false,
-    )
-    .expect("Void Shield catalog area selectors");
-    units.retain(|&unit| unit != primary);
+    let mut units = select_secondary_atonement_allies(world, caster, spell, primary, index);
     let count = script_effect_value(world, caster, VOID_SHIELD, 1) as usize;
     if units.len() + 1 > count {
         use rand::seq::SliceRandom;
@@ -176,21 +195,11 @@ fn select_radiance_allies(
     primary: Entity,
     index: usize,
 ) -> Vec<Entity> {
-    let mut units = targets::select_targets(
-        world,
-        caster,
-        Some(primary),
-        spell,
-        &spell.effects[index],
-        0,
-        false,
-    )
-    .expect("Radiance catalog area selectors");
+    let mut units = select_secondary_atonement_allies(world, caster, spell, primary, index);
     units.retain(|&unit| {
-        unit != primary
-            && world
-                .get::<Health>(unit)
-                .is_some_and(|health| health.current < health.max)
+        world
+            .get::<Health>(unit)
+            .is_some_and(|health| health.current < health.max)
     });
     // Stable sorting retains native nearest-first ordering within each priority.
     units.sort_by_key(|&unit| {
