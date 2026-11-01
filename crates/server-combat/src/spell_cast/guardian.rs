@@ -955,23 +955,26 @@ fn cast_on_owner_target(world: &mut World, actor: Entity) {
     cast_first_ready(world, actor, target);
 }
 
-fn grove_guardian_target(world: &World, actor: Entity) -> Option<Entity> {
+fn grove_guardian_target(world: &mut World, actor: Entity) -> Option<Entity> {
     let target = world.get::<super::summon::GroveGuardianTarget>(actor)?.0;
     if super::targets::is_alive(world, target)
         && world.get::<crate::maps::InMap>(target) == world.get::<crate::maps::InMap>(actor)
     {
         return Some(target);
     }
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(422090)?;
-    let effect = spell.effects.iter().find(|effect| effect.index == 0)?;
+    let radius = {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(422090)?;
+        let effect = spell.effects.iter().find(|effect| effect.index == 0)?;
+        super::targets::radius(effect, 1)
+    };
     let center = super::targets::position(world, actor)?;
     super::targets::area_units(
         world,
         actor,
         center,
-        super::targets::radius(effect, 1),
+        radius,
         super::targets::Relation::Ally,
         0,
     )
