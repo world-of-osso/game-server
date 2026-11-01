@@ -54,9 +54,24 @@ fn settle_held_healer() -> ClassParty {
     run
 }
 
+/// Cast once the previous cast's global cooldown or cast bar has ended.
 fn cast(run: &mut ClassParty, spell: u32, target: Entity) {
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.healer, spell, Some(target), false)
-        .unwrap();
+    use crate::spell_cast::CastFailure;
+    for _ in 0..200 {
+        let healer = run.healer;
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            healer,
+            spell,
+            Some(target),
+            false,
+        ) {
+            Ok(()) => return,
+            Err(CastFailure::OnGlobalCooldown | CastFailure::InProgress) => run.app.update(),
+            Err(failure) => panic!("cast {spell} failed: {failure:?}"),
+        }
+    }
+    panic!("cast {spell} never left the global cooldown");
 }
 
 #[test]
@@ -172,8 +187,8 @@ fn mistweaver_courage_claw_heals_an_ally_for_its_damage_after_two_seconds() {
     advance_until(&mut run, |run| own_aura(run, healer, 460127).is_some());
 
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    let cast_at = crate::spell_cast::now(run.app.world());
     cast(&mut run, 100780, enemy);
+    let cast_at = crate::spell_cast::now(run.app.world());
     run.app.update();
     assert!(
         own_aura(&run, healer, 460127).is_none(),
