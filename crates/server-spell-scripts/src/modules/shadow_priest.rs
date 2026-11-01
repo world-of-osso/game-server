@@ -5,11 +5,11 @@ use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
-use super::combat;
+use super::{combat, shadow_link};
 use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
-use combat::spell_cast;
+use combat::spell_cast::{self, effects::EffectCtx};
 use combat::spell_cast::script_registry::{DeclaredReach, HitHook, ScriptReach, SpellScriptHook};
 use combat::spell_info::SpellStore;
 
@@ -20,6 +20,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LaunchDelay(launch_delay),
     SpellScriptHook::DotMasteryMultiplier(weaving_multiplier),
     SpellScriptHook::LateAuraRegistration(register_hallucinations),
+    SpellScriptHook::ResolvedDamage(maddening_touch_tick),
+    SpellScriptHook::ConsumedEffectValues(&[(MADDENING_TOUCH, 1)]),
 ];
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
@@ -36,6 +38,8 @@ const VT: u32 = 34914;
 const MISERY: u32 = 238558;
 const PAIN: u32 = 589;
 const HALLUCINATIONS: u32 = 280752;
+const MADDENING_TOUCH: u32 = 391228;
+const MADDENING_TOUCH_GAIN: u32 = 391232;
 const MADDENING_TENTACLES: u32 = 1279353;
 const MADNESS: u32 = 335467;
 const SHADOW_WEAVING: u32 = 343690;
@@ -139,6 +143,41 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     for target in units {
         spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
     }
+}
+
+#[derive(Component)]
+struct MaddeningTouchProgress {
+    passive: u32,
+    accumulated: f64,
+}
+
+fn maddening_touch_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool, amount: f32) {
+    if ctx.spell.id != VT || ctx.spell.cast_periodic_ordinal.is_none() || amount <= 0.0 {
+        return;
+    }
+    let passive = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        auras.iter().find(|aura| aura.caster == ctx.caster && aura.spell_id == MADDENING_TOUCH)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(passive) = passive else { return };
+    let dots = shadow_link::read_vampiric_touch_targets(world, ctx.caster).len();
+    if dots == 0 { return; }
+    if world.get::<MaddeningTouchProgress>(ctx.caster).is_none_or(|state| state.passive != passive) {
+        world.entity_mut(ctx.caster).insert(MaddeningTouchProgress {
+            passive,
+            accumulated: combat::random::random::<f64>(),
+        });
+    }
+    // SimC76f8118 sc_priest_shadow.cpp797–813/2339–2352 and proc_rng.cpp221–273.
+    let increment = 0.25 * (0.25 + combat::random::random::<f64>() * 1.5) / (dots as f64).powf(0.6);
+    let mut progress = world.get_mut::<MaddeningTouchProgress>(ctx.caster).unwrap();
+    progress.accumulated += increment;
+    if progress.accumulated < 1.0 { return; }
+    progress.accumulated -= 1.0;
+    let gain = spell_cast::scripts::script_effect_value(world, ctx.caster, MADDENING_TOUCH, 1);
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, MADDENING_TOUCH_GAIN, ctx.depth + 1) else { return };
+    spell.cast_effect0_amount = Some(gain);
+    spell_cast::launch_triggered_spell(world, ctx.caster, &spell, Some(ctx.caster), ctx.depth + 1);
 }
 
 fn register_hallucinations(scripts: &mut AuraScripts) {
