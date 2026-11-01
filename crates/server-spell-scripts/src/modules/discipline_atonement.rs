@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterAuraApplication(apply_mark),
     SpellScriptHook::AfterAuraApplication(spread_pain_from_penance),
+    SpellScriptHook::AfterAuraApplication(record_friendly_penance),
     SpellScriptHook::OnCast(start_penance),
     SpellScriptHook::LateAuraRegistration(register_shield_discipline),
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
@@ -186,6 +187,7 @@ fn twist_healing_multiplier(
 struct PenanceBolts {
     completed: u32,
     friendly_completed: u32,
+    friendly_channel: bool,
     friendly_twinsight_target: Option<Entity>,
     dark_side_multiplier: f32,
 }
@@ -209,6 +211,7 @@ fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
     world.entity_mut(caster).insert(PenanceBolts {
         completed: 0,
         friendly_completed: 0,
+        friendly_channel: false,
         friendly_twinsight_target: None,
         dark_side_multiplier,
     });
@@ -740,6 +743,16 @@ fn penance_healing_multiplier(
         .map_or(1.0, |bolts| bolts.dark_side_multiplier)
 }
 
+fn record_friendly_penance(world: &mut World, target: Entity, aura: &AuraInstance) {
+    // Healing missiles can land after the channel aura has expired.
+    if aura.spell_id == 47757
+        && target == aura.caster
+        && let Some(mut bolts) = world.get_mut::<PenanceBolts>(aura.caster)
+    {
+        bolts.friendly_channel = true;
+    }
+}
+
 fn friendly_penance_twinsight(
     world: &mut World,
     ctx: &EffectCtx<'_>,
@@ -751,7 +764,9 @@ fn friendly_penance_twinsight(
 ) {
     let caster = ctx.caster;
     if ctx.spell.id != 47750
-        || !auras::has_aura(world, caster, 47757)
+        || !world
+            .get::<PenanceBolts>(caster)
+            .is_some_and(|bolts| bolts.friendly_channel)
         || !world
             .get::<combat::class_progression::KnownSpells>(caster)
             .is_some_and(|known| known.contains(440742))
