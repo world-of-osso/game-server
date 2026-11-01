@@ -4135,6 +4135,26 @@ pub fn cast_triggered(
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
 }
 
+/// Launch an automatic action using the same native charge pool as its manual cast.
+pub(crate) fn cast_triggered_with_shared_charge(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    depth: u8,
+) {
+    let Some(spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    if cooldown_query::cooldown_value(world, caster, &spell, "charges")
+        .expect("native charge query")
+        <= 0.0
+    {
+        return;
+    }
+    start_cooldowns(world, caster, &spell);
+    launch_triggered_spell(world, caster, &spell, Some(caster), depth);
+}
+
 /// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
 pub fn try_cast_triggered(
     world: &mut World,

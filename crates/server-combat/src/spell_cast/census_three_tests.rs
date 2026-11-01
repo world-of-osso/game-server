@@ -211,6 +211,22 @@ fn census_three_396_native_loss_casts_authored_energy_child() {
 }
 
 #[test]
+fn thistle_tea_automatic_trigger_spends_charges() {
+    let mut h = fixture(4, &[469779, 381623]);
+    apply(&mut h, 469779, 1);
+    for _ in 0..3 {
+        super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -70.0).unwrap();
+        assert_eq!(h.power(PowerType::Energy), 100.0);
+    }
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -70.0).unwrap();
+    assert_eq!(
+        h.power(PowerType::Energy),
+        30.0,
+        "a depleted charge pool cannot restore energy"
+    );
+}
+
+#[test]
 fn census_three_396_native_regeneration_crossing_and_refresh_control() {
     let mut h = fixture(4, &[409462, 409463]);
     super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();

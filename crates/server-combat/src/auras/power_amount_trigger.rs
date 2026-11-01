@@ -22,10 +22,16 @@ fn matches_power(effect: &AuraEffectState, power: PowerType) -> bool {
         && effect.misc_values[0] == power as i32
 }
 
-fn cast_children(world: &mut World, unit: Entity, children: Vec<u32>) {
-    for child in children {
+fn cast_children(world: &mut World, unit: Entity, children: Vec<(u32, u32)>) {
+    for (source, child) in children {
         let depth = crate::spell_cast::next_trigger_depth(world);
-        crate::spell_cast::cast_triggered(world, unit, child, Some(unit), depth);
+        if source == 469779 {
+            // SimC76f8118 sc_rogue.cpp2671–2676: automatic Thistle Tea
+            // spends the same charge pool as the manually selected action.
+            crate::spell_cast::cast_triggered_with_shared_charge(world, unit, child, depth);
+        } else {
+            crate::spell_cast::cast_triggered(world, unit, child, Some(unit), depth);
+        }
     }
 }
 
@@ -40,7 +46,7 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
             let power = PowerType::from_db(effect.misc_values[0])?;
             let (current, _) = crate::spell_cast::powers::power_value(world, unit, power)?;
             reaches_threshold(effect.misc_values[1], None, current, effect.amount)
-                .then_some(effect.trigger_spell)
+                .then_some((aura.spell_id, effect.trigger_spell))
         })
         .collect();
     cast_children(world, unit, children);
@@ -57,13 +63,18 @@ pub(crate) fn on_changed(world: &mut World, unit: Entity, power: PowerType, old:
     cast_children(world, unit, children);
 }
 
-fn collect_children(auras: &ActiveAuras, power: PowerType, old: f32, new: f32) -> Vec<u32> {
+fn collect_children(auras: &ActiveAuras, power: PowerType, old: f32, new: f32) -> Vec<(u32, u32)> {
     auras
         .iter()
-        .flat_map(|aura| &aura.effects)
-        .filter(|effect| matches_power(effect, power))
-        .filter(|effect| reaches_threshold(effect.misc_values[1], Some(old), new, effect.amount))
-        .map(|effect| effect.trigger_spell)
+        .flat_map(|aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| matches_power(effect, power))
+                .filter(|effect| {
+                    reaches_threshold(effect.misc_values[1], Some(old), new, effect.amount)
+                })
+                .map(|effect| (aura.spell_id, effect.trigger_spell))
+        })
         .collect()
 }
 
