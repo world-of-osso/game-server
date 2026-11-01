@@ -2105,10 +2105,12 @@ fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
         .iter()
         .find(|event| event.target == Some(second.to_bits()) && !event.crit)
         .unwrap();
+    let hit_targets: std::collections::HashSet<_> =
+        first.iter().filter_map(|event| event.target).collect();
+    let reduction = (1.0 / hit_targets.len() as f32).sqrt();
     assert!(
-        (secondary.amount as f32 / primary.amount as f32 - std::f32::consts::FRAC_1_SQRT_2).abs()
-            < 0.03,
-        "secondary hits receive the source one-target soft cap: primary={primary:?}, secondary={secondary:?}"
+        (secondary.amount as f32 / primary.amount as f32 - reduction).abs() < 0.03,
+        "secondary hits receive the source one-target soft cap: primary={primary:?}, secondary={secondary:?}, targets={hit_targets:?}"
     );
     app.world_mut()
         .entity_mut(second)
