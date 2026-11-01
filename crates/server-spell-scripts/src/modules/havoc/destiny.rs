@@ -20,17 +20,10 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 struct FuryRemainder(f32);
 
 fn extend_from_paid_fury(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    if !has_talent(world, caster, TALENT) || !paid_fury(spell) || !live_meta(world, caster) {
+    let base = paid_base_fury(spell);
+    if !has_talent(world, caster, TALENT) || base == 0.0 || !live_meta(world, caster) {
         return;
     }
-    let base = spell
-        .power_costs
-        .iter()
-        .filter(|cost| {
-            cost.power_type == PowerType::Fury as i32 && cost.required_aura_spell_id == 0
-        })
-        .map(|cost| cost.mana_cost as f32)
-        .sum::<f32>();
     let threshold = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 1);
     let milliseconds = combat::spell_cast::scripts::script_effect_value(world, caster, TALENT, 0);
     assert!(
@@ -49,14 +42,27 @@ fn extend_from_paid_fury(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-fn paid_fury(spell: &SpellInfo) -> bool {
-    spell.cast_policy_context.as_ref().is_some_and(|context| {
+/// SimC76f8118 sc_demon_hunter.cpp2533–2546: a paid Fury spender counts its native
+/// base cost, not the reduced amount it actually paid.
+pub(super) fn paid_base_fury(spell: &SpellInfo) -> f32 {
+    let paid = spell.cast_policy_context.as_ref().is_some_and(|context| {
         !context.free_spender
             && context
                 .resources
                 .iter()
                 .any(|(power, paid)| *power == PowerType::Fury && *paid > 0.0)
-    })
+    });
+    if !paid {
+        return 0.0;
+    }
+    spell
+        .power_costs
+        .iter()
+        .filter(|cost| {
+            cost.power_type == PowerType::Fury as i32 && cost.required_aura_spell_id == 0
+        })
+        .map(|cost| cost.mana_cost as f32)
+        .sum()
 }
 
 fn live_meta(world: &World, caster: Entity) -> bool {
