@@ -541,3 +541,79 @@ fn restoration_thriving_vegetation_heals_a_fifth_of_rejuvenation_up_front() {
         ticks.len()
     );
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_lifetreading_grows_efflorescence_and_lifebloom_blooms_verdancy() {
+    use crate::spell_cast::summon::SummonedCreature;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    for _ in 0..3 {
+        run.app.update();
+    }
+    for aura in [1217941, 392325] {
+        assert!(crate::auras::has_aura(run.app.world(), healer, aura));
+    }
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33763, Some(tank), false)
+        .unwrap();
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let mut summons = run.app.world_mut().query::<&SummonedCreature>();
+    let blossoms = summons
+        .iter(run.app.world())
+        .filter(|summon| summon.owner == healer && summon.spell_id == 1232285)
+        .count();
+    assert_eq!(
+        blossoms, 1,
+        "Lifebloom grows one Lifetreading Efflorescence"
+    );
+    let healer_heals = |events: &[shared::protocol::CombatLogEvent], spell| {
+        events
+            .iter()
+            .filter(|e| {
+                e.kind == CombatLogKind::Heal
+                    && e.spell_id == Some(spell)
+                    && e.source == Some(healer.to_bits())
+            })
+            .filter_map(|e| e.target)
+            .collect::<Vec<_>>()
+    };
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        !healer_heals(events, 81269).is_empty(),
+        "the blossom pulses Efflorescence heals"
+    );
+    // A second Lifebloom keeps one blossom.
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33763, Some(tank), true).unwrap();
+    run.app.update();
+    let blossoms = summons
+        .iter(run.app.world())
+        .filter(|summon| summon.owner == healer && summon.spell_id == 1232285)
+        .count();
+    assert_eq!(blossoms, 1, "Efflorescence is limited to one");
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 33778, Some(tank), true).unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let verdancy = healer_heals(events, 392329);
+    // 392325 s1: up to three allies inside the blossom, all injured here.
+    assert_eq!(verdancy.len(), 3, "{events:?}");
+    assert!(
+        verdancy
+            .iter()
+            .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target))
+    );
+}
