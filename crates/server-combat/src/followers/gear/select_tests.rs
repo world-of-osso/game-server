@@ -155,6 +155,13 @@ fn follower_weapons_follow_native_loot_specializations() {
                     );
                 }
             }
+            if profile.spec_id == 255 {
+                let weapon = templates.get(main.1, main.2).unwrap();
+                assert!(
+                    !matches!(weapon.inventory_type, 15 | 26),
+                    "Survival uses ItemSpec-eligible melee weapons"
+                );
+            }
             if profile.spec_id == 581 {
                 assert_ne!(
                     main.2, 251_128,

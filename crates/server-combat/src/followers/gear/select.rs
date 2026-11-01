@@ -138,8 +138,9 @@ pub(super) fn select_items(
     let pick = |slot: EquipmentSlot, used: &BTreeSet<u32>, two_hand_only: bool| {
         candidates.iter().find_map(|row| {
             let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
-            let ranged_hunter =
-                class == 3 && slot == MainHand && !matches!(item.inventory_type, 15 | 26);
+            let ranged_hunter = matches!(spec_id, 253 | 254)
+                && slot == MainHand
+                && !matches!(item.inventory_type, 15 | 26);
             let shield_tank = matches!(spec_id, 66 | 73)
                 && ((slot == MainHand && !matches!(item.inventory_type, 13 | 21))
                     || (slot == OffHand && item.inventory_type != 14));
