@@ -26,12 +26,21 @@ fn trigger_gusts(world: &mut World, caster: Entity, _: &SpellInfo) {
     let Some(center) = targets::position(world, caster) else {
         return;
     };
-    let presence = world.resource::<SpellStore>().get(PRESENCE).expect("Chi-Ji presence missing");
+    let presence = world
+        .resource::<SpellStore>()
+        .get(PRESENCE)
+        .expect("Chi-Ji presence missing");
     let radius = targets::radius(&presence.effects[0], 0);
     let mut allies = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
     allies.sort_by(|a, b| {
-        let distance = |unit| targets::position(world, unit).unwrap().distance_squared(center);
-        distance(*a).total_cmp(&distance(*b)).then_with(|| a.to_bits().cmp(&b.to_bits()))
+        let distance = |unit| {
+            targets::position(world, unit)
+                .unwrap()
+                .distance_squared(center)
+        };
+        distance(*a)
+            .total_cmp(&distance(*b))
+            .then_with(|| a.to_bits().cmp(&b.to_bits()))
     });
     let limit = script_effect_value(world, caster, PRESENCE, 2).max(0.0) as usize;
     allies.truncate(limit);
@@ -40,8 +49,15 @@ fn trigger_gusts(world: &mut World, caster: Entity, _: &SpellInfo) {
     for _ in 0..count {
         for &target in &allies {
             if !spell_cast::cast_triggered_with_overrides(
-                world, caster, GUST, Some(target), 1,
-                spell_cast::TriggeredSpellOverrides { healing_multiplier: Some(multiplier), ..Default::default() },
+                world,
+                caster,
+                GUST,
+                Some(target),
+                1,
+                spell_cast::TriggeredSpellOverrides {
+                    healing_multiplier: Some(multiplier),
+                    ..Default::default()
+                },
             ) {
                 warn!(?caster, ?target, "Chi-Ji Gust failed");
             }
