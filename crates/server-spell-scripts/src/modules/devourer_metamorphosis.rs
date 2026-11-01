@@ -260,6 +260,29 @@ fn grant_entry_fury(world: &mut World, unit: Entity, aura: &AuraInstance) {
     auras::remove_auras(world, unit, RemoveReason::Consumed, |aura| {
         aura.caster == unit && matches!(aura.spell_id, 1225789 | 1213809)
     });
+    // SimC76f8118 cpp9197–9206: Midnight's third node grants a ready Star and fragments.
+    if world
+        .get::<KnownSpells>(unit)
+        .is_some_and(|known| known.contains(1250094))
+    {
+        let stacks = script_effect_value(world, unit, 1221167, 0) as u8;
+        for _ in 0..stacks {
+            assert!(
+                spell_cast::try_cast_triggered(world, unit, 1227702, Some(unit), 1),
+                "native Collapsing Star stack"
+            );
+        }
+        let fragments = script_effect_value(world, unit, 1250094, 0) as usize;
+        for _ in 0..fragments {
+            combat::soul_fragments::spawn(
+                world,
+                unit,
+                combat::soul_fragments::FragmentKind::Lesser,
+                false,
+            )
+            .expect("native Midnight fragment");
+        }
+    }
     // SimC76f8118 sc_demon_hunter.cpp12445–12452 grants 200 Fury on Meta entry.
     // Native PowerPools owns the cap and the actual applied amount.
     if powers::change_power(world, unit, PowerType::Fury, 200.0).is_none() {

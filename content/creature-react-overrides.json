@@ -9,5 +9,16 @@
     ],
     "source_gap": "TC 15e0ed76 has no passive react flag or script for Polymorphic Rune; its addon aura 386362 is cosmetic.",
     "retire_when": "The TC or DB2 creature data supplies the rune's passive react state."
+  },
+  {
+    "entry": 244041,
+    "react_state": "passive",
+    "evidence": [
+      "Warcraft Logs Hx64j9RrfnytB8cA fight 12: absent from NPC actor roster",
+      "Warcraft Logs YaZ7RKjBnp6dyHTG fight 53: absent from NPC actor roster",
+      "Warcraft Logs BDjZ2QF6pNr8xV4W fight 1: absent from NPC actor roster"
+    ],
+    "source_gap": "TDB 66838 has a non-selectable type-10 Meat Pile with no AI script, vehicle or explicit passive react state; the three complete +2 logs do not show it attacking.",
+    "retire_when": "A sourced Meat Pile combat or react rule establishes its behavior."
   }
 ]

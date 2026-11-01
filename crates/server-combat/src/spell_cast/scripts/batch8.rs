@@ -95,6 +95,9 @@ pub(super) fn provoke_plan(
 pub(super) fn demonbolt(world: &mut World, caster: Entity, spell: &SpellInfo) {
     const DEMONIC_CORE: u32 = 264173;
     const SUMMON_DOOMGUARD: u32 = 1276672;
+    if crate::auras::has_aura(world, caster, DEMONIC_CORE) {
+        spell_cast::guardian::core::on_core_demonbolt(world, caster);
+    }
     let knows_doomguard = world
         .get::<crate::class_progression::KnownSpells>(caster)
         .is_some_and(|known| known.contains(SUMMON_DOOMGUARD));
