@@ -206,6 +206,7 @@ fn follower_cc_authored_shield_excludes_sheep_secondary_but_allows_explicit_shee
     let primary = h.npc;
     let sheep = spawn_npc(&mut h.app, 4.0);
     let other = spawn_npc(&mut h.app, 5.0);
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), other, h.caster);
     polymorph(&mut h, sheep);
     let targets = selected(&mut h, AVENGERS_SHIELD, Some(primary));
     assert!(
