@@ -14,6 +14,9 @@ fn follower_shadow_maddening_touch_generates_insanity_from_vt_ticks() {
         app.world_mut()
             .entity_mut(actor)
             .remove::<crate::followers::Follower>();
+        for _ in 0..4 {
+            app.update();
+        }
         assert!(crate::auras::has_aura(app.world(), actor, 391228));
         if !selected {
             crate::auras::remove_auras(
