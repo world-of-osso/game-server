@@ -1749,6 +1749,73 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_attacks_with_its_equipped_weapon_type() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    for (spec, ranged) in [(253, true), (73, false)] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, spec, 70);
+        let stats = app
+            .world()
+            .get::<crate::stats::CharacterStats>(actor)
+            .unwrap();
+        assert_eq!(
+            stats.main_hand.weapon_type == shared::components::WeaponType::Ranged,
+            ranged,
+            "spec {spec} must use the expected DB2 weapon type"
+        );
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        for _ in 0..5 {
+            app.update();
+        }
+        app.world_mut().entity_mut(owner).insert((
+            crate::networking::CombatTarget(Some(target)),
+            crate::combat::AutoAttack::new(target),
+        ));
+        crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+        finish_follower_precombat(&mut app, actor);
+        app.world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        for _ in 0..400 {
+            app.update();
+        }
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let damage: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+            })
+            .collect();
+        let melee = damage
+            .iter()
+            .filter(|event| event.spell_id.is_none())
+            .count();
+        if ranged {
+            assert_eq!(melee, 0, "ranged follower must not melee");
+            assert!(
+                damage.iter().any(|event| event.spell_id == Some(75)),
+                "ranged follower must use Auto Shot"
+            );
+        } else {
+            assert!(melee > 0, "melee follower must land melee attacks");
+        }
+    }
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")

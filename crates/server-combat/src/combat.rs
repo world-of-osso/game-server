@@ -389,6 +389,7 @@ fn creature_attack_system(
     query: RetargetedCreatures,
     rules: AttackRules,
     controlled_pets: Query<&Npc, With<crate::hunter_pet::HunterPet>>,
+    followers: Query<(&crate::followers::Follower, &crate::stats::CharacterStats)>,
     world_data: Option<Res<crate::world_data::WorldData>>,
     mut commands: Commands,
 ) {
@@ -397,7 +398,16 @@ fn creature_attack_system(
             Some(victim)
                 if !rules.dead(creature) && rules.valid_attack_target(creature, victim) =>
             {
-                if !casts_without_melee(&controlled_pets, world_data.as_deref(), creature) {
+                // SimC76f8118 sc_hunter.cpp:7235-7245 selects either Auto Shot
+                // or melee from the equipped weapon, not both.
+                let ranged_follower = followers.get(creature).is_ok_and(|(_, stats)| {
+                    stats.main_hand.weapon_type == shared::components::WeaponType::Ranged
+                });
+                if ranged_follower {
+                    if current.is_some() {
+                        commands.queue(move |world: &mut World| attack_stop(world, creature));
+                    }
+                } else if !casts_without_melee(&controlled_pets, world_data.as_deref(), creature) {
                     start_attack(&mut commands, creature, victim, current);
                 }
                 commands.queue(move |world: &mut World| {
