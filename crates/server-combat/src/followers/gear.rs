@@ -17,7 +17,8 @@ use serde::Deserialize;
 use shared::components::Level;
 use shared::item_data::ItemDefinitionSource;
 
-// Stockade is a Normal simulator fixture, not a follower LFG catalog entry.
+// Stockade is a Normal simulator fixture, not a follower LFG catalog entry: it
+// draws the Journal tier pool production follower dungeons of the same level use.
 const STOCKADE_SIMULATOR_MAP: u32 = 34;
 
 #[derive(Deserialize)]
@@ -96,7 +97,6 @@ pub fn read_dungeon_item_pools(
         .filter_map(|row| instances.get(&row.instance).map(|map| (row.id, *map)))
         .collect();
     let mut by_tier: HashMap<i32, BTreeSet<JournalGearCandidate>> = HashMap::new();
-    let mut stockade = BTreeSet::new();
     for row in read_rows::<JournalItem>(db2, "JournalEncounterItem.csv")? {
         if row.season != 0 || row.world_state != 0 {
             continue;
@@ -110,14 +110,11 @@ pub fn read_dungeon_item_pools(
             difficulty_mask: row.difficulty_mask,
             faction_mask: row.faction_mask,
         };
-        if *map == STOCKADE_SIMULATOR_MAP {
-            stockade.insert(item);
-        }
         if let Some(tier) = tiers.get(map) {
             by_tier.entry(*tier).or_default().insert(item);
         }
     }
-    let mut pools: HashMap<u32, Vec<JournalGearCandidate>> = tiers
+    tiers
         .into_iter()
         .map(|(map, tier)| {
             let items = by_tier
@@ -128,18 +125,55 @@ pub fn read_dungeon_item_pools(
                 })?;
             Ok((map, items.iter().copied().collect()))
         })
-        .collect::<Result<_, String>>()?;
-    if stockade.is_empty() {
-        return Err("FOLLOWER_STOCKADE_JOURNAL_LOOT_UNAVAILABLE".into());
+        .collect()
+}
+
+/// A follower dungeon's ContentTuning level range, for Stockade tier selection.
+struct TierLevels {
+    map: u32,
+    expansion: i32,
+    min: u8,
+    max: u8,
+}
+
+fn read_tier_levels(db: &Connection) -> Result<Vec<TierLevels>, String> {
+    let mut statement = db.prepare("SELECT d.map_id,t.ExpansionID,t.MinLevelSquish,t.MaxLevelSquish FROM follower_lfg_dungeons d JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.difficulty_id=205 ORDER BY d.map_id")
+        .map_err(|error| format!("read follower dungeon levels: {error}"))?;
+    statement
+        .query_map([], |row| {
+            Ok(TierLevels {
+                map: row.get(0)?,
+                expansion: row.get(1)?,
+                min: row.get(2)?,
+                max: row.get(3)?,
+            })
+        })
+        .map_err(|error| format!("query follower dungeon levels: {error}"))?
+        .collect::<Result<_, _>>()
+        .map_err(|error| format!("decode follower dungeon levels: {error}"))
+}
+
+impl FollowerGearSource {
+    /// A follower dungeon uses its own tier pool. Stockade uses the newest tier whose
+    /// follower dungeons cover `level`; production dungeons of that level draw it too.
+    fn pool_map(&self, map: u32, level: u8) -> Result<u32, String> {
+        if map != STOCKADE_SIMULATOR_MAP {
+            return Ok(map);
+        }
+        self.tiers
+            .iter()
+            .filter(|tier| (tier.min..=tier.max).contains(&level))
+            .max_by_key(|tier| (tier.expansion, std::cmp::Reverse(tier.map)))
+            .map(|tier| tier.map)
+            .ok_or_else(|| format!("FOLLOWER_STOCKADE_GEAR_TIER_UNAVAILABLE level{level}"))
     }
-    pools.insert(STOCKADE_SIMULATOR_MAP, stockade.into_iter().collect());
-    Ok(pools)
 }
 
 /// Active source data needed to select and scale a follower's equipment.
 #[derive(Resource)]
 pub struct FollowerGearSource {
     pools: HashMap<u32, Vec<JournalGearCandidate>>,
+    tiers: Vec<TierLevels>,
     levels: levels::DungeonItemLevels,
     item_specs: item_spec::ItemSpecs,
     database: std::path::PathBuf,
@@ -150,6 +184,7 @@ pub fn load_source(database: &Path, db2: &Path) -> Result<FollowerGearSource, St
         .map_err(|error| format!("open follower gear source: {error}"))?;
     Ok(FollowerGearSource {
         pools: read_dungeon_item_pools(&db, db2)?,
+        tiers: read_tier_levels(&db)?,
         levels: levels::DungeonItemLevels::read(db2)?,
         item_specs: item_spec::ItemSpecs::load(&db)
             .map_err(|error| format!("read follower item specializations: {error}"))?,
@@ -189,9 +224,10 @@ pub fn equip(
         .get::<Level>(actor)
         .ok_or("follower gear level unavailable")?
         .0;
+    let pool_map = source.pool_map(copy.map_id, level)?;
     let pool = source
         .pools
-        .get(&copy.map_id)
+        .get(&pool_map)
         .ok_or_else(|| format!("FOLLOWER_GEAR_DUNGEON_UNAVAILABLE map{}", copy.map_id))?;
     let templates = world
         .get_resource::<crate::item_templates::ItemTemplates>()
@@ -232,7 +268,7 @@ pub fn equip(
         .collect::<Result<Vec<_>, _>>()?;
     let selection = select::select_items(
         pool,
-        copy.map_id,
+        pool_map,
         profile.class_id,
         crate::stats::PrimaryStat::from_priority(spec.primary_stat_priority),
         profile.spec_id,
@@ -244,22 +280,15 @@ pub fn equip(
         &action_info,
     );
     if !selection.missing.is_empty() {
-        if copy.map_id == STOCKADE_SIMULATOR_MAP {
-            warn!(
-                "FOLLOWER_STOCKADE_JOURNAL_SLOTS_UNAVAILABLE spec{}: {:?}",
-                profile.spec_id, selection.missing
-            );
-        } else {
-            return Err(format!(
-                "FOLLOWER_GEAR_SLOTS_UNAVAILABLE spec{}: {:?}",
-                profile.spec_id, selection.missing
-            ));
-        }
+        return Err(format!(
+            "FOLLOWER_GEAR_SLOTS_UNAVAILABLE spec{}: {:?}",
+            profile.spec_id, selection.missing
+        ));
     }
     let representative = pool
         .iter()
         .filter(|item| {
-            item.source_map == copy.map_id && item.difficulty_mask == -1 && item.faction_mask == -1
+            item.source_map == pool_map && item.difficulty_mask == -1 && item.faction_mask == -1
         })
         .find_map(|item| {
             templates
@@ -326,15 +355,37 @@ mod tests {
     use rusqlite::OpenFlags;
 
     #[test]
-    fn stockade_fixture_uses_only_its_own_journal_loot() {
+    fn stockade_draws_the_tier_pool_of_follower_dungeons_at_its_level() {
         let path = crate::test_data::world_db_path();
-        let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-        let pools =
-            read_dungeon_item_pools(&db, &path.parent().unwrap().join("db2/active")).unwrap();
-        let stockade = &pools[&34];
-        assert!(stockade.iter().any(|item| item.item_id == 2168));
-        assert!(stockade.iter().all(|item| item.source_map == 34));
-        assert_eq!(stockade.len(), 15);
+        let source = load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap();
+        assert!(
+            !source.pools.contains_key(&34),
+            "no Stockade-only gear source"
+        );
+        let tier = |level| {
+            let map = source.pool_map(34, level).unwrap();
+            source
+                .tiers
+                .iter()
+                .find(|tier| tier.map == map)
+                .unwrap()
+                .expansion
+        };
+        // ContentTuning: Dragonflight 10-70, The War Within 71-80, Midnight 80-90.
+        assert_eq!(tier(32), 9);
+        assert_eq!(tier(75), 10);
+        assert_eq!(
+            tier(80),
+            11,
+            "the newest covering tier at a shared boundary"
+        );
+        assert_eq!(
+            source.pools[&source.pool_map(34, 32).unwrap()],
+            source.pools[&2515],
+            "level 32 Stockade uses the production Dragonflight pool"
+        );
+        assert_eq!(source.pool_map(2515, 32).unwrap(), 2515);
+        assert!(source.pool_map(34, 5).is_err(), "no tier below level 10");
     }
 
     #[test]

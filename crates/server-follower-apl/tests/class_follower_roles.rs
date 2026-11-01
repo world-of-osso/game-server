@@ -13,6 +13,7 @@ use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 /// Ten seconds of 20Hz frames: precombat plus several GCDs.
 const FRAMES: usize = 200;
+const STOCKADE: u32 = 34;
 
 struct Pull {
     harness: Harness,
@@ -20,6 +21,8 @@ struct Pull {
 }
 
 fn dungeon_owner(h: &mut Harness, map: u32) {
+    // Stockade is the Normal-only simulator map; follower dungeons run difficulty 205.
+    let difficulty = if map == STOCKADE { 1 } else { 205 };
     // Production world data, as the server loads it at startup, plus any
     // creature templates this harness authored for its own units.
     let source = server_combat::test_data::world_data();
@@ -64,7 +67,7 @@ fn dungeon_owner(h: &mut Harness, map: u32) {
     let entrant = InstanceEntrant {
         character_id: 1,
         leader: 1,
-        difficulty_id: 205,
+        difficulty_id: difficulty,
         ..default()
     };
     let now = Now {
@@ -245,6 +248,33 @@ fn follower_weapon_action_elemental_equips_shield() {
     let info = world
         .resource::<server_combat::spell_info::SpellStore>()
         .get(462757)
+        .unwrap();
+    server_combat::spell_cast::check_equipped_item_requirements(world, actor, info).unwrap();
+}
+
+#[test]
+fn follower_weapon_action_protection_equips_tier_shield_in_stockade() {
+    let mut pull = spawn_at_map(66, 32, STOCKADE);
+    let actor = pull.follower;
+    let world = pull.harness.app.world_mut();
+    let (_, source, item) = *world
+        .get::<server_combat::stats::EquippedItems>(actor)
+        .unwrap()
+        .items
+        .iter()
+        .find(|(slot, _, _)| *slot == shared::protocol::EquipmentSlot::OffHand)
+        .expect("Stockade Protection follower equips an off-hand");
+    let template = world
+        .resource::<server_combat::item_templates::ItemTemplates>()
+        .get(source, item)
+        .unwrap();
+    assert_eq!(
+        template.inventory_type, 14,
+        "off-hand item{item} is a shield"
+    );
+    let info = world
+        .resource::<server_combat::spell_info::SpellStore>()
+        .get(31935)
         .unwrap();
     server_combat::spell_cast::check_equipped_item_requirements(world, actor, info).unwrap();
 }

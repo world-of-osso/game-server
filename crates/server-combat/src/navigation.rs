@@ -10,7 +10,7 @@ const TELEPORT_DISTANCE: f32 = 2.0;
 
 pub(crate) mod collision_drop;
 mod deferred;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 mod fixture_queries;
 pub(crate) mod hazard_trace;
 mod requests;

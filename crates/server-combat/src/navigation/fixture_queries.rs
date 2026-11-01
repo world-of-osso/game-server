@@ -29,6 +29,7 @@ impl Navigation {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn first_collision(
         &mut self,
         map_id: u32,
