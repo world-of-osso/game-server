@@ -36,6 +36,107 @@ fn story_follower_does_not_gain_mana_from_player_only_aura() {
 }
 
 #[test]
+fn ranged_hunters_spawn_with_ranged_journal_weapons_at_queue_levels() {
+    let (mut h, _, _) = spawn_profile_fixture_with_plugins(209057, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    let source = crate::test_data::world_data();
+    let mut world_data = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>();
+    world_data.class_level_base_hp = source.class_level_base_hp.clone();
+    world_data.class_level_base_mana = source.class_level_base_mana.clone();
+    drop(world_data);
+    let path = crate::test_data::world_db_path();
+    let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(super::super::catalog::load_catalog(&db).unwrap());
+    h.app.insert_resource(
+        super::super::gear::load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap(),
+    );
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    h.app.insert_resource(NativeItemInstances {
+        bonuses: crate::item_instance::load::load_bonus_tables(&db).unwrap(),
+        enchants: crate::item_instance::load::load_enchantment_tables(&db).unwrap(),
+        effects: crate::item_instance::load::load_item_effect_tables(&db).unwrap(),
+    });
+    h.app.insert_resource(super::super::FollowerActionProvider {
+        source_actions: |_, _, _| Ok(vec![75]),
+        equipped_actions: |_, _, _| Ok(Vec::new()),
+    });
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let profiles = super::super::class_profiles::read_profiles().unwrap();
+    for (map, level) in [
+        (2521, 10),
+        (2521, 40),
+        (2521, 70),
+        (2648, 71),
+        (2648, 80),
+        (2805, 80),
+        (2805, 90),
+    ] {
+        let mut instances = crate::maps::InstanceManager::default();
+        let copy = instances
+            .create_map(
+                &maps,
+                map,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: 205,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(instances);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((copy, Level(level)));
+        for spec in [253, 254] {
+            let profile = profiles
+                .iter()
+                .find(|profile| profile.spec_id == spec)
+                .unwrap();
+            let unit = spawn_class(
+                h.app.world_mut(),
+                h.caster,
+                profile,
+                0,
+                0,
+                GearSource::Journal,
+            )
+            .unwrap_or_else(|error| panic!("map{map} level{level} spec{spec}: {error}"));
+            let items = h.app.world().get::<EquippedItems>(unit).unwrap();
+            let (_, source, item) = items
+                .items
+                .iter()
+                .find(|(slot, _, _)| *slot == shared::protocol::EquipmentSlot::MainHand)
+                .unwrap_or_else(|| panic!("map{map} level{level} spec{spec}: no main hand"));
+            let weapon = h
+                .app
+                .world()
+                .resource::<crate::item_templates::ItemTemplates>()
+                .get(*source, *item)
+                .unwrap();
+            assert!(
+                matches!(weapon.inventory_type, 15 | 26),
+                "map{map} level{level} spec{spec}: item{item} is not ranged"
+            );
+        }
+    }
+}
+
+#[test]
 fn class_install_requires_an_action_provider_before_mutating_actor() {
     let mut world = World::new();
     let owner = world.spawn_empty().id();
