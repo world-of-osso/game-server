@@ -744,3 +744,78 @@ fn bursting_growth_heals_three_on_bloom_expiry_and_rejuvenation() {
     assert_eq!(on_expiry.len(), 3, "{on_expiry:?}");
     assert!(on_expiry.contains(&tank.to_bits()));
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn regenerative_heartwood_shares_rejuvenation_ticks_with_the_ironbark_target() {
+    use crate::auras::ActiveAuras;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::healer_simc_replay::hold(&mut run, healer);
+    run.app.update();
+    assert!(crate::auras::has_aura(run.app.world(), healer, 392116));
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    let patient = run
+        .slots
+        .into_iter()
+        .find(|&unit| unit != tank && unit != healer)
+        .unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 102342, Some(tank), true)
+        .unwrap();
+    run.app.update();
+    let ironbark = run
+        .app
+        .world()
+        .get::<ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 102342)
+        .map(|aura| aura.duration_ms)
+        .unwrap();
+    // 392116 s2: 12 s native Ironbark lasts 4 s longer.
+    assert_eq!(ironbark, 16_000, "Ironbark lasts {ironbark} ms");
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 774, Some(patient), true)
+        .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let ticks: Vec<i64> = events
+        .iter()
+        .filter(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.periodic
+                && e.spell_id == Some(774)
+                && e.target == Some(patient.to_bits())
+                && e.source == Some(healer.to_bits())
+        })
+        .map(|e| i64::from(e.amount))
+        .collect();
+    let shared: Vec<i64> = events
+        .iter()
+        .filter(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(392117)
+                && e.source == Some(healer.to_bits())
+        })
+        .map(|e| {
+            assert_eq!(e.target, Some(tank.to_bits()));
+            i64::from(e.amount)
+        })
+        .collect();
+    assert!(ticks.len() >= 2, "{ticks:?}");
+    // 392116 s1: 75% of each tick's raw healing.
+    let expected: Vec<i64> = ticks
+        .iter()
+        .map(|tick| (*tick as f32 * 0.75).round() as i64)
+        .collect();
+    assert_eq!(shared, expected);
+}
