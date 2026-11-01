@@ -10,15 +10,20 @@ fn pull(health: &[f32], now: u64) -> (World, Entity, Vec<Entity>, Encounter) {
     let mut clock = Time::<()>::default();
     clock.advance_by(Duration::from_secs(now));
     world.insert_resource(clock);
-    let actor = world.spawn_empty().id();
+    // A pull's units share one map copy (cycling_variable candidates).
+    let map = crate::maps::InMap::continent(0);
+    let actor = world.spawn(map).id();
     let adds = health
         .iter()
         .map(|&current| {
             world
-                .spawn(Health {
-                    current,
-                    max: 1000.0,
-                })
+                .spawn((
+                    map,
+                    Health {
+                        current,
+                        max: 1000.0,
+                    },
+                ))
                 .id()
         })
         .collect();
@@ -84,12 +89,15 @@ fn class_follower_dying_dungeon_pack_keeps_vengeance_cooldowns_gated() {
     let (remains, execute, pull_ttd, chosen) = select(&[50.0, 50.0, 50.0]);
     assert_eq!(remains, 2700.0 - 28.0);
     assert_eq!(execute, Some(0.0));
-    assert!((pull_ttd - 50.0 / (2850.0 / 30.0 / 3.0)).abs() < 1e-9);
+    assert!(
+        (pull_ttd - 50.0 / (2850.0 / 30.0 / 3.0)).abs() < 1e-9,
+        "{pull_ttd}"
+    );
     assert_eq!(chosen, None);
     // The same route with a fresh pack still spends the cooldown.
     let (_, execute, pull_ttd, chosen) = select(&[900.0, 900.0, 900.0]);
     assert_eq!(execute, Some(0.0));
-    assert!((pull_ttd - 270.0).abs() < 1e-9);
+    assert!((pull_ttd - 270.0).abs() < 1e-9, "{pull_ttd}");
     assert_eq!(chosen.as_deref(), Some("soul_carver"));
 }
 
