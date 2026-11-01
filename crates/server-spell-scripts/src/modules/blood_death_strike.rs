@@ -85,7 +85,8 @@ fn base_effect(world: &World, spell: u32, index: u8) -> f32 {
         .base_points
 }
 
-// SimC76f8118 player.cpp8322–8331: record damage received, after mitigation.
+// SimC76f8118 player.cpp8317–8331 records post-absorb damage before health loss,
+// including damage beyond the recipient's remaining health.
 fn record_incoming_damage(world: &mut World, event: &CombatLogEvent) {
     if event.kind != CombatLogKind::Damage {
         return;
@@ -96,7 +97,7 @@ fn record_incoming_damage(world: &mut World, event: &CombatLogEvent) {
     if !blood(world, unit) {
         return;
     }
-    let amount = (event.amount - event.overflow.max(0)).max(0) as f32;
+    let amount = event.amount.max(0) as f32;
     if amount == 0.0 {
         return;
     }
