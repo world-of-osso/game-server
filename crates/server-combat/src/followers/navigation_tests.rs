@@ -1135,6 +1135,13 @@ fn spawn_ara_kara_slope_follower() -> (Harness, Entity) {
     .unwrap();
     h.app
         .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    // The watcher is test template 6; native aggro geometry reads its native template.
+    let watcher_templates = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(watcher_templates.templates);
     let maps = crate::maps::store::load_map_store(&db).unwrap();
     let mut instances = crate::maps::InstanceManager::default();
     let map = instances

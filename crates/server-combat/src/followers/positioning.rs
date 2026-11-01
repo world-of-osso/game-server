@@ -233,9 +233,11 @@ fn blockers_on_path(
     Ok(blockers)
 }
 
-/// `Creature::CanStartAttack` also needs `IsWithinLOSInMap`: a leg enters a watcher's
-/// sight only where it is inside the radius and the watcher sees the unit standing there.
-fn leg_enters_sight(
+/// The one idle-hostile exclusion predicate for a path leg. TC ea5113cce
+/// Creature.cpp:2107 `Creature::CanStartAttack` ends `return IsWithinLOSInMap(who);`
+/// (:2143): a leg enters a watcher's sight only where it is inside the radius and the
+/// watcher sees the unit standing there.
+pub(super) fn leg_enters_sight(
     world: &World,
     unit: Entity,
     watcher: Entity,
