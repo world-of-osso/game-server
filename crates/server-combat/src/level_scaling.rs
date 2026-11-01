@@ -364,6 +364,7 @@ pub(crate) type ScalingItem<'a> = (
     Option<&'a LevelScaling>,
     Option<&'a ScaledStats>,
     Option<&'a ArmorTuning>,
+    Option<&'a crate::mythic_plus_scaling::KeystoneCreatureScale>,
 );
 
 /// A unit's level and, when it is a tuned creature, its scaling.
@@ -373,6 +374,7 @@ pub struct UnitScaling<'a> {
     level: u8,
     tuned: Option<(&'a LevelScaling, &'a LevelStats)>,
     armor_tuning: Option<&'a ArmorTuning>,
+    keystone_scale: Option<&'a crate::mythic_plus_scaling::KeystoneCreatureScale>,
 }
 
 impl<'a> UnitScaling<'a> {
@@ -383,19 +385,23 @@ impl<'a> UnitScaling<'a> {
             Option<&'a ScaledStats>,
         ),
     ) -> Self {
-        Self::from_query((level, scaling, stats, None))
+        Self::from_query((level, scaling, stats, None, None))
     }
 
-    pub(crate) fn from_query((level, scaling, stats, armor_tuning): ScalingItem<'a>) -> Self {
+    pub(crate) fn from_query(
+        (level, scaling, stats, armor_tuning, keystone_scale): ScalingItem<'a>,
+    ) -> Self {
         Self {
             level: level.map_or(1, |level| level.0),
             tuned: scaling.zip(stats.map(|stats| &*stats.0)),
             armor_tuning,
+            keystone_scale,
         }
     }
 
     pub fn of(world: &'a World, unit: Entity) -> Self {
         Self::from_query((
+            world.get(unit),
             world.get(unit),
             world.get(unit),
             world.get(unit),
@@ -420,6 +426,10 @@ impl<'a> UnitScaling<'a> {
     pub fn swing_damage_range(&self, attack_secs: f32) -> Option<(f32, f32)> {
         self.tuned
             .map(|(_, stats)| stats.swing_damage_range(self.level, attack_secs))
+    }
+
+    pub(crate) fn keystone_damage_multiplier(&self) -> f32 {
+        self.keystone_scale.map_or(1.0, |scale| scale.damage)
     }
 
     /// Creature::GetDamageMultiplierForTarget: base DPS at the target's level
@@ -454,6 +464,19 @@ impl<'a> UnitScaling<'a> {
 /// `victim`, times the attacker's damage multiplier for the victim; what the
 /// combat log, threat and rage see.
 pub fn damage_dealt(attacker: &UnitScaling, victim: &UnitScaling, damage: f32) -> f32 {
+    damage_dealt_after_keystone(
+        attacker,
+        victim,
+        damage * attacker.keystone_damage_multiplier(),
+    )
+}
+
+/// Apply level scaling when keystone damage has already been included before absorbs.
+pub(crate) fn damage_dealt_after_keystone(
+    attacker: &UnitScaling,
+    victim: &UnitScaling,
+    damage: f32,
+) -> f32 {
     (damage * attacker.damage_multiplier(victim)).trunc()
 }
 

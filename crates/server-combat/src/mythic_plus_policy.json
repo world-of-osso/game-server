@@ -1,0 +1,5 @@
+{
+  "countdown_ms": {"value": 10000, "citation": "https://www.wowhead.com/guide/mythic-keystones-and-dungeons"},
+  "death_bands": {"value": [{"min_level": 2, "milliseconds": 0}, {"min_level": 6, "milliseconds": 5000}, {"min_level": 12, "milliseconds": 15000}], "citation": "https://www.wowhead.com/guide/mythic-keystones-and-dungeons"},
+  "upgrade_percentages": {"value": [100, 80, 60], "citation": "https://www.wowhead.com/guide/mythic-keystones-and-dungeons; MapChallengeMode.csv build 12.1.5.70448 sha256:3d36a4b9078b1c4029ecb6a03652d43aa9d36003ff544f3c690d9764a47ce186"}
+}

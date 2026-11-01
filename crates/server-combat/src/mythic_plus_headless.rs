@@ -25,7 +25,6 @@ impl Session {
         if world.contains_resource::<GameDatabase>() {
             return Err("headless keystone requires an isolated character database".into());
         }
-        let config = super::read_config()?;
         let map = *world
             .get::<InMap>(player)
             .ok_or("keystone player has no copy")?;
@@ -99,7 +98,6 @@ impl Session {
         world.insert_resource(GameDatabase::new(database));
         world.insert_resource(Challenges {
             definition: Some(definition),
-            config,
             ..Default::default()
         });
         let epoch = crate::maps::ServerClock::default().unix();
@@ -125,6 +123,12 @@ impl Session {
             key,
             epoch,
         })
+    }
+
+    #[cfg(test)]
+    pub(super) fn set_test_epoch(&mut self, world: &mut World, epoch: i64) {
+        self.epoch = epoch;
+        world.resource_mut::<crate::maps::ServerClock>().fixed_unix = Some(epoch);
     }
 
     pub fn font_position(&self, world: &World) -> Result<Position, String> {

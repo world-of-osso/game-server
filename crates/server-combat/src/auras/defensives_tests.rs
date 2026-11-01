@@ -377,6 +377,25 @@ fn remaining_for(h: &Harness, id: u32) -> f32 {
 }
 
 #[test]
+fn mythic_scaling_increases_spell_and_melee_before_absorbs() {
+    let mut h = harness(Vec::new(), &[17, FIREBALL], 5).expect("real world.db required");
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(crate::mythic_plus_scaling::KeystoneCreatureScale { damage: 2.0 });
+    apply_test_absorb(&mut h, 17, 150.0);
+    assert_eq!(incoming_fire(&mut h, 100.0), 50.0);
+    assert_eq!(remaining_for(&h, 17), 0.0);
+    apply_test_absorb(&mut h, 17, 1000.0);
+    let melee = incoming_melee(&mut h);
+    assert_eq!(melee.health_loss, 0.0);
+    assert_eq!(
+        remaining_for(&h, 17),
+        1000.0 - 200.0 * melee.critical_multiplier
+    );
+}
+
+#[test]
 fn defensives_absorbs_prioritize_soul_barrier_then_smallest() {
     let mut h = harness(Vec::new(), &[17, FIREBALL], 5).expect("real world.db required");
     apply_test_absorb(&mut h, 17, 400.0);

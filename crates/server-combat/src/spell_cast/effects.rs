@@ -2334,6 +2334,7 @@ fn deal_source_damage_and_report(
     {
         crate::combat::reward_bear_melee_hit_rage(world, target);
     }
+    let amount = amount * UnitScaling::of(world, ctx.caster).keystone_damage_multiplier();
     #[cfg(any(test, feature = "test-support"))]
     factor_capture::record_mitigated(world, ctx, target, amount);
     #[cfg(any(test, feature = "test-support"))]
@@ -2357,7 +2358,8 @@ fn deal_source_damage_and_report(
         UnitScaling::of(world, ctx.caster),
         UnitScaling::of(world, target),
     );
-    let amount = crate::level_scaling::damage_dealt(&caster_scaling, &target_scaling, amount);
+    let amount =
+        crate::level_scaling::damage_dealt_after_keystone(&caster_scaling, &target_scaling, amount);
     let scaled_loss = crate::level_scaling::health_loss(&caster_scaling, &target_scaling, amount);
     let training_dummy = world.get::<TrainingDummy>(target).is_some();
     if !periodic {

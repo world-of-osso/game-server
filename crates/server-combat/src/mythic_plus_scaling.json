@@ -1,0 +1,17 @@
+{
+  "per_level": {
+    "value": {"through_10": 1.07, "from_11": 1.10, "round_to": 100.0, "reference_level": 2},
+    "citation": "https://news.blizzard.com/en-gb/article/24174877/the-war-within-season-2-mythic-updates-ahead; https://www.warcraftlogs.com/reports/HxcCzY3MGF7Nb1g8#fight=2; https://www.warcraftlogs.com/reports/yQVRkw7dF2b61zmA#fight=3",
+    "qualification": "WCL fit relative to unweakened +2; rounding and Mythic 0 baseline are not established. Blizzard's rates are historical."
+  },
+  "fortified": {
+    "value": {"health": 1.20, "damage": 1.20},
+    "citation": "https://worldofwarcraft.blizzard.com/en-us/worldsoul/us/leaderboards/mythic-dungeon/draenor/ruby-life-pools",
+    "qualification": "Blizzard describes damage as up to 20%, not a universally proven fixed multiplier."
+  },
+  "tyrannical": {
+    "value": {"health": 1.25, "damage": 1.15},
+    "citation": "https://worldofwarcraft.blizzard.com/en-us/worldsoul/us/leaderboards/mythic-dungeon/draenor/ruby-life-pools",
+    "qualification": "Blizzard describes boss and minion damage as up to 15%; WCL comparison did not establish a universal multiplier."
+  }
+}
