@@ -604,7 +604,7 @@ fn darkflame_non_tank_approach_holds_only_for_watchers_that_would_aggro() {
 
 #[test]
 #[ignore = "requires actual2651 navigation/ground and imported follower profile"]
-fn follower_approach_query_completes_after_hold_timeout() {
+fn follower_approach_query_completes_while_follow_remains_held() {
     let from = Vec3::new(365.0142, 87.06531, -32.37358);
     let to = Vec3::new(421.7417, 87.0782, -29.7178);
     let (mut h, follower) = create_native_follower_fixture_for(209072);
@@ -633,7 +633,7 @@ fn follower_approach_query_completes_after_hold_timeout() {
         .resource_mut::<bevy::prelude::Time>()
         .advance_by(std::time::Duration::from_secs(6));
     for _ in 0..3 {
-        assert!(!super::positioning::hold_unsafe_approach(
+        assert!(super::positioning::hold_unsafe_approach(
             h.app.world_mut(),
             follower,
             h.caster

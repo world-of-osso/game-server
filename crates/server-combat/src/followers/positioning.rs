@@ -11,7 +11,7 @@ use crate::navigation::{Goal, Navigation};
 use crate::spell_cast::targets;
 use ::navigation::worker::{Output, Query as NavQuery};
 
-const HOLD_TIMEOUT_SECONDS: f64 = 5.0;
+const HOLD_LOG_INTERVAL_SECONDS: f64 = 10.0;
 /// Extra clearance for movement and sight updates between ticks, in yards.
 const AGGRO_STEP_MARGIN: f32 = 0.5;
 /// Spacing of the sight samples along a path leg inside a watcher's radius, in yards.
@@ -77,27 +77,22 @@ pub(super) fn update_combat_exclusions(
 }
 
 #[derive(Component)]
-struct HoldTimeout {
+struct HoldLog {
     target: Entity,
-    since: f64,
+    last: f64,
 }
 
-fn bounded_hold(world: &mut World, unit: Entity, target: Entity) -> bool {
+fn hold_unresolved_approach(world: &mut World, unit: Entity, target: Entity, reason: &str) -> bool {
     let now = world.resource::<Time>().elapsed_secs_f64();
     if world
-        .get::<HoldTimeout>(unit)
-        .is_none_or(|hold| hold.target != target)
+        .get::<HoldLog>(unit)
+        .is_none_or(|hold| hold.target != target || now - hold.last >= HOLD_LOG_INTERVAL_SECONDS)
     {
-        world
-            .entity_mut(unit)
-            .insert(HoldTimeout { target, since: now });
+        warn!(?unit, ?target, reason, "Follower approach held");
+        world.entity_mut(unit).insert(HoldLog { target, last: now });
     }
-    let hold =
-        now - world.get::<HoldTimeout>(unit).expect("hold timer").since < HOLD_TIMEOUT_SECONDS;
-    if hold {
-        hold_position(world, unit);
-    }
-    hold
+    hold_position(world, unit);
+    true
 }
 
 fn hold_position(world: &mut World, unit: Entity) {
@@ -105,14 +100,6 @@ fn hold_position(world: &mut World, unit: Entity) {
         .entity_mut(unit)
         .remove::<crate::creature_ai::FollowOwner>()
         .insert(crate::creature_ai::CreatureState::Idle);
-}
-
-fn hold_pending_approach(world: &mut World, unit: Entity, target: Entity, is_owner: bool) -> bool {
-    if is_owner {
-        return bounded_hold(world, unit, target);
-    }
-    hold_position(world, unit);
-    true
 }
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -127,22 +114,16 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     }
     let blockers = match approach_enters_unpulled_sight(world, unit, target) {
         Ok(None) => {
-            debug!(
-                ?unit,
-                ?target,
-                "Follower approach waiting for a navigation result"
-            );
-            return hold_pending_approach(world, unit, target, is_owner);
+            return hold_unresolved_approach(world, unit, target, "waiting for navigation");
         }
         Ok(Some(blockers)) => blockers,
         Err(error) => {
-            warn!(?unit, %error, "Follower positioning lacks native sight geometry");
-            return hold_pending_approach(world, unit, target, is_owner);
+            return hold_unresolved_approach(world, unit, target, &error);
         }
     };
     if blockers.is_empty() {
         super::trail_follow::clear(world, unit);
-        world.entity_mut(unit).remove::<HoldTimeout>();
+        world.entity_mut(unit).remove::<HoldLog>();
         return false;
     }
     hold_position(world, unit);

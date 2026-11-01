@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and source world data"]
-fn timed_out_pending_follow_cannot_step_into_windrunner_watcher() {
+fn pending_follow_stays_held_and_cannot_step_into_windrunner_watcher() {
     let (mut h, follower, _) =
         super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
             app.insert_resource(crate::test_data::world_data().clone());
@@ -115,8 +115,8 @@ fn timed_out_pending_follow_cannot_step_into_windrunner_watcher() {
         .resource_mut::<Time>()
         .advance_by(std::time::Duration::from_secs(6));
     assert!(
-        !super::positioning::hold_unsafe_approach(h.app.world_mut(), follower, owner),
-        "timeout must still release pending owner follow"
+        super::positioning::hold_unsafe_approach(h.app.world_mut(), follower, owner),
+        "unresolved owner follow must remain held"
     );
     let data = h
         .app
@@ -129,7 +129,7 @@ fn timed_out_pending_follow_cannot_step_into_windrunner_watcher() {
     assert_eq!(
         *h.app.world().get::<Position>(follower).unwrap(),
         from,
-        "post-timeout step must not enter watcher radius plus margin"
+        "follow step must not enter watcher radius plus margin"
     );
     h.app
         .world_mut()
