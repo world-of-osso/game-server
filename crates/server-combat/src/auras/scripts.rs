@@ -311,6 +311,23 @@ pub(super) fn absorb_amount(
         let amount = crate::spell_cast::effects::scaled_amount(world, caster, spell, effect);
         return Some(amount * crate::spell_cast::effects::versatility_multiplier(world, caster));
     }
+    // Temporal Anomaly 373862 has no native coefficient; DescriptionVariables 746
+    // on 373861 defines $shield=${$SP*6*(1+$@versadmg)}.
+    if (spell.id, effect.index) == (373862, 0) {
+        let (spell_power, _) = crate::spell_cast::effects::power_stats(world, caster, true);
+        let coefficient = super::spell_mods::modify(
+            world,
+            caster,
+            spell,
+            super::spell_mods::SpellModOp::BonusCoefficient,
+            6.0,
+        );
+        return Some(
+            spell_power
+                * coefficient
+                * crate::spell_cast::effects::versatility_multiplier(world, caster),
+        );
+    }
     // Caster max health * percentage / 100 * (1 + versatility): TC a352b1fa spell_monk.cpp:224–228
     // and DescriptionVariables 260 for Life Cocoon (effect 3); DescriptionVariables 813
     // `$newshield` for the Chi Cocoons (effect 2).

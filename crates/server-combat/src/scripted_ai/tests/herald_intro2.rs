@@ -148,18 +148,29 @@ pub(super) fn received_casts(h: &Harness, caster: Entity, spell_id: u32) -> usiz
         .count()
 }
 
-fn assert_summon_at_floor(world: &mut World, map: InMap, actor: Entity, pre_clamp_y: f32) {
+/// TC UpdateEntry re-applies Nazan's FLOATING static flag (Creature.cpp:709), so the
+/// caster CanFly and UpdateAllowedPositionZ only raises 30717's Z to the floor.
+fn assert_summon_keeps_flying_caster_y(
+    world: &mut World,
+    map: InMap,
+    actor: Entity,
+    caster_y: f32,
+) {
     let position = *world.get::<Position>(actor).unwrap();
     let probe = world
         .resource_mut::<crate::ground::GroundMap>()
-        .creature_ground_in(map, Vec3::new(position.x, pre_clamp_y, position.z));
+        .creature_ground_in(map, Vec3::new(position.x, caster_y, position.z));
     let crate::ground::GroundProbe::Supported(floor) = probe else {
         panic!("actual Ramparts source floor required: {probe:?}");
     };
+    assert!(
+        floor < caster_y,
+        "source floor {floor} lies below the flying caster"
+    );
     assert_eq!(
         position.y.to_bits(),
-        floor.to_bits(),
-        "30717 must assign the exact source floor at final XZ with its observed pre-clamp caster Y/ray"
+        caster_y.to_bits(),
+        "30717 keeps the flying caster's Y above floor {floor}"
     );
 }
 
@@ -296,7 +307,7 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
             Some(&cast_origin),
             "30717 changes destination Z, not caster position; first-flight movement starts after this cast tick"
         );
-        assert_summon_at_floor(h.app.world_mut(), map, child, cast_origin.y);
+        assert_summon_keeps_flying_caster_y(h.app.world_mut(), map, child, cast_origin.y);
         h.advance(0.05);
         assert!(
             h.has_aura(child, 5301),

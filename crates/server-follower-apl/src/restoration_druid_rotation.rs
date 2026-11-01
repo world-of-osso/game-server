@@ -152,6 +152,12 @@ pub fn has_owned_hot(world: &World, healer: Entity, target: Entity, spell: u32) 
         })
 }
 
+/// Native triage, not SimC (76f8118 has no Restoration APL): a party member
+/// below this health fraction counts toward `party.injured`. Source: WCL
+/// kD8MqXLV6CFYHN2p fight 3 (key-17 druid, actor 108), where the second-lowest
+/// party member is at a median 93.9% health at the 72 Wild Growth casts.
+const INJURED_FRACTION: f32 = 0.94;
+
 impl Restoration {
     /// Heal the party; damage `enemy` when no heal is due.
     pub fn drive(
@@ -179,7 +185,7 @@ impl Restoration {
             .filter(|unit| {
                 world
                     .get::<Health>(**unit)
-                    .is_some_and(|h| h.current > 0.0 && h.current < h.max * 0.90)
+                    .is_some_and(|h| h.current > 0.0 && h.current < h.max * INJURED_FRACTION)
             })
             .count();
         let efflorescence_up = world

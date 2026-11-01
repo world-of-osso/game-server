@@ -67,6 +67,124 @@ fn stagger_defers_a_real_hit_and_purifying_brew_clears_the_live_pool() {
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn expected_swing_damage_enters_stagger_before_purify() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut expected = prepare_literal(268, 1).unwrap();
+    let mut full = prepare_literal(268, 1).unwrap();
+    engage(&mut expected);
+    engage(&mut full);
+    let hit = Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 100_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: "Dodge".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let measure = |run: &mut Run, weighted: bool| {
+        let actor = run.actor;
+        let attacker = run.targets[0];
+        let before = run.app.world().get::<Health>(actor).unwrap().current;
+        if weighted {
+            crate::combat::replay_expected_healer_hit(
+                run.app.world_mut(),
+                attacker,
+                actor,
+                &hit,
+                0.5,
+            )
+            .unwrap();
+        } else {
+            let mut landed = hit.clone();
+            if let HitKind::Melee { outcome, .. } = &mut landed.kind {
+                *outcome = "Hit".into();
+            }
+            crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &landed)
+                .unwrap();
+        }
+        let immediate = before - run.app.world().get::<Health>(actor).unwrap().current;
+        let pool = crate::auras::stagger::pool_size(run.app.world(), actor);
+        assert!(immediate > 0.0 && pool > 0.0);
+        (immediate, pool)
+    };
+    let (weighted_direct, weighted_pool) = measure(&mut expected, true);
+    let (full_direct, full_pool) = measure(&mut full, false);
+    assert!((weighted_direct - full_direct * 0.5).abs() < 3.0);
+    assert!((weighted_pool - full_pool * 0.5).abs() < 3.0);
+    for (run, before) in [(&mut expected, weighted_pool), (&mut full, full_pool)] {
+        crate::auras::stagger::purify_fraction(run.app.world_mut(), run.actor, 0.6);
+        let after = crate::auras::stagger::pool_size(run.app.world(), run.actor);
+        assert!((after - before * 0.4).abs() < 3.0);
+    }
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn stagger_absorb_records_self_damage_scale() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let attacker = run.targets[0];
+    let hit = Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 100_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &hit).unwrap();
+    assert!(crate::auras::stagger::pool_size(run.app.world(), actor) > 0.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1241059, Some(actor), false)
+        .unwrap();
+    run.app
+        .insert_resource(server::test_support::healer_intake::Capture {
+            members: vec![actor],
+            ..Default::default()
+        });
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let capture = run
+        .app
+        .world()
+        .resource::<server::test_support::healer_intake::Capture>();
+    let absorbed = capture
+        .consumed_absorbs_by_spell
+        .get(&(actor, 1241059))
+        .copied()
+        .unwrap_or(0.0);
+    let usage = capture
+        .consumed_absorbs
+        .get(&actor)
+        .expect("consumed self shield");
+    assert!(
+        absorbed > 0.0,
+        "Stagger ticks must consume Celestial Infusion"
+    );
+    assert_eq!(usage.unknown_scale, 0.0);
+    assert_eq!(usage.non_unit, 0.0);
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn stagger_defers_a_live_creature_auto_attack() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(268, 1).unwrap();

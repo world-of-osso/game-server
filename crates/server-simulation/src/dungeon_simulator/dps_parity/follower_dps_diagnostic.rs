@@ -121,6 +121,131 @@ fn prepare_class_follower(
     (app, actor, target, profile)
 }
 
+fn prepare_marksmanship_70() -> (App, Entity, Entity) {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    (app, actor, target)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 288613, Some(target), false).unwrap();
+    for _ in 0..10 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), target, 1301098),
+        "real Trueshot earns Take Aim mark"
+    );
+    for _ in 0..40 {
+        app.update();
+    }
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false).unwrap();
+    for _ in 0..60 {
+        app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(app.world(), target, 1301098),
+        "Rapid Fire consumes earned mark"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_explosive_restores_one_aimed_charge() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 19434, Some(target), false)
+            .unwrap();
+        for _ in 0..70 {
+            app.update();
+        }
+    }
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("aimed_shot".into(), 19434)].into(),
+        ..default()
+    };
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: 0.0,
+        duration: 120.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let charges = |app: &App| {
+        let facts =
+            crate::simc_apl_native::NativeFacts::new(app.world(), actor, &bindings, encounter, 1);
+        server::simc_apl::Facts::value(&facts, "cooldown.aimed_shot.charges").unwrap()
+    };
+    assert_eq!(charges(&app), 0.0, "actual Aimed casts spend both charges");
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 212431, Some(target), false).unwrap();
+    for _ in 0..4 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 194594),
+        "selected Tactical Reload earns Lock and Load"
+    );
+    assert_eq!(
+        charges(&app),
+        1.0,
+        "new Lock and Load restores one Aimed charge"
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194594, Some(actor), 1);
+    assert_eq!(
+        charges(&app),
+        1.0,
+        "refreshing the existing buff cannot restore a second charge"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_rapid_fire_earns_windrunner_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    for _ in 0..16 {
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false)
+            .unwrap();
+        for _ in 0..55 {
+            app.update();
+        }
+        if crate::auras::has_aura(app.world(), actor, 194594) {
+            return;
+        }
+        crate::spell_cast::scripts::reduce_cooldown(app.world_mut(), actor, 257044, 120.0);
+    }
+    panic!("selected Windrunner Quiver must earn Lock and Load on a real Rapid Fire");
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_salvo_earns_tactical_reload() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 260243, Some(target), false).unwrap();
+    for _ in 0..80 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 194594),
+        "an actual Salvo pulse earns Tactical Reload"
+    );
+}
+
 fn flame_shock_mastery_sample(keep_mastery: bool) -> (f32, i32, bool, i32, bool) {
     let _seed = crate::random::seed_scope(1);
     let (mut app, actor, target, _) = prepare_follower(209053, 90, 2813);
@@ -1891,10 +2016,18 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
         app.world_mut(),
         actor,
         actor,
+        None,
         1_266_619,
         125.0,
     );
-    server::test_support::healer_intake::record_absorb(app.world_mut(), other, actor, 17, 50.0);
+    server::test_support::healer_intake::record_absorb(
+        app.world_mut(),
+        other,
+        actor,
+        None,
+        17,
+        50.0,
+    );
     let (spells, non_unit, unknown) = self_absorb_receipts(app.world(), actor);
     assert_eq!(spells, [(1_266_619, 125.0)].into());
     assert_eq!((non_unit, unknown), (0.0, 0.0));
@@ -2088,6 +2221,33 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let lunar_bolts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1263137)
+        })
+        .collect();
+    assert!(
+        lunar_bolts.len() >= 3
+            && lunar_bolts
+                .iter()
+                .all(|event| event.crit && event.amount > 0),
+        "Lunar Eclipse must launch critical Lunar Bolt damage"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1261573)
+                && event.crit
+                && event.amount > 0),
+        "Solar Eclipse must launch critical Solar Bolt damage"
+    );
     let umbral_applications = events
         .iter()
         .filter(|event| {
@@ -2648,10 +2808,15 @@ fn follower_dps_production_dummy() {
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut aura_applications = BTreeMap::<u32, usize>::new();
     let mut energize = BTreeMap::<u32, i64>::new();
+    let expected_avoidance = std::env::var_os("FOLLOWER_DPS_EXPECTED_AVOIDANCE").is_some();
     let incoming: Vec<_> = events
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage && event.target == Some(actor.to_bits())
+            event.target == Some(actor.to_bits())
+                && (event.kind == CombatLogKind::Damage
+                    || (expected_avoidance
+                        && event.source == Some(target.to_bits())
+                        && event.spell_id.is_none()))
         })
         .collect();
     for event in events {

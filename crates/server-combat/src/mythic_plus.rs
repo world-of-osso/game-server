@@ -1,6 +1,6 @@
 //! Authenticated owner bag keys, Font slots and copy-scoped challenge runs.
 use crate::auth::{Authenticated, InWorld};
-use crate::maps::{InMap, InstanceManager};
+use crate::maps::{InMap, InstanceManager, WorldLocation};
 use crate::networking::PlayerLink;
 use crate::persistence::{self, GameDatabase};
 use ::server::mythic_plus_catalog::{
@@ -36,6 +36,7 @@ struct Challenges {
     weeks_path: std::path::PathBuf,
     definition: Option<ChallengeDefinition>,
     summaries: HashMap<u32, ChallengeSummary>,
+    start_positions: HashMap<u32, WorldLocation>,
     fonts: HashMap<Entity, Entity>,
     slots: HashMap<Entity, Active>,
     runs: HashMap<InMap, Active>,
@@ -47,6 +48,7 @@ impl Default for Challenges {
                 .map_or_else(|| "data/mythic_plus_weeks.json".into(), Into::into),
             definition: None,
             summaries: HashMap::new(),
+            start_positions: HashMap::new(),
             fonts: HashMap::new(),
             slots: HashMap::new(),
             runs: HashMap::new(),
@@ -78,10 +80,36 @@ fn load_startup(world: &mut World) {
             .expect("open challenge world data");
     let definition = load_azure(&conn).expect("qualify imported Azure challenge");
     let summaries = load_summaries(&conn).expect("load imported challenge summaries");
+    let start_positions = load_start_positions(&conn).expect("load challenge start positions");
     let mut challenges = world.resource_mut::<Challenges>();
     challenges.definition = definition;
     challenges.summaries = summaries;
+    challenges.start_positions = start_positions;
 }
+fn load_start_positions(
+    conn: &rusqlite::Connection,
+) -> rusqlite::Result<HashMap<u32, WorldLocation>> {
+    let mut statement = conn.prepare("SELECT map_id, position_x, position_y, position_z, orientation FROM mythic_plus_start_position")?;
+    statement
+        .query_map([], |row| {
+            let map_id = row.get(0)?;
+            let position = Vec3::new(row.get(1)?, row.get(2)?, row.get(3)?);
+            let orientation: f32 = row.get(4)?;
+            if !position.is_finite() || !orientation.is_finite() {
+                return Err(rusqlite::Error::InvalidQuery);
+            }
+            Ok((
+                map_id,
+                WorldLocation {
+                    map_id,
+                    position,
+                    orientation,
+                },
+            ))
+        })?
+        .collect()
+}
+
 fn save_key(db: &redb::Database, key: &KeystoneInfo) {
     let txn = db.begin_write().expect("begin keystone write");
     txn.open_table(KEYS)
@@ -292,6 +320,50 @@ fn validate_world_font(
     };
     validate_font(context).map_err(str::to_owned)
 }
+fn relocate_party_to_start(
+    world: &mut World,
+    player: Entity,
+    map: InMap,
+    destination: WorldLocation,
+) {
+    let members = world
+        .get::<crate::persistence::ClientId>(player)
+        .and_then(|id| {
+            world
+                .get_resource::<crate::group::GroupRegistry>()
+                .map(|groups| groups.group_members(id.0))
+        })
+        .unwrap_or_default();
+    let mut players: Vec<_> = world.query_filtered::<(Entity, &crate::persistence::ClientId, &InMap), With<shared::components::Player>>()
+        .iter(world).filter(|(_, id, copy)| **copy == map && members.contains(&id.0))
+        .map(|(entity, _, _)| entity).collect();
+    if !players.contains(&player) {
+        players.push(player);
+    }
+    let followers: Vec<_> = world
+        .query::<(Entity, &crate::followers::Follower, &InMap)>()
+        .iter(world)
+        .filter(|(_, follower, copy)| **copy == map && players.contains(&follower.owner))
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for unit in players {
+        crate::maps::transfer::near_teleport(
+            world,
+            unit,
+            &destination,
+            crate::maps::TeleportOptions::default(),
+        );
+    }
+    for unit in followers {
+        crate::maps::transfer::teleport_creature_with_companions(world, unit, &destination);
+        world.entity_mut(unit).insert(shared::components::Rotation {
+            x: 0.0,
+            y: destination.orientation + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    }
+}
+
 fn start(world: &mut World, connection: Entity) -> Result<(), String> {
     let active = world
         .resource::<Challenges>()
@@ -317,6 +389,12 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
     if world.resource::<Challenges>().runs.contains_key(&map) {
         return Err("Another keystone run already owns this copy".into());
     }
+    let destination = world
+        .resource::<Challenges>()
+        .start_positions
+        .get(&map.map_id)
+        .copied()
+        .ok_or_else(|| format!("map{} has no sourced keystone start position", map.map_id))?;
     let mut active = active;
     active.run.start(now_ms(world)).map_err(str::to_owned)?;
     let difficulty = *world
@@ -328,6 +406,7 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .resource_mut::<InstanceManager>()
         .activate_challenge_difficulty(map, difficulty)?;
     crate::zones::apply_difficulty_retune(world, retuned);
+    relocate_party_to_start(world, player, map, destination);
     // Deplete at activation, so abandoning or restarting cannot duplicate an upgrade.
     let mut depleted = key;
     depleted.level = active.run.depleted_level();
@@ -646,8 +725,11 @@ pub(crate) mod fixture {
         });
         persistence::save_inventory(db, character, &inventory);
         save_key(db, &key);
+        let player = world.get::<PlayerLink>(connection).unwrap().0;
+        let destination = crate::maps::transfer::current_location(world, player, definition.map_id);
         world.insert_resource(Challenges {
             weeks_path: weeks.path().to_owned(),
+            start_positions: HashMap::from([(definition.map_id, destination)]),
             definition: Some(definition),
             ..Default::default()
         });
@@ -900,10 +982,51 @@ mod tests {
         std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
         h.app.world_mut().resource_mut::<Challenges>().weeks_path = weeks.path().to_owned();
         session.set_test_epoch(h.app.world_mut(), 1791705600);
+        let destination = h.app.world().resource::<Challenges>().start_positions[&2515];
         let position = session.font_position(h.app.world()).unwrap();
         h.app.world_mut().entity_mut(h.player).insert(position);
+        let follower = h
+            .app
+            .world_mut()
+            .spawn((
+                map,
+                position,
+                crate::followers::Follower {
+                    owner: h.player,
+                    profile: crate::followers::Profile {
+                        entry: 1,
+                        name: "Fixture follower".into(),
+                        class_id: 8,
+                        spec_id: 63,
+                        role: shared::group::GroupRole::Dps,
+                        attack_spell: 0,
+                        cooldown_spell: 0,
+                        heal_spell: 0,
+                        taunt_spell: 0,
+                        form_spell: 0,
+                        melee: false,
+                    },
+                },
+            ))
+            .id();
         assert!(session.in_font_range(h.app.world()).unwrap());
         session.activate(h.app.world_mut()).unwrap();
+        assert_eq!(
+            *h.app.world().get::<Position>(h.player).unwrap(),
+            destination.bevy_position()
+        );
+        assert_eq!(
+            *h.app.world().get::<Position>(follower).unwrap(),
+            destination.bevy_position()
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::Rotation>(follower)
+                .unwrap()
+                .y,
+            destination.orientation + std::f32::consts::FRAC_PI_2
+        );
         let scaling = h
             .app
             .world()
@@ -1110,6 +1233,14 @@ mod tests {
         std::fs::write(weeks.path(), serde_json::to_vec(&incomplete).unwrap()).unwrap();
         h.app.world_mut().insert_resource(Challenges {
             weeks_path: weeks.path().to_owned(),
+            start_positions: HashMap::from([(
+                map.map_id,
+                WorldLocation {
+                    map_id: map.map_id,
+                    position: Vec3::ZERO,
+                    orientation: 0.0,
+                },
+            )]),
             definition: Some(definition.clone()),
             ..Default::default()
         });
@@ -1198,6 +1329,24 @@ mod tests {
         assert!(start(h.app.world_mut(), connection).is_err());
         assert_eq!(owned_keys(h.db(), owner)[0].level, 10);
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
+        let destination = h
+            .app
+            .world_mut()
+            .resource_mut::<Challenges>()
+            .start_positions
+            .remove(&map.map_id)
+            .unwrap();
+        assert!(
+            start(h.app.world_mut(), connection)
+                .unwrap_err()
+                .contains("no sourced keystone start position")
+        );
+        assert_eq!(owned_keys(h.db(), owner)[0].level, 10);
+        h.app
+            .world_mut()
+            .resource_mut::<Challenges>()
+            .start_positions
+            .insert(map.map_id, destination);
         let existing_npc = h
             .app
             .world_mut()

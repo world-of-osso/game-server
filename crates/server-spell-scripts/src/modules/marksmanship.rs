@@ -18,6 +18,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(apply_residual),
     SpellScriptHook::AfterDirectDamageBeforeItems(roll_auto_lock),
     SpellScriptHook::AfterNativeOnCast(roll_surging_shots),
+    SpellScriptHook::AfterNativeOnCast(grant_cast_lock_and_load),
+    SpellScriptHook::OwnsPolicyProc(|spell| spell == 1301406),
 ];
 
 fn declared_reach(
@@ -38,6 +40,7 @@ fn declared_reach(
 }
 
 fn register(scripts: &mut AuraScripts) {
+    scripts.0.entry(194594).or_default().on_apply = Some(restore_aimed_charge);
     scripts.0.insert(
         RAPID_FIRE,
         AuraScript {
@@ -69,6 +72,47 @@ fn is_marksmanship(world: &World, caster: Entity) -> bool {
 
 pub(super) fn selected(world: &World, caster: Entity, talent: u32) -> bool {
     is_marksmanship(world, caster) && has_talent(world, caster, talent)
+}
+
+fn restore_aimed_charge(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura.caster != unit {
+        return;
+    }
+    // SimC76f8118 sc_hunter.cpp8058–8063: gaining a new Lock and Load
+    // stack restores one Aimed Shot charge; refreshing an active stack does not.
+    let category = world
+        .resource::<SpellStore>()
+        .get(AIMED_SHOT)
+        .and_then(|spell| spell.categories.as_ref())
+        .expect("native Aimed Shot charge category")
+        .charge_category;
+    spell_cast::restore_charges(world, unit, category, 1);
+}
+
+fn grant_cast_lock_and_load(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if depth != 0 {
+        return;
+    }
+    match spell {
+        212431 => grant_tactical_reload(world, caster),
+        RAPID_FIRE if selected(world, caster, 473523) => {
+            // sc_hunter.cpp5811–5814: Rapid Fire rolls Windrunner Quiver's
+            // native effect2 chance once on execution, not once per tick.
+            let chance = script_effect_value(world, caster, 473523, 1);
+            if combat::random::random::<f32>() * 100.0 < chance {
+                spell_cast::cast_triggered(world, caster, 194594, Some(caster), 1);
+            }
+        }
+        _ => {}
+    }
+}
+
+pub(super) fn grant_tactical_reload(world: &mut World, caster: Entity) {
+    // sc_hunter.cpp5938–5943/6956–6964: foreground Explosive Shot
+    // or one actual Salvo pulse grants the selected native buff.
+    if selected(world, caster, 1301406) {
+        spell_cast::cast_triggered(world, caster, 194594, Some(caster), 1);
+    }
 }
 
 /// sc_hunter.cpp5315–5318/5371–5374 and5629–5647: primary is full
@@ -168,6 +212,7 @@ fn expire_focus_fire(
     aura: &AuraInstance,
     _: auras::RemoveReason,
 ) {
+    super::marksmanship_sentinel::clear_rapid_marks(world, aura.caster);
     // sc_hunter.cpp5832–5837: the finished Rapid Fire consumes Focus Fire.
     auras::remove_auras(
         world,

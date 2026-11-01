@@ -13,6 +13,7 @@ const BUFF: u32 = 213708;
 const MOON_GUARDIAN: u32 = 429520;
 const MOONFIRE: u32 = 8921;
 const MOONFIRE_DAMAGE: u32 = 164812;
+const TWIN_MOONS: u32 = 279620;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
@@ -35,13 +36,13 @@ fn declared_reach(
     if spell.id != MOONFIRE || !selected {
         return Default::default();
     }
-    let range = spell
-        .misc
-        .as_ref()
-        .and_then(|misc| misc.range)
-        .expect("native Moonfire range")
-        .max_hostile;
-    combat::spell_cast::script_registry::ScriptReach::caster(range)
+    combat::spell_cast::script_registry::ScriptReach::target(twin_range(world, caster))
+}
+
+// SimC76f8118 sc_druid.cpp7906–7907: the copy radius is only in Balance Twin Moons
+// (279620) effect 1 data; get_smart_target (7928, 7943) measures it from the primary.
+fn twin_range(world: &World, caster: Entity) -> f32 {
+    spell_cast::scripts::script_effect_value(world, caster, TWIN_MOONS, 0)
 }
 
 fn moonfire_hit(spell: u32) -> Option<fn(&mut World, &EffectCtx<'_>, Entity)> {
@@ -61,21 +62,21 @@ fn copy_twin_moonfire(world: &mut World, ctx: &EffectCtx<'_>, primary: Entity) {
     {
         return;
     }
-    let Some(origin) = targets::position(world, caster) else {
-        return;
-    };
-    let range = ctx
-        .spell
-        .misc
-        .as_ref()
-        .and_then(|misc| misc.range)
-        .expect("Moonfire native range")
-        .max_hostile;
-    let mut enemies =
-        targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
-    if !enemies.contains(&primary) {
+    // Moonfire's energize effects hit the caster; only the enemy target is copied.
+    if !targets::relation_matches(world, caster, primary, targets::Relation::Enemy) {
         return;
     }
+    let Some(center) = targets::position(world, primary) else {
+        return;
+    };
+    let mut enemies = targets::area_units(
+        world,
+        caster,
+        center,
+        twin_range(world, caster),
+        targets::Relation::Enemy,
+        0,
+    );
     enemies.retain(|&target| target != primary);
     enemies.shuffle(&mut combat::random::thread_rng());
     enemies.sort_by(|&a, &b| {

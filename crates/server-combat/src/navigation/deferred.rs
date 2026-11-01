@@ -4,6 +4,11 @@ use ::navigation::worker::{Output, Query as WorkerQuery, Request};
 
 pub(crate) type QueryResult = Result<Option<Output>, String>;
 
+/// A higher-priority query defers others only while its owner keeps requesting it.
+/// Owners request every tick; an owner that stopped (its target died, its fight
+/// ended) must not hold a stationary unit's lower-priority query forever.
+pub(super) const ABANDONED_QUERY_SECS: f64 = 1.0;
+
 pub(super) struct PendingQuery {
     pub(super) id: u64,
     pub(super) map_id: u32,
@@ -11,6 +16,7 @@ pub(super) struct PendingQuery {
     query: WorkerQuery,
     pub(super) result: Option<QueryResult>,
     consumed: bool,
+    asked_at: f64,
 }
 
 impl Navigation {
@@ -22,17 +28,20 @@ impl Navigation {
         goal: Goal,
         query: WorkerQuery,
     ) -> Option<QueryResult> {
+        let now = self.now;
         if let Some(previous) = self.queries.get_mut(&entity) {
             if previous.map_id == map_id
                 && previous.goal == goal
                 && same_query(goal, &previous.query, &query)
             {
                 previous.consumed |= previous.result.is_some();
+                previous.asked_at = now;
                 return previous.result.clone();
             }
             if previous.map_id == map_id
                 && !previous.consumed
                 && previous.goal.query_priority() > goal.query_priority()
+                && now - previous.asked_at <= ABANDONED_QUERY_SECS
             {
                 return None;
             }
@@ -49,6 +58,7 @@ impl Navigation {
                 query: query.clone(),
                 result: None,
                 consumed: false,
+                asked_at: now,
             },
         );
         self.worker.submit(Request {
@@ -65,6 +75,11 @@ impl Navigation {
             });
         }
         None
+    }
+
+    /// Called once per tick before callers query.
+    pub(super) fn observe_clock(&mut self, now: f64) {
+        self.now = now;
     }
 
     pub(crate) fn query_owner(&self, entity: Entity) -> Option<Goal> {
