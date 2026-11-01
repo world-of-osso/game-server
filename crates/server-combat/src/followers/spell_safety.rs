@@ -43,22 +43,21 @@ pub fn chain_candidate_allowed(
         .and_then(|target| target.0)
         .unwrap_or(primary);
     let planned = super::pull_set::members(world, caller, actor).contains(&candidate)
-        && !super::pull_set::uncommitted_helpers(world, caller, actor).contains(&candidate);
+        && !super::pull_set::pending_helpers(world, caller, actor).contains(&candidate);
     planned || engaged_with_party(world, follower, candidate)
 }
 
-/// `enemy` is a committed helper or in combat with the follower's party.
+/// `enemy` is in combat with the follower's party.
 fn engaged_with_party(world: &World, follower: Entity, enemy: Entity) -> bool {
     let Some(owner) = world.get::<super::Follower>(follower).map(|f| f.owner) else {
         return false;
     };
-    super::pull_set::committed_helpers(world, follower).contains(&enemy)
-        || crate::combat_refs::active_opponents(world, enemy).any(|opponent| {
-            opponent == owner
-                || world
-                    .get::<super::Follower>(opponent)
-                    .is_some_and(|member| member.owner == owner)
-        })
+    crate::combat_refs::active_opponents(world, enemy).any(|opponent| {
+        opponent == owner
+            || world
+                .get::<super::Follower>(opponent)
+                .is_some_and(|member| member.owner == owner)
+    })
 }
 
 /// A scripted summon action must not launch if its native targets include an
@@ -99,7 +98,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         .and_then(|target| target.0)
         .or_else(|| enemy_target.then_some(target));
     let pending = primary
-        .map(|primary| super::pull_set::uncommitted_helpers(world, primary, actor))
+        .map(|primary| super::pull_set::pending_helpers(world, primary, actor))
         .unwrap_or_default();
     if enemy_target && pending.contains(&target) {
         debug!(target: "game_server::follower_safety", ?actor, ?target, ?spell, ?primary, ?pending, reason = "pending_target", "follower action refused");
@@ -115,8 +114,19 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
     if caster_radius <= 0.0 && target_radius <= 0.0 {
         return true;
     }
-    if !pending.is_empty() {
-        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "uncommitted_helpers", "follower action refused");
+    if pending.iter().any(|&helper| {
+        let Some(helper_position) = targets::position(world, helper) else {
+            return true;
+        };
+        let caster_reaches = caster_radius > 0.0
+            && targets::position(world, actor)
+                .is_none_or(|position| position.distance(helper_position) <= caster_radius);
+        let target_reaches = target_radius > 0.0
+            && targets::position(world, target)
+                .is_none_or(|position| position.distance(helper_position) <= target_radius);
+        caster_reaches || target_reaches
+    }) {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "pending_helper_in_reach", "follower action refused");
         return false;
     }
     let Some((caster_radius, target_radius)) =

@@ -97,18 +97,6 @@ pub(super) fn committed_helpers(world: &World, victim: Entity) -> HashSet<Entity
         .collect()
 }
 
-pub(super) fn uncommitted_helpers(
-    world: &World,
-    target: Entity,
-    victim: Entity,
-) -> HashSet<Entity> {
-    let committed = committed_helpers(world, victim);
-    pending_helpers(world, target, victim)
-        .difference(&committed)
-        .copied()
-        .collect()
-}
-
 #[cfg(test)]
 pub(super) fn risky_pending_helpers(
     world: &World,

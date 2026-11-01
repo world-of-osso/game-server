@@ -476,21 +476,20 @@ fn windrunner_assistants_do_not_call_second_wave_and_tank_avoids_it() {
         .insert(crate::combat::AutoAttack::new(helper));
     let selected = crate::pet_control::select_next_target(h.app.world_mut(), tank, pet);
     assert_eq!(
-        selected,
-        Some(helper),
-        "a pet may select a committed helper"
+        selected, None,
+        "a pet must not select a helper before dispatch"
     );
     h.app
         .world_mut()
         .entity_mut(tank)
         .remove::<crate::combat::AutoAttack>();
     assert!(
-        super::spell_safety::action_safe(h.app.world(), pet, helper, None),
-        "pet attacks on committed helpers are admitted"
+        !super::spell_safety::action_safe(h.app.world(), pet, helper, None),
+        "pet attacks on pending helpers are refused"
     );
     assert!(
-        super::spell_safety::safe(h.app.world(), tank, caller, 31935),
-        "planned chain candidates remain safe during committed assistance"
+        !super::spell_safety::safe(h.app.world(), tank, caller, 31935),
+        "a chain that reaches a pending helper is refused"
     );
     for _ in 0..60 {
         h.advance(1);
