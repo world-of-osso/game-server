@@ -692,7 +692,17 @@ fn released_leader_rejoins_party_through_azure_book() {
             );
         }
     }
-    assert!(reunited, "released leader did not rejoin the tank");
+    assert!(
+        reunited,
+        "released leader did not rejoin the tank: owner={:?}, tank={:?}, intent={:?}, decisions={:?}",
+        run.app.world().get::<Position>(owner),
+        run.app.world().get::<Position>(tank),
+        run.app
+            .world()
+            .get::<MoveIntent>(owner)
+            .map(|intent| intent.0),
+        run.report.pulls
+    );
     let owner_position = *run.app.world().get::<Position>(owner).unwrap();
     let tank_position = *run.app.world().get::<Position>(tank).unwrap();
     assert!(
