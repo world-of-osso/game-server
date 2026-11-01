@@ -912,6 +912,7 @@ fn random_valid_model<'a>(
 /// Level-dependent state prepared before a copy changes difficulty.
 pub(crate) struct DifficultyRetune {
     entity: Entity,
+    difficulty_id: u32,
     level: u8,
     health: f32,
     armor: f32,
@@ -1008,6 +1009,7 @@ pub(crate) fn prepare_difficulty_retune(
                 };
                 Ok(DifficultyRetune {
                     entity,
+                    difficulty_id,
                     level,
                     health,
                     armor,
@@ -1030,7 +1032,11 @@ pub(crate) fn apply_difficulty_retune(world: &mut World, projections: Vec<Diffic
             health.max = projection.health;
             health.current = projection.health * fraction;
         }
-        actor.insert((UnitLevel(projection.level), CreatureArmor(projection.armor)));
+        actor.insert((
+            UnitLevel(projection.level),
+            CreatureArmor(projection.armor),
+            CreatureDifficulty(projection.difficulty_id),
+        ));
         if let Some((scaling, stats)) = projection.scaling {
             actor.insert((scaling, ScaledStats(stats)));
         } else {
