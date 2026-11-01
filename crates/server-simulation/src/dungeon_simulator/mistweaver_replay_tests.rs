@@ -20,8 +20,11 @@ fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
             .unwrap()
             .crit_pct = 0.0;
         let start = world.resource::<ObservedCombatEvents>().0.len();
-        crate::spell_cast::creature_cast(world, healer, spell, Some(tank), true).unwrap();
-        let events = &world.resource::<ObservedCombatEvents>().0[start..];
+        crate::spell_cast::creature_cast(world, healer, spell, Some(tank), false).unwrap();
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
         let gusts: Vec<_> = events
             .iter()
             .filter(|event| {
