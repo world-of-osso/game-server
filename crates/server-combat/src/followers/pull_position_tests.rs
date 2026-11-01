@@ -206,19 +206,27 @@ fn spend_party_kicks(f: &mut Fixture, caster: Entity, selected: Entity) {
     crate::spell_cast::cancel_cast(f.h.app.world_mut(), caster);
     let world = f.h.app.world();
     let (_, members, _) = super::party::read_admission(world, f.h.caster).unwrap();
-    let catalog = world.resource::<super::FollowerCatalog>();
     let store = world.resource::<crate::spell_info::SpellStore>();
     let actions: BTreeSet<_> = members
         .iter()
         .flat_map(|&unit| {
-            let follower = world.get::<Follower>(unit).unwrap();
-            let level = world.get::<shared::components::Level>(unit).unwrap().0;
-            catalog
-                .kits
+            world
+                .get::<crate::class_progression::KnownSpells>(unit)
+                .unwrap()
                 .iter()
-                .filter(move |entry| entry.available(follower.profile.spec_id, level))
-                .filter(|entry| super::kit_interrupt::is_interrupt_entry(entry, store))
-                .map(move |entry| (unit, entry.spell_id))
+                .filter(move |&id| {
+                    store.get(id).is_some_and(|spell| {
+                        let interrupt = spell.effects.iter().any(|effect| {
+                            effect.effect == crate::spell_cast::effects::EFFECT_INTERRUPT_CAST
+                                && effect.implicit_targets[0] == 6
+                        });
+                        let cooldown = spell.cooldowns.as_ref().is_some_and(|source| {
+                            source.recovery_ms > 0 || source.category_recovery_ms > 0
+                        });
+                        !crate::auras::is_passive(spell) && interrupt && cooldown
+                    })
+                })
+                .map(move |id| (unit, id))
         })
         .collect();
     assert!(
@@ -228,7 +236,7 @@ fn spend_party_kicks(f: &mut Fixture, caster: Entity, selected: Entity) {
     for &(unit, spell) in &actions {
         spend_native_kick(f, unit, spell, selected);
     }
-    // Let ordinary preparation GCDs finish; no cooldown reset or kit-row removal.
+    // Let ordinary preparation GCDs finish without resetting cooldowns.
     f.h.advance(40);
     let world = f.h.app.world();
     let now = crate::spell_cast::history_now(world);
