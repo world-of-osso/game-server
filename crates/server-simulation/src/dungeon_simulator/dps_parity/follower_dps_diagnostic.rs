@@ -2760,6 +2760,8 @@ fn follower_dps_production_dummy() {
     let mut stat_sums = [0.0f64; 6];
     let mut aura_frames = std::collections::BTreeMap::new();
     let mut target_aura_frames = std::collections::BTreeMap::new();
+    let mut mark_trace = Vec::new();
+    let mut previous_marks = (false, false);
     for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
@@ -2785,6 +2787,16 @@ fn follower_dps_production_dummy() {
         if let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) {
             for aura in auras.iter().filter(|aura| aura.caster == actor) {
                 *target_aura_frames.entry(aura.spell_id).or_insert(0u32) += 1;
+            }
+        }
+        if trace_actions {
+            let marks = (
+                crate::auras::has_aura(world, target, 1253601),
+                crate::auras::has_aura(world, target, 1301098),
+            );
+            if marks != previous_marks {
+                mark_trace.push(((frame + 1) as f64 / 20.0, marks));
+                previous_marks = marks;
             }
         }
         let now = crate::spell_cast::history_now(world);
@@ -3016,6 +3028,9 @@ fn follower_dps_production_dummy() {
         })
         .collect();
     println!("FOLLOWER_TARGET_AURAS {}", serde_json::json!(target_uptime));
+    if trace_actions {
+        println!("FOLLOWER_MARK_TRACE {}", serde_json::json!(mark_trace));
+    }
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
