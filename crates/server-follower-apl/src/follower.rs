@@ -10,6 +10,9 @@ const PRECOMBAT_TICKS: u32 = 600;
 
 /// A spec's production APL driver over the shared literal `Driver`.
 pub trait SpecRotation: Send + Sync {
+    /// Spell IDs bound to actions in this rotation's actual program.
+    fn action_spells(&self) -> Vec<u32>;
+
     /// Next precombat decision. `Waiting` covers a row the adapter executed itself.
     fn poll_precombat(
         &mut self,

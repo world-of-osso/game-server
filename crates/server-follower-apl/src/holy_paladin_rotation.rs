@@ -203,6 +203,10 @@ impl ActionFacts for PartyFacts<'_> {
 }
 
 impl crate::follower::SpecRotation for HolyPaladin {
+    fn action_spells(&self) -> Vec<u32> {
+        self.driver.action_spells(&self.bindings)
+    }
+
     fn poll_precombat(
         &mut self,
         _world: &mut World,

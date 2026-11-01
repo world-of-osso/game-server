@@ -18,6 +18,34 @@ use server::simc_apl::{Action, ActionFacts, Expression, Facts, Program, Variable
 #[derive(Resource, Default)]
 pub struct LiteralTickProgress(pub bool);
 
+#[cfg(test)]
+mod action_metadata_tests {
+    use super::*;
+
+    #[test]
+    fn action_spells_only_includes_bound_actions_used_by_the_program() {
+        let program = Program::parse(&[
+            ("default", "fireball"),
+            ("default", "fire_blast"),
+            ("precombat", "fireball"),
+        ])
+        .unwrap();
+        let bindings = crate::simc_apl_native::Bindings {
+            actions: [
+                ("fireball".into(), 133),
+                ("fire_blast".into(), 108853),
+                ("unused".into(), 999),
+            ]
+            .into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            Driver::new(program).action_spells(&bindings),
+            vec![133, 108853]
+        );
+    }
+}
+
 /// The same encounter with its combat clock restarted when precombat finishes.
 pub fn encounter_starting_at(
     encounter: crate::simc_apl_native::Encounter,
@@ -112,6 +140,19 @@ impl Driver {
             channel: None,
             decisions: 0,
         }
+    }
+
+    /// Native spells bound to actions actually present in this APL program.
+    pub fn action_spells(&self, bindings: &crate::simc_apl_native::Bindings) -> Vec<u32> {
+        let mut spells: Vec<_> = self
+            .program
+            .actions()
+            .filter_map(|(_, action)| bindings.actions.get(&action.name).copied())
+            .filter(|spell| *spell != 0)
+            .collect();
+        spells.sort_unstable();
+        spells.dedup();
+        spells
     }
 
     pub fn precombat_exhausted(&self) -> bool {

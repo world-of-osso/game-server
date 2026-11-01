@@ -234,6 +234,10 @@ impl ActionFacts for FrostFacts<'_> {
 }
 
 impl crate::follower::SpecRotation for Rotation {
+    fn action_spells(&self) -> Vec<u32> {
+        self.driver.action_spells(&self.bindings)
+    }
+
     fn poll_precombat(
         &mut self,
         world: &mut World,
