@@ -214,6 +214,58 @@ impl Fixture {
     }
 }
 
+#[test]
+fn native_admission_ignores_dead_formation_leader_still_in_copy() {
+    let mut fixture = fixture();
+    let second = fixture.second;
+    let second_guid = fixture
+        .h
+        .app
+        .world()
+        .get::<crate::zones::CreatureOrigin>(second)
+        .unwrap()
+        .guid;
+    let formation = crate::world_data::FormationInfo {
+        leader_guid: fixture.first_guid,
+        follow_dist: 0.0,
+        follow_angle: 0.0,
+        group_ai: 0,
+    };
+    {
+        let mut data = fixture.h.app.world_mut().resource_mut::<WorldData>();
+        data.formations
+            .insert(fixture.first_guid, formation.clone());
+        data.formations.insert(second_guid, formation);
+    }
+    let owner = fixture.h.caster;
+    crate::combat::kill_unit(fixture.h.app.world_mut(), owner, fixture.first);
+    let map = *fixture.h.app.world().get::<InMap>(second).unwrap();
+    assert!(
+        fixture
+            .h
+            .app
+            .world()
+            .resource::<crate::maps::units::MapUnits>()
+            .in_map(map)
+            .any(|unit| unit == fixture.first)
+    );
+    assert!(
+        pull_history::snapshot(fixture.h.app.world(), owner)
+            .unwrap()
+            .cleared_spawns
+            .contains(&fixture.first_guid)
+    );
+    assert!(crate::spell_cast::targets::is_alive(
+        fixture.h.app.world(),
+        second
+    ));
+    let decision = fixture.read(&[second]);
+    assert!(
+        decision.is_ok(),
+        "surviving formation member must reach native admission: {decision:?}"
+    );
+}
+
 fn measured_fixture() -> Fixture {
     let mut f = fixture();
     f.sample(100);

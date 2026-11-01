@@ -27,26 +27,36 @@ pub(super) fn log_admission(world: &mut World, tank: Entity, target: Entity) {
 }
 
 fn assistants(world: &World, target: Entity, victim: Entity) -> Vec<Entity> {
-    if let Some(snapshot) = world.get::<crate::creature_assistance::AssistanceSnapshot>(target) {
-        return snapshot.0.clone();
-    }
-    if world
+    let assistants = if let Some(snapshot) =
+        world.get::<crate::creature_assistance::AssistanceSnapshot>(target)
+    {
+        snapshot.0.clone()
+    } else if world
         .get::<crate::creature_assistance::AssistanceCalled>(target)
         .is_some()
     {
-        return Vec::new();
-    }
-    crate::creature_assistance::assistance_snapshot(world, target, victim)
+        Vec::new()
+    } else {
+        crate::creature_assistance::assistance_snapshot(world, target, victim)
+    };
+    assistants
+        .into_iter()
+        .filter(|unit| crate::spell_cast::targets::is_alive(world, *unit))
+        .collect()
 }
 
 fn formation(world: &World, target: Entity) -> HashSet<Entity> {
+    if !crate::spell_cast::targets::is_alive(world, target) {
+        return HashSet::new();
+    }
     let mut result = HashSet::from([target]);
     if let (Some(map), Some(units)) = (
         world.get::<crate::maps::InMap>(target),
         world.get_resource::<crate::maps::units::MapUnits>(),
     ) {
         result.extend(units.in_map(*map).filter(|&candidate| {
-            super::positioning::in_target_formation(world, target, candidate)
+            crate::spell_cast::targets::is_alive(world, candidate)
+                && super::positioning::in_target_formation(world, target, candidate)
         }));
     }
     result
