@@ -33,11 +33,16 @@ class SyntheticFloorTest(unittest.TestCase):
                     (63805222, 238099, 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS; sample'),
                 ])
             route = root / 'route.json'
-            route.write_text(json.dumps([dict(map=2805, x=5328.386, y=-3216.4063, z=101.156075)]))
+            route.write_text('[]')
             report = root / 'report.json'
             command = ['python3', str(SCRIPT), '--world-db', str(db_path), '--resolver', resolver,
                        '--geometry', str(GEOMETRY), '--navigation', str(NAV), '--routes', str(route),
                        '--output', str(report)]
+            subprocess.run(command, check=True)
+            without_route = json.loads(report.read_text())
+            self.assertEqual(without_route['changes'], [])
+            self.assertEqual(len(without_route['unresolved']), 3)
+            route.write_text(json.dumps([dict(map=2805, x=5328.386, y=-3216.4063, z=101.156075)]))
             subprocess.run(command, check=True)
             result = json.loads(report.read_text())
             self.assertEqual(result['scanned'], 3)
