@@ -24,7 +24,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {
         (SLAM, 0) => Some(slam_impact),
-        (VT, 1) => Some(apply_misery),
+        (VT, 3) => Some(apply_misery),
         _ => None,
     }
 }
