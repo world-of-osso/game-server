@@ -413,13 +413,6 @@ pub struct CreatureAiState {
     pending: VecDeque<Hook>,
 }
 
-pub(crate) fn read_scheduled_damage(world: &World, source: Entity) -> Vec<ScheduledDamage> {
-    world
-        .get::<CreatureAiState>(source)
-        .and_then(|state| state.ai.as_ref())
-        .map_or_else(Vec::new, |ai| ai.scheduled_damage())
-}
-
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {

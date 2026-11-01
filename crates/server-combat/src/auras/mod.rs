@@ -780,24 +780,6 @@ pub(crate) fn fresh_duration_ms(
     duration_ms(world, &application, spell)
 }
 
-/// Fresh maximum duration through the same caster/target modifier path as apply.
-/// A carried refresh duration is not the next cast's Pandemic threshold.
-pub(crate) fn maximum_duration_ms(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell_id: u32,
-) -> Option<u32> {
-    let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
-    let duration = spell.misc.as_mut()?.duration.as_mut()?;
-    if duration.max_duration_ms <= 0 {
-        return None;
-    }
-    duration.duration_ms = duration.max_duration_ms;
-    duration.per_resource_ms = 0;
-    Some(fresh_duration_ms(world, caster, target, &spell))
-}
-
 /// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796
 /// uses1s damage ticks, including tick0 (five over4s). TC has no FoF script;
 /// its generic226 handler does nothing. Preserve the approved toy trigger bridge.
@@ -3001,23 +2983,6 @@ pub(crate) fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_t
         && aura.dispel_type != 0
         && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)
         && aura.harmful != hostile
-}
-
-/// Read the exact eligibility predicate used by ordinary SPELL_EFFECT_DISPEL.
-pub(crate) fn has_dispellable_aura(
-    world: &World,
-    dispeller: Entity,
-    target: Entity,
-    types: &[u32],
-) -> bool {
-    let hostile = targets::is_hostile(world, dispeller, target);
-    world.get::<ActiveAuras>(target).is_some_and(|auras| {
-        auras.iter().any(|aura| {
-            types
-                .iter()
-                .any(|dispel_type| aura_can_be_dispelled(aura, hostile, *dispel_type))
-        })
-    })
 }
 
 /// SPELL_EFFECT_DISPEL: remove up to `count` non-passive auras of
