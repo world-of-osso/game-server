@@ -88,6 +88,62 @@ fn native_replay_cli_driver() {
     println!("HEALER_TANK_REPORT={report}");
 }
 
+#[test]
+#[ignore = "requires the class-party snapshot and SimC tank and party traces"]
+fn party_pulse_seed_replays_identical_events_and_outcome() {
+    fn replay() -> (serde_json::Value, Vec<serde_json::Value>) {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "dungeon_simulator::replay_cli_tests::native_replay_cli_driver",
+                "--exact",
+                "--ignored",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env("HEALER_TANK_SOURCE", "simc")
+            .env("HEALER_TANK_MODE", "healer")
+            .env("HEALER_TANK_LEVEL", "90")
+            .env("HEALER_TANK_DURATION", "120")
+            .env("HEALER_TANK_SPEC", "105")
+            .env("HEALER_TANK_SEED", "8")
+            .env("HEALER_TANK_TRACE_EVENTS", "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let report = stdout
+            .lines()
+            .find_map(|line| {
+                line.split_once("HEALER_TANK_REPORT=")
+                    .map(|(_, report)| serde_json::from_str(report).unwrap())
+            })
+            .expect("replay report");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        let events: Vec<serde_json::Value> = stderr
+            .lines()
+            .filter_map(|line| line.strip_prefix("HEALER_REPLAY_EVENT "))
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert!(!events.is_empty(), "replay emitted no events");
+        (report, events)
+    }
+    let first = replay();
+    let second = replay();
+    for (index, (left, right)) in first.1.iter().zip(&second.1).enumerate() {
+        assert_eq!(left, right, "combat event {index} diverged");
+    }
+    assert_eq!(
+        first.1.len(),
+        second.1.len(),
+        "combat event counts diverged"
+    );
+    assert_eq!(first.0, second.0, "replay outcomes diverged");
+}
+
 /// Train-executed batches use the same replay entry point as single-seed runs.
 #[test]
 #[ignore = "native tank replay batch entry point"]

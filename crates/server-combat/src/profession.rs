@@ -413,7 +413,7 @@ pub(crate) fn effect_create_item(
             warn!("Crafting order {} failed: {error}", ctx.spell.id);
             return;
         }
-        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 1..=1000);
+        let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 1..=1000);
         with_learner(world, ctx.caster, |learner, profs| {
             learner.craft_skill_up(profs, ctx.spell.id, roll)
         });
@@ -426,7 +426,7 @@ pub(crate) fn effect_create_item(
         warn!("Spell {}: CREATE_ITEM failed: {error}", ctx.spell.id);
         return;
     }
-    let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 1..=1000);
+    let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 1..=1000);
     with_learner(world, target, |learner, profs| {
         learner.craft_skill_up(profs, ctx.spell.id, roll)
     });

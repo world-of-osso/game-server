@@ -423,7 +423,7 @@ impl CreatureAi for Disciple {
             .schedule_range(EVENT_SLEEP, 5_000, 10_000);
         self.combat_events
             .schedule_range(EVENT_DRUIDS_POTION, 5_000, 10_000);
-        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+        let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..100);
         if roll < AGGRO_SPEECH_CHANCE {
             super::creature_text::talk_with_target(ctx.world, ctx.me, SAY_AGGRO, Some(who));
         }

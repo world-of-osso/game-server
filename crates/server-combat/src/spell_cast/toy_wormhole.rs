@@ -38,7 +38,10 @@ pub(super) fn teleport_to_random_pandaria_point(
     ctx: &EffectCtx,
     _effect: &SpellEffect,
 ) {
-    let choice = rand::Rng::gen_range(&mut rand::thread_rng(), 0..PANDARIA_TELEPORTS.len());
+    let choice = rand::Rng::gen_range(
+        &mut crate::random::thread_rng(),
+        0..PANDARIA_TELEPORTS.len(),
+    );
     let teleport = PANDARIA_TELEPORTS[choice];
     super::cast_triggered(world, ctx.caster, teleport, Some(ctx.caster), ctx.depth + 1);
 }

@@ -187,7 +187,7 @@ fn retire_felstorm_actor(
 /// TC spell_kystia_manaheart_mirror_image::SetDest. WoW y is negative engine z.
 pub(crate) fn relocate_mirror_destination(dest: &mut crate::spell_cast::targets::Dest) {
     use rand::Rng;
-    let mut rng = rand::thread_rng();
+    let mut rng = crate::random::thread_rng();
     dest.position.x += rng.gen_range(-30.0..=25.0);
     dest.position.z -= rng.gen_range(-15.0..=26.0);
 }

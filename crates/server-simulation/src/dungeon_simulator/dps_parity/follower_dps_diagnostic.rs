@@ -3277,6 +3277,56 @@ fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn fixed_fight_seed_replays_identical_events_and_outcome() {
+    fn replay() -> (serde_json::Value, Vec<serde_json::Value>) {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "dungeon_simulator::dps_parity::follower_dps_diagnostic::follower_dps_production_dummy",
+                "--exact", "--ignored", "--nocapture", "--test-threads=1",
+            ])
+            .env("FOLLOWER_DPS_SPEC", "62")
+            .env("FOLLOWER_DPS_LEVEL", "90")
+            .env("FOLLOWER_DPS_MAP", "2813")
+            .env("FOLLOWER_DPS_SEED", "8")
+            .env("FOLLOWER_TRACE_EVENTS", "1")
+            .output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let report: serde_json::Value = stdout
+            .lines()
+            .find_map(|line| {
+                line.split_once("FOLLOWER_DPS ")
+                    .map(|(_, value)| serde_json::from_str(value).unwrap())
+            })
+            .expect("DPS report");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        let events: Vec<serde_json::Value> = stderr
+            .lines()
+            .filter_map(|line| line.strip_prefix("FOLLOWER_REPLAY_EVENT "))
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert!(!events.is_empty(), "fight emitted no events");
+        (report, events)
+    }
+    let first = replay();
+    let second = replay();
+    for (index, (left, right)) in first.1.iter().zip(&second.1).enumerate() {
+        assert_eq!(left, right, "combat event {index} diverged");
+    }
+    assert_eq!(
+        first.1.len(),
+        second.1.len(),
+        "combat event counts diverged"
+    );
+    assert_eq!(first.0, second.0, "fight outcomes diverged");
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")
@@ -3508,6 +3558,14 @@ fn follower_dps_production_dummy() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        if std::env::var_os("FOLLOWER_TRACE_EVENTS").is_some() {
+            for event in &events[seen_events..] {
+                eprintln!(
+                    "FOLLOWER_REPLAY_EVENT {}",
+                    json!({"tick": frame + 1, "event": event})
+                );
+            }
+        }
         if trace_actions {
             let after_power = crate::spell_cast::powers::power_value(
                 app.world(),
