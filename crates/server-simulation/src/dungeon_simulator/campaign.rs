@@ -844,6 +844,7 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     };
     let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
+    crate::followers::simulator::stop_leader_driver(run.app.world_mut(), owner);
     let rune = run.actors[&29001892];
     // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
     let hostile = run.actors[&29001878];
