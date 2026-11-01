@@ -688,6 +688,89 @@ fn keystone_death_time_starts_after_native_countdown() {
 
 #[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_two_pulls_do_not_repeat_precombat_setup() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    let mage = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<shared::components::ActiveSpec>(*unit)
+                .is_some_and(|spec| spec.0 == 63)
+        })
+        .unwrap();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..2000 {
+        run.control().unwrap();
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        let kills = events
+            .iter()
+            .filter(|event| {
+                event.kind == shared::protocol::CombatLogKind::Death
+                    && event.target.is_some_and(|target| {
+                        run.actors.values().any(|actor| actor.to_bits() == target)
+                    })
+            })
+            .count();
+        let pulls = run
+            .report
+            .pulls
+            .iter()
+            .filter(|pull| pull.decision.starts_with("Allow"))
+            .count();
+        if kills >= 2 && pulls >= 2 {
+            let casts = |actor: Entity, spell| {
+                events
+                    .iter()
+                    .filter(|event| {
+                        event.kind == shared::protocol::CombatLogKind::CastSuccess
+                            && event.source == Some(actor.to_bits())
+                            && event.spell_id == Some(spell)
+                    })
+                    .count()
+            };
+            assert_eq!(
+                casts(owner, 883),
+                1,
+                "Call Pet must not repeat between pulls"
+            );
+            assert_eq!(
+                casts(mage, 1459),
+                1,
+                "Arcane Intellect must not repeat between pulls"
+            );
+            return;
+        }
+    }
+    panic!("two native source deaths were not observed");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn keystone_driver_waits_for_countdown_before_pulling() {
     let options = super::keystone::Options {
         map_id: 2515,

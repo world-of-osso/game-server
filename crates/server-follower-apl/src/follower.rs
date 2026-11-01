@@ -1,4 +1,4 @@
-//! Per-pull APL lifecycle for a class follower: its precombat list once, then the default list.
+//! Persistent follower APL: precombat once, with a fresh encounter clock for each pull.
 use crate::literal_rotation::{self, PrecombatPoll, execution::Execution};
 use bevy::prelude::*;
 use server::followers::AplControlled;
@@ -37,14 +37,16 @@ pub trait SpecRotation: Send + Sync {
 enum Phase {
     Precombat { ticks: u32 },
     Combat,
+    Idle,
 }
 
-/// The follower's APL for the current pull; dropped when the pull ends.
+/// The follower's APL persists across pulls until death or a precombat buff expires.
 #[derive(Component)]
 pub struct FollowerApl {
     rotation: Box<dyn SpecRotation>,
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
+    precombat_buffs: std::collections::BTreeMap<u32, f64>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -57,6 +59,7 @@ impl FollowerApl {
             rotation,
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
+            precombat_buffs: Default::default(),
         }
     }
 
@@ -70,6 +73,10 @@ impl FollowerApl {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        if matches!(self.phase, Phase::Idle) {
+            self.rotation.start_combat_at(crate::spell_cast::now(world));
+            self.phase = Phase::Combat;
+        }
         if let Phase::Precombat { ticks } = &mut self.phase {
             *ticks += 1;
             if *ticks > PRECOMBAT_TICKS {
@@ -88,6 +95,19 @@ impl FollowerApl {
                     return self.execute_plan(world, actor, action, execution);
                 }
                 PrecombatPoll::Finished => {
+                    let actions = self.rotation.action_spells();
+                    self.precombat_buffs = world
+                        .get::<server::auras::ActiveAuras>(actor)
+                        .into_iter()
+                        .flat_map(|auras| auras.iter())
+                        .filter(|aura| {
+                            aura.caster == actor
+                                && !aura.passive
+                                && !aura.harmful
+                                && actions.contains(&aura.spell_id)
+                        })
+                        .filter_map(|aura| aura.expires_at.map(|at| (aura.spell_id, at)))
+                        .collect();
                     self.rotation.start_combat_at(crate::spell_cast::now(world));
                     self.phase = Phase::Combat;
                 }
@@ -95,6 +115,32 @@ impl FollowerApl {
         }
         let rotation = &mut self.rotation;
         literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, targets))
+    }
+
+    fn idle(&mut self) {
+        if matches!(self.phase, Phase::Combat) {
+            self.phase = Phase::Idle;
+        }
+    }
+
+    fn precombat_buff_expired(&mut self, world: &World, actor: Entity) -> bool {
+        let now = crate::spell_cast::now(world);
+        self.precombat_buffs.iter_mut().any(|(spell, deadline)| {
+            let current = world
+                .get::<server::auras::ActiveAuras>(actor)
+                .into_iter()
+                .flat_map(|auras| auras.iter())
+                .find(|aura| aura.caster == actor && aura.spell_id == *spell);
+            match current {
+                Some(aura) => {
+                    if let Some(at) = aura.expires_at {
+                        *deadline = at;
+                    }
+                    false
+                }
+                None => now >= *deadline,
+            }
+        })
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
@@ -135,16 +181,24 @@ pub fn drive_followers(world: &mut World) {
 }
 
 fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
-    let targets = if crate::spell_cast::targets::is_alive(world, unit) {
-        ordered_targets(world, unit)
-    } else {
-        Vec::new()
-    };
-    if targets.is_empty() {
+    if !crate::spell_cast::targets::is_alive(world, unit) {
         world
             .entity_mut(unit)
             .remove::<(FollowerApl, FollowerAplFailed)>();
         return;
+    }
+    let targets = ordered_targets(world, unit);
+    if targets.is_empty() {
+        if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
+            apl.idle();
+        }
+        world.entity_mut(unit).remove::<FollowerAplFailed>();
+        return;
+    }
+    if let Some(mut apl) = world.entity_mut(unit).take::<FollowerApl>() {
+        if !apl.precombat_buff_expired(world, unit) {
+            world.entity_mut(unit).insert(apl);
+        }
     }
     if world.get::<FollowerAplFailed>(unit).is_some() {
         return;
