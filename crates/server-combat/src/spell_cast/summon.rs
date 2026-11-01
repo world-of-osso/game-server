@@ -86,6 +86,10 @@ impl SummonProperties {
             || self.joins_summoner_spawn_group()
     }
 
+    pub(crate) fn is_pet_or_guardian(self) -> bool {
+        self.is_pet() || self.is_guardian() || matches!(self.title, TITLE_PET | TITLE_COMPANION)
+    }
+
     /// TC Map::SummonCreature: Guardian and Companion masks inherit Minion ownership.
     fn is_minion(self) -> bool {
         match self.control {

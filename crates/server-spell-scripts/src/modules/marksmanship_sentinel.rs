@@ -12,7 +12,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_damage),
     SpellScriptHook::AfterQueuedTriggers(roll_queued_tip_marks),
     SpellScriptHook::ActualCriticalChanceBonus(aimed_mark_crit),
-    SpellScriptHook::ActualDamageMultiplier(rapid_mark_damage),
 ];
 use bevy::prelude::*;
 
@@ -58,11 +57,9 @@ fn aimed_mark_crit(
     }
 }
 
-fn rapid_mark_damage(world: &mut World, ctx: &EffectCtx, target: Entity) -> f32 {
-    if ctx.spell.id != RAPID_TICK {
-        return 1.0;
-    }
-    let caster = ctx.caster;
+pub(super) fn snapshot_rapid_mark(world: &mut World, caster: Entity, target: Entity) -> f32 {
+    // SimC snapshots each target before the tick's missile travels. A mark
+    // earned later must not be consumed by that already-launched missile.
     let removed = auras::remove_auras(world, target, RemoveReason::Consumed, |aura| {
         aura.caster == caster && aura.spell_id == RAPID_MARK
     });
