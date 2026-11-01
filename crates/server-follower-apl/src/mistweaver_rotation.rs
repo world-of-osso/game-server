@@ -15,6 +15,7 @@ pub const SPELLS: &[(&str, u32, bool)] = &[
     ("revival", 115310, true),
     ("life_cocoon", 116849, false),
     ("invoke_chi_ji", 325197, true),
+    ("celestial_conduit", 443028, true),
     ("thunder_focus_tea", 116680, true),
     ("renewing_mist", 115151, false),
     ("enveloping_mist", 124682, false),
@@ -55,6 +56,7 @@ pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("default", "life_cocoon,if=target.health.pct<35"),
         ("default", "invoke_chi_ji,if=target.health.pct<90"),
+        ("default", "celestial_conduit,if=target.health.pct<90"),
         ("default", "revival,if=party.injured>=3"),
         (
             "default",

@@ -82,7 +82,13 @@ fn mistweaver_chiji_blackout_kick_heals_injured_party_members() {
         .iter()
         .find(|aura| aura.spell_id == 325197)
         .unwrap();
-    assert_eq!(aura.duration_ms, 25_000);
+    // 325197 lasts 25s; Gift of the Celestials 388212 effect 1 shortens it by 13s.
+    let duration = if crate::auras::has_aura(run.app.world(), healer, 388212) {
+        12_000
+    } else {
+        25_000
+    };
+    assert_eq!(aura.duration_ms, duration);
     let mut query = run.app.world_mut().query::<(&Npc, &UnitSummonedBy)>();
     assert!(
         query
@@ -233,6 +239,8 @@ fn mistweaver_way_of_the_crane_doubles_tiger_palm_and_heals_from_crane_kick_hits
     let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
     let healer = run.healer;
     let enemy = run.sources[0];
+    // Only the test's casts: the follower would otherwise channel heals on the injured party.
+    super::healer_simc_replay::hold(&mut run, healer);
     assert!(crate::auras::has_aura(run.app.world(), healer, 388779));
     for unit in run.slots {
         let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
@@ -266,15 +274,21 @@ fn mistweaver_way_of_the_crane_doubles_tiger_palm_and_heals_from_crane_kick_hits
     let kick = cast(&mut run, 101546);
     let hits: Vec<_> = kick
         .iter()
-        .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(107270))
+        .filter(|e| {
+            e.kind == CombatLogKind::Damage
+                && e.spell_id == Some(107270)
+                && e.source == Some(healer.to_bits())
+        })
         .collect();
     let heals: Vec<_> = kick
         .iter()
-        .filter(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(389325))
+        .filter(|e| e.kind == CombatLogKind::Heal && matches!(e.spell_id, Some(389325 | 389328)))
         .collect();
     assert!(!hits.is_empty());
     assert_eq!(heals.len(), hits.len(), "one heal per kick hit: {kick:?}");
     for (hit, heal) in hits.iter().zip(&heals) {
+        // 389328 is the critical-hit variant, as Ancient Teachings' 388025.
+        assert_eq!(heal.spell_id, Some(if hit.crit { 389328 } else { 389325 }));
         // 388779 s1 = 280% before healing-done modifiers; WCL deciles span 2.77-3.18.
         let ratio = heal.amount as f32 / hit.amount as f32;
         assert!(
@@ -291,11 +305,60 @@ fn mistweaver_way_of_the_crane_doubles_tiger_palm_and_heals_from_crane_kick_hits
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_celestial_conduit_pulses_heal_injured_allies_and_damage_enemies() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    let injured = [run.tank, run.slots[3]];
+    for unit in injured {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.2;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 443028, Some(healer), false)
+        .unwrap();
+    for _ in 0..120 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let healed: Vec<_> = events
+        .iter()
+        .filter(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(443039))
+        .filter_map(|e| e.target)
+        .collect();
+    for unit in injured {
+        let pulses = healed.iter().filter(|t| **t == unit.to_bits()).count();
+        assert!(
+            pulses >= 4,
+            "4s channel at 1s period: {pulses} pulses on {unit:?}"
+        );
+    }
+    assert!(
+        healed
+            .iter()
+            .all(|t| injured.iter().any(|unit| unit.to_bits() == *t)),
+        "only injured allies: {healed:?}"
+    );
+    assert!(events.iter().any(|e| e.kind == CombatLogKind::Damage
+        && e.spell_id == Some(443038)
+        && e.target == Some(run.sources[0].to_bits())));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_celestial_harmony_cocoons_party_when_chiji_is_invoked() {
     use shared::components::{Health, Npc, UnitSummonedBy};
 
     let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
     let healer = run.healer;
+    super::healer_simc_replay::hold(&mut run, healer);
+    // Settle equipped stats before reading the caster's health and versatility.
+    for _ in 0..3 {
+        run.app.update();
+    }
     assert!(crate::auras::has_aura(run.app.world(), healer, 343655));
     let world = run.app.world();
     let max = world.get::<Health>(healer).unwrap().max;
@@ -303,8 +366,13 @@ fn mistweaver_celestial_harmony_cocoons_party_when_chiji_is_invoked() {
         .get::<crate::stats::CharacterStats>(healer)
         .unwrap()
         .versatility_pct;
-    // DescriptionVariables 813: $newshield = caster max health * 406220 s2 (24%) * (1 + vers).
-    let expected = max * 0.24 * (1.0 + versatility / 100.0);
+    // DescriptionVariables 813: $newshield = caster max health * 406220 s2 * (1 + vers).
+    // s2 is 24%; selected Gift of the Celestials 388212 effect 4 lowers it by a flat
+    // 12 points through spell label 4551.
+    let percent = crate::spell_cast::scripts::script_effect_value(world, healer, 406220, 1);
+    let gift = crate::auras::has_aura(world, healer, 388212);
+    assert_eq!(percent, if gift { 12.0 } else { 24.0 });
+    let expected = max * percent / 100.0 * (1.0 + versatility / 100.0);
     // An untriggered cast runs the after-cast hooks a follower's own cast does.
     crate::spell_cast::creature_cast(run.app.world_mut(), healer, 325197, Some(healer), false)
         .unwrap();

@@ -327,6 +327,7 @@ register_modules! {
     soulcoiler_ritual: (1000, "modules/soulcoiler_ritual.rs"),
     midnight_tendril: (1000, "modules/midnight_tendril.rs"),
     mistweaver_ancient_teachings: (2700, "modules/mistweaver_ancient_teachings.rs"),
+    mistweaver_celestial_conduit: (2700, "modules/mistweaver_celestial_conduit.rs"),
     mistweaver_chiji: (2700, "modules/mistweaver_chiji.rs"),
     mistweaver_gust: (2700, "modules/mistweaver_gust.rs"),
     mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
