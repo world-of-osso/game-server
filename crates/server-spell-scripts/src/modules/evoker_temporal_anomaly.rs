@@ -1,4 +1,5 @@
-//! Temporal Anomaly 373861 shields the caster and allies with 373862.
+//! Temporal Anomaly 373861 shields the caster and allies with 373862 and
+//! applies Echo at s4% effectiveness.
 //! SimC76f8118 has no Temporal Anomaly, and 70448 client DB2 lacks its
 //! AreaTriggerCreateProperties 25294/34997, so the vortex's path is not modeled:
 //! its caster dummy (s2, five allies) shields the nearest living raid allies
@@ -6,7 +7,9 @@
 //! shields five allies in 59 of 95 casts, nearly all within 250 ms of the cast.
 //! Absorption past s2 targets is reduced in raids; that reduction is not modeled.
 use super::combat;
+use super::evoker_echo::{ECHO, REPLICATION_EFFECT, owned_echo};
 use bevy::prelude::*;
+use combat::auras::{AuraApplication, AuraSource};
 use combat::spell_cast::script_registry::{HitHook, SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::targets::{self, Relation};
@@ -15,6 +18,7 @@ use combat::spell_info::SpellStore;
 const ANOMALY: u32 = 373861;
 const SHIELD: u32 = 373862;
 const TARGET_COUNT_EFFECT: u8 = 1;
+const ECHO_EFFECTIVENESS_EFFECT: u8 = 3;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::EffectHit(effect_hit)];
 
@@ -34,5 +38,35 @@ fn shield_allies(world: &mut World, caster: Entity, _: Entity, depth: u8) {
         .expect("Temporal Anomaly requires its native shield 373862");
     for ally in targets::area_units(world, caster, center, range, Relation::Raid, count as u32) {
         combat::spell_cast::cast_triggered(world, caster, SHIELD, Some(ally), depth + 1);
+        apply_partial_echo(world, caster, ally);
     }
+}
+
+/// WCL hbJmL1xDC6qkrdcR fight 1: all five allies already holding Echo at an
+/// Anomaly cast kept it unchanged, so an existing Echo is not replaced.
+fn apply_partial_echo(world: &mut World, caster: Entity, ally: Entity) {
+    if owned_echo(world, caster, ally).is_some() {
+        return;
+    }
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target: ally,
+            spell_id: ECHO,
+            effect_mask: 1 << REPLICATION_EFFECT,
+            source: AuraSource::Cast,
+        },
+    );
+    let Some((instance, amount)) = owned_echo(world, caster, ally) else {
+        return;
+    };
+    let effectiveness = script_effect_value(world, caster, ANOMALY, ECHO_EFFECTIVENESS_EFFECT);
+    combat::auras::set_effect_amount(
+        world,
+        ally,
+        instance,
+        REPLICATION_EFFECT,
+        amount * effectiveness / 100.0,
+    );
 }

@@ -1,5 +1,122 @@
 use std::path::Path;
 
+fn echo_percent(
+    world: &bevy::prelude::World,
+    caster: bevy::prelude::Entity,
+    unit: bevy::prelude::Entity,
+) -> Option<f32> {
+    world
+        .get::<crate::auras::ActiveAuras>(unit)?
+        .iter()
+        .find(|aura| aura.spell_id == 364343 && aura.caster == caster)?
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .map(|effect| effect.amount)
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn echo_replicates_living_flame_on_every_holder_including_anomaly_echoes() {
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(1468, 90, 1);
+    let healer = run.healer;
+    super::healer_simc_replay::hold(&mut run, healer);
+    let [_, _, full_holder, primary, _] = run.slots;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 364343, Some(full_holder), 1);
+    let full = echo_percent(run.app.world(), healer, full_holder).expect("Echo applied");
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 373861, None, false)
+        .expect("Temporal Anomaly cast starts");
+    for _ in 0..60 {
+        run.app.update();
+    }
+    // Anomaly keeps an existing Echo and adds a 373861 s4 (30%) Echo elsewhere.
+    assert_eq!(
+        echo_percent(run.app.world(), healer, full_holder),
+        Some(full)
+    );
+    let partial = full * 0.3;
+    for unit in run.slots.into_iter().filter(|&unit| unit != full_holder) {
+        let percent = echo_percent(run.app.world(), healer, unit)
+            .unwrap_or_else(|| panic!("{unit:?} has no Anomaly Echo"));
+        assert!((percent - partial).abs() < 0.01, "{percent} vs {partial}");
+    }
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 361469, Some(primary), false)
+        .expect("Living Flame cast starts");
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let heals: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(361509)
+                && event.source == Some(healer.to_bits())
+                && !event.periodic
+        })
+        .map(|event| (event.target.unwrap(), event.amount as f32, event.crit))
+        .collect();
+    assert!(heals.iter().all(|heal| !heal.2), "{heals:?}");
+    let on = |unit: bevy::prelude::Entity| -> Vec<f32> {
+        heals
+            .iter()
+            .filter(|heal| heal.0 == unit.to_bits())
+            .map(|heal| heal.1)
+            .collect()
+    };
+    // Full-health targets: raw amounts share one mastery and differ only by Echo.
+    let mut on_primary = on(primary);
+    on_primary.sort_by(f32::total_cmp);
+    assert_eq!(
+        on_primary.len(),
+        2,
+        "root heal and its Echo copy: {heals:?}"
+    );
+    let root = on_primary[1];
+    assert!(
+        (on_primary[0] / root - partial / 100.0).abs() < 0.01,
+        "{heals:?}"
+    );
+    let full_copy = on(full_holder);
+    assert_eq!(full_copy.len(), 1, "{heals:?}");
+    assert!(
+        (full_copy[0] / root - full / 100.0).abs() < 0.01,
+        "{heals:?}"
+    );
+    for unit in run.slots {
+        assert_eq!(
+            echo_percent(run.app.world(), healer, unit),
+            None,
+            "Echo consumed"
+        );
+        if unit != primary && unit != full_holder {
+            assert_eq!(
+                on(unit).len(),
+                1,
+                "Anomaly Echo copy on {unit:?}: {heals:?}"
+            );
+        }
+    }
+}
+
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn temporal_anomaly_shields_the_party_with_its_description_amount() {
