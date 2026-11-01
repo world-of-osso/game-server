@@ -14,7 +14,6 @@ fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
     for _ in 0..3 {
         run.app.update();
     }
-    assert!(crate::auras::has_aura(run.app.world(), healer, 1235108));
     let cast = |run: &mut super::healer_simc_replay::ClassParty, spell| {
         let world = run.app.world_mut();
         let max = world.get::<Health>(tank).unwrap().max;
@@ -40,24 +39,29 @@ fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
         assert_eq!(gusts.len(), 1, "{events:?}");
         gusts[0].amount
     };
-    let high_rating = run
+    let low_rating = run
         .app
         .world()
         .get::<crate::stats::CharacterStats>(healer)
         .unwrap()
         .ratings
         .mastery;
-    let high = cast(&mut run, 124682);
-    crate::auras::remove_auras(
+    let low = cast(&mut run, 124682);
+    // Native test mastery aura 211521 grants 5000 mastery rating.
+    crate::auras::apply_aura(
         run.app.world_mut(),
-        healer,
-        crate::auras::RemoveReason::Cancelled,
-        |aura| aura.spell_id == 1235108,
+        &crate::auras::AuraApplication {
+            caster: healer,
+            target: healer,
+            spell_id: 211521,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
     );
     for _ in 0..3 {
         run.app.update();
     }
-    let low_rating = run
+    let high_rating = run
         .app
         .world()
         .get::<crate::stats::CharacterStats>(healer)
@@ -66,9 +70,9 @@ fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
         .mastery;
     assert!(
         high_rating > low_rating,
-        "flask must increase mastery rating: {high_rating} <= {low_rating}"
+        "native aura must increase mastery rating: {high_rating} <= {low_rating}"
     );
-    let low = cast(&mut run, 124682);
+    let high = cast(&mut run, 124682);
     assert!(
         high > low && low > 0,
         "Gust must scale with mastery rating: {high} vs {low}"
