@@ -48,6 +48,7 @@ mod arms_missing_relationship_tests;
 mod arms_reap_cleave_tests;
 mod arms_reap_tests;
 mod arms_sweeping_tests;
+mod arms_wild_strikes_follower_tests;
 mod arms_tests;
 mod assassination_blindside_follower_tests;
 mod assassination_doomblade_tests;
