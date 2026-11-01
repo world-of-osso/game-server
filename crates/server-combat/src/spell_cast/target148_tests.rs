@@ -205,7 +205,7 @@ fn native_target148_force_location_steps_back_from_deep_drop() {
     h.app.insert_resource(ground);
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 0.0,
-        y: 0.0,
+        y: 0.01,
         z: 0.0,
     });
     h.app.world_mut().entity_mut(h.caster).insert(Position {
