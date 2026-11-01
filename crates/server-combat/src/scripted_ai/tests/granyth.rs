@@ -64,6 +64,8 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
                 .expect("native Granyth area cast");
             h.advance(5.0);
             assert_eq!(completed_casts(&h, boss, spell), 1);
+            let player = h.player();
+            let selection = super::describe_enemy_selection(&mut h, boss, player);
             assert!(
                 h.inbox(0).log.iter().any(|event| {
                     event.kind == CombatLogKind::Damage
@@ -72,9 +74,7 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
                         && event.source == Some(boss.to_bits())
                         && event.target == Some(h.player().to_bits())
                 }),
-                "native{spell} projected{difficulty}: boss_flags={:?}, player={:?}, receipts={:?}, events={:?}",
-                h.app.world().get::<UnitFlags>(boss).map(|flags| flags.0),
-                h.player().to_bits(),
+                "native{spell} projected{difficulty}: {selection}, receipts={:?}, events={:?}",
                 h.inbox(0)
                     .spell_gos
                     .iter()
