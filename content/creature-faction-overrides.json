@@ -1,0 +1,12 @@
+[
+  {
+    "entry": 196116,
+    "faction": 16,
+    "provenance": "INFERRED: TC 15e0ed76 formation 9001890 contains Crystal Fury spawn 9001878 and its Crystal Thrasher leader 9001890, whose template faction is 16; the Crystal Fury template's faction 0 is invalid.",
+    "evidence": [
+      "Warcraft Logs 3fZmXV6TjPhCLwqg fight 5: Crystal Fury is an enemy NPC",
+      "Warcraft Logs KZRC6PmWrHfjT91M fight 87: Crystal Fury is an enemy NPC"
+    ],
+    "retire_when": "A sniff-backed TDB or DB2 row supplies Crystal Fury's actual faction."
+  }
+]

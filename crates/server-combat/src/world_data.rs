@@ -47,6 +47,39 @@ fn retail_passive_creatures() -> &'static HashSet<u32> {
     })
 }
 
+fn retail_faction_overrides() -> &'static HashMap<u32, u16> {
+    #[derive(serde::Deserialize)]
+    struct Override {
+        entry: u32,
+        faction: u16,
+        provenance: String,
+        evidence: Vec<String>,
+        retire_when: String,
+    }
+    static ENTRIES: std::sync::OnceLock<HashMap<u32, u16>> = std::sync::OnceLock::new();
+    ENTRIES.get_or_init(|| {
+        let overrides: Vec<Override> = serde_json::from_str(include_str!(
+            "../../../content/creature-faction-overrides.json"
+        ))
+        .expect("valid creature faction overrides");
+        let mut entries = HashMap::new();
+        for item in overrides {
+            assert!(
+                !item.provenance.is_empty()
+                    && !item.evidence.is_empty()
+                    && !item.retire_when.is_empty(),
+                "creature faction override needs provenance, evidence and retirement condition"
+            );
+            assert!(
+                entries.insert(item.entry, item.faction).is_none(),
+                "duplicate creature faction override {}",
+                item.entry
+            );
+        }
+        entries
+    })
+}
+
 use crate::creature_aggro::AggroMode;
 use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
@@ -689,7 +722,10 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         entry,
         min_level: row.get::<_, i64>(1)? as u8,
         max_level: row.get::<_, i64>(2)? as u8,
-        faction: row.get::<_, i64>(3)? as u16,
+        faction: retail_faction_overrides()
+            .get(&entry)
+            .copied()
+            .unwrap_or(row.get::<_, i64>(3)? as u16),
         npc_flags: row.get::<_, i64>(4)? as u64,
         speed_walk: row.get(5)?,
         health_modifier,

@@ -697,7 +697,8 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
     let rune = run.actors[&29001892];
-    let hostile = run.actors[&29001895];
+    // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
+    let hostile = run.actors[&29001878];
     let location = *run.app.world().get::<Position>(rune).unwrap();
     run.app.world_mut().entity_mut(owner).insert(location);
     run.app.world_mut().entity_mut(hostile).insert(Position {
