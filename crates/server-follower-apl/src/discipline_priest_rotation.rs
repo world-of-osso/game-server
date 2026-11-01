@@ -302,6 +302,33 @@ impl Discipline {
         }
         // INFERRED: 20 key-17 Disc actors had a 32.92% median post-hit
         // health at recipient-confirmed saves; see healer-tank-replay/256.md.
+        if critical
+            && self.select(
+                world,
+                healer,
+                lowest,
+                injured,
+                active_atonements,
+                "shield",
+                &["void_shield"],
+            )?
+        {
+            return Ok(());
+        }
+        if critical
+            && injured >= 3
+            && self.select(
+                world,
+                healer,
+                lowest,
+                injured,
+                active_atonements,
+                "radiance_fallback",
+                &["radiance"],
+            )?
+        {
+            return Ok(());
+        }
         if self.select(
             world,
             healer,
