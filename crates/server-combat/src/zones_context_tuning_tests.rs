@@ -175,7 +175,7 @@ fn herald_context_authored_yala_keeps_provenance_selected_fixed_stats() {
     assert!(world.get::<ScaledStats>(actor).is_none());
 }
 
-pub(super) fn sourced_nazan_fixture() -> WorldData {
+pub(crate) fn sourced_nazan_fixture() -> WorldData {
     let source = crate::test_data::world_db_path();
     let connection = Connection::open_with_flags(source, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     // Temporary views project actual TDB base/difficulty fields; the source stays read-only.
