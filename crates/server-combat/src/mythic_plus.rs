@@ -480,6 +480,19 @@ pub(crate) fn record_boss(world: &mut World, map: InMap, encounter: u32) {
         }
     }
 }
+pub(crate) fn record_follower_death(world: &mut World, follower: Entity) {
+    if world.get::<crate::followers::Follower>(follower).is_none() {
+        return;
+    }
+    let member = crate::followers::Follower::member_id(follower);
+    let grouped = world
+        .get_resource::<crate::group::GroupRegistry>()
+        .is_some_and(|groups| groups.group_id_of(member).is_some());
+    if grouped {
+        record_death(world, follower);
+    }
+}
+
 pub(crate) fn record_death(world: &mut World, player: Entity) {
     let Some(map) = world.get::<InMap>(player).copied() else {
         return;
@@ -517,6 +530,112 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn follower_lethal_damage_counts_once_in_running_challenge() {
+        use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+        use shared::group::GroupRole;
+
+        let (mut h, follower, _) =
+            crate::followers::profile_behavior_tests::spawn_profile_fixture_with_plugins(
+                209057,
+                |_| {},
+            );
+        let map = InMap {
+            map_id: 2515,
+            instance_id: 7,
+        };
+        for entity in [h.caster, h.npc, follower] {
+            h.app.world_mut().entity_mut(entity).insert(map);
+        }
+        let leader = 42;
+        let mut registry = GroupRegistry::default();
+        let mut online = OnlineView::new();
+        let member = |entity: Entity, name: &str| OnlineMember {
+            entity: entity.to_bits(),
+            name: name.into(),
+            class: 2,
+            level: 70,
+            portrait: Default::default(),
+            dungeon_difficulty: 23,
+            raid_difficulty: Default::default(),
+        };
+        online.insert(leader, member(h.caster, "owner"));
+        let roles = [
+            GroupRole::Tank,
+            GroupRole::Healer,
+            GroupRole::Dps,
+            GroupRole::Dps,
+        ];
+        let mut companions = Vec::new();
+        for (index, role) in roles.into_iter().enumerate() {
+            let unit = if index == 0 {
+                follower
+            } else {
+                h.app.world_mut().spawn_empty().id()
+            };
+            let id = crate::followers::Follower::member_id(unit);
+            online.insert(id, member(unit, "companion"));
+            companions.push((id, role));
+        }
+        registry
+            .create_companion_party(leader, GroupRole::Dps, &companions, &online)
+            .unwrap();
+        h.app.insert_resource(registry);
+        let definition = ChallengeDefinition {
+            challenge_id: 401,
+            map_id: map.map_id,
+            name: "test".into(),
+            timers_ms: [100_000, 80_000, 60_000],
+            forces_required: 10,
+            creature_weights: Default::default(),
+            scenario_event_weights: Default::default(),
+            bosses: vec![],
+        };
+        let key = KeystoneInfo {
+            item_guid: 1,
+            item_id: KEYSTONE_ITEM,
+            challenge_id: 401,
+            level: 2,
+            affixes: vec![],
+        };
+        let config = UnsourcedChallengeConfig {
+            unsourced_death_penalty_ms: 5000,
+            ..Default::default()
+        };
+        let mut run = Run::new(1, map.instance_id, key, definition, config);
+        run.start(0).unwrap();
+        let mut challenges = Challenges::default();
+        challenges.runs.insert(
+            map,
+            Active {
+                owner: leader,
+                font: h.caster,
+                run,
+                settled: false,
+            },
+        );
+        h.app.insert_resource(challenges);
+        // A disconnected owner retains its companion roster until the copy expires.
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<InWorld>();
+        h.app
+            .world_mut()
+            .get_mut::<Health>(follower)
+            .unwrap()
+            .current = 1.0;
+        let attacker = h.npc;
+        crate::combat::deal_direct_damage(h.app.world_mut(), attacker, follower, 1000.0);
+        h.advance(3);
+        let snapshot = &h.app.world().resource::<Challenges>().runs[&map]
+            .run
+            .snapshot;
+        assert_eq!(snapshot.deaths, 1);
+        assert_eq!(snapshot.time_lost_ms, 5000);
+    }
+
     #[test]
     fn achievements_criteria_mythic_completion_credits_real_timed_map_once_after_settlement() {
         let path = std::env::var("MYTHIC_PLUS_WORLD_COPY").expect("private imported copy");

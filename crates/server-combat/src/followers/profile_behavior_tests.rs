@@ -11,7 +11,7 @@ pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
     (h, unit, profile)
 }
 
-pub(super) fn spawn_profile_fixture_with_plugins(
+pub(crate) fn spawn_profile_fixture_with_plugins(
     entry: u32,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity, Profile) {
