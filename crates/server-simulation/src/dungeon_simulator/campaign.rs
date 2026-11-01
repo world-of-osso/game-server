@@ -127,18 +127,65 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
             )
         })
         .collect();
-    run.app.world_mut().entity_mut(owner).insert(source);
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for &unit in &members {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
-        Ok(5)
+        Ok(1)
     );
-    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+    for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
         let world = run.app.world();
-        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
         assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
         assert_eq!(world.get::<Health>(unit).unwrap().current, health);
         assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
     }
+    for &unit in &run.party.members {
+        assert_eq!(
+            run.app.world().get::<Position>(unit),
+            Some(&source),
+            "owner interaction must not teleport followers"
+        );
+    }
+    let mut arrived = std::collections::HashSet::new();
+    for _ in 0..2000 {
+        run.app.update();
+        for (&unit, &(copy, _, _)) in members.iter().zip(&before) {
+            let world = run.app.world();
+            let position = world.get::<Position>(unit).unwrap();
+            if Vec3::new(position.x, position.y, position.z)
+                .distance(Vec3::new(endpoint.x, endpoint.y, endpoint.z))
+                < 3.0
+            {
+                arrived.insert(unit);
+            }
+            assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        }
+        if arrived.len() == members.len() {
+            break;
+        }
+    }
+    assert_eq!(
+        arrived.len(),
+        members.len(),
+        "each follower must independently use the book"
+    );
 }
 
 #[test]
@@ -983,19 +1030,12 @@ fn released_leader_rejoins_party_through_azure_book() {
             break;
         }
         run.app.update();
-        if !run
-            .report
-            .pulls
-            .iter()
-            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
-        {
-            for (member, position) in &positions_before_return {
-                assert_eq!(
-                    *run.app.world().get::<Position>(*member).unwrap(),
-                    *position,
-                    "living followers must hold until the leader uses the book"
-                );
-            }
+        for (member, position) in &positions_before_return {
+            assert_eq!(
+                *run.app.world().get::<Position>(*member).unwrap(),
+                *position,
+                "living followers must hold throughout the leader's return"
+            );
         }
     }
     assert!(
