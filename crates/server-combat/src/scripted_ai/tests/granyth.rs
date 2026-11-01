@@ -72,7 +72,19 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
                         && event.source == Some(boss.to_bits())
                         && event.target == Some(h.player().to_bits())
                 }),
-                "native{spell} projected{difficulty}"
+                "native{spell} projected{difficulty}: boss_flags={:?}, player={:?}, receipts={:?}, events={:?}",
+                h.app.world().get::<UnitFlags>(boss).map(|flags| flags.0),
+                h.player().to_bits(),
+                h.inbox(0)
+                    .spell_gos
+                    .iter()
+                    .filter(|go| go.spell_id == spell)
+                    .collect::<Vec<_>>(),
+                h.inbox(0)
+                    .log
+                    .iter()
+                    .filter(|event| event.spell_id == Some(spell))
+                    .collect::<Vec<_>>()
             );
             assert!(
                 h.inbox(1)
