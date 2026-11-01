@@ -238,11 +238,8 @@ fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
     let copy = create_open_follower_copy(&mut app, 2515).unwrap();
     let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
     app.world_mut()
-        .get_mut::<crate::networking::CombatTarget>(actor)
-        .unwrap()
-        .0 = Some(target);
-    app.world_mut()
         .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(target)))
         .remove::<crate::followers::Follower>();
     crate::spell_cast::creature_cast(app.world_mut(), actor, 1276672, Some(target), false).unwrap();
     for _ in 0..40 {
