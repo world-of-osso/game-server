@@ -3545,6 +3545,68 @@ fn neltharus_player_release_revives_inside_the_same_instance() {
 }
 
 #[test]
+fn windrunner_stuck_escape_uses_its_imported_entrance_in_the_same_instance() {
+    let store = map_store().expect("world database").clone();
+    let entrance = store
+        .dungeon_entrance_location(2805)
+        .expect("Windrunner entrance");
+    assert!(close(
+        entrance.position,
+        Vec3::new(5216.55, -3163.16, 161.50517)
+    ));
+    let mut h = harness_with(|app| {
+        app.add_plugins(crate::death::DeathPlugin);
+    })
+    .unwrap();
+    let copy = h
+        .app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .create_map(&store, 2805, entrant_at(30, 205), at(0.0))
+        .unwrap()
+        .map;
+    let player = h.spawn_at_level(30, 90, copy, Vec3::new(5210.789, -3038.346, 124.373));
+    h.app
+        .world_mut()
+        .resource_mut::<InstanceManager>()
+        .add_player(copy, player.player);
+    h.app
+        .world_mut()
+        .entity_mut(player.player)
+        .insert(DungeonDifficulty(205));
+    h.app
+        .world_mut()
+        .entity_mut(player.connection)
+        .insert(pair::<UseStuckEscape>());
+    let epoch = h
+        .app
+        .world()
+        .get::<MovementControl>(player.player)
+        .unwrap()
+        .epoch;
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<UseStuckEscape>>(player.connection)
+        .unwrap()
+        .send::<DeathChannel>(UseStuckEscape);
+    h.advance(3);
+    assert_eq!(h.map_of(&player), Some(copy));
+    assert!(close(h.position(&player), entrance.position));
+    assert_eq!(
+        h.app.world().get::<Health>(player.player).unwrap().current,
+        100.0
+    );
+    assert_ne!(
+        h.app
+            .world()
+            .get::<MovementControl>(player.player)
+            .unwrap()
+            .epoch,
+        epoch
+    );
+}
+
+#[test]
 fn voidscar_release_uses_imported_entrance_when_graveyard_and_exit_are_missing() {
     let store = map_store().expect("world database").clone();
     let entrance = store

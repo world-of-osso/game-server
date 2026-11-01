@@ -607,8 +607,10 @@ fn process_stuck_escape_requests(
         &InMap,
     )>,
     state: Res<DeathServerState>,
+    maps: Option<Res<MapStore>>,
     dirty_queue: Option<Res<InterestDirtyQueue>>,
     mut senders: Query<&mut MessageSender<DeathStateUpdate>>,
+    mut commands: Commands,
 ) {
     for (conn_entity, link, mut receiver) in &mut receivers {
         for _ in receiver.receive() {
@@ -621,15 +623,25 @@ fn process_stuck_escape_requests(
                 );
                 continue;
             };
-            match use_stuck_escape(
-                &mut position,
-                death_state,
-                player.race,
-                map.map_id,
-                &state.graveyards,
-            ) {
+            let dungeon = maps
+                .as_deref()
+                .and_then(|maps| maps.map(map.map_id))
+                .filter(|entry| entry.is_dungeon());
+            let result = match (dungeon, maps.as_deref()) {
+                (Some(entry), Some(maps)) => {
+                    stuck_escape_in_dungeon(link.0, death_state, entry, maps, &mut commands)
+                }
+                _ => use_stuck_escape(
+                    &mut position,
+                    death_state,
+                    player.race,
+                    map.map_id,
+                    &state.graveyards,
+                )
+                .inspect(|_| teleported(dirty_queue.as_deref(), link.0, &mut control)),
+            };
+            match result {
                 Ok(message) => {
-                    teleported(dirty_queue.as_deref(), link.0, &mut control);
                     send_update(
                         conn_entity,
                         &position,
@@ -652,6 +664,23 @@ fn process_stuck_escape_requests(
             }
         }
     }
+}
+
+fn stuck_escape_in_dungeon(
+    player: Entity,
+    death_state: Option<&PlayerDeathState>,
+    map: &crate::maps::store::MapEntry,
+    maps: &MapStore,
+    commands: &mut Commands,
+) -> Result<String, String> {
+    validate_stuck_escape(death_state)?;
+    let entrance = maps
+        .dungeon_entrance_location(map.id)
+        .ok_or_else(|| "unable to find a dungeon entrance".to_string())?;
+    commands.queue(move |world: &mut World| {
+        crate::maps::teleport_to(world, player, entrance, Default::default());
+    });
+    Ok("stuck escape used".into())
 }
 
 fn build_detected_player_death_state(
@@ -727,12 +756,7 @@ fn use_stuck_escape(
     map_id: u32,
     graveyards: &GraveyardRegistry,
 ) -> Result<String, String> {
-    if death_state
-        .as_ref()
-        .is_some_and(|state| state.state != DeathState::Alive)
-    {
-        return Err("stuck escape is unavailable while dead".into());
-    }
+    validate_stuck_escape(death_state)?;
     let graveyard = lookup_graveyard(
         graveyards,
         map_id as u16,
@@ -746,6 +770,13 @@ fn use_stuck_escape(
     position.y = graveyard.y;
     position.z = graveyard.z;
     Ok("stuck escape used".into())
+}
+
+fn validate_stuck_escape(death_state: Option<&PlayerDeathState>) -> Result<(), String> {
+    if death_state.is_some_and(|state| state.state != DeathState::Alive) {
+        return Err("stuck escape is unavailable while dead".into());
+    }
+    Ok(())
 }
 
 fn resurrect_player_at_corpse(
