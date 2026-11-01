@@ -837,6 +837,7 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 ### Demonology literal execution and alternative Tyrant
 
+- A Core-powered Demonbolt applies the selected native Doom to its actual target if absent. Each Hand of Gul'dan shortens owned Doom by the native effect1 time; expiration causes native Doom damage. Source: SimC 76f8118 `sc_warlock_actions.cpp:2847–2853,2975–2976`, `sc_warlock.cpp:53–59`.
 - Selected Mark of F'harg gives each actual Charhound its native Infernal Presence aura; its periodic damage belongs to that pet and ends with its lifetime. Source: SimC 76f8118 `sc_warlock_pets.cpp:1430–1485`.
 - The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. A Demonbolt that consumes Demonic Core reduces the running Doomguard cooldown by native1276672 effect2 seconds; an ordinary hardcast does not. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`, `sc_warlock_actions.cpp:2960–2961`.
 
