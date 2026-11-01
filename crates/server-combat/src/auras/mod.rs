@@ -1412,6 +1412,15 @@ pub fn set_owned_stacks(
     else {
         return false;
     };
+    if aura.spell_id == 1263382 && std::env::var_os("BALANCE_TRACE_STARS").is_some() {
+        eprintln!(
+            "ASC_STARS set {} -> {} charges {}\n{}",
+            aura.stacks,
+            stacks,
+            aura.charges,
+            std::backtrace::Backtrace::force_capture()
+        );
+    }
     aura.stacks = stacks.min(aura.max_stacks.max(1));
     let source = aura.clone();
     auras.dirty = true;
@@ -2112,6 +2121,15 @@ pub fn remove_auras(
         return removed;
     }
     for aura in &removed {
+        if aura.spell_id == 1263382 && std::env::var_os("BALANCE_TRACE_STARS").is_some() {
+            eprintln!(
+                "ASC_STARS remove stacks {} charges {} reason {:?}\n{}",
+                aura.stacks,
+                aura.charges,
+                reason,
+                std::backtrace::Backtrace::force_capture()
+            );
+        }
         debug!("Aura {} removed from {unit}: {reason:?}", aura.spell_id);
         announce_removed(world, unit, aura, reason);
     }
@@ -2256,6 +2274,14 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(aura) = auras.get_mut(instance_id) else {
         return;
     };
+    if aura.spell_id == 1263382 && std::env::var_os("BALANCE_TRACE_STARS").is_some() {
+        eprintln!(
+            "ASC_STARS charge stacks {} charges {}\n{}",
+            aura.stacks,
+            aura.charges,
+            std::backtrace::Backtrace::force_capture()
+        );
+    }
     aura.charges = aura.charges.saturating_sub(1);
     if aura.charges == 0 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
@@ -2272,6 +2298,14 @@ pub fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     let Some(aura) = auras.get_mut(instance_id) else {
         return;
     };
+    if aura.spell_id == 1263382 && std::env::var_os("BALANCE_TRACE_STARS").is_some() {
+        eprintln!(
+            "ASC_STARS spend stack {} charges {}\n{}",
+            aura.stacks,
+            aura.charges,
+            std::backtrace::Backtrace::force_capture()
+        );
+    }
     if aura.stacks <= 1 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
     } else {
