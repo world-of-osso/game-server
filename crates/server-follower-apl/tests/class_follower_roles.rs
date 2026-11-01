@@ -817,11 +817,34 @@ fn class_healer_heals_the_most_injured_party_member_before_damage() {
         .get::<shared::components::Mana>(pull.follower)
         .unwrap()
         .current;
+    // Halo heals and damages in one area cast; the APL's heal priority is its
+    // targeted heals and its separate damage list.
+    let table = |names: &[&str]| {
+        pull.resolved(
+            server_follower_apl::holy_priest_rotation::SPELLS
+                .iter()
+                .filter(|(name, _, _)| names.contains(name))
+                .map(|&(_, spell, _)| spell),
+        )
+    };
+    let targeted_heals = table(&[
+        "guardian_spirit",
+        "serenity",
+        "prayer_of_mending",
+        "renew",
+        "flash_heal",
+        "heal",
+    ]);
+    let damage = table(&["holy_fire", "smite"]);
     let healer = Some(pull.follower.to_bits());
     let first_heal = |pull: &Pull| {
-        pull.events()
-            .iter()
-            .position(|event| event.source == healer && event.kind == CombatLogKind::Heal)
+        pull.events().iter().position(|event| {
+            event.source == healer
+                && event.kind == CombatLogKind::CastSuccess
+                && event
+                    .spell_id
+                    .is_some_and(|spell| targeted_heals.contains(&spell))
+        })
     };
     for _ in 0..FRAMES {
         if first_heal(&pull).is_some() {
@@ -831,17 +854,23 @@ fn class_healer_heals_the_most_injured_party_member_before_damage() {
         server_follower_apl::drive_followers(pull.harness.app.world_mut());
         pull.harness.app.update();
     }
-    let first_heal = first_heal(&pull).expect("Holy follower must heal an injured party member");
+    let first_heal = first_heal(&pull).expect("Holy follower must cast a targeted APL heal");
     assert_eq!(
         pull.events()[first_heal].target,
         Some(ally.to_bits()),
         "Holy follower must heal the most injured ally first"
     );
+    let early_damage: Vec<_> = pull.events()[..first_heal]
+        .iter()
+        .filter(|event| {
+            event.source == healer
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id.is_some_and(|spell| damage.contains(&spell))
+        })
+        .collect();
     assert!(
-        !pull.events()[..first_heal]
-            .iter()
-            .any(|event| event.source == healer && event.kind == CombatLogKind::Damage),
-        "Holy follower must heal before damaging while the ally attacks"
+        early_damage.is_empty(),
+        "Holy damage list ran while a heal was due: {early_damage:?}"
     );
     assert!(
         pull.harness
