@@ -165,6 +165,17 @@ impl TankScenario {
                                     | crate::melee::MeleeOutcome::CritBlock
                             ),
                         );
+                    } else if std::env::var_os("FOLLOWER_DPS_EXPECTED_AVOIDANCE").is_some() {
+                        if table.crit != 0.0 {
+                            return Err("EXPECTED_SWING_CRIT_UNSUPPORTED".into());
+                        }
+                        crate::combat::replay_expected_healer_hit(
+                            world,
+                            self.source,
+                            self.tank,
+                            &recorded,
+                            table.expected_landed(),
+                        )?;
                     } else {
                         crate::combat::replay_healer_hit(world, self.source, self.tank, &recorded)?;
                     }
