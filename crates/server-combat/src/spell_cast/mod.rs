@@ -1353,8 +1353,19 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     crate::followers::pull_history::record_event(world, &event);
     crate::followers::live_facts::record_event(world, &event);
     #[cfg(any(test, feature = "test-support"))]
-    if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {
-        observed.0.push(event.clone());
+    if world.contains_resource::<test_harness::ObservedCombatEvents>() {
+        let mut captured = event.clone();
+        if event.kind == CombatLogKind::Death
+            && let Some(target) = event.target.and_then(Entity::try_from_bits)
+            && let Ok(mut target) = world.get_entity_mut(target)
+            && let Some(cause) = target.take::<test_harness::ObservedLethalSpell>()
+        {
+            captured.spell_id = Some(cause.0);
+        }
+        world
+            .resource_mut::<test_harness::ObservedCombatEvents>()
+            .0
+            .push(captured);
     }
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);

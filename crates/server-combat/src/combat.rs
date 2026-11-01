@@ -3020,6 +3020,10 @@ pub(crate) fn deal_health_damage(
     if !commit.lethal {
         return;
     }
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(spell) = spell_id {
+        crate::spell_cast::test_harness::capture_lethal_spell(world, victim, spell);
+    }
     world.entity_mut(victim).insert(KillingBlow(Some(attacker)));
     if world.get::<Npc>(victim).is_some() {
         mark_npc_dead_world(world, victim);

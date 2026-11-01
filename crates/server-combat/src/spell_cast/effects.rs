@@ -247,6 +247,13 @@ pub(super) fn retain_threat_level_targets(
 /// TC EffectInstaKill hit-target branch. The existing Unit::Kill path handles
 /// death/AI/credit once; instakill packet details and player CHEAT_GOD are unmodelled.
 fn instakill(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
+    #[cfg(any(test, feature = "test-support"))]
+    if world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        super::test_harness::capture_lethal_spell(world, target, ctx.spell.id);
+    }
     crate::combat::kill_unit(world, ctx.caster, target);
 }
 
@@ -2486,6 +2493,8 @@ fn deal_source_damage_and_report(
     }
     crate::scripted_ai::health_threshold::complete_crossing(world, target, before, incoming_loss);
     if commit.lethal {
+        #[cfg(any(test, feature = "test-support"))]
+        super::test_harness::capture_lethal_spell(world, target, ctx.spell.id);
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
     let effective = (amount - overkill).max(0.0);
