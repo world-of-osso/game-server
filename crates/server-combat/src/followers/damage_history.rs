@@ -67,6 +67,39 @@ fn effective_health_loss(world: &World, target: Entity, event: &CombatLogEvent) 
     crate::level_scaling::health_loss(&source, &target, amount)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn records_effective_damage_from_the_combat_log() {
+        let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[], 1).unwrap();
+        let event = CombatLogEvent {
+            kind: CombatLogKind::Damage,
+            source: None,
+            target: Some(h.caster.to_bits()),
+            amount: 125,
+            overflow: 25,
+            spell_id: None,
+            school_mask: 1,
+            absorbed: 0,
+            resisted: 0,
+            blocked: 0,
+            crit: false,
+            glancing: false,
+            periodic: false,
+            extra_spell_id: None,
+            timestamp_unix_ms: 0,
+        };
+        crate::followers::pull_history::record_event(h.app.world_mut(), &event);
+        let world = h.app.world();
+        assert_eq!(
+            incoming_rate(world, h.caster, crate::auras::aura_now(world)),
+            100.0
+        );
+    }
+}
+
 pub(super) fn incoming_rate(world: &World, target: Entity, now: f64) -> f32 {
     let Some(history) = world.get::<IncomingDamage>(target) else {
         return 0.0;
