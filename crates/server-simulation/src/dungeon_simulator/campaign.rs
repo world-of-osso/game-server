@@ -643,6 +643,156 @@ fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
     );
 }
 
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_death_time_starts_after_native_countdown() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    for _ in 0..240 {
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    let attacker = *run.actors.values().next().unwrap();
+    crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
+    run.app.update();
+    run.keystone
+        .as_mut()
+        .unwrap()
+        .update(run.app.world_mut())
+        .unwrap();
+    let state = run.keystone.take().unwrap();
+    let record = state
+        .finish(
+            run.app.world(),
+            1,
+            options,
+            "blocked".into(),
+            "test".into(),
+            serde_json::Value::Null,
+        )
+        .unwrap();
+    assert_eq!(record.deaths.len(), 1);
+    let death = record.deaths[0].elapsed_ms;
+    assert!((1_500..3_000).contains(&death), "death elapsed {death}");
+    assert!(record.outcome.elapsed_ms.unwrap().abs_diff(death) <= 1000);
+}
+
+#[test]
+#[ignore = "requires extracted Azure Vault follower graph and native navigation"]
+fn released_leader_rejoins_party_through_azure_book() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let book = run.actors[&29001868];
+    let position = *run.app.world().get::<Position>(book).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(position);
+    let transport = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.source_guid == 29001868)
+        .unwrap()
+        .clone();
+    server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
+        .unwrap();
+    super::movement::forget_party_travel(run.app.world_mut(), owner);
+    let cleared: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for actor in cleared {
+        run.app.world_mut().despawn(actor);
+    }
+    crate::combat::kill_unit(run.app.world_mut(), owner, owner);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    run.control().unwrap();
+    assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    let positions_before_return: Vec<_> = run
+        .party
+        .members
+        .iter()
+        .map(|member| (*member, *run.app.world().get::<Position>(*member).unwrap()))
+        .collect();
+    let mut reunited = false;
+    for _ in 0..7000 {
+        assert!(
+            crate::spell_cast::targets::is_alive(run.app.world(), owner),
+            "leader died again while returning at {:?}",
+            run.app.world().get::<Position>(owner)
+        );
+        if !run.return_to_party().unwrap() {
+            reunited = true;
+            break;
+        }
+        run.app.update();
+        if !run
+            .report
+            .pulls
+            .iter()
+            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
+        {
+            for (member, position) in &positions_before_return {
+                assert_eq!(
+                    *run.app.world().get::<Position>(*member).unwrap(),
+                    *position,
+                    "living followers must hold until the leader uses the book"
+                );
+            }
+        }
+    }
+    assert!(
+        reunited,
+        "released leader did not rejoin the tank: owner={:?}, tank={:?}, intent={:?}, decisions={:?}",
+        run.app.world().get::<Position>(owner),
+        run.app.world().get::<Position>(tank),
+        run.app
+            .world()
+            .get::<MoveIntent>(owner)
+            .map(|intent| intent.0),
+        run.report
+            .pulls
+            .iter()
+            .map(|pull| &pull.decision)
+            .collect::<Vec<_>>()
+    );
+    let owner_position = *run.app.world().get::<Position>(owner).unwrap();
+    let tank_position = *run.app.world().get::<Position>(tank).unwrap();
+    assert!(
+        Vec3::new(owner_position.x, owner_position.y, owner_position.z).distance(Vec3::new(
+            tank_position.x,
+            tank_position.y,
+            tank_position.z
+        )) < 40.0
+    );
+    assert!(
+        run.report
+            .pulls
+            .iter()
+            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
+    );
+}
+
 fn spawn_azure_gate_after_first_member_death() -> Run {
     let mut run = spawn_run(3, &mut None).unwrap();
     let first = run.actors[&29001816];
@@ -2136,6 +2286,7 @@ struct Run {
     best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
     next_cohesion_check: f64,
     waiting_for_tank: bool,
+    returning_to_party: bool,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
@@ -2527,6 +2678,7 @@ fn spawn_run_mode(
         best_routes: BTreeMap::new(),
         next_cohesion_check: 0.0,
         waiting_for_tank: false,
+        returning_to_party: false,
         last_resources: Vec::new(),
         healer_metrics,
         pet_recorder: Default::default(),
@@ -2842,6 +2994,56 @@ impl Run {
         Ok(self.waiting_for_tank)
     }
 
+    fn return_to_party(&mut self) -> Result<bool, String> {
+        if !self.returning_to_party {
+            return Ok(false);
+        }
+        let world = self.app.world();
+        let Some(member) = self
+            .party
+            .members
+            .iter()
+            .copied()
+            .find(|member| crate::spell_cast::targets::is_alive(world, *member))
+        else {
+            self.returning_to_party = false;
+            return Ok(false);
+        };
+        let target = *world
+            .get::<Position>(member)
+            .ok_or("party member position absent")?;
+        let owner = *world
+            .get::<Position>(self.party.owner)
+            .ok_or("returning leader position absent")?;
+        let target = Vec3::new(target.x, target.y, target.z);
+        let from = Vec3::new(owner.x, owner.y, owner.z);
+        if self.approach_translocation(target)? {
+            return Ok(true);
+        }
+        let route = self
+            .app
+            .world()
+            .resource::<super::Space>()
+            .walk_legs(from, target)
+            .map_err(|error| format!("released leader cannot reach party: {error}"))?;
+        let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+        let (_, range) = crate::followers::simulator::opening_spell(self.app.world(), member);
+        if yards > range {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(MoveIntent(target));
+            return Ok(true);
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
+        self.returning_to_party = false;
+        self.next_cohesion_check = 0.0;
+        Ok(false)
+    }
+
     fn advance_deck_replay(&mut self) -> Result<bool, String> {
         let Some(deck) = self.deck_replay.take() else {
             return Ok(false);
@@ -2871,10 +3073,14 @@ impl Run {
                     self.party.owner,
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.returning_to_party = true;
             }
             return Ok(());
         }
         if super::movement::flight_in_progress(self.app.world(), self.party.owner) {
+            return Ok(());
+        }
+        if self.return_to_party()? {
             return Ok(());
         }
         if self.wait_for_tank()? {

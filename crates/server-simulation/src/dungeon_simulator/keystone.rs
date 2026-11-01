@@ -60,6 +60,7 @@ pub(super) struct State {
     route: PlannedRoute,
     scaling: super::keystone_record::Scaling,
     start_seconds: f64,
+    countdown_ms: u64,
 }
 
 /// Plan from the actual challenge criteria and the selected dungeon's native level cap.
@@ -168,7 +169,10 @@ pub(super) fn start(
         .0
         .len();
     tracker.skip_existing(cursor);
-    tracker.observe_world(app.world_mut(), 0);
+    let countdown_ms = session
+        .snapshot(app.world())
+        .ok_or("started keystone snapshot unavailable")?
+        .countdown_ms;
     let start_seconds = app.world().resource::<Time<Virtual>>().elapsed_secs_f64();
     Ok(State {
         session,
@@ -177,6 +181,7 @@ pub(super) fn start(
         route: plan,
         scaling,
         start_seconds,
+        countdown_ms,
     })
 }
 
@@ -190,7 +195,20 @@ impl State {
     pub fn update(&mut self, world: &mut World) -> Result<(), String> {
         let elapsed = self.elapsed_ms(world);
         self.session.advance(world, elapsed / 1000)?;
-        self.tracker.observe_world(world, elapsed);
+        let snapshot = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        if snapshot.phase == shared::protocol::ChallengePhase::Countdown {
+            let cursor = world
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .len();
+            self.tracker.skip_existing(cursor);
+        } else {
+            self.tracker
+                .observe_world(world, elapsed.saturating_sub(self.countdown_ms));
+        }
         Ok(())
     }
 
@@ -216,7 +234,9 @@ impl State {
             .ok_or("active keystone snapshot unavailable")?;
         let completed = snapshot.phase == shared::protocol::ChallengePhase::Completed;
         let resulting_key = self.session.resulting_key(world)?;
-        let (actors, deaths, pulls) = self.tracker.finish(elapsed);
+        let (actors, deaths, pulls) = self
+            .tracker
+            .finish(elapsed.saturating_sub(self.countdown_ms));
         Ok(RunRecord {
             schema_version: 1,
             seed,

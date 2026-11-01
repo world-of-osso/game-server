@@ -251,6 +251,13 @@ fn handle_unreachable_movement(
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
+    if world.get::<MoveIntent>(unit).is_none()
+        && world.get::<crate::creature_ai::FollowOwner>(unit).is_some()
+    {
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
     if matches!(
         world.get::<crate::creature_ai::PetMotion>(unit),
         Some(crate::creature_ai::PetMotion::Chase(_))
