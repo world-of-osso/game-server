@@ -205,6 +205,18 @@ fn isolate_ignite_producer(h: &mut crate::spell_cast::test_harness::Harness, cas
     assert!(!crate::auras::has_aura(h.app.world(), caster, 416714));
 }
 
+fn master_of_flame_multiplier(h: &crate::spell_cast::test_harness::Harness, caster: Entity) -> f32 {
+    let talent = 384174;
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(talent)
+    );
+    1.0 + crate::spell_cast::scripts::script_effect_value(h.app.world(), caster, talent, 0) / 100.0
+}
+
 #[test]
 fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
     let _seed = crate::random::seed_scope(1);
@@ -266,7 +278,10 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
-    assert_eq!(amount, damage as f32 * percent / 100.0 / ticks as f32);
+    assert_eq!(
+        amount,
+        damage as f32 * percent / 100.0 / ticks as f32 * master_of_flame_multiplier(&h, caster)
+    );
     h.advance(200);
     let hits: Vec<_> = h.inbox.log[start..]
         .iter()
@@ -282,7 +297,10 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         ticks as usize,
         "one earned9tick bank, no self-proc cascade"
     );
-    assert!(hits.iter().all(|event| event.amount == amount as i32));
+    assert!(
+        hits.iter()
+            .all(|event| event.amount == amount.round() as i32)
+    );
     assert!(!crate::auras::has_aura(h.app.world(), target, 12654));
 }
 
@@ -298,6 +316,16 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
             .entity_mut(*target)
             .insert((Level(70), UnitLevel(70)));
     }
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(targets[1])
+        .unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(targets[1])
+        .unwrap()
+        .x += 100.0;
     for _ in 0..2 {
         crate::spell_cast::creature_cast(
             h.app.world_mut(),
@@ -325,6 +353,11 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
         .unwrap()
         .effects[0]
         .amount;
+    *h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(targets[1])
+        .unwrap() = position;
+    assert!(!crate::auras::has_aura(h.app.world(), targets[1], 12654));
     let start = h.inbox.log.len();
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, 11366, Some(targets[1]), false)
         .unwrap();
@@ -361,9 +394,23 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
+    let inflame = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 417467)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
     assert_eq!(
         amount,
-        damage as f32 * (percent * 2.0) / 100.0 / 9.0,
+        damage as f32 * (percent * (2.0 * (1.0 + inflame / 100.0))) / 100.0 / 9.0
+            * master_of_flame_multiplier(&h, caster),
         "native HotStreak share survives its consumed aura and ordinary missile"
     );
 }
@@ -494,11 +541,19 @@ fn fire_efficiency_native70_ordinary_ignite_refresh_keeps_unpaid_native_damage()
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
-    let new_amount = second_damage as f32 * percent / 100.0 / 9.0;
-    let unpaid = old_amount * (9 - paid) as f32;
+    let new_amount =
+        second_damage as f32 * percent / 100.0 / 9.0 * master_of_flame_multiplier(&h, caster);
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let period = f64::from(effect.period_ms) / 1000.0;
+    let unpaid = 1.0 + (old.expires_at.unwrap() - effect.next_tick_at()) / period;
+    let future = 1.0 + (aura.expires_at.unwrap() - effect.next_tick_at()) / period;
+    let expected = ((f64::from(old_amount) * unpaid + f64::from(new_amount) * 9.0) / future) as f32;
     assert_eq!(
-        refreshed,
-        new_amount + unpaid / 9.0,
+        refreshed, expected,
         "ordinary producer must enter the shared nativeROLLING_PERIODIC carry once"
     );
     assert!(refreshed > new_amount);

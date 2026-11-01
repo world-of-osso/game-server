@@ -26,21 +26,6 @@ pub(crate) struct AutoRepeat {
     ready_in: Duration,
 }
 
-impl AutoRepeat {
-    pub(crate) fn targets(&self, target: Entity) -> bool {
-        self.target == target
-    }
-
-    /// Follow the attack decision without starting another shot or resetting its timer.
-    pub(crate) fn retarget_auto_shot(&mut self, target: Entity) -> bool {
-        if self.spell_id != AUTO_SHOT {
-            return false;
-        }
-        self.target = target;
-        true
-    }
-}
-
 pub(crate) fn active(world: &World, caster: Entity, spell: u32) -> bool {
     world
         .get::<AutoRepeat>(caster)

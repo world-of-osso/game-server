@@ -58,18 +58,12 @@ pub(super) fn stop_damage(world: &mut World, unit: Entity) {
     if world.get::<CastState>(unit).is_some_and(|cast| {
         let hostile = Entity::try_from_bits(cast.target)
             .is_some_and(|target| crate::spell_cast::targets::is_hostile(world, unit, target));
-        let damage_slot = world.get::<Follower>(unit).is_some_and(|follower| {
-            world
-                .resource::<super::FollowerCatalog>()
-                .kits
-                .iter()
-                .any(|entry| {
-                    entry.spec_id == follower.profile.spec_id
-                        && entry.spell_id == cast.spell_id
-                        && matches!(entry.slot, super::kit::Slot::Attack | super::kit::Slot::Aoe)
-                })
-        });
-        hostile || damage_slot
+        let store = world.resource::<crate::spell_info::SpellStore>();
+        let spell = store
+            .get(cast.spell_id)
+            .expect("pull-back cast spell unavailable");
+        let damaging = crate::spell_info::positivity::negative_effects(store, spell) != 0;
+        hostile || damaging
     }) {
         crate::spell_cast::cancel_cast(world, unit);
     }
@@ -155,47 +149,6 @@ mod tests {
         assert!(!super::super::tank_pull_back::party_should_wait(
             &world, owner
         ));
-    }
-
-    #[test]
-    fn healer_keeps_healing_and_combat_reference_while_party_waits() {
-        let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
-        let owner = h.caster;
-        let enemy = h.npc;
-        let before = {
-            let mut health = h
-                .app
-                .world_mut()
-                .get_mut::<shared::components::Health>(owner)
-                .unwrap();
-            health.current = health.max * 0.1;
-            health.current
-        };
-        assert!(crate::combat_refs::has_active_reference_to(
-            h.app.world(),
-            enemy,
-            owner
-        ));
-        h.app
-            .world_mut()
-            .entity_mut(owner)
-            .insert(super::super::tank_pull_back::WaitingForPullBack(owner));
-        let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
-        for _ in 0..240 {
-            super::super::ai::update_follower(h.app.world_mut(), healer, &follower);
-            h.advance(1);
-            if h.health(owner) > before {
-                break;
-            }
-        }
-        assert!(
-            h.health(owner) > before,
-            "healer must use a native heal while waiting"
-        );
-        assert!(
-            crate::combat_refs::has_active_reference_to(h.app.world(), enemy, owner),
-            "waiting must retain the live combat reference"
-        );
     }
 }
 

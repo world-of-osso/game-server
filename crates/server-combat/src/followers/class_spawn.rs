@@ -75,18 +75,14 @@ fn is_melee(spec: u32) -> Result<bool, String> {
     }
 }
 
-pub(super) fn profile_for(
-    source: &ClassProfile,
-    slot: usize,
-    attack_spell: u32,
-) -> Result<Profile, String> {
+pub(super) fn profile_for(source: &ClassProfile, slot: usize) -> Result<Profile, String> {
     Ok(Profile {
         entry: CLASS_FOLLOWER_ENTRY,
         name: follower_name(slot),
         class_id: source.class_id,
         spec_id: source.spec_id,
         role: source.group_role()?,
-        attack_spell,
+        attack_spell: 0,
         cooldown_spell: 0,
         heal_spell: 0,
         taunt_spell: 0,
@@ -97,17 +93,28 @@ pub(super) fn profile_for(
 
 fn taunt_spell(
     store: &crate::spell_info::SpellStore,
-    known: &[crate::class_progression::KnownSpell],
+    known: impl Iterator<Item = u32>,
 ) -> Result<u32, String> {
     let taunts: Vec<_> = known
-        .iter()
-        .filter(|spell| !spell.passive)
-        .filter_map(|spell| store.get(spell.spell_id))
+        .filter_map(|id| store.get(id))
+        .filter(|spell| !crate::auras::is_passive(spell))
         .filter(|spell| {
-            spell.effects.iter().any(|effect| {
-                effect.effect == crate::spell_cast::effects::EFFECT_ATTACK_ME
-                    && effect.implicit_targets[0] == 6 // TARGET_UNIT_TARGET_ENEMY
-            }) || spell.id == 115546 // Provoke's native dummy script casts the taunt 116189.
+            let scripted = crate::spell_cast::scripts::scripted_enemy_trigger(spell.id);
+            std::iter::once(*spell)
+                .chain(
+                    spell
+                        .effects
+                        .iter()
+                        .filter_map(|effect| store.get(effect.trigger_spell)),
+                )
+                .chain(scripted.and_then(|child| store.get(child)))
+                .any(|action| {
+                    action.effects.iter().any(|effect| {
+                        (effect.effect == crate::spell_cast::effects::EFFECT_ATTACK_ME
+                            || effect.aura == crate::auras::handlers::MOD_TAUNT)
+                            && effect.implicit_targets[0] == 6 // TARGET_UNIT_TARGET_ENEMY
+                    })
+                })
         })
         .map(|spell| spell.id)
         .collect();
@@ -119,55 +126,16 @@ fn taunt_spell(
     }
 }
 
-pub(super) fn attack_spell(
-    classes: &crate::spell_info::ClassSpells,
-    store: &crate::spell_info::SpellStore,
-    source: &ClassProfile,
-    known: &[crate::class_progression::KnownSpell],
-) -> Result<u32, String> {
-    if is_melee(source.spec_id)? {
-        return Ok(0);
+pub(super) fn known_taunt(world: &World, unit: Entity) -> Option<u32> {
+    let known = world.get::<crate::class_progression::KnownSpells>(unit)?;
+    let store = world.get_resource::<crate::spell_info::SpellStore>()?;
+    match taunt_spell(store, known.iter()) {
+        Ok(spell) => Some(spell),
+        Err(error) => {
+            warn!("Follower {unit}: {error}");
+            None
+        }
     }
-    let spec = classes
-        .classes
-        .iter()
-        .find(|class| class.class_id == source.class_id)
-        .and_then(|class| {
-            class
-                .specs
-                .iter()
-                .find(|spec| spec.spec_id == source.spec_id)
-        })
-        .ok_or("follower specialization unavailable")?;
-    spec.spells
-        .iter()
-        .filter(|spell| {
-            !spell.passive && known.iter().any(|known| known.spell_id == spell.spell_id)
-        })
-        .filter_map(|spell| store.get(spell.spell_id))
-        .filter(|spell| {
-            !spell.effects.iter().any(|effect| {
-                matches!(
-                    effect.effect,
-                    crate::death::resurrection::EFFECT_RESURRECT
-                        | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA
-                )
-            })
-        })
-        .find(|spell| {
-            spell
-                .misc
-                .as_ref()
-                .and_then(|misc| misc.range)
-                .is_some_and(|range| range.max_hostile.max(range.max_friendly) >= 20.0)
-        })
-        .map(|spell| spell.id)
-        .ok_or_else(|| {
-            format!(
-                "follower spec {} has no known ranged spec spell",
-                source.spec_id
-            )
-        })
 }
 
 fn spawn_neutral(
@@ -370,10 +338,15 @@ pub fn install_class(
     let store = world
         .get_resource::<crate::spell_info::SpellStore>()
         .ok_or("follower spell store unavailable")?;
-    let attack_spell = attack_spell(classes, store, source, &known)?;
-    let mut profile = profile_for(source, slot, attack_spell)?;
+    let profile = profile_for(source, slot)?;
     if profile.role == shared::group::GroupRole::Tank {
-        profile.taunt_spell = taunt_spell(store, &known)?;
+        taunt_spell(
+            store,
+            known
+                .iter()
+                .filter(|spell| !spell.passive)
+                .map(|spell| spell.spell_id),
+        )?;
     }
     let (stats, pools, _) = class_stats(world, &profile, level, source.race)?;
     let passives: Vec<_> = known

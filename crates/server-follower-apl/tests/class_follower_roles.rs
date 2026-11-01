@@ -408,6 +408,18 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
         reach.0 > 0.0 || reach.1 > 0.0,
         "item must have real hostile area reach: {reach:?}"
     );
+    world
+        .entity_mut(pull.follower)
+        .insert(server_combat::followers::FollowerActionSpells(vec![407512]));
+    let aggregate = server_combat::followers::party_unintended_reach(world, &[pull.follower]);
+    assert!(
+        aggregate
+            .iter()
+            .any(|&(actor, caster, target)| actor == pull.follower
+                && caster >= reach.0
+                && target >= reach.1),
+        "equipped item reach missing: {aggregate:?}"
+    );
     let no_items = server_combat::simc_apl::Program::parse(&[("default", "fireball")]).unwrap();
     let absent = server_follower_apl::action_metadata::equipped_action_spells(
         world,
@@ -419,6 +431,274 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
     assert!(
         absent.is_empty(),
         "item not named by program must not enter metadata: {absent:?}"
+    );
+}
+
+#[test]
+fn fire_follower_reach_uses_program_actions_without_the_kit_catalog() {
+    let mut pull = spawn(63);
+    let actor = pull.follower;
+    let world = pull.harness.app.world_mut();
+    let actions = &world
+        .get::<server_combat::followers::FollowerActionSpells>(actor)
+        .unwrap()
+        .0;
+    assert!(
+        actions.contains(&108853),
+        "Fire Blast must be a selected APL action"
+    );
+    let blast =
+        server_combat::followers::spell_unintended_reach(world, actor, 108853, actor).unwrap();
+    assert!(
+        blast.0 > 0.0,
+        "native Fire Blast spread reach must be visible"
+    );
+    world.remove_resource::<server_combat::followers::FollowerCatalog>();
+    let reaches = server_combat::followers::party_unintended_reach(world, &[actor]);
+    assert!(
+        reaches
+            .iter()
+            .any(|&(unit, caster, _)| unit == actor && caster >= blast.0)
+    );
+}
+
+#[test]
+fn class_healer_pull_readiness_uses_program_heals_without_the_kit_catalog() {
+    let mut pull = spawn(257);
+    let healer = pull.follower;
+    let tank = pull.harness.caster;
+    let world = pull.harness.app.world_mut();
+    let actions = world
+        .get::<server_combat::followers::FollowerActionSpells>(healer)
+        .unwrap()
+        .0
+        .clone();
+    assert!(
+        actions.contains(&2061),
+        "Holy Flash Heal must be a selected APL action"
+    );
+    world.remove_resource::<server_combat::followers::FollowerCatalog>();
+    let (ready_healer, spell) = server_combat::followers::test_ready_heal(world, tank, &[healer])
+        .unwrap()
+        .expect("a sourced APL heal must be ready");
+    assert_eq!(ready_healer, healer);
+    assert!(
+        actions.contains(&spell),
+        "ready heal {spell} not in APL actions {actions:?}"
+    );
+    world
+        .entity_mut(healer)
+        .insert(server_combat::followers::FollowerActionSpells(Vec::new()));
+    assert!(
+        server_combat::followers::test_ready_heal(world, tank, &[healer])
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
+    let mut failures = Vec::new();
+    for (spec, taunt) in [
+        (66, 62124),
+        (73, 355),
+        (104, 6795),
+        (250, 56222),
+        (268, 115546),
+        (581, 185245),
+    ] {
+        let mut pull = spawn(spec);
+        let owner = pull.harness.caster;
+        let enemy = pull.harness.npc;
+        let healer_profile = read_profiles()
+            .unwrap()
+            .into_iter()
+            .find(|profile| profile.spec_id == 257)
+            .unwrap();
+        let world = pull.harness.app.world_mut();
+        let healer = spawn_class(world, owner, &healer_profile, 2, 0, GearSource::Journal).unwrap();
+        world
+            .get_mut::<server_combat::followers::Follower>(pull.follower)
+            .unwrap()
+            .profile
+            .taunt_spell = 133; // The live class taunt must not come from this legacy field.
+        world.entity_mut(enemy).insert((
+            shared::components::ThreatTable::default(),
+            server_combat::networking::CombatTarget(Some(healer)),
+            server_combat::creature_ai::CreatureState::Pursuing {
+                target: healer.to_bits(),
+            },
+        ));
+        server_combat::creature_aggro::add_threat(world, enemy, healer, 100.0);
+        for _ in 0..120 {
+            server_combat::followers::update_ai(pull.harness.app.world_mut());
+            server_follower_apl::drive_followers(pull.harness.app.world_mut());
+            pull.harness.app.update();
+            if pull.casts().contains(&taunt) {
+                break;
+            }
+        }
+        if !pull.casts().contains(&taunt) {
+            let world = pull.harness.app.world_mut();
+            let target = world
+                .get::<server_combat::networking::CombatTarget>(pull.follower)
+                .and_then(|target| target.0);
+            let victim = world
+                .get::<server_combat::networking::CombatTarget>(enemy)
+                .and_then(|target| target.0);
+            let known = server_combat::spell_cast::knowledge::resolve_actor_action(
+                world,
+                pull.follower,
+                taunt,
+            );
+            let candidates: Vec<_> = world
+                .get::<server_combat::class_progression::KnownSpells>(pull.follower)
+                .unwrap()
+                .iter()
+                .filter(|&id| {
+                    world
+                        .resource::<server_combat::spell_info::SpellStore>()
+                        .get(id)
+                        .is_some_and(|spell| {
+                            spell.effects.iter().any(|effect| {
+                                effect.effect
+                                    == server_combat::spell_cast::effects::EFFECT_ATTACK_ME
+                                    || effect.aura == server_combat::auras::handlers::MOD_TAUNT
+                            })
+                        })
+                })
+                .collect();
+            let spell = world
+                .resource::<server_combat::spell_info::SpellStore>()
+                .get(taunt)
+                .unwrap()
+                .clone();
+            let admission = server_combat::spell_cast::read_native_cast_start(
+                world,
+                pull.follower,
+                &spell,
+                enemy,
+            );
+            failures.push(format!(
+                "spec {spec} did not cast {taunt}: target={target:?} victim={victim:?} known={known:?} candidates={candidates:?} admission={admission:?}"
+            ));
+        } else if pull
+            .harness
+            .app
+            .world()
+            .get::<server_combat::networking::CombatTarget>(enemy)
+            .unwrap()
+            .0
+            != Some(pull.follower)
+        {
+            failures.push(format!(
+                "spec {spec} did not take the enemy from the healer"
+            ));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn class_follower_holds_damage_during_polymorph_and_resumes_afterward() {
+    let mut pull = spawn(63);
+    let owner = pull.harness.caster;
+    let target = pull.harness.npc;
+    let world = pull.harness.app.world_mut();
+    server_combat::creature_aggro::add_threat(world, target, owner, 100.0);
+    let spell = world
+        .resource::<server_combat::spell_info::SpellStore>()
+        .get(118)
+        .unwrap();
+    let mask = server_combat::auras::aura_effect_mask(spell);
+    server_combat::auras::apply_aura(
+        world,
+        &server_combat::auras::AuraApplication {
+            caster: owner,
+            target,
+            spell_id: 118,
+            effect_mask: mask,
+            source: server_combat::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..40 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    assert!(server_combat::auras::has_aura(
+        pull.harness.app.world(),
+        target,
+        118
+    ));
+    assert!(
+        !pull
+            .events()
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(target.to_bits()))
+    );
+    server_combat::auras::remove_auras(
+        pull.harness.app.world_mut(),
+        target,
+        server_combat::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 118,
+    );
+    for _ in 0..200 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+        if pull.events().iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    panic!(
+        "class follower did not resume damage after polymorph ended: {:?}",
+        pull.casts()
+    );
+}
+
+#[test]
+fn class_tank_defends_against_an_engaged_alternate_after_its_primary_dies() {
+    let mut pull = spawn(66);
+    let owner = pull.harness.caster;
+    let primary = pull.harness.npc;
+    let alternate = server_combat::spell_cast::test_harness::spawn_npc(&mut pull.harness.app, 3.0);
+    let world = pull.harness.app.world_mut();
+    let map = *world.get::<server_combat::maps::InMap>(primary).unwrap();
+    world.entity_mut(alternate).insert((
+        map,
+        Health {
+            current: 10_000_000.0,
+            max: 10_000_000.0,
+        },
+        shared::components::ThreatTable::default(),
+    ));
+    server_combat::creature_aggro::add_threat(world, primary, owner, 100.0);
+    server_combat::creature_aggro::add_threat(world, alternate, owner, 100.0);
+    server_combat::combat::kill_unit(world, owner, primary);
+    for _ in 0..200 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+        if pull.events().iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(alternate.to_bits())
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    panic!(
+        "class tank did not damage the engaged alternate after primary death: {:?}",
+        pull.casts()
     );
 }
 
@@ -503,6 +783,108 @@ fn class_follower_healer_casts_holy_priest_apl_heals_on_dummy_pull() {
 }
 
 #[test]
+fn class_healer_heals_the_most_injured_party_member_before_damage() {
+    let mut pull = spawn(257);
+    let owner = pull.harness.caster;
+    let profiles = read_profiles().unwrap();
+    let arcane = profiles
+        .iter()
+        .find(|profile| profile.spec_id == 62)
+        .unwrap();
+    let ally = spawn_class(
+        pull.harness.app.world_mut(),
+        owner,
+        arcane,
+        1,
+        1,
+        GearSource::Journal,
+    )
+    .unwrap();
+    // The owner is at half health; the attacking ally is far lower.
+    let max = pull.harness.app.world().get::<Health>(ally).unwrap().max;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(ally)
+        .insert(Health {
+            current: max * 0.1,
+            max,
+        });
+    let mana = pull
+        .harness
+        .app
+        .world()
+        .get::<shared::components::Mana>(pull.follower)
+        .unwrap()
+        .current;
+    // Halo heals and damages in one area cast; the APL's heal priority is its
+    // targeted heals and its separate damage list.
+    let table = |names: &[&str]| {
+        pull.resolved(
+            server_follower_apl::holy_priest_rotation::SPELLS
+                .iter()
+                .filter(|(name, _, _)| names.contains(name))
+                .map(|&(_, spell, _)| spell),
+        )
+    };
+    let targeted_heals = table(&[
+        "guardian_spirit",
+        "serenity",
+        "prayer_of_mending",
+        "renew",
+        "flash_heal",
+        "heal",
+    ]);
+    let damage = table(&["holy_fire", "smite"]);
+    let healer = Some(pull.follower.to_bits());
+    let first_heal = |pull: &Pull| {
+        pull.events().iter().position(|event| {
+            event.source == healer
+                && event.kind == CombatLogKind::CastSuccess
+                && event
+                    .spell_id
+                    .is_some_and(|spell| targeted_heals.contains(&spell))
+        })
+    };
+    for _ in 0..FRAMES {
+        if first_heal(&pull).is_some() {
+            break;
+        }
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    let first_heal = first_heal(&pull).expect("Holy follower must cast a targeted APL heal");
+    assert_eq!(
+        pull.events()[first_heal].target,
+        Some(ally.to_bits()),
+        "Holy follower must heal the most injured ally first"
+    );
+    let early_damage: Vec<_> = pull.events()[..first_heal]
+        .iter()
+        .filter(|event| {
+            event.source == healer
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id.is_some_and(|spell| damage.contains(&spell))
+        })
+        .collect();
+    assert!(
+        early_damage.is_empty(),
+        "Holy damage list ran while a heal was due: {early_damage:?}"
+    );
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<shared::components::Mana>(pull.follower)
+            .unwrap()
+            .current
+            < mana,
+        "ordinary heals must spend mana"
+    );
+}
+
+#[test]
 fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
     let mut pull = spawn(257);
     let owner = pull.harness.caster;
@@ -582,6 +964,14 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
     assert!(
         !pull.casts().contains(&19236),
         "legacy defensive bridge ran"
+    );
+    assert!(
+        server_combat::combat_refs::has_active_reference_to(
+            pull.harness.app.world(),
+            pull.harness.npc,
+            owner
+        ),
+        "waiting must retain the live combat reference"
     );
     assert!(!pull.apl_failed());
 }

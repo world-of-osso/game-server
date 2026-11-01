@@ -114,13 +114,10 @@ fn aura_results(h: &Harness, root: u32) -> Vec<u32> {
 fn assert_native_party_buff(entry: u32, spell: u32) {
     let (mut h, unit) = level32(entry);
     let party = prepare_out_of_combat(&mut h, unit);
-    let follower = h.app.world().get::<Follower>(unit).unwrap().clone();
     let results = aura_results(&h, spell);
-    for _ in 0..120 {
-        let enemies = super::ai::engaged_enemies(h.app.world_mut(), &follower, unit, &party);
-        super::kit_ai::update(h.app.world_mut(), unit, &follower, &party, None, &enemies);
-        h.advance(1);
-    }
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, spell, Some(unit), false)
+        .expect("native party buff must start");
+    h.advance(120);
     for recipient in party {
         assert!(
             results
@@ -142,7 +139,7 @@ fn assert_native_party_buff(entry: u32, spell: u32) {
             .filter(|go| go.caster == unit.to_bits() && go.spell_id == spell)
             .count(),
         1,
-        "maintained native party buff must not be cast repeatedly"
+        "the native party buff must be cast once"
     );
 }
 

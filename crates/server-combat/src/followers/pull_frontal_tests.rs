@@ -1,7 +1,5 @@
 //! Native Azure directional pose proof; interrupts remain legitimate, not disabled for the test.
-use super::super::{
-    Follower, FollowerCatalog, ai, catalog, kit, pull_history, pull_route, spawning,
-};
+use super::super::{Follower, ai, catalog, pull_history, pull_route, spawning};
 use super::FollowerRun;
 use crate::maps::{InMap, WorldLocation};
 use crate::spell_cast::test_harness::{Harness, harness_with_plugins, world_db};
@@ -26,13 +24,7 @@ struct Fixture {
     clean_pose: Vec3,
 }
 
-fn initialize_native_owner(
-    h: &mut Harness,
-    catalog: &FollowerCatalog,
-    level: u8,
-    map: InMap,
-    position: Position,
-) {
+fn initialize_native_owner(h: &mut Harness, level: u8, map: InMap, position: Position) {
     let spec = h
         .app
         .world()
@@ -57,16 +49,6 @@ fn initialize_native_owner(
         .filter(|spell| spell.passive && spell.required_level <= u32::from(level))
         .map(|spell| spell.spell_id)
         .collect();
-    for entry in catalog
-        .kits
-        .iter()
-        .filter(|entry| entry.available(63, level))
-    {
-        known.push(entry.spell_id);
-        if entry.slot == kit::Slot::Passive {
-            passives.push(entry.spell_id);
-        }
-    }
     known.sort_unstable();
     known.dedup();
     passives.sort_unstable();
@@ -305,7 +287,7 @@ fn fixture() -> Fixture {
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(origin.position_x, origin.position_y, origin.position_z);
     let from = grounded(&mut h, map, Vec3::new(x, y, z));
-    initialize_native_owner(&mut h, &catalog, level, map, from);
+    initialize_native_owner(&mut h, level, map, from);
     h.app.insert_resource(native);
     h.app.insert_resource(catalog);
     spawn_native_population(&mut h, map);

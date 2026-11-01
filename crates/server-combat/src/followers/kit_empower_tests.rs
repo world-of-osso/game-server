@@ -291,39 +291,6 @@ fn native_empower_cancel_preserves_fire_charge_recovery_until_natural_recharge()
 }
 
 #[test]
-fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
-    let (mut h, caster) = prepare(21);
-    let mut begun = false;
-    for _ in 0..600 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-        if h.inbox
-            .go
-            .iter()
-            .any(|event| event.caster == caster.to_bits() && event.spell_id == FIRE_BREATH)
-        {
-            begun = true;
-            break;
-        }
-    }
-    assert!(begun, "real follower must first admit native Fire Breath");
-    for _ in 0..21 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    let dot = h.app.world().get::<ActiveAuras>(h.npc).and_then(|auras| {
-        auras
-            .iter()
-            .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == caster)
-    });
-    assert_eq!(
-        dot.map(|aura| aura.duration_ms),
-        Some(20_000),
-        "SimC fb_fs single-target rank1 releases after the first native stage"
-    );
-}
-
-#[test]
 fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
     let (mut h, caster) = prepare(90);
     let tip = 370553;

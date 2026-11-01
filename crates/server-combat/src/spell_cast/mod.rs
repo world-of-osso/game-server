@@ -29,23 +29,9 @@ pub mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
-pub(crate) mod cooldown_query;
 pub(crate) mod equipped_items;
 #[cfg(any(test, feature = "test-support"))]
 pub use equipped_items::check_cast as check_equipped_item_requirements;
-#[cfg(test)]
-mod equipped_items_tests;
-#[cfg(test)]
-mod form_display_power_tests;
-#[cfg(any(test, feature = "test-support"))]
-pub mod holy_metrics;
-#[cfg(test)]
-mod holy_words_tests;
-#[cfg(test)]
-mod mastery_base_tests;
-#[cfg(test)]
-mod trait_effect_points_tests;
-pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
@@ -73,6 +59,19 @@ mod census_tail_tests;
 #[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
+pub(crate) mod cooldown_query;
+#[cfg(test)]
+mod equipped_items_tests;
+#[cfg(test)]
+mod form_display_power_tests;
+#[cfg(any(test, feature = "test-support"))]
+pub mod holy_metrics;
+#[cfg(test)]
+mod holy_words_tests;
+#[cfg(test)]
+mod mastery_base_tests;
+#[cfg(test)]
+mod trait_effect_points_tests;
 pub use charge::ChargeMovement;
 mod charge_consumption;
 #[cfg(test)]
@@ -285,9 +284,10 @@ pub use creature::{
     AiTarget, creature_cast, creature_cast_empowered_with_targets, creature_cast_with_targets,
 };
 pub(crate) use creature::{
-    ai_spell_target, creature_cast_empowered, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
+    ai_spell_target, creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
 };
+#[cfg(test)]
+pub(crate) use creature::{creature_cast_empowered, creature_cast_interrupting_self};
 use effects::{EffectCtx, UnhandledEffects};
 pub use scripts::last_combo_action;
 use targets::{Dest, Relation};
@@ -2189,27 +2189,6 @@ pub(crate) fn read_targets_include(
         }
     }
     Ok(false)
-}
-
-/// Re-plan only the active cast's recipients; no effects, resources or cooldowns execute.
-/// Use its prepared spell so requested destinations and native modifiers are retained.
-pub(crate) fn read_active_direct_heal_targets(
-    world: &mut World,
-    caster: Entity,
-    explicit: Option<Entity>,
-) -> Result<Vec<Entity>, CastFailure> {
-    let spell = world
-        .get::<PendingCastSpell>(caster)
-        .map(|pending| pending.spell.clone())
-        .ok_or_else(|| {
-            CastFailure::Unsupported("active heal lacks its prepared native spell".into())
-        })?;
-    let plan = plan_targets(world, caster, &spell, explicit, false)?;
-    Ok(plan
-        .into_iter()
-        .filter(|planned| spell.effects[planned.index].effect == 10)
-        .flat_map(|planned| planned.units)
-        .collect())
 }
 
 fn read_periodic_trigger(

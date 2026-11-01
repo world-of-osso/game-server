@@ -37,7 +37,6 @@ pub struct FollowerCatalog {
     pub profiles: crate::catalog_data::CatalogData<Vec<Profile>>,
     pub follower_ids: crate::catalog_data::CatalogData<HashSet<u32>>,
     pub dungeons: crate::catalog_data::CatalogData<HashMap<u32, Dungeon>>,
-    pub(super) kits: crate::catalog_data::CatalogData<Vec<super::kit::Entry>>,
 }
 
 pub fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
@@ -112,7 +111,6 @@ fn read_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
         profiles: profiles.into(),
         follower_ids: follower_ids.into(),
         dungeons: dungeons.into(),
-        kits: super::kit::load(db)?.into(),
     })
 }
 

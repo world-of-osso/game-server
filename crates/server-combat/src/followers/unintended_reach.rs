@@ -1,16 +1,14 @@
 //! Reach of hostile secondary targets, for follower pull-position selection.
 use std::collections::HashSet;
 
-use bevy::prelude::*;
-use shared::components::Level;
-
-use super::{Follower, FollowerCatalog};
+use super::Follower;
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::guardian::GuardianActor;
 use crate::spell_cast::script_registry::{DeclaredReach, SpellScriptRegistry};
 use crate::spell_cast::summon::SummonedCreature;
 use crate::spell_cast::targets;
 use crate::spell_info::SpellStore;
+use bevy::prelude::*;
 
 /// One entry per party member and currently owned pet, centered on that unit.
 /// The second radius is centered on that unit's explicit combat target.
@@ -137,31 +135,9 @@ fn active_field_extent(world: &mut World, unit: Entity) -> f32 {
 }
 
 fn unit_spells(world: &World, unit: Entity) -> Vec<u32> {
-    if let Some(follower) = world.get::<Follower>(unit) {
-        let level = world.get::<Level>(unit).expect("follower level").0;
-        let catalog = world.resource::<FollowerCatalog>();
-        let spells: Vec<_> = catalog
-            .kits
-            .iter()
-            .filter(|entry| entry.available(follower.profile.spec_id, level))
-            .map(|entry| entry.spell_id)
-            .collect();
-        if !spells.is_empty() {
-            let resolved = spells.iter().filter_map(|&spell| {
-                crate::spell_cast::knowledge::resolve_actor_action(world, unit, spell).ok()
-            });
-            return spells.iter().copied().chain(resolved).collect();
-        }
-        return [
-            follower.profile.attack_spell,
-            follower.profile.cooldown_spell,
-            follower.profile.heal_spell,
-            follower.profile.taunt_spell,
-            follower.profile.form_spell,
-        ]
-        .into_iter()
-        .filter(|&spell| spell != 0)
-        .collect();
+    if world.get::<Follower>(unit).is_some() {
+        return super::action_spells::available(world, unit)
+            .expect("follower available action resolution failed");
     }
     let known = world
         .get::<KnownSpells>(unit)

@@ -1,42 +1,34 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 #[cfg(test)]
 mod action_knowledge_tests;
+mod action_spells;
 mod ai;
 mod candlelight;
+#[cfg(test)]
+mod cast_while_casting_tests;
 mod catalog;
 pub mod class_profiles;
 pub mod class_spawn;
 #[cfg(test)]
 mod darkflame_drop_tests;
-mod empower_policy;
 #[cfg(test)]
 mod floodgate_healer_tests;
 #[cfg(test)]
 mod form_combat_tests;
 pub mod gear;
 mod hazards;
-mod healer_context;
-#[cfg(test)]
-mod healer_group_cancel_tests;
-mod healer_policy;
-mod healer_triage;
-mod holy_policy;
 #[cfg(test)]
 mod holy_policy_native_tests;
 #[cfg(test)]
 mod holy_priest_tests;
 #[cfg(test)]
 mod holy_threat_tests;
-mod kit;
-mod kit_ai;
-mod kit_area;
 #[cfg(test)]
-mod kit_defensive_fidelity_tests;
+mod kit;
 #[cfg(test)]
 mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
-mod kit_interrupt;
 #[cfg(test)]
 mod kit_light_of_titans_tests;
 pub(crate) mod live_facts;
@@ -63,8 +55,6 @@ mod kit_elemental_resource_tests;
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
-#[cfg(test)]
-mod kit_rotation_tests;
 #[cfg(test)]
 mod meteor_tests;
 mod owner_trail;
@@ -108,7 +98,6 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
-mod resto_policy;
 pub mod retreat;
 #[cfg(test)]
 mod rotation_dummy_tests;
@@ -119,7 +108,6 @@ mod spawning;
 pub mod spec_selection;
 mod spell_safety;
 mod stockade_diagnostic;
-mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
@@ -132,11 +120,23 @@ mod trail_follow;
 mod unintended_reach;
 #[cfg(test)]
 mod unintended_reach_tests;
-mod utility;
-pub(crate) use utility::is_boss;
+pub(crate) fn is_boss(world: &World, unit: Entity) -> bool {
+    const DUNGEON_BOSS_FLAG: u32 = 0x1000_0000;
+    const WORLD_BOSS_FLAG: u32 = 0x4;
+    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
+        return false;
+    };
+    world
+        .resource::<crate::world_data::WorldData>()
+        .templates
+        .get(&npc.template_id)
+        .is_some_and(|template| {
+            template.flags_extra & DUNGEON_BOSS_FLAG != 0
+                || template.type_flags & WORLD_BOSS_FLAG != 0
+        })
+}
 #[cfg(test)]
 mod utility_buff_tests;
-mod utility_interrupt;
 #[cfg(test)]
 mod utility_policy_tests;
 pub mod visual;
@@ -171,6 +171,16 @@ pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
         .insert(tank_pull_back::WaitingForPullBack(tank));
 }
 
+#[cfg(feature = "test-support")]
+pub fn test_ready_heal(
+    world: &mut World,
+    tank: Entity,
+    party: &[Entity],
+) -> Result<Option<(Entity, u32)>, String> {
+    Ok(pull_readiness::read_ready_heal(world, tank, party)?
+        .map(|ready| (ready.healer, ready.spell_id)))
+}
+
 /// Program-bound class actions and selected equipped on-use spells.
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct FollowerActionSpells(pub Vec<u32>);
@@ -193,7 +203,27 @@ pub fn holding_pull_damage(world: &World, unit: Entity) -> bool {
         })
 }
 pub use catalog::{FollowerCatalog, load_catalog};
-pub use kit_ai::is_tank;
+/// A tank-role follower, or a unit whose active spec has the tank role.
+pub fn is_tank(world: &World, unit: Entity) -> bool {
+    if world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.profile.role == GroupRole::Tank)
+    {
+        return true;
+    }
+    let Some(spec) = world.get::<crate::class_progression::ActiveSpec>(unit) else {
+        return false;
+    };
+    world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .is_some_and(|classes| {
+            classes
+                .classes
+                .iter()
+                .flat_map(|class| &class.specs)
+                .any(|entry| entry.spec_id == spec.0 && entry.role == 0)
+        })
+}
 pub use live_facts::{ObservedEvents, observe_unit};
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 pub(crate) use spell_safety::summon_targets_safe;
@@ -363,8 +393,6 @@ mod combat_refs_tests;
 #[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]
-mod defensive_tests;
-#[cfg(test)]
 mod hazard_reaction_tests;
 #[cfg(test)]
 mod hazard_tests;
@@ -384,8 +412,6 @@ mod kit_clearcasting_tests;
 mod kit_dot_ownership_tests;
 #[cfg(test)]
 mod kit_germination_tests;
-#[cfg(test)]
-mod kit_interrupt_tests;
 #[cfg(test)]
 mod kit_lifebloom_refresh_tests;
 #[cfg(test)]
@@ -407,6 +433,8 @@ mod kit_wild_growth_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod native_fixture;
 #[cfg(test)]
+mod native_interrupt_tests;
+#[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
 mod passive_stats_tests;
@@ -419,19 +447,13 @@ pub(crate) mod profile_behavior_tests;
 #[cfg(test)]
 mod pyroclasm_tests;
 #[cfg(test)]
-mod rotation_defense_tests;
-#[cfg(test)]
 mod rotation_imp_tests;
 #[cfg(test)]
 mod rotation_measurements;
 #[cfg(test)]
-mod rotation_override_tests;
-#[cfg(test)]
 mod rotation_proc_tests;
 #[cfg(test)]
 mod rotation_refresh_tests;
-#[cfg(test)]
-mod rotation_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

@@ -4,6 +4,14 @@
 use super::script_registry;
 use crate::random as rand;
 
+/// Child cast by a script against its ordinary explicit enemy target.
+pub(crate) fn scripted_enemy_trigger(spell: u32) -> Option<u32> {
+    match spell {
+        batch8::PROVOKE => Some(batch8::PROVOKE_SINGLE),
+        _ => None,
+    }
+}
+
 /// Reach from combat-owned scripts whose selection is not encoded by the root effects.
 pub fn native_script_reach(
     world: &World,
@@ -219,8 +227,7 @@ pub(crate) use batch3::{
 };
 pub use batch9::spawn_delayed_ground_pulses;
 pub(crate) use batch9::{
-    ground_pulse_radius, hostile_ground_fields, hostile_ground_pulse_radius, owned_ground_fields,
-    owned_hostile_ground_fields,
+    hostile_ground_fields, hostile_ground_pulse_radius, owned_hostile_ground_fields,
 };
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};

@@ -35,7 +35,6 @@ pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
 }
 
 pub(super) const MELEE_REACH: f32 = 2.0;
-const AUTO_SHOT: u32 = 75;
 
 pub(super) fn update(world: &mut World) {
     super::pull_history::sample_all(world);
@@ -51,10 +50,6 @@ pub(super) fn update(world: &mut World) {
         .collect();
     for owner in owners {
         super::owner_trail::record(world, owner);
-    }
-    for (unit, follower) in &followers {
-        super::utility::sample_health(world, *unit);
-        super::utility::sample_health(world, follower.owner);
     }
     for (unit, follower) in &followers {
         if follower.profile.role == GroupRole::Tank
@@ -100,7 +95,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     if follower.profile.role != GroupRole::Tank
         && super::tank_pull_back::party_should_wait(world, follower.owner)
     {
-        wait_for_tank_pull_back(world, unit, follower, &party);
+        wait_for_tank_pull_back(world, unit, &party);
         return;
     }
     super::tank_pull_back_party::restore_pets(world, unit);
@@ -137,59 +132,15 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     trace_target_selection(world, unit, follower.owner, &party, enemy);
-    if world.get::<AplControlled>(unit).is_some() {
-        position_for_apl(world, unit, follower, selection);
-        return;
-    }
-    update_auto_shot(world, unit, follower, enemy);
-    if enemy.is_some() {
-        use_freightrunners_flask(world, unit);
-    }
-    if super::kit_ai::update(world, unit, follower, &party, enemy, &enemies) {
-        return;
-    }
-    if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
-        return;
-    }
-    if enemy.is_some_and(|enemy| defend_follower(world, unit, enemy, follower.profile.class_id)) {
-        return;
-    }
-    if world.get::<CastState>(unit).is_some() {
-        return;
-    }
-    if prepare_pet(world, unit, follower) {
-        return;
-    }
-    if heal_party_member(world, unit, follower, &party) {
-        return;
-    }
-    let Some(enemy) = enemy else {
-        if matches!(selection, EnemySelection::Hold) {
-            hold_combat(world, unit);
-        } else {
-            regroup(world, unit, follower.owner);
-        }
-        return;
-    };
-    attack_enemy(world, unit, follower, enemy);
+    position_for_apl(world, unit, follower, selection);
 }
 
-fn wait_for_tank_pull_back(world: &mut World, unit: Entity, follower: &Follower, party: &[Entity]) {
+fn wait_for_tank_pull_back(world: &mut World, unit: Entity, party: &[Entity]) {
     super::tank_pull_back_party::stop_damage(world, unit);
     if let Some(tank) = super::tank_pull_back_party::find_tank(world, party) {
         super::tank_pull_back_party::follow_tank(world, unit, tank);
     } else {
         hold_combat(world, unit);
-    }
-    if world.get::<AplControlled>(unit).is_some() {
-        return;
-    }
-    if !super::kit_ai::update(world, unit, follower, party, None, &[])
-        && follower.profile.heal_spell != 0
-        && let Some(patient) = lowest_health(world, party, unit)
-        && pursue(world, unit, patient, follower.profile.heal_spell, false)
-    {
-        cast(world, unit, patient, follower.profile.heal_spell);
     }
 }
 
@@ -236,89 +187,6 @@ fn trace_target_selection(
         .get::<crate::combat::AutoAttack>(owner)
         .is_some_and(|attack| attack.victim == enemy);
     debug!(target: "game_server::follower_target", ?unit, ?owner, ?enemy, ?victim, ?refs, ?threat, owner_victim, "selected enemy");
-}
-
-/// The pinned Elemental APL uses this equipped on-use trinket in combat.
-fn use_freightrunners_flask(world: &mut World, unit: Entity) {
-    const FLASK: u32 = 250215;
-    if world.get::<CastState>(unit).is_some() {
-        return;
-    }
-    let Some((slot, source, item)) = world
-        .get::<crate::stats::EquippedItems>(unit)
-        .and_then(|items| items.items.iter().find(|(_, _, item)| *item == FLASK))
-        .copied()
-    else {
-        return;
-    };
-    let Some(template) = world
-        .get_resource::<crate::item_templates::ItemTemplates>()
-        .and_then(|templates| templates.get(source, item))
-    else {
-        return;
-    };
-    let Some(on_use) = template.on_use else {
-        return;
-    };
-    let Some(item_level) = world
-        .get::<crate::stats::EquippedItemModifiers>(unit)
-        .and_then(|mods| mods.items.iter().find(|(key, _)| *key == slot))
-        .and_then(|(_, mods)| mods.item_level_override)
-    else {
-        return;
-    };
-    let Some(spell) = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(on_use.spell_id)
-    else {
-        return;
-    };
-    if world
-        .get::<crate::spell_cast::SpellHistory>(unit)
-        .is_some_and(|history| history.on_cooldown(spell, crate::spell_cast::history_now(world)))
-    {
-        return;
-    }
-    if !super::spell_safety::safe(world, unit, unit, on_use.spell_id) {
-        return;
-    }
-    if let Err(failure) = crate::spell_cast::cast_item_spell(
-        world,
-        unit,
-        on_use.spell_id,
-        Some(unit),
-        on_use.cooldown,
-        item_level,
-        Some(item),
-    ) {
-        debug!(?unit, ?failure, "Follower on-use trinket unavailable");
-    }
-}
-
-/// BM_AUTO_SHOT_STARTS_ON_ENGAGE_SIMC_APL: pinned Hunter APL's auto_shot
-/// starts native75 on engagement, not on owner selection. TC qualifies the repeat,
-/// not this initial policy decision; no player spell or resource is granted.
-fn update_auto_shot(world: &mut World, unit: Entity, follower: &Follower, enemy: Option<Entity>) {
-    if follower.profile.spec_id != 253 {
-        return;
-    }
-    let Some(enemy) = enemy else {
-        crate::spell_cast::auto_repeat::cancel(world, unit);
-        return;
-    };
-    if !super::spell_safety::safe(world, unit, enemy, AUTO_SHOT) {
-        crate::spell_cast::auto_repeat::cancel(world, unit);
-        return;
-    }
-    if let Some(mut repeat) = world.get_mut::<crate::spell_cast::auto_repeat::AutoRepeat>(unit) {
-        if repeat.retarget_auto_shot(enemy) {
-            return;
-        }
-    }
-    if let Err(error) = crate::spell_cast::creature_cast(world, unit, AUTO_SHOT, Some(enemy), false)
-    {
-        debug!(?unit, ?error, "Follower Auto Shot start unavailable");
-    }
 }
 
 /// TC a352b1fa CasterAI::UpdateAI, CombatAI.cpp:166–177. Stop a cast
@@ -372,71 +240,6 @@ pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
     crate::pet_control::order_companion_pet(world, unit, target);
 }
 
-#[derive(Component)]
-struct PetPreparationFailureReported;
-
-fn report_pet_preparation_failure(
-    world: &mut World,
-    unit: Entity,
-    failure: impl std::fmt::Display,
-) {
-    if world.get::<PetPreparationFailureReported>(unit).is_none() {
-        error!(
-            "Follower {unit} cannot prepare native pet: {failure}; continuing its other kit actions"
-        );
-        world.entity_mut(unit).insert(PetPreparationFailureReported);
-    }
-}
-
-pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
-    if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
-        if follower.profile.spec_id == 253 && !crate::spell_cast::targets::is_alive(world, pet) {
-            if let Err(failure) = crate::spell_cast::creature_cast(world, unit, 982, None, false) {
-                report_pet_preparation_failure(world, unit, format_args!("spell982: {failure:?}"));
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-    let spell = match follower.profile.spec_id {
-        266 => 30146, // The native Demonology summon names its own creature.
-        253 => {
-            if let Err(error) = crate::hunter_pet::provision_follower_duck(world, unit) {
-                report_pet_preparation_failure(world, unit, error);
-                return false;
-            }
-            883 // Ordinary Call Pet reads the actual provisioned stable slot.
-        }
-        _ => return false,
-    };
-    if let Err(failure) = crate::spell_cast::creature_cast(world, unit, spell, Some(unit), false) {
-        report_pet_preparation_failure(world, unit, format_args!("spell{spell}: {failure:?}"));
-        return false;
-    }
-    true
-}
-
-fn heal_party_member(
-    world: &mut World,
-    unit: Entity,
-    follower: &Follower,
-    party: &[Entity],
-) -> bool {
-    if follower.profile.heal_spell == 0 {
-        return false;
-    }
-    let Some(patient) = lowest_health(world, party, unit) else {
-        return false;
-    };
-    if pursue(world, unit, patient, follower.profile.heal_spell, false) {
-        cast(world, unit, patient, follower.profile.heal_spell);
-    } else {
-        regroup(world, unit, follower.owner);
-    }
-    true
-}
-
 fn position_for_apl(
     world: &mut World,
     unit: Entity,
@@ -445,11 +248,18 @@ fn position_for_apl(
 ) {
     match selection {
         EnemySelection::Attack(enemy) => {
-            let profile = &follower.profile;
-            if pursue(world, unit, enemy, profile.attack_spell, profile.melee) {
+            let reach = if follower.profile.melee {
+                Some(MELEE_REACH)
+            } else {
+                super::target_reach::attack_range(world, unit, follower)
+                    .map(|range| (range - 1.0).max(MELEE_REACH))
+            };
+            if reach.is_some_and(|reach| pursue_at_reach(world, unit, enemy, reach)) {
                 order_pet_attack(world, unit, enemy);
-                if needs_taunt(world, unit, enemy, follower) {
-                    cast(world, unit, enemy, profile.taunt_spell);
+                if needs_taunt(world, unit, enemy, follower)
+                    && let Some(spell) = super::class_spawn::known_taunt(world, unit)
+                {
+                    cast(world, unit, enemy, spell);
                 }
             } else {
                 regroup(world, unit, follower.owner);
@@ -473,33 +283,6 @@ pub fn engaged_targets(world: &mut World, unit: Entity) -> Vec<Entity> {
         .collect()
 }
 
-fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Entity) {
-    if !pursue(
-        world,
-        unit,
-        enemy,
-        follower.profile.attack_spell,
-        follower.profile.melee,
-    ) {
-        regroup(world, unit, follower.owner);
-        return;
-    }
-    order_pet_attack(world, unit, enemy);
-    if needs_taunt(world, unit, enemy, follower)
-        && cast(world, unit, enemy, follower.profile.taunt_spell)
-    {
-        return;
-    }
-    if follower.profile.cooldown_spell != 0
-        && cast(world, unit, enemy, follower.profile.cooldown_spell)
-    {
-        return;
-    }
-    if follower.profile.attack_spell != 0 {
-        cast(world, unit, enemy, follower.profile.attack_spell);
-    }
-}
-
 /// The owner and every follower in the owner's party.
 pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
     let mut units: Vec<_> = world
@@ -510,20 +293,6 @@ pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
         .collect();
     units.push(owner);
     units
-}
-
-fn lowest_health(world: &World, party: &[Entity], healer: Entity) -> Option<Entity> {
-    party
-        .iter()
-        .copied()
-        .filter(|unit| world.get::<InMap>(*unit) == world.get::<InMap>(healer))
-        .filter_map(|unit| {
-            let health = world.get::<Health>(unit)?;
-            let injured = health.current > 0.0 && health.current < health.max;
-            injured.then_some((unit, health.current / health.max))
-        })
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(unit, _)| unit)
 }
 
 enum EnemySelection {
@@ -613,115 +382,15 @@ pub(super) fn engaged_enemies(
     enemies
 }
 
-/// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
-/// are verified in local SpellName/SpellEffect12.1.0.69933 (Skull Bash's
-/// effect68 child93985 is referenced by its source description). Holy/Restoration
-/// have no selected kick; Demonology's pet interrupt is not a player cast.
-fn interrupt_spell(spec: u32) -> Option<u32> {
-    match spec {
-        66 => Some(96231),    // Protection Paladin: Rebuke.
-        73 => Some(6552),     // Protection Warrior: Pummel.
-        63 => Some(2139),     // Fire Mage: Counterspell.
-        262 => Some(57994),   // Elemental Shaman: Wind Shear.
-        253 => Some(147362),  // Beast Mastery Hunter: Counter Shot.
-        1467 => Some(351338), // Devastation Evoker: Quell.
-        269 => Some(116705),  // Windwalker Monk: Spear Hand Strike.
-        103 => Some(106839),  // Feral Druid: Skull Bash.
-        _ => None,
-    }
-}
-
-pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
-    let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
-        return false;
-    };
-    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy)
-        || !super::spell_safety::safe(world, caster, enemy, spell)
-    {
-        return false;
-    }
-    if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
-        return false;
-    }
-    match crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(enemy)) {
-        Ok(()) => true,
-        Err(failure) => {
-            debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
-            false
-        }
-    }
-}
-
-/// CreatureFamily29/SkillLine761 teaches Felguard Axe Toss89766 at17; source
-/// SpellEffect64 triggers the real347008 effect68. Never cast an unlearned pet spell.
-fn interrupt_source(world: &World, unit: Entity, spec: u32) -> Option<(Entity, u32)> {
-    if spec != 266 {
-        return interrupt_spell(spec).map(|spell| (unit, spell));
-    }
-    let pet = crate::hunter_pet::summoned_pet(world, unit)?;
-    let charm = world.get::<crate::pet_control::PetCharm>(pet)?;
-    charm.spell_slot(89766).map(|_| (pet, 89766))
-}
-
-/// Approved bridge policy: defend a wounded companion being actively attacked.
-/// No invented health-percentage threshold or NPC-kit parity claim.
-fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) -> bool {
-    let wounded = world
-        .get::<Health>(unit)
-        .is_some_and(|health| health.current < health.max);
-    let attacked = world
-        .get::<CombatTarget>(enemy)
-        .is_some_and(|target| target.0 == Some(unit));
-    if !wounded || !attacked {
-        return false;
-    }
-    let Some(spell) = defensive_spell(class) else {
-        return false;
-    };
-    if !super::spell_safety::safe(world, unit, unit, spell) {
-        return false;
-    }
-    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
-        Ok(()) => true,
-        Err(failure) => {
-            debug!("Follower {unit} defensive {spell}: {failure:?}");
-            false
-        }
-    }
-}
-
-fn defensive_spell(class: u8) -> Option<u32> {
-    Some(match class {
-        1 => 871,     // Shield Wall.
-        2 => 498,     // Divine Protection.
-        3 => 186265,  // Aspect of the Turtle.
-        5 => 19236,   // Desperate Prayer.
-        7 => 108271,  // Astral Shift.
-        8 => 45438,   // Ice Block.
-        9 => 104773,  // Unending Resolve.
-        10 => 115203, // Fortifying Brew.
-        11 => 22812,  // Barkskin.
-        13 => 363916, // Obsidian Scales.
-        _ => return None,
-    })
-}
-
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
-    follower.profile.taunt_spell != 0
+    follower.profile.role == GroupRole::Tank
         && world
             .get::<CombatTarget>(enemy)
             .and_then(|target| target.0)
             .is_some_and(|victim| victim != tank)
 }
 
-pub(super) fn pursue(
-    world: &mut World,
-    unit: Entity,
-    target: Entity,
-    spell_id: u32,
-    melee: bool,
-) -> bool {
-    debug!(target: "game_server::follower_target", ?unit, ?target, spell_id, melee, "spell approach requested");
+pub(super) fn pursue_at_reach(world: &mut World, unit: Entity, target: Entity, reach: f32) -> bool {
     if super::candlelight::hold_pursuit(world, unit, target) {
         return true;
     }
@@ -731,15 +400,6 @@ pub(super) fn pursue(
     {
         return true;
     }
-    let reach = if melee {
-        Some(MELEE_REACH)
-    } else {
-        spell_reach(world, spell_id)
-    };
-    let Some(reach) = reach else {
-        warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
-        return false;
-    };
     let in_range_and_visible = crate::spell_cast::targets::position(world, unit)
         .zip(crate::spell_cast::targets::position(world, target))
         .is_some_and(|(from, to)| from.distance(to) <= reach)
@@ -764,17 +424,6 @@ pub(super) fn pursue(
         CombatTarget(Some(target)),
     ));
     true
-}
-
-fn spell_reach(world: &World, spell_id: u32) -> Option<f32> {
-    world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(spell_id)
-        .and_then(|spell| spell.misc.as_ref())
-        .and_then(|misc| misc.range)
-        .map(|range| range.max_hostile.max(range.max_friendly))
-        .filter(|range| *range > 0.0)
-        .map(|range| (range - 1.0).max(2.0))
 }
 
 fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {

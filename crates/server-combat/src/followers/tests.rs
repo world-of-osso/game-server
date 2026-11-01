@@ -46,7 +46,10 @@ fn every_player_role_forms_exactly_one_tank_one_healer_three_damage() {
 fn spawn_follower(h: &mut crate::spell_cast::test_harness::Harness, profile: Profile) -> Entity {
     let owner = h.caster;
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let actions = super::spawning::profile_actions(&profile);
     h.app.world_mut().entity_mut(unit).insert((
+        crate::class_progression::KnownSpells::from_baseline(actions.clone()),
+        FollowerActionSpells(actions),
         Npc {
             template_id: profile.entry,
             name: profile.name.clone(),
@@ -241,70 +244,6 @@ fn class_follower_apl_marker_keeps_pursuit_without_kit_casts() {
             .get::<crate::creature_ai::FollowOwner>(follower)
             .is_some(),
         "the brain regroups after the pull"
-    );
-}
-
-#[test]
-fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
-    let mut h = crate::spell_cast::test_harness::harness(vec![], &[585, 2061, 137031], 5).unwrap();
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
-    let mut holy = profile(215011, GroupRole::Healer, 585, 2061);
-    holy.class_id = 5;
-    holy.spec_id = 257;
-    let (_, _, passives) = super::spawning::class_stats(h.app.world(), &holy, 10).unwrap();
-    assert!(
-        passives.contains(&137031),
-        "Holy Priest's authored passive activates Flash Heal's native cost"
-    );
-    let healer = spawn_follower(&mut h, holy);
-    crate::auras::sync_passives(
-        h.app.world_mut(),
-        healer,
-        crate::auras::AuraSource::KnownSpell,
-        &passives,
-    );
-    let injured = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 0, 0));
-    h.app
-        .world_mut()
-        .get_mut::<Health>(injured)
-        .unwrap()
-        .current = 100.0;
-    h.app
-        .world_mut()
-        .get_mut::<Health>(h.caster)
-        .unwrap()
-        .current = 800.0;
-    h.app
-        .world_mut()
-        .get_mut::<crate::networking::CombatTarget>(h.caster)
-        .unwrap()
-        .0 = Some(h.npc);
-    h.attack(h.npc);
-    h.advance(3);
-    for _ in 0..40 {
-        update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert!(
-        h.health(injured) > 100.0,
-        "healer must heal the most injured ally"
-    );
-    assert!(
-        !h.inbox.log.iter().any(|event| {
-            event.source == Some(healer.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage
-        }),
-        "the healer must prioritize healing, even while another party member attacks"
-    );
-    assert!(
-        h.app.world().get::<Mana>(healer).unwrap().current < 10000.0,
-        "ordinary spells must spend mana"
     );
 }
 

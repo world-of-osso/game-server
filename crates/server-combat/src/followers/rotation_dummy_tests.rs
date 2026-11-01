@@ -1,48 +1,12 @@
-//! Headless 120s max-level decision/execution measurements, not a damage oracle.
+//! Native follower stats and proc observation fixtures.
 use super::kit_tests::at_level;
 use crate::auras::{ActiveAuras, aura_now};
 use crate::spell_cast::test_harness::{Harness, spawn_npc};
 use bevy::prelude::*;
-use serde::Serialize;
 use shared::components::{Health, ThreatTable};
-use shared::protocol::CombatLogKind;
 use std::collections::BTreeMap;
 
-const DURATION_SECONDS: f64 = 120.0;
-const AUTO_SHOT: u32 = 75;
 const DUMMY_HEALTH: f32 = 1_000_000_000.0;
-
-#[derive(Default, Serialize)]
-struct ProcMeasurement {
-    gained: usize,
-    consumed: usize,
-    expired: usize,
-    consumed_per_gained: Option<f64>,
-}
-
-#[derive(Serialize)]
-struct DummyMeasurement {
-    spec: u32,
-    level: u8,
-    targets: usize,
-    elapsed_seconds: f64,
-    sample_interval_seconds: f64,
-    damage: i64,
-    pet_damage: i64,
-    buff_uptime_fraction: BTreeMap<u32, f64>,
-    actions: BTreeMap<u32, usize>,
-    dot_target_seconds: BTreeMap<u32, f64>,
-    dot_uptime_fraction: BTreeMap<u32, f64>,
-    procs: BTreeMap<u32, ProcMeasurement>,
-    pet_present: bool,
-    stat_source: &'static str,
-    initial_stats: serde_json::Value,
-    final_stats: serde_json::Value,
-    reported_damage_sources: Vec<u64>,
-    known_spells: Vec<u32>,
-    summon_owners: BTreeMap<u64, u64>,
-    combat_events: Vec<shared::protocol::CombatLogEvent>,
-}
 
 pub(super) fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
     let mut targets = vec![h.npc];
@@ -156,30 +120,6 @@ impl ProcObserver {
     }
 }
 
-fn buff_auras(spec: u32) -> &'static [u32] {
-    match spec {
-        262 => &[77762, 191634, 1219480],
-        63 => &[48107, 48108, 190319],
-        253 => &[1264934, 19574],
-        1467 => &[359618, 375087],
-        _ => unreachable!("only assigned native follower specs"),
-    }
-}
-
-fn sample_buffs(
-    world: &World,
-    caster: Entity,
-    spec: u32,
-    seconds: f64,
-    totals: &mut BTreeMap<u32, f64>,
-) {
-    for &aura in buff_auras(spec) {
-        if crate::auras::has_aura(world, caster, aura) {
-            *totals.entry(aura).or_default() += seconds;
-        }
-    }
-}
-
 pub(super) fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
     if spec != 253 {
         return at_level(entry, level, |app| {
@@ -203,103 +143,6 @@ pub(super) fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, En
                 crate::creature_ai::CreatureAiPlugin,
             ));
     })
-}
-
-#[test]
-fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_repeat() {
-    let (mut h, caster) = prepare_follower(209065, 253, 32);
-    let targets = prepare_dummies(&mut h, 2);
-    let next_target = targets[1];
-    let stats = h
-        .app
-        .world()
-        .get::<crate::stats::CharacterStats>(caster)
-        .unwrap();
-    let base = if stats.main_hand.kind == shared::components::WeaponType::Ranged {
-        stats.main_hand.speed
-    } else {
-        2.0 // TC BASE_ATTACK_TIME when no ranged main hand supplies the clock.
-    };
-    let frame_step = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
-        bevy::time::TimeUpdateStrategy::ManualDuration(step) => *step,
-        _ => panic!("native fixture requires its manual frame clock"),
-    };
-    let interval =
-        crate::melee::attack_timer_duration(crate::melee::swing_time(base, stats.haste_pct));
-    assert_eq!(interval.as_nanos() % frame_step.as_nanos(), 0);
-    // The direct AI call executes before advance; its receipt is drained only
-    // afterward. Timestamp that initial execution, not its later delivery frame.
-    let started_at = h.app.world().resource::<Time>().elapsed();
-    let first = h.inbox.go.len();
-    super::update_ai(h.app.world_mut());
-    h.advance(1);
-    let initial_shots = h.inbox.go[first..]
-        .iter()
-        .filter(|event| event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT)
-        .count();
-    assert_eq!(initial_shots, 1, "initial ordinary Auto Shot receipt");
-    let mut shots = vec![started_at];
-    for frame in 1..200 {
-        if frame == 10 {
-            h.select(Some(next_target));
-            h.attack(next_target);
-        }
-        let first = h.inbox.go.len();
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-        let now = h.app.world().resource::<Time>().elapsed();
-        shots.extend(h.inbox.go[first..].iter().filter_map(|event| {
-            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(now)
-        }));
-    }
-    assert!(
-        shots.len() >= 3,
-        "engaged native BM must start and repeat Auto Shot: {shots:?}"
-    );
-    for pair in shots.windows(2) {
-        assert_eq!(
-            pair[1] - pair[0],
-            interval,
-            "native ranged execution clock, not receipt-frame labels: {shots:?}"
-        );
-    }
-    assert!(
-        h.inbox.log.iter().any(|event| {
-            event.source == Some(caster.to_bits())
-                && event.spell_id == Some(AUTO_SHOT)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0
-        }),
-        "actual native follower Auto Shot damage"
-    );
-    assert!(
-        h.inbox.log.iter().any(|event| {
-            event.source == Some(caster.to_bits())
-                && event.spell_id == Some(AUTO_SHOT)
-                && event.target == Some(next_target.to_bits())
-                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
-        }),
-        "ordinary target change redirects the repeat without restarting its clock"
-    );
-}
-
-#[test]
-fn rotation_fidelity_253_selection_alone_does_not_start_auto_shot() {
-    let (mut h, caster, _) =
-        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209065, |app| {
-            app.add_plugins(crate::stats::StatsPlugin);
-        });
-    for _ in 0..120 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert!(
-        !h.inbox
-            .go
-            .iter()
-            .any(|event| { event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT }),
-        "owner selection without native engagement must not start Auto Shot"
-    );
 }
 
 #[test]
@@ -332,28 +175,6 @@ fn rotation_dummy_native_stat_buff_recomputes_all_four_follower_sheets() {
     }
 }
 
-fn sample_dots(
-    h: &Harness,
-    caster: Entity,
-    targets: &[Entity],
-    seconds: f64,
-    totals: &mut BTreeMap<u32, f64>,
-) {
-    for &target in targets {
-        if let Some(auras) = h.app.world().get::<ActiveAuras>(target) {
-            for aura in auras.iter().filter(|aura| aura.caster == caster) {
-                let periodic_damage = aura
-                    .effects
-                    .iter()
-                    .any(|effect| effect.aura_type == crate::auras::PERIODIC_DAMAGE_AURA);
-                if periodic_damage {
-                    *totals.entry(aura.spell_id).or_default() += seconds;
-                }
-            }
-        }
-    }
-}
-
 pub(super) fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
     let stats = h
         .app
@@ -373,171 +194,6 @@ pub(super) fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
         "max_health": stats.max_health,
         "max_mana": stats.max_mana,
     })
-}
-
-fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
-    let (mut h, caster) = prepare_follower(entry, spec, level);
-    let targets = prepare_dummies(&mut h, count);
-    let initial_stats = snapshot_stats(&h, caster);
-    let begin = aura_now(h.app.world());
-    let first_log = h.inbox.log.len();
-    let mut summon_query = h
-        .app
-        .world_mut()
-        .query::<(Entity, &shared::components::UnitSummonedBy)>();
-    let mut summon_owners = BTreeMap::new();
-    let mut dots = BTreeMap::new();
-    let mut buffs = BTreeMap::new();
-    let mut observer = ProcObserver::new(spec, caster);
-    let mut updates = 0;
-    while aura_now(h.app.world()) - begin < seconds {
-        let previous_time = aura_now(h.app.world());
-        let previous_procs = proc_snapshots(h.app.world(), caster, spec);
-        let first_go = h.inbox.go.len();
-        super::update_ai(h.app.world_mut());
-        let after_ai = proc_snapshots(h.app.world(), caster, spec);
-        h.advance(1);
-        for (entity, owner) in summon_query.iter(h.app.world()) {
-            summon_owners.insert(entity.to_bits(), owner.0);
-        }
-        let now = aura_now(h.app.world());
-        let current = proc_snapshots(h.app.world(), caster, spec);
-        let receipts = &h.inbox.go[first_go..];
-        observer.observe(&previous_procs, &after_ai, previous_time, receipts);
-        observer.observe(&after_ai, &current, now, receipts);
-        sample_buffs(h.app.world(), caster, spec, now - previous_time, &mut buffs);
-        sample_dots(&h, caster, &targets, now - previous_time, &mut dots);
-        updates += 1;
-        assert!(updates <= 3000, "120s deterministic clock did not advance");
-        assert!(targets.iter().all(|target| h.health(*target) > 0.0));
-    }
-    let elapsed = aura_now(h.app.world()) - begin;
-    let pet = crate::hunter_pet::summoned_pet(h.app.world(), caster);
-    let sources: Vec<_> = [Some(caster.to_bits()), pet.map(Entity::to_bits)]
-        .into_iter()
-        .flatten()
-        .collect();
-    let events = &h.inbox.log[first_log..];
-    let pet_damage = events
-        .iter()
-        .filter(|event| {
-            event.kind == CombatLogKind::Damage
-                && pet.is_some_and(|pet| event.source == Some(pet.to_bits()))
-        })
-        .map(|event| i64::from(event.amount))
-        .sum();
-    let damage = events
-        .iter()
-        .filter(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.source.is_some_and(|source| sources.contains(&source))
-        })
-        .map(|event| i64::from(event.amount))
-        .sum();
-    let mut actions = BTreeMap::new();
-    for event in events.iter().filter(|event| {
-        event.kind == CombatLogKind::CastSuccess && event.source == Some(caster.to_bits())
-    }) {
-        if let Some(spell) = event.spell_id {
-            *actions.entry(spell).or_default() += 1;
-        }
-    }
-    let procs = proc_consumers(spec)
-        .iter()
-        .map(|(aura, _)| {
-            let gained = events
-                .iter()
-                .filter(|event| {
-                    event.kind == CombatLogKind::AuraApplied
-                        && event.spell_id == Some(*aura)
-                        && event.source.is_some_and(|source| sources.contains(&source))
-                })
-                .count();
-            let consumed = observer.consumed.get(aura).copied().unwrap_or(0);
-            (
-                *aura,
-                ProcMeasurement {
-                    gained,
-                    consumed,
-                    expired: observer.expired.get(aura).copied().unwrap_or(0),
-                    consumed_per_gained: (gained > 0).then_some(consumed as f64 / gained as f64),
-                },
-            )
-        })
-        .collect();
-    let fractions = dots
-        .iter()
-        .map(|(&spell, &seconds)| (spell, seconds / elapsed / count as f64))
-        .collect();
-    let mut known_spells: Vec<_> = h
-        .app
-        .world()
-        .get::<crate::class_progression::KnownSpells>(caster)
-        .expect("native follower retains its actual selected book")
-        .iter()
-        .collect();
-    known_spells.sort_unstable();
-    let report = DummyMeasurement {
-        spec,
-        level,
-        targets: count,
-        elapsed_seconds: elapsed,
-        sample_interval_seconds: super::kit_clearcasting_tests::frame_seconds(&h),
-        damage,
-        pet_damage,
-        buff_uptime_fraction: buffs
-            .into_iter()
-            .map(|(aura, seconds)| (aura, seconds / elapsed))
-            .collect(),
-        actions,
-        dot_target_seconds: dots,
-        dot_uptime_fraction: fractions,
-        procs,
-        pet_present: pet.is_some(),
-        stat_source: "production_stats_plugin_ungeared_starter",
-        initial_stats,
-        final_stats: snapshot_stats(&h, caster),
-        reported_damage_sources: sources,
-        known_spells,
-        summon_owners,
-        combat_events: events
-            .iter()
-            .filter(|event| {
-                matches!(
-                    event.kind,
-                    CombatLogKind::Damage
-                        | CombatLogKind::CastSuccess
-                        | CombatLogKind::Summon
-                        | CombatLogKind::Energize
-                )
-            })
-            .cloned()
-            .collect(),
-    };
-    let observed_damage: i64 = report
-        .combat_events
-        .iter()
-        .filter(|event| {
-            event.kind == CombatLogKind::Damage
-                && event
-                    .source
-                    .is_some_and(|source| report.reported_damage_sources.contains(&source))
-        })
-        .map(|event| i64::from(event.amount))
-        .sum();
-    assert_eq!(
-        observed_damage, report.damage,
-        "exported actual events must reconstruct the reported source-scoped damage"
-    );
-    let json = serde_json::to_string_pretty(&report).unwrap();
-    println!("ROTATION_DUMMY {json}");
-    if let Some(directory) = std::env::var_os("ROTATION_FIDELITY_OUTPUT") {
-        let path = std::path::PathBuf::from(directory)
-            .join(format!("{spec}-level{level}-{count}target.json"));
-        std::fs::write(&path, json + "\n")
-            .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
-    }
-    assert!(damage > 0, "native follower produced no damage");
 }
 
 #[test]
@@ -565,61 +221,4 @@ fn rotation_metrics_1467_observes_one_use_when_two_real_stacks_become_one() {
         "a real2→1 stack spend must appear in the consumption numerator"
     );
     assert!(observer.expired.is_empty());
-}
-
-#[test]
-fn rotation_dummy_262_single_target_120s() {
-    measure_dummy(209053, 262, 1, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_262_three_targets_120s() {
-    measure_dummy(209053, 262, 3, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_262_level70_single_target_60s() {
-    measure_dummy(209053, 262, 1, 70, 60.0);
-}
-#[test]
-fn rotation_dummy_262_level70_three_targets_60s() {
-    measure_dummy(209053, 262, 3, 70, 60.0);
-}
-#[test]
-fn rotation_dummy_262_level32_smoke() {
-    measure_dummy(209053, 262, 1, 32, 10.0);
-}
-#[test]
-fn rotation_dummy_63_single_target_120s() {
-    measure_dummy(209059, 63, 1, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_63_three_targets_120s() {
-    measure_dummy(209059, 63, 3, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_63_level32_smoke() {
-    measure_dummy(209059, 63, 1, 32, 10.0);
-}
-#[test]
-fn rotation_dummy_253_single_target_120s() {
-    measure_dummy(209065, 253, 1, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_253_three_targets_120s() {
-    measure_dummy(209065, 253, 3, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_253_level32_smoke() {
-    measure_dummy(209065, 253, 1, 32, 10.0);
-}
-#[test]
-fn rotation_dummy_1467_single_target_120s() {
-    measure_dummy(215240, 1467, 1, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_1467_three_targets_120s() {
-    measure_dummy(215240, 1467, 3, 90, DURATION_SECONDS);
-}
-#[test]
-fn rotation_dummy_1467_level32_smoke() {
-    measure_dummy(215240, 1467, 1, 32, 10.0);
 }

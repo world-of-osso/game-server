@@ -1,6 +1,6 @@
 //! Native31146 uses CombatManager references, not a fabricated threat list.
 use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
-use super::{Follower, FollowerCatalog, ai, kit_area};
+use super::{Follower, ai, spell_safety};
 use crate::spell_cast::test_harness::{Harness, load_native_creature_world};
 use bevy::prelude::*;
 use shared::components::{CombatStatus, ThreatTable};
@@ -151,27 +151,7 @@ fn follower_combatrefs_native_three_targets_reach_area_policy() {
         "all three real31146 are in party combat; owner victim alone previously admitted only one"
     );
     assert_eq!(enemies[0].0, targets[0], "selected target retains priority");
-    let mut meteor = h
-        .app
-        .world()
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .find(|entry| entry.spell_id == METEOR && entry.available(63, 32))
-        .unwrap()
-        .clone();
-    // This fixture tests three-target combat admission, not the live Fire APL.
-    // Retain native Meteor geometry while fixing this test's area threshold:
-    // published Fire policy may legitimately allow Meteor on one enemy.
-    meteor.conditions.min_enemies = targets.len();
-    assert_eq!(meteor.conditions.min_enemies, 3);
-    assert!(kit_area::allows(
-        h.app.world_mut(),
-        unit,
-        targets[0],
-        &enemies,
-        &meteor
-    ));
+    assert!(spell_safety::safe(h.app.world(), unit, targets[0], METEOR));
 
     // Nearby but unengaged enemies still veto an implicit area. Merely holding
     // combat with an outsider must not recruit that outsider's pack either.
@@ -188,7 +168,7 @@ fn follower_combatrefs_native_three_targets_reach_area_policy() {
     assert_eq!(enemies.len(), 3, "nonparty combat must not be recruited");
     assert!(!enemies.iter().any(|(enemy, _)| *enemy == fresh));
     assert!(
-        !kit_area::allows(h.app.world_mut(), unit, targets[0], &enemies, &meteor),
+        !spell_safety::safe(h.app.world(), unit, targets[0], METEOR),
         "area must not pull unengaged packs"
     );
 

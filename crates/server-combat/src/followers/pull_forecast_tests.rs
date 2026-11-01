@@ -203,6 +203,10 @@ pub(super) fn add_native_healer(h: &mut Harness) -> Entity {
         map,
     ));
     super::spawning::initialize(h.app.world_mut(), owner, healer, profile).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(super::FollowerActionSpells(vec![774, 8936]));
     healer
 }
 

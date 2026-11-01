@@ -71,7 +71,15 @@ pub(super) fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
                 shared::components::UnitPowers::default(),
                 map,
             ));
+            let actions = [profile.attack_spell, profile.cooldown_spell]
+                .into_iter()
+                .filter(|&spell| spell != 0)
+                .collect();
             super::spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
+            h.app
+                .world_mut()
+                .entity_mut(unit)
+                .insert(super::FollowerActionSpells(actions));
             unit
         })
         .collect()
@@ -316,7 +324,10 @@ fn tank_pull_admission_native_bootstrap_is_one_source_pack_without_prior_rates()
         Decision::Wait(Reason::Recovery)
     );
     f.h.app.world_mut().entity_mut(f.healer).insert(mana);
-    f.h.app.world_mut().remove_resource::<FollowerCatalog>();
+    f.h.app
+        .world_mut()
+        .entity_mut(f.healer)
+        .remove::<super::FollowerActionSpells>();
     assert!(
         super::pull_readiness::read_ready_heal(f.h.app.world_mut(), f.tank, &f.members,).is_err()
     );

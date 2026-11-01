@@ -6,6 +6,13 @@ use crate::spell_info::SpellStore;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
+fn absorb_remaining(world: &bevy::prelude::World, unit: bevy::prelude::Entity) -> f32 {
+    crate::auras::forecast::absorb_remaining(
+        world.get::<ActiveAuras>(unit).unwrap(),
+        crate::auras::aura_now(world),
+    )
+}
+
 #[test]
 fn life_cocoon_absorbs_hit_on_other_party_member_using_caster_health() {
     let (mut h, healer, party) = native_party(90);
@@ -17,14 +24,7 @@ fn life_cocoon_absorbs_hit_on_other_party_member_using_caster_health() {
         .unwrap()
         .versatility_pct = 25.0;
     crate::spell_cast::creature_cast(world, healer, 116849, Some(target), true).unwrap();
-    let now = crate::auras::aura_now(world);
-    let capacity = crate::auras::forecast::healing_coverage(
-        world.get::<ActiveAuras>(target).unwrap(),
-        now,
-        0.0,
-    )
-    .1;
-    assert_eq!(capacity, 600.0); // 1000 * 48% * 1.25
+    assert_eq!(absorb_remaining(world, target), 600.0); // 1000 * 48% * 1.25
     let spell = world.resource::<SpellStore>().get(133).unwrap().clone();
     let before = world.get::<Health>(target).unwrap().current;
     let ctx = EffectCtx {
@@ -36,13 +36,7 @@ fn life_cocoon_absorbs_hit_on_other_party_member_using_caster_health() {
     };
     deal_damage(world, &ctx, target, 100.0, false, false);
     assert_eq!(world.get::<Health>(target).unwrap().current, before);
-    let capacity = crate::auras::forecast::healing_coverage(
-        world.get::<ActiveAuras>(target).unwrap(),
-        now,
-        0.0,
-    )
-    .1;
-    assert_eq!(capacity, 500.0);
+    assert_eq!(absorb_remaining(world, target), 500.0);
 }
 
 #[test]

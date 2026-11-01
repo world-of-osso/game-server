@@ -231,11 +231,8 @@ pub fn spawn_keystone_party(
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
-    let spells = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .ok_or("follower spells unavailable")?;
     let profiles = super::gear::wcl::class_profiles(classes, key_level)?;
-    let qualified = class_profiles::validate_profiles(&profiles, classes, spells, level);
+    let qualified = class_profiles::validate_profiles(&profiles, classes, level);
     let selected = select_party_profiles(specs, &qualified)?;
     spawn_profiled_party(
         world,
@@ -514,9 +511,10 @@ pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
 }
 
-/// The tank opens a pull with its native taunt, resolved when it spawned.
+/// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
-    let spell_id = world.get::<Follower>(tank).unwrap().profile.taunt_spell;
+    let spell_id =
+        super::class_spawn::known_taunt(world, tank).expect("tank must know its native taunt");
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
