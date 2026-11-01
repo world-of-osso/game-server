@@ -129,6 +129,15 @@ fn follower_subtlety_danse_macabre_once_per_distinct_action_per_dance() {
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
     let copy = create_open_follower_copy(&mut app, 2515).unwrap();
     let (mut app, actor, target, _) = prepare_class_follower(app, copy, 261, 70);
+    let mut position = app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap()
+        .clone();
+    position.x += 2.0;
+    *app.world_mut()
+        .get_mut::<shared::components::Position>(target)
+        .unwrap() = position;
     app.world_mut()
         .entity_mut(actor)
         .remove::<crate::followers::Follower>();
