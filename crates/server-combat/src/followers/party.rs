@@ -248,7 +248,7 @@ fn begin_run(
     let profiles = class_profiles
         .iter()
         .enumerate()
-        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot, 0))
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot))
         .collect::<Result<Vec<_>, _>>()?;
     let position = *world
         .get::<shared::components::Position>(player)
@@ -2092,7 +2092,6 @@ mod copy_tests {
         let qualified = super::super::class_profiles::validate_profiles(
             &available,
             app.world().resource::<crate::spell_info::ClassSpells>(),
-            app.world().resource::<crate::spell_info::SpellStore>(),
             70,
         );
         let replay =

@@ -207,7 +207,9 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
             104 => 6795,
             _ => 0,
         };
-        assert_eq!(follower.profile.taunt_spell, expected_taunt);
+        if expected_taunt != 0 {
+            assert_eq!(super::known_taunt(world, unit), Some(expected_taunt));
+        }
         assert_eq!(follower.profile.form_spell, 0);
         assert_eq!(
             world.get::<shared::components::ActiveSpec>(unit).unwrap().0,
@@ -245,41 +247,6 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
                 Some(*item) == entry.item_id && Some(*source) == entry.definition_source
             })
         }));
-        if !follower.profile.melee {
-            let attack = follower.profile.attack_spell;
-            let classes = world.resource::<crate::spell_info::ClassSpells>();
-            let spec_data = classes
-                .classes
-                .iter()
-                .find(|class| class.class_id == profile.class_id)
-                .unwrap()
-                .specs
-                .iter()
-                .find(|entry| entry.spec_id == spec)
-                .unwrap();
-            assert!(
-                spec_data
-                    .spells
-                    .iter()
-                    .any(|spell| spell.spell_id == attack)
-            );
-            let spell = world
-                .resource::<crate::spell_info::SpellStore>()
-                .get(attack)
-                .unwrap();
-            assert!(
-                spell
-                    .misc
-                    .as_ref()
-                    .and_then(|misc| misc.range)
-                    .is_some_and(|range| range.max_hostile.max(range.max_friendly) >= 20.0)
-            );
-            assert!(!spell.effects.iter().any(|effect| matches!(
-                effect.effect,
-                crate::death::resurrection::EFFECT_RESURRECT
-                    | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA
-            )));
-        }
         let items = world.get::<EquippedItems>(unit).unwrap().clone();
         let modifiers = world
             .get::<crate::stats::EquippedItemModifiers>(unit)

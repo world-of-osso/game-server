@@ -57,7 +57,6 @@ pub fn read_profiles() -> Result<Vec<ClassProfile>, String> {
 pub(super) fn validate_profiles(
     profiles: &[ClassProfile],
     classes: &crate::spell_info::ClassSpells,
-    spells: &crate::spell_info::SpellStore,
     level: u8,
 ) -> Vec<ClassProfile> {
     profiles
@@ -71,7 +70,7 @@ pub(super) fn validate_profiles(
                         .ok_or("decoded talents are missing".to_owned())?;
                     let source = profile.talent_source()?;
                     crate::race_class::validate_race_class(profile.race, profile.class_id)?;
-                    let (known, _, _) = crate::class_progression::evaluate_follower_progression(
+                    crate::class_progression::evaluate_follower_progression(
                         classes,
                         profile.class_id,
                         profile.race,
@@ -80,7 +79,7 @@ pub(super) fn validate_profiles(
                         source,
                         entries,
                     )?;
-                    super::class_spawn::attack_spell(classes, spells, profile, &known).map(|_| ())
+                    Ok(())
                 },
                 |error| Err(error.clone()),
             );
@@ -106,10 +105,7 @@ pub(super) fn select_party_profiles(
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
-    let spells = world
-        .get_resource::<crate::spell_info::SpellStore>()
-        .ok_or("follower spell store unavailable")?;
-    let qualified = validate_profiles(&read_profiles()?, classes, spells, level);
+    let qualified = validate_profiles(&read_profiles()?, classes, level);
     select_profiles(&qualified, role, player_spec, seed)
 }
 
@@ -173,8 +169,8 @@ mod tests {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
-        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, &spells, 90);
+        let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let profiles = validate_profiles(&read_profiles().unwrap(), &classes, 90);
         for role in [GroupRole::Tank, GroupRole::Healer, GroupRole::Dps] {
             let count = profiles
                 .iter()
@@ -195,9 +191,9 @@ mod tests {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
         let roster = read_profiles().unwrap();
-        let validated = validate_profiles(&roster, &classes, &spells, 90);
+        let validated = validate_profiles(&roster, &classes, 90);
         let accepted: BTreeSet<_> = validated.iter().map(|profile| profile.spec_id).collect();
         let rejected: Vec<_> = roster
             .iter()

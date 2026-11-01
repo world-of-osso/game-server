@@ -520,7 +520,7 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
             .get_mut::<server_combat::followers::Follower>(pull.follower)
             .unwrap()
             .profile
-            .taunt_spell = 0;
+            .taunt_spell = 133; // The live class taunt must not come from this legacy field.
         world.entity_mut(enemy).insert((
             shared::components::ThreatTable::default(),
             server_combat::networking::CombatTarget(Some(healer)),
