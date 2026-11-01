@@ -171,6 +171,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Retribution literal fixture
 
+- Selected Radiant Glory and Avenging Wrath cause Wake of Ashes to cast background Avenging Wrath before Wake damage (SimC76f8118 `sc_paladin_retribution.cpp:848–850`).
+- Selected Hammer of Wrath talent exposes Retribution action 24275 without adding it to the native spellbook (SimC76f8118 `sc_paladin.cpp:3407–3412`).
+
 Instrument of Retribution 404752 grants the native Avenging Wrath 31884 aura for nine seconds when another player in the paladin's party or raid dies within 40 yards in the same map instance. The paladin must be alive and know the passive. Pet, non-group and own deaths do not trigger it. Reapplication follows the native aura refresh rules, including Crusade's existing no-duration-refresh rule; Radiant Glory does not replace the proc aura. The 2026-10-17 Sszorak log records five nine-second 31884 applications near player deaths; it does not establish overlapping-proc or Crusade behavior.
 
 `RET_INSTRUMENT_UNEXPLAINED_DEATH_MISSES`: archive comparisons found some deaths without an observed proc even when recent horizontal positions were within 40 yards, the last logged paladin health was positive, and the death was not flagged unconscious. Positions lack height, talent snapshots can be stale, and aura visibility is incomplete; the data does not establish an additional proc condition. Do not infer a cooldown or subgroup restriction from these samples.
@@ -658,7 +661,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Slayer's Malice444779 applies its first native effect for Arms and its second for Fury, not both overlapping damage modifiers (`sc_warrior.cpp7877–7879`).
 
-- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 remains the separate Execute producer and Fury's native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
+- Selected Mortal Wounds1261062 applies native Deep Wounds262115 only after an actual Mortal Strike12294 or Slam-family critical impact (Slam1464 and inherited Heroic Strike1269383), including background Unhinged/Fervor attacks. Normal hits cannot grant it. Shared1261060 supplies one Deep Wounds deposit per Execute damage impact, not on the zero-damage parent; Fury's separate native relationship is unchanged (`sc_warrior.cpp3153–3154,3518–3519,3551–3562,4248–4249`).
 
 - Selected Arms Anger Management reduces only running Avatar and Colossus Smash native endpoints from actual paid Rage and native effect0's displayed-Rage divisor. Ignore Pain and zero-payment casts do not contribute (`sc_warrior.cpp1450–1455,1519–1527`). Fury's separate effect2 policy is unchanged.
 - Selected Tactician rolls its native effect0 chance once per positive foreground Rage payment. Selected Brute Force adds its native chance only for Slam/Heroic Strike. A success restores one Overpower charge and grants selected native Opportunist456120 (`sc_warrior.cpp1458–1471`).

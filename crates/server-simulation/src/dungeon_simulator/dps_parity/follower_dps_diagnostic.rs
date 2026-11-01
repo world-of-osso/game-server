@@ -121,6 +121,114 @@ fn prepare_class_follower(
     (app, actor, target, profile)
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with level-specific Ret profiles"]
+fn follower_ret_radiant_glory_wake_activates_wrath_only_when_selected() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    for (level, map, selected) in [(70, 2515, true), (90, 2813, false)] {
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 70, level);
+        let traits = app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap();
+        assert_eq!(
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == 458359),
+            selected
+        );
+        assert!(!crate::auras::has_aura(app.world(), actor, 454351));
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 255937, Some(target), false)
+            .unwrap();
+        assert_eq!(crate::auras::has_aura(app.world(), actor, 454351), selected);
+        assert_eq!(
+            crate::auras::has_aura(app.world(), actor, 1277026),
+            selected
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Ret follower profiles"]
+fn follower_ret_hammer_selected_talent_admits_real_wrath_cast() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 70, level);
+        let known = app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1241288));
+        assert!(!known.contains(24275));
+        assert_eq!(
+            crate::spell_cast::knowledge::resolve_action(app.world(), actor, 24275).unwrap(),
+            Some(24275)
+        );
+        crate::spell_cast::cast_triggered(app.world_mut(), actor, 31884, Some(actor), 0);
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 24275, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            app.update();
+        }
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(24275)
+                    && event.amount > 0)
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
+fn follower_arms_execute_applies_one_deep_wounds_deposit() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
+    for _ in 0..5 {
+        app.update();
+    }
+    let mut health = app
+        .world_mut()
+        .get_mut::<shared::components::Health>(target)
+        .unwrap();
+    health.current = health.max * 0.1;
+    app.world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(shared::components::PowerType::Rage)
+        .unwrap()
+        .current = 400.0;
+    app.init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false).unwrap();
+    for _ in 0..20 {
+        app.update();
+    }
+    let casts = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0;
+    let deposits = casts
+        .iter()
+        .filter(|(caster, spell, _)| *caster == actor && *spell == 262115)
+        .count();
+    assert_eq!(
+        deposits, 1,
+        "one Execute impact must deposit Deep Wounds once: {casts:?}"
+    );
+}
+
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
