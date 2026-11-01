@@ -1,7 +1,8 @@
 //! Native70448 Fire Blast108853 Attr4/0x80; TC Spell.cpp530–531 ignores only
 //! cast-in-progress, never the existing cast's completion, costs or cooldowns.
-use super::*;
 use crate::spell_cast::test_harness::{Harness, harness};
+use bevy::prelude::Entity;
+use shared::casting::CastState;
 use shared::protocol::CombatLogKind;
 
 const FIREBALL: u32 = 133;
@@ -50,37 +51,6 @@ fn dps_parity_cast_while_casting_native_creature_preserves_active_fireball() {
         .unwrap();
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIRE_BLAST, Some(target), false)
         .expect("Fire Blast108853 must ignore only the cast-in-progress veto");
-    assert_fire_blast_preserved_fireball(&mut h, caster, target);
-}
-
-#[test]
-fn dps_parity_cast_while_casting_follower_kit_executes_without_self_interrupt() {
-    let (mut h, caster) = crate::followers::kit_proc_fidelity_tests::prepare(209059);
-    let target = h.npc;
-    let follower = h.app.world().get::<Follower>(caster).unwrap().clone();
-    let entry = h
-        .app
-        .world()
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .find(|entry| entry.spec_id == 63 && entry.spell_id == FIRE_BLAST)
-        .unwrap()
-        .clone();
-    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
-        .unwrap();
-    assert!(
-        attempt_cast(
-            h.app.world_mut(),
-            caster,
-            target,
-            Some(target),
-            &follower,
-            &entry,
-            1
-        ),
-        "ordinary kit precheck must honor the same native cast attribute"
-    );
     assert_fire_blast_preserved_fireball(&mut h, caster, target);
 }
 

@@ -4,6 +4,8 @@ mod action_knowledge_tests;
 mod action_spells;
 mod ai;
 mod candlelight;
+#[cfg(test)]
+mod cast_while_casting_tests;
 mod catalog;
 pub mod class_profiles;
 pub mod class_spawn;
