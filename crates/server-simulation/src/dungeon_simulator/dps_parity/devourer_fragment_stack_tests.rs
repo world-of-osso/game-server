@@ -478,16 +478,16 @@ fn collapsing_star_spawns_selected_star_fragments() {
     for _ in 0..30 {
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
     }
-    let before = crate::soul_fragments::total_count(
+    let before = server::soul_fragments::total_count(
         run.app.world(),
         actor,
-        crate::soul_fragments::FragmentFilter::Lesser,
+        server::soul_fragments::FragmentFilter::Lesser,
     );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1221150, Some(target), 1);
-    let after = crate::soul_fragments::total_count(
+    let after = server::soul_fragments::total_count(
         run.app.world(),
         actor,
-        crate::soul_fragments::FragmentFilter::Lesser,
+        server::soul_fragments::FragmentFilter::Lesser,
     );
     assert_eq!(
         after - before,
@@ -514,10 +514,10 @@ fn midnight_grants_ready_star_and_fragments_on_meta_entry() {
         .entity_mut(actor)
         .insert(crate::class_progression::KnownSpells::from_baseline(spells));
     engage(&mut run);
-    let before = crate::soul_fragments::total_count(
+    let before = server::soul_fragments::total_count(
         run.app.world(),
         actor,
-        crate::soul_fragments::FragmentFilter::Lesser,
+        server::soul_fragments::FragmentFilter::Lesser,
     );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
     for _ in 0..20 {
@@ -528,10 +528,10 @@ fn midnight_grants_ready_star_and_fragments_on_meta_entry() {
     }
     assert_eq!(stacks(run.app.world(), actor, 1227702), 30);
     assert!(crate::auras::has_aura(run.app.world(), actor, 1221171));
-    let after = crate::soul_fragments::total_count(
+    let after = server::soul_fragments::total_count(
         run.app.world(),
         actor,
-        crate::soul_fragments::FragmentFilter::Lesser,
+        server::soul_fragments::FragmentFilter::Lesser,
     );
     assert_eq!(after - before, 5, "Midnight creates five actual fragments");
 }
