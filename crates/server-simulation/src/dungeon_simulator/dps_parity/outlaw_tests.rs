@@ -383,6 +383,43 @@ fn rogue_literal_spend_cap_and_base_energy_ignore_temporary_capacity() {
 
 #[test]
 #[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_preparation_resets_five_running_cooldowns() {
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    let cooldowns = [13750, 315341, 13877, 271877, 51690];
+    for id in cooldowns.into_iter().chain([381989]) {
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            run.app.world_mut(),
+            run.actor,
+            id,
+            90_000.0,
+        );
+    }
+    let remaining = |run: &Run, id| {
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+    };
+    assert!(cooldowns.into_iter().all(|id| remaining(&run, id) > 0));
+    let unrelated = remaining(&run, 381989);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(1277933, run.actor, None),
+    )
+    .unwrap();
+    assert!(cooldowns.into_iter().all(|id| remaining(&run, id) == 0));
+    assert_eq!(remaining(&run, 381989), unrelated);
+}
+
+#[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
 fn outlaw_restless_blades_counts_high_roll_bonus_once() {
     use shared::components::PowerType;
     let _seed = crate::random::seed_scope(70448);
