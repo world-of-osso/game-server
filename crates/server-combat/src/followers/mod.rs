@@ -9,20 +9,14 @@ mod cast_while_casting_tests;
 mod catalog;
 pub mod class_profiles;
 pub mod class_spawn;
-mod damage_history;
 #[cfg(test)]
 mod darkflame_drop_tests;
-mod empower_policy;
 #[cfg(test)]
 mod floodgate_healer_tests;
 #[cfg(test)]
 mod form_combat_tests;
 pub mod gear;
 mod hazards;
-mod healer_context;
-mod healer_policy;
-mod healer_triage;
-mod holy_policy;
 #[cfg(test)]
 mod holy_policy_native_tests;
 #[cfg(test)]
@@ -30,8 +24,6 @@ mod holy_priest_tests;
 #[cfg(test)]
 mod holy_threat_tests;
 mod kit;
-mod kit_ai;
-mod kit_area;
 #[cfg(test)]
 mod kit_defensive_fidelity_tests;
 #[cfg(test)]
@@ -108,7 +100,6 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
-mod resto_policy;
 pub mod retreat;
 #[cfg(test)]
 mod rotation_dummy_tests;
@@ -119,7 +110,6 @@ mod spawning;
 pub mod spec_selection;
 mod spell_safety;
 mod stockade_diagnostic;
-mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
