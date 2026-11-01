@@ -109,6 +109,8 @@ pub struct Navigation {
     queries: EntityHashMap<PendingQuery>,
     unbaked: HashSet<u32>,
     next_id: u64,
+    /// Simulation seconds at the latest prune pass; dates each query's last request.
+    now: f64,
     /// Last goal kind per unit, kept only while `GOAL_TRACE` debug logging is enabled.
     traced_goals: EntityHashMap<Goal>,
     #[cfg(any(test, feature = "test-support"))]
@@ -126,6 +128,7 @@ impl Navigation {
             queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
             next_id: 0,
+            now: 0.0,
             traced_goals: EntityHashMap::default(),
             #[cfg(any(test, feature = "test-support"))]
             applied: Vec::new(),
@@ -402,8 +405,10 @@ mod request_tests;
 
 fn prune_routes(
     mut nav: ResMut<Navigation>,
+    time: Res<Time>,
     actors: Query<(Option<&crate::maps::InMap>, Option<&Position>)>,
 ) {
+    nav.observe_clock(time.elapsed_secs_f64());
     deferred::prune_queries(&mut nav, &actors);
     let obsolete: Vec<_> = nav
         .pending

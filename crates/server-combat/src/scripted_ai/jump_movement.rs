@@ -118,7 +118,14 @@ fn calculate_jump(id: u32, from: Vec3, to: Vec3, options: JumpOptions) -> Option
     };
     let height = (shared::skyriding::GRAVITY * seconds * seconds / 8.0)
         .clamp(options.min_height, options.max_height);
-    let duration_ms = MIN_DURATION_MS + (seconds * 1000.0) as u32;
+    // CommonInitializer multiplies SegLength by 1000/velocity in that order: dividing
+    // first rounds a 1 s timed jump to exactly 1000 and adds a millisecond.
+    let travel_ms = if distance == 0.0 {
+        seconds * 1000.0
+    } else {
+        distance * (1000.0 / speed)
+    };
+    let duration_ms = MIN_DURATION_MS + travel_ms as u32;
     Some(JumpMovement {
         id,
         from,

@@ -108,7 +108,7 @@ fn remains_in_current_copy(world: &World, player: Entity, current: InMap) -> boo
     ) == Some(current)
 }
 
-fn near_teleport(
+pub(crate) fn near_teleport(
     world: &mut World,
     player: Entity,
     destination: &WorldLocation,

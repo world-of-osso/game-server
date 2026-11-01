@@ -617,3 +617,30 @@ fn restoration_lifetreading_grows_efflorescence_and_lifebloom_blooms_verdancy() 
             .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target))
     );
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_druid_casts_wild_growth_on_a_lightly_injured_party() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let healer = run.healer;
+    // A party-wide pulse leaves every member at ~93%, as the SimC party trace does.
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.93;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        events.iter().any(|e| e.source == Some(healer.to_bits())
+            && e.spell_id == Some(48438)
+            && e.kind == CombatLogKind::CastSuccess),
+        "Wild Growth must heal a party-wide pulse"
+    );
+}
