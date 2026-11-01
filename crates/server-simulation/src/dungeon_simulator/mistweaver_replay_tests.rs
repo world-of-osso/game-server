@@ -10,6 +10,12 @@ fn mistweaver_rushing_wind_heals_only_own_misted_allies() {
 
     let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
     let healer = run.healer;
+    println!(
+        "mistweaver gear instances: {:?}",
+        run.app
+            .world()
+            .get::<crate::stats::EquippedItemModifiers>(healer)
+    );
     let [tank, _, friend, outsider, _] = run.slots;
     for unit in [tank, friend, outsider] {
         let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
