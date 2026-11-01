@@ -624,12 +624,15 @@ fn blood_draw_triggers_only_once_during_its_cooldown() {
         1,
         "cooldown must block another Blood Draw"
     );
-    app.world_mut()
-        .resource_mut::<Time>()
-        .advance_by(Duration::from_secs(121));
-    for _ in 0..4 {
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(250),
+    ));
+    for _ in 0..484 {
         app.update();
     }
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
     assert!(!crate::auras::has_aura(app.world(), actor, 374609));
     assert!(!crate::auras::has_aura(app.world(), actor, 454871));
     hit_below_threshold(&mut app);
