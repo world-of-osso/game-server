@@ -9,7 +9,9 @@ const MAP: InMap = InMap {
     map_id: 2669,
     instance_id: 1,
 };
-const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480, 4336];
+const IDS: &[u32] = &[
+    330398, 196884, 1243638, 1281788, 1242814, 448480, 4336, 202770,
+];
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(Vec::new(), IDS, 1).expect("native spell fixture");
@@ -175,13 +177,11 @@ fn native_creature_original_destination_survives_normalization_and_landing() {
 }
 
 #[test]
-fn native_target148_force_location_has_named_geometry_gap() {
-    let (mut h, _) = scene();
-    let spell = world_db().unwrap().store.get(448480).unwrap().clone(); // Actual [138,148], force-location attribute.
-    let result = plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), false);
-    assert!(
-        matches!(result, Err(CastFailure::Unsupported(ref reason))
-        if reason.contains("SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT")),
-        "native force-location must not silently use direct-ray geometry: {result:?}"
-    );
+fn native_target148_force_location_moves_fury_of_elune_without_collision_raycast() {
+    let (mut h, origin) = scene();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::line_of_sight::LineOfSight>();
+    let actual = destination(&mut h, 202770, 1);
+    assert_endpoint(&mut h, actual, origin, 1.25);
 }

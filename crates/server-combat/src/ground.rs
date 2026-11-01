@@ -511,6 +511,74 @@ impl GroundMap {
         self.add_live_height(map, feet, base)
     }
 
+    /// TC Map::GetHeight: terrain plus collision faces within 50 yards below z.
+    pub(crate) fn map_height_in(&mut self, map: crate::maps::InMap, point: Vec3) -> GroundProbe {
+        if let Some(height) = self.flat_arena_height {
+            let terrain = (height <= point.y + 0.05).then_some(height);
+            let live = self
+                .live_hulls
+                .get(&map)
+                .into_iter()
+                .flatten()
+                .flat_map(|hull| hull.floor_heights(point.x, point.z))
+                .filter(|height| *height <= point.y && *height >= point.y - 50.0);
+            return terrain
+                .into_iter()
+                .chain(live)
+                .max_by(f32::total_cmp)
+                .map_or(GroundProbe::Unsupported, GroundProbe::Supported);
+        }
+        if !self.maps.contains_key(&map.map_id) {
+            let loaded = self.open_map(map.map_id);
+            self.maps.insert(map.map_id, loaded);
+        }
+        let Some((terrain, wmos)) = self
+            .maps
+            .get_mut(&map.map_id)
+            .and_then(Option::as_mut)
+            .and_then(|ground| ground.collision_at(point))
+        else {
+            return GroundProbe::Unloaded;
+        };
+        let mut heights = Vec::new();
+        for wmo in wmos {
+            wmo.collision_heights(point.x, point.z, point.y, point.y - 50.0, &mut heights);
+        }
+        if let Some(terrain) = terrain.filter(|height| *height <= point.y + 0.05) {
+            heights.push(terrain);
+        }
+        let m2 = self
+            .m2_floors
+            .entry(map.map_id)
+            .or_insert_with(|| {
+                los::LosMap::new(&self.data_dir.join(format!("los/{}/m2", map.map_id)))
+            })
+            .floor_heights(point.x, point.z);
+        let m2 = match m2 {
+            Ok(heights) => heights,
+            Err(error) => {
+                error!(map = map.map_id, %error, "M2 map-height query failed");
+                return GroundProbe::Unsupported;
+            }
+        };
+        heights.extend(
+            m2.into_iter()
+                .filter(|height| *height <= point.y && *height >= point.y - 50.0),
+        );
+        heights.extend(
+            self.live_hulls
+                .get(&map)
+                .into_iter()
+                .flatten()
+                .flat_map(|hull| hull.floor_heights(point.x, point.z))
+                .filter(|height| *height <= point.y && *height >= point.y - 50.0),
+        );
+        heights
+            .into_iter()
+            .max_by(f32::total_cmp)
+            .map_or(GroundProbe::Unsupported, GroundProbe::Supported)
+    }
+
     /// MoveFall searches beyond the ordinary ground-snap depth.
     pub(crate) fn creature_fall_ground_in(
         &mut self,
