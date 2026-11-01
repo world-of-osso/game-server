@@ -1145,6 +1145,9 @@ Named `action.<alias>.charges`, `max_charges`, `charges_fractional` and `full_re
 
 ## Marksmanship literal controller
 
+- L70, map 2515, 120 seconds, seeds 70448 and 1–9, temporary enchants disabled: after Bullseye and Lock and Load fixes, native averages 5,264 DPS versus tree-only SimC 5,520; mean paired delta is −4.52% ± 4.02 percentage points (95% t interval). The point estimate is within 5%, but the interval is not. Aimed Shot casts are 15–21 native versus 21–24 SimC; Lock and Load applications are 9–17 versus 11–17 SimC starts plus refreshes. Haste recovery uses the active native Marksmanship aura; Trueshot recovery and Precise Shots have existing behavioral coverage. The remaining cast gap has not been resolved.
+- L90, map 2813, same seeds and duration: native averages 30,233 DPS versus matching SimC 36,332; mean paired delta is −16.43% ± 5.13 percentage points. Gear matches the reference. This remains outside the point threshold and requires further localization.
+
 - [x] Spec254 uses a real Player with exact reference gear/traits and unchanged pinned `hunter_marksmanship.simc` source through shared `literal_rotation`. It does not require a nonexistent follower profile or use AssistedCombat priorities.
 - [x] Execute source precombat, preserve native cooldowns/overrides and item admission, and start ranged attacks through native75. Report the literal driver and native stat snapshot. Missing potion inventory and external providers remain explicit gaps, not fabricated effects.
 - Sentinel's Mark `.react` clocks belong to each actual recipient. Configure the exact pinned254 reference player reaction settings before acquisition for initial targets and replacement waves; never infer acquisition at query time. Keep the literal action rows unchanged.
