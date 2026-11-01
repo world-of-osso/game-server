@@ -914,9 +914,9 @@ fn build_effect(
     effect: &SpellEffect,
     now: f64,
 ) -> AuraEffectState {
-    // SimC76f8118 sc_death_knight.cpp17164–17169 applies Gift dynamically;
-    // do not snapshot its label modifiers into Essence's haste and apply them twice.
-    let amount = if spell.id == 433925 && effect.index == 0 {
+    // Essence's haste is dynamic; Fortifying Brew's health is already snapshotted.
+    // Neither amount should receive its label modifiers a second time.
+    let amount = if (spell.id == 433925 || spell.id == 120954) && effect.index == 0 {
         effect.base_points
     } else if spell.id == 132403
         && effect.index == 1

@@ -1635,6 +1635,9 @@ fn customize_fortifying_brew(world: &World, caster: Entity) -> Option<SpellInfo>
     for effect in &mut buff.effects {
         match effect.index {
             0 => effect.base_points = health_bonus,
+            // The selected talent's label modifier supplies this amount when the
+            // aura is built; adding it here would apply the same modifier twice.
+            1 if selected => effect.base_points = 0.0,
             1 => effect.base_points = damage_percent,
             _ => {}
         }
