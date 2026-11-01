@@ -555,8 +555,10 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         z: -348.5,
     };
     h.app.world_mut().entity_mut(h.caster).insert(prior_leader);
-    h.advance(30);
+    let mut nav_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
+    let mut descents = 0;
     for (leader, frames) in [
+        (prior_leader, 30),
         (
             Position {
                 x: -82.5,
@@ -598,8 +600,23 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: interpolated.y,
                 z: interpolated.z,
             });
+            let before = *h.app.world().get::<Position>(tank).unwrap();
             h.advance(1);
-            minimum_y = minimum_y.min(h.app.world().get::<Position>(tank).unwrap().y);
+            let after = *h.app.world().get::<Position>(tank).unwrap();
+            minimum_y = minimum_y.min(after.y);
+            if after.y < before.y - 0.05 && descents < 12 {
+                let upper = Vec3::new(after.x, 137.1, after.z);
+                let ground = h
+                    .app
+                    .world_mut()
+                    .resource_mut::<GroundMap>()
+                    .creature_ground_in(map, upper);
+                let surface = nav_map.floor_polygon(upper).unwrap();
+                eprintln!(
+                    "descent before={before:?} after={after:?} upper_ground={ground:?} nav={surface:?}"
+                );
+                descents += 1;
+            }
         }
         prior_leader = leader;
         eprintln!(

@@ -177,10 +177,6 @@ impl Navigation {
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
-        #[cfg(test)]
-        if matches!(request.goal, Goal::FollowFormation(..)) && request.map_id == 2660 {
-            eprintln!("ara trace: formation advance entity={entity:?}");
-        }
         self.trace_goal_change(entity, &request);
         if self.drop_requests.contains_key(&entity) {
             return Step::Pending;
