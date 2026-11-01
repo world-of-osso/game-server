@@ -465,8 +465,8 @@ fn class_follower_frost_mage_apl_reacts_to_its_procs() {
     );
 }
 
-const SHADOW_BOLT: u32 = 686;
-const HAND_OF_GULDAN: u32 = 105174;
+/// Shadow Bolt, Hand of Gul'dan, Call Dreadstalkers, Demonbolt, Summon Demonic Tyrant.
+const DEMONOLOGY_CORE: [u32; 5] = [686, 105174, 104316, 264178, 265187];
 const KEG_SMASH: u32 = 121253;
 
 /// Casts of `spells` in this pull and in the next one, which loads a fresh APL.
@@ -531,10 +531,10 @@ fn class_follower_demonology_casts_below_hero_level_on_every_pull() {
         "the logged tree's keystone reads enabled: {hero:?}"
     );
     // The live failure cast only the precombat Shadow Bolt each pull.
-    let casts = two_pull_casts(&mut pull, &[SHADOW_BOLT, HAND_OF_GULDAN]);
+    let casts = two_pull_casts(&mut pull, &DEMONOLOGY_CORE);
     assert!(
         casts.iter().all(|&count| count >= 2),
-        "Shadow Bolt/Hand of Gul'dan per pull {casts:?}; casts {:?}",
+        "Demonology core casts per pull {casts:?}; casts {:?}",
         pull.casts()
     );
 }
