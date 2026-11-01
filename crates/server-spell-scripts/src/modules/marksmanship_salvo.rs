@@ -48,6 +48,9 @@ fn on_volley_hit(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity) {
     world
         .entity_mut(ctx.caster)
         .insert(SalvoCooldown(now + duration));
+    if !targets.is_empty() {
+        super::marksmanship::grant_tactical_reload(world, ctx.caster);
+    }
     for target in targets {
         // Background execution keeps native periodic amounts and rolling carry,
         // without ordinary Focus payment, cooldown or Unstable Trigger producers.

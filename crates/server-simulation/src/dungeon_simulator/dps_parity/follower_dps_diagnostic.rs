@@ -121,6 +121,99 @@ fn prepare_class_follower(
     (app, actor, target, profile)
 }
 
+fn prepare_marksmanship_70() -> (App, Entity, Entity) {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    (app, actor, target)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_explosive_restores_one_aimed_charge() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 19434, Some(target), false)
+            .unwrap();
+        for _ in 0..70 {
+            app.update();
+        }
+    }
+    let bindings = crate::simc_apl_native::Bindings {
+        actions: [("aimed_shot".into(), 19434)].into(),
+        ..default()
+    };
+    let encounter = crate::simc_apl_native::Encounter::Fixture {
+        started_at: 0.0,
+        duration: 120.0,
+        style: crate::simc_apl_native::FightStyle::Patchwerk,
+    };
+    let charges = |app: &App| {
+        let facts =
+            crate::simc_apl_native::NativeFacts::new(app.world(), actor, &bindings, encounter, 1);
+        server::simc_apl::Facts::value(&facts, "cooldown.aimed_shot.charges").unwrap()
+    };
+    assert_eq!(charges(&app), 0.0, "actual Aimed casts spend both charges");
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 212431, Some(target), false).unwrap();
+    for _ in 0..4 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 194594),
+        "selected Tactical Reload earns Lock and Load"
+    );
+    assert_eq!(
+        charges(&app),
+        1.0,
+        "new Lock and Load restores one Aimed charge"
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194594, Some(actor), 1);
+    assert_eq!(
+        charges(&app),
+        1.0,
+        "refreshing the existing buff cannot restore a second charge"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_rapid_fire_earns_windrunner_proc() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    for _ in 0..16 {
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false)
+            .unwrap();
+        for _ in 0..55 {
+            app.update();
+        }
+        if crate::auras::has_aura(app.world(), actor, 194594) {
+            return;
+        }
+        crate::spell_cast::scripts::reduce_cooldown(app.world_mut(), actor, 257044, 120.0);
+    }
+    panic!("selected Windrunner Quiver must earn Lock and Load on a real Rapid Fire");
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_lock_and_load_salvo_earns_tactical_reload() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut app, actor, target) = prepare_marksmanship_70();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 260243, Some(target), false).unwrap();
+    for _ in 0..80 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), actor, 194594),
+        "an actual Salvo pulse earns Tactical Reload"
+    );
+}
+
 fn flame_shock_mastery_sample(keep_mastery: bool) -> (f32, i32, bool, i32, bool) {
     let _seed = crate::random::seed_scope(1);
     let (mut app, actor, target, _) = prepare_follower(209053, 90, 2813);
