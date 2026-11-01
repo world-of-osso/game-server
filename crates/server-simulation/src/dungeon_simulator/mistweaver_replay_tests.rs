@@ -37,7 +37,7 @@ fn mistweaver_selected_chiji_is_invoked_under_tank_pressure() {
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
-    use shared::components::{Health, Npc, UnitSummonedBy};
+    use shared::components::{Health, Npc, Position, UnitSummonedBy};
     use shared::protocol::CombatLogKind;
 
     let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
@@ -64,6 +64,29 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
             .any(|(npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits()),
         "Chi-Ji must be summoned"
     );
+    let center = *run.app.world().get::<Position>(healer).unwrap();
+    for (unit, distance) in [
+        (run.tank, 1.0),
+        (run.slots[2], 5.0),
+        (run.slots[3], 6.0),
+        (run.slots[4], 7.0),
+    ] {
+        let mut position = run.app.world_mut().get_mut::<Position>(unit).unwrap();
+        position.x = center.x + distance;
+        position.y = center.y;
+    }
+    let mut summons = run
+        .app
+        .world_mut()
+        .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>();
+    let chiji = summons
+        .iter(run.app.world())
+        .find(|(_, npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits())
+        .unwrap()
+        .0;
+    let mut position = run.app.world_mut().get_mut::<Position>(chiji).unwrap();
+    position.x = center.x + 20.0;
+    position.y = center.y;
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
@@ -88,14 +111,90 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
     );
     let targets: std::collections::HashSet<_> = heals.iter().map(|event| event.target).collect();
     assert_eq!(
-        targets.len(),
-        2,
-        "the two nearest allies must receive each Gust"
+        targets,
+        [Some(healer.to_bits()), Some(run.tank.to_bits())]
+            .into_iter()
+            .collect()
     );
     assert!(
         heals
             .iter()
-            .all(|event| event.amount > 0 && event.amount > event.overflow)
+            .all(|event| event.amount > 0 && event.amount > event.overflow && !event.crit)
+    );
+    let target = heals[0].target.unwrap();
+    let chiji_amount = heals[0].amount;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        healer,
+        343819,
+        Some(bevy::prelude::Entity::from_bits(target)),
+        1
+    ));
+    let direct = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .find(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
+        .unwrap()
+        .amount;
+    // 343819 has 5% authored variance; Invoke effect 6 supplies the 50% multiplier.
+    let ratio = chiji_amount as f32 / direct as f32;
+    assert!(
+        (0.45..=0.55).contains(&ratio),
+        "Chi-Ji Gust {chiji_amount} versus unscaled {direct}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_chiji_makes_enveloping_mist_instant_and_cheaper() {
+    use shared::components::Mana;
+
+    let cast = |active: bool| {
+        let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+        let healer = run.healer;
+        if active {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                healer,
+                325197,
+                Some(healer),
+                false,
+            )
+            .unwrap();
+        }
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let before = run.app.world().get::<Mana>(healer).unwrap().current;
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            healer,
+            124682,
+            Some(run.tank),
+            false,
+        )
+        .unwrap();
+        let casting = run
+            .app
+            .world()
+            .get::<shared::casting::CastState>(healer)
+            .is_some();
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let after = run.app.world().get::<Mana>(healer).unwrap().current;
+        (casting, before - after)
+    };
+    let (normal_cast, normal_cost) = cast(false);
+    let (active_cast, active_cost) = cast(true);
+    assert!(
+        normal_cast && !active_cast,
+        "Enveloping Mist must become instant with Chi-Ji"
+    );
+    assert!(normal_cost > 0.0);
+    assert!(
+        (active_cost / normal_cost - 0.8).abs() < 0.02,
+        "costs: normal {normal_cost}, active {active_cost}"
     );
 }
 
