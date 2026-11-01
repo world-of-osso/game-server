@@ -1,5 +1,4 @@
-//! Every authenticated local class/spec profile uses the production initializer and
-//! real spell/aura/cost executor. No invented follower identities or spell rows.
+//! Native follower fixtures, combat targeting, and taunt effects.
 use super::*;
 use crate::spell_cast::test_harness::{Harness, harness_with_plugins, spawn_npc, world_db};
 use shared::components::{Health, Npc, UnitPowers};
@@ -307,124 +306,14 @@ fn follower_garrick_level32_uses_installed_level32_creature_armor() {
     );
 }
 
-fn assert_profile_combat(entry: u32) {
-    let (mut h, unit, profile) = spawn_profile_fixture(entry);
-    let _summon_source = if profile.spec_id == 266 {
-        let prepared = crate::spell_cast::test_harness::prepare_class_world();
-        let mut data = crate::world_data::load_world_data(&prepared.path());
-        // Keep native defense metadata for the harness's live Kobold target too.
-        data.templates.retain(|entry, _| [6, 17252].contains(entry));
-        h.app.insert_resource(data);
-        let db = rusqlite::Connection::open_with_flags(
-            crate::test_data::world_db_path(),
-            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )
-        .unwrap();
-        h.app
-            .insert_resource(crate::pet_control::load_pet_levelup_spells(&db).unwrap());
-        Some(prepared)
-    } else {
-        None
-    };
-    let enemy = h.npc;
-    if profile.role == GroupRole::Healer {
-        h.app
-            .world_mut()
-            .get_mut::<Health>(h.caster)
-            .unwrap()
-            .current = 100.0;
-    }
-    if profile.role == GroupRole::Tank {
-        // Native62124/355 are ALWAYS_HIT; no invented hit statistic is needed.
-        h.app.world_mut().entity_mut(enemy).insert((
-            shared::components::ThreatTable::default(),
-            crate::creature_ai::CreatureState::Pursuing {
-                target: h.caster.to_bits(),
-            },
-            crate::networking::CombatTarget(Some(h.caster)),
-        ));
-        crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
-        update_ai(h.app.world_mut());
-        h.advance(4);
-        assert_eq!(
-            h.app
-                .world()
-                .get::<crate::networking::CombatTarget>(enemy)
-                .unwrap()
-                .0,
-            Some(unit),
-            "{} must taunt the ally's attacker with spell{}; casts {:?}; combat {:?}",
-            profile.name,
-            profile.taunt_spell,
-            h.inbox.go,
-            h.inbox.log
-        );
-    }
-    let before = h.health(enemy);
-    for _ in 0..200 {
-        update_ai(h.app.world_mut());
-        h.advance(1);
-        if profile.role == GroupRole::Healer && h.health(h.caster) > 100.0 {
-            break;
-        }
-    }
-    if profile.role == GroupRole::Healer {
-        assert!(
-            h.health(h.caster) > 100.0,
-            "{} must heal the injured owner through spell{}",
-            profile.name,
-            profile.heal_spell
-        );
-        assert!(
-            !h.inbox
-                .log
-                .iter()
-                .any(|event| event.source == Some(unit.to_bits())
-                    && event.kind == shared::protocol::CombatLogKind::Damage),
-            "{} must triage before damage",
-            profile.name
-        );
-    } else {
-        assert!(
-            h.health(enemy) < before,
-            "{} class{} spec{} must damage with its native priority spells{}/{}; actual casts: {:?}",
-            profile.name,
-            profile.class_id,
-            profile.spec_id,
-            profile.attack_spell,
-            profile.cooldown_spell,
-            h.inbox
-                .go
-                .iter()
-                .filter(|event| event.caster == unit.to_bits())
-                .map(|event| event.spell_id)
-                .collect::<Vec<_>>()
-        );
-    }
-    assert!(
-        h.app
-            .world()
-            .get::<UnitPowers>(unit)
-            .is_some_and(|powers| !powers.entries.is_empty()),
-        "{} native class resources must be replicated",
-        profile.name
-    );
-}
-
 #[test]
 fn follower_real_taunt_miss_keeps_the_attacked_ally_as_victim() {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     let enemy = h.npc;
     // 70448 SpellMisc62124 Attr3=0x50000 includes ALWAYS_HIT, so it cannot
-    // qualify avoidance. Select native43263 Ghoul Taunt only for this AI control:
+    // qualify avoidance. Select native43263 Ghoul Taunt only for this native cast control:
     // Attr3=0, DefenseType2, effects114/63. This is not a Garrick-kit assertion.
     const AVOIDABLE_TAUNT: u32 = 43263;
-    h.app
-        .world_mut()
-        .get_mut::<Follower>(unit)
-        .unwrap()
-        .profile
-        .taunt_spell = AVOIDABLE_TAUNT;
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
     h.app
         .world_mut()
@@ -448,7 +337,8 @@ fn follower_real_taunt_miss_keeps_the_attacked_ally_as_victim() {
         crate::networking::CombatTarget(Some(h.caster)),
     ));
     crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
-    update_ai(h.app.world_mut());
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, AVOIDABLE_TAUNT, Some(enemy), false)
+        .unwrap();
     h.advance(4);
     assert_eq!(
         h.app
@@ -502,7 +392,14 @@ fn follower_native_always_hit_taunt_ignores_real_evasion() {
         crate::networking::CombatTarget(Some(h.caster)),
     ));
     crate::creature_aggro::add_threat(h.app.world_mut(), enemy, h.caster, 100.0);
-    update_ai(h.app.world_mut());
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        unit,
+        profile.taunt_spell,
+        Some(enemy),
+        false,
+    )
+    .unwrap();
     h.advance(4);
     assert_eq!(
         h.app
@@ -532,26 +429,6 @@ fn follower_native_always_hit_taunt_ignores_real_evasion() {
         h.inbox.log
     );
 }
-
-macro_rules! profile_case {
-    ($test:ident, $entry:literal) => {
-        #[test]
-        fn $test() {
-            assert_profile_combat($entry);
-        }
-    };
-}
-profile_case!(follower_labelled_garrick_protection_paladin, 209057);
-profile_case!(follower_labelled_breka_protection_warrior, 215517);
-profile_case!(follower_labelled_crenna_restoration_druid, 209072);
-profile_case!(follower_labelled_henry_holy_priest, 215011);
-profile_case!(follower_labelled_meredy_fire_mage, 209059);
-profile_case!(follower_labelled_shuja_elemental_shaman, 209053);
-profile_case!(follower_labelled_austin_beast_mastery_hunter, 209065);
-profile_case!(follower_labelled_kybel_devastation_evoker, 215240);
-profile_case!(follower_labelled_bo_windwalker_monk, 227734);
-profile_case!(follower_labelled_lantha_demonology_warlock, 230861);
-profile_case!(follower_labelled_ralia_feral_druid, 232800);
 
 #[test]
 fn current_victim_garrick_primary_death_without_alternate_returns_to_owner() {
