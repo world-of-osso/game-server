@@ -32,17 +32,30 @@ pub(super) fn finish_blindside(world: &mut World, caster: Entity, spell: &SpellI
     if !matches!(spell.id, 1329 | 8676) {
         return;
     }
-    let Some(target) = world.entity_mut(caster).take::<BlindsideHit>().map(|hit| hit.0) else {
+    let Some(target) = world
+        .entity_mut(caster)
+        .take::<BlindsideHit>()
+        .map(|hit| hit.0)
+    else {
         return;
     };
     let Some(talent) = world.get::<auras::ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == BLINDSIDE && aura.caster == caster)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == BLINDSIDE && aura.caster == caster)
     }) else {
         return;
     };
-    let value = |index| talent.effects.iter().find(|effect| effect.index == index)
-        .expect("Blindside retains its native effect").amount;
-    let execute = world.get::<Health>(target)
+    let value = |index| {
+        talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("Blindside retains its native effect")
+            .amount
+    };
+    let execute = world
+        .get::<Health>(target)
         .is_some_and(|health| health.current * 100.0 < health.max * value(2));
     let chance = value(if execute { 1 } else { 0 });
     if combat::random::random::<f32>() * 100.0 < chance {
