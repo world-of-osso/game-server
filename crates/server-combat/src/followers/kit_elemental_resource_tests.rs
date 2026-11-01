@@ -217,21 +217,29 @@ fn assert_removed_controller_blocks_energize(case: ResourceCase) {
     assert!(energize_receipts(&h.inbox.log[first..], caster, case.energize).is_empty());
 }
 
-fn stormkeeper_charges(h: &Harness, caster: Entity) -> u8 {
+fn stormkeeper_uses(h: &Harness, caster: Entity) -> u8 {
     h.app
         .world()
         .get::<ActiveAuras>(caster)
         .unwrap()
         .iter()
         .find(|aura| aura.spell_id == 191634)
-        .map_or(0, |aura| aura.charges)
+        .map_or(0, |aura| aura.stacks)
 }
 
 fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
     let (mut h, caster, targets) = spawn_resource_fixture(case);
     assert!(has_aura(h.app.world(), caster, 168534));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(caster)
+            .unwrap()
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 191634)
+    );
     complete_cast(&mut h, caster, 191634, caster);
-    assert_eq!(stormkeeper_charges(&h, caster), 2);
+    assert_eq!(stormkeeper_uses(&h, caster), 2);
     let first = h.inbox.log.len();
     for remaining in [1, 0] {
         super::kit_clearcasting_tests::wait_for_gcd(&mut h, caster, case.spell);
@@ -251,20 +259,20 @@ fn assert_energize_preserves_parent_stormkeeper_uses(case: ResourceCase) {
                 .is_none(),
             "both actual native SK uses must still make their parent instant"
         );
-        let immediate = stormkeeper_charges(&h, caster);
+        let immediate = stormkeeper_uses(&h, caster);
         println!(
             "NATIVE_SK_LAUNCH spell={} remaining={immediate} expected={remaining}",
             case.spell
         );
         assert_eq!(
             immediate, remaining,
-            "the inline resource child retains parent charge ownership"
+            "the inline resource child retains parent use ownership"
         );
         h.advance(40);
         assert_eq!(
-            stormkeeper_charges(&h, caster),
+            stormkeeper_uses(&h, caster),
             remaining,
-            "energize helpers must not independently spend their triggering parent's SK charge"
+            "energize helpers must not independently spend their triggering parent's SK use"
         );
     }
     assert_damage_targets(&h.inbox.log[first..], caster, case, &targets);
