@@ -8,6 +8,7 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 - [x] Preserve unrelated data, replace the catalog atomically, reject corrupt layouts and refuse canonical/symlink/hardlink destinations.
 - [x] Qualify a MapChallengeMode dungeon with existing difficulty8 spawns and an authored Font of Power; selected candidate is The Azure Vault (map2515/challenge401).
 - [x] Keep keystone item identity, challenge ID, level and affixes durable; validate actual current-character bag ownership and Font reach/copy/difficulty before activation.
+- [ ] Preserve the Mythic entry binding after the copy changes to Keystone difficulty so same-copy transports and re-entry retain the party.
 - [x] Show Font insertion/activation, countdown, elapsed/remaining time, death count/time lost, configured affixes and scenario boss/enemy-force criteria in both skins. The cited Midnight Season 2 policy supplies a 10-second countdown and 0/5/15-second death penalties for +2–5/+6–11/+12 and above.
 - [x] Complete only after authored boss and force criteria; use 100%, 80% and 60% of the DB2 timer for upgrades, handle failed/abandoned keys without repeat awards. Equality is treated as qualifying; exact retail boundary and rounding semantics are unsourced.
 - [x] Persist completed runs without fabricating a score formula. Timed and overtime rating remain disabled; next-dungeon selection remains disabled.

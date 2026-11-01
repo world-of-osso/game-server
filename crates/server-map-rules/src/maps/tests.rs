@@ -6,6 +6,44 @@ use rusqlite::{Connection, OpenFlags};
 use shared::protocol::TransferAbortReason;
 
 #[test]
+fn activated_keystone_copy_retains_its_mythic_entry_binding() {
+    let store = map_store().expect("authentic map metadata");
+    let mut manager = InstanceManager::default();
+    let solo = entrant_at(30, DIFFICULTY_MYTHIC);
+    let map = manager.create_map(store, 2515, solo, at(0.0)).unwrap().map;
+    manager.bind_group_instance(77, 30, map).unwrap();
+    let party = InstanceEntrant {
+        group: Some(77),
+        ..solo
+    };
+    assert_eq!(
+        manager.find_instance(store, 2515, party, SUNDAY_NOON),
+        Some(map)
+    );
+    let keystone = *store.map_difficulty(2515, 8).unwrap();
+    manager
+        .activate_challenge_difficulty(map, keystone)
+        .unwrap();
+    assert_eq!(manager.copy_difficulty(map).unwrap().difficulty_id, 8);
+    assert_eq!(
+        manager.find_instance(store, 2515, party, SUNDAY_NOON),
+        Some(map)
+    );
+    assert_eq!(
+        manager.create_map(store, 2515, party, at(1.0)).unwrap().map,
+        map
+    );
+    let normal = InstanceEntrant {
+        difficulty_id: store::DIFFICULTY_NORMAL,
+        ..party
+    };
+    assert_ne!(
+        manager.find_instance(store, 2515, normal, SUNDAY_NOON),
+        Some(map)
+    );
+}
+
+#[test]
 fn world_population_expansion_maps_admit_players_without_dungeon_copies() {
     let store = map_store().expect("authentic map metadata");
     let mut manager = InstanceManager::default();

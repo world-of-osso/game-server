@@ -71,6 +71,8 @@ impl Default for InstanceEntrant {
 #[derive(Debug)]
 struct InstanceCopy {
     difficulty: MapDifficulty,
+    /// Difficulty used to bind this copy, preserved when a Font activates a key.
+    entry_difficulty_id: u32,
     /// Admission is the match roster, independent of dungeon group/lock ownership.
     battleground: bool,
     max_players: u32,
@@ -307,7 +309,7 @@ impl InstanceManager {
         // The instance id may be in use by another owner's copy for encounter locks.
         (entries.is_instance_id_bound() || copy.lock_owner.is_none_or(|o| o == owner))
             .then_some(map)
-            .filter(|_| copy.difficulty.difficulty_id == entries.difficulty_id)
+            .filter(|_| copy.entry_difficulty_id == entries.difficulty_id)
     }
 
     fn find_battleground_copy(&self, map_id: u32, character_id: u64) -> Option<InMap> {
@@ -490,7 +492,7 @@ impl InstanceManager {
             && self
                 .copies
                 .get(&map)
-                .is_some_and(|copy| copy.difficulty.difficulty_id != entries.difficulty_id)
+                .is_some_and(|copy| copy.entry_difficulty_id != entries.difficulty_id)
         {
             instance_id = self.generate_instance_id();
             map.instance_id = instance_id;
@@ -572,6 +574,7 @@ impl InstanceManager {
             map,
             InstanceCopy {
                 difficulty: *entries,
+                entry_difficulty_id: entries.difficulty_id,
                 battleground: false,
                 max_players,
                 owning_group: entrant.group,
