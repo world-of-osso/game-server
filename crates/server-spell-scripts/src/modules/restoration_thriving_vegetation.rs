@@ -5,8 +5,14 @@
 //! Rejuvenation/Germination casts.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, AuraInstance, spell_mods::{self, SpellModOp}};
-use combat::spell_cast::{effects::{self, EffectCtx}, script_registry::SpellScriptHook};
+use combat::auras::{
+    self, AuraInstance,
+    spell_mods::{self, SpellModOp},
+};
+use combat::spell_cast::{
+    effects::{self, EffectCtx},
+    script_registry::SpellScriptHook,
+};
 use combat::spell_info::SpellStore;
 
 const TALENT: u32 = 447131;

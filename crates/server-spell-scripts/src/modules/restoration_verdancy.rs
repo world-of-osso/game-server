@@ -28,7 +28,8 @@ fn heal_within_efflorescence(world: &mut World, caster: Entity, _target: Entity,
     if !combat::auras::has_aura(world, caster, TALENT) {
         return;
     }
-    let Some(center) = own_efflorescence(world, caster).and_then(|unit| targets::position(world, unit))
+    let Some(center) =
+        own_efflorescence(world, caster).and_then(|unit| targets::position(world, unit))
     else {
         return;
     };
@@ -64,7 +65,9 @@ fn select_allies(world: &mut World, caster: Entity, center: Vec3, limit: usize) 
     allies.retain(|&unit| {
         world.get::<SummonedCreature>(unit).is_none()
             && !world.get::<UnitIsPet>(unit).is_some_and(|pet| pet.0)
-            && world.get::<Health>(unit).is_some_and(|health| health.current > 0.0)
+            && world
+                .get::<Health>(unit)
+                .is_some_and(|health| health.current > 0.0)
     });
     allies.shuffle(&mut rand::thread_rng());
     allies.sort_by_key(|&unit| {
