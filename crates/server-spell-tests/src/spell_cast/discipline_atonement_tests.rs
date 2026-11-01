@@ -5,6 +5,92 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement() {
+    use shared::components::CombatStatus;
+
+    for (selected, engaged, friendly, expected) in [
+        (false, true, true, 0),
+        (true, false, true, 0),
+        (true, true, true, 3),
+        (true, true, false, 0),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[
+                47540, 47758, 47757, 47666, 47750, 440742, 1232571, 194384, 81749, 94472,
+            ],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![47540, 440742]
+            } else {
+                vec![47540]
+            }),
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert(CombatStatus(engaged));
+        for unit in [caster, ally, enemy] {
+            *h.app.world_mut().get_mut::<Health>(unit).unwrap() = Health {
+                current: 50_000.0,
+                max: 100_000.0,
+            };
+        }
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(if friendly { ally } else { enemy }));
+        h.advance(100);
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(1232571))
+            .collect();
+        assert_eq!(
+            hits.len(),
+            expected,
+            "selected={selected}, engaged={engaged}, friendly={friendly}"
+        );
+        assert!(
+            hits.iter()
+                .all(|event| event.target == Some(enemy.to_bits()) && event.amount > 0)
+        );
+        if expected > 0 {
+            let transfers = events
+                .iter()
+                .filter(|event| {
+                    event.kind == CombatLogKind::Heal
+                        && event.spell_id == Some(94472)
+                        && event.target == Some(caster.to_bits())
+                })
+                .count();
+            assert_eq!(transfers, 3, "each Twinsight hit transfers Atonement");
+        }
+    }
+}
+
+#[test]
 fn encroaching_shadows_spreads_owned_pain_from_real_penance() {
     for (selected, marked, revel, expected) in [
         (false, true, false, 0),
