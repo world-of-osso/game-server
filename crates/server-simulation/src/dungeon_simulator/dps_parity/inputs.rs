@@ -437,13 +437,21 @@ fn dps_parity_ret_hammer_knowledge_is_scoped_to_selected_reference_actors() {
             "native selected class talent is known"
         );
         assert!(!known.contains(24275), "native spellbook remains unchanged");
-        assert_eq!(crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275).unwrap(), Some(24275));
+        assert_eq!(
+            crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275)
+                .unwrap(),
+            Some(24275)
+        );
         install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
         let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
         // Native Ret grants its root class talent even with no purchases.
         assert!(known.contains(1241288));
         assert!(!known.contains(24275));
-        assert_eq!(crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275).unwrap(), Some(24275));
+        assert_eq!(
+            crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275)
+                .unwrap(),
+            Some(24275)
+        );
     }
 }
 
