@@ -109,7 +109,7 @@ impl Kargath {
             .get::<BladeDanceTargets>(ctx.me)
             .expect("Kargath target list")
             .0
-            .choose(&mut rand::thread_rng())
+            .choose(&mut crate::random::thread_rng())
             .copied();
         if let Some(target) = target {
             ctx.do_cast_at(Some(target), BLADE_DANCE_CHARGE, false);
@@ -256,7 +256,7 @@ fn start_assassin_wander(world: &mut World, actor: Entity) {
             target_x: position.x,
             target_z: position.z,
             idle_remaining: 0.0,
-            seed: rand::random(),
+            seed: crate::random::random(),
         });
 }
 

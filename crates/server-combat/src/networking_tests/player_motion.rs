@@ -38,7 +38,8 @@ fn motion(app: &App, player: Entity) -> PlayerMotion {
 }
 
 /// Input receive → height judgement → gravity → replicated motion, including ticks
-/// with no input. Walking across the single fixture chunk's edge removes support.
+/// with no input. Walking across the single fixture chunk's edge removes support once
+/// the body's footprint (`BODY_RADIUS`, client `TerrainGround::sample`) leaves it.
 #[test]
 fn player_motion_airborne_walkoff_and_touchdown_replicate_without_jump() {
     use super::client_height::{movement_app, tick};
@@ -47,14 +48,18 @@ fn player_motion_airborne_walkoff_and_touchdown_replicate_without_jump() {
     let (mut app, player, connection) = movement_app(ground, Position { x, y, z });
     tick(&mut app, connection, vec![]);
     assert_eq!(motion(&app, player), PlayerMotion(0));
-    let sent = PlayerInput {
+    // One run-speed tick each: 0.15 yd past the edge the footprint still stands on
+    // the chunk; 0.50 yd past it (beyond BODY_RADIUS 0.388) support ends.
+    let walk = |distance: f32| PlayerInput {
         transport: None,
         direction: [-1.0, 0.0, 0.0],
         facing_yaw: -std::f32::consts::FRAC_PI_2,
-        position: [x - 0.35, y, z],
+        position: [x - distance, y, z],
         ..input([0.0; 3])
     };
-    tick(&mut app, connection, vec![sent]);
+    tick(&mut app, connection, vec![walk(0.35)]);
+    assert_eq!(motion(&app, player), PlayerMotion(PlayerMotion::FORWARD));
+    tick(&mut app, connection, vec![walk(0.70)]);
     assert!(motion(&app, player).contains(PlayerMotion::FORWARD | PlayerMotion::FALLING));
     assert!(!motion(&app, player).contains(PlayerMotion::JUMP_STARTED));
     tick(&mut app, connection, vec![]);

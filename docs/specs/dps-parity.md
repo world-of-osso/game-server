@@ -838,6 +838,8 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 ### Demonology literal execution and alternative Tyrant
 
+- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`.
+
 - Dreadbite271971 hits only its selected primary unless Dreadlash264078 is selected; a landed Dreadbite triggers the owner's Blighted Maw1276960 using the native1276956 percentage of the actual damage. The Felguard prioritizes its native Felstorm89751 and its89753 ticks when ready (`sc_warlock_pets.cpp536–601,1068–1110`).
 - Selected Flametouched453699 applies native Ferocity453704 to each actual Dreadstalker; its owner-sourced native modifiers supply the melee-haste and critical-chance amounts (`sc_warlock_pets.cpp146–162,1223–1226,1269–1286`).
 

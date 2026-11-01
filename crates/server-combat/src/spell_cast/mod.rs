@@ -1350,6 +1350,11 @@ fn send_inventory_rejection(
 /// wall clock; damage also counts on the damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
+    #[cfg(any(test, feature = "test-support"))]
+    if world.contains_resource::<test_harness::ReplayCombatClock>() {
+        const REPLAY_EPOCH_MS: u64 = 1_792_454_400_000;
+        event.timestamp_unix_ms = REPLAY_EPOCH_MS + (history_now(world) * 1000.0) as u64;
+    }
     crate::followers::pull_history::record_event(world, &event);
     crate::followers::live_facts::record_event(world, &event);
     #[cfg(any(test, feature = "test-support"))]

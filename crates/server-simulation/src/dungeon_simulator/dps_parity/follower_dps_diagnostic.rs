@@ -229,6 +229,65 @@ fn follower_arms_execute_applies_one_deep_wounds_deposit() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(target)))
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 1276672, Some(target), false).unwrap();
+    for _ in 0..40 {
+        app.update();
+    }
+    let pet = {
+        let mut query = app.world_mut().query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>();
+        query
+            .iter(app.world())
+            .find(|(_, summon, npc)| {
+                summon.owner == actor && summon.spell_id == 1276672 && npc.template_id == 250785
+            })
+            .map(|(entity, _, _)| entity)
+            .expect("real selected Doomguard must be summoned")
+    };
+    for _ in 0..160 {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let volleys = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(pet.to_bits())
+                && event.spell_id == Some(1251989)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        volleys >= 2,
+        "actual Doomguard must repeatedly land native volleys: {volleys}"
+    );
+    for _ in 0..80 {
+        app.update();
+    }
+    assert!(
+        app.world().get_entity(pet).is_err(),
+        "native Doomguard expires after its authored lifetime"
+    );
+}
+
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
@@ -2715,6 +2774,25 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.amount > 0),
         "actual Starfire hits must produce selected Star Cascade damage"
     );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(394111)
+                && event.amount > 0),
+        "Sundered Firmament must damage the actual target"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(394108)
+                && event.amount > 0),
+        "Sundered Firmament must generate Astral Power"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -3199,6 +3277,56 @@ fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn fixed_fight_seed_replays_identical_events_and_outcome() {
+    fn replay() -> (serde_json::Value, Vec<serde_json::Value>) {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "dungeon_simulator::dps_parity::follower_dps_diagnostic::follower_dps_production_dummy",
+                "--exact", "--ignored", "--nocapture", "--test-threads=1",
+            ])
+            .env("FOLLOWER_DPS_SPEC", "62")
+            .env("FOLLOWER_DPS_LEVEL", "90")
+            .env("FOLLOWER_DPS_MAP", "2813")
+            .env("FOLLOWER_DPS_SEED", "8")
+            .env("FOLLOWER_TRACE_EVENTS", "1")
+            .output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let report: serde_json::Value = stdout
+            .lines()
+            .find_map(|line| {
+                line.split_once("FOLLOWER_DPS ")
+                    .map(|(_, value)| serde_json::from_str(value).unwrap())
+            })
+            .expect("DPS report");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        let events: Vec<serde_json::Value> = stderr
+            .lines()
+            .filter_map(|line| line.strip_prefix("FOLLOWER_REPLAY_EVENT "))
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert!(!events.is_empty(), "fight emitted no events");
+        (report, events)
+    }
+    let first = replay();
+    let second = replay();
+    for (index, (left, right)) in first.1.iter().zip(&second.1).enumerate() {
+        assert_eq!(left, right, "combat event {index} diverged");
+    }
+    assert_eq!(
+        first.1.len(),
+        second.1.len(),
+        "combat event counts diverged"
+    );
+    assert_eq!(first.0, second.0, "fight outcomes diverged");
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")
@@ -3430,6 +3558,14 @@ fn follower_dps_production_dummy() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        if std::env::var_os("FOLLOWER_TRACE_EVENTS").is_some() {
+            for event in &events[seen_events..] {
+                eprintln!(
+                    "FOLLOWER_REPLAY_EVENT {}",
+                    json!({"tick": frame + 1, "event": event})
+                );
+            }
+        }
         if trace_actions {
             let after_power = crate::spell_cast::powers::power_value(
                 app.world(),

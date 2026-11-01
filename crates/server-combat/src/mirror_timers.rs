@@ -417,7 +417,7 @@ fn deal_environmental_damage(
     health: &mut Health,
     kinds: &[EnvironmentalKind],
 ) -> Vec<CombatLogEvent> {
-    let mut rng = rand::thread_rng();
+    let mut rng = crate::random::thread_rng();
     kinds
         .iter()
         .filter_map(|&kind| {
