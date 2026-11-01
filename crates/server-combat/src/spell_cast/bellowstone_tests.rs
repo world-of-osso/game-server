@@ -27,7 +27,7 @@ fn emit(h: &mut Harness, hit_mask: u32) {
             reflected: false,
         },
     );
-    h.advance(1);
+    h.advance(3);
 }
 
 fn crit(h: &Harness) -> f32 {
@@ -90,7 +90,8 @@ fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     );
     let before = crit(&h);
     emit(&mut h, procs::PROC_HIT_CRITICAL);
-    let echo = aura(&h, ECHOING_ROAR).expect("critical hit adds Echoing Roar");
+    let echo = aura(&h, ECHOING_ROAR)
+        .unwrap_or_else(|| panic!("critical hit adds Echoing Roar; active Last Roar: {last:?}"));
     assert_eq!(echo.stacks, stacks + 1);
     assert!(echo.effects.iter().any(|e| e.index == 0 && e.amount > 0.0));
     assert!(
