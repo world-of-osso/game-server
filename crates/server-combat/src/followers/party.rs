@@ -36,8 +36,8 @@ impl DisconnectedRuns {
     pub(crate) fn member_difficulty(&self, member: Entity) -> Option<u32> {
         self.0
             .values()
-            .any(|run| run.run.members.contains(&member))
-            .then_some(FOLLOWER_DIFFICULTY)
+            .find(|run| run.run.members.contains(&member))
+            .map(|run| run.run.entry_difficulty())
     }
 }
 
@@ -48,6 +48,7 @@ pub(crate) struct FollowerRun {
     class_profiles: Vec<super::class_profiles::ClassProfile>,
     seed: u64,
     gear: super::class_spawn::GearSource,
+    keystone: Option<shared::protocol::KeystoneInfo>,
     members: Vec<Entity>,
     copy: Option<InMap>,
     previous_difficulty: u32,
@@ -56,9 +57,34 @@ pub(crate) struct FollowerRun {
 }
 
 impl FollowerRun {
+    fn entry_difficulty(&self) -> u32 {
+        match self.gear {
+            super::class_spawn::GearSource::Journal => FOLLOWER_DIFFICULTY,
+            super::class_spawn::GearSource::KeystoneBand(_) => self.previous_difficulty,
+        }
+    }
+
     pub(crate) fn contains_member(&self, member: Entity) -> bool {
         self.copy.is_some() && self.members.contains(&member)
     }
+}
+
+pub(crate) fn validate_keystone(
+    world: &World,
+    owner: Entity,
+    key: &shared::protocol::KeystoneInfo,
+) -> Result<(), String> {
+    if let Some(run) = world.get::<FollowerRun>(owner) {
+        let matches = run.keystone.as_ref().is_some_and(|expected| {
+            expected.item_guid == key.item_guid
+                && expected.challenge_id == key.challenge_id
+                && expected.level == key.level
+        });
+        if !matches {
+            return Err("follower party was formed for a different keystone".into());
+        }
+    }
+    Ok(())
 }
 
 /// Admitted copy, companion IDs (including missing entities), and owner's role.
@@ -124,9 +150,39 @@ fn begin_run(
     if let Some(reason) = dungeon.level_lock(u32::from(level)) {
         return Err(reason.into());
     }
+    let previous_difficulty = world
+        .get::<DungeonDifficulty>(player)
+        .ok_or("player has no dungeon difficulty")?
+        .0;
+    let keystone = if previous_difficulty == 23 {
+        Some(crate::mythic_plus::follower_key_for_map(
+            world,
+            id,
+            dungeon.entrance.map_id,
+        )?)
+    } else {
+        None
+    };
+    let gear = match &keystone {
+        Some(key) => super::class_spawn::GearSource::KeystoneBand(key.level),
+        None => super::class_spawn::GearSource::Journal,
+    };
     let seed = rand::random::<u64>();
-    let class_profiles =
-        super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?;
+    let class_profiles = match gear {
+        super::class_spawn::GearSource::Journal => {
+            super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?
+        }
+        super::class_spawn::GearSource::KeystoneBand(key_level) => {
+            super::class_profiles::select_keystone_party_profiles(
+                world,
+                role,
+                player_spec,
+                level,
+                key_level,
+                seed,
+            )?
+        }
+    };
     let profiles = class_profiles
         .iter()
         .enumerate()
@@ -144,16 +200,16 @@ fn begin_run(
         position: Vec3::new(x, y, z),
         orientation: 0.0,
     };
-    let previous_difficulty = world
-        .get::<DungeonDifficulty>(player)
-        .ok_or("player has no dungeon difficulty")?
-        .0;
+    let entry_difficulty = match gear {
+        super::class_spawn::GearSource::Journal => FOLLOWER_DIFFICULTY,
+        super::class_spawn::GearSource::KeystoneBand(_) => previous_difficulty,
+    };
     world
         .resource_mut::<crate::maps::InstanceManager>()
         .forget_recent_instance(id, dungeon.entrance.map_id);
     world
         .entity_mut(player)
-        .insert(DungeonDifficulty(FOLLOWER_DIFFICULTY));
+        .insert(DungeonDifficulty(entry_difficulty));
     if !teleport_to(world, player, dungeon.entrance, TeleportOptions::default()) {
         world
             .entity_mut(player)
@@ -199,7 +255,8 @@ fn begin_run(
         profiles,
         class_profiles,
         seed,
-        gear: super::class_spawn::GearSource::Journal,
+        gear,
+        keystone,
         members: Vec::new(),
         copy: None,
         previous_difficulty,
@@ -476,9 +533,10 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
             summoned_by.0 = player.to_bits();
         }
     }
+    let difficulty = run.entry_difficulty();
     world
         .entity_mut(player)
-        .insert((DungeonDifficulty(FOLLOWER_DIFFICULTY), run, lfg));
+        .insert((DungeonDifficulty(difficulty), run, lfg));
     send_update(world, player, None, None);
 }
 
@@ -677,6 +735,7 @@ mod copy_tests {
             class_profiles: Vec::new(),
             seed: 0,
             gear: super::super::class_spawn::GearSource::Journal,
+            keystone: None,
             members,
             copy: Some(copy),
             previous_difficulty: 1,

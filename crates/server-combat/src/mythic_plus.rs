@@ -97,6 +97,30 @@ fn owned_keys(db: &redb::Database, character: u64) -> Vec<KeystoneInfo> {
         })
         .collect()
 }
+pub(crate) fn follower_key_for_map(
+    world: &World,
+    character: u64,
+    map_id: u32,
+) -> Result<KeystoneInfo, String> {
+    let definition = world
+        .resource::<Challenges>()
+        .definition
+        .as_ref()
+        .filter(|definition| definition.map_id == map_id)
+        .ok_or("selected dungeon has no qualified keystone challenge")?;
+    let keys: Vec<_> = owned_keys(&world.resource::<GameDatabase>().db, character)
+        .into_iter()
+        .filter(|key| key.challenge_id == definition.challenge_id)
+        .collect();
+    match keys.as_slice() {
+        [key] => Ok(key.clone()),
+        _ => Err(format!(
+            "expected one owned keystone for this dungeon, found {}",
+            keys.len()
+        )),
+    }
+}
+
 pub(crate) fn issue_keystone(
     db: &redb::Database,
     templates: &crate::item_templates::ItemTemplates,
@@ -280,6 +304,7 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .into_iter()
         .find(|key| *key == active.run.snapshot.key)
         .ok_or("Slotted keystone changed or left your bags")?;
+    crate::followers::party::validate_keystone(world, player, &key)?;
     let map = *world.get::<InMap>(player).ok_or("No map")?;
     if world.resource::<Challenges>().runs.contains_key(&map) {
         return Err("Another keystone run already owns this copy".into());
@@ -634,6 +659,98 @@ mod tests {
             .snapshot;
         assert_eq!(snapshot.deaths, 1);
         assert_eq!(snapshot.time_lost_ms, 5000);
+    }
+
+    #[test]
+    fn follower_mythic_queue_uses_owned_dungeon_key() {
+        use shared::group::GroupRole;
+        let path = crate::test_data::world_db_path();
+        let db = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let definition = load_azure(&db).unwrap().expect("qualified Azure challenge");
+        let store = crate::maps::store::load_map_store(&db).unwrap();
+        let catalog = crate::followers::load_catalog(&db).unwrap();
+        let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut h = crate::bank_test_harness::harness_at(file.path(), "Keymaster").unwrap();
+        h.app
+            .insert_resource(store)
+            .insert_resource(catalog)
+            .insert_resource(classes)
+            .insert_resource(spells)
+            .init_resource::<crate::maps::InstanceManager>()
+            .init_resource::<crate::group::GroupRegistry>();
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1791705600),
+        });
+        h.app.insert_resource(Challenges {
+            definition: Some(definition),
+            ..Default::default()
+        });
+        h.app.world_mut().entity_mut(h.player).insert((
+            shared::components::Level(70),
+            shared::components::UnitLevel(70),
+            shared::components::ActiveSpec(62),
+            crate::maps::DungeonDifficulty(23),
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            InMap {
+                map_id: 0,
+                instance_id: 0,
+            },
+        ));
+        let txn = h.db().begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.commit().unwrap();
+        let mut inventory = h.inventory();
+        inventory.items.push(persistence::InventoryItemData {
+            item_guid: 4242,
+            item_id: KEYSTONE_ITEM,
+            name: "Mythic Keystone".into(),
+            quality: 4,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 0,
+            unique_auction: false,
+        });
+        persistence::save_inventory(h.db(), h.character_id, &inventory);
+        let key = KeystoneInfo {
+            item_guid: 4242,
+            item_id: KEYSTONE_ITEM,
+            challenge_id: 401,
+            level: 8,
+            affixes: vec![],
+        };
+        save_key(h.db(), &key);
+        crate::followers::queue_player(h.app.world_mut(), h.player, GroupRole::Dps, 2498);
+        assert!(
+            h.app
+                .world()
+                .get::<crate::maps::MapTransfer>(h.player)
+                .is_some()
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::maps::DungeonDifficulty>(h.player)
+                .unwrap()
+                .0,
+            23
+        );
+        assert!(crate::followers::party::validate_keystone(h.app.world(), h.player, &key).is_ok());
+        let mut different = key.clone();
+        different.level += 1;
+        assert!(
+            crate::followers::party::validate_keystone(h.app.world(), h.player, &different)
+                .is_err()
+        );
     }
 
     #[test]

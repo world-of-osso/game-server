@@ -107,6 +107,63 @@ pub(super) fn find_profile(spec: u32, level: u32) -> Result<&'static Profile, St
     }
 }
 
+pub(in crate::followers) fn class_profiles(
+    classes: &crate::spell_info::ClassSpells,
+    level: u32,
+) -> Result<Vec<super::super::class_profiles::ClassProfile>, String> {
+    let mut profiles = Vec::new();
+    for profile in catalog()?.profiles.values() {
+        if !band_contains(&profile.key_band, level)? {
+            continue;
+        }
+        let spec = classes
+            .classes
+            .iter()
+            .find(|class| class.class_id == profile.class_id)
+            .and_then(|class| {
+                class
+                    .specs
+                    .iter()
+                    .find(|spec| spec.spec_id == profile.spec_id)
+            })
+            .ok_or_else(|| {
+                format!(
+                    "keystone profile spec{} lacks native class metadata",
+                    profile.spec_id
+                )
+            })?;
+        let role =
+            u8::try_from(spec.role).map_err(|_| format!("invalid spec{} role", profile.spec_id))?;
+        profiles.push(super::super::class_profiles::ClassProfile {
+            spec_id: profile.spec_id,
+            class_id: profile.class_id,
+            role,
+            race: profile.race.id,
+            talents: "TALENTS_FROM_WCL".into(),
+            race_source: profile.race.source.clone(),
+            talents_source: Some("TALENTS_FROM_WCL".into()),
+            talent_entries: Some(
+                profile
+                    .talents
+                    .iter()
+                    .map(|talent| (talent.entry, talent.points))
+                    .collect(),
+            ),
+            rejection: None,
+        });
+    }
+    profiles.sort_by_key(|profile| profile.spec_id);
+    if profiles
+        .windows(2)
+        .any(|pair| pair[0].spec_id == pair[1].spec_id)
+    {
+        return Err(format!(
+            "overlapping qualified follower profiles for key{level}"
+        ));
+    }
+    Ok(profiles)
+}
+
 pub(in crate::followers) fn class_profile(
     base: &super::super::class_profiles::ClassProfile,
     level: u32,

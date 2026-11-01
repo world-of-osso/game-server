@@ -37,7 +37,7 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 - [ ] Selected affix mechanics only where authored rules exist; historical affix rows are not a current active rotation.
 - [x] Both-skin private UDP5800 native loop proof recorded; rating remains deliberately absent under the disabled numeric policy.
 - [ ] Scenario-event92 producers, full affix combat/art, active next-dungeon pool, key-level NPC scaling and Azure combat mechanics beyond the existing BossAI lifecycle are not covered. NPCs spawned before activation retain authored baseline Mythic stats. Slot drag-removal/banner animation parity is unclaimed.
-- [ ] Class-follower keystone party admission is not yet wired. The keystone gear source selects the tracked qualified WCL talents and equipment by specialization and key band, preserves race and talent provenance separately, and rejects missing profiles rather than using Normal gear. Grouped follower death transitions count toward an active run with the configured death penalty; class-party completion and release still need end-to-end proof.
+- [ ] Selecting Mythic dungeon difficulty before queuing a follower dungeon requests that dungeon's owned keystone and admits the class-follower party to a fresh Mythic copy; insert and activate that key at its Font. The keystone gear source selects the tracked qualified WCL talents and equipment by specialization and key band, preserves race and talent provenance separately, and rejects missing profiles rather than using Normal gear. Grouped follower death transitions count toward an active run with the configured death penalty; class-party completion and release still need end-to-end proof.
 
 ## Out of scope
 
