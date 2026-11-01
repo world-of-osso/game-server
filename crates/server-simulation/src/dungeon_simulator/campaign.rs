@@ -877,13 +877,15 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
         .0[cursor..];
     let melee = |source: Entity| {
         events.iter().any(|event| {
-            event.kind == shared::protocol::CombatLogKind::Damage
-                && event.source == Some(source.to_bits())
+            matches!(
+                event.kind,
+                shared::protocol::CombatLogKind::Damage | shared::protocol::CombatLogKind::Miss(_)
+            ) && event.source == Some(source.to_bits())
                 && event.target == Some(owner.to_bits())
                 && event.spell_id.is_none()
         })
     };
-    assert!(!melee(rune), "rune hit the owner");
+    assert!(!melee(rune), "rune attempted to melee the owner");
     assert!(melee(hostile), "nearby hostile did not melee the owner");
     let observed = super::diagnostics::inspect_unit(run.app.world(), Some(29001878), hostile);
     assert!(
