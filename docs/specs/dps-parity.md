@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
 - Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`) and starts Corrupted Blood on cooldown (`sc_death_knight.cpp:4754–4758`). Rune Weapon Blood Plague continues through its remaining duration after the weapon is dismissed; a dismissed weapon cannot mirror further attacks. Blood's disease ticks can apply the selected Brittle debuff (`sc_death_knight.cpp:7809–7821`). Rune Weapon Death Strike copies execute before the owner heals and consumes Hemostasis (`sc_death_knight.cpp:10116–10130`).
@@ -132,14 +133,20 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Focused Ray
 
 - Selected Focused Ray1240203 amplifies Void Ray damage children1213649/1214595 by native effect1 when the real resolved enemy count is at most native effect2 (SimC76f8118 `sc_demon_hunter.cpp`6304–6321).
+- A completed Void Ray grants selected Eradicate1239524 and executes selected Voidglare Boon1241922; interrupted channels do not (SimC76f8118 `sc_demon_hunter.cpp`6392–6415).
 ### Devourer Metamorphosis entry
 
 - Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
 - Void Metamorphosis damage effects4/5 use Monster Within mastery once, not both their raw aura amount and the mastery-scaled amount (SimC76f8118 `sc_demon_hunter.cpp`2174–2185).
+- The literal follower's precombat initializes selected Entropy1261684 effect2 soul stacks once. Selected Midnight1250094 grants a ready Collapsing Star and effect1 lesser fragments at Meta entry. During Meta, each consumed fragment adds selected Emptiness1242504; each stack grants one hundredth of native talent1242492 effect1 as haste (SimC76f8118 `sc_demon_hunter.cpp`3678–3700,9192–9206,9824–9835,12755).
+- Collapsing Star damage creates the selected Star Fragments1240204 effect1 lesser fragments (SimC76f8118 `sc_demon_hunter.cpp`6501–6509).
 
 ### Devourer Reap
 
-- Each Reap1226019 executes the delayed damage child1225823 once, without an additional legacy1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+- Each Reap1226019 executes the delayed damage child1225823 once, without an additional Eradicate1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+- Eradicate1225826 requires and consumes its ready buff, consumes actual lesser fragments, and delivers delayed1225827 outside Meta or1279200 in Meta. Reap and Cull are not selected while that buff is active (SimC76f8118 `sc_demon_hunter.cpp`6110–6296).
+- Selected Annihilator Voidfall builds from Consume/Devour, completed Void Ray with Meteoric Rise, and Meta with Mass Acceleration. Reap-family spenders launch meteors, spending one stack per launch; Meteoric Fall can launch the full stack, with selected World Killer replacing the last meteor and spawning its native fragment count (SimC76f8118 `sc_demon_hunter.cpp`2977–3085,3141–3168,6392–6415,6570–6635,9336–9379).
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled: native 30,832 DPS, SimC 31,152; mean paired percentage difference −0.81% ±5.23 pp (95% t interval). The point estimate is within ±5%; its interval is not. L70 remains unqualified because pinned SimC has no unique logged Annihilator keystone.
 ### Devourer Singular Strikes
 
 - Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
@@ -645,6 +652,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
+- Selected Battlelord rolls its native proc chance on Overpower execution, resets Mortal Strike's cooldown and grants its native buff; only a foreground Mortal Strike consumes that buff (`sc_warrior.cpp:3108–3109,5478–5487`).
 - Selected Arms Imminent Demise adds Bladestorm ticks within its hasted duration and expires its earned stacks when Bladestorm ends (`sc_warrior.cpp:3279–3299,3344–3349`).
 
 - With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
