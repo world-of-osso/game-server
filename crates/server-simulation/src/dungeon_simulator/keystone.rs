@@ -208,6 +208,14 @@ impl State {
         Ok(())
     }
 
+    pub fn waiting_for_start(&self, world: &World) -> Result<bool, String> {
+        let run = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        Ok(run.phase == shared::protocol::ChallengePhase::Countdown)
+    }
+
     pub fn completed(&self, world: &World) -> bool {
         self.session
             .snapshot(world)
