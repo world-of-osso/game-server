@@ -649,12 +649,12 @@ fn follower_elemental_flame_shock_uses_mastery_on_direct_and_periodic_damage() {
 }
 
 /// The production dummy's 120 s SimC `max_time` window in 50 ms frames.
-const FIXED_FIGHT_FRAMES: u32 = 2400;
+pub(super) const FIXED_FIGHT_FRAMES: u32 = 2400;
 
 /// Engage the dummy for a SimC fixed-time fight of `seconds`. SimC76f8118
 /// sim.cpp3582–3585: `fight_remains` is the iteration length minus elapsed time,
 /// not the dummy's projected time to die.
-fn start_fixed_time_fight(
+pub(super) fn start_fixed_time_fight(
     app: &mut App,
     owner: Entity,
     actor: Entity,

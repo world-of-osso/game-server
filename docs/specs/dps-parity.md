@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
 - Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`) and starts Corrupted Blood on cooldown (`sc_death_knight.cpp:4754–4758`). Rune Weapon Blood Plague continues through its remaining duration after the weapon is dismissed; a dismissed weapon cannot mirror further attacks. Blood's disease ticks can apply the selected Brittle debuff (`sc_death_knight.cpp:7809–7821`). Rune Weapon Death Strike copies execute before the owner heals and consumes Hemostasis (`sc_death_knight.cpp:10116–10130`).
@@ -645,6 +646,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
+- Selected Battlelord rolls its native proc chance on Overpower execution, resets Mortal Strike's cooldown and grants its native buff; only a foreground Mortal Strike consumes that buff (`sc_warrior.cpp:3108–3109,5478–5487`).
 - Selected Arms Imminent Demise adds Bladestorm ticks within its hasted duration and expires its earned stacks when Bladestorm ends (`sc_warrior.cpp:3279–3299,3344–3349`).
 
 - With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
