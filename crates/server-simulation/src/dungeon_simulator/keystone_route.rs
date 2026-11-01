@@ -1,6 +1,6 @@
 //! Add the least-cost authored force packs to the retained boss route.
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet};
 
 use super::graph::{Graph, RouteStep};
 use serde::Serialize;
@@ -87,6 +87,7 @@ pub(super) fn plan(
     graph: &Graph,
     weights: &HashMap<u32, u64>,
     required: u64,
+    hostile_sources: &HashSet<u32>,
 ) -> Result<PlannedRoute, String> {
     let paths = adjacency(graph)?;
     let distances: BTreeMap<_, _> = graph
@@ -98,6 +99,7 @@ pub(super) fn plan(
     let points = |pack: &super::graph::Pack| {
         pack.spawns
             .iter()
+            .filter(|spawn| hostile_sources.contains(&spawn.guid))
             .map(|spawn| weights.get(&spawn.entry).copied().unwrap_or(0))
             .sum::<u64>()
     };
@@ -209,6 +211,11 @@ mod tests {
             &graph,
             &definition.creature_weights,
             definition.forces_required,
+            &graph
+                .packs
+                .iter()
+                .flat_map(|pack| pack.spawns.iter().map(|spawn| spawn.guid))
+                .collect(),
         )
         .unwrap();
         assert!(selected.planned_forces >= definition.forces_required);
@@ -238,7 +245,8 @@ mod tests {
             "edges":[{"from":1,"to":4,"yards":10},{"from":1,"to":2,"yards":1},{"from":2,"to":4,"yards":10},{"from":1,"to":3,"yards":4},{"from":3,"to":4,"yards":7}],
             "teleports":[],"unreachable":[],"route":[{"pack":1,"anchor":[0,0,0]},{"pack":4,"anchor":[10,0,0]}]
         })).unwrap();
-        let selected = plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 10).unwrap();
+        let eligible = HashSet::from([2, 3]);
+        let selected = plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 10, &eligible).unwrap();
         assert_eq!(selected.added_packs, vec![3]);
         assert_eq!(selected.planned_forces, 10);
         assert_eq!(
@@ -250,9 +258,28 @@ mod tests {
             vec![1, 3, 4]
         );
         assert!(
-            plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 16)
+            plan(&graph, &HashMap::from([(20, 5), (30, 10)]), 16, &eligible)
                 .unwrap_err()
                 .contains("15 of 16")
+        );
+        let hostile_only = plan(
+            &graph,
+            &HashMap::from([(20, 5), (30, 10)]),
+            5,
+            &HashSet::from([2]),
+        )
+        .unwrap();
+        assert_eq!(hostile_only.added_packs, vec![2]);
+        assert_eq!(hostile_only.planned_forces, 5);
+        assert!(
+            plan(
+                &graph,
+                &HashMap::from([(20, 5), (30, 10)]),
+                6,
+                &HashSet::from([2])
+            )
+            .unwrap_err()
+            .contains("5 of 6")
         );
     }
 }

@@ -64,7 +64,9 @@ pub(super) struct State {
 }
 
 /// Plan from the actual challenge criteria and the selected dungeon's native level cap.
-pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), String> {
+pub(super) fn prepare_challenge(
+    graph: &Graph,
+) -> Result<(server::mythic_plus_runtime::ChallengeDefinition, u8), String> {
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|error| format!("open keystone catalog: {error}"))?;
@@ -92,13 +94,7 @@ pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), Str
             graph.map_id
         ));
     }
-    let plan = super::keystone_route::plan(
-        graph,
-        &definition.creature_weights,
-        definition.forces_required,
-    )?;
-    graph.route = plan.steps.clone();
-    Ok((plan, *level))
+    Ok((definition, *level))
 }
 
 pub(super) fn start(

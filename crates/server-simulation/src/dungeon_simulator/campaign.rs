@@ -2607,7 +2607,7 @@ fn spawn_run_mode(
         ));
     }
     let planned = if options.is_some() {
-        Some(super::keystone::prepare_graph(&mut graph)?)
+        Some(super::keystone::prepare_challenge(&graph)?)
     } else {
         None
     };
@@ -2703,7 +2703,22 @@ fn spawn_run_mode(
         }
     }
     let keystone = match (options, planned) {
-        (Some(options), Some((plan, _))) => {
+        (Some(options), Some((definition, _))) => {
+            let hostile_sources = actors
+                .iter()
+                .filter_map(|(guid, actor)| {
+                    crate::spell_cast::targets::is_hostile(app.world(), party.owner, *actor)
+                        .then_some(*guid)
+                })
+                .collect();
+            let plan = super::keystone_route::plan(
+                &graph,
+                &definition.creature_weights,
+                definition.forces_required,
+                &hostile_sources,
+            )?;
+            graph.route = plan.steps.clone();
+            app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
