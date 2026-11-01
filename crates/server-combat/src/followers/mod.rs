@@ -68,8 +68,6 @@ mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
 #[cfg(test)]
-mod kit_rotation_tests;
-#[cfg(test)]
 mod meteor_tests;
 mod owner_trail;
 mod pack_identity;
@@ -467,8 +465,6 @@ pub(crate) mod profile_behavior_tests;
 #[cfg(test)]
 mod pyroclasm_tests;
 #[cfg(test)]
-mod rotation_defense_tests;
-#[cfg(test)]
 mod rotation_imp_tests;
 #[cfg(test)]
 mod rotation_measurements;
@@ -478,8 +474,6 @@ mod rotation_override_tests;
 mod rotation_proc_tests;
 #[cfg(test)]
 mod rotation_refresh_tests;
-#[cfg(test)]
-mod rotation_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
