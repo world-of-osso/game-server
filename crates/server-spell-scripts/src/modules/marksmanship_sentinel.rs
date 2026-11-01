@@ -11,6 +11,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ArmorIgnoredSpells(ARMOR_IGNORED),
     SpellScriptHook::ResolvedDamage(after_damage),
     SpellScriptHook::AfterQueuedTriggers(roll_queued_tip_marks),
+    SpellScriptHook::ActualCriticalChanceBonus(aimed_mark_crit),
+    SpellScriptHook::ActualDamageMultiplier(rapid_mark_damage),
 ];
 use bevy::prelude::*;
 
@@ -32,6 +34,60 @@ const BLOOD_DAMAGE: u32 = 1319015;
 const ARMAMENTS: u32 = 1253831;
 const ARMAMENTS_DOT: u32 = 1253836;
 const PRECISE_SHOTS: u32 = 260242;
+const TAKE_AIM_RANK_THREE: u32 = 1273132;
+const RAPID_MARK: u32 = 1301098;
+const ARCANE_TALONS: u32 = 1253846;
+
+#[derive(Resource, Default)]
+struct RapidMarkedTargets(Vec<(Entity, Entity)>);
+
+fn aimed_mark_crit(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    _: f32,
+) -> f32 {
+    if spell.id == AIMED
+        && selected(world, caster, ARCANE_TALONS)
+        && owns_mark(world, caster, target, RAPID_MARK)
+    {
+        script_effect_value(world, caster, ARCANE_TALONS, 1)
+    } else {
+        0.0
+    }
+}
+
+fn rapid_mark_damage(world: &mut World, ctx: &EffectCtx, target: Entity) -> f32 {
+    if ctx.spell.id != RAPID_TICK {
+        return 1.0;
+    }
+    let caster = ctx.caster;
+    let removed = auras::remove_auras(world, target, RemoveReason::Consumed, |aura| {
+        aura.caster == caster && aura.spell_id == RAPID_MARK
+    });
+    if !removed.is_empty() {
+        world.init_resource::<RapidMarkedTargets>();
+        let mut marked = world.resource_mut::<RapidMarkedTargets>();
+        if !marked.0.contains(&(caster, target)) {
+            marked.0.push((caster, target));
+        }
+    }
+    if world
+        .get_resource::<RapidMarkedTargets>()
+        .is_some_and(|marked| marked.0.contains(&(caster, target)))
+    {
+        1.0 + script_effect_value(world, caster, RAPID_MARK, 0) / 100.0
+    } else {
+        1.0
+    }
+}
+
+pub(super) fn clear_rapid_marks(world: &mut World, caster: Entity) {
+    if let Some(mut marked) = world.get_resource_mut::<RapidMarkedTargets>() {
+        marked.0.retain(|(owner, _)| *owner != caster);
+    }
+}
 
 #[derive(Resource, Default)]
 struct PendingTipMarks(Vec<(Entity, Entity)>);
@@ -217,6 +273,12 @@ fn grant_mark(world: &mut World, caster: Entity, target: Entity) {
     if !spell_cast::try_cast_triggered(world, caster, MARK, Some(target), 1) {
         warn!(?caster, ?target, "Native Sentinel mark refused");
         return;
+    }
+    if selected(world, caster, TAKE_AIM_RANK_THREE) {
+        assert!(
+            spell_cast::try_cast_triggered(world, caster, RAPID_MARK, Some(target), 1),
+            "native Rapid Fire mark refused"
+        );
     }
     // sc_hunter.cpp3666–3667/3709–3710: a real mark reduces both native
     // running recoveries by their distinct Moon's Blessing effects; never start one.

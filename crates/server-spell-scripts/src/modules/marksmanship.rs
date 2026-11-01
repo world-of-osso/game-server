@@ -212,6 +212,7 @@ fn expire_focus_fire(
     aura: &AuraInstance,
     _: auras::RemoveReason,
 ) {
+    super::marksmanship_sentinel::clear_rapid_marks(world, aura.caster);
     // sc_hunter.cpp5832–5837: the finished Rapid Fire consumes Focus Fire.
     auras::remove_auras(
         world,
