@@ -2701,13 +2701,16 @@ fn fixed_fight_seed_replays_identical_events_and_outcome() {
             String::from_utf8_lossy(&output.stderr)
         );
         let stdout = String::from_utf8(output.stdout).unwrap();
-        let report = stdout
+        let mut report: serde_json::Value = stdout
             .lines()
             .find_map(|line| {
                 line.split_once("FOLLOWER_DPS ")
                     .map(|(_, value)| serde_json::from_str(value).unwrap())
             })
             .expect("DPS report");
+        for event in report["incoming"].as_array_mut().unwrap() {
+            event.as_object_mut().unwrap().remove("timestamp_unix_ms");
+        }
         let stderr = String::from_utf8(output.stderr).unwrap();
         let events: Vec<serde_json::Value> = stderr
             .lines()
