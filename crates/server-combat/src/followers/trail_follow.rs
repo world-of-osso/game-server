@@ -285,7 +285,16 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         &crate::ground::ground_data_dir(),
         HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
     ));
-    let nav = crate::ground::ground_data_dir().join("navmesh");
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    let mut native_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
+    assert!(
+        native_map.complete_walk_path(start, trail[0]).is_ok(),
+        "first trail point must be reachable on the real navmesh"
+    );
     crate::navigation::install_fixture(&mut h.app, Navigation::new(&nav));
     h.app
         .world_mut()
@@ -317,6 +326,17 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         .insert(positioning::CombatMovementExclusions(Some(vec![(
             center, 17.0,
         )])));
+    assert!(
+        positioning::is_unpulled_hostile(h.app.world(), follower, watcher),
+        "fixture watcher must be idle and hostile"
+    );
+    let exclusions = positioning::CombatMovementExclusions(Some(vec![(center, 17.0)]));
+    assert!(
+        trail
+            .windows(2)
+            .all(|leg| exclusions.permits(leg[0], leg[1])),
+        "recorded owner trail must stay outside the watcher margin"
+    );
     let mut previous = start;
     for _ in 0..600 {
         h.advance(1);
