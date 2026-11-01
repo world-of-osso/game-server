@@ -1324,10 +1324,17 @@ pub(crate) fn install_follow_fixture(app: &mut App) {
 
 #[cfg(test)]
 pub(crate) fn install_follower_follow_fixture(app: &mut App) {
+    install_follower_follow_with(app, |_| {});
+}
+
+/// Follower brain, then `apl` (the class follower casting step), then native chase and follow.
+#[cfg(any(test, feature = "test-support"))]
+pub fn install_follower_follow_with(app: &mut App, apl: fn(&mut World)) {
     app.add_systems(
         FixedUpdate,
         (
             crate::followers::update_ai,
+            apl,
             chase_system,
             flight_follow::update,
             follow_owner_system,
