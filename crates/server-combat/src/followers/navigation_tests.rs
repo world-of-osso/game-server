@@ -549,6 +549,13 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         .resource_mut::<Navigation>()
         .cancel_route(tank);
     let mut minimum_y = approach_start.y;
+    let mut prior_leader = Position {
+        x: -81.8,
+        y: 137.1,
+        z: -348.5,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(prior_leader);
+    h.advance(30);
     for (leader, frames) in [
         (
             Position {
@@ -583,13 +590,21 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
             160,
         ),
     ] {
-        h.app.world_mut().entity_mut(h.caster).insert(leader);
-        for _ in 0..frames {
+        for frame in 1..=frames {
+            let fraction = (frame as f32 / 5.0).min(1.0);
+            let interpolated = point(prior_leader).lerp(point(leader), fraction);
+            h.app.world_mut().entity_mut(h.caster).insert(Position {
+                x: interpolated.x,
+                y: interpolated.y,
+                z: interpolated.z,
+            });
             h.advance(1);
             minimum_y = minimum_y.min(h.app.world().get::<Position>(tank).unwrap().y);
         }
+        prior_leader = leader;
         eprintln!(
-            "recorded approach leader={leader:?} tank={:?} min_y={minimum_y}",
+            "recorded approach leader={leader:?} rotation={:?} tank={:?} min_y={minimum_y}",
+            h.app.world().get::<Rotation>(h.caster).map(|r| r.y),
             h.app.world().get::<Position>(tank)
         );
     }
