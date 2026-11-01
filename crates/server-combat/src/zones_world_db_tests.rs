@@ -912,6 +912,12 @@ fn retail_polymorphic_rune_does_not_enter_combat_or_melee() {
     let templates = crate::faction::world_db_faction_templates().expect("world factions");
     let mut app = patrol_app_with(&[RUNE, FOREST_SPIDER], |app| {
         app.insert_resource(templates);
+        let db = rusqlite::Connection::open_with_flags(
+            world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
         app.add_plugins((
             crate::combat::CombatPlugin,
             crate::creature_aggro::CreatureAggroPlugin,
