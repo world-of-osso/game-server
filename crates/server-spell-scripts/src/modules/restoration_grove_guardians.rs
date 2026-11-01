@@ -28,7 +28,11 @@ fn summon_treant(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     let Some(target) = spell.cast_primary_target else {
-        warn!(?caster, spell = spell.id, "Grove Guardians cast lacks its primary target");
+        warn!(
+            ?caster,
+            spell = spell.id,
+            "Grove Guardians cast lacks its primary target"
+        );
         return;
     };
     if !spell_cast::try_cast_triggered(world, caster, SUMMON, Some(target), 1) {
@@ -56,9 +60,15 @@ fn nourish_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellI
     // SimC76f8118 sc_druid.cpp:13896–13913 counts these owned HoTs for Harmony.
     let hots = [200389, 155777, 8936, 774, 48438]
         .into_iter()
-        .filter(|spell| auras.iter().any(|aura| aura.caster == owner && aura.spell_id == *spell))
+        .filter(|spell| {
+            auras
+                .iter()
+                .any(|aura| aura.caster == owner && aura.spell_id == *spell)
+        })
         .count() as f32;
-    let lifebloom = auras.iter().any(|aura| aura.caster == owner && aura.spell_id == 33763);
+    let lifebloom = auras
+        .iter()
+        .any(|aura| aura.caster == owner && aura.spell_id == 33763);
     let bonus_blooms = if combat::auras::has_aura(world, owner, 392256) {
         combat::spell_cast::scripts::script_effect_value(world, owner, 392256, 0)
     } else {
@@ -66,7 +76,8 @@ fn nourish_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellI
     };
     let count = hots + if lifebloom { 1.0 + bonus_blooms } else { 0.0 };
     // Spell422090 effect1 grants 100% of the owner's Harmony bonus.
-    let effectiveness = combat::spell_cast::scripts::script_effect_value(world, owner, NOURISH, 1) / 100.0;
+    let effectiveness =
+        combat::spell_cast::scripts::script_effect_value(world, owner, NOURISH, 1) / 100.0;
     1.0 + count * stats.mastery_pct / 100.0 * effectiveness
 }
 
