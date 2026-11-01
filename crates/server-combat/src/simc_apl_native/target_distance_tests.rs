@@ -26,7 +26,7 @@ fn native_apl_target_distance_reads_selected_live_positions() {
         })
         .id();
     let bindings = Bindings::default();
-    let encounter = Encounter::Dungeon { started_at: 0.0 };
+    let encounter = Encounter::dungeon(0.0);
     let action = Action {
         name: "aspect_of_the_eagle".into(),
         target: Some(candidate.to_bits()),
@@ -65,15 +65,9 @@ fn native_apl_target_distance_does_not_invent_missing_positions() {
     let target = world.spawn_empty().id();
     let bindings = Bindings::default();
     let read = |world: &World| {
-        NativeFacts::new(
-            world,
-            actor,
-            &bindings,
-            Encounter::Dungeon { started_at: 0.0 },
-            1,
-        )
-        .with_targets(Some(target), &[target])
-        .value("target.distance")
+        NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
+            .with_targets(Some(target), &[target])
+            .value("target.distance")
     };
     assert!(read(&world).unwrap_err().contains("POSITION_UNAVAILABLE"));
     world.entity_mut(target).insert(Position {

@@ -45,28 +45,13 @@ fn native_expected_combat_length_invalid_fixture_duration_has_no_default() {
 }
 
 #[test]
-fn class_follower_expected_combat_length_uses_observed_target_lifetime() {
-    let (mut world, actor) = fixture_world();
-    let target = world
-        .spawn(shared::components::Health {
-            current: 100.0,
-            max: 100.0,
-        })
-        .id();
-    let targets = [target];
+fn class_follower_expected_combat_length_is_the_dungeon_route_iteration() {
+    let (world, actor) = fixture_world();
     let bindings = Bindings::default();
-    let facts = NativeFacts::new(
-        &world,
-        actor,
-        &bindings,
-        Encounter::Dungeon { started_at: 11.0 },
-        1,
-    )
-    .with_targets(Some(target), &targets);
-    assert_eq!(
-        facts.value("expected_combat_length").unwrap(),
-        72.0 + live_facts::UNKNOWN_TTD
-    );
+    let facts = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(11.0), 1);
+    // SimC76f8118 sim.cpp2368/3579–3580: DungeonRoute's 45-minute max_time.
+    assert_eq!(facts.value("expected_combat_length").unwrap(), 2700.0);
+    assert_eq!(facts.value("fight_remains").unwrap(), 2700.0 - 72.0);
 }
 
 #[test]

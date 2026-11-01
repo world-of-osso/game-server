@@ -12,7 +12,7 @@ pub const SPECS: &[u32] = &[
 
 /// A harness's fixed-length fight against dummies that never die: like SimC's
 /// `max_time`, `fight_remains` is the duration minus elapsed time. Production
-/// dungeons never insert it and read time to die from the engaged enemies.
+/// dungeons never insert it and run SimC's DungeonRoute semantics.
 #[derive(Resource, Clone, Copy)]
 pub struct FixedLengthFight {
     pub duration: f64,
@@ -27,7 +27,7 @@ pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecR
             duration: fight.duration,
             style: crate::simc_apl_native::FightStyle::Patchwerk,
         },
-        None => Encounter::Dungeon { started_at },
+        None => Encounter::dungeon(started_at),
     };
     if matches!(spec, 253 | 255) {
         // SimC76f8118 sc_hunter.cpp1052: summon_pet defaults to the duck; Call Pet summons it.

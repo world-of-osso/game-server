@@ -45,13 +45,7 @@ fn fury_native_absent_movement_event_has_zero_distance() {
     };
     let facts = NativeFacts::new(&world, actor, &bindings, encounter, 1);
     assert_eq!(facts.value("raid_event.movement.distance").unwrap(), 0.0);
-    let dungeon = NativeFacts::new(
-        &world,
-        actor,
-        &bindings,
-        Encounter::Dungeon { started_at: 0.0 },
-        1,
-    );
+    let dungeon = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1);
     assert!(
         dungeon
             .value("raid_event.movement.distance")

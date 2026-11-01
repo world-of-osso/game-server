@@ -1071,11 +1071,7 @@ fn literal_ww_native_non_fixture_follower_keeps_its_native_kit() {
 #[ignore = "literal WW native RED: dungeon clock unavailable instead of hidden rotation fallback"]
 fn literal_ww_native_driver_rejects_dungeon_ttd_without_touching_the_native_kit() {
     let mut run = super::super::prepare(269, 1).unwrap();
-    let result = Rotation::load(
-        run.app.world_mut(),
-        run.actor,
-        Encounter::Dungeon { started_at: 0.0 },
-    );
+    let result = Rotation::load(run.app.world_mut(), run.actor, Encounter::dungeon(0.0));
     assert!(result.err().unwrap().contains("DUNGEON_TTD_UNAVAILABLE"));
     super::super::engage(&mut run);
     for _ in 0..80 {

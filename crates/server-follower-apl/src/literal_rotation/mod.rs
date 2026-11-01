@@ -105,7 +105,10 @@ pub fn encounter_starting_at(
             duration,
             style,
         },
-        Encounter::Dungeon { .. } => Encounter::Dungeon { started_at },
+        Encounter::Dungeon { pulled_at, .. } => Encounter::Dungeon {
+            started_at,
+            pulled_at,
+        },
     }
 }
 

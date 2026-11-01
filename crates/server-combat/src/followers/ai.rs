@@ -137,9 +137,6 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     trace_target_selection(world, unit, follower.owner, &party, enemy);
-    if let Some(target) = enemy {
-        super::live_facts::track_target(world, target);
-    }
     if world.get::<AplControlled>(unit).is_some() {
         position_for_apl(world, unit, follower, selection);
         return;
@@ -613,9 +610,6 @@ pub(super) fn engaged_enemies(
             follower.profile.role == GroupRole::Tank && victim.is_some_and(|victim| victim != unit);
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
-    for &(enemy, _) in &enemies {
-        super::live_facts::track_target(world, enemy);
-    }
     enemies
 }
 

@@ -679,7 +679,7 @@ fn hero_facts(pull: &Pull, names: &[&str]) -> Vec<f64> {
         pull.harness.app.world(),
         pull.follower,
         &bindings,
-        server_combat::simc_apl_native::Encounter::Dungeon { started_at: 0.0 },
+        server_combat::simc_apl_native::Encounter::dungeon(0.0),
         1,
     );
     names

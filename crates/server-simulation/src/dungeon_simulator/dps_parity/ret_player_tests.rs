@@ -11,9 +11,7 @@ fn class_follower_ret_dungeon_apl_casts_in_native_pull() {
     let (profile, traits) = read_reference(70).unwrap();
     let race = inputs::read_reference_race(&profile.race).unwrap();
     let mut run = prepare_reference(profile, &traits, 1, ParityActor::Player { race }).unwrap();
-    let encounter = Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter = Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     let mut rotation =
         ret_rotation::Rotation::load(run.app.world_mut(), run.actor, encounter).unwrap();
     rotation.start_combat_at(crate::spell_cast::now(run.app.world()));

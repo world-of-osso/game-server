@@ -1,7 +1,6 @@
 //! Gameplay-world bindings for the engine-free pinned SimC APL evaluator.
 mod periodic;
 pub mod reaction;
-use crate::followers::live_facts;
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
 use shared::components::PowerType;
@@ -113,7 +112,23 @@ pub enum Encounter {
     },
     Dungeon {
         started_at: f64,
+        /// When the follower engaged the pull: SimC76f8118 raid_event.cpp1153 `spawn_time`.
+        pulled_at: f64,
     },
+}
+
+/// SimC76f8118 sim.cpp2368 DungeonRoute `max_time`; a single iteration keeps
+/// `iteration_time_adjust` at 1 (sim.cpp1672–1673, 1815).
+const DUNGEON_ROUTE_EXPECTED_ITERATION: f64 = 45.0 * 60.0;
+
+impl Encounter {
+    /// A dungeon pull engaged and started at `started_at`.
+    pub fn dungeon(started_at: f64) -> Self {
+        Self::Dungeon {
+            started_at,
+            pulled_at: started_at,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -226,7 +241,9 @@ impl<'a> NativeFacts<'a> {
 
     fn elapsed(&self) -> f64 {
         let start = match self.encounter {
-            Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => started_at,
+            Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at, .. } => {
+                started_at
+            }
         };
         (crate::spell_cast::now(self.world) - start).max(0.0)
     }
@@ -239,25 +256,63 @@ impl<'a> NativeFacts<'a> {
             Encounter::Fixture { duration, .. } => Err(format!(
                 "EXPECTED_COMBAT_LENGTH_UNAVAILABLE: fixture duration must be positive and finite, got {duration}"
             )),
-            Encounter::Dungeon { .. } => {
-                Ok(self.elapsed() + self.remaining("expected_combat_length")?)
-            }
+            // SimC76f8118 sim.cpp3579–3580: the expected iteration time.
+            Encounter::Dungeon { .. } => Ok(DUNGEON_ROUTE_EXPECTED_ITERATION),
         }
     }
 
-    fn remaining(&self, operand: &str) -> Result<f64, String> {
+    /// SimC76f8118 sim.cpp3582–3585: expected iteration time minus elapsed,
+    /// independent of any target's health.
+    fn remaining(&self) -> f64 {
         match self.encounter {
-            Encounter::Fixture { duration, .. } => Ok((duration - self.elapsed()).max(0.0)),
-            Encounter::Dungeon { .. } => {
-                let now = crate::spell_cast::now(self.world);
-                let targets = self.ordered_targets()?;
-                targets
-                    .iter()
-                    .map(|&target| live_facts::target_time_to_die(self.world, target, now))
-                    .try_fold(0.0_f64, |longest, ttd| Ok(longest.max(ttd?)))
-                    .map_err(|error: String| format!("{operand}: {error}"))
-            }
+            Encounter::Fixture { duration, .. } => (duration - self.elapsed()).max(0.0),
+            Encounter::Dungeon { .. } => DUNGEON_ROUTE_EXPECTED_ITERATION - self.elapsed(),
         }
+    }
+
+    /// Bare `time_to_die`: the fixture's remaining length, or the pull's longest
+    /// target lifetime. SimC76f8118 action.cpp4276/player.cpp11866–11895 reads
+    /// the actor's own lifetime instead; that is not modeled yet.
+    fn longest_time_to_die(&self) -> Result<f64, String> {
+        match self.encounter {
+            Encounter::Fixture { .. } => Ok(self.remaining()),
+            Encounter::Dungeon { pulled_at, .. } => self
+                .ordered_targets()?
+                .iter()
+                .map(|&target| self.wave_time_to_die(target, pulled_at))
+                .try_fold(0.0_f64, |longest, ttd| Ok(longest.max(ttd?))),
+        }
+    }
+
+    /// SimC76f8118 raid_event.cpp401–434 `mob_t::time_to_percent(0)`: health the
+    /// pull's living adds lost since it started, split evenly over them.
+    fn wave_time_to_die(&self, target: Entity, pulled_at: f64) -> Result<f64, String> {
+        let health = |unit| {
+            self.world
+                .get::<shared::components::Health>(unit)
+                .ok_or_else(|| "native target lacks Health".to_owned())
+        };
+        let current = f64::from(health(target)?.current);
+        if current <= 0.0 {
+            return Ok(0.0);
+        }
+        let (living, lost) =
+            self.ordered_targets()?
+                .iter()
+                .try_fold((0_u32, 0.0_f64), |(living, lost), &add| {
+                    let add = health(add)?;
+                    Ok::<_, String>(match add.current > 0.0 {
+                        true => (living + 1, lost + f64::from(add.max - add.current)),
+                        false => (living, lost),
+                    })
+                })?;
+        if lost > 0.0 {
+            let pull_seconds = crate::spell_cast::now(self.world) - pulled_at;
+            return Ok(current / (lost / pull_seconds / f64::from(living)));
+        }
+        // SimC76f8118 player.cpp7743–7760: no damage taken and fixed_time off
+        // leave expected iteration time minus elapsed, never negative.
+        Ok(self.remaining().max(0.0))
     }
 
     fn selected_target(&self, action: Option<&Action>) -> Result<Entity, String> {
@@ -274,15 +329,9 @@ impl<'a> NativeFacts<'a> {
 
     fn target_fact(&self, property: &str, action: Option<&Action>) -> Result<f64, String> {
         let target = self.selected_target(action)?;
-        if matches!(self.encounter, Encounter::Dungeon { .. }) {
+        if let Encounter::Dungeon { pulled_at, .. } = self.encounter {
             match property {
-                "time_to_die" => {
-                    return live_facts::target_time_to_die(
-                        self.world,
-                        target,
-                        crate::spell_cast::now(self.world),
-                    );
-                }
+                "time_to_die" => return self.wave_time_to_die(target, pulled_at),
                 // SimC76f8118 player.hpp964: the encounter boss, not its adds;
                 // natively the creature template's dungeon/world boss flag.
                 "is_boss" => {
@@ -638,9 +687,8 @@ impl<'a> NativeFacts<'a> {
                 // SimC76f8118 buff.cpp551–555/2189/3056: encounter-relative
                 // last successful trigger survives expiry; unused is timespan::min.
                 let start = match self.encounter {
-                    Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
-                        started_at
-                    }
+                    Encounter::Fixture { started_at, .. }
+                    | Encounter::Dungeon { started_at, .. } => started_at,
                 };
                 Ok(reaction::last_trigger(self.world, self.actor, id)?
                     .map_or(i64::MIN as f64 / 1000.0, |at| at - start))
@@ -831,7 +879,7 @@ impl<'a> NativeFacts<'a> {
     ) -> Result<f64, String> {
         if alias == "pick_up_fragment" && property == "last_used" {
             let start = match self.encounter {
-                Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
+                Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at, .. } => {
                     started_at
                 }
             };
@@ -859,9 +907,8 @@ impl<'a> NativeFacts<'a> {
             "last_used" => {
                 // action.cpp3644–3669 and timespan.hpp216: unused is timespan::min.
                 let start = match self.encounter {
-                    Encounter::Fixture { started_at, .. } | Encounter::Dungeon { started_at } => {
-                        started_at
-                    }
+                    Encounter::Fixture { started_at, .. }
+                    | Encounter::Dungeon { started_at, .. } => started_at,
                 };
                 Ok(self
                     .world
@@ -1186,10 +1233,8 @@ impl Facts for NativeFacts<'_> {
                 .map(|cast| f64::from(cast.channel_tick_interval))
                 .ok_or_else(|| "tick_time requires an active native channel".into()),
             "expected_combat_length" => self.expected_combat_length(),
-            // SimC76f8118 action.cpp4276/player.cpp11866–11895 delegates
-            // bare TTD to the actor; fixed-time player.cpp7731–7754 uses
-            // expected fight length minus elapsed, not a selected add's lifetime.
-            "fight_remains" | "time_to_die" => self.remaining(name),
+            "fight_remains" => Ok(self.remaining()),
+            "time_to_die" => self.longest_time_to_die(),
             // SimC76f8118 action.cpp3886–3896: without distance targeting,
             // bare spell_targets uses active_enemies, including recurring adds.
             "active_enemies" | "spell_targets" => Ok(self.active_enemies as f64),
@@ -1357,6 +1402,8 @@ fn bool_value(value: bool) -> f64 {
     if value { 1.0 } else { 0.0 }
 }
 
+#[cfg(test)]
+mod dungeon_route_tests;
 #[cfg(test)]
 mod expected_length_tests;
 #[cfg(test)]

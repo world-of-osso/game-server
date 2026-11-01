@@ -196,7 +196,7 @@ fn class_follower_target_context_movement_event_is_explicitly_absent() {
         h.app.world(),
         h.caster,
         &b,
-        Encounter::Dungeon { started_at: 0.0 },
+        Encounter::dungeon(0.0),
         targets.len(),
     )
     .with_targets(Some(targets[0]), &targets);
@@ -242,9 +242,7 @@ fn native_dungeon_target_is_boss_reads_the_creature_boss_flag() {
         .world_mut()
         .entity_mut(h.caster)
         .insert(crate::networking::CombatTarget(None));
-    let dungeon = Encounter::Dungeon {
-        started_at: crate::spell_cast::now(h.app.world()),
-    };
+    let dungeon = Encounter::dungeon(crate::spell_cast::now(h.app.world()));
     let read = |current: Entity| {
         NativeFacts::new(h.app.world(), h.caster, &b, dungeon, 2)
             .with_targets(Some(current), &targets)

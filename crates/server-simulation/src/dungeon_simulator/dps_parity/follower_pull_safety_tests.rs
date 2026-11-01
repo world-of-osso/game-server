@@ -265,9 +265,8 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         "native Fire Breath cone must actually reach the outsider"
     );
     crate::creature_aggro::attack_start(run.app.world_mut(), caller, actor);
-    let encounter = crate::simc_apl_native::Encounter::Dungeon {
-        started_at: crate::spell_cast::now(run.app.world()),
-    };
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
     let rotation = server_follower_apl::devastation_rotation::Rotation::load(
         run.app.world(),
         actor,
@@ -282,9 +281,8 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
         options: BTreeMap::from([("empower_to".into(), "1".into())]),
     };
     let ready = |run: &mut Run| {
-        let encounter = crate::simc_apl_native::Encounter::Dungeon {
-            started_at: crate::spell_cast::now(run.app.world()),
-        };
+        let encounter =
+            crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
         let rotation = server_follower_apl::devastation_rotation::Rotation::load(
             run.app.world(),
             actor,
