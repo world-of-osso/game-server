@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
 - Blood Beast inherits its owner's level for native combat and summon stats (SimC `pet.cpp:69`) and starts Corrupted Blood on cooldown (`sc_death_knight.cpp:4754–4758`). Rune Weapon Blood Plague continues through its remaining duration after the weapon is dismissed; a dismissed weapon cannot mirror further attacks. Blood's disease ticks can apply the selected Brittle debuff (`sc_death_knight.cpp:7809–7821`). Rune Weapon Death Strike copies execute before the owner heals and consumes Hemostasis (`sc_death_knight.cpp:10116–10130`).
@@ -643,6 +644,11 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
+- Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
+- Selected Battlelord rolls its native proc chance on Overpower execution, resets Mortal Strike's cooldown and grants its native buff; only a foreground Mortal Strike consumes that buff (`sc_warrior.cpp:3108–3109,5478–5487`).
+- Selected Arms Imminent Demise adds Bladestorm ticks within its hasted duration and expires its earned stacks when Bladestorm ends (`sc_warrior.cpp:3279–3299,3344–3349`).
+
 - With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
 
 - Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).
@@ -837,7 +843,8 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 ### Demonology literal execution and alternative Tyrant
 
-- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`.
+- Selected Mark of F'harg gives each actual Charhound its native Infernal Presence aura; its periodic damage belongs to that pet and ends with its lifetime. Source: SimC 76f8118 `sc_warlock_pets.cpp:1430–1485`.
+- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. A Demonbolt that consumes Demonic Core reduces the running Doomguard cooldown by native1276672 effect2 seconds; an ordinary hardcast does not. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`, `sc_warlock_actions.cpp:2960–2961`.
 
 - Dreadbite271971 hits only its selected primary unless Dreadlash264078 is selected; a landed Dreadbite triggers the owner's Blighted Maw1276960 using the native1276956 percentage of the actual damage. The Felguard prioritizes its native Felstorm89751 and its89753 ticks when ready (`sc_warlock_pets.cpp536–601,1068–1110`).
 - Selected Flametouched453699 applies native Ferocity453704 to each actual Dreadstalker; its owner-sourced native modifiers supply the melee-haste and critical-chance amounts (`sc_warlock_pets.cpp146–162,1223–1226,1269–1286`).

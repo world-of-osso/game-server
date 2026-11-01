@@ -21,7 +21,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 fn selected(world: &World, caster: Entity) -> bool {
     world
         .get::<ActiveSpec>(caster)
-        .is_some_and(|spec| spec.0 == 72)
+        .is_some_and(|spec| matches!(spec.0, 71 | 72))
         && auras::has_aura(world, caster, IMMINENT)
         && auras::has_aura(world, caster, SUDDEN_DEATH)
 }
