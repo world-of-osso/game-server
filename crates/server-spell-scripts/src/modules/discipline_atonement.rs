@@ -10,9 +10,12 @@ use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{ActiveSpec, Health, Player};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
+const PAIN_SPREAD_RADIUS: f32 = 8.0;
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterAuraApplication(apply_mark),
+    SpellScriptHook::AfterAuraApplication(spread_pain_from_penance),
     SpellScriptHook::OnCast(start_penance),
     SpellScriptHook::LateAuraRegistration(register_shield_discipline),
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
@@ -41,6 +44,12 @@ fn declared_reach(
     spell: &SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
     use combat::spell_cast::script_registry::{DeclaredReach, ScriptReach, reach_source_selected};
+    if spell.id == 47540 && reach_source_selected(world, caster, 472568) {
+        return ScriptReach::Area(DeclaredReach {
+            caster_radius: 0.0,
+            target_radius: PAIN_SPREAD_RADIUS,
+        });
+    }
     if !matches!(spell.id, 1253593 | 1253827) || !reach_source_selected(world, caster, 1253827) {
         return ScriptReach::None;
     }
@@ -494,6 +503,81 @@ fn apply_mark(world: &mut World, target: Entity, aura: &AuraInstance) {
             source: AuraSource::Cast,
         },
     );
+}
+
+fn spread_pain_from_penance(world: &mut World, target: Entity, aura: &AuraInstance) {
+    let caster = aura.caster;
+    if aura.spell_id != 47758
+        || target == caster
+        || !world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(472568))
+        || !has_owned_pain(world, caster, target)
+    {
+        return;
+    }
+    let count = pain_spread_count(world, caster);
+    // SimC76f8118 sc_priest_discipline.cpp:522-576 spreads at channel impact,
+    // preferring targets without this priest's Pain within eight yards.
+    for recipient in find_pain_spread_targets(world, caster, target)
+        .into_iter()
+        .take(count)
+    {
+        if !combat::spell_cast::try_cast_triggered(world, caster, 589, Some(recipient), 1) {
+            warn!(
+                ?caster,
+                ?recipient,
+                "Encroaching Shadows could not apply Pain"
+            );
+        }
+    }
+}
+
+fn pain_spread_count(world: &World, caster: Entity) -> usize {
+    let revel = world
+        .get::<combat::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(373003));
+    1 + if revel {
+        combat::spell_cast::scripts::script_effect_value(world, caster, 373003, 1) as usize
+    } else {
+        0
+    }
+}
+
+fn find_pain_spread_targets(world: &mut World, caster: Entity, target: Entity) -> Vec<Entity> {
+    use combat::spell_cast::targets::{self, Relation};
+    use rand::seq::SliceRandom;
+
+    let Some(origin) = targets::position(world, target) else {
+        return Vec::new();
+    };
+    let mut recipients: Vec<_> = world
+        .query::<(Entity, &shared::components::Position)>()
+        .iter(world)
+        .filter_map(|(candidate, _)| {
+            (candidate != target
+                && targets::is_alive(world, candidate)
+                && targets::same_map(world, caster, candidate)
+                && targets::relation_matches(world, caster, candidate, Relation::Enemy)
+                && targets::position(world, candidate)
+                    .is_some_and(|position| position.distance(origin) <= PAIN_SPREAD_RADIUS))
+            .then_some(candidate)
+        })
+        .collect();
+    recipients.shuffle(&mut combat::random::thread_rng());
+    recipients.sort_by_key(|&candidate| has_owned_pain(world, caster, candidate));
+    recipients
+}
+
+fn has_owned_pain(world: &World, caster: Entity, target: Entity) -> bool {
+    let now = auras::aura_now(world);
+    world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.caster == caster
+                && aura.spell_id == 589
+                && aura.expires_at.is_none_or(|expiry| expiry > now)
+        })
+    })
 }
 
 fn mark_flash_heal(world: &mut World, event: &CombatLogEvent) {
