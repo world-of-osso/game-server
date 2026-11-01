@@ -2,6 +2,7 @@
 pub mod flight;
 pub mod graph;
 pub mod healer_intake;
+pub use crate::mythic_plus::headless as keystone;
 pub mod objectives;
 pub mod transport;
 pub use crate::ground::GroundMap;
