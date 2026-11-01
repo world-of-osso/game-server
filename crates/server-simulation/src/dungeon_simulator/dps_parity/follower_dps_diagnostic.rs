@@ -2208,7 +2208,7 @@ fn balance_touch_cosmos_makes_one_starsurge_free() {
     }
     let power = shared::components::PowerType::LunarPower;
     app.world_mut()
-        .get_mut::<shared::components::PowerPools>(actor)
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
         .unwrap()
         .get_mut(power)
         .unwrap()
