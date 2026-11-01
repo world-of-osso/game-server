@@ -2220,9 +2220,23 @@ pub(super) fn run_keystone(
     } else {
         run.report.status.clone()
     };
+    let diagnostics = serde_json::json!({
+        "current_pack": run.current_pack,
+        "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
+        "terminal_units": run.inspect_units(),
+        "pull_decisions": &run.report.pulls,
+        "native_combat_events_wall_timestamps": &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0,
+    });
     let state = run.keystone.take().expect("keystone state after run");
     state
-        .finish(run.app.world(), seed, options, status, run.report.detail)
+        .finish(
+            run.app.world(),
+            seed,
+            options,
+            status,
+            run.report.detail,
+            diagnostics,
+        )
         .unwrap_or_else(|error| failed_keystone_record(seed, options, error))
 }
 
@@ -2253,6 +2267,7 @@ fn failed_keystone_record(
         deaths: Vec::new(),
         pulls: Vec::new(),
         actors: Vec::new(),
+        diagnostics: serde_json::Value::Null,
     }
 }
 

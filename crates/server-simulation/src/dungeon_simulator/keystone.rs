@@ -182,6 +182,7 @@ impl State {
         options: Options,
         status: String,
         reason: String,
+        diagnostics: serde_json::Value,
     ) -> Result<RunRecord, String> {
         let elapsed = self.elapsed_ms(world);
         let snapshot = self
@@ -213,6 +214,7 @@ impl State {
             deaths,
             pulls,
             actors,
+            diagnostics,
         })
     }
 }

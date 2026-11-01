@@ -72,6 +72,7 @@ pub(super) struct RunRecord {
     pub deaths: Vec<Death>,
     pub pulls: Vec<Pull>,
     pub actors: Vec<ActorMetrics>,
+    pub diagnostics: serde_json::Value,
 }
 
 /// Read native item instances, resolving every equipped item's actual level.
@@ -395,6 +396,7 @@ mod tests {
             deaths: vec![],
             pulls: vec![],
             actors: vec![],
+            diagnostics: serde_json::Value::Null,
         };
         let json = serde_json::to_value(record).unwrap();
         assert_eq!(json["schema_version"], 1);
