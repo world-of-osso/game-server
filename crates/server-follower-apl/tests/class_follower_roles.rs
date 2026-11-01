@@ -208,160 +208,36 @@ impl Pull {
 }
 
 #[test]
-fn class_rotation_reports_its_program_bound_spells() {
-    for (spec, spell) in [(63, 133), (257, 2061), (66, 31935)] {
+fn pure_action_metadata_matches_every_class_rotation() {
+    for &spec in server_follower_apl::registry::SPECS {
         let mut pull = spawn(spec);
         let rotation =
             server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
                 .unwrap();
-        let actions = rotation.action_spells();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert_eq!(pure, actions, "spec{spec} pure and runtime actions differ");
-        assert!(
-            actions.contains(&spell),
-            "spec{spec} missing {spell}: {actions:?}"
-        );
-        assert!(actions.windows(2).all(|pair| pair[0] < pair[1]));
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_additional_programs() {
-    for spec in [62, 64, 71, 72, 73, 250, 251, 252, 260, 261] {
-        let mut pull = spawn(spec);
-        let rotation =
-            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-                .unwrap();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
-        assert_eq!(
-            pure,
-            rotation.action_spells(),
-            "spec{spec} pure and runtime actions differ"
-        );
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_hunter_and_demon_hunter_programs() {
-    for spec in [253, 254, 255, 577, 1480] {
-        let mut pull = spawn(spec);
-        let rotation =
-            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-                .unwrap();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
-        assert_eq!(
-            pure,
-            rotation.action_spells(),
-            "spec{spec} pure and runtime actions differ"
-        );
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_remaining_tank_and_damage_programs() {
-    for spec in [70, 104, 269, 581, 1467] {
-        let mut pull = spawn(spec);
-        let rotation =
-            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-                .unwrap();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
-        assert_eq!(
-            pure,
-            rotation.action_spells(),
-            "spec{spec} pure and runtime actions differ"
-        );
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_healer_programs() {
-    for spec in [65, 105, 256, 264, 270, 1468] {
-        let mut pull = spawn(spec);
-        let rotation =
-            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-                .unwrap();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
-        assert_eq!(
-            pure,
-            rotation.action_spells(),
-            "spec{spec} pure and runtime actions differ"
-        );
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_shadow_shaman_and_brewmaster_programs() {
-    for spec in [258, 262, 263, 268] {
-        let mut pull = spawn(spec);
-        let rotation =
-            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-                .unwrap();
-        let traits = pull
-            .harness
-            .app
-            .world()
-            .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
-            .unwrap();
-        let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
-        assert_eq!(
-            pure,
-            rotation.action_spells(),
-            "spec{spec} pure and runtime actions differ"
-        );
-    }
-}
-
-#[test]
-fn class_rotation_pure_metadata_matches_assassination_program() {
-    let spec = 259;
-    let mut pull = spawn(spec);
-    let rotation =
-        server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
-            .unwrap();
-    let traits = pull
-        .harness
-        .app
-        .world()
-        .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
+        let input = server_follower_apl::action_metadata::read_inputs(
+            pull.harness.app.world(),
+            pull.follower,
+            spec,
+        )
         .unwrap();
-    let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
-    assert!(!pure.is_empty());
-    assert_eq!(pure, rotation.action_spells());
+        let pure = server_follower_apl::action_metadata::action_spells(spec, &input).unwrap();
+        assert!(!pure.is_empty(), "spec{spec} has no bound actions");
+        assert_eq!(
+            pure,
+            rotation.action_spells(),
+            "spec{spec} pure and runtime actions differ"
+        );
+        assert!(pure.windows(2).all(|pair| pair[0] < pair[1]));
+        if let Some(spell) = [(63, 133), (257, 2061), (66, 31935)]
+            .into_iter()
+            .find_map(|(id, spell)| (id == spec).then_some(spell))
+        {
+            assert!(
+                pure.contains(&spell),
+                "spec{spec} missing {spell}: {pure:?}"
+            );
+        }
+    }
 }
 
 #[test]

@@ -76,6 +76,15 @@ pub fn names(entries: &[(&str, u32)]) -> std::collections::BTreeMap<String, u32>
 }
 
 pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
+    let ca_inc =
+        server::spell_cast::knowledge::resolve_action(world, actor, 194223)?.unwrap_or(194223);
+    let lunar_calling = world
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .is_some_and(|known| known.contains(429523));
+    Ok(build_for_actions(ca_inc, lunar_calling))
+}
+
+pub fn build_for_actions(ca_inc: u32, lunar_calling: bool) -> Bindings {
     let mut bindings = Bindings {
         actions: ACTIONS
             .iter()
@@ -93,16 +102,11 @@ pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
     };
     // SimC76f8118 sc_druid.cpp10149–10160/13486–13491: ca_inc is the
     // selected Incarnation or Celestial Alignment.
-    let ca_inc =
-        server::spell_cast::knowledge::resolve_action(world, actor, 194223)?.unwrap_or(194223);
     for alias in ["celestial_alignment", "ca_inc"] {
         bindings.actions.insert(alias.into(), ca_inc);
     }
     bindings.buffs.insert("ca_inc".into(), ca_inc);
     // SimC76f8118 sc_druid.cpp7255–7257: Lunar Calling casts Lunar Eclipse.
-    let lunar_calling = world
-        .get::<crate::class_progression::KnownSpells>(actor)
-        .is_some_and(|known| known.contains(429523));
     let eclipse = if lunar_calling { 1233272 } else { 1233346 };
     bindings.actions.insert("eclipse".into(), eclipse);
     // SimC action.cpp4630–4635: ordinary pandemic refresh window.
@@ -115,7 +119,7 @@ pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
             },
         );
     }
-    Ok(bindings)
+    bindings
 }
 
 pub fn execution_actions(

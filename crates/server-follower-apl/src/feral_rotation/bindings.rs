@@ -101,6 +101,10 @@ pub fn names(entries: &[(&str, u32)]) -> std::collections::BTreeMap<String, u32>
 pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
     let berserk = server::spell_cast::knowledge::resolve_action(world, actor, 106951)?
         .ok_or("native Feral reference lacks its selected Berserk/Incarnation action")?;
+    Ok(build_for_berserk(berserk))
+}
+
+pub fn build_for_berserk(berserk: u32) -> Bindings {
     let mut bindings = Bindings {
         actions: names(ACTIONS),
         buffs: names(BUFFS),
@@ -134,5 +138,5 @@ pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
             policy: DotRefreshPolicy::Pandemic,
         },
     );
-    Ok(bindings)
+    bindings
 }
