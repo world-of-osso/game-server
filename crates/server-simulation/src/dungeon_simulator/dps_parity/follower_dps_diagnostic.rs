@@ -3113,28 +3113,18 @@ fn fixed_fight_seed_replays_identical_events_and_outcome() {
             String::from_utf8_lossy(&output.stderr)
         );
         let stdout = String::from_utf8(output.stdout).unwrap();
-        let mut report: serde_json::Value = stdout
+        let report: serde_json::Value = stdout
             .lines()
             .find_map(|line| {
                 line.split_once("FOLLOWER_DPS ")
                     .map(|(_, value)| serde_json::from_str(value).unwrap())
             })
             .expect("DPS report");
-        for event in report["incoming"].as_array_mut().unwrap() {
-            event.as_object_mut().unwrap().remove("timestamp_unix_ms");
-        }
         let stderr = String::from_utf8(output.stderr).unwrap();
         let events: Vec<serde_json::Value> = stderr
             .lines()
             .filter_map(|line| line.strip_prefix("FOLLOWER_REPLAY_EVENT "))
-            .map(|line| {
-                let mut event: serde_json::Value = serde_json::from_str(line).unwrap();
-                event["event"]
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("timestamp_unix_ms");
-                event
-            })
+            .map(|line| serde_json::from_str(line).unwrap())
             .collect();
         assert!(!events.is_empty(), "fight emitted no events");
         (report, events)

@@ -126,14 +126,7 @@ fn party_pulse_seed_replays_identical_events_and_outcome() {
         let events: Vec<serde_json::Value> = stderr
             .lines()
             .filter_map(|line| line.strip_prefix("HEALER_REPLAY_EVENT "))
-            .map(|line| {
-                let mut event: serde_json::Value = serde_json::from_str(line).unwrap();
-                event["event"]
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("timestamp_unix_ms");
-                event
-            })
+            .map(|line| serde_json::from_str(line).unwrap())
             .collect();
         assert!(!events.is_empty(), "replay emitted no events");
         (report, events)
