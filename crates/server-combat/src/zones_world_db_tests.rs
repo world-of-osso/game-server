@@ -931,7 +931,10 @@ fn retail_polymorphic_rune_does_not_enter_combat_or_melee() {
     assert_eq!(app.world().get::<Health>(owner).unwrap().current, 100.0);
     assert!(
         app.world().get::<Health>(control).unwrap().current < 100.0,
-        "hostile control must melee"
+        "hostile control must melee: spider {:?}, player {:?}",
+        app.world()
+            .get::<crate::creature_ai::CreatureState>(entity_of(&app, FOREST_SPIDER)),
+        app.world().get::<Position>(control)
     );
     assert!(
         app.world()
