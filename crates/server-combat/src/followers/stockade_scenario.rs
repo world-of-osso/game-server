@@ -474,42 +474,54 @@ pub fn assert_existing_fight_defense_without_a_healer(engaged: (Scenario, Positi
         let cast = world
             .get::<shared::casting::CastState>(s.tank)
             .map(|cast| cast.spell_id);
-        // Trace the unperturbed brain/APL decisions; no extra admission reads.
-        let subscriber = bevy::log::tracing_subscriber::fmt()
-            .with_env_filter(
-                "server_combat::followers=debug,game_server::follower_target=debug,server_follower_apl=debug",
-            )
-            .without_time()
-            .with_ansi(false)
-            .with_test_writer()
-            .finish();
-        let probe: Vec<_> = bevy::log::tracing::subscriber::with_default(subscriber, || {
-            (0..6)
-                .map(|_| {
-                    s.h.advance(1);
-                    let world = s.h.app.world();
-                    let current = world
-                        .get::<crate::networking::CombatTarget>(s.tank)
-                        .and_then(|current| current.0);
-                    let distance = current.and_then(|victim| {
-                        crate::spell_cast::targets::position(world, s.tank)
-                            .zip(crate::spell_cast::targets::position(world, victim))
-                            .map(|(a, b)| a.distance(b))
-                    });
-                    format!(
-                        "target={current:?} distance={distance:?} state={:?} reach={:?}",
-                        world.get::<crate::creature_ai::CreatureState>(s.tank),
-                        world.get::<ai::FollowerReach>(s.tank).map(|reach| reach.0),
-                    )
-                })
-                .collect()
-        });
+        let probe = describe_pull_back(&mut s);
         panic!(
             "existing-fight defense must still move without new-pull healer readiness: \
              target={combat_target:?} owner_victim={target:?} state={state:?} cast={cast:?} \
              probe={probe:#?}"
         );
     }
+}
+
+/// Pull-back ownership, the admitted point and each engaged enemy's exclusion standing.
+fn describe_pull_back(s: &mut Scenario) -> Vec<String> {
+    let tank = s.tank;
+    let follower = s.h.app.world().get::<Follower>(tank).unwrap().clone();
+    let world = s.h.app.world_mut();
+    let party = ai::party_units(world, follower.owner);
+    let reach = super::party_unintended_reach(world, &party)
+        .into_iter()
+        .flat_map(|(_, caster, target)| [caster, target])
+        .fold(0.0_f32, f32::max);
+    let here = crate::spell_cast::targets::position(world, tank);
+    let mut lines = vec![format!(
+        "pull_back={} admitted={:?} here={here:?} reach={reach}",
+        super::tank_pull_back::active(world, tank),
+        world
+            .get::<AdmittedPosition>(tank)
+            .map(|admitted| admitted.0),
+    )];
+    for (enemy, _) in ai::engaged_enemies(world, &follower, tank, &party) {
+        let at = crate::spell_cast::targets::position(world, enemy);
+        let exclusions = super::tank_pull_back::read_exclusions(world, tank, enemy, reach);
+        let inside = exclusions.as_ref().map(|exclusions| {
+            at.is_some_and(|at| !super::tank_pull_back::outside_exclusions(at, exclusions))
+        });
+        lines.push(format!(
+            "{enemy:?} entry={:?} victim={:?} cast={:?} distance={:?} inside_exclusion={inside:?}",
+            world
+                .get::<shared::components::Npc>(enemy)
+                .map(|npc| npc.template_id),
+            world
+                .get::<crate::networking::CombatTarget>(enemy)
+                .and_then(|victim| victim.0),
+            world
+                .get::<shared::casting::CastState>(enemy)
+                .map(|cast| cast.spell_id),
+            at.zip(here).map(|(a, b)| a.distance(b)),
+        ));
+    }
+    lines
 }
 
 fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u32) -> bool {
