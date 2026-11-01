@@ -35,7 +35,6 @@ pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
 }
 
 pub(super) const MELEE_REACH: f32 = 2.0;
-const AUTO_SHOT: u32 = 75;
 
 pub(super) fn update(world: &mut World) {
     super::pull_history::sample_all(world);
@@ -194,89 +193,6 @@ fn trace_target_selection(
     debug!(target: "game_server::follower_target", ?unit, ?owner, ?enemy, ?victim, ?refs, ?threat, owner_victim, "selected enemy");
 }
 
-/// The pinned Elemental APL uses this equipped on-use trinket in combat.
-fn use_freightrunners_flask(world: &mut World, unit: Entity) {
-    const FLASK: u32 = 250215;
-    if world.get::<CastState>(unit).is_some() {
-        return;
-    }
-    let Some((slot, source, item)) = world
-        .get::<crate::stats::EquippedItems>(unit)
-        .and_then(|items| items.items.iter().find(|(_, _, item)| *item == FLASK))
-        .copied()
-    else {
-        return;
-    };
-    let Some(template) = world
-        .get_resource::<crate::item_templates::ItemTemplates>()
-        .and_then(|templates| templates.get(source, item))
-    else {
-        return;
-    };
-    let Some(on_use) = template.on_use else {
-        return;
-    };
-    let Some(item_level) = world
-        .get::<crate::stats::EquippedItemModifiers>(unit)
-        .and_then(|mods| mods.items.iter().find(|(key, _)| *key == slot))
-        .and_then(|(_, mods)| mods.item_level_override)
-    else {
-        return;
-    };
-    let Some(spell) = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(on_use.spell_id)
-    else {
-        return;
-    };
-    if world
-        .get::<crate::spell_cast::SpellHistory>(unit)
-        .is_some_and(|history| history.on_cooldown(spell, crate::spell_cast::history_now(world)))
-    {
-        return;
-    }
-    if !super::spell_safety::safe(world, unit, unit, on_use.spell_id) {
-        return;
-    }
-    if let Err(failure) = crate::spell_cast::cast_item_spell(
-        world,
-        unit,
-        on_use.spell_id,
-        Some(unit),
-        on_use.cooldown,
-        item_level,
-        Some(item),
-    ) {
-        debug!(?unit, ?failure, "Follower on-use trinket unavailable");
-    }
-}
-
-/// BM_AUTO_SHOT_STARTS_ON_ENGAGE_SIMC_APL: pinned Hunter APL's auto_shot
-/// starts native75 on engagement, not on owner selection. TC qualifies the repeat,
-/// not this initial policy decision; no player spell or resource is granted.
-fn update_auto_shot(world: &mut World, unit: Entity, follower: &Follower, enemy: Option<Entity>) {
-    if follower.profile.spec_id != 253 {
-        return;
-    }
-    let Some(enemy) = enemy else {
-        crate::spell_cast::auto_repeat::cancel(world, unit);
-        return;
-    };
-    if !super::spell_safety::safe(world, unit, enemy, AUTO_SHOT) {
-        crate::spell_cast::auto_repeat::cancel(world, unit);
-        return;
-    }
-    if let Some(mut repeat) = world.get_mut::<crate::spell_cast::auto_repeat::AutoRepeat>(unit) {
-        if repeat.retarget_auto_shot(enemy) {
-            return;
-        }
-    }
-    if let Err(error) = crate::spell_cast::creature_cast(world, unit, AUTO_SHOT, Some(enemy), false)
-    {
-        debug!(?unit, ?error, "Follower Auto Shot start unavailable");
-    }
-}
-
 /// TC a352b1fa CasterAI::UpdateAI, CombatAI.cpp:166–177. Stop a cast
 /// before completion, not missiles that have already left the caster.
 fn stop_attacking_cc(world: &mut World, unit: Entity) {
@@ -373,26 +289,6 @@ pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) 
     true
 }
 
-fn heal_party_member(
-    world: &mut World,
-    unit: Entity,
-    follower: &Follower,
-    party: &[Entity],
-) -> bool {
-    if follower.profile.heal_spell == 0 {
-        return false;
-    }
-    let Some(patient) = lowest_health(world, party, unit) else {
-        return false;
-    };
-    if pursue(world, unit, patient, follower.profile.heal_spell, false) {
-        cast(world, unit, patient, follower.profile.heal_spell);
-    } else {
-        regroup(world, unit, follower.owner);
-    }
-    true
-}
-
 fn position_for_apl(
     world: &mut World,
     unit: Entity,
@@ -436,33 +332,6 @@ pub fn engaged_targets(world: &mut World, unit: Entity) -> Vec<Entity> {
         .collect()
 }
 
-fn attack_enemy(world: &mut World, unit: Entity, follower: &Follower, enemy: Entity) {
-    if !pursue(
-        world,
-        unit,
-        enemy,
-        follower.profile.attack_spell,
-        follower.profile.melee,
-    ) {
-        regroup(world, unit, follower.owner);
-        return;
-    }
-    order_pet_attack(world, unit, enemy);
-    if needs_taunt(world, unit, enemy, follower)
-        && cast(world, unit, enemy, follower.profile.taunt_spell)
-    {
-        return;
-    }
-    if follower.profile.cooldown_spell != 0
-        && cast(world, unit, enemy, follower.profile.cooldown_spell)
-    {
-        return;
-    }
-    if follower.profile.attack_spell != 0 {
-        cast(world, unit, enemy, follower.profile.attack_spell);
-    }
-}
-
 /// The owner and every follower in the owner's party.
 pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
     let mut units: Vec<_> = world
@@ -473,20 +342,6 @@ pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
         .collect();
     units.push(owner);
     units
-}
-
-fn lowest_health(world: &World, party: &[Entity], healer: Entity) -> Option<Entity> {
-    party
-        .iter()
-        .copied()
-        .filter(|unit| world.get::<InMap>(*unit) == world.get::<InMap>(healer))
-        .filter_map(|unit| {
-            let health = world.get::<Health>(unit)?;
-            let injured = health.current > 0.0 && health.current < health.max;
-            injured.then_some((unit, health.current / health.max))
-        })
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(unit, _)| unit)
 }
 
 enum EnemySelection {
@@ -574,99 +429,6 @@ pub(super) fn engaged_enemies(
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
     enemies
-}
-
-/// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
-/// are verified in local SpellName/SpellEffect12.1.0.69933 (Skull Bash's
-/// effect68 child93985 is referenced by its source description). Holy/Restoration
-/// have no selected kick; Demonology's pet interrupt is not a player cast.
-fn interrupt_spell(spec: u32) -> Option<u32> {
-    match spec {
-        66 => Some(96231),    // Protection Paladin: Rebuke.
-        73 => Some(6552),     // Protection Warrior: Pummel.
-        63 => Some(2139),     // Fire Mage: Counterspell.
-        262 => Some(57994),   // Elemental Shaman: Wind Shear.
-        253 => Some(147362),  // Beast Mastery Hunter: Counter Shot.
-        1467 => Some(351338), // Devastation Evoker: Quell.
-        269 => Some(116705),  // Windwalker Monk: Spear Hand Strike.
-        103 => Some(106839),  // Feral Druid: Skull Bash.
-        _ => None,
-    }
-}
-
-pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
-    let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
-        return false;
-    };
-    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy)
-        || !super::spell_safety::safe(world, caster, enemy, spell)
-    {
-        return false;
-    }
-    if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
-        return false;
-    }
-    match crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(enemy)) {
-        Ok(()) => true,
-        Err(failure) => {
-            debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
-            false
-        }
-    }
-}
-
-/// CreatureFamily29/SkillLine761 teaches Felguard Axe Toss89766 at17; source
-/// SpellEffect64 triggers the real347008 effect68. Never cast an unlearned pet spell.
-fn interrupt_source(world: &World, unit: Entity, spec: u32) -> Option<(Entity, u32)> {
-    if spec != 266 {
-        return interrupt_spell(spec).map(|spell| (unit, spell));
-    }
-    let pet = crate::hunter_pet::summoned_pet(world, unit)?;
-    let charm = world.get::<crate::pet_control::PetCharm>(pet)?;
-    charm.spell_slot(89766).map(|_| (pet, 89766))
-}
-
-/// Approved bridge policy: defend a wounded companion being actively attacked.
-/// No invented health-percentage threshold or NPC-kit parity claim.
-fn defend_follower(world: &mut World, unit: Entity, enemy: Entity, class: u8) -> bool {
-    let wounded = world
-        .get::<Health>(unit)
-        .is_some_and(|health| health.current < health.max);
-    let attacked = world
-        .get::<CombatTarget>(enemy)
-        .is_some_and(|target| target.0 == Some(unit));
-    if !wounded || !attacked {
-        return false;
-    }
-    let Some(spell) = defensive_spell(class) else {
-        return false;
-    };
-    if !super::spell_safety::safe(world, unit, unit, spell) {
-        return false;
-    }
-    match crate::spell_cast::creature_cast_interrupting_self(world, unit, spell, Some(unit)) {
-        Ok(()) => true,
-        Err(failure) => {
-            debug!("Follower {unit} defensive {spell}: {failure:?}");
-            false
-        }
-    }
-}
-
-fn defensive_spell(class: u8) -> Option<u32> {
-    Some(match class {
-        1 => 871,     // Shield Wall.
-        2 => 498,     // Divine Protection.
-        3 => 186265,  // Aspect of the Turtle.
-        5 => 19236,   // Desperate Prayer.
-        7 => 108271,  // Astral Shift.
-        8 => 45438,   // Ice Block.
-        9 => 104773,  // Unending Resolve.
-        10 => 115203, // Fortifying Brew.
-        11 => 22812,  // Barkskin.
-        13 => 363916, // Obsidian Scales.
-        _ => return None,
-    })
 }
 
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
