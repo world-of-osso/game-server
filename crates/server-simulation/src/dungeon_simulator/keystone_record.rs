@@ -58,6 +58,12 @@ pub(super) struct Outcome {
 }
 
 #[derive(Debug, Serialize)]
+pub(super) struct Scaling {
+    pub scaled_creatures: usize,
+    pub damage_multipliers: Vec<f32>,
+}
+
+#[derive(Debug, Serialize)]
 pub(super) struct RunRecord {
     pub schema_version: u32,
     pub seed: u64,
@@ -68,6 +74,7 @@ pub(super) struct RunRecord {
     pub affixes: Option<Vec<u32>>,
     pub party: Vec<PartyMember>,
     pub route: Option<super::keystone_route::PlannedRoute>,
+    pub scaling: Option<Scaling>,
     pub outcome: Outcome,
     pub deaths: Vec<Death>,
     pub pulls: Vec<Pull>,
@@ -384,6 +391,10 @@ mod tests {
                 added_packs: vec![10],
                 planned_forces: 410,
             }),
+            scaling: Some(Scaling {
+                scaled_creatures: 225,
+                damage_multipliers: vec![1.0],
+            }),
             outcome: Outcome {
                 status: "completed".into(),
                 reason: String::new(),
@@ -403,6 +414,7 @@ mod tests {
         assert_eq!(json["party"][0]["spec_id"], 253);
         assert_eq!(json["party"][0]["item_levels"][0]["level"], 334);
         assert_eq!(json["route"]["planned_forces"], 410);
+        assert_eq!(json["scaling"]["scaled_creatures"], 225);
         assert_eq!(json["outcome"]["resulting_key_level"], 5);
     }
 
