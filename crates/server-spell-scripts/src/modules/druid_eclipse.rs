@@ -130,6 +130,7 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
             ..Default::default()
         },
     );
+    super::druid_starlord::on_eclipse(world, caster);
     super::druid_balance_of_all_things::on_eclipse(world, caster, spell);
     super::druid_sundered_firmament::on_eclipse(world, caster);
 }
