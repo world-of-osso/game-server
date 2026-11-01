@@ -131,6 +131,43 @@ fn completed_void_ray_grants_eradicate() {
     );
 }
 
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn completed_void_ray_grants_voidglare_fury() {
+    let mut run = start_ray(1);
+    let actor = run.actor;
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.push(1240202);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().get::<CastState>(actor).is_none() {
+            break;
+        }
+    }
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.spell_id == Some(1241922)
+                && event.kind == shared::protocol::CombatLogKind::Energize
+                && event.amount == 10),
+        "completed Ray grants 10 native Fury"
+    );
+}
+
 fn start_ray(targets: usize) -> Run {
     let mut run = prepare(1480, targets).expect("native Devourer profile");
     run.app
