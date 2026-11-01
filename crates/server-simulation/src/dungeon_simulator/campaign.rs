@@ -643,6 +643,50 @@ fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
     );
 }
 
+#[test]
+#[ignore = "requires extracted Azure Vault follower graph and native navigation"]
+fn released_leader_rejoins_party_through_azure_book() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let owner = run.party.owner;
+    let tank = run.party.tank().unwrap();
+    let book = run.actors[&29001868];
+    let position = *run.app.world().get::<Position>(book).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(position);
+    server::test_support::azure_translocation::traverse(run.app.world_mut(), owner, book).unwrap();
+    let attacker = *run.actors.values().next().unwrap();
+    crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
+    for _ in 0..10 {
+        run.app.update();
+    }
+    run.control().unwrap();
+    assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    let mut reunited = false;
+    for _ in 0..3000 {
+        if !run.wait_for_tank().unwrap() {
+            reunited = true;
+            break;
+        }
+        run.app.update();
+    }
+    assert!(reunited, "released leader did not rejoin the tank");
+    let owner_position = *run.app.world().get::<Position>(owner).unwrap();
+    let tank_position = *run.app.world().get::<Position>(tank).unwrap();
+    assert!(
+        Vec3::new(owner_position.x, owner_position.y, owner_position.z).distance(Vec3::new(
+            tank_position.x,
+            tank_position.y,
+            tank_position.z
+        )) < 40.0
+    );
+    assert!(
+        run.report
+            .pulls
+            .iter()
+            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
+    );
+}
+
 fn spawn_azure_gate_after_first_member_death() -> Run {
     let mut run = spawn_run(3, &mut None).unwrap();
     let first = run.actors[&29001816];
@@ -2819,12 +2863,18 @@ impl Run {
             self.waiting_for_tank = if nearby {
                 false
             } else {
-                let route = world
-                    .resource::<super::Space>()
-                    .walk_legs(from, to)
-                    .map_err(|error| format!("tank cannot follow leader: {error}"))?;
-                let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
-                yards > opening_range
+                match world.resource::<super::Space>().walk_legs(from, to) {
+                    Ok(route) => {
+                        let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+                        yards > opening_range
+                    }
+                    Err(error) => {
+                        if self.approach_translocation(from)? {
+                            return Ok(true);
+                        }
+                        return Err(format!("tank cannot follow leader: {error}"));
+                    }
+                }
             };
             self.next_cohesion_check = self.now() + COHESION_CHECK_SECONDS;
         }
