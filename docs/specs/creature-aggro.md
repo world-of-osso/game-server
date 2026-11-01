@@ -10,7 +10,7 @@ A dormant creature's threat membership publishes only after it actually survives
 
 - [x] Critters (`type` 8), non-combat pets (`type` 12), triggers (`flags_extra` 0x80), `IMMUNE_TO_PC` units (`unit_flags` 0x100) and `npc_training_dummy` creatures have no threat list: they never aggro, never chase and never swing, however they are attacked.
 - [x] Civilians (`flags_extra` 0x2, e.g. Kobold Vermin) never aggro on sight but fight back when attacked.
-- [x] Every other creature aggroes on sight when it is hostile to the player (FactionTemplate reaction Hostile); a neutral creature (e.g. Stonetusk Boar, template 189) only fights back.
+- [x] Every other creature aggroes on sight when it is hostile to the player (FactionTemplate reaction Hostile); a neutral creature (e.g. Stonetusk Boar, template 189) only fights back, except for the evidence-backed passive entries in `content/creature-react-overrides.json`. Apply each override at all difficulties as passive react state with no autonomous melee or combat. Remove an override when TC or DB2 supplies its passive flag; retain its cited retail evidence and the source-data gap until then.
 
 ### Aggro on sight (`CreatureAI::MoveInLineOfSight`, `Creature::CanStartAttack`)
 

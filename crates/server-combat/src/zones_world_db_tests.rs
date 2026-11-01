@@ -905,6 +905,47 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
     assert_eq!(player_health(HEROIC_TRAINING_DUMMY), 100.0);
 }
 
+#[test]
+#[ignore = "requires the imported world.db"]
+fn retail_polymorphic_rune_does_not_enter_combat_or_melee() {
+    const RUNE: u32 = RETAIL + 9_001_892;
+    let templates = crate::faction::world_db_faction_templates().expect("world factions");
+    let mut app = patrol_app_with(&[RUNE, FOREST_SPIDER], |app| {
+        app.insert_resource(templates);
+        app.add_plugins((
+            crate::combat::CombatPlugin,
+            crate::creature_aggro::CreatureAggroPlugin,
+        ));
+    });
+    let owner = spawn_human_near(&mut app, RUNE);
+    let control = spawn_human_near(&mut app, FOREST_SPIDER);
+    let rune = entity_of(&app, RUNE);
+    for _ in 0..100 {
+        app.update();
+    }
+    let rune_position = *app.world().get::<Position>(rune).unwrap();
+    app.world_mut().entity_mut(owner).insert(rune_position);
+    for _ in 0..100 {
+        app.update();
+    }
+    assert_eq!(app.world().get::<Health>(owner).unwrap().current, 100.0);
+    assert!(
+        app.world().get::<Health>(control).unwrap().current < 100.0,
+        "hostile control must melee"
+    );
+    assert!(
+        app.world()
+            .get::<shared::components::CombatStatus>(rune)
+            .is_none_or(|status| !status.0)
+    );
+    assert!(app.world().get::<crate::combat::AutoAttack>(rune).is_none());
+    assert!(
+        app.world()
+            .get::<shared::components::ThreatTable>(rune)
+            .is_none()
+    );
+}
+
 fn spawns_of(entry: u32) -> Vec<&'static CreatureSpawn> {
     world_data()
         .spawns
