@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Key {
     Target(u32),
+    Pursuit(u32),
     Point,
 }
 
@@ -71,9 +72,12 @@ impl AdmissionPaths {
         if !self.poll(nav, tank) {
             return Ok(None);
         }
+        // Ordinary pursuit rechecks both this route and the live target route.
+        // Point and caster-collection callers still require their exact endpoint.
         if let Some(ready) = self.completed.get(&captured.key)
             && ready.captured.from == captured.from
-            && ready.captured.to == captured.to
+            && (ready.captured.to == captured.to
+                || matches!(captured.key, Key::Pursuit(_)) && ready.result.is_ok())
         {
             return ready.result.clone().map(Some);
         }
