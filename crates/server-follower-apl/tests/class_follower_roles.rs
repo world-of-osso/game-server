@@ -498,6 +498,7 @@ fn class_healer_pull_readiness_uses_program_heals_without_the_kit_catalog() {
 
 #[test]
 fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
+    let mut failures = Vec::new();
     for (spec, taunt) in [
         (66, 62124),
         (73, 355),
@@ -574,21 +575,24 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
                 &spell,
                 enemy,
             );
-            panic!(
+            failures.push(format!(
                 "spec {spec} did not cast {taunt}: target={target:?} victim={victim:?} known={known:?} candidates={candidates:?} admission={admission:?}"
-            );
+            ));
+        } else if pull
+            .harness
+            .app
+            .world()
+            .get::<server_combat::networking::CombatTarget>(enemy)
+            .unwrap()
+            .0
+            != Some(pull.follower)
+        {
+            failures.push(format!(
+                "spec {spec} did not take the enemy from the healer"
+            ));
         }
-        assert_eq!(
-            pull.harness
-                .app
-                .world()
-                .get::<server_combat::networking::CombatTarget>(enemy)
-                .unwrap()
-                .0,
-            Some(pull.follower),
-            "spec {spec} did not take the enemy from the healer"
-        );
     }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 #[test]
