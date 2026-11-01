@@ -2576,7 +2576,6 @@ pub(super) fn run_keystone(
         "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
         "terminal_units": run.inspect_units(),
         "pull_decisions": &run.report.pulls,
-        "native_combat_events_wall_timestamps": &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0,
     });
     let state = run.keystone.take().expect("keystone state after run");
     state

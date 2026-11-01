@@ -229,7 +229,7 @@ impl State {
         options: Options,
         status: String,
         reason: String,
-        diagnostics: serde_json::Value,
+        mut diagnostics: serde_json::Value,
     ) -> Result<RunRecord, String> {
         let elapsed = self.elapsed_ms(world);
         let snapshot = self
@@ -238,9 +238,15 @@ impl State {
             .ok_or("active keystone snapshot unavailable")?;
         let completed = snapshot.phase == shared::protocol::ChallengePhase::Completed;
         let resulting_key = self.session.resulting_key(world)?;
-        let (actors, deaths, pulls) = self
+        let (actors, deaths, pulls, timeline) = self
             .tracker
             .finish(elapsed.saturating_sub(self.countdown_ms));
+        if let Some(diagnostics) = diagnostics.as_object_mut() {
+            diagnostics.insert(
+                "native_combat_events".into(),
+                serde_json::to_value(timeline).map_err(|error| error.to_string())?,
+            );
+        }
         Ok(RunRecord {
             schema_version: 1,
             seed,
