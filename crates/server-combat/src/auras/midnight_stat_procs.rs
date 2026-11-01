@@ -34,6 +34,7 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             on_apply: Some(apply_roar_rating),
             on_refresh: Some(apply_roar_rating),
             check_proc: Some(is_critical_hit),
+            on_proc: Some(apply_echoing_roar),
             ..Default::default()
         },
     );
@@ -167,6 +168,27 @@ fn apply_roar_rating(world: &mut World, unit: Entity, aura: &AuraInstance) {
 
 fn is_critical_hit(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
     event.hit_mask & super::procs::PROC_HIT_CRITICAL != 0
+}
+
+/// Last Roar's area-aura trigger is not part of its self-applied rating aura.
+fn apply_echoing_roar(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    _other: Option<Entity>,
+) {
+    crate::spell_cast::cast_triggered_with_overrides(
+        world,
+        unit,
+        ECHOING_ROAR,
+        Some(unit),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            item_level: aura.cast_item_level,
+            item_inventory_type: aura.cast_item_inventory_type,
+            ..Default::default()
+        },
+    );
 }
 
 /// unique_gear_midnight.cpp682–685: each equipped driver adds its effect0
