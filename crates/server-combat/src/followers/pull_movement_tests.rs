@@ -39,8 +39,8 @@ pub(super) fn load_native_kit(h: &mut Harness, tank: Entity) -> BTreeSet<u32> {
     )
     .unwrap();
     let catalog = catalog::load_catalog(&db).unwrap();
-    let attacks = catalog
-        .kits
+    let attacks = kit::load(&db)
+        .unwrap()
         .iter()
         .filter(|entry| {
             entry.spec_id == 66 && matches!(entry.slot, kit::Slot::Attack | kit::Slot::Aoe)

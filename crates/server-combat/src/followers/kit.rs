@@ -1,5 +1,4 @@
-//! Additive, level-gated project policy over native player starter spellbooks.
-use bevy::prelude::*;
+//! Legacy spell IDs retained only for the physical movement fixtures.
 use rusqlite::Connection;
 use serde::Deserialize;
 
@@ -21,110 +20,28 @@ pub(super) enum Slot {
     Buff,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub(super) enum Target {
-    #[default]
-    Enemy,
-    #[serde(rename = "self")]
-    SelfUnit,
-    Party,
-    Tank,
-}
-
-/// APL quantities use displayed units; native PowerType.DisplayModifier supplies scale.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct ResourceCondition {
-    pub power: shared::components::PowerType,
-    pub min: Option<f32>,
-    pub below: Option<f32>,
-    pub min_deficit: Option<f32>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(super) struct CooldownThreshold {
-    pub spell_id: u32,
-    pub seconds: f64,
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub(super) struct Conditions {
-    pub target: Target,
-    pub health_below: Option<f32>,
-    pub missing_aura: Option<u32>,
-    pub required_aura: Option<u32>,
-    pub refresh_fraction: Option<f32>,
-    pub refresh_seconds: Option<f32>,
-    pub tank_defensive_sequence: bool,
-    pub no_repeat_group: Vec<u32>,
-    pub resources: Vec<ResourceCondition>,
-    pub cooldown_remaining_above: Option<CooldownThreshold>,
-
-    pub required_self_aura: Option<u32>,
-    pub refreshable_aura: Option<u32>,
-    pub target_if_min_aura: Option<u32>,
-    /// Current engaged hostile enemies in the group's combat, without a radius gate.
-    pub min_active_enemies: usize,
-    pub min_enemies: usize,
-    pub min_injured: usize,
-    pub attacked: bool,
-    pub lost_threat: bool,
-    pub combat: bool,
-    pub ground: bool,
-    pub source_center: bool,
-    pub exclusive_aura: bool,
-    pub dispel_types: Vec<u32>,
-    pub requires_cast: bool,
-}
-
 #[derive(Clone, Debug)]
 pub(super) struct Entry {
     pub spec_id: u32,
     pub spell_id: u32,
-    pub min_level: u8,
-    pub max_level: u8,
     pub slot: Slot,
-    pub conditions: Conditions,
-}
-
-impl Entry {
-    pub fn available(&self, spec: u32, level: u8) -> bool {
-        self.spec_id == spec && self.min_level <= level && level <= self.max_level
-    }
 }
 
 pub(super) fn load(db: &Connection) -> rusqlite::Result<Vec<Entry>> {
-    let exists: bool = db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='follower_spec_kit')",
-        [], |row| row.get(0),
-    )?;
-    // User-requested compatibility: unpublished/absent kit rows use legacy slots.
-    if !exists {
-        return Ok(Vec::new());
-    }
-    let mut query = db.prepare("SELECT spec_id,spell_id,min_level,max_level,role_slot,conditions FROM follower_spec_kit ORDER BY priority,spell_id,min_level")?;
+    let mut query = db.prepare("SELECT spec_id,spell_id,role_slot FROM follower_spec_kit ORDER BY priority,spell_id,min_level")?;
     query
         .query_map([], |row| {
-            let slot: String = row.get(4)?;
-            let conditions: String = row.get(5)?;
-            let parse_error = |column, error| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    column,
-                    rusqlite::types::Type::Text,
-                    Box::new(error),
-                )
-            };
+            let slot: String = row.get(2)?;
             Ok(Entry {
                 spec_id: row.get(0)?,
                 spell_id: row.get(1)?,
-                min_level: row.get(2)?,
-                max_level: row.get(3)?,
-                slot: serde_json::from_value(serde_json::Value::String(slot))
-                    .map_err(|e| parse_error(4, e))?,
-                conditions: serde_json::from_str(&conditions).map_err(|e| parse_error(5, e))?,
+                slot: serde_json::from_value(serde_json::Value::String(slot)).map_err(|error| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        2,
+                        rusqlite::types::Type::Text,
+                        Box::new(error),
+                    )
+                })?,
             })
         })?
         .collect()
