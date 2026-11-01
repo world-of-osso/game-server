@@ -322,3 +322,54 @@ fn tank_pull_route_refuses_unavailable_native_radius_and_disappeared_source() {
         "disappearance is not a free route or a guessed radius"
     );
 }
+
+#[test]
+fn tank_pull_route_admits_an_immune_spawned_source_once_its_script_unlocks_it() {
+    use crate::creature_aggro::{AggroMode, AggroRange, DeferredCombat};
+    use shared::components::{ThreatTable, UnitFlags};
+    let (mut h, tank) = route_fixture();
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    let target = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, origin, copy)| origin.guid == TARGET_GUID && **copy == map)
+        .unwrap()
+        .0;
+    // The source as an IMMUNE_TO_PC boss template spawns (Avanoxx 213179): a passive
+    // template, combat deferred until its script clears the immunity.
+    let entry = h
+        .app
+        .world()
+        .get::<shared::components::Npc>(target)
+        .unwrap()
+        .template_id;
+    let mut data = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>();
+    for template in data.templates.values_mut().filter(|t| t.entry == entry) {
+        template.aggro_mode = AggroMode::Passive;
+        template.unit_flags |= UnitFlags::IMMUNE_TO_PC;
+    }
+    for ((_, _), template) in data
+        .difficulty_templates
+        .iter_mut()
+        .filter(|((id, _), _)| *id == entry)
+    {
+        template.aggro_mode = AggroMode::Passive;
+        template.unit_flags |= UnitFlags::IMMUNE_TO_PC;
+    }
+    let mut actor = h.app.world_mut().entity_mut(target);
+    actor.get_mut::<UnitFlags>().unwrap().0 |= UnitFlags::IMMUNE_TO_PC;
+    actor.remove::<(ThreatTable, crate::creature_ai::CreatureState, AggroRange)>();
+    actor.insert(DeferredCombat(AggroMode::Aggressive));
+    assert!(
+        read_route(&mut h, tank).is_err(),
+        "an immune boss before its unlock is not a pull target"
+    );
+    crate::creature_aggro::unlock_immune_creature(h.app.world_mut(), target);
+    let route = read_route(&mut h, tank).expect("the unlocked boss is a live pull target");
+    assert!(route.spawns.contains(&TARGET_GUID));
+}
