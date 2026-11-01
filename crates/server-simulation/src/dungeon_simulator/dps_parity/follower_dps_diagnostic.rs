@@ -693,7 +693,7 @@ fn form_override_guardian_swipe_and_form_switch() {
         crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 213764).unwrap(),
         213771
     );
-    for tick in 0..600 {
+    for tick in 0..1000 {
         scenario.advance(app.world_mut(), tick * 50).unwrap();
         app.update();
     }
