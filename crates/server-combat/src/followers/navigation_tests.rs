@@ -381,10 +381,9 @@ fn point(position: Position) -> Vec3 {
 }
 #[test]
 #[ignore = "requires actual Ara-Kara navigation and ground assets"]
-fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
+fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() {
     use crate::creature_ai::{FollowOwner, PartyFollowSlot};
-    use crate::navigation::Navigation;
-    use shared::components::Rotation;
+    use shared::components::{Level, Rotation};
 
     let (mut h, placeholder, _) =
         super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
@@ -397,16 +396,6 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         .get_mut::<crate::networking::CombatTarget>(h.caster)
         .unwrap()
         .0 = None;
-    let from = Position {
-        x: -84.49721,
-        y: 133.57056,
-        z: -349.0956,
-    };
-    let owner_at = Position {
-        x: -90.0,
-        y: 136.5,
-        z: -367.2,
-    };
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -432,10 +421,16 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         .unwrap()
         .map;
     h.app.insert_resource(instances);
+    // Live rerun 2026-11-01 01:49:41-01:50:07 UTC: player and Guardian roster samples.
+    let mut leader = Position {
+        x: -81.8,
+        y: 137.1,
+        z: -348.5,
+    };
     h.app.world_mut().entity_mut(h.caster).insert((
-        owner_at,
+        leader,
         map,
-        shared::components::Level(78),
+        Level(78),
         Rotation {
             x: 0.0,
             y: crate::creature_ai::facing_along(-1.4, -3.2).unwrap(),
@@ -443,177 +438,41 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         },
     ));
     let tank = super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 104).unwrap();
+    let start = Position {
+        x: -83.1,
+        y: 137.0,
+        z: -344.0,
+    };
     h.app.world_mut().entity_mut(tank).insert((
-        from,
+        start,
         map,
         FollowOwner::new(h.caster),
         PartyFollowSlot::new(0, 4),
     ));
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(shared::components::Level(79));
+    h.app.world_mut().entity_mut(h.caster).insert(Level(79));
     h.app.insert_resource(GroundMap::new(
         &crate::ground::ground_data_dir(),
         HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
     ));
     let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
         .map(PathBuf::from)
-        .unwrap();
-    let angle = crate::creature_ai::facing_along(-1.4, -3.2).unwrap() - std::f32::consts::FRAC_PI_2
-        + PartyFollowSlot::new(0, 4).angle();
-    let target = Position {
-        x: owner_at.x + 4.0 * angle.cos(),
-        y: owner_at.y,
-        z: owner_at.z - 4.0 * angle.sin(),
-    };
-    let mut probe = Navigation::new(&nav);
-    let request = crate::navigation::MoveRequest {
-        map_id: 2660,
-        goal: crate::navigation::Goal::FollowFormation(h.caster.to_bits(), point(owner_at)),
-        from,
-        to: target,
-        distance: 0.455,
-        reach: 0.0,
-    };
-    let _ = probe.advance(tank, request);
-    probe.drain_until_idle();
-    match probe.advance(tank, request) {
-        crate::navigation::Step::Moved { position, .. } => {
-            let support = crate::creature_ai::follower_footprint_ground(
-                Some(&mut h.app.world_mut().resource_mut::<GroundMap>()),
-                Some(&map),
-                from,
-                position,
-            );
-            eprintln!(
-                "formation target={target:?} navigation step={position:?} footprint={support:?}"
-            );
-        }
-        crate::navigation::Step::Pending => {
-            eprintln!("formation target={target:?} navigation pending")
-        }
-        crate::navigation::Step::Blocked => {
-            eprintln!("formation target={target:?} navigation blocked")
-        }
-        crate::navigation::Step::Unbaked => {
-            eprintln!("formation target={target:?} navigation unbaked")
-        }
-    }
-    let mut substep_nav = Navigation::new(&nav);
-    let mut substep_position = from;
-    let mut max_rise = 0.0_f32;
-    for iteration in 0..250 {
-        let subrequest = crate::navigation::MoveRequest {
-            from: substep_position,
-            distance: 0.1,
-            ..request
-        };
-        let mut result = substep_nav.advance(tank, subrequest);
-        if matches!(result, crate::navigation::Step::Pending) {
-            substep_nav.drain_until_idle();
-            result = substep_nav.advance(tank, subrequest);
-        }
-        let crate::navigation::Step::Moved {
-            mut position,
-            reached,
-        } = result
-        else {
-            eprintln!("substep stopped without route at {iteration} position={substep_position:?}");
-            break;
-        };
-        let support = crate::creature_ai::follower_footprint_ground(
-            Some(&mut h.app.world_mut().resource_mut::<GroundMap>()),
-            Some(&map),
-            substep_position,
-            position,
-        );
-        let Some(height) = support else {
-            eprintln!(
-                "substep unsupported at {iteration} from={substep_position:?} to={position:?}"
-            );
-            break;
-        };
-        max_rise = max_rise.max(height - substep_position.y);
-        position.y = height;
-        substep_position = position;
-        if reached {
-            eprintln!("substep reached at {iteration}");
-            break;
-        }
-    }
-    eprintln!("substep end={substep_position:?} max_step_rise={max_rise}");
-    h.app.insert_resource(Navigation::new(&nav));
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
-    let mut previous = from;
-    let mut greatest_step = 0.0_f32;
-    let mut destination = None;
-    for _ in 0..400 {
-        h.advance(1);
-        let at = *h.app.world().get::<Position>(tank).unwrap();
-        greatest_step = greatest_step.max(point(at).distance(point(previous)));
-        destination = destination.or(h
-            .app
-            .world()
-            .resource::<Navigation>()
-            .current_destination(tank));
-        previous = at;
-    }
-    let world = h.app.world_mut();
-    let following = world.get::<FollowOwner>(tank).is_some();
-    let active = world
-        .query_filtered::<Entity, crate::creature_ai::ActiveUncontrolled>()
-        .iter(world)
-        .any(|entity| entity == tank);
-    let health = world
-        .get::<shared::components::Health>(tank)
-        .map(|value| value.current);
-    let cast = world
-        .get::<shared::casting::CastState>(tank)
-        .map(|value| value.cast_while_moving);
-    let speed = world
-        .get::<crate::auras::AuraStatMods>(tank)
-        .map(|value| value.movement_speed);
-    let elapsed = world.resource::<Time>().elapsed_secs();
-    eprintln!(
-        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} following={following} active={active} health={health:?} cast_movable={cast:?} speed={speed:?} elapsed={elapsed} end={previous:?} greatest_step={greatest_step}"
-    );
-    let approach_start = Position {
-        x: -83.1,
-        y: 137.0,
-        z: -344.0,
-    };
-    h.app
-        .world_mut()
-        .entity_mut(tank)
-        .insert((approach_start, FollowOwner::new(h.caster)));
-    h.app
-        .world_mut()
-        .resource_mut::<Navigation>()
-        .cancel_route(tank);
-    h.app
-        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
-            std::time::Duration::from_millis(10),
-        ));
-    h.app.insert_resource(Time::<Fixed>::from_seconds(0.01));
-    let mut minimum_y = approach_start.y;
-    let mut prior_leader = Position {
-        x: -81.8,
-        y: 137.1,
-        z: -348.5,
-    };
-    h.app.world_mut().entity_mut(h.caster).insert(prior_leader);
-    let mut nav_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
-    let mut descents = 0;
-    for (leader, frames) in [
-        (prior_leader, 150),
+    let mut previous = start;
+    let (mut lowest, mut greatest_step) = (start.y, 0.0_f32);
+    for (next, frames) in [
+        (leader, 30),
         (
             Position {
                 x: -82.5,
                 y: 137.1,
                 z: -349.9,
             },
-            900,
+            180,
         ),
         (
             Position {
@@ -621,7 +480,7 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 137.0,
                 z: -350.9,
             },
-            800,
+            160,
         ),
         (
             Position {
@@ -629,7 +488,7 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 136.9,
                 z: -351.8,
             },
-            800,
+            160,
         ),
         (
             Position {
@@ -637,49 +496,54 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 136.8,
                 z: -355.0,
             },
-            800,
+            160,
+        ),
+        (
+            Position {
+                x: -87.3,
+                y: 136.5,
+                z: -360.9,
+            },
+            200,
+        ),
+        (
+            Position {
+                x: -90.0,
+                y: 136.5,
+                z: -367.2,
+            },
+            300,
         ),
     ] {
         for frame in 1..=frames {
-            let fraction = (frame as f32 / 25.0).min(1.0);
-            let interpolated = point(prior_leader).lerp(point(leader), fraction);
+            let at = point(leader).lerp(point(next), (frame as f32 / 5.0).min(1.0));
             h.app.world_mut().entity_mut(h.caster).insert(Position {
-                x: interpolated.x,
-                y: interpolated.y,
-                z: interpolated.z,
+                x: at.x,
+                y: at.y,
+                z: at.z,
             });
-            let before = *h.app.world().get::<Position>(tank).unwrap();
             h.advance(1);
-            let after = *h.app.world().get::<Position>(tank).unwrap();
-            minimum_y = minimum_y.min(after.y);
-            if after.y < before.y - 0.05 && descents < 12 {
-                let upper = Vec3::new(after.x, 137.1, after.z);
-                let ground = h
-                    .app
-                    .world_mut()
-                    .resource_mut::<GroundMap>()
-                    .creature_ground_in(map, upper);
-                let surface = nav_map.floor_polygon(upper).unwrap();
-                eprintln!(
-                    "descent before={before:?} after={after:?} upper_ground={ground:?} nav={surface:?}"
-                );
-                descents += 1;
-            }
+            let tank_at = *h.app.world().get::<Position>(tank).unwrap();
+            lowest = lowest.min(tank_at.y);
+            greatest_step = greatest_step.max(point(tank_at).distance(point(previous)));
+            previous = tank_at;
         }
-        prior_leader = leader;
-        eprintln!(
-            "recorded approach leader={leader:?} rotation={:?} tank={:?} min_y={minimum_y}",
-            h.app.world().get::<Rotation>(h.caster).map(|r| r.y),
-            h.app.world().get::<Position>(tank)
-        );
+        leader = next;
     }
+    // The live Guardian followed a collision seam down to y133.6 under the 137.1 route
+    // and never left it; the route's own floor stays above 135.2 here.
     assert!(
-        greatest_step < 1.0,
-        "tank must not teleport during recovery"
+        lowest > 135.0,
+        "tank dropped into the bridged seam: lowest y {lowest}"
     );
     assert!(
-        point(previous).distance(point(owner_at)) < point(from).distance(point(owner_at)) - 1.0,
-        "tank must make real progress toward owner"
+        greatest_step < 1.0,
+        "tank must not teleport: step {greatest_step}"
+    );
+    let gap = (previous.x - leader.x).hypot(previous.z - leader.z);
+    assert!(
+        gap < 6.0,
+        "tank must regroup with its owner: {previous:?} gap {gap}"
     );
 }
 
