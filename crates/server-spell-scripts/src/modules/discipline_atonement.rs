@@ -222,12 +222,7 @@ fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
         scripts.0.entry(spell).or_default().on_remove = Some(shield_discipline);
     }
     let ultimate = scripts.0.entry(421434).or_default();
-    ultimate.on_apply = Some(ultimate_penance_start);
     ultimate.on_periodic = Some(ultimate_penance_tick);
-}
-
-fn ultimate_penance_start(world: &mut World, caster: Entity, _aura: &AuraInstance) {
-    cast_ultimate_penance_bolt(world, caster);
 }
 
 fn ultimate_penance_tick(world: &mut World, caster: Entity, _aura: &AuraInstance, index: u8) {
