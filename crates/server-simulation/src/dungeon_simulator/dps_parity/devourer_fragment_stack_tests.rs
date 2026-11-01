@@ -508,6 +508,7 @@ fn midnight_grants_ready_star_and_fragments_on_meta_entry() {
         .unwrap()
         .iter()
         .collect();
+    spells.retain(|&spell| spell != 1261684);
     spells.extend([1250094, 1221167]);
     run.app
         .world_mut()
