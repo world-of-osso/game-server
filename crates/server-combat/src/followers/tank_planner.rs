@@ -113,7 +113,7 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
         return false;
     }
     // Existing but incomplete run records still go through fail-closed admission.
-    match read_movement_admission(world, tank, target, &follower, None) {
+    match read_route_admission(world, tank, target, &follower, None, true) {
         Ok(Some(true)) => return false,
         Ok(None) => debug!(
             ?tank,
@@ -142,6 +142,17 @@ pub(super) fn read_movement_admission(
     target: Entity,
     follower: &Follower,
     destination: Option<Vec3>,
+) -> Result<Option<bool>, String> {
+    read_route_admission(world, tank, target, follower, destination, false)
+}
+
+fn read_route_admission(
+    world: &mut World,
+    tank: Entity,
+    target: Entity,
+    follower: &Follower,
+    destination: Option<Vec3>,
+    pursuit: bool,
 ) -> Result<Option<bool>, String> {
     let map = *world
         .get::<crate::maps::InMap>(tank)
@@ -172,6 +183,7 @@ pub(super) fn read_movement_admission(
     };
     let Some(route) = (match destination {
         Some(point) => super::pull_route::read_point_route(world, &request, point)?,
+        None if pursuit => super::pull_route::read_pursuit_route(world, &request)?,
         None => super::pull_route::read_route(world, &request)?,
     }) else {
         return Ok(None);

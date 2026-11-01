@@ -34,7 +34,15 @@ pub(super) fn read_route(
     world: &mut World,
     request: &Request<'_>,
 ) -> Result<Option<PullRoute>, String> {
-    read_route_with_destination(world, request, None, read_complete_route)
+    read_route_with_destination(world, request, None, read_complete_route, false)
+}
+
+/// An ordinary chase also checks the current target route before moving.
+pub(super) fn read_pursuit_route(
+    world: &mut World,
+    request: &Request<'_>,
+) -> Result<Option<PullRoute>, String> {
+    read_route_with_destination(world, request, None, read_complete_route, true)
 }
 
 pub(super) fn read_point_route(
@@ -42,7 +50,13 @@ pub(super) fn read_point_route(
     request: &Request<'_>,
     destination: Vec3,
 ) -> Result<Option<PullRoute>, String> {
-    read_route_with_destination(world, request, Some(destination), read_complete_route)
+    read_route_with_destination(
+        world,
+        request,
+        Some(destination),
+        read_complete_route,
+        false,
+    )
 }
 
 fn read_route_with_destination(
@@ -50,6 +64,7 @@ fn read_route_with_destination(
     request: &Request<'_>,
     destination: Option<Vec3>,
     read_path: ReadPath,
+    pursuit: bool,
 ) -> Result<Option<PullRoute>, String> {
     let map = *world
         .get::<InMap>(request.tank)
@@ -71,9 +86,13 @@ fn read_route_with_destination(
     {
         return Err("Pull target must be a living attackable non-passive source actor".into());
     }
-    let key = destination.map_or(paths::Key::Target(request.target_guid), |_| {
+    let key = if destination.is_some() {
         paths::Key::Point
-    });
+    } else if pursuit {
+        paths::Key::Pursuit(request.target_guid)
+    } else {
+        paths::Key::Target(request.target_guid)
+    };
     let destination = match destination {
         Some(point) => point,
         None => crate::spell_cast::targets::position(world, actor)
@@ -162,7 +181,7 @@ fn read_complete_route(
 
 #[cfg(test)]
 pub(super) fn inspect_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
-    read_route_with_destination(world, request, None, inspect_complete_route)?
+    read_route_with_destination(world, request, None, inspect_complete_route, false)?
         .ok_or_else(|| "Fixture route inspection unexpectedly pending".into())
 }
 
@@ -172,7 +191,7 @@ pub(super) fn inspect_point_route(
     request: &Request<'_>,
     point: Vec3,
 ) -> Result<PullRoute, String> {
-    read_route_with_destination(world, request, Some(point), inspect_complete_route)?
+    read_route_with_destination(world, request, Some(point), inspect_complete_route, false)?
         .ok_or_else(|| "Fixture point inspection unexpectedly pending".into())
 }
 

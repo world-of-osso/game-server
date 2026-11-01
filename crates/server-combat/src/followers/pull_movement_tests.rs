@@ -1,5 +1,5 @@
 //! Actual kit AI → pursue → native fixed chase, with and without an injected plan.
-use super::pull_route_tests::route_fixture;
+use super::pull_route_tests::{route_fixture, route_fixture_with_plugins};
 use super::tank_planner::AdmittedPosition;
 use super::{Follower, catalog, kit};
 use crate::maps::InMap;
@@ -191,6 +191,182 @@ fn production_tank_pending_admission_holds_native_chase_without_losing_victim() 
         *h.app.world().get::<Position>(tank).unwrap(),
         from,
         "unpublished admission must hold the actual native chase boundary"
+    );
+}
+
+#[test]
+fn tank_reaches_moving_owner_attacker_without_pulling_nearby_idle_pack() {
+    use crate::creature_aggro::AggroDistance;
+    use bevy::ecs::system::SystemState;
+    use shared::components::CombatStatus;
+
+    const TARGET_GUID: u32 = 20375682;
+    const IDLE_GUID: u32 = 20375688;
+    let (mut h, tank) = route_fixture_with_plugins(|app| {
+        app.insert_resource(crate::test_data::world_data().clone());
+        app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
+    });
+    load_native_kit(&mut h, tank);
+    let from = place_on_source_floor(&mut h, tank);
+    let owner = h.caster;
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(super::stockade_diagnostic::DiagnosticParty {
+            copy: map,
+            members: vec![tank],
+            player_role: shared::group::GroupRole::Dps,
+        });
+    let sources: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, _, copy)| **copy == map)
+        .map(|(entity, origin, _)| (entity, origin.guid))
+        .collect();
+    let target = sources
+        .iter()
+        .find(|(_, guid)| *guid == TARGET_GUID)
+        .unwrap()
+        .0;
+    let idle = sources
+        .iter()
+        .find(|(_, guid)| *guid == IDLE_GUID)
+        .unwrap()
+        .0;
+    for (entity, guid) in sources {
+        if guid != TARGET_GUID && guid != IDLE_GUID {
+            h.app.world_mut().despawn(entity);
+        }
+    }
+    let mut data = h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .clone();
+    data.spawns = data
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.guid, TARGET_GUID | IDLE_GUID))
+        .cloned()
+        .collect::<Vec<_>>()
+        .into();
+    data.spawns_by_map = crate::world_data::build_spawns_by_map(&data.spawns);
+    h.app.insert_resource(data);
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(super::ai::AplControlled);
+    h.app
+        .world_mut()
+        .get_mut::<Follower>(tank)
+        .unwrap()
+        .profile
+        .taunt_spell = 0;
+    crate::creature_aggro::attack_start(h.app.world_mut(), target, owner);
+    // Move the attacker by a deterministic 0.05 yd per fixed tick below. The
+    // real navigation worker must publish each result after the target moves.
+    h.app
+        .world_mut()
+        .get_mut::<crate::creature_ai::SpawnPoint>(target)
+        .unwrap()
+        .speed_run = 0.0;
+    assert!(
+        h.app
+            .world()
+            .get_resource::<crate::navigation::Navigation>()
+            .is_some()
+    );
+    assert!(
+        h.app
+            .world()
+            .get_resource::<crate::test_support::Space>()
+            .is_none()
+    );
+    let initial_target = *h.app.world().get::<Position>(target).unwrap();
+    let mut geometry = SystemState::<AggroDistance>::new(h.app.world_mut());
+    let radius =
+        super::pull_route::read_native_radius(h.app.world(), &mut geometry, tank, idle).unwrap();
+    let point = |position: Position| Vec3::new(position.x, position.y, position.z);
+    let idle_position = *h.app.world().get::<Position>(idle).unwrap();
+    assert!(point(from).distance(point(idle_position)) > radius + 0.5);
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut reached = false;
+    let mut moved = false;
+    let mut target_moved = false;
+    let mut previous = point(from);
+    let mut checkpoints = Vec::new();
+    for tick in 0..160 {
+        h.advance(1);
+        let tank_position = *h.app.world().get::<Position>(tank).unwrap();
+        let target_position = *h.app.world().get::<Position>(target).unwrap();
+        let toward_owner = (point(from) - point(target_position)).normalize();
+        let next = point(target_position) + toward_owner * 0.05;
+        h.app.world_mut().entity_mut(target).insert(Position {
+            x: next.x,
+            y: next.y,
+            z: next.z,
+        });
+        moved |= point(tank_position).distance(point(from)) > 1.0;
+        target_moved |= point(target_position).distance(point(initial_target)) > 1.0;
+        if tick % 20 == 0 {
+            checkpoints.push((
+                tick,
+                tank_position,
+                target_position,
+                h.app
+                    .world()
+                    .get::<crate::creature_ai::CreatureState>(tank)
+                    .cloned(),
+                h.app
+                    .world()
+                    .resource::<crate::navigation::Navigation>()
+                    .query_owner(tank),
+                super::tank_pull_back::active(h.app.world(), tank),
+            ));
+        }
+        let current = point(tank_position);
+        assert!(
+            super::pull_route::segment_distance_squared(point(idle_position), previous, current)
+                >= (radius + 0.5).powi(2),
+            "tank crossed the idle source's native aggro radius plus 0.5 yd"
+        );
+        previous = current;
+        assert!(
+            h.app
+                .world()
+                .get::<CombatStatus>(idle)
+                .is_none_or(|status| !status.0),
+            "the unrelated idle pack must not enter combat"
+        );
+        assert!(
+            crate::combat_refs::active_opponents(h.app.world(), idle)
+                .next()
+                .is_none()
+        );
+        let melee_range = crate::scripted_ai::model_reach::melee_range(h.app.world(), tank, target)
+            .expect("native tank and source combat reaches");
+        if moved
+            && target_moved
+            && point(tank_position).distance(point(target_position)) <= melee_range
+        {
+            reached = true;
+            break;
+        }
+    }
+    assert!(
+        target_moved,
+        "the engaged source must actually move toward the owner"
+    );
+    assert!(
+        moved,
+        "the tank must move rather than wait for the source to arrive"
+    );
+    assert!(
+        reached,
+        "the tank must reach the moving source within 8 seconds: {checkpoints:?}"
     );
 }
 
