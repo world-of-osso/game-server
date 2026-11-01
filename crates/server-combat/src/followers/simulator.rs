@@ -514,9 +514,10 @@ pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
 }
 
-/// The tank opens a pull with its native taunt, resolved when it spawned.
+/// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
-    let spell_id = world.get::<Follower>(tank).unwrap().profile.taunt_spell;
+    let spell_id =
+        super::class_spawn::known_taunt(world, tank).expect("tank must know its native taunt");
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
         .get(spell_id)
