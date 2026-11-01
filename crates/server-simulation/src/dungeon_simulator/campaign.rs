@@ -688,6 +688,71 @@ fn keystone_death_time_starts_after_native_countdown() {
 
 #[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_driver_waits_for_countdown_before_pulling() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let initial_deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    while run
+        .keystone
+        .as_ref()
+        .unwrap()
+        .waiting_for_start(run.app.world())
+        .unwrap()
+    {
+        run.control().unwrap();
+        assert!(
+            run.report.pulls.is_empty(),
+            "route admitted a pull during countdown"
+        );
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    let deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    assert_eq!(deaths, initial_deaths, "creature died during countdown");
+    for _ in 0..800 {
+        run.control().unwrap();
+        if run
+            .report
+            .pulls
+            .iter()
+            .any(|pull| pull.decision.starts_with("Allow"))
+        {
+            return;
+        }
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    panic!("driver never admitted a pull after countdown");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn azure_rune_does_not_attack_owner_while_hostile_does() {
     let options = super::keystone::Options {
         map_id: 2515,
@@ -3129,6 +3194,11 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if let Some(keystone) = &self.keystone
+            && keystone.waiting_for_start(self.app.world())?
+        {
+            return Ok(());
+        }
         if self.advance_deck_replay()? {
             return Ok(());
         }
