@@ -1,4 +1,136 @@
 //! Class APL admission on native Windrunner assistance geometry.
+
+#[test]
+#[ignore = "requires native Devastation profile, spell data and follower initialization"]
+fn devastation_follower_commandos_do_not_pull_idle_outsider() {
+    let (profile, traits) = read_reference(1467).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    let actor = run.actor;
+    let owner = fixture_player(&run);
+    let [primary, second, outsider] = [run.targets[0], run.targets[1], run.targets[2]];
+    for target in [primary, second] {
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, target);
+    }
+    run.app
+        .world_mut()
+        .entity_mut(outsider)
+        .insert(crate::creature_ai::CreatureState::Idle);
+    let original = *run.app.world().get::<Position>(outsider).unwrap();
+    run.app.world_mut().get_mut::<Position>(outsider).unwrap().x += 100.0;
+    run.app.world_mut().entity_mut(actor).insert((
+        crate::followers::AplControlled,
+        crate::networking::CombatTarget(Some(primary)),
+    ));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1260745));
+    face_actor_toward_primary(run.app.world_mut(), actor, primary);
+    let encounter = crate::simc_apl_native::Encounter::Dungeon {
+        started_at: crate::spell_cast::now(run.app.world()),
+    };
+    let rotation = server_follower_apl::devastation_rotation::Rotation::load(
+        run.app.world(),
+        actor,
+        encounter,
+    )
+    .unwrap();
+    let mut apl = server_follower_apl::FollowerApl::new(Box::new(rotation));
+    let action = server::simc_apl::Action {
+        source_row: None,
+        name: "deep_breath".into(),
+        target: Some(primary.to_bits()),
+        options: BTreeMap::new(),
+    };
+    apl.execute_plan(
+        run.app.world_mut(),
+        actor,
+        action,
+        server_follower_apl::literal_rotation::execution::Execution::Spell(
+            433874,
+            actor,
+            Some(primary),
+        ),
+    )
+    .unwrap();
+    for _ in 0..20 {
+        run.app.update();
+    }
+    let pets: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, summon)| {
+            summon.owner == actor && [1235843, 1237036].contains(&summon.spell_id)
+        })
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(pets.len(), 2, "real APL must summon both Commandos");
+    run.app.world_mut().entity_mut(outsider).insert(original);
+    let pyre = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1236970)
+        .unwrap()
+        .clone();
+    let effect = pyre
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    let selected = crate::spell_cast::targets::select_targets(
+        run.app.world_mut(),
+        pets[0],
+        Some(primary),
+        &pyre,
+        effect,
+        0,
+        false,
+    )
+    .unwrap();
+    assert!(
+        selected.contains(&outsider),
+        "native Pyre must reach the idle outsider"
+    );
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(
+            |event| pets.iter().any(|pet| event.source == Some(pet.to_bits()))
+                && event.target == Some(primary.to_bits())
+                && event.spell_id == Some(1236970)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        ),
+        "safe Pyre must hit the engaged pack"
+    );
+    assert!(
+        !events.iter().any(
+            |event| pets.iter().any(|pet| event.source == Some(pet.to_bits()))
+                && event.target == Some(outsider.to_bits())
+                && event.spell_id == Some(1236970)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        ),
+        "Commando Pyre must not hit an idle outsider"
+    );
+    assert!(
+        crate::combat_refs::active_opponents(run.app.world(), outsider)
+            .next()
+            .is_none(),
+        "the outsider must not acquire a summon combat reference"
+    );
+}
+
 use super::*;
 use bevy::ecs::world::CommandQueue;
 use shared::casting::CastState;

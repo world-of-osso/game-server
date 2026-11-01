@@ -4327,7 +4327,18 @@ pub fn plan_triggered_spell(
         return Err(CastFailure::InvalidTarget);
     }
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
-    plan_targets(world, caster, spell, explicit, true)
+    let plan = plan_targets(world, caster, spell, explicit, true)?;
+    if !crate::followers::summon_targets_safe(
+        world,
+        caster,
+        spell.cast_primary_target.or(explicit),
+        plan.iter()
+            .flat_map(|effect| effect.selected_units.iter().chain(&effect.units))
+            .copied(),
+    ) {
+        return Err(CastFailure::NoValidTargets);
+    }
+    Ok(plan)
 }
 
 pub fn launch_triggered_spell(

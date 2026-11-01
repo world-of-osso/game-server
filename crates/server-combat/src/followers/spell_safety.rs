@@ -61,6 +61,33 @@ fn engaged_with_party(world: &World, follower: Entity, enemy: Entity) -> bool {
         })
 }
 
+/// A scripted summon action must not launch if its native targets include an
+/// unrelated hostile. Check the whole cast without changing its target list.
+pub(crate) fn summon_targets_safe(
+    world: &World,
+    actor: Entity,
+    primary: Option<Entity>,
+    targets: impl IntoIterator<Item = Entity>,
+) -> bool {
+    let Some(follower) = controlling_follower(world, actor).filter(|follower| *follower != actor)
+    else {
+        return true;
+    };
+    let caller = world
+        .get::<crate::networking::CombatTarget>(follower)
+        .and_then(|target| target.0)
+        .or(primary);
+    targets.into_iter().all(|target| {
+        world.get::<Npc>(target).is_none()
+            || !targets::relation_matches(world, actor, target, targets::Relation::Enemy)
+            || engaged_with_party(world, follower, target)
+            || caller.is_some_and(|caller| {
+                engaged_with_party(world, follower, caller)
+                    && chain_candidate_allowed(world, actor, caller, target)
+            })
+    })
+}
+
 /// Shared admission for a follower spell or a follower-owned pet's direct attack.
 pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u32>) -> bool {
     let Some(follower) = controlling_follower(world, actor) else {
