@@ -25,8 +25,6 @@ mod holy_priest_tests;
 mod holy_threat_tests;
 mod kit;
 #[cfg(test)]
-mod kit_defensive_fidelity_tests;
-#[cfg(test)]
 mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
