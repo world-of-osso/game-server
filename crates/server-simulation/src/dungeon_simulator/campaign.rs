@@ -670,13 +670,27 @@ fn released_leader_rejoins_party_through_azure_book() {
     }
     run.control().unwrap();
     assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    let tank_before_return = *run.app.world().get::<Position>(tank).unwrap();
     let mut reunited = false;
     for _ in 0..3000 {
-        if !run.wait_for_tank().unwrap() {
+        run.control().unwrap();
+        if !run.returning_to_party {
             reunited = true;
             break;
         }
         run.app.update();
+        if !run
+            .report
+            .pulls
+            .iter()
+            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
+        {
+            assert_eq!(
+                *run.app.world().get::<Position>(tank).unwrap(),
+                tank_before_return,
+                "the living tank must hold until the leader uses the book"
+            );
+        }
     }
     assert!(reunited, "released leader did not rejoin the tank");
     let owner_position = *run.app.world().get::<Position>(owner).unwrap();
@@ -2189,6 +2203,7 @@ struct Run {
     best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
     next_cohesion_check: f64,
     waiting_for_tank: bool,
+    returning_to_party: bool,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
@@ -2580,6 +2595,7 @@ fn spawn_run_mode(
         best_routes: BTreeMap::new(),
         next_cohesion_check: 0.0,
         waiting_for_tank: false,
+        returning_to_party: false,
         last_resources: Vec::new(),
         healer_metrics,
         pet_recorder: Default::default(),
@@ -2872,18 +2888,12 @@ impl Run {
             self.waiting_for_tank = if nearby {
                 false
             } else {
-                match world.resource::<super::Space>().walk_legs(from, to) {
-                    Ok(route) => {
-                        let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
-                        yards > opening_range
-                    }
-                    Err(error) => {
-                        if self.approach_translocation(from)? {
-                            return Ok(true);
-                        }
-                        return Err(format!("tank cannot follow leader: {error}"));
-                    }
-                }
+                let route = world
+                    .resource::<super::Space>()
+                    .walk_legs(from, to)
+                    .map_err(|error| format!("tank cannot follow leader: {error}"))?;
+                let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+                yards > opening_range
             };
             self.next_cohesion_check = self.now() + COHESION_CHECK_SECONDS;
         }
@@ -2899,6 +2909,56 @@ impl Run {
                 .insert(MoveIntent(Vec3::new(owner.x, owner.y, owner.z)));
         }
         Ok(self.waiting_for_tank)
+    }
+
+    fn return_to_party(&mut self) -> Result<bool, String> {
+        if !self.returning_to_party {
+            return Ok(false);
+        }
+        let world = self.app.world();
+        let Some(member) = self
+            .party
+            .members
+            .iter()
+            .copied()
+            .find(|member| crate::spell_cast::targets::is_alive(world, *member))
+        else {
+            self.returning_to_party = false;
+            return Ok(false);
+        };
+        let target = *world
+            .get::<Position>(member)
+            .ok_or("party member position absent")?;
+        let owner = *world
+            .get::<Position>(self.party.owner)
+            .ok_or("returning leader position absent")?;
+        let target = Vec3::new(target.x, target.y, target.z);
+        let from = Vec3::new(owner.x, owner.y, owner.z);
+        if self.approach_translocation(target)? {
+            return Ok(true);
+        }
+        let route = self
+            .app
+            .world()
+            .resource::<super::Space>()
+            .walk_legs(from, target)
+            .map_err(|error| format!("released leader cannot reach party: {error}"))?;
+        let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
+        let (_, range) = crate::followers::simulator::opening_spell(self.app.world(), member);
+        if yards > range {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(MoveIntent(target));
+            return Ok(true);
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
+        self.returning_to_party = false;
+        self.next_cohesion_check = 0.0;
+        Ok(false)
     }
 
     fn advance_deck_replay(&mut self) -> Result<bool, String> {
@@ -2930,10 +2990,14 @@ impl Run {
                     self.party.owner,
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.returning_to_party = true;
             }
             return Ok(());
         }
         if super::movement::flight_in_progress(self.app.world(), self.party.owner) {
+            return Ok(());
+        }
+        if self.return_to_party()? {
             return Ok(());
         }
         if self.wait_for_tank()? {
