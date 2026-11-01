@@ -452,7 +452,7 @@ fn class_blood_follower_regenerates_runes_and_keeps_casting() {
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn blood_follower_death_strike_counts_damage_beyond_current_health() {
     use server::test_support::healer_intake::{Hit, HitKind};
-    use shared::components::{Health, PowerType};
+    use shared::components::Health;
 
     fn strike(start_health_fraction: f32) -> (i32, i32, i32, f32) {
         let _seed = crate::random::seed_scope(1);
@@ -516,14 +516,13 @@ fn blood_follower_death_strike_counts_damage_beyond_current_health() {
             .unwrap();
         let (amount, overflow) = (damage.amount, damage.overflow);
         app.world_mut().get_mut::<Health>(actor).unwrap().current = max * 0.01;
-        crate::spell_cast::powers::change_power(
+        assert!(crate::spell_cast::try_cast_triggered(
             app.world_mut(),
             actor,
-            PowerType::RunicPower,
-            1000.0,
-        );
-        crate::spell_cast::creature_cast(app.world_mut(), actor, 49998, Some(target), false)
-            .unwrap();
+            49998,
+            Some(target),
+            1
+        ));
         for _ in 0..4 {
             app.update();
         }
