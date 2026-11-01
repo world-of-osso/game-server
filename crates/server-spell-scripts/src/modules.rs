@@ -338,6 +338,7 @@ register_modules! {
     outlaw_ace: (2605, "modules/outlaw_ace.rs"),
     outlaw_bte: (2606, "modules/outlaw_bte.rs"),
     outlaw_coup: (2608, "modules/outlaw_coup.rs"),
+    outlaw_fatal_flourish: (2600, "modules/outlaw_fatal_flourish.rs"),
     outlaw_flurry: (2601, "modules/outlaw_flurry.rs"),
     outlaw_gravedigger: (2608, "modules/outlaw_gravedigger.rs"),
     outlaw_keep_rolling: (2604, "modules/outlaw_keep_rolling.rs"),

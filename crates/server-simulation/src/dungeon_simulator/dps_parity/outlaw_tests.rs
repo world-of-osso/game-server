@@ -382,6 +382,47 @@ fn rogue_literal_spend_cap_and_base_energy_ignore_temporary_capacity() {
 }
 
 #[test]
+#[ignore = "requires native Outlaw260 profile and DPS_PARITY_ACTOR=player"]
+fn outlaw_fatal_flourish_uses_earned_hit_chance() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(260, 1).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), run.actor, 35551));
+    engage(&mut run);
+    let started_at = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started_at);
+    for _ in 0..400 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let gains = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Energize
+                && event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(35546)
+        })
+        .count();
+    let eligible_upper_bound = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(run.actor.to_bits())
+                && matches!(event.spell_id, None | Some(0 | 185763 | 86392))
+        })
+        .count();
+    assert!(gains > 0, "eligible hits must earn Fatal Flourish");
+    assert!(
+        gains * 2 < eligible_upper_bound,
+        "{gains} gains from at most {eligible_upper_bound} eligible hits"
+    );
+}
+
+#[test]
 #[ignore = "requires private native260 profile/traits and DPS_PARITY_ACTOR=player"]
 fn outlaw_literal_driver_coats_and_executes_profile_opener() {
     let _seed = crate::random::seed_scope(70448);
