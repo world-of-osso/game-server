@@ -687,6 +687,57 @@ fn keystone_death_time_starts_after_native_countdown() {
 }
 
 #[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn azure_rune_does_not_attack_owner_while_hostile_does() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    let rune = run.actors[&29001892];
+    let hostile = run.actors[&29001895];
+    let location = *run.app.world().get::<Position>(rune).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(location);
+    run.app.world_mut().entity_mut(hostile).insert(Position {
+        x: location.x + 2.0,
+        ..location
+    });
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        run.app.update();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::components::CombatStatus>(rune)
+                .is_none_or(|state| !state.0),
+            "rune entered combat"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let melee = |source: Entity| {
+        events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(source.to_bits())
+                && event.target == Some(owner.to_bits())
+                && event.spell_id.is_none()
+        })
+    };
+    assert!(!melee(rune), "rune hit the owner");
+    assert!(melee(hostile), "nearby hostile did not melee the owner");
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();

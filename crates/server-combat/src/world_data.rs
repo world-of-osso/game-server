@@ -10,6 +10,43 @@ use std::sync::Arc;
 
 pub(crate) mod summon_levels;
 
+fn retail_passive_creatures() -> &'static HashSet<u32> {
+    #[derive(serde::Deserialize)]
+    struct Override {
+        entry: u32,
+        react_state: String,
+        evidence: Vec<String>,
+        source_gap: String,
+        retire_when: String,
+    }
+    static ENTRIES: std::sync::OnceLock<HashSet<u32>> = std::sync::OnceLock::new();
+    ENTRIES.get_or_init(|| {
+        let overrides: Vec<Override> = serde_json::from_str(include_str!(
+            "../../../content/creature-react-overrides.json"
+        ))
+        .expect("valid creature react overrides");
+        let mut entries = HashSet::new();
+        for item in overrides {
+            assert_eq!(
+                item.react_state, "passive",
+                "unsupported creature react override"
+            );
+            assert!(
+                !item.evidence.is_empty()
+                    && !item.source_gap.is_empty()
+                    && !item.retire_when.is_empty(),
+                "creature react override needs evidence and retirement condition"
+            );
+            assert!(
+                entries.insert(item.entry),
+                "duplicate creature react override {}",
+                item.entry
+            );
+        }
+        entries
+    })
+}
+
 use crate::creature_aggro::AggroMode;
 use crate::level_scaling::{
     ArmorConstants, CreatureStats, ExpectedStats, LevelStats, TuningInputs,
@@ -29,7 +66,7 @@ pub struct CreatureTemplate {
     pub type_flags: u32,
     /// Source creature_template.flags_extra, including dungeon-boss/knockback immunity.
     pub flags_extra: u32,
-    /// TDB creature_template_difficulty StaticFlags1–8 for this resolved difficulty.
+    /// TDB difficulty StaticFlags1–8, with documented retail react overrides applied.
     pub static_flags: [u32; 8],
     pub min_level: u8,
     pub max_level: u8,
@@ -613,7 +650,8 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         0 => DEFAULT_BASE_ATTACK_TIME_MS,
         authored => authored,
     };
-    let static_flags = [
+    let entry = row.get::<_, i64>(0)? as u32;
+    let mut static_flags = [
         row.get("StaticFlags1")?,
         row.get("StaticFlags2")?,
         row.get("StaticFlags3")?,
@@ -623,6 +661,9 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         row.get("StaticFlags7")?,
         row.get("StaticFlags8")?,
     ];
+    if retail_passive_creatures().contains(&entry) {
+        static_flags[0] |= crate::creature_static::IGNORE_COMBAT;
+    }
     let unit_class = row.get::<_, i64>(14)? as u8;
     let health_modifier = row.get(6)?;
     let armor_modifier = row.get(23)?;
@@ -645,7 +686,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         })
         .transpose()?;
     Ok(CreatureTemplate {
-        entry: row.get::<_, i64>(0)? as u32,
+        entry,
         min_level: row.get::<_, i64>(1)? as u8,
         max_level: row.get::<_, i64>(2)? as u8,
         faction: row.get::<_, i64>(3)? as u16,
