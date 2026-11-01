@@ -15,6 +15,82 @@ fn class_party_death_audit() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn grove_guardians_heal_the_class_followers_target() {
+    use shared::protocol::CombatLogKind;
+
+    for source in [18562, 48438] {
+        let mut run = super::snapshot_party(105, 90, 1);
+        let healer = run.healer;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), run.healer, 1226140));
+        run.app
+            .world_mut()
+            .get_mut::<Health>(run.tank)
+            .unwrap()
+            .current *= 0.25;
+        if source == 18562 {
+            crate::spell_cast::cast_triggered(
+                run.app.world_mut(),
+                run.healer,
+                774,
+                Some(run.tank),
+                1,
+            );
+        }
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.healer,
+            source,
+            Some(run.tank),
+            false,
+        )
+        .expect("cast selected Restoration spell");
+        let mut treant = None;
+        let mut healed = false;
+        for _ in 0..160 {
+            run.app.update();
+            let world = run.app.world_mut();
+            if treant.is_none() {
+                treant = world
+                    .query::<(
+                        bevy::prelude::Entity,
+                        &crate::spell_cast::summon::SummonedCreature,
+                    )>()
+                    .iter(world)
+                    .find_map(|(actor, summon)| {
+                        (summon.owner == run.healer && summon.spell_id == 102693).then_some(actor)
+                    });
+            }
+            if let Some(actor) = treant {
+                healed = world
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|event| {
+                        event.source == Some(actor.to_bits())
+                            && event.target == Some(run.tank.to_bits())
+                            && event.kind == CombatLogKind::Heal
+                            && event.spell_id == Some(422090)
+                            && event.amount > 0
+                    });
+                if healed {
+                    break;
+                }
+            }
+        }
+        assert!(treant.is_some(), "spell {source} must summon a treant");
+        assert!(
+            healed,
+            "spell {source}'s treant must heal the original target"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn dummy_pressure_uses_unscaled_same_level_units() {
     for level in [70, 90] {
         let run = super::snapshot_party(105, level, 1);

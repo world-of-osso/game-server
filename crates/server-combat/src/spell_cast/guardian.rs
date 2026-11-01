@@ -34,6 +34,16 @@ struct GuardianPolicy {
 // SimC76f8118 pets.cpp19/705/867/1510–1548: bindings and inheritance
 // belong to the actual root/creature pair, including the alternative Tyrant.
 const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
+    // 70448 Spell1226140/102693 summons54983 to cast422090; the latter's
+    // native two-second cast time and owner spell-power coefficient drive it.
+    GuardianPolicy {
+        summons: &[102693],
+        entry: 54983,
+        spells: &[422090],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 sc_monk_pets.cpp425–435: Niuzao inherits its owner's AP.
     GuardianPolicy {
         summons: &[132578],
@@ -920,10 +930,15 @@ pub(super) fn cannot_afford_firebolt(world: &World, actor: Entity) -> bool {
 }
 
 fn cast_on_owner_target(world: &mut World, actor: Entity) {
-    let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
-    let target = world
-        .get::<crate::networking::CombatTarget>(owner)
-        .and_then(|target| target.0);
+    let summon = world.get::<SummonedCreature>(actor).unwrap();
+    let owner = summon.owner;
+    let target = if summon.spell_id == 102693 {
+        grove_guardian_target(world, actor)
+    } else {
+        world
+            .get::<crate::networking::CombatTarget>(owner)
+            .and_then(|target| target.0)
+    };
     world
         .get_mut::<crate::networking::CombatTarget>(actor)
         .unwrap()
@@ -938,6 +953,38 @@ fn cast_on_owner_target(world: &mut World, actor: Entity) {
         return;
     };
     cast_first_ready(world, actor, target);
+}
+
+fn grove_guardian_target(world: &World, actor: Entity) -> Option<Entity> {
+    let target = world.get::<super::summon::GroveGuardianTarget>(actor)?.0;
+    if super::targets::is_alive(world, target)
+        && world.get::<crate::maps::InMap>(target) == world.get::<crate::maps::InMap>(actor)
+    {
+        return Some(target);
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(422090)?;
+    let effect = spell.effects.iter().find(|effect| effect.index == 0)?;
+    let center = super::targets::position(world, actor)?;
+    super::targets::area_units(
+        world,
+        actor,
+        center,
+        super::targets::radius(effect, 1),
+        super::targets::Relation::Ally,
+        0,
+    )
+    .into_iter()
+    .filter(|unit| super::targets::is_alive(world, *unit))
+    .min_by(|a, b| {
+        let fraction = |unit| {
+            world
+                .get::<shared::components::Health>(unit)
+                .map_or(1.0, |health| health.current / health.max.max(1.0))
+        };
+        fraction(*a).total_cmp(&fraction(*b))
+    })
 }
 
 fn has_repeat_clock(spell: &crate::spell_info::SpellInfo) -> bool {

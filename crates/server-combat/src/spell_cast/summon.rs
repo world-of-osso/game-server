@@ -232,6 +232,10 @@ pub(crate) fn unregister_source_summon(world: &mut World, actor: Entity) {
     }
 }
 
+/// The friendly target that caused Grove Guardians to summon this actor.
+#[derive(Component, Clone, Copy)]
+pub(super) struct GroveGuardianTarget(pub Entity);
+
 #[derive(Component, Debug, Clone)]
 pub struct SummonedCreature {
     pub owner: Entity,
@@ -1019,6 +1023,11 @@ fn spawn_summon(
     ));
     if let Some(mana) = template.mana {
         entity.insert(mana);
+    }
+    if ctx.spell.id == 102693
+        && let Some(target) = ctx.primary_target()
+    {
+        entity.insert(GroveGuardianTarget(target));
     }
     let actor = entity.id();
     entity.world_scope(|world| {
