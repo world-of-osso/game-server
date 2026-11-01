@@ -58,16 +58,14 @@ fn feral_action_reach_includes_the_selected_cat_form_action() {
 }
 
 #[test]
-fn active_hostile_field_remains_bounded_from_its_owner_after_movement() {
+fn walking_away_from_a_fixed_hostile_field_does_not_grow_reach() {
     let (mut harness, actor) = kit_tests::at_level_unengaged(209057, 32, |_| {});
     let world = harness.app.world_mut();
+    let without_field = party_unintended_reach(world, &[actor]);
     let origin = *world.get::<Position>(actor).unwrap();
     let map = *world.get::<crate::maps::InMap>(actor).unwrap();
     world.spawn((
-        Position {
-            x: origin.x + 35.0,
-            ..origin
-        },
+        origin,
         map,
         SpellAreaTrigger {
             caster: actor,
@@ -85,6 +83,13 @@ fn active_hostile_field_remains_bounded_from_its_owner_after_movement() {
             inside: HashSet::new(),
         },
     ));
-    let reaches = party_unintended_reach(world, &[actor]);
-    assert!(reaches[0].1 >= 43.0, "{reaches:?}");
+    let mut reaches = Vec::new();
+    for distance in [0.0, 35.0, 70.0] {
+        world.get_mut::<Position>(actor).unwrap().x = origin.x + distance;
+        reaches.push(party_unintended_reach(world, &[actor]));
+    }
+    assert!(
+        reaches.iter().all(|reach| *reach == without_field),
+        "a field left behind must not grow the fight-position reach: {without_field:?} -> {reaches:?}"
+    );
 }

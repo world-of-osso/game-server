@@ -157,6 +157,10 @@ fn has_bound_effect(world: &World, binding: &AuraAreaTrigger) -> bool {
         })
 }
 
+pub(super) fn attached_unit(world: &World, entity: Entity) -> Option<Entity> {
+    Some(world.get::<AuraAreaTrigger>(entity)?.target)
+}
+
 pub(super) fn maximum_radius(world: &World, entity: Entity) -> Option<f32> {
     let binding = world.get::<AuraAreaTrigger>(entity)?;
     Some(
