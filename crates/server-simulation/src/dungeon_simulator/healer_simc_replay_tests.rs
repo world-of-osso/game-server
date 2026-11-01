@@ -16,7 +16,7 @@ fn class_party_death_audit() {
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_grove_guardian_admission_receipt() {
-    let mut run = super::snapshot_party(105, 90, 1);
+    let run = super::snapshot_party(105, 90, 1);
     let world = run.app.world();
     let known = world
         .get::<crate::class_progression::KnownSpells>(run.healer)
@@ -26,20 +26,11 @@ fn restoration_grove_guardian_admission_receipt() {
         !known.contains(102693),
         "check whether the active summon is learned"
     );
-    run.app
-        .world_mut()
-        .get_mut::<Health>(run.tank)
-        .unwrap()
-        .current *= 0.5;
-    let result = crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        run.healer,
-        102693,
-        Some(run.tank),
-        false,
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_action(world, run.healer, 102693).unwrap(),
+        None,
+        "the follower controller cannot select the unlearned summon action"
     );
-    eprintln!("GROVE_CAST_RESULT {result:?}");
-    assert!(result.is_err(), "check native cast admission");
 }
 
 #[test]
