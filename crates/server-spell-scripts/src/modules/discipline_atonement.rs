@@ -545,8 +545,8 @@ fn pain_spread_count(world: &World, caster: Entity) -> usize {
 }
 
 fn find_pain_spread_targets(world: &mut World, caster: Entity, target: Entity) -> Vec<Entity> {
+    use combat::random::seq::SliceRandom;
     use combat::spell_cast::targets::{self, Relation};
-    use rand::seq::SliceRandom;
 
     let Some(origin) = targets::position(world, target) else {
         return Vec::new();
