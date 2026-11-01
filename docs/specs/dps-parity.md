@@ -645,6 +645,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Arms literal controller
 
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
+- A Sudden Death Execute with Unrelenting Onslaught reduces the cooldown of the Bladestorm action that the actor actually casts, including a follower's Slayer alias (`sc_warrior.cpp:4361–4365`, `4561–4565`).
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).

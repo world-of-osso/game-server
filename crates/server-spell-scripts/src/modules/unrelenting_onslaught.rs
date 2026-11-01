@@ -29,8 +29,14 @@ fn after_execute(world: &mut World, caster: Entity, spell: &SpellInfo, target: O
         return;
     };
     let seconds = script_effect_value(world, caster, ONSLAUGHT, 0) * f32::from(stacks);
-    let action = combat::auras::overrides::resolve_spell(world, caster, BLADESTORM);
-    combat::spell_cast::scripts::reduce_cooldown(world, caster, action, f64::from(seconds));
+    // Followers reach Slayer's Bladestorm through knowledge aliases, not an
+    // override aura; reduce the action this actor actually casts.
+    match combat::spell_cast::knowledge::resolve_actor_action(world, caster, BLADESTORM) {
+        Ok(action) => {
+            combat::spell_cast::scripts::reduce_cooldown(world, caster, action, f64::from(seconds))
+        }
+        Err(reason) => warn!(?caster, ?reason, "Native Onslaught Bladestorm unavailable"),
+    }
     apply_overwhelmed(world, caster, target, stacks);
 }
 
