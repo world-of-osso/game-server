@@ -600,6 +600,71 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
 }
 
 #[test]
+fn class_follower_holds_damage_during_polymorph_and_resumes_afterward() {
+    let mut pull = spawn(63);
+    let owner = pull.harness.caster;
+    let target = pull.harness.npc;
+    let world = pull.harness.app.world_mut();
+    server_combat::creature_aggro::add_threat(world, target, owner, 100.0);
+    let spell = world
+        .resource::<server_combat::spell_info::SpellStore>()
+        .get(118)
+        .unwrap();
+    let mask = server_combat::auras::aura_effect_mask(spell);
+    server_combat::auras::apply_aura(
+        world,
+        &server_combat::auras::AuraApplication {
+            caster: owner,
+            target,
+            spell_id: 118,
+            effect_mask: mask,
+            source: server_combat::auras::AuraSource::Cast,
+        },
+    );
+    for _ in 0..40 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    assert!(server_combat::auras::has_aura(
+        pull.harness.app.world(),
+        target,
+        118
+    ));
+    assert!(
+        !pull
+            .events()
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(target.to_bits()))
+    );
+    server_combat::auras::remove_auras(
+        pull.harness.app.world_mut(),
+        target,
+        server_combat::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 118,
+    );
+    for _ in 0..200 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+        if pull.events().iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    panic!(
+        "class follower did not resume damage after polymorph ended: {:?}",
+        pull.casts()
+    );
+}
+
+#[test]
 fn class_tank_defends_against_an_engaged_alternate_after_its_primary_dies() {
     let mut pull = spawn(66);
     let owner = pull.harness.caster;

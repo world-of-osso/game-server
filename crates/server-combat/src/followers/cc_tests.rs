@@ -75,12 +75,13 @@ fn assert_holds_cc(entry: u32) {
     );
     remove_polymorph(&mut h, enemy);
     update_ai(h.app.world_mut());
-    h.advance(80);
-    assert!(
-        h.inbox.log.iter().any(|event| {
-            event.source == Some(unit.to_bits()) && event.kind == CombatLogKind::CastSuccess
-        }),
-        "profile{entry} did not resume after CC expiry"
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CombatTarget>(unit)
+            .and_then(|target| target.0),
+        Some(enemy),
+        "profile{entry} must retarget after CC ends"
     );
 }
 
