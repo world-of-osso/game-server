@@ -142,7 +142,7 @@ pub(crate) fn spawn_keystone_test_party(
     let profiles = class_profiles
         .iter()
         .enumerate()
-        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot, 0))
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot))
         .collect::<Result<Vec<_>, _>>()?;
     let run = FollowerRun {
         dungeon,

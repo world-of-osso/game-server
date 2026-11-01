@@ -10,6 +10,18 @@ pub(crate) fn has_absorb(auras: &ActiveAuras, now: f64) -> bool {
         .any(|effect| effect.aura_type == handlers::SCHOOL_ABSORB && effect.absorb_remaining > 0.0)
 }
 
+/// Remaining unexpired helpful school absorption.
+#[cfg(test)]
+pub(crate) fn absorb_remaining(auras: &ActiveAuras, now: f64) -> f32 {
+    auras
+        .iter()
+        .filter(|aura| !aura.harmful && aura.expires_at.is_none_or(|expiry| expiry > now))
+        .flat_map(|aura| &aura.effects)
+        .filter(|effect| effect.aura_type == handlers::SCHOOL_ABSORB)
+        .map(|effect| effect.absorb_remaining.max(0.0))
+        .sum()
+}
+
 pub(crate) fn first_melee_stat_expiry(unit: Entity, auras: &ActiveAuras) -> Option<f64> {
     let mut expiries: Vec<_> = auras.iter().filter_map(|aura| aura.expires_at).collect();
     expiries.sort_by(f64::total_cmp);
