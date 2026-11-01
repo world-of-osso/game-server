@@ -304,10 +304,9 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
         });
     let mut native_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
-    let first_route = native_map
+    native_map
         .complete_walk_path(start, trail[0])
         .expect("first trail point must be reachable on the real navmesh");
-    eprintln!("first trail route: {first_route:?}");
     crate::navigation::install_fixture(&mut h.app, Navigation::new(&nav));
     h.app
         .world_mut()
@@ -368,18 +367,25 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
             break;
         }
     }
-    let state = h.app.world().get::<TrailFollow>(follower);
-    eprintln!(
-        "hostile={} destination={:?} candidates={:?}",
-        positioning::is_unpulled_hostile(h.app.world(), follower, watcher),
-        state.and_then(|s| s.destination),
-        state.map(|s| &s.candidates)
-    );
     assert!(
         previous.distance(*trail.last().unwrap()) < 5.0,
         "follower stopped at {previous:?} instead of reaching owner {:?}",
         trail.last().unwrap()
     );
+
+    // A destination inside the idle watcher's sight has no safe route.
+    clear(h.app.world_mut(), follower);
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(as_position(center));
+    super::owner_trail::record(h.app.world_mut(), owner);
+    let held_at = *h.app.world().get::<Position>(follower).unwrap();
+    for _ in 0..140 {
+        h.advance(1);
+        assert!(advance(h.app.world_mut(), follower, owner, vec![watcher]));
+        assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), held_at);
+    }
 }
 
 pub(super) fn clear(world: &mut World, unit: Entity) {

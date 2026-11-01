@@ -318,14 +318,6 @@ impl ProjectedSight {
     }
 }
 
-/// [`sees_in_world`] with `target`'s feet projected to `feet`.
-pub(crate) fn sees_at(world: &World, watcher: Entity, target: Entity, feet: Position) -> bool {
-    ProjectedSight::capture(world, watcher, target).sees(
-        world.get_resource::<LineOfSight>(),
-        Vec3::new(feet.x, feet.y, feet.z),
-    )
-}
-
 /// Project only a unit's feet; both bodies still use actual native eyes/pose/facing.
 pub(crate) fn mutually_visible_at(
     world: &World,
