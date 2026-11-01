@@ -58,6 +58,8 @@ Routed followers and pets follow navigation height when entering, swimming in, o
 
 A routed follower whose own floor lies more than a step below the route surface, for example in a narrow floor dip that the six-cell detail mesh bridges, may still take a step whose support is within one step of its own floor. A floor farther than one step from the follower still holds it. Live Floodgate map 2773 kept a healer in such a dip at (1657.5, 338.66, 2799.9), under a 340.3 route surface, for eight minutes.
 
+When footprint probes find support both within one step of the follower and within one step of the route surface, the follower takes that support rather than following a lower center floor away from the route. A route bridging a narrow collision seam must not lead a follower down into the seam. In the live Ara-Kara map 2660 rerun, a Guardian tank descended from y 137.0 to 133.6 below a 137.1 route near (-84.5, -349.1) and could not climb back.
+
 `FLOODGATE_DROP_LOG_CORRELATED`: after Swampface (3053) is Done, the owner and living followers and pets can walk to the supported edge and fall to the Geezle-connected floor. WCL reports `67c3WanVygd4ZvCt`/1, `XCmNaPcWdFA4kJ8D`/32 and `hjF7fyTxVNdBnWbJ`/2 correlate the floor change. Gravity starts at the supported edge; no participant walks horizontally through unsupported air. The landing lies under WMO liquid type 941 at Y 278.167; a live-party water crossing remains untested. NPC fall damage remains unmodeled.
 
 `FLOODGATE_DAM_GATE_LOG_CORRELATED`: Swampface Done opens Dam Gate 505620 and its collision proxy 528436 at spawn 30001653. The other 528436 placement stays unchanged. WCL `67c3WanVygd4ZvCt`/1 crosses the gate plane after Swampface; the exact Retail trigger is unknown.

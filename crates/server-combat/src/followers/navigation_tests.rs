@@ -537,7 +537,6 @@ fn ara_kara_guardian_follows_across_bridged_seam_without_dropping_below_route() 
         lowest > 135.0,
         "tank dropped into the bridged seam: lowest y {lowest}"
     );
-    eprintln!("ara seam: lowest={lowest} stride={stride} rise={rise} end={previous:?}");
     // One tick runs at most ~0.6yd and may step up no more than the agent climb.
     assert!(
         stride < 1.0,
