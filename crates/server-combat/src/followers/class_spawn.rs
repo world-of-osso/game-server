@@ -323,6 +323,10 @@ pub fn install_class(
     slot: usize,
     gear: GearSource,
 ) -> Result<crate::trait_config::TalentSource, String> {
+    let provider = world
+        .get_resource::<super::FollowerActionProvider>()
+        .ok_or("class follower action metadata provider unavailable")?
+        .0;
     let level = world
         .get::<Level>(owner)
         .ok_or("follower owner has no level")?
@@ -414,6 +418,10 @@ pub fn install_class(
         GearSource::Journal => super::gear::equip(world, entity, &profile),
     }
     .and_then(|()| super::gear::publish_appearance(world, entity))?;
+    let spells = provider(world, entity, source.spec_id)?;
+    world
+        .entity_mut(entity)
+        .insert(super::FollowerActionSpells(spells));
     Ok(talent_source)
 }
 

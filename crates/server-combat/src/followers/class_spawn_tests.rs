@@ -36,6 +36,31 @@ fn story_follower_does_not_gain_mana_from_player_only_aura() {
 }
 
 #[test]
+fn class_install_requires_an_action_provider_before_mutating_actor() {
+    let mut world = World::new();
+    let owner = world.spawn_empty().id();
+    let actor = world.spawn_empty().id();
+    let profile = super::super::class_profiles::read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == 62)
+        .unwrap();
+    let error = install_class(
+        &mut world,
+        owner,
+        actor,
+        &profile,
+        0,
+        0,
+        GearSource::Journal,
+    )
+    .unwrap_err();
+    assert_eq!(error, "class follower action metadata provider unavailable");
+    assert!(world.get::<Follower>(actor).is_none());
+    assert!(world.get::<super::super::AplControlled>(actor).is_none());
+}
+
+#[test]
 fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
     let (mut h, _, _) = spawn_profile_fixture_with_plugins(209057, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
@@ -88,6 +113,21 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         .world_mut()
         .entity_mut(h.caster)
         .insert((copy, Level(90)));
+    h.app
+        .insert_resource(super::super::FollowerActionProvider(|_, _, spec| {
+            let spell = match spec {
+                581 => 203720,
+                73 => 23922,
+                66 => 31935,
+                250 => 55050,
+                268 => 121253,
+                104 => 33917,
+                257 => 2061,
+                62 => 30451,
+                _ => return Err(format!("no fixture action for spec{spec}")),
+            };
+            Ok(vec![spell])
+        }));
     let profiles = super::super::class_profiles::read_profiles().unwrap();
     for (slot, spec) in [581, 73, 66, 250, 268, 104, 257, 62]
         .into_iter()
@@ -114,6 +154,14 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
                 .is_none()
         );
         assert!(world.get::<super::super::AplControlled>(unit).is_some());
+        assert_eq!(
+            world
+                .get::<super::super::FollowerActionSpells>(unit)
+                .unwrap()
+                .0
+                .len(),
+            1
+        );
         let visual = world.get::<CharacterVisual>(unit).unwrap();
         assert_eq!(
             (visual.race, visual.class, visual.appearance.sex),

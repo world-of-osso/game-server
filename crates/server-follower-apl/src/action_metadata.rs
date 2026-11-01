@@ -1,7 +1,90 @@
 //! Pure action metadata from the same programs and bindings used by the rotations.
 use crate::class_progression::TraitLoadout;
 use crate::profiles::profile;
-use bevy::prelude::{Entity, World};
+use bevy::prelude::{App, Entity, Resource, World};
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct CacheKey {
+    spec: u32,
+    flamestrike: bool,
+    infusion: bool,
+    feral_berserk: Option<u32>,
+    balance_alignment: u32,
+    lunar_calling: bool,
+    pet_summon: Option<u32>,
+    coatings: Vec<u32>,
+}
+
+struct CachedActions {
+    program: server::simc_apl::Program,
+    spells: Vec<u32>,
+}
+
+#[derive(Resource, Default)]
+struct ActionCache(BTreeMap<CacheKey, Arc<CachedActions>>);
+
+/// Register the pure metadata provider before spawning class followers.
+pub fn install_provider(app: &mut App) {
+    app.init_resource::<ActionCache>()
+        .insert_resource(server::followers::FollowerActionProvider(provide_actions));
+}
+
+fn provide_actions(world: &mut World, actor: Entity, spec: u32) -> Result<Vec<u32>, String> {
+    let input = read_inputs(world, actor, spec)?;
+    let key = CacheKey {
+        spec,
+        flamestrike: input
+            .traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 2120),
+        infusion: input
+            .traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 1241059),
+        feral_berserk: input.feral_berserk,
+        balance_alignment: input.balance_alignment,
+        lunar_calling: input.lunar_calling,
+        pet_summon: input.pet_summon,
+        coatings: input.coatings.clone(),
+    };
+    let cached = world
+        .get_resource::<ActionCache>()
+        .ok_or("class follower action metadata cache unavailable")?
+        .0
+        .get(&key)
+        .cloned();
+    let cached = match cached {
+        Some(cached) => cached,
+        None => {
+            let (program, bindings) = parse(spec, &input)?;
+            let spells = crate::literal_rotation::program_action_spells_with_composite(
+                &program,
+                &bindings,
+                "apply_poison",
+                input.coatings.iter().copied(),
+            );
+            let cached = Arc::new(CachedActions { program, spells });
+            world
+                .resource_mut::<ActionCache>()
+                .0
+                .insert(key, Arc::clone(&cached));
+            cached
+        }
+    };
+    let mut bindings = crate::simc_apl_native::Bindings::default();
+    let mut spells = cached.spells.clone();
+    spells.extend(equipped_action_spells(
+        world,
+        actor,
+        &cached.program,
+        &mut bindings,
+    )?);
+    spells.sort_unstable();
+    spells.dedup();
+    Ok(spells)
+}
 
 /// Actor-specific inputs selected before pure program parsing.
 pub struct ActionInputs<'a> {
@@ -261,6 +344,11 @@ pub fn equipped_action_spells(
     let equipment = crate::literal_rotation::equipment::Equipment::load(world, actor, bindings)?;
     let mut spells = Vec::new();
     for (_, action) in program.actions() {
+        if let Some(slot) = equipment.slots.get(&action.name)
+            && let Some(item) = slot.on_use
+        {
+            spells.push(item.on_use.spell_id);
+        }
         let slots = match action.name.as_str() {
             "use_item" => equipment.slot_for_action(action)?.into_iter().collect(),
             "use_items" => equipment.use_items_slots(action, program)?,

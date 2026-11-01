@@ -105,6 +105,7 @@ fn spawn_at(spec: u32, level: u8) -> Pull {
     let mut harness = harness_with_plugins(vec![], &[], 8, false, |app| {
         app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
         app.add_plugins(server_combat::stats::StatsPlugin);
+        server_follower_apl::action_metadata::install_provider(app);
     })
     .expect("native world database");
     let data = world_db().unwrap();
@@ -221,6 +222,30 @@ fn pure_action_metadata_matches_every_class_rotation() {
         )
         .unwrap();
         let pure = server_follower_apl::action_metadata::action_spells(spec, &input).unwrap();
+        let (program, mut bindings) =
+            server_follower_apl::action_metadata::parse(spec, &input).unwrap();
+        let mut expected = pure.clone();
+        expected.extend(
+            server_follower_apl::action_metadata::equipped_action_spells(
+                pull.harness.app.world(),
+                pull.follower,
+                &program,
+                &mut bindings,
+            )
+            .unwrap(),
+        );
+        expected.sort_unstable();
+        expected.dedup();
+        assert_eq!(
+            pull.harness
+                .app
+                .world()
+                .get::<server_combat::followers::FollowerActionSpells>(pull.follower)
+                .unwrap()
+                .0,
+            expected,
+            "spec{spec} spawn metadata differs"
+        );
         assert!(!pure.is_empty(), "spec{spec} has no bound actions");
         assert_eq!(
             pure,
@@ -255,6 +280,22 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
         shared::item_data::ItemDefinitionSource::Retail,
         204736,
     ));
+    let provider = world
+        .resource::<server_combat::followers::FollowerActionProvider>()
+        .0;
+    let action_spells = provider(world, pull.follower, 63).unwrap();
+    world
+        .entity_mut(pull.follower)
+        .insert(server_combat::followers::FollowerActionSpells(
+            action_spells,
+        ));
+    assert!(
+        world
+            .get::<server_combat::followers::FollowerActionSpells>(pull.follower)
+            .unwrap()
+            .0
+            .contains(&407512)
+    );
     let input =
         server_follower_apl::action_metadata::read_inputs(world, pull.follower, 63).unwrap();
     let (program, mut bindings) = server_follower_apl::action_metadata::parse(63, &input).unwrap();

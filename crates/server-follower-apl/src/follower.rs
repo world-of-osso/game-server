@@ -198,6 +198,7 @@ pub struct FollowerAplPlugin;
 
 impl Plugin for FollowerAplPlugin {
     fn build(&self, app: &mut App) {
+        crate::action_metadata::install_provider(app);
         app.add_systems(
             FixedUpdate,
             drive_followers.after(server::followers::update_ai),
