@@ -79,8 +79,14 @@ fn parse_party_specs(value: &str) -> Result<[u32; 5], String> {
 
 /// The class profiles for `specs`, each checked against its party slot's role.
 fn read_party_profiles(specs: [u32; 5]) -> Result<Vec<ClassProfile>, String> {
+    select_party_profiles(specs, &class_profiles::read_profiles()?)
+}
+
+fn select_party_profiles(
+    specs: [u32; 5],
+    profiles: &[ClassProfile],
+) -> Result<Vec<ClassProfile>, String> {
     use shared::group::GroupRole::{Dps, Healer, Tank};
-    let profiles = class_profiles::read_profiles()?;
     specs
         .into_iter()
         .zip([Tank, Healer, Dps, Dps, Dps])
@@ -141,7 +147,14 @@ pub fn spawn_party_with_healer(
 ) -> Result<Party, String> {
     let mut specs = DEFAULT_PARTY;
     specs[1] = spec;
-    spawn_profiled_party(world, copy, at, level, read_party_profiles(specs)?)
+    spawn_profiled_party(
+        world,
+        copy,
+        at,
+        level,
+        read_party_profiles(specs)?,
+        GearSource::Journal,
+    )
 }
 
 /// Attach four class companions to an existing parity healer player.
@@ -154,7 +167,7 @@ pub fn spawn_party_for_healer_player(world: &mut World, healer: Entity) -> Resul
         .into_iter()
         .map(|index| profiles[index].clone())
         .collect();
-    let members = spawn_companions(world, healer, &companions)?;
+    let members = spawn_companions(world, healer, &companions, GearSource::Journal)?;
     party::join_members(world, healer, shared::group::GroupRole::Healer, &members)?;
     world
         .entity_mut(healer)
@@ -177,14 +190,9 @@ fn spawn_companions(
     world: &mut World,
     owner: Entity,
     profiles: &[ClassProfile],
+    gear: GearSource,
 ) -> Result<Vec<Entity>, String> {
-    class_spawn::spawn_members(
-        world,
-        owner,
-        profiles,
-        SIMULATOR_SEX_SEED,
-        GearSource::Journal,
-    )
+    class_spawn::spawn_members(world, owner, profiles, SIMULATOR_SEX_SEED, gear)
 }
 
 /// Assign the headless reference player its distinct group identity.
@@ -201,7 +209,42 @@ fn spawn_configured_party(
     configuration: PartyConfiguration,
 ) -> Result<Party, String> {
     let profiles = read_party_profiles(configuration.specs)?;
-    spawn_profiled_party(world, copy, at, configuration.level, profiles)
+    spawn_profiled_party(
+        world,
+        copy,
+        at,
+        configuration.level,
+        profiles,
+        GearSource::Journal,
+    )
+}
+
+/// Spawn an explicitly selected class party using the qualified key-band builds.
+pub fn spawn_keystone_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    specs: [u32; 5],
+    key_level: u32,
+) -> Result<Party, String> {
+    let classes = world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .ok_or("follower classes unavailable")?;
+    let spells = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .ok_or("follower spells unavailable")?;
+    let profiles = super::gear::wcl::class_profiles(classes, key_level)?;
+    let qualified = class_profiles::validate_profiles(&profiles, classes, spells, level);
+    let selected = select_party_profiles(specs, &qualified)?;
+    spawn_profiled_party(
+        world,
+        copy,
+        at,
+        level,
+        selected,
+        GearSource::KeystoneBand(key_level),
+    )
 }
 
 /// Party units that wear gear with the profile that selects it: follower
@@ -224,11 +267,13 @@ fn spawn_profiled_party(
     at: Position,
     level: u8,
     profiles: Vec<ClassProfile>,
+    gear: GearSource,
 ) -> Result<Party, String> {
     let difficulty = copy_difficulty(world, copy)?;
-    let (owner, leader) = spawn_class_owner(world, &profiles[4], level, copy, at, difficulty)?;
+    let (owner, leader) =
+        spawn_class_owner(world, &profiles[4], level, copy, at, difficulty, gear)?;
     world.entity_mut(owner).insert(LeaderProfile(leader));
-    let members = spawn_companions(world, owner, &profiles[..4])?;
+    let members = spawn_companions(world, owner, &profiles[..4], gear)?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
         .entity_mut(owner)
@@ -393,10 +438,11 @@ fn spawn_class_owner(
     copy: crate::maps::InMap,
     at: Position,
     difficulty: crate::maps::DungeonDifficulty,
+    gear: GearSource,
 ) -> Result<(Entity, Profile), String> {
     let owner = spawn_parity_player(world, source.spec_id, level, source.race, copy, difficulty)?;
     world.entity_mut(owner).insert(at);
-    class_spawn::install_class(world, owner, owner, source, 0, 4, GearSource::Journal)?;
+    class_spawn::install_class(world, owner, owner, source, 0, 4, gear)?;
     // install_class makes the actor follow `owner`; the party owner follows no one.
     let follower = world
         .entity_mut(owner)

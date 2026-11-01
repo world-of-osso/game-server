@@ -62,6 +62,78 @@ pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
 }
 
 #[test]
+fn keystone_simulator_spawns_selected_class_party_with_real_apls() {
+    let mut app = build_app();
+    let maps = app.world().resource::<crate::maps::MapStore>().clone();
+    let copy = app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            2515,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 23,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1792454400,
+            },
+        )
+        .unwrap()
+        .map;
+    let party = crate::followers::simulator::spawn_keystone_party(
+        app.world_mut(),
+        copy,
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        70,
+        [66, 105, 262, 63, 253],
+        2,
+    )
+    .unwrap();
+    let units: Vec<_> = std::iter::once(party.owner)
+        .chain(party.members.iter().copied())
+        .collect();
+    let actual: Vec<_> = units
+        .iter()
+        .map(|unit| {
+            app.world()
+                .get::<shared::components::ActiveSpec>(*unit)
+                .unwrap()
+                .0
+        })
+        .collect();
+    assert_eq!(actual, vec![253, 66, 105, 262, 63]);
+    for unit in units {
+        assert!(
+            app.world()
+                .get::<crate::followers::AplControlled>(unit)
+                .is_some()
+        );
+        assert!(
+            !app.world()
+                .get::<crate::followers::FollowerActionSpells>(unit)
+                .unwrap()
+                .0
+                .is_empty()
+        );
+        assert!(
+            !app.world()
+                .get::<crate::stats::EquippedItems>(unit)
+                .unwrap()
+                .items
+                .is_empty()
+        );
+    }
+}
+
+#[test]
 fn native_evade_at_home_completes_ordinary_return_lifecycle() {
     let mut app = build_app();
     let copy = create_copy(&mut app);
