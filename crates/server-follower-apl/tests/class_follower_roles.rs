@@ -600,6 +600,44 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
 }
 
 #[test]
+fn class_tank_defends_against_an_engaged_alternate_after_its_primary_dies() {
+    let mut pull = spawn(66);
+    let owner = pull.harness.caster;
+    let primary = pull.harness.npc;
+    let alternate = server_combat::spell_cast::test_harness::spawn_npc(&mut pull.harness.app, 3.0);
+    let world = pull.harness.app.world_mut();
+    let map = *world.get::<server_combat::maps::InMap>(primary).unwrap();
+    world.entity_mut(alternate).insert((
+        map,
+        Health {
+            current: 10_000_000.0,
+            max: 10_000_000.0,
+        },
+        shared::components::ThreatTable::default(),
+    ));
+    server_combat::creature_aggro::add_threat(world, primary, owner, 100.0);
+    server_combat::creature_aggro::add_threat(world, alternate, owner, 100.0);
+    server_combat::combat::kill_unit(world, owner, primary);
+    for _ in 0..200 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+        if pull.events().iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(pull.follower.to_bits())
+                && event.target == Some(alternate.to_bits())
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    panic!(
+        "class tank did not damage the engaged alternate after primary death: {:?}",
+        pull.casts()
+    );
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;

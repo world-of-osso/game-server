@@ -476,7 +476,7 @@ fn current_victim_garrick_primary_death_without_alternate_returns_to_owner() {
 }
 
 #[test]
-fn current_victim_garrick_primary_death_preserves_live_alternate_party_defence() {
+fn current_victim_primary_death_pursues_engaged_alternate() {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     update_ai(h.app.world_mut());
     h.advance(3);
@@ -526,15 +526,6 @@ fn current_victim_garrick_primary_death_preserves_live_alternate_party_defence()
             .world()
             .get::<crate::creature_ai::FollowOwner>(unit)
             .is_none()
-    );
-    let before = h.health(alternate);
-    for _ in 0..45 {
-        update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert!(
-        h.health(alternate) < before,
-        "real sourced Garrick spells still defend the party after the primary dies"
     );
 }
 
