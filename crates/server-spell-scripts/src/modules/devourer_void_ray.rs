@@ -42,6 +42,11 @@ fn finish_ray(world: &mut World, actor: Entity, aura: &combat::auras::AuraInstan
     let known = world.get::<KnownSpells>(actor);
     let final_breath = known.is_some_and(|known| known.contains(1266500));
     let moment = known.is_some_and(|known| known.contains(1238488));
+    let eradicate = known.is_some_and(|known| known.contains(1226033));
+    // SimC76f8118 cpp6392–6401: completed Void Ray grants Eradicate.
+    if eradicate && !spell_cast::try_cast_triggered(world, actor, 1239524, Some(actor), 1) {
+        error!(?actor, "native Eradicate buff was refused");
+    }
     if final_breath {
         // SimC76f8118 cpp3282–3325: a completed channel executes an additional
         // native tick at Final Breath effect1's percentage.

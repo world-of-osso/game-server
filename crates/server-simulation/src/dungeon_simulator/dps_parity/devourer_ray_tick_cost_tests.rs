@@ -101,6 +101,31 @@ fn batch4_complete_ray_grants_moment_and_final_breath() {
     );
 }
 
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn completed_void_ray_grants_eradicate() {
+    let mut run = start_ray(1);
+    let actor = run.actor;
+    assert!(
+        run.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap()
+            .contains(1226033)
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1239524));
+    for _ in 0..100 {
+        run.app.update();
+        if run.app.world().get::<CastState>(actor).is_none() {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 1239524),
+        "completed Void Ray grants Eradicate"
+    );
+}
+
 fn start_ray(targets: usize) -> Run {
     let mut run = prepare(1480, targets).expect("native Devourer profile");
     run.app
