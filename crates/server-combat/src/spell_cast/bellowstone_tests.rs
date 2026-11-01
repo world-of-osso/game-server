@@ -1,5 +1,5 @@
 //! Equipped Resonant Bellowstone: SimC76f8118 unique_gear_midnight.cpp2109.
-use super::{Harness, item_fixture};
+use super::{Harness, devastate, item_fixture};
 use crate::auras::{self, ActiveAuras, procs};
 use shared::protocol::EquipmentSlot;
 
@@ -51,6 +51,7 @@ fn aura(h: &Harness, spell: u32) -> Option<auras::AuraInstance> {
 fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     let _seed = crate::random::seed_scope(70448);
     let mut h = item_fixture(false);
+    devastate(&mut h);
     h.app
         .world_mut()
         .get_mut::<crate::stats::EquippedItems>(h.caster)
@@ -71,8 +72,8 @@ fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     let driver = aura(&h, DRIVER).expect("equipped trinket supplies its native driver");
     assert!(driver.cast_item_level.is_some());
     let base = crit(&h);
-    for _ in 0..1000 {
-        emit(&mut h, procs::PROC_HIT_NORMAL);
+    for _ in 0..100 {
+        devastate(&mut h);
         if aura(&h, LAST_ROAR).is_some() {
             break;
         }
@@ -80,14 +81,17 @@ fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     let last = aura(&h, LAST_ROAR).expect("real equipment proc applies Last Roar");
     assert!(last.effects.iter().any(|e| e.index == 0 && e.amount > 0.0));
     assert!(crit(&h) > base, "Last Roar must increase effective crit");
-    assert!(
-        aura(&h, ECHOING_ROAR).is_none(),
+    let stacks = aura(&h, ECHOING_ROAR).map_or(0, |echo| echo.stacks);
+    emit(&mut h, procs::PROC_HIT_NORMAL);
+    assert_eq!(
+        aura(&h, ECHOING_ROAR).map_or(0, |echo| echo.stacks),
+        stacks,
         "normal hits cannot trigger Echoing Roar"
     );
     let before = crit(&h);
     emit(&mut h, procs::PROC_HIT_CRITICAL);
     let echo = aura(&h, ECHOING_ROAR).expect("critical hit adds Echoing Roar");
-    assert_eq!(echo.stacks, 1);
+    assert_eq!(echo.stacks, stacks + 1);
     assert!(echo.effects.iter().any(|e| e.index == 0 && e.amount > 0.0));
     assert!(
         crit(&h) > before,
@@ -95,8 +99,8 @@ fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     );
     let first = crit(&h);
     emit(&mut h, procs::PROC_HIT_NORMAL);
-    assert_eq!(aura(&h, ECHOING_ROAR).unwrap().stacks, 1);
+    assert_eq!(aura(&h, ECHOING_ROAR).unwrap().stacks, stacks + 1);
     emit(&mut h, procs::PROC_HIT_CRITICAL);
-    assert_eq!(aura(&h, ECHOING_ROAR).unwrap().stacks, 2);
+    assert_eq!(aura(&h, ECHOING_ROAR).unwrap().stacks, stacks + 2);
     assert!(crit(&h) > first, "each critical stack increases crit");
 }
