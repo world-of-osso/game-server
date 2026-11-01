@@ -783,6 +783,79 @@ fn class_follower_healer_casts_holy_priest_apl_heals_on_dummy_pull() {
 }
 
 #[test]
+fn class_healer_heals_the_most_injured_party_member_before_damage() {
+    let mut pull = spawn(257);
+    let owner = pull.harness.caster;
+    let profiles = read_profiles().unwrap();
+    let arcane = profiles
+        .iter()
+        .find(|profile| profile.spec_id == 62)
+        .unwrap();
+    let ally = spawn_class(
+        pull.harness.app.world_mut(),
+        owner,
+        arcane,
+        1,
+        1,
+        GearSource::Journal,
+    )
+    .unwrap();
+    // The owner is at half health; the attacking ally is far lower.
+    let max = pull.harness.app.world().get::<Health>(ally).unwrap().max;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(ally)
+        .insert(Health {
+            current: max * 0.1,
+            max,
+        });
+    let mana = pull
+        .harness
+        .app
+        .world()
+        .get::<shared::components::Mana>(pull.follower)
+        .unwrap()
+        .current;
+    let healer = Some(pull.follower.to_bits());
+    let first_heal = |pull: &Pull| {
+        pull.events()
+            .iter()
+            .position(|event| event.source == healer && event.kind == CombatLogKind::Heal)
+    };
+    for _ in 0..FRAMES {
+        if first_heal(&pull).is_some() {
+            break;
+        }
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    let first_heal = first_heal(&pull).expect("Holy follower must heal an injured party member");
+    assert_eq!(
+        pull.events()[first_heal].target,
+        Some(ally.to_bits()),
+        "Holy follower must heal the most injured ally first"
+    );
+    assert!(
+        !pull.events()[..first_heal]
+            .iter()
+            .any(|event| event.source == healer && event.kind == CombatLogKind::Damage),
+        "Holy follower must heal before damaging while the ally attacks"
+    );
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<shared::components::Mana>(pull.follower)
+            .unwrap()
+            .current
+            < mana,
+        "ordinary heals must spend mana"
+    );
+}
+
+#[test]
 fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
     let mut pull = spawn(257);
     let owner = pull.harness.caster;
