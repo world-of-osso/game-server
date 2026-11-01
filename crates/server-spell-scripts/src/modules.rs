@@ -275,6 +275,7 @@ register_modules! {
     druid_ascendant_stars: (1054, "modules/druid_ascendant_stars.rs"),
     druid_astral_smolder: (1054, "modules/druid_astral_smolder.rs"),
     druid_atmospheric_exposure: (1054, "modules/druid_atmospheric_exposure.rs"),
+    druid_balance_of_all_things: (1054, "modules/druid_balance_of_all_things.rs"),
     druid_eclipse: (1054, "modules/druid_eclipse.rs"),
     druid_shooting_stars: (1054, "modules/druid_shooting_stars.rs"),
     druid_touch_cosmos: (1054, "modules/druid_touch_cosmos.rs"),

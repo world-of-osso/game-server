@@ -130,6 +130,7 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
             ..Default::default()
         },
     );
+    super::druid_balance_of_all_things::on_eclipse(world, caster, spell);
 }
 
 fn trigger_eclipse_benefits(world: &mut World, caster: Entity) {

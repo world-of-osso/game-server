@@ -2222,6 +2222,63 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_eclipse_grants_decaying_critical_stacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let starfire = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(194153)
+        .unwrap()
+        .clone();
+    let eclipse = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233272)
+        .unwrap()
+        .clone();
+    let before = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &eclipse, Some(actor)).unwrap();
+    let stacks = |app: &App| {
+        app.world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 394050)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&app), 10, "Lunar Eclipse grants ten native stacks");
+    let initial = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    assert!(
+        initial > before + 15.0,
+        "Eclipse stacks increase Arcane crit: {before} -> {initial}"
+    );
+    for _ in 0..22 {
+        app.update();
+    }
+    assert_eq!(
+        stacks(&app),
+        9,
+        "one stack decays at the native one-second period"
+    );
+    let decayed = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    assert!(
+        decayed < initial,
+        "critical chance follows stack decay: {initial} -> {decayed}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn balance_ascendant_stars_boosts_three_starsurges() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
