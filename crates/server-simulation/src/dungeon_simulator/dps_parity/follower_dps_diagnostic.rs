@@ -211,6 +211,86 @@ fn follower_elemental_flame_shock_uses_mastery_on_direct_and_periodic_damage() {
     );
 }
 
+/// The production dummy's 120 s SimC `max_time` window in 50 ms frames.
+const FIXED_FIGHT_FRAMES: u32 = 2400;
+
+/// Engage the dummy for a SimC fixed-time fight of `seconds`. SimC76f8118
+/// sim.cpp3582–3585: `fight_remains` is the iteration length minus elapsed time,
+/// not the dummy's projected time to die.
+fn start_fixed_time_fight(
+    app: &mut App,
+    owner: Entity,
+    actor: Entity,
+    target: Entity,
+    seconds: f64,
+) {
+    app.insert_resource(server_follower_apl::registry::FixedLengthFight { duration: seconds });
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    app.world_mut()
+        .entity_mut(owner)
+        .insert(crate::combat::AutoAttack::new(target));
+    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    finish_follower_precombat(app, actor);
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn blood_follower_spends_runic_power_inside_a_fixed_fights_last_ten_seconds() {
+    // SimC76f8118 apl_death_knight.cpp204:
+    // death_strike,if=runic_power.deficit<40|fight_remains<10|...
+    let death_strikes = |seconds: f64| {
+        let _seed = crate::random::seed_scope(1);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 250, 90);
+        for _ in 0..5 {
+            app.update();
+        }
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        start_fixed_time_fight(&mut app, owner, actor, target, seconds);
+        for _ in 0..200 {
+            app.update();
+        }
+        app.world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        // Hold 60 Runic Power (deficit 65) so only fight_remains can select Death Strike
+        // over the following heart_strike,if=rune>=2 / blood_boil lines.
+        for _ in 0..160 {
+            let power = shared::components::PowerType::RunicPower;
+            let current = crate::spell_cast::powers::power_value(app.world(), actor, power)
+                .unwrap()
+                .0;
+            crate::spell_cast::powers::change_power(app.world_mut(), actor, power, 600.0 - current);
+            app.update();
+        }
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(49998)
+            })
+            .count()
+    };
+    let ending = death_strikes(20.0);
+    let long = death_strikes(300.0);
+    assert!(
+        ending > long,
+        "a fight ending within 10 s spends Runic Power on Death Strike: {ending} vs {long}"
+    );
+}
+
 /// SimC runs precombat before the fixed-time target-health timeline starts.
 fn finish_follower_precombat(app: &mut App, actor: Entity) {
     for _ in 0..800 {
@@ -1880,14 +1960,13 @@ fn follower_dps_production_dummy() {
     } else {
         None
     };
-    app.world_mut()
-        .entity_mut(owner)
-        .insert(crate::networking::CombatTarget(Some(target)));
-    app.world_mut()
-        .entity_mut(owner)
-        .insert(crate::combat::AutoAttack::new(target));
-    crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
-    finish_follower_precombat(&mut app, actor);
+    start_fixed_time_fight(
+        &mut app,
+        owner,
+        actor,
+        target,
+        f64::from(FIXED_FIGHT_FRAMES) / 20.0,
+    );
     let stats = app
         .world()
         .get::<crate::stats::CharacterStats>(actor)
@@ -1952,10 +2031,10 @@ fn follower_dps_production_dummy() {
     let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
     let mut aura_frames = std::collections::BTreeMap::new();
-    for frame in 0..2400 {
+    for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
-                .advance(app.world_mut(), (frame + 1) * 50)
+                .advance(app.world_mut(), u64::from(frame + 1) * 50)
                 .expect("replay SimC tank pressure");
         }
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
@@ -1963,7 +2042,8 @@ fn follower_dps_production_dummy() {
             .world_mut()
             .get_mut::<shared::components::Health>(target)
             .unwrap();
-        health.current = health.max * (2400 - frame) as f32 / 2400.0;
+        health.current =
+            health.max * (FIXED_FIGHT_FRAMES - frame) as f32 / FIXED_FIGHT_FRAMES as f32;
         let before_power = crate::spell_cast::powers::power_value(
             app.world(),
             actor,
@@ -2192,7 +2272,7 @@ fn follower_dps_production_dummy() {
         json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "self_absorbs_by_spell":self_absorbs,"self_absorb_non_unit":absorb_non_unit,"self_absorb_unknown_scale":absorb_unknown_scale,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
-        "mean_stats":stat_sums.map(|sum| sum / 2400.0),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / 2400.0)).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
+        "mean_stats":stat_sums.map(|sum| sum / f64::from(FIXED_FIGHT_FRAMES)),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES))).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
