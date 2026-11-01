@@ -491,9 +491,24 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
             .current_destination(tank));
         previous = at;
     }
-    let following = h.app.world().get::<FollowOwner>(tank).is_some();
+    let world = h.app.world_mut();
+    let following = world.get::<FollowOwner>(tank).is_some();
+    let active = world
+        .query_filtered::<Entity, crate::creature_ai::ActiveUncontrolled>()
+        .iter(world)
+        .any(|entity| entity == tank);
+    let health = world
+        .get::<shared::components::Health>(tank)
+        .map(|value| value.current);
+    let cast = world
+        .get::<shared::casting::CastState>(tank)
+        .map(|value| value.cast_while_moving);
+    let speed = world
+        .get::<crate::auras::AuraStatMods>(tank)
+        .map(|value| value.movement_speed);
+    let elapsed = world.resource::<Time>().elapsed_secs();
     eprintln!(
-        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} following={following} end={previous:?} greatest_step={greatest_step}"
+        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} following={following} active={active} health={health:?} cast_movable={cast:?} speed={speed:?} elapsed={elapsed} end={previous:?} greatest_step={greatest_step}"
     );
     assert!(
         greatest_step < 1.0,
