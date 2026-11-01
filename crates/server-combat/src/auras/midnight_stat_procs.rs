@@ -13,6 +13,9 @@ const LINING: u32 = 1283697;
 const LINING_RPPM: u32 = 1229511;
 const INSIGHT: u32 = 1229746;
 const EVERSONG: u32 = 1258209;
+const BELLOWSTONE: u32 = 1250564;
+const LAST_ROAR: u32 = 1254180;
+const ECHOING_ROAR: u32 = 1254331;
 /// unique_gear_midnight.cpp45–55: Peridot, Garnet, Lapis, Amethyst descriptions.
 const GEM_COLORS: [u32; 4] = [14262, 14276, 14277, 14278];
 
@@ -22,6 +25,23 @@ pub(super) fn register(scripts: &mut AuraScripts) {
         AuraScript {
             check_proc: Some(is_first_lining_callback),
             on_proc: Some(apply_insight),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        LAST_ROAR,
+        AuraScript {
+            on_apply: Some(apply_roar_rating),
+            on_refresh: Some(apply_roar_rating),
+            check_proc: Some(is_critical_hit),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        ECHOING_ROAR,
+        AuraScript {
+            on_apply: Some(apply_roar_rating),
+            on_refresh: Some(apply_roar_rating),
             ..Default::default()
         },
     );
@@ -105,14 +125,48 @@ fn read_driver_value(
     item_level: Option<u16>,
     item_inventory_type: Option<u8>,
     index: u8,
+    driver: u32,
 ) -> Option<f32> {
-    let mut spell = world.resource::<SpellStore>().get(LINING)?.clone();
+    let mut spell = world.resource::<SpellStore>().get(driver)?.clone();
     spell.cast_item_level = item_level;
     spell.cast_item_inventory_type = item_inventory_type;
     let effect = spell.effects.iter().find(|effect| effect.index == index)?;
     Some(crate::spell_cast::effects::modded_base_points(
         world, unit, &spell, effect,
     ))
+}
+
+/// SimC76f8118 unique_gear_midnight.cpp2109–2127: the buff ratings come
+/// from the item-scaled driver, not the zero-value child aura effects.
+fn apply_roar_rating(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let index = u8::from(aura.spell_id == ECHOING_ROAR);
+    let Some(amount) = read_driver_value(
+        world,
+        unit,
+        aura.cast_item_level,
+        aura.cast_item_inventory_type,
+        index,
+        BELLOWSTONE,
+    )
+    .filter(|amount| *amount > 0.0) else {
+        error!(
+            ?unit,
+            spell = aura.spell_id,
+            "Bellowstone driver lacks item-scaled rating"
+        );
+        return;
+    };
+    if let Some(effect) = world
+        .get_mut::<ActiveAuras>(unit)
+        .and_then(|auras| auras.into_inner().get_mut(aura.instance_id))
+        .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+    {
+        effect.amount = amount;
+    }
+}
+
+fn is_critical_hit(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.hit_mask & super::procs::PROC_HIT_CRITICAL != 0
 }
 
 /// unique_gear_midnight.cpp682–685: each equipped driver adds its effect0
@@ -127,8 +181,8 @@ fn read_insight_amount(world: &World, unit: Entity) -> Option<f32> {
     sources
         .into_iter()
         .try_fold(0.0, |sum, (level, inventory_type)| {
-            let value = read_driver_value(world, unit, level, inventory_type, 0)?;
-            let share = read_driver_value(world, unit, level, inventory_type, 1)?;
+            let value = read_driver_value(world, unit, level, inventory_type, 0, LINING)?;
+            let share = read_driver_value(world, unit, level, inventory_type, 1, LINING)?;
             Some(sum + value * share / 100.0)
         })
 }
