@@ -500,6 +500,49 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
             eprintln!("formation target={target:?} navigation unbaked")
         }
     }
+    let mut substep_nav = Navigation::new(&nav);
+    let mut substep_position = from;
+    let mut max_rise = 0.0_f32;
+    for iteration in 0..250 {
+        let subrequest = crate::navigation::MoveRequest {
+            from: substep_position,
+            distance: 0.1,
+            ..request
+        };
+        let mut result = substep_nav.advance(tank, subrequest);
+        if matches!(result, crate::navigation::Step::Pending) {
+            substep_nav.drain_until_idle();
+            result = substep_nav.advance(tank, subrequest);
+        }
+        let crate::navigation::Step::Moved {
+            mut position,
+            reached,
+        } = result
+        else {
+            eprintln!("substep stopped without route at {iteration} position={substep_position:?}");
+            break;
+        };
+        let support = crate::creature_ai::follower_footprint_ground(
+            Some(&mut h.app.world_mut().resource_mut::<GroundMap>()),
+            Some(&map),
+            substep_position,
+            position,
+        );
+        let Some(height) = support else {
+            eprintln!(
+                "substep unsupported at {iteration} from={substep_position:?} to={position:?}"
+            );
+            break;
+        };
+        max_rise = max_rise.max(height - substep_position.y);
+        position.y = height;
+        substep_position = position;
+        if reached {
+            eprintln!("substep reached at {iteration}");
+            break;
+        }
+    }
+    eprintln!("substep end={substep_position:?} max_step_rise={max_rise}");
     h.app.insert_resource(Navigation::new(&nav));
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
     let mut previous = from;
