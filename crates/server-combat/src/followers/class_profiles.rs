@@ -12,6 +12,8 @@ pub struct ClassProfile {
     pub race: u8,
     pub talents: String,
     pub race_source: String,
+    #[serde(default)]
+    pub talents_source: Option<String>,
     pub talent_entries: Option<Vec<(u32, u32)>>,
     pub rejection: Option<String>,
 }
@@ -30,6 +32,12 @@ impl ClassProfile {
     }
 
     pub(super) fn talent_source(&self) -> Result<crate::trait_config::TalentSource, String> {
+        if let Some(source) = self.talents_source.as_deref() {
+            return match source {
+                "TALENTS_FROM_WCL" => Ok(crate::trait_config::TalentSource::Wcl),
+                source => Err(format!("unknown follower talent source {source}")),
+            };
+        }
         match self.race_source.as_str() {
             "RACE_FROM_SIMC_PROFILE" => Ok(crate::trait_config::TalentSource::SimcProfile),
             "RACE_FROM_PARITY_PROFILE" => Ok(crate::trait_config::TalentSource::ParityProfile),
