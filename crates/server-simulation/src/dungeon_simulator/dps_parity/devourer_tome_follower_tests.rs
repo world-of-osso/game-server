@@ -67,14 +67,16 @@ fn follower_devourer_equipped_tome_delivers_unstable_barrage() {
         .get::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .versatility_pct;
-    let base =
-        event.amount as f32 / (1.0 + versatility / 100.0) / if event.crit { 2.0 } else { 1.0 };
+    // Native Chaos Brand1490 effect0 (+3% magic damage taken) is on the dummy.
+    assert!(crate::auras::has_aura(app.world(), target, 1490));
+    let crit = if event.crit { 2.0 } else { 1.0 };
+    let base = event.amount as f32 / (1.0 + versatility / 100.0) / 1.03 / crit;
     // SimC76f8118 unique_gear_dragonflight.cpp7438–7445: 0.9, 1.0 or 1.1 of the budget.
     let ratio = base / budget;
     assert!(
         [0.9, 1.0, 1.1]
             .iter()
-            .any(|step| (ratio - step).abs() < 0.02),
+            .any(|step| (ratio - step).abs() < 0.005),
         "Barrage scales the native budget by one image step: ratio {ratio}, amount {}, budget {budget}",
         event.amount
     );
