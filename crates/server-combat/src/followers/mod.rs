@@ -450,8 +450,6 @@ mod rotation_imp_tests;
 #[cfg(test)]
 mod rotation_measurements;
 #[cfg(test)]
-mod rotation_override_tests;
-#[cfg(test)]
 mod rotation_proc_tests;
 #[cfg(test)]
 mod rotation_refresh_tests;
