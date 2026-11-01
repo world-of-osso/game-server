@@ -431,8 +431,6 @@ mod kit_dot_ownership_tests;
 #[cfg(test)]
 mod kit_germination_tests;
 #[cfg(test)]
-mod kit_interrupt_tests;
-#[cfg(test)]
 mod kit_lifebloom_refresh_tests;
 #[cfg(test)]
 mod kit_soul_of_forest_tests;
@@ -452,6 +450,8 @@ mod kit_utility_tests;
 mod kit_wild_growth_tests;
 #[cfg(any(test, feature = "test-support"))]
 pub mod native_fixture;
+#[cfg(test)]
+mod native_interrupt_tests;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
