@@ -145,8 +145,9 @@ pub(crate) fn grants_preset_spell(world: &World, unit: Entity, spell: u32) -> bo
         return false;
     };
     world
-        .get_resource::<ShapeshiftForms>()
-        .and_then(|forms| forms.0.get(&form))
+        .resource::<ShapeshiftForms>()
+        .0
+        .get(&form)
         .is_some_and(|row| row.preset_spells.contains(&spell))
 }
 
