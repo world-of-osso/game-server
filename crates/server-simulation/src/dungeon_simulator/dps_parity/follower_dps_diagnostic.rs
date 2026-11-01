@@ -450,6 +450,114 @@ fn class_blood_follower_regenerates_runes_and_keeps_casting() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn blood_follower_death_strike_counts_damage_beyond_current_health() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    use shared::components::Health;
+
+    fn strike(start_health_fraction: f32) -> (i32, i32, i32, f32) {
+        let _seed = crate::random::seed_scope(1);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 250, 90);
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::networking::CombatTarget(Some(target)));
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::combat::AutoAttack::new(target));
+        crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+        finish_follower_precombat(&mut app, actor);
+        app.world_mut()
+            .entity_mut(actor)
+            .insert(server::test_support::SimcInfiniteHealth);
+        let max = app.world().get::<Health>(actor).unwrap().max;
+        app.world_mut().get_mut::<Health>(actor).unwrap().current = max * start_health_fraction;
+        let hit = Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: 0,
+            school: 1,
+            raw: max * 0.9,
+            level_scaling_factor: 1.0,
+            kind: HitKind::Melee {
+                hand: 0,
+                outcome: "Hit".into(),
+                level_difference: 0,
+                critical_multiplier: 1.0,
+                weapon_speed: 2.0,
+            },
+        };
+        let start = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::combat::replay_healer_hit(app.world_mut(), target, actor, &hit).unwrap();
+        for _ in 0..4 {
+            app.update();
+        }
+        let damage = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..]
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.target == Some(actor.to_bits())
+                    && event.source == Some(target.to_bits())
+            })
+            .unwrap();
+        let (amount, overflow) = (damage.amount, damage.overflow);
+        app.world_mut().get_mut::<Health>(actor).unwrap().current = max * 0.01;
+        assert!(crate::spell_cast::try_cast_triggered(
+            app.world_mut(),
+            actor,
+            49998,
+            Some(target),
+            1
+        ));
+        for _ in 0..4 {
+            app.update();
+        }
+        let heal = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[start..]
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(45470)
+            })
+            .expect("Death Strike heal")
+            .amount;
+        (amount, overflow, heal, max)
+    }
+
+    let (full_damage, full_overflow, full_heal, max) = strike(1.0);
+    let (low_damage, low_overflow, low_heal, _) = strike(0.01);
+    assert_eq!(full_damage, low_damage);
+    assert_eq!(full_overflow, 0);
+    assert!(low_overflow > 0, "low-health hit must report overkill");
+    assert!(
+        full_heal as f32 > max * 0.1,
+        "damage-based heal must exceed the minimum"
+    );
+    assert_eq!(
+        low_heal, full_heal,
+        "remaining health must not reduce the recorded damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_starts_measurement_after_precombat() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     let owner = app
