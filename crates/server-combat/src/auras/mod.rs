@@ -2009,6 +2009,26 @@ fn commit_death_prevention(
     }
 }
 
+fn scripted_lethal_absorb(world: &mut World, unit: Entity, loss: f32, school: u32) -> Option<f32> {
+    let health = world.get::<shared::components::Health>(unit)?;
+    if health.current <= 0.0 || loss < health.current {
+        return None;
+    }
+    let registry = *world.resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+    let hooks: Vec<_> = world
+        .get::<ActiveAuras>(unit)?
+        .iter()
+        .filter(|aura| {
+            aura.effects.iter().any(|effect| {
+                effect.aura_type == handlers::SCHOOL_ABSORB_OVERKILL
+                    && effect.misc_values[0] as u32 & school_or_physical(school) != 0
+            })
+        })
+        .filter_map(|aura| registry.lethal_absorb(aura.spell_id))
+        .collect();
+    hooks.into_iter().find_map(|hook| hook(world, unit, loss))
+}
+
 pub(crate) fn apply_attack_damage(
     world: &mut World,
     unit: Entity,
@@ -2033,6 +2053,12 @@ pub(crate) fn apply_attack_damage(
     if let Some(rescue) = find_death_prevention(world, unit, loss, school) {
         return commit_death_prevention(world, unit, rescue, loss);
     }
+    if let Some(absorbed_loss) = scripted_lethal_absorb(world, unit, loss, school) {
+        return DamageCommit {
+            lethal: false,
+            absorbed_loss,
+        };
+    }
     let absorbed_loss = overkill_absorb_amount(world, unit, loss, school);
     // Generic316 reports absorption, but only a sourced script may prevent death.
     DamageCommit {
@@ -2051,16 +2077,21 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
     if health.current <= 0.0 || loss < health.current {
         return 0.0;
     }
+    let registry = *world.resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     let eligible = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
-        auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
-            effect.aura_type == handlers::SCHOOL_ABSORB_OVERKILL
-                && effect.misc_values[0] as u32 & school_or_physical(school) != 0
-                && if effect.amount > 0.0 {
-                    loss <= effect.amount
-                } else {
-                    loss < health.max * 2.0
-                }
-        })
+        auras
+            .iter()
+            .filter(|aura| registry.lethal_absorb(aura.spell_id).is_none())
+            .flat_map(|aura| &aura.effects)
+            .any(|effect| {
+                effect.aura_type == handlers::SCHOOL_ABSORB_OVERKILL
+                    && effect.misc_values[0] as u32 & school_or_physical(school) != 0
+                    && if effect.amount > 0.0 {
+                        loss <= effect.amount
+                    } else {
+                        loss < health.max * 2.0
+                    }
+            })
     });
     if eligible { loss } else { 0.0 }
 }

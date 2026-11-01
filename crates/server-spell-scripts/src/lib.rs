@@ -27,6 +27,8 @@ pub const fn registry() -> SpellScriptRegistry {
 pub mod test_support;
 
 #[cfg(test)]
+mod lethal_absorb_tests;
+#[cfg(test)]
 mod party_reach_tests;
 #[cfg(test)]
 mod policy_order_tests;

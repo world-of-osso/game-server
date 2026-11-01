@@ -257,6 +257,8 @@ pub type RawHealHook = fn(&mut World, &EffectCtx<'_>, f32);
 pub type ExpelHarmHealHook = fn(&mut World, Entity) -> f32;
 pub type IncomingDamageBeforeMitigationHook = fn(&mut World, Entity, Option<u32>, f32);
 pub type HealReceivedHook = fn(&mut World, Entity, u32, f32, f32, bool);
+pub type LethalAbsorbHook = fn(&mut World, Entity, f32) -> Option<f32>;
+pub type LethalAbsorbLookup = fn(u32) -> Option<LethalAbsorbHook>;
 pub type SupportAuraRegistrationHook = fn(&mut crate::auras::scripts::AuraScripts);
 pub type NamedAuraFields = &'static [(u32, u8)];
 pub type SnapshotLaunchAurasHook = fn(&World, Entity, &mut SpellInfo);
@@ -493,6 +495,7 @@ pub enum SpellScriptHook {
     ExpelHarmHeal(ExpelHarmHealHook),
     IncomingDamageBeforeMitigation(IncomingDamageBeforeMitigationHook),
     HealReceived(HealReceivedHook),
+    LethalAbsorb(LethalAbsorbLookup),
     SupportAuraRegistration(SupportAuraRegistrationHook),
     NamedAuraFields(NamedAuraFields),
     SnapshotLaunchAuras(SnapshotLaunchAurasHook),
@@ -562,6 +565,13 @@ impl SpellScriptRegistry {
             })
             .flatten()
             .collect()
+    }
+
+    pub fn lethal_absorb(self, spell: u32) -> Option<LethalAbsorbHook> {
+        self.hooks().find_map(|hook| match hook {
+            SpellScriptHook::LethalAbsorb(lookup) => lookup(spell),
+            _ => None,
+        })
     }
 
     pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
