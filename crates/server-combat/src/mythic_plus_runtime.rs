@@ -1,12 +1,11 @@
 //! Challenge lifecycle over authored MapChallengeMode thresholds and scenario criteria.
+use crate::mythic_plus_policy::ChallengePolicy;
 use shared::protocol::{ChallengeBoss, ChallengePhase, ChallengeRun, KeystoneInfo};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, Default, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct UnsourcedChallengeConfig {
-    pub unsourced_pre_start_countdown_ms: u64,
-    pub unsourced_death_penalty_ms: u64,
     pub unsourced_minimum_keystone_level: u32,
     pub unsourced_seasonal_affix_rotation: Vec<HashMap<u32, Vec<u32>>>,
     pub unsourced_season_period_secs: u64,
@@ -52,6 +51,7 @@ pub struct Run {
     pub snapshot: ChallengeRun,
     pub definition: ChallengeDefinition,
     pub config: UnsourcedChallengeConfig,
+    pub policy: ChallengePolicy,
     start_ms: u64,
     killed: HashSet<u64>,
     scenario_events: HashSet<u64>,
@@ -86,6 +86,7 @@ impl Run {
             },
             definition,
             config,
+            policy: ChallengePolicy::retail(),
             start_ms: 0,
             killed: HashSet::new(),
             scenario_events: HashSet::new(),
@@ -95,7 +96,7 @@ impl Run {
         if self.snapshot.phase != ChallengePhase::Slotted {
             return Err("This keystone run has already started");
         }
-        self.start_ms = now.saturating_add(self.config.unsourced_pre_start_countdown_ms);
+        self.start_ms = now.saturating_add(self.policy.countdown_ms.value);
         self.snapshot.phase = ChallengePhase::Countdown;
         self.tick(now);
         Ok(())
@@ -157,7 +158,7 @@ impl Run {
         self.snapshot.time_lost_ms = self
             .snapshot
             .time_lost_ms
-            .saturating_add(self.config.unsourced_death_penalty_ms);
+            .saturating_add(self.policy.death_penalty_ms(self.snapshot.key.level));
     }
     pub fn depleted_level(&self) -> u32 {
         self.snapshot
@@ -180,11 +181,8 @@ impl Run {
     fn complete(&mut self) {
         self.snapshot.phase = ChallengePhase::Completed;
         self.snapshot.upgrade_levels = self
-            .definition
-            .timers_ms
-            .iter()
-            .filter(|&&limit| self.snapshot.elapsed_ms <= limit)
-            .count() as u32;
+            .policy
+            .upgrade_levels(self.snapshot.elapsed_ms, self.snapshot.time_limit_ms);
         let level = self.snapshot.key.level;
         self.snapshot.resulting_level = Some(if self.snapshot.upgrade_levels == 0 {
             self.depleted_level()
@@ -199,7 +197,7 @@ impl Run {
 mod tests {
     use super::*;
     fn run() -> Run {
-        Run::new(
+        let mut run = Run::new(
             1,
             7,
             KeystoneInfo {
@@ -227,7 +225,10 @@ mod tests {
                     .collect(),
             },
             UnsourcedChallengeConfig::default(),
-        )
+        );
+        run.policy.countdown_ms.value = 0;
+        run.policy.death_bands.value.clear();
+        run
     }
     fn clear(run: &mut Run) {
         for spawn in 0..82 {
@@ -278,8 +279,11 @@ mod tests {
     #[test]
     fn mythic_runtime_countdown_death_and_abandon_policy() {
         let mut r = run();
-        r.config.unsourced_pre_start_countdown_ms = 4000;
-        r.config.unsourced_death_penalty_ms = 15000;
+        r.policy.countdown_ms.value = 4000;
+        r.policy.death_bands.value = vec![crate::mythic_plus_policy::DeathBand {
+            min_level: 2,
+            milliseconds: 15000,
+        }];
         r.start(1000).unwrap();
         r.kill(1, 187160);
         r.death();
@@ -296,6 +300,33 @@ mod tests {
         assert_eq!(r.snapshot.resulting_level, Some(7));
         assert_eq!(r.snapshot.phase, ChallengePhase::Abandoned);
     }
+    #[test]
+    fn mythic_runtime_retail_upgrades_follow_timer_fractions() {
+        for (elapsed, upgrades) in [(600, 3), (601, 2), (800, 2), (801, 1), (1000, 1), (1001, 0)] {
+            let mut run = run();
+            run.snapshot.time_limit_ms = 1000;
+            run.start(0).unwrap();
+            clear(&mut run);
+            run.tick(elapsed);
+            assert_eq!(run.snapshot.upgrade_levels, upgrades, "elapsed {elapsed}");
+        }
+    }
+
+    #[test]
+    fn mythic_runtime_retail_deaths_use_key_level_band() {
+        for (level, penalty) in [(2, 0), (5, 0), (6, 5000), (11, 5000), (12, 15000)] {
+            let mut run = run();
+            run.snapshot.key.level = level;
+            run.policy = ChallengePolicy::retail();
+            run.start(1000).unwrap();
+            run.death();
+            assert_eq!(run.snapshot.deaths, 0);
+            run.tick(11000);
+            run.death();
+            assert_eq!(run.snapshot.time_lost_ms, penalty);
+        }
+    }
+
     #[test]
     fn mythic_runtime_unsourced_rotation_is_disabled_until_a_period_is_supplied() {
         let mut config = UnsourcedChallengeConfig::default();

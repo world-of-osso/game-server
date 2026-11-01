@@ -1029,13 +1029,14 @@ mod tests {
         let summary = {
             let mut state = h.app.world_mut().resource_mut::<Challenges>();
             let active = state.runs.get_mut(&map).unwrap();
+            active.run.tick(now + 10_000);
             for spawn in 0..82 {
                 active.run.kill(spawn, 187160);
             }
             for boss in [2582, 2585, 2583, 2584] {
                 active.run.boss(boss);
             }
-            active.run.tick(now);
+            active.run.tick(now + 10_000);
             active.run.snapshot.clone()
         };
         assert_eq!(summary.phase, ChallengePhase::Completed);

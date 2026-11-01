@@ -12,7 +12,7 @@ The offline catalog importer validates destination independence and six DB2 layo
 
 Each copy holds one run. The pure lifecycle reads injected shared ServerClock time, counts each qualifying creature entity once at its authored weight, retains scenario-event weights, consumes encounter DONE from the existing instance framework and records real death transitions. Azure bosses use the shared data-selected BossAI lifecycle. `encounter_compat.csv` preserves their four authored encounter IDs and saved ordinals when integrating the data-driven boss registry; no new combat spell numbers are authored. Only required bosses plus forces complete the run. Terminal key metadata and summary history settle in one redb transaction, idempotently by run ID. Final state stops accumulating time/kills/deaths.
 
-Unsourced numeric fields default disabled/0; their names and boundaries live only in the contract. Positive seasonal periods index explicitly supplied epoch/rotation rows; no active season is presumed. Current-character changes on a persistent connection invalidate a previously slotted character's activation authority.
+The cited timing table in `crates/server-combat/src/mythic_plus_policy.json` supplies the 10-second countdown, level-banded death penalties and timer-relative upgrade thresholds. Threshold equality qualifies in this implementation; retail equality and rounding are not established. The Guile final-minute behavior is also not established. Remaining optional unsourced numeric fields default disabled/0. Positive seasonal periods index explicitly supplied epoch/rotation rows; no active season is presumed. Current-character changes on a persistent connection invalidate a previously slotted character's activation authority.
 
 ## Proof — 2026-10-11
 

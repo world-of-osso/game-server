@@ -7,6 +7,7 @@ mod character_visual;
 pub mod item_instance;
 pub mod mythic_plus_catalog;
 pub mod mythic_plus_history;
+pub mod mythic_plus_policy;
 pub mod mythic_plus_runtime;
 pub mod raid_history_store;
 pub mod simc_apl;
