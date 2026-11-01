@@ -1,5 +1,5 @@
-use super::*;
 use super::follower_dps_diagnostic::*;
+use super::*;
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
@@ -33,4 +33,3 @@ fn follower_shadow_slam_applies_pain_through_misery() {
         assert_eq!(crate::auras::has_aura(app.world(), target, 589), selected);
     }
 }
-
