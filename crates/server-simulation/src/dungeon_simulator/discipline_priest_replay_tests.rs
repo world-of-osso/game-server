@@ -435,17 +435,19 @@ fn discipline_emergency_heals_critical_tank_before_damage() {
         }
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
-    assert!(
-        events.iter().any(|event| event.kind == CombatLogKind::Heal
-            && event.source == Some(healer.to_bits())
-            && event.target == Some(tank.to_bits())
-            && event.spell_id == Some(186263)
-            && event.amount > event.overflow),
-        "the critical tank must receive Shadow Mend: {events:?}"
-    );
+    let save = events
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && event.spell_id == Some(186263)
+                && event.amount > event.overflow
+        })
+        .unwrap_or_else(|| panic!("the critical tank must receive Shadow Mend: {events:?}"));
     assert!(run.app.world().get::<Health>(tank).unwrap().current > before);
     assert!(
-        !events
+        !events[..save]
             .iter()
             .any(|event| event.kind == CombatLogKind::CastSuccess
                 && event.source == Some(healer.to_bits())
