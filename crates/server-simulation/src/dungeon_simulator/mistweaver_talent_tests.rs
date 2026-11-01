@@ -183,6 +183,8 @@ fn mistweaver_courage_claw_heals_an_ally_for_its_damage_after_two_seconds() {
     for unit in run.slots {
         set_health_fraction(&mut run, unit, 0.2);
     }
+    // Xuen claws only an enemy the monk already fights.
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), healer, enemy);
     cast(&mut run, 325197, healer);
     advance_until(&mut run, |run| own_aura(run, healer, 460127).is_some());
 

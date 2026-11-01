@@ -10,9 +10,10 @@
 //! damage done after armor (SimC heals from pre-mitigation `result_total`; retail wins).
 //! INFERRED (residual): the remaining 1.30× of 2.600/2.00 has no DB2 source and is not applied;
 //! retire when a decomp answer or SimC implementation names it.
-//! INFERRED: the claw takes the nearest enemy and the heal an injured-first random ally (as Way
-//! of the Crane); WCL heals went to all five members (18/18/10/10/8). One cast activates at
-//! most once: a certain activation spends 460127 instead of also rolling.
+//! INFERRED: the claw takes the nearest enemy already in combat with the monk (a heal never
+//! pulls an idle enemy) and the heal an injured-first random ally (as Way of the Crane); WCL
+//! heals went to all five members (18/18/10/10/8). Without such an enemy nothing is rolled or
+//! spent. One cast activates at most once: a certain activation spends 460127 instead of rolling.
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras};
@@ -64,23 +65,15 @@ fn make_next_certain(world: &mut World, caster: Entity, _: &SpellInfo) {
 }
 
 fn activate(world: &mut World, caster: Entity, parent: &SpellInfo) {
-    if !is_selected(world, caster) || !roll_activation(world, caster) {
+    if !is_selected(world, caster) {
         return;
     }
-    let Some(center) = targets::position(world, caster) else {
+    let Some(enemy) = find_engaged_enemy(world, caster) else {
         return;
     };
-    let (_, range) = targets::spell_range(
-        world
-            .resource::<SpellStore>()
-            .get(CLAW)
-            .expect("Courage claw missing"),
-        true,
-    );
-    let Some(&enemy) = targets::area_units(world, caster, center, range, Relation::Enemy, 1).first()
-    else {
+    if !roll_activation(world, caster) {
         return;
-    };
+    }
     let ctx = EffectCtx {
         caster,
         spell: parent,
@@ -89,6 +82,22 @@ fn activate(world: &mut World, caster: Entity, parent: &SpellInfo) {
         chain_multiplier: 1.0,
     };
     queued_triggers::schedule_full_trigger(world, &ctx, enemy, CLAW, TRAVEL_MS);
+}
+
+/// The nearest enemy within 457917's range that the monk is in combat with.
+fn find_engaged_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
+    let center = targets::position(world, caster)?;
+    let (_, range) = targets::spell_range(
+        world
+            .resource::<SpellStore>()
+            .get(CLAW)
+            .expect("Courage claw missing"),
+        true,
+    );
+    let opponents: Vec<_> = combat::combat_refs::active_opponents(world, caster).collect();
+    targets::area_units(world, caster, center, range, Relation::Enemy, 0)
+        .into_iter()
+        .find(|enemy| opponents.contains(enemy))
 }
 
 fn roll_activation(world: &mut World, caster: Entity) -> bool {
