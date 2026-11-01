@@ -2,6 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::random::{self as rand, seq::SliceRandom};
+use combat::spell_cast::summon::SummonedCreature;
 use combat::spell_cast::{
     self,
     script_registry::SpellScriptHook,
@@ -9,7 +10,6 @@ use combat::spell_cast::{
     targets::{self, Relation},
 };
 use combat::spell_info::{SpellInfo, SpellStore};
-use combat::spell_cast::summon::SummonedCreature;
 use shared::components::{Health, UnitIsPet};
 
 const INVOKE: u32 = 325197;
