@@ -382,6 +382,67 @@ fn rogue_literal_spend_cap_and_base_energy_ignore_temporary_capacity() {
 }
 
 #[test]
+#[ignore = "requires native Outlaw260 profile and player actor"]
+fn outlaw_restless_blades_counts_high_roll_bonus_once() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 1).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(381989, run.actor, None),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: run.actor,
+            target: run.actor,
+            spell_id: 1214935,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let bonus =
+        crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 1214937, 3);
+    {
+        let mut pools = run
+            .app
+            .world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+            .unwrap();
+        pools.get_mut(PowerType::Energy).unwrap().current = 200.0;
+        pools.get_mut(PowerType::ComboPoints).unwrap().current = 5.0;
+    }
+    let cooldown = |run: &Run| {
+        let world = run.app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(381989)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::now(world))
+    };
+    let before = cooldown(&run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(2098, run.targets[0], Some(run.targets[0])),
+    )
+    .unwrap();
+    let reduction = before - cooldown(&run);
+    let expected = (5000.0 * (1.0 + bonus / 100.0)) as u64;
+    assert_eq!(
+        reduction, expected,
+        "high-roll cooldown reduction must apply once"
+    );
+}
+
+#[test]
 #[ignore = "requires native Outlaw260 profile and DPS_PARITY_ACTOR=player"]
 fn outlaw_fatal_flourish_uses_earned_hit_chance() {
     let _seed = crate::random::seed_scope(70448);
