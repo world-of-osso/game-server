@@ -781,8 +781,12 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), player, book)
             .unwrap(),
-        5
+        1
     );
+    for unit in &followers {
+        crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), *unit, book)
+            .unwrap();
+    }
     assert_eq!(h.app.world().get::<InMap>(player), Some(&map));
     assert!(
         h.app
