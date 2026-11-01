@@ -132,14 +132,20 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Devourer Focused Ray
 
 - Selected Focused Ray1240203 amplifies Void Ray damage children1213649/1214595 by native effect1 when the real resolved enemy count is at most native effect2 (SimC76f8118 `sc_demon_hunter.cpp`6304–6321).
+- A completed Void Ray grants selected Eradicate1239524 and executes selected Voidglare Boon1241922; interrupted channels do not (SimC76f8118 `sc_demon_hunter.cpp`6392–6415).
 ### Devourer Metamorphosis entry
 
 - Entering native Void Metamorphosis1217607 grants 200 Fury, capped by the actor's native pool (SimC76f8118 `sc_demon_hunter.cpp`12445–12452). Drain and exit behavior are separate.
 - Void Metamorphosis damage effects4/5 use Monster Within mastery once, not both their raw aura amount and the mastery-scaled amount (SimC76f8118 `sc_demon_hunter.cpp`2174–2185).
+- The literal follower's precombat initializes selected Entropy1261684 effect2 soul stacks once. Selected Midnight1250094 grants a ready Collapsing Star and effect1 lesser fragments at Meta entry. During Meta, each consumed fragment adds selected Emptiness1242504; each stack grants one hundredth of native talent1242492 effect1 as haste (SimC76f8118 `sc_demon_hunter.cpp`3678–3700,9192–9206,9824–9835,12755).
+- Collapsing Star damage creates the selected Star Fragments1240204 effect1 lesser fragments (SimC76f8118 `sc_demon_hunter.cpp`6501–6509).
 
 ### Devourer Reap
 
-- Each Reap1226019 executes the delayed damage child1225823 once, without an additional legacy1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+- Each Reap1226019 executes the delayed damage child1225823 once, without an additional Eradicate1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
+- Eradicate1225826 requires and consumes its ready buff, consumes actual lesser fragments, and delivers delayed1225827 outside Meta or1279200 in Meta. Reap and Cull are not selected while that buff is active (SimC76f8118 `sc_demon_hunter.cpp`6110–6296).
+- Selected Annihilator Voidfall builds from Consume/Devour, completed Void Ray with Meteoric Rise, and Meta with Mass Acceleration. Reap-family spenders launch meteors, spending one stack per launch; Meteoric Fall can launch the full stack, with selected World Killer replacing the last meteor and spawning its native fragment count (SimC76f8118 `sc_demon_hunter.cpp`2977–3085,3141–3168,6392–6415,6570–6635,9336–9379).
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled: native 30,832 DPS, SimC 31,152; mean paired percentage difference −0.81% ±5.23 pp (95% t interval). The point estimate is within ±5%; its interval is not. L70 remains unqualified because pinned SimC has no unique logged Annihilator keystone.
 ### Devourer Singular Strikes
 
 - Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
