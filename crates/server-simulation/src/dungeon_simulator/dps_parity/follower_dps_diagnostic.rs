@@ -2108,7 +2108,7 @@ fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
     assert!(
         (secondary.amount as f32 / primary.amount as f32 - std::f32::consts::FRAC_1_SQRT_2).abs()
             < 0.03,
-        "secondary hits receive the source one-target soft cap"
+        "secondary hits receive the source one-target soft cap: primary={primary:?}, secondary={secondary:?}"
     );
     app.world_mut()
         .entity_mut(second)
