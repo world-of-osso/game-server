@@ -533,11 +533,34 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
             server_combat::followers::update_ai(pull.harness.app.world_mut());
             pull.harness.app.update();
         }
-        assert!(
-            pull.casts().contains(&taunt),
-            "spec {spec} did not cast {taunt}: {:?}",
-            pull.casts()
-        );
+        if !pull.casts().contains(&taunt) {
+            let world = pull.harness.app.world_mut();
+            let target = world
+                .get::<server_combat::networking::CombatTarget>(pull.follower)
+                .and_then(|target| target.0);
+            let victim = world
+                .get::<server_combat::networking::CombatTarget>(enemy)
+                .and_then(|target| target.0);
+            let known = server_combat::spell_cast::knowledge::resolve_actor_action(
+                world,
+                pull.follower,
+                taunt,
+            );
+            let spell = world
+                .resource::<server_combat::spell_info::SpellStore>()
+                .get(taunt)
+                .unwrap()
+                .clone();
+            let admission = server_combat::spell_cast::read_native_cast_start(
+                world,
+                pull.follower,
+                &spell,
+                enemy,
+            );
+            panic!(
+                "spec {spec} did not cast {taunt}: target={target:?} victim={victim:?} known={known:?} admission={admission:?}"
+            );
+        }
         assert_eq!(
             pull.harness
                 .app
