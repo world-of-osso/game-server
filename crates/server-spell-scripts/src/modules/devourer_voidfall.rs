@@ -22,6 +22,7 @@ struct Impact {
     at: f64,
     target: Entity,
     spell: u32,
+    launching: bool,
 }
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -174,22 +175,13 @@ fn spend(world: &mut World, actor: Entity, target: Entity) {
             .expect("meteor misc")
             .speed,
     );
-    let world_delay = f64::from(
-        world
-            .resource::<SpellStore>()
-            .get(1256618)
-            .expect("native World Killer")
-            .misc
-            .as_ref()
-            .expect("World Killer misc")
-            .speed,
-    );
     for i in 0..launches {
         let final_meteor = world_killer && (if fall { i + 1 == launches } else { count == 1 });
         let impact = Impact {
-            at: now + f64::from(i) * delay + if final_meteor { world_delay } else { delay },
+            at: now + f64::from(i) * delay,
             target,
             spell: if final_meteor { WORLD_KILLER } else { METEOR },
+            launching: true,
         };
         world
             .entity_mut(actor)
@@ -199,25 +191,48 @@ fn spend(world: &mut World, actor: Entity, target: Entity) {
             .pending
             .push(impact);
     }
-    let remaining = count - launches;
-    if remaining == 0 {
+}
+
+fn launch_meteor(world: &mut World, actor: Entity, mut impact: Impact) {
+    let count = stacks(world, actor, SPENDING);
+    if count > 1 {
+        assert!(
+            auras::set_owned_stacks(world, actor, actor, SPENDING, count - 1),
+            "native Voidfall stacks"
+        );
+    } else if count == 1 {
         auras::remove_auras(world, actor, RemoveReason::Consumed, |a| {
             a.caster == actor && a.spell_id == SPENDING
         });
-    } else {
+    }
+    if count > 0 && selected(world, actor, 1253805) {
         assert!(
-            auras::set_owned_stacks(world, actor, actor, SPENDING, remaining),
-            "native Voidfall stacks"
+            spell_cast::try_cast_triggered(world, actor, 1256322, Some(actor), 1),
+            "native Final Hour"
         );
     }
-    if selected(world, actor, 1253805) {
-        for _ in 0..launches {
-            assert!(
-                spell_cast::try_cast_triggered(world, actor, 1256322, Some(actor), 1),
-                "native Final Hour"
-            );
-        }
-    }
+    let driver = if impact.spell == WORLD_KILLER {
+        1256618
+    } else {
+        1256304
+    };
+    let delay = world
+        .resource::<SpellStore>()
+        .get(driver)
+        .expect("native Voidfall driver")
+        .misc
+        .as_ref()
+        .expect("native Voidfall missile")
+        .speed;
+    impact.at = spell_cast::now(world) + f64::from(delay);
+    impact.launching = false;
+    world
+        .entity_mut(actor)
+        .entry::<VoidfallState>()
+        .or_default()
+        .into_mut()
+        .pending
+        .push(impact);
 }
 
 fn update(world: &mut World) {
@@ -237,6 +252,10 @@ fn update(world: &mut World) {
         };
         for impact in due {
             if !spell_cast::targets::is_alive(world, impact.target) {
+                continue;
+            }
+            if impact.launching {
+                launch_meteor(world, actor, impact);
                 continue;
             }
             let mut damage = spell_cast::load_triggered_spell(world, impact.spell, 1)

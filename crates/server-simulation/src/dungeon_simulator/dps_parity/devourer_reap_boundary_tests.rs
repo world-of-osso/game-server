@@ -182,6 +182,23 @@ fn annihilator_metamorphosis_builds_voidfall_and_reap_fires_meteors() {
         "Meta creates the Voidfall spending buff"
     );
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1245453, Some(target), 1);
+    for _ in 0..2 {
+        run.app.update();
+    }
+    let remaining = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == 1256302 && aura.caster == actor)
+        })
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(
+        remaining, 2,
+        "only the first meteor has launched before 250ms"
+    );
     for _ in 0..40 {
         run.app.update();
     }
