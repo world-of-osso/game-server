@@ -78,6 +78,7 @@ mod composite_precombat_tests;
 #[cfg(test)] mod demonology_doom_follower_tests;
 #[cfg(test)] mod demonology_doomguard_cooldown_follower_tests;
 #[cfg(test)] mod demonology_infernal_presence_follower_tests;
+#[cfg(test)] mod demonology_knowledge_follower_tests;
 mod demonology_flametouched_tests;
 mod demonology_hellbent_tests;
 mod demonology_reign_tests;
