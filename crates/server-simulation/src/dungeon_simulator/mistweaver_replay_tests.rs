@@ -31,18 +31,35 @@ fn mistweaver_selected_chiji_is_invoked_under_tank_pressure() {
                 && event.kind == CombatLogKind::CastSuccess),
         "selected Chi-Ji must be invoked during tank pressure"
     );
+    for _ in 0..300 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let gusts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(healer.to_bits())
+                && event.spell_id == Some(343819)
+                && event.kind == CombatLogKind::Heal
+        })
+        .count();
+    assert!(
+        gusts >= 6,
+        "the follower must kick during Chi-Ji so its Gusts heal: {gusts}"
+    );
 }
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
+fn mistweaver_chiji_blackout_kick_heals_injured_party_members() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
-    use shared::components::{Health, Npc, Position, UnitSummonedBy};
+    use shared::components::{Health, Npc, UnitSummonedBy};
     use shared::protocol::CombatLogKind;
 
     let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
     let healer = run.healer;
-    for unit in run.slots {
+    let injured = [run.tank, run.slots[3]];
+    for unit in injured {
         let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
         health.current = health.max * 0.1;
     }
@@ -73,17 +90,6 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
             .any(|(npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits()),
         "Chi-Ji must be summoned"
     );
-    let center = *run.app.world().get::<Position>(healer).unwrap();
-    for (unit, distance) in [
-        (run.tank, 1.0),
-        (run.slots[2], 5.0),
-        (run.slots[3], 6.0),
-        (run.slots[4], 7.0),
-    ] {
-        let mut position = run.app.world_mut().get_mut::<Position>(unit).unwrap();
-        position.x = center.x + distance;
-        position.y = center.y;
-    }
     let mut summons = run
         .app
         .world_mut()
@@ -93,9 +99,6 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
         .find(|(_, npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits())
         .unwrap()
         .0;
-    let mut position = run.app.world_mut().get_mut::<Position>(chiji).unwrap();
-    position.x = center.x + 20.0;
-    position.y = center.y;
     run.app
         .world_mut()
         .get_mut::<crate::stats::CharacterStats>(healer)
@@ -124,11 +127,10 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
         "three Gusts must heal two allies: {heals:?}"
     );
     let targets: std::collections::HashSet<_> = heals.iter().map(|event| event.target).collect();
+    // The full-health healer, other members and the effigy rank behind injured members.
     assert_eq!(
         targets,
-        [Some(healer.to_bits()), Some(run.tank.to_bits())]
-            .into_iter()
-            .collect()
+        injured.iter().map(|unit| Some(unit.to_bits())).collect()
     );
     assert!(
         heals
@@ -157,11 +159,42 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
         .find(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
         .unwrap()
         .amount;
-    // 343819 has 5% authored variance; Invoke effect 6 supplies the 50% multiplier.
+    // 343819 has 5% authored variance; Invoke effect 5 supplies the 50% multiplier.
     let ratio = chiji_amount as f32 / direct as f32;
     assert!(
         (0.45..=0.55).contains(&ratio),
         "Chi-Ji Gust {chiji_amount} versus unscaled {direct}"
+    );
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max;
+    }
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        healer,
+        100784,
+        Some(run.sources[0]),
+        true,
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let full: Vec<_> = run.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
+        .filter_map(|event| event.target)
+        .collect();
+    // The live follower policy may add its own Chi-Ji kicks; each yields six Gusts.
+    assert!(
+        full.len() >= 6 && full.len() % 6 == 0,
+        "a full party still receives Gusts: {full:?}"
+    );
+    assert!(
+        full.iter()
+            .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target)),
+        "Gusts must reach party members, never the effigy: {full:?}"
     );
     for _ in 0..600 {
         run.app.update();
