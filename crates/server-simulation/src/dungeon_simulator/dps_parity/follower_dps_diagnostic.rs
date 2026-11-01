@@ -664,6 +664,12 @@ fn guardian_form_boosts_grant_swipe_and_switch_with_form() {
         .insert(crate::combat::AutoAttack::new(target));
     crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
     finish_follower_precombat(&mut app, actor);
+    for _ in 0..60 {
+        app.update();
+        if crate::auras::has_aura(app.world(), actor, 5487) {
+            break;
+        }
+    }
     assert!(
         app.world()
             .get::<crate::class_progression::KnownSpells>(actor)
