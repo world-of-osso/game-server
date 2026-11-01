@@ -20,6 +20,7 @@ const FELSTORM: u32 = 89751;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AdditionalReachActions(autonomous_actions),
     SpellScriptHook::TargetPlan(target_plan),
+    SpellScriptHook::TargetDamageMultiplier(dreadlash_multiplier),
     SpellScriptHook::ResolvedDamage(blighted_maw),
     SpellScriptHook::AfterQueuedTriggers(felstorm),
 ];
@@ -77,6 +78,20 @@ fn plan_dreadbite(
             }
         })
         .collect()
+}
+
+// SimC76f8118 pets.cpp1074–1081: Dreadlash raises Dreadbite by its native Dummy0.
+fn dreadlash_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+    if spell.id != DREADBITE {
+        return 1.0;
+    }
+    let Some(owner) = world.get::<SummonedCreature>(caster).map(|s| s.owner) else {
+        return 1.0;
+    };
+    if !auras::has_aura(world, owner, DREADLASH) {
+        return 1.0;
+    }
+    1.0 + spell_cast::scripts::script_effect_value(world, owner, DREADLASH, 0) / 100.0
 }
 
 // SimC76f8118 pets.cpp1098–1110: the owner deals a native percentage of the actual bite.
