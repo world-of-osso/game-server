@@ -97,7 +97,7 @@ fn prepare_follower(
     prepare_class_follower(app, copy, profile.spec_id, level)
 }
 
-fn prepare_class_follower(
+pub(super) fn prepare_class_follower(
     mut app: App,
     copy: crate::maps::InMap,
     spec: u32,
@@ -190,319 +190,61 @@ fn follower_ret_hammer_selected_talent_admits_real_wrath_cast() {
 }
 
 #[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_execute_applies_one_deep_wounds_deposit() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
-    for _ in 0..5 {
-        app.update();
-    }
-    let mut health = app
-        .world_mut()
-        .get_mut::<shared::components::Health>(target)
-        .unwrap();
-    health.current = health.max * 0.1;
-    app.world_mut()
-        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-        .unwrap()
-        .get_mut(shared::components::PowerType::Rage)
-        .unwrap()
-        .current = 400.0;
-    app.init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false).unwrap();
-    for _ in 0..20 {
-        app.update();
-    }
-    let casts = &app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-        .0;
-    let deposits = casts
-        .iter()
-        .filter(|(caster, spell, _)| *caster == actor && *spell == 262115)
-        .count();
-    assert_eq!(
-        deposits, 1,
-        "one Execute impact must deposit Deep Wounds once: {casts:?}"
-    );
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_fatality_mortal_strike_earns_mark_and_execute_deals_damage() {
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 90);
-    for _ in 0..5 {
-        app.update();
-    }
-    assert!(crate::auras::has_aura(app.world(), actor, 383703));
-    let mut successes = 0;
-    for _ in 0..16 {
-        assert!(crate::spell_cast::try_cast_triggered(
-            app.world_mut(),
-            actor,
-            12294,
-            Some(target),
-            1,
-        ));
-        successes += 1;
-        app.update();
-        if crate::auras::has_aura(app.world(), target, 383704) {
-            break;
-        }
-    }
-    assert!(
-        app.world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(12294)
-                && event.amount > 0),
-        "actual Mortal Strike impacts must land"
-    );
-    assert!(
-        crate::auras::has_aura(app.world(), target, 383704),
-        "selected Fatality must earn a mark from actual Mortal Strikes; casts={successes}"
-    );
-    let mut health = app
-        .world_mut()
-        .get_mut::<shared::components::Health>(target)
-        .unwrap();
-    health.current = health.max * 0.1;
-    let mut cast = false;
-    for _ in 0..100 {
-        app.world_mut()
-            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-            .unwrap()
-            .get_mut(shared::components::PowerType::Rage)
-            .unwrap()
-            .current = 1000.0;
-        if crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false)
-            .is_ok()
-        {
-            cast = true;
-            break;
-        }
-        app.update();
-    }
-    assert!(cast, "actual Execute must be admitted");
-    for _ in 0..20 {
-        app.update();
-    }
-    let events = &app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
-    assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(383706)
-                && event.amount > 0)
-    );
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_mortal_strike_consumes_earned_executioners_precision() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
     let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
-    for _ in 0..5 {
-        app.update();
-    }
-    assert!(crate::auras::has_aura(app.world(), actor, 386634));
-    let mut health = app
-        .world_mut()
-        .get_mut::<shared::components::Health>(target)
-        .unwrap();
-    health.current = health.max * 0.1;
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
     app.world_mut()
-        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-        .unwrap()
-        .get_mut(shared::components::PowerType::Rage)
-        .unwrap()
-        .current = 400.0;
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false).unwrap();
-    for _ in 0..20 {
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(target)))
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 1276672, Some(target), false).unwrap();
+    for _ in 0..40 {
         app.update();
     }
-    assert!(
-        crate::auras::has_aura(app.world(), actor, 386633),
-        "Execute must earn native Precision"
-    );
-    assert!(crate::spell_cast::try_cast_triggered(
-        app.world_mut(),
-        actor,
-        7384,
-        Some(target),
-        1
-    ));
-    assert!(
-        crate::auras::has_aura(app.world(), actor, 386633),
-        "Overpower must not consume Precision"
-    );
-    assert!(crate::spell_cast::try_cast_triggered(
-        app.world_mut(),
-        actor,
-        12294,
-        Some(target),
-        1
-    ));
-    assert!(
-        !crate::auras::has_aura(app.world(), actor, 386633),
-        "Mortal Strike consumes Precision after damage"
-    );
-    let events = &app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
-    assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(actor.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.spell_id == Some(12294)
-                && event.amount > 0)
-    );
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_imminent_demise_adds_bladestorm_ticks_and_expires() {
-    fn spin(stacks: usize) -> usize {
-        let _seed = crate::random::seed_scope(70448);
-        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
-        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 90);
-        for _ in 0..5 {
-            app.update();
-        }
-        assert!(crate::auras::has_aura(app.world(), actor, 444769));
-        assert!(crate::auras::has_aura(app.world(), actor, 29725));
-        for _ in 0..stacks {
-            crate::spell_cast::cast_triggered(app.world_mut(), actor, 445606, Some(actor), 1);
-        }
-        let spin =
-            crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 227847).unwrap();
-        assert_eq!(
-            spin, 446035,
-            "the selected native Slayer action must resolve"
-        );
-        crate::spell_cast::creature_cast(app.world_mut(), actor, spin, Some(actor), false).unwrap();
-        assert!(
-            crate::auras::has_aura(app.world(), actor, 446035),
-            "the native spin must start"
-        );
-        for _ in 0..500 {
-            app.update();
-            if !crate::auras::has_aura(app.world(), actor, 446035) {
-                break;
-            }
-        }
-        assert!(!crate::auras::has_aura(app.world(), actor, 446035));
-        assert!(
-            !crate::auras::has_aura(app.world(), actor, 445606),
-            "spin completion consumes earned Imminent Demise"
-        );
-        app.world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .filter(|event| {
-                event.source == Some(actor.to_bits())
-                    && event.target == Some(target.to_bits())
-                    && event.spell_id == Some(50622)
-                    && event.amount > 0
+    let pet = {
+        let mut query = app.world_mut().query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>();
+        query
+            .iter(app.world())
+            .find(|(_, summon, npc)| {
+                summon.owner == actor && summon.spell_id == 1276672 && npc.template_id == 250785
             })
-            .count()
-    }
-    let ordinary = spin(0);
-    let enhanced = spin(3);
-    assert_eq!(
-        enhanced,
-        ordinary + 3,
-        "three Imminent Demise stacks add three actual ticks"
-    );
-}
-
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
-    let _seed = crate::random::seed_scope(70448);
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
-    for _ in 0..5 {
+            .map(|(entity, _, _)| entity)
+            .expect("real selected Doomguard must be summoned")
+    };
+    for _ in 0..160 {
         app.update();
     }
-    assert!(crate::auras::has_aura(app.world(), actor, 386630));
-    for _ in 0..16 {
-        assert!(crate::spell_cast::try_cast_triggered(
-            app.world_mut(),
-            actor,
-            1464,
-            Some(target),
-            1
-        ));
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let volleys = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(pet.to_bits())
+                && event.spell_id == Some(1251989)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        volleys >= 2,
+        "actual Doomguard must repeatedly land native volleys: {volleys}"
+    );
+    for _ in 0..80 {
         app.update();
     }
     assert!(
-        !crate::auras::has_aura(app.world(), actor, 386631),
-        "Slam must not earn Battlelord"
-    );
-    for _ in 0..16 {
-        assert!(crate::spell_cast::try_cast_triggered(
-            app.world_mut(),
-            actor,
-            7384,
-            Some(target),
-            1
-        ));
-        app.update();
-        if crate::auras::has_aura(app.world(), actor, 386631) {
-            break;
-        }
-    }
-    assert!(
-        crate::auras::has_aura(app.world(), actor, 386631),
-        "actual Overpower casts must earn Battlelord"
-    );
-    assert!(crate::spell_cast::try_cast_triggered(
-        app.world_mut(),
-        actor,
-        12294,
-        Some(target),
-        1
-    ));
-    assert!(
-        crate::auras::has_aura(app.world(), actor, 386631),
-        "background Mortal Strike must not consume Battlelord"
-    );
-    for _ in 0..60 {
-        app.update();
-    }
-    app.world_mut()
-        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-        .unwrap()
-        .get_mut(shared::components::PowerType::Rage)
-        .unwrap()
-        .current = 1000.0;
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 12294, Some(target), false).unwrap();
-    assert!(
-        !crate::auras::has_aura(app.world(), actor, 386631),
-        "foreground Mortal Strike consumes Battlelord"
+        app.world().get_entity(pet).is_err(),
+        "native Doomguard expires after its authored lifetime"
     );
 }
 
@@ -515,6 +257,62 @@ fn prepare_marksmanship_70() -> (App, Entity, Entity) {
         .entity_mut(actor)
         .remove::<crate::followers::Follower>();
     (app, actor, target)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_steady_shot_reduces_running_aimed_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    for trueshot in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+        app.world_mut()
+            .entity_mut(actor)
+            .remove::<crate::followers::Follower>();
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 19434, Some(target), false)
+            .unwrap();
+        for _ in 0..70 {
+            app.update();
+        }
+        if trueshot {
+            crate::spell_cast::cast_triggered(app.world_mut(), actor, 288613, Some(actor), 1);
+            for _ in 0..2 {
+                app.update();
+            }
+        }
+        let bindings = Bindings {
+            actions: [("aimed_shot".into(), 19434)].into(),
+            ..default()
+        };
+        let encounter = Encounter::Fixture {
+            started_at: 0.0,
+            duration: 120.0,
+            style: FightStyle::Patchwerk,
+        };
+        let recharge = |app: &App| {
+            NativeFacts::new(app.world(), actor, &bindings, encounter, 1)
+                .value("cooldown.aimed_shot.full_recharge_time")
+                .unwrap()
+        };
+        let before = recharge(&app);
+        let start = crate::spell_cast::history_now(app.world());
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 56641, Some(target), false)
+            .unwrap();
+        for _ in 0..55 {
+            app.update();
+        }
+        let elapsed = crate::spell_cast::history_now(app.world()) - start;
+        let reduction = before - elapsed - recharge(&app);
+        let expected = if trueshot { 2.0 / 1.4 } else { 2.0 };
+        assert!(
+            (reduction - expected).abs() < 0.1,
+            "Steady Shot recharge reduction={reduction}, expected={expected}, Trueshot={trueshot}"
+        );
+    }
 }
 
 #[test]
@@ -546,6 +344,55 @@ fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
     assert!(
         !crate::auras::has_aura(app.world(), target, 1301098),
         "Rapid Fire consumes earned mark"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_new_mark_survives_in_flight_rapid_tick() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false).unwrap();
+    let mut channel_started = false;
+    for _ in 0..100 {
+        app.update();
+        let active = crate::auras::has_aura(app.world(), target, 257044);
+        channel_started |= active;
+        if channel_started && !active {
+            break;
+        }
+    }
+    assert!(
+        channel_started && !crate::auras::has_aura(app.world(), target, 257044),
+        "Rapid Fire channel must start and finish"
+    );
+    let count = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(257045) && event.kind == CombatLogKind::Damage)
+            .count()
+    };
+    let before = count(&app);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 1301098, Some(target), 1);
+    assert!(crate::auras::has_aura(app.world(), target, 1301098));
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(
+        count(&app) > before,
+        "a Rapid Fire missile actually landed after the channel"
+    );
+    assert!(
+        crate::auras::has_aura(app.world(), target, 1301098),
+        "a previously launched missile must not consume the new mark"
     );
 }
 
@@ -614,12 +461,19 @@ fn follower_mm_take_aim_mark_increases_actual_aimed_crit_and_all_rapid_ticks() {
         plain.len() >= 3 && plain.len() == marked.len(),
         "Rapid Fire ticks {plain:?} / {marked:?}"
     );
+    // Applying the mark advances the random stream, so weapon variance differs
+    // between the two runs. Check every tick and the aggregate separately.
     for (a, b) in plain.iter().zip(&marked) {
         assert!(
-            (*b as f64 / *a as f64 - 1.2).abs() < 0.05,
+            (*b as f64 / *a as f64 - 1.55).abs() < 0.08,
             "each actual Rapid tick must retain the consumed mark: {plain:?} / {marked:?}"
         );
     }
+    let ratio = marked.iter().sum::<i32>() as f64 / plain.iter().sum::<i32>() as f64;
+    assert!(
+        (ratio - 1.55).abs() < 0.04,
+        "actual channel damage ratio {ratio}"
+    );
 }
 
 #[test]
@@ -2491,6 +2345,63 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
     assert_eq!((non_unit, unknown), (0.0, 0.0));
 }
 
+/// SimC76f8118 sc_monk.cpp7245–7252 trace: each dodged dummy swing reduces every
+/// running Brew by the 268/70 profile's rank-2 Anvil and Stave value, 1s.
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_brewmaster_avoidance_reduces_running_brews() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let _seed = crate::random::seed_scope(70448);
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 268, 70);
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 115203, Some(actor), false).unwrap();
+    app.update();
+    let remaining = |app: &App| {
+        let world = app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(115203)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+    };
+    let swing = |outcome: &str| Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: outcome.into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let mut spent = |outcome: &str| {
+        let before = remaining(&app);
+        crate::combat::replay_healer_hit(app.world_mut(), target, actor, &swing(outcome)).unwrap();
+        app.update();
+        before - remaining(&app)
+    };
+    // A landed swing only advances the running Brew by one frame.
+    let frame = spent("Hit");
+    for outcome in ["Dodge", "Miss"] {
+        let reduction = spent(outcome) - frame;
+        assert!(
+            (999..=1001).contains(&reduction),
+            "{outcome} reduced the running Brew by {reduction}ms"
+        );
+    }
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_attacks_with_its_equipped_weapon_type() {
@@ -2555,6 +2466,112 @@ fn follower_attacks_with_its_equipped_weapon_type() {
         } else {
             assert!(melee > 0, "melee follower must land melee attacks");
         }
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn frost_follower_comet_storm_requires_ray_and_deals_projectile_damage() {
+    let _seed = crate::random::seed_scope(1);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 64, 70);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    for _ in 0..5 {
+        app.update();
+    }
+    start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    for frame in 0..FIXED_FIGHT_FRAMES {
+        let mut health = app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current =
+            health.max * (FIXED_FIGHT_FRAMES - frame) as f32 / FIXED_FIGHT_FRAMES as f32;
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none()
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let casts = |id| {
+        events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.kind == CombatLogKind::CastSuccess
+                    && event.spell_id == Some(id)
+            })
+            .count()
+    };
+    let rays = casts(205021);
+    let comets = casts(153595);
+    assert!(
+        rays > 0 && comets > 0 && comets <= rays,
+        "each Comet Storm must be earned from Ray of Frost: ray={rays}, comet={comets}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(153596)
+                && event.amount > 0),
+        "Comet Storm must deliver its native projectile damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn frost_follower_seed_seven_continues_after_reactive_passive_acquisition() {
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let _seed = crate::random::seed_scope(7);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 64, level);
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        for _ in 0..5 {
+            app.update();
+        }
+        start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+        for _ in 0..FIXED_FIGHT_FRAMES {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_none(),
+            "Frost level {level} must not fail after tracked aura acquisition"
+        );
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Frost level {level} must damage its target"
+        );
     }
 }
 
@@ -2675,10 +2692,67 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
     for _ in 0..FIXED_FIGHT_FRAMES {
         app.update();
     }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none(),
+        "the rotation must continue after reactive buffs appear"
+    );
     let events = &app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(450360)),
+        "the real follower must proc Touch the Cosmos from generators"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(1263382)),
+        "Eclipse must grant Ascendant Stars"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1271222)
+                && event.amount > 0),
+        "actual Starfire hits must produce selected Star Cascade damage"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(394111)
+                && event.amount > 0),
+        "Sundered Firmament must damage the actual target"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(394108)
+                && event.amount > 0),
+        "Sundered Firmament must generate Astral Power"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -2780,6 +2854,216 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.spell_id == Some(1263250)
                 && event.amount > 0),
         "Eclipse critical hits must produce Astral Smolder periodic damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_eclipse_grants_decaying_critical_stacks() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let starfire = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(194153)
+        .unwrap()
+        .clone();
+    let eclipse = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233272)
+        .unwrap()
+        .clone();
+    let before = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &eclipse, Some(actor)).unwrap();
+    let stacks = |app: &App| {
+        app.world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 394050)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&app), 10, "Lunar Eclipse grants ten native stacks");
+    let initial = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    assert!(
+        initial > before + 15.0,
+        "Eclipse stacks increase Arcane crit: {before} -> {initial}"
+    );
+    for _ in 0..22 {
+        app.update();
+    }
+    assert_eq!(
+        stacks(&app),
+        9,
+        "one stack decays at the native one-second period"
+    );
+    let decayed = crate::spell_cast::effects::crit_chance(app.world(), actor, target, &starfire);
+    assert!(
+        decayed < initial,
+        "critical chance follows stack decay: {initial} -> {decayed}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_ascendant_stars_boosts_three_starsurges() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -100.0;
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    let power = shared::components::PowerType::LunarPower;
+    let fire = |app: &mut App| {
+        app.world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = -100.0;
+        app.world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(power)
+            .unwrap()
+            .current = 1000.0;
+        crate::spell_cast::execute_cast(app.world_mut(), actor, &spell, Some(target)).unwrap();
+        for _ in 0..20 {
+            app.update();
+        }
+    };
+    fire(&mut app);
+    crate::spell_cast::cast_triggered_with_overrides(
+        app.world_mut(),
+        actor,
+        1263382,
+        Some(actor),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(3),
+            ..Default::default()
+        },
+    );
+    let initial = app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1263382)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(initial, 3, "fixture must start with three stacks");
+    for remaining in (0..3).rev() {
+        fire(&mut app);
+        let stacks = app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1263382)
+            .map_or(0, |aura| aura.stacks);
+        assert_eq!(stacks, remaining, "one stack must be consumed per cast");
+    }
+    assert!(
+        !crate::auras::has_aura(app.world(), actor, 1263382),
+        "three Starsurges consume three stacks"
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(78674)
+        })
+        .map(|event| event.amount)
+        .collect();
+    assert_eq!(hits.len(), 4, "one damage result per Starsurge: {hits:?}");
+    for hit in &hits[1..] {
+        assert!(
+            *hit > hits[0] * 11 / 10,
+            "Ascendant Stars amplifies each spender: {hits:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_touch_cosmos_makes_one_starsurge_free() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let power = shared::components::PowerType::LunarPower;
+    app.world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(power)
+        .unwrap()
+        .current = 800.0;
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 450360, Some(actor), 1);
+    let starsurge = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &starsurge, Some(target)).unwrap();
+    let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    assert_eq!(after, 800.0, "Touch the Cosmos must make Starsurge free");
+    assert!(
+        !crate::auras::has_aura(app.world(), actor, 450360),
+        "the free cast consumes the buff"
+    );
+    for _ in 0..40 {
+        app.update();
+    }
+    let before = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &starsurge, Some(target)).unwrap();
+    let after = crate::spell_cast::powers::power_value(app.world(), actor, power)
+        .unwrap()
+        .0;
+    assert_eq!(
+        before - after,
+        360.0,
+        "the next Starsurge must pay its modified native AP cost"
     );
 }
 
@@ -2953,6 +3237,56 @@ fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn fixed_fight_seed_replays_identical_events_and_outcome() {
+    fn replay() -> (serde_json::Value, Vec<serde_json::Value>) {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "dungeon_simulator::dps_parity::follower_dps_diagnostic::follower_dps_production_dummy",
+                "--exact", "--ignored", "--nocapture", "--test-threads=1",
+            ])
+            .env("FOLLOWER_DPS_SPEC", "62")
+            .env("FOLLOWER_DPS_LEVEL", "90")
+            .env("FOLLOWER_DPS_MAP", "2813")
+            .env("FOLLOWER_DPS_SEED", "8")
+            .env("FOLLOWER_TRACE_EVENTS", "1")
+            .output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let report: serde_json::Value = stdout
+            .lines()
+            .find_map(|line| {
+                line.split_once("FOLLOWER_DPS ")
+                    .map(|(_, value)| serde_json::from_str(value).unwrap())
+            })
+            .expect("DPS report");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        let events: Vec<serde_json::Value> = stderr
+            .lines()
+            .filter_map(|line| line.strip_prefix("FOLLOWER_REPLAY_EVENT "))
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert!(!events.is_empty(), "fight emitted no events");
+        (report, events)
+    }
+    let first = replay();
+    let second = replay();
+    for (index, (left, right)) in first.1.iter().zip(&second.1).enumerate() {
+        assert_eq!(left, right, "combat event {index} diverged");
+    }
+    assert_eq!(
+        first.1.len(),
+        second.1.len(),
+        "combat event counts diverged"
+    );
+    assert_eq!(first.0, second.0, "fight outcomes diverged");
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")
@@ -3088,6 +3422,9 @@ fn follower_dps_production_dummy() {
     let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
     let mut aura_frames = std::collections::BTreeMap::new();
+    let mut target_aura_frames = std::collections::BTreeMap::new();
+    let mut mark_trace = Vec::new();
+    let mut previous_marks = (false, false);
     for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
@@ -3110,6 +3447,21 @@ fn follower_dps_production_dummy() {
         super::super::healer_simc_replay::report_death_audit(&mut app, &[actor, owner]);
         let world = app.world();
         sample_actor_auras(world, actor, &mut aura_frames);
+        if let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) {
+            for aura in auras.iter().filter(|aura| aura.caster == actor) {
+                *target_aura_frames.entry(aura.spell_id).or_insert(0u32) += 1;
+            }
+        }
+        if trace_actions {
+            let marks = (
+                crate::auras::has_aura(world, target, 1253601),
+                crate::auras::has_aura(world, target, 1301098),
+            );
+            if marks != previous_marks {
+                mark_trace.push(((frame + 1) as f64 / 20.0, marks));
+                previous_marks = marks;
+            }
+        }
         let now = crate::spell_cast::history_now(world);
         let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
         for (sum, value) in stat_sums.iter_mut().zip([
@@ -3166,6 +3518,14 @@ fn follower_dps_production_dummy() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        if std::env::var_os("FOLLOWER_TRACE_EVENTS").is_some() {
+            for event in &events[seen_events..] {
+                eprintln!(
+                    "FOLLOWER_REPLAY_EVENT {}",
+                    json!({"tick": frame + 1, "event": event})
+                );
+            }
+        }
         if trace_actions {
             let after_power = crate::spell_cast::powers::power_value(
                 app.world(),
@@ -3266,6 +3626,7 @@ fn follower_dps_production_dummy() {
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut aura_applications = BTreeMap::<u32, usize>::new();
     let mut energize = BTreeMap::<u32, i64>::new();
+    let mut energize_details = BTreeMap::<String, [i64; 3]>::new();
     let expected_avoidance = std::env::var_os("FOLLOWER_DPS_EXPECTED_AVOIDANCE").is_some();
     let incoming: Vec<_> = events
         .iter()
@@ -3298,6 +3659,12 @@ fn follower_dps_production_dummy() {
         }
         if event.kind == CombatLogKind::Energize && event.target == Some(actor.to_bits()) {
             *energize.entry(id).or_default() += i64::from(event.amount);
+            let detail = energize_details
+                .entry(format!("{id}:{}", event.amount))
+                .or_default();
+            detail[0] += 1;
+            detail[1] += i64::from(event.amount);
+            detail[2] += i64::from(event.overflow);
         }
         if matches!(
             event.kind,
@@ -3329,15 +3696,27 @@ fn follower_dps_production_dummy() {
     }
     let (self_absorbs, absorb_non_unit, absorb_unknown_scale) =
         self_absorb_receipts(app.world(), actor);
-    println!(
-        "FOLLOWER_DPS {}",
-        json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
+    let target_uptime: std::collections::BTreeMap<_, _> = target_aura_frames
+        .into_iter()
+        .map(|(spell, frames)| {
+            (
+                spell,
+                f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES),
+            )
+        })
+        .collect();
+    println!("FOLLOWER_TARGET_AURAS {}", serde_json::json!(target_uptime));
+    if trace_actions {
+        println!("FOLLOWER_MARK_TRACE {}", serde_json::json!(mark_trace));
+    }
+    let mut receipt = json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "self_absorbs_by_spell":self_absorbs,"self_absorb_non_unit":absorb_non_unit,"self_absorb_unknown_scale":absorb_unknown_scale,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
         "mean_stats":stat_sums.map(|sum| sum / f64::from(FIXED_FIGHT_FRAMES)),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES))).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
-        "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0})
-    );
+        "gcd_s":gcd_total as f64 / 20.0,"gcd_only_s":gcd_only as f64 / 20.0,"ready_s":ready as f64 / 20.0});
+    receipt["energize_details"] = json!(energize_details);
+    println!("FOLLOWER_DPS {receipt}");
 }

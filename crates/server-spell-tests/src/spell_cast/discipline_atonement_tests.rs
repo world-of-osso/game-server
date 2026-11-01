@@ -5,6 +5,136 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn atonement_area_spells_preserve_explicit_summon_but_exclude_secondary_summons() {
+    use crate::spell_cast::summon::{SummonProperties, SummonedCreature};
+    use server::hunter_pet::HunterPet;
+    use shared::components::UnitFactionTemplate;
+
+    for spell in [1253593, 194509] {
+        for primary_index in 0..5 {
+            let _seed = crate::random::seed_scope(70448);
+            let mut h = harness(Vec::new(), &[1253593, 194509, 194384], 5).unwrap();
+            let caster = h.caster;
+            h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+            let player = spawn_player(&mut h.app, 5, 3.0);
+            let allies: Vec<_> = (0..4)
+                .map(|index| spawn_player(&mut h.app, 5, 4.0 + index as f32))
+                .collect();
+            let pet = spawn_npc(&mut h.app, 2.0);
+            let guardian = spawn_npc(&mut h.app, 2.5);
+            let wyvern = spawn_npc(&mut h.app, 2.7);
+            let temp_summon = spawn_npc(&mut h.app, 2.9);
+            h.app.world_mut().entity_mut(pet).insert((
+                UnitFactionTemplate(1),
+                HunterPet {
+                    owner: caster,
+                    slot: 1,
+                },
+            ));
+            h.app.world_mut().entity_mut(guardian).insert((
+                UnitFactionTemplate(1),
+                SummonedCreature {
+                    owner: caster,
+                    spell_id: 157319,
+                    properties_id: 3490,
+                    properties: SummonProperties {
+                        control: 1,
+                        faction: 0,
+                        title: 3,
+                        slot: -1,
+                        flags: 0,
+                    },
+                    display_scale: 1.0,
+                    expires_at: None,
+                },
+            ));
+            h.app.world_mut().entity_mut(wyvern).insert((
+                UnitFactionTemplate(1),
+                SummonedCreature {
+                    owner: caster,
+                    spell_id: 1222271,
+                    properties_id: 6178,
+                    properties: SummonProperties {
+                        control: 0,
+                        faction: 0,
+                        title: 0,
+                        slot: 0,
+                        flags: 16,
+                    },
+                    display_scale: 0.5,
+                    expires_at: None,
+                },
+            ));
+            h.app.world_mut().entity_mut(temp_summon).insert((
+                UnitFactionTemplate(1),
+                server::zones::TempSummon { summoner: caster },
+            ));
+            let targets = [player, pet, guardian, wyvern, temp_summon];
+            for target in allies.iter().copied().chain(targets) {
+                let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
+                health.current = health.max * 0.1;
+            }
+            let primary = targets[primary_index];
+            assert!(crate::spell_cast::try_cast_triggered(
+                h.app.world_mut(),
+                caster,
+                spell,
+                Some(primary),
+                0
+            ));
+            h.advance(50);
+            let protected = |target| crate::auras::has_aura(h.app.world(), target, 194384);
+            assert!(
+                protected(primary),
+                "spell {spell} must keep explicit primary {primary:?}"
+            );
+            for secondary in [pet, guardian, wyvern, temp_summon] {
+                if secondary != primary {
+                    assert!(
+                        !protected(secondary),
+                        "spell {spell} must exclude secondary summon {secondary:?}"
+                    );
+                }
+            }
+            assert!(
+                allies.iter().copied().any(protected),
+                "spell {spell} must still reach player allies"
+            );
+        }
+    }
+}
+
+#[test]
+fn radiance_heals_and_marks_full_health_allies() {
+    let mut h = harness(Vec::new(), &[194509, 194384], 5).unwrap();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+    let allies: Vec<_> = (0..4)
+        .map(|index| spawn_player(&mut h.app, 5, 3.0 + index as f32))
+        .collect();
+    for target in allies.iter().copied().chain([caster]) {
+        let health = h.app.world().get::<Health>(target).unwrap();
+        assert_eq!(health.current, health.max);
+    }
+    h.cast_and_deliver(194509, Some(allies[0]));
+    h.advance(65);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    for target in allies.into_iter().chain([caster]) {
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(194509)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Heal
+                    && event.overflow > 0),
+            "Radiance did not overheal full-health ally {target:?}"
+        );
+        assert!(crate::auras::has_aura(h.app.world(), target, 194384));
+    }
+}
+
+#[test]
 fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement() {
     use shared::components::CombatStatus;
 

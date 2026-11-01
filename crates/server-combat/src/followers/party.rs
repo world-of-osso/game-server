@@ -229,7 +229,7 @@ fn begin_run(
         Some(key) => super::class_spawn::GearSource::KeystoneBand(key.level),
         None => super::class_spawn::GearSource::Journal,
     };
-    let seed = rand::random::<u64>();
+    let seed = crate::random::random::<u64>();
     let class_profiles = match gear {
         super::class_spawn::GearSource::Journal => {
             super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?

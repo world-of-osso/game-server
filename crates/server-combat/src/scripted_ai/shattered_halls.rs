@@ -95,7 +95,7 @@ fn find_in_copy(world: &mut World, map: InMap, entry: u32) -> Option<Entity> {
 }
 
 fn pick<T: Copy>(choices: &[T]) -> T {
-    choices[rand::Rng::gen_range(&mut rand::thread_rng(), 0..choices.len())]
+    choices[rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..choices.len())]
 }
 
 /// TC `leftHead->AI()->DoAction(action)`.
@@ -328,7 +328,7 @@ fn maybe_blast_wave(
     _aura: &AuraInstance,
     _other: Option<Entity>,
 ) {
-    let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+    let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..100);
     if roll < BLAST_WAVE_CHANCE
         && let Err(error) = crate::spell_cast::creature_cast(world, target, BLAST_WAVE, None, false)
     {

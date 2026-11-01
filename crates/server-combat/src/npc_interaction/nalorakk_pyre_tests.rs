@@ -70,6 +70,12 @@ fn nalorakk_pyre_gossip_moves_owner_and_owned_follower_in_both_directions() {
         copy,
         DungeonDifficulty(205),
         crate::persistence::ClientId(1),
+        shared::components::Player {
+            name: "Reader".into(),
+            race: 1,
+            class: 3,
+            appearance: Default::default(),
+        },
         MovementControl::default(),
     ));
     h.app
@@ -215,7 +221,14 @@ fn nalorakk_pyre_gossip_moves_owner_and_owned_follower_in_both_directions() {
             .get::<MovementControl>(h.player)
             .unwrap()
             .epoch;
+        let follower_before = *h.app.world().get::<Position>(follower).unwrap();
         h.select(pyre, gossip.options[0].option_id);
+        assert_eq!(
+            *h.app.world().get::<Position>(follower).unwrap(),
+            follower_before,
+            "the owner's use must not teleport the follower"
+        );
+        crate::npc_interaction::nalorakk_pyre::traverse(h.app.world_mut(), follower, pyre).unwrap();
         for unit in [h.player, follower]
             .into_iter()
             .chain(companions.iter().copied())

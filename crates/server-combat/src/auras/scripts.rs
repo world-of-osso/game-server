@@ -34,6 +34,8 @@ pub struct AuraScript {
     /// Duration expiry or explicit full channel completion, never interruption.
     pub on_natural_end: Option<AuraHook>,
     pub on_periodic: Option<PeriodicHook>,
+    /// Before any scheduled periodic tick; false skips it (the script may have removed the aura).
+    pub before_periodic_tick: Option<fn(&mut World, Entity, &AuraInstance) -> bool>,
     /// Called after a periodic damage tick, with its actual aura recipient.
     pub after_periodic_damage: Option<PeriodicHook>,
     pub on_proc: Option<ProcHook>,
@@ -137,6 +139,19 @@ pub(super) fn check_proc(
     script(world, aura.spell_id)
         .and_then(|script| script.check_proc)
         .is_none_or(|check| check(world, aura, event))
+}
+
+pub(super) fn allow_periodic_tick(world: &mut World, unit: Entity, instance_id: u32) -> bool {
+    let Some(aura) = world
+        .get::<super::ActiveAuras>(unit)
+        .and_then(|auras| auras.get(instance_id))
+        .cloned()
+    else {
+        return true;
+    };
+    script(world, aura.spell_id)
+        .and_then(|script| script.before_periodic_tick)
+        .is_none_or(|run| run(world, unit, &aura))
 }
 
 pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance, effect_index: u8) {
@@ -330,11 +345,14 @@ pub(super) fn absorb_amount(
         let health = world
             .get::<shared::components::Health>(caster)
             .expect("cocoon caster health");
+        // Scripted effectiveness, e.g. Spiritfont's 1260680 s1 cocoons.
+        let effectiveness = spell.cast_healing_multiplier.unwrap_or(1.0);
         return Some(
             health.max
                 * crate::spell_cast::effects::modded_base_points(world, caster, spell, percent)
                 / 100.0
-                * crate::spell_cast::effects::versatility_multiplier(world, caster),
+                * crate::spell_cast::effects::versatility_multiplier(world, caster)
+                * effectiveness,
         );
     }
     let percent_index = match (spell.id, effect.index) {

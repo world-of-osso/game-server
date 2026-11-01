@@ -95,6 +95,7 @@ fn grant_cast_lock_and_load(world: &mut World, caster: Entity, spell: u32, depth
         return;
     }
     match spell {
+        56641 if is_marksmanship(world, caster) => reduce_aimed_from_steady(world, caster),
         212431 => grant_tactical_reload(world, caster),
         RAPID_FIRE if selected(world, caster, 473523) => {
             // sc_hunter.cpp5811–5814: Rapid Fire rolls Windrunner Quiver's
@@ -106,6 +107,29 @@ fn grant_cast_lock_and_load(world: &mut World, caster: Entity, spell: u32, depth
         }
         _ => {}
     }
+}
+
+fn reduce_aimed_from_steady(world: &mut World, caster: Entity) {
+    // SimC76f8118 sc_hunter.cpp4092–4096: the native Steady Shot effect2
+    // reduces running Aimed Shot recharge, scaled by Trueshot's recharge rate.
+    let steady = world
+        .resource::<SpellStore>()
+        .get(56641)
+        .expect("native Steady Shot");
+    let seconds = f64::from(
+        steady
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .expect("native Steady Shot cooldown reduction")
+            .base_points,
+    ) / 1000.0;
+    let rate = if auras::has_aura(world, caster, 288613) {
+        1.0 + f64::from(script_effect_value(world, caster, 288613, 1)) / 100.0
+    } else {
+        1.0
+    };
+    reduce_cooldown(world, caster, AIMED_SHOT, seconds / rate);
 }
 
 pub(super) fn grant_tactical_reload(world: &mut World, caster: Entity) {
@@ -140,6 +164,19 @@ pub(super) fn trick_plan(
         let extras = select_trick_targets(world, caster, primary, count);
         chain_multipliers.extend(extras.iter().map(|&target| (target, multiplier)));
         units.extend(extras);
+    }
+    if spell.id == RAPID_FIRE_SHOT {
+        for &unit in &units {
+            let multiplier = super::marksmanship_sentinel::snapshot_rapid_mark(world, caster, unit);
+            if let Some((_, existing)) = chain_multipliers
+                .iter_mut()
+                .find(|(target, _)| *target == unit)
+            {
+                *existing *= multiplier;
+            } else if multiplier != 1.0 {
+                chain_multipliers.push((unit, multiplier));
+            }
+        }
     }
     vec![PlannedEffect {
         index: 0,

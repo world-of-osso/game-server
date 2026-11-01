@@ -22,7 +22,7 @@ pub(super) fn filter_targets(world: &World, caster: Entity, units: &mut Vec<Enti
         let distance_squared = offset.x * offset.x + offset.z * offset.z;
         distance_squared <= ORBITAL_RADIUS * ORBITAL_RADIUS
     });
-    units.shuffle(&mut rand::thread_rng());
+    units.shuffle(&mut crate::random::thread_rng());
     units.truncate(1);
     false
 }
