@@ -1,5 +1,5 @@
 //! Equipped Resonant Bellowstone: SimC76f8118 unique_gear_midnight.cpp2109.
-use super::{Harness, devastate, item_fixture};
+use super::{Harness, devastate, item_fixture_with_stats};
 use crate::auras::{self, ActiveAuras, procs};
 use shared::protocol::EquipmentSlot;
 
@@ -50,7 +50,7 @@ fn aura(h: &Harness, spell: u32) -> Option<auras::AuraInstance> {
 #[test]
 fn equipped_bellowstone_applies_item_scaled_crit_and_stacks_only_on_crits() {
     let _seed = crate::random::seed_scope(70448);
-    let mut h = item_fixture(false);
+    let mut h = item_fixture_with_stats(false, true);
     devastate(&mut h);
     h.app
         .world_mut()

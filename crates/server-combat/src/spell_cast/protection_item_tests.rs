@@ -1,5 +1,5 @@
 //! Equipped70448 item producers; native item/set/role source ingress precedes scripts.
-use super::{DEVASTATE, Harness, Inbox, apply_passive, fixture};
+use super::{DEVASTATE, Harness, Inbox, apply_passive, fixture_with_stats};
 use shared::protocol::{CombatLogKind, EquipmentSlot};
 
 #[path = "bellowstone_tests.rs"]
@@ -31,7 +31,11 @@ fn native_catalog_connection() -> rusqlite::Connection {
 }
 
 fn item_fixture(equipped: bool) -> Harness {
-    let mut h = fixture(false);
+    item_fixture_with_stats(equipped, false)
+}
+
+fn item_fixture_with_stats(equipped: bool, computed_stats: bool) -> Harness {
+    let mut h = fixture_with_stats(false, computed_stats);
     let conn = native_catalog_connection();
     h.app.insert_resource(crate::stats::NativeItemInstances {
         bonuses: server::item_instance::load::load_bonus_tables(&conn).unwrap(),
