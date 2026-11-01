@@ -74,12 +74,16 @@ def apply_changes(db, changes):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('world-db', 'resolver', 'geometry', 'navigation', 'routes', 'output'):
+    for name in ('world-db', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
+    for name in ('resolver', 'geometry', 'navigation', 'routes'):
+        parser.add_argument('--' + name, type=Path)
     action = parser.add_mutually_exclusive_group()
     action.add_argument('--dry-run', action='store_true', help='write a report without changing world-db (default)')
     action.add_argument('--apply', action='store_true', help='apply the existing report to world-db')
     args = parser.parse_args()
+    if not args.apply and any(value is None for value in (args.resolver, args.geometry, args.navigation, args.routes)):
+        parser.error('dry-run requires --resolver, --geometry, --navigation and --routes')
     mode = 'rw' if args.apply else 'ro'
     with sqlite3.connect(f'file:{args.world_db.resolve()}?mode={mode}', uri=True) as db:
         if args.apply:

@@ -14,7 +14,6 @@ WORLD = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 
 
 class SyntheticFloorTest(unittest.TestCase):
-    @unittest.skipUnless(os.environ.get('FLOOR_RESOLVER_BIN'), 'requires built floor resolver and local geometry')
     def test_real_windrunner_route_corrects_two_floor_spawns_without_self_anchor(self):
         resolver = os.environ['FLOOR_RESOLVER_BIN']
         with tempfile.TemporaryDirectory() as directory:
