@@ -28,6 +28,27 @@ fn wmo_surface_halls_swim_bounds_use_floor_below_player() {
     assert!(swim.floor < -40.0 && swim.top > -40.0, "{swim:?}");
 }
 
+/// Windrunner's upper WMO liquid must not make the floors below its group swimmable.
+#[test]
+#[ignore = "requires Windrunner Spire extracted WMO assets"]
+fn windrunner_upper_liquid_does_not_reach_lower_floors() {
+    let data = std::env::var_os("GAME_SERVER_GROUND_DIR")
+        .map(std::path::PathBuf::from)
+        .expect("GAME_SERVER_GROUND_DIR must contain extracted Windrunner assets");
+    let mut ground = GroundMap::new(&data, std::collections::HashMap::from([(2805, 6099383)]));
+    for y in [100.4, 124.8, 149.0258] {
+        let feet = Vec3::new(5212.431, y, 3054.774);
+        assert!(
+            ground.liquid_at(2805, feet).is_none(),
+            "unexpected liquid at {feet:?}"
+        );
+        assert!(
+            swim_bounds(&mut ground, InMap::continent(2805), feet).is_none(),
+            "unexpected swim bounds at {feet:?}"
+        );
+    }
+}
+
 #[derive(Component)]
 struct ReplicationTag;
 
