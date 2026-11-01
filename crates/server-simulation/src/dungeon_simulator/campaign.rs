@@ -919,6 +919,15 @@ fn released_leader_rejoins_party_through_azure_book() {
         .clone();
     server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
         .unwrap();
+    for member in run.party.members.clone() {
+        server::test_support::transport::activate(
+            run.app.world_mut(),
+            member,
+            Some(book),
+            &transport,
+        )
+        .unwrap();
+    }
     super::movement::forget_party_travel(run.app.world_mut(), owner);
     let cleared: Vec<_> = run
         .actors
