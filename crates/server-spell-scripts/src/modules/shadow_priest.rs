@@ -6,7 +6,7 @@ use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
 use super::combat;
-use combat::auras::ActiveAuras;
+use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
 use combat::spell_cast;
@@ -19,6 +19,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ConsumedEffectValues(&[(SLAM, 2)]),
     SpellScriptHook::LaunchDelay(launch_delay),
     SpellScriptHook::DotMasteryMultiplier(weaving_multiplier),
+    SpellScriptHook::LateAuraRegistration(register_hallucinations),
 ];
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
@@ -34,6 +35,7 @@ const DAMAGE: u32 = 1227621;
 const VT: u32 = 34914;
 const MISERY: u32 = 238558;
 const PAIN: u32 = 589;
+const HALLUCINATIONS: u32 = 280752;
 const MADDENING_TENTACLES: u32 = 1279353;
 const MADNESS: u32 = 335467;
 const SHADOW_WEAVING: u32 = 343690;
@@ -137,6 +139,21 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     for target in units {
         spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
     }
+}
+
+fn register_hallucinations(scripts: &mut AuraScripts) {
+    scripts.0.entry(HALLUCINATIONS).or_default().check_proc = Some(hallucinations_cast);
+}
+
+fn hallucinations_cast(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    // Native70448 spell280752 description lists these four combat casts;
+    // SimC76f8118 sc_priest.cpp1985–1990 implements the Shield producer.
+    let eligible = matches!(event.spell_id, Some(17 | 528 | 32375 | 213634));
+    event.actor == aura.caster
+        && eligible
+        && combat::combat_refs::active_opponents(world, aura.caster)
+            .next()
+            .is_some()
 }
 
 fn apply_misery(world: &mut World, caster: Entity, target: Entity, depth: u8) {
