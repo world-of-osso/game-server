@@ -150,6 +150,12 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
         Ok(1)
     );
+    for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
+        let world = run.app.world();
+        assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        assert_eq!(world.get::<Health>(unit).unwrap().current, health);
+        assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
+    }
     for &unit in &run.party.members {
         assert_eq!(
             run.app.world().get::<Position>(unit),
@@ -160,7 +166,7 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
     let mut arrived = std::collections::HashSet::new();
     for _ in 0..2000 {
         run.app.update();
-        for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
+        for (&unit, &(copy, _, _)) in members.iter().zip(&before) {
             let world = run.app.world();
             let position = world.get::<Position>(unit).unwrap();
             if Vec3::new(position.x, position.y, position.z)
@@ -170,8 +176,6 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
                 arrived.insert(unit);
             }
             assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
-            assert_eq!(world.get::<Health>(unit).unwrap().current, health);
-            assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
         }
         if arrived.len() == members.len() {
             break;
