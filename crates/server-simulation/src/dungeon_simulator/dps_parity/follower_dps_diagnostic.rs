@@ -232,7 +232,25 @@ fn start_fixed_time_fight(
         .entity_mut(owner)
         .insert(crate::combat::AutoAttack::new(target));
     crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
+    // The default list first runs in the tick precombat finishes; restart the
+    // dummy's lifetime with the fight clock afterwards.
+    install_fixed_fight_dummy(app, target, seconds);
     finish_follower_precombat(app, actor);
+    install_fixed_fight_dummy(app, target, seconds);
+}
+
+/// SimC76f8118 player.cpp7743–7754: with fixed_time the dummy's time to die is
+/// the iteration length minus elapsed time; player.hpp964: a tank dummy is a boss.
+fn install_fixed_fight_dummy(app: &mut App, target: Entity, seconds: f64) {
+    let lifetime = std::time::Duration::from_secs_f64(seconds);
+    let expires_at = app.world().resource::<Time>().elapsed() + lifetime;
+    app.world_mut()
+        .entity_mut(target)
+        .insert(crate::simc_apl_native::FixtureTarget {
+            expires_at,
+            lifetime,
+            is_boss: true,
+        });
 }
 
 #[test]
@@ -289,6 +307,60 @@ fn blood_follower_spends_runic_power_inside_a_fixed_fights_last_ten_seconds() {
         ending > long,
         "a fight ending within 10 s spends Runic Power on Death Strike: {ending} vs {long}"
     );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn ttd_reading_followers_keep_casting_against_the_fixed_fight_dummy() {
+    // Vengeance reads target.time_to_die for dung_pull_ttd every pass; Arms
+    // for its execute timing. Both failed without the dummy's lifetime.
+    for (spec, level, map) in [(581, 70, 2515), (71, 90, 2813)] {
+        let _seed = crate::random::seed_scope(1);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, spec, level);
+        for _ in 0..5 {
+            app.update();
+        }
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+        let started = app.world().resource::<Time>().elapsed();
+        for _ in 0..200 {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_none(),
+            "spec{spec} APL failed in the fixed fight"
+        );
+        let elapsed = (app.world().resource::<Time>().elapsed() - started).as_secs_f64();
+        let remaining = app
+            .world()
+            .get::<crate::simc_apl_native::FixtureTarget>(target)
+            .unwrap()
+            .remaining(app.world().resource::<Time>().elapsed())
+            .as_secs_f64();
+        assert!(
+            (remaining - (120.0 - elapsed)).abs() < 1e-6,
+            "spec{spec}: {remaining}"
+        );
+        let casts = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::CastSuccess && event.source == Some(actor.to_bits())
+            })
+            .count();
+        assert!(casts > 0, "spec{spec} cast nothing in 10 s");
+    }
 }
 
 /// SimC runs precombat before the fixed-time target-health timeline starts.
