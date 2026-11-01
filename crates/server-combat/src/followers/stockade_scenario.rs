@@ -474,25 +474,36 @@ pub fn assert_existing_fight_defense_without_a_healer(engaged: (Scenario, Positi
         let cast = world
             .get::<shared::casting::CastState>(s.tank)
             .map(|cast| cast.spell_id);
-        let follower = world.get::<Follower>(s.tank).unwrap().clone();
-        let probe: Vec<_> = combat_target
-            .map(|victim| {
-                (0..10)
-                    .map(|_| {
-                        s.h.advance(1);
-                        let world = s.h.app.world_mut();
-                        let at = world.get::<Position>(victim).copied();
-                        let nav = world.resource::<crate::navigation::Navigation>();
-                        let pending = nav.route_pending(s.tank);
-                        let owner = nav.query_owner(s.tank);
-                        let admission = super::tank_planner::read_movement_admission(
-                            world, s.tank, victim, &follower, None,
-                        );
-                        format!("{at:?} pending={pending} owner={owner:?} {admission:?}")
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        // Trace the unperturbed brain/APL decisions; no extra admission reads.
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_env_filter(
+                "server_combat::followers=debug,game_server::follower_target=debug,server_follower_apl=debug",
+            )
+            .without_time()
+            .with_ansi(false)
+            .with_test_writer()
+            .finish();
+        let probe: Vec<_> = bevy::log::tracing::subscriber::with_default(subscriber, || {
+            (0..6)
+                .map(|_| {
+                    s.h.advance(1);
+                    let world = s.h.app.world();
+                    let current = world
+                        .get::<crate::networking::CombatTarget>(s.tank)
+                        .and_then(|current| current.0);
+                    let distance = current.and_then(|victim| {
+                        crate::spell_cast::targets::position(world, s.tank)
+                            .zip(crate::spell_cast::targets::position(world, victim))
+                            .map(|(a, b)| a.distance(b))
+                    });
+                    format!(
+                        "target={current:?} distance={distance:?} state={:?} reach={:?}",
+                        world.get::<crate::creature_ai::CreatureState>(s.tank),
+                        world.get::<ai::FollowerReach>(s.tank).map(|reach| reach.0),
+                    )
+                })
+                .collect()
+        });
         panic!(
             "existing-fight defense must still move without new-pull healer readiness: \
              target={combat_target:?} owner_victim={target:?} state={state:?} cast={cast:?} \
