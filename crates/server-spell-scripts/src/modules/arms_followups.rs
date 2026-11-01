@@ -38,15 +38,20 @@ fn consume_executioners_precision(
     _: bool,
 ) {
     if spell.id != 12294
-        || world.get::<ActiveSpec>(caster).is_none_or(|spec| spec.0 != 71)
+        || world
+            .get::<ActiveSpec>(caster)
+            .is_none_or(|spec| spec.0 != 71)
     {
         return;
     }
     // SimC76f8118 sc_warrior.cpp3102: Mortal Strike snapshots Precision,
     // then expires it, including when the strike is a background action.
-    combat::auras::remove_auras(world, caster, combat::auras::RemoveReason::Consumed, |aura| {
-        aura.spell_id == 386633 && aura.caster == caster
-    });
+    combat::auras::remove_auras(
+        world,
+        caster,
+        combat::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == 386633 && aura.caster == caster,
+    );
 }
 
 fn selected(world: &World, caster: Entity, passive: u32) -> bool {

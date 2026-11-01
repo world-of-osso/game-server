@@ -66,7 +66,7 @@ pub(super) fn energize_heartbreaker(world: &mut World, caster: Entity, _target: 
 }
 
 /// SimC76f8118 sc_priest.cpp:2082–2165 and sc_priest_discipline.cpp:57–118
-/// preserve the explicit target but exclude summoned units from secondary selection.
+/// preserve the explicit target and party followers but exclude other summoned units.
 fn select_secondary_atonement_allies(
     world: &mut World,
     caster: Entity,
@@ -86,11 +86,12 @@ fn select_secondary_atonement_allies(
     .expect("Atonement spell catalog area selectors");
     units.retain(|&unit| {
         unit != primary
-            && world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
-            && world
-                .get::<spell_cast::summon::SummonedCreature>(unit)
-                .is_none()
-            && world.get::<crate::zones::TempSummon>(unit).is_none()
+            && (world.get::<crate::followers::Follower>(unit).is_some()
+                || (world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
+                    && world
+                        .get::<spell_cast::summon::SummonedCreature>(unit)
+                        .is_none()
+                    && world.get::<crate::zones::TempSummon>(unit).is_none()))
     });
     units
 }
