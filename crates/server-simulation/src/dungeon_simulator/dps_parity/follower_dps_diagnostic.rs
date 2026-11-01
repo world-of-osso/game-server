@@ -2759,6 +2759,7 @@ fn follower_dps_production_dummy() {
     let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
     let mut aura_frames = std::collections::BTreeMap::new();
+    let mut target_aura_frames = std::collections::BTreeMap::new();
     for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
@@ -2781,6 +2782,11 @@ fn follower_dps_production_dummy() {
         super::super::healer_simc_replay::report_death_audit(&mut app, &[actor, owner]);
         let world = app.world();
         sample_actor_auras(world, actor, &mut aura_frames);
+        if let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) {
+            for aura in auras.iter().filter(|aura| aura.caster == actor) {
+                *target_aura_frames.entry(aura.spell_id).or_insert(0u32) += 1;
+            }
+        }
         let now = crate::spell_cast::history_now(world);
         let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
         for (sum, value) in stat_sums.iter_mut().zip([
@@ -3005,7 +3011,7 @@ fn follower_dps_production_dummy() {
         json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
         "self_absorbs_by_spell":self_absorbs,"self_absorb_non_unit":absorb_non_unit,"self_absorb_unknown_scale":absorb_unknown_scale,
         "items":items,"modifiers":modifiers,"talents":talents,"known_spells":known_spells,"target_armor":armor,"checkpoints":checkpoints,"incoming":incoming,"actor_id":actor.to_bits(),"target_id":target.to_bits(),"damage":damage,"hits":hits,"hit_breakdown":hit_breakdown,
-        "mean_stats":stat_sums.map(|sum| sum / f64::from(FIXED_FIGHT_FRAMES)),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES))).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
+        "mean_stats":stat_sums.map(|sum| sum / f64::from(FIXED_FIGHT_FRAMES)),"sources":damage_sources,"casts":casts,"cast_trace":cast_trace,"aura_applications":aura_applications,"aura_uptime_pct":aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES))).collect::<std::collections::BTreeMap<_, _>>(),"target_aura_uptime_pct":target_aura_frames.into_iter().map(|(spell, frames)| (spell, f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES))).collect::<std::collections::BTreeMap<_, _>>(),"energize":energize,
         "flame_shock_s":flame_shock_frames as f64 / 20.0,"lava_surge_s":lava_surge_frames as f64 / 20.0,
         "storm_elemental_s":storm_frames as f64 / 20.0,"lava_casts_started_during_storm":lava_during_storm,
         "bolt_casts_started_during_storm":bolt_during_storm,"lava_successes_during_stable_storm":lava_during_stable_storm,"casting_s":casting as f64 / 20.0,
