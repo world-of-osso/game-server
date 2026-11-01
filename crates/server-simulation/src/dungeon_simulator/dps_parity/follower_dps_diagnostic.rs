@@ -460,6 +460,18 @@ fn blood_follower_death_strike_counts_damage_beyond_current_health() {
         let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
         let copy = create_open_follower_copy(&mut app, 2813).unwrap();
         let (mut app, actor, target, _) = prepare_class_follower(app, copy, 250, 90);
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::networking::CombatTarget(Some(target)));
+        app.world_mut()
+            .entity_mut(owner)
+            .insert(crate::combat::AutoAttack::new(target));
+        crate::combat_refs::set_in_combat_with(app.world_mut(), owner, target);
         finish_follower_precombat(&mut app, actor);
         app.world_mut()
             .entity_mut(actor)
