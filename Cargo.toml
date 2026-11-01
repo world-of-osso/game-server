@@ -22,9 +22,12 @@ opt-level = 2
 opt-level = 2
 debug = 1
 
+# This crate's test harness is large; omit debug info and use fewer codegen
+# units to reduce rustc peak memory while retaining optimized gameplay.
 [profile.dev.package.server-combat]
 opt-level = 2
-debug = 1
+debug = 0
+codegen-units = 128
 
 [profile.dev.package.server-core]
 opt-level = 2
