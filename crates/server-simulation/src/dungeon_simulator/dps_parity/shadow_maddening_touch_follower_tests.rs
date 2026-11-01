@@ -25,6 +25,9 @@ fn follower_shadow_maddening_touch_generates_insanity_from_vt_ticks() {
         }
         crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
         for cycle in 0..40 {
+            if !selected {
+                assert!(!crate::auras::has_aura(app.world(), actor, 391228), "talent returned at cycle {cycle}");
+            }
             if cycle % 8 == 0 {
                 crate::spell_cast::cast_triggered(app.world_mut(), actor, 34914, Some(target), 1);
             }
