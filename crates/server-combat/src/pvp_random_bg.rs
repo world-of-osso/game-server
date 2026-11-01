@@ -123,7 +123,7 @@ pub(super) fn draw_match(queue: &mut BgQueue, catalog: &Catalog) -> Option<BgMat
     if total == 0 {
         return None;
     }
-    let ticket = rand::Rng::gen_range(&mut rand::thread_rng(), 0..total);
+    let ticket = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..total);
     let selected = select_ticket(&maps, ticket).expect("ticket within configured weights");
     matched.bg_id = selected.template.id;
     matched.bracket = selected.bracket;

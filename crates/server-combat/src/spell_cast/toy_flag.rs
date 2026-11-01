@@ -97,7 +97,7 @@ pub(super) fn targeting_plan(
 ) -> TargetPlan {
     let bodies = enemy_bodies(world, caster, spell);
     let units = bodies
-        .choose(&mut rand::thread_rng())
+        .choose(&mut crate::random::thread_rng())
         .copied()
         .into_iter()
         .collect();

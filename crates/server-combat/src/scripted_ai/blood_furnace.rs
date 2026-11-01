@@ -390,7 +390,7 @@ impl Channeler {
         if candidates.is_empty() {
             return None;
         }
-        let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..candidates.len());
+        let pick = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..candidates.len());
         Some(candidates[pick])
     }
 
@@ -431,7 +431,7 @@ impl CreatureAi for Channeler {
         self.tasks.reset();
         crate::spell_cast::cancel_cast(ctx.world, ctx.me);
         ctx.talk(SAY_CHANNELER_AGGRO_1);
-        if rand::Rng::gen_bool(&mut rand::thread_rng(), CHANNELER_AGGRO_2_CHANCE) {
+        if rand::Rng::gen_bool(&mut crate::random::thread_rng(), CHANNELER_AGGRO_2_CHANCE) {
             ctx.talk(SAY_CHANNELER_AGGRO_2);
         }
         self.tasks.schedule_range(TASK_SHADOW_BOLT, 0, 5_000);

@@ -380,7 +380,7 @@ pub(crate) fn effect_gather(
     }
     let ability = choose_ability(world, ctx.caster, target).expect("validated gather ability");
     let (loot, progress) = gather_progress(world, ctx.caster, target, &ability);
-    let mut rng = rand::thread_rng();
+    let mut rng = crate::random::thread_rng();
     let rolled = world.resource::<crate::loot::LootTables>().roll_gathering(
         loot,
         ability.effect == SKIN,

@@ -223,6 +223,7 @@ pub(crate) fn spawn_level_dummy(
 /// parity follower and area-trigger catalogs read from that snapshot.
 pub(crate) fn build_snapshot_app(path: &std::path::Path) -> Result<App, String> {
     let mut app = super::runtime::build_app_with_world_db(path);
+    app.init_resource::<crate::spell_cast::test_harness::ReplayCombatClock>();
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .map_err(|error| format!("open measurement snapshot: {error}"))?;

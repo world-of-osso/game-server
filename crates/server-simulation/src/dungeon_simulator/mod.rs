@@ -31,6 +31,7 @@ mod merithra_proc_tests;
 mod merithra_replay_tests;
 mod mistweaver_mana_tea_tests;
 mod mistweaver_replay_tests;
+mod mistweaver_talent_tests;
 mod movement;
 mod preservation_empower_tests;
 mod preservation_evoker_replay_tests;

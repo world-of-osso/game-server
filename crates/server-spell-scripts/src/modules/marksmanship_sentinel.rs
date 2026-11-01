@@ -12,7 +12,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_damage),
     SpellScriptHook::AfterQueuedTriggers(roll_queued_tip_marks),
     SpellScriptHook::ActualCriticalChanceBonus(aimed_mark_crit),
-    SpellScriptHook::ActualDamageMultiplier(rapid_mark_damage),
 ];
 use bevy::prelude::*;
 
@@ -58,11 +57,9 @@ fn aimed_mark_crit(
     }
 }
 
-fn rapid_mark_damage(world: &mut World, ctx: &EffectCtx, target: Entity) -> f32 {
-    if ctx.spell.id != RAPID_TICK {
-        return 1.0;
-    }
-    let caster = ctx.caster;
+pub(super) fn snapshot_rapid_mark(world: &mut World, caster: Entity, target: Entity) -> f32 {
+    // SimC snapshots each target before the tick's missile travels. A mark
+    // earned later must not be consumed by that already-launched missile.
     let removed = auras::remove_auras(world, target, RemoveReason::Consumed, |aura| {
         aura.caster == caster && aura.spell_id == RAPID_MARK
     });
@@ -77,18 +74,9 @@ fn rapid_mark_damage(world: &mut World, ctx: &EffectCtx, target: Entity) -> f32 
         .get_resource::<RapidMarkedTargets>()
         .is_some_and(|marked| marked.0.contains(&(caster, target)))
     {
-        // SimC reads the native debuff's raw effect, not caster spell modifiers.
-        let mark = world
-            .resource::<combat::spell_info::SpellStore>()
-            .get(RAPID_MARK)
-            .expect("native Rapid Fire mark");
-        1.0 + mark
-            .effects
-            .iter()
-            .find(|effect| effect.index == 0)
-            .expect("native Rapid Fire mark damage")
-            .base_points
-            / 100.0
+        // SimC applies selected Arcane Talons and Avian Specialization to
+        // the native effect before sc_hunter.cpp5731 reads its value.
+        1.0 + script_effect_value(world, caster, RAPID_MARK, 0) / 100.0
     } else {
         1.0
     }
