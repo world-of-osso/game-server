@@ -5,6 +5,96 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn searing_light_banks_real_penance_bolts_and_transfers_atonement() {
+    for selected in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[47540, 47758, 47666, 1280131, 1280134, 194384, 81749, 94472],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(if selected {
+                vec![47540, 1280131]
+            } else {
+                vec![47540]
+            }),
+        ));
+        *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+            current: 10_000.0,
+            max: 100_000.0,
+        };
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        };
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target: caster,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(enemy));
+        h.advance(400);
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        let bolts: Vec<_> = events
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(47666))
+            .collect();
+        let ticks: Vec<_> = events
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(1280134))
+            .collect();
+        assert!(!bolts.is_empty(), "Penance must land real damage bolts");
+        if !selected {
+            assert!(ticks.is_empty(), "Searing Light requires its talent");
+            continue;
+        }
+        assert!(
+            !ticks.is_empty(),
+            "Penance must produce the rolling residual"
+        );
+        assert!(
+            ticks.iter().all(|event| !event.crit),
+            "the residual must not crit again"
+        );
+        let bolt_damage: i64 = bolts.iter().map(|event| i64::from(event.amount)).sum();
+        let dot_damage: i64 = ticks.iter().map(|event| i64::from(event.amount)).sum();
+        assert!(
+            (dot_damage * 5 - bolt_damage).abs() <= 25,
+            "20% of all overlapping bolt damage: bolts={bolt_damage}, ticks={dot_damage}"
+        );
+        let transfers = events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(94472)
+                    && event.target == Some(caster.to_bits())
+            })
+            .count();
+        assert_eq!(
+            transfers,
+            bolts.len() + ticks.len(),
+            "each bolt and residual tick must transfer Atonement"
+        );
+    }
+}
+
+#[test]
 fn dark_indulgence_grants_dark_side_from_real_mind_blast() {
     for selected in [false, true] {
         let mut h = harness(Vec::new(), &[8092, 372972, 198069], 5).unwrap();

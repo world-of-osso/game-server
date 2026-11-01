@@ -23,6 +23,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::HealingMultiplier(twist_healing_multiplier),
     SpellScriptHook::ResolvedHeal(divine_aegis),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
+    SpellScriptHook::ResolvedDamage(bank_searing_light),
     SpellScriptHook::RawResolvedDamage(trigger_dark_indulgence),
     SpellScriptHook::DamageAmount(penance_bolt_damage),
     SpellScriptHook::HealingMultiplier(penance_healing_multiplier),
@@ -568,6 +569,29 @@ fn transfer_damage(
         extend_pain_from_penance(world, caster, target);
         finish_penance_bolt(world, caster);
     }
+}
+
+fn bank_searing_light(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    target: Entity,
+    _critical: bool,
+    damage: f32,
+) {
+    const SEARING_LIGHT: u32 = 1280131;
+    const SEARING_LIGHT_DOT: u32 = 1280134;
+    if ctx.spell.id != 47666
+        || damage <= 0.0
+        || !world
+            .get::<combat::class_progression::KnownSpells>(ctx.caster)
+            .is_some_and(|known| known.contains(SEARING_LIGHT))
+    {
+        return;
+    }
+    // SimC76f8118 sc_priest_discipline.cpp:292-299 banks each landed Penance bolt.
+    let percent =
+        combat::spell_cast::scripts::script_effect_value(world, ctx.caster, SEARING_LIGHT, 0);
+    super::marksmanship::bank_residual(world, ctx, target, SEARING_LIGHT_DOT, percent, damage);
 }
 
 fn extend_pain_from_penance(world: &mut World, caster: Entity, target: Entity) {
