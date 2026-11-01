@@ -2084,6 +2084,12 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
     for _ in 0..FIXED_FIGHT_FRAMES {
         app.update();
     }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none(),
+        "the rotation must continue after reactive buffs appear"
+    );
     let events = &app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
