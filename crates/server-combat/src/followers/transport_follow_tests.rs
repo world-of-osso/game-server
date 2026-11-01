@@ -1,5 +1,4 @@
 //! Real navigation and production follower movement across a registered pyre.
-use super::*;
 use bevy::prelude::*;
 use shared::components::Position;
 
