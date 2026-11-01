@@ -548,19 +548,24 @@ fn pre_mid2_magus_spells(world: &World, owner: Entity, entry: u32) -> Option<&'s
 const MAGUS: u32 = 163366;
 const MAGUS_FROSTBOLT: u32 = 317792;
 
-/// SimC76f8118 sc_death_knight.cpp4424–4434: a Magus recasts Frostbolt only
-/// after its native slow duration.
-fn magus_frostbolt_cooldown(world: &World, entry: u32, spell: u32) -> Option<f64> {
-    if (entry, spell) != (MAGUS, MAGUS_FROSTBOLT) {
+/// SimC76f8118 sc_death_knight.cpp4424–4434: a Magus Frostbolt cooldown of its
+/// native slow duration starts when the cast executes; this clock starts at
+/// cast start, so it adds the cast time.
+fn magus_frostbolt_cooldown(world: &World, actor: Entity, entry: u32, id: u32) -> Option<f64> {
+    if (entry, id) != (MAGUS, MAGUS_FROSTBOLT) {
         return None;
     }
-    let duration = world
+    let spell = world
         .resource::<crate::spell_info::SpellStore>()
-        .get(spell)
-        .and_then(|spell| spell.misc.as_ref())
+        .get(id)
+        .expect("native Magus Frostbolt");
+    let duration = spell
+        .misc
+        .as_ref()
         .and_then(|misc| misc.duration)
         .expect("native Magus Frostbolt duration");
-    Some(f64::from(duration.duration_ms) / 1000.0)
+    let cast_ms = super::cast_time_ms(world, actor, spell);
+    Some(f64::from(duration.duration_ms + cast_ms) / 1000.0)
 }
 
 fn action_policy(entry: u32, spell: u32) -> Option<&'static GuardianActionPolicy> {
@@ -1135,7 +1140,7 @@ fn start_repeat_clock(world: &mut World, actor: Entity, id: u32, repeatable: boo
     let entry = world.get::<Npc>(actor).unwrap().template_id;
     if let Some(cooldown) = action_policy(entry, id)
         .and_then(|row| row.cooldown)
-        .or_else(|| magus_frostbolt_cooldown(world, entry, id))
+        .or_else(|| magus_frostbolt_cooldown(world, actor, entry, id))
     {
         let until = super::now(world) + cooldown;
         world

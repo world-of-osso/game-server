@@ -78,11 +78,12 @@ fn follower_unholy_magus_and_lord_cast_frostbolt_without_mid2_set() {
             .all(|&(_, spell)| !matches!(spell, 1297055 | 1297086 | 1297091)),
         "{spells:?}"
     );
-    // SimC76f8118 cpp4429–4433: each Magus recasts Frostbolt after its 6 s slow.
+    // SimC76f8118 cpp4429–4433: each Magus recasts Frostbolt 6 s after the
+    // previous one executes, so impacts are at least 6 s plus a hasted cast apart.
     let mut last: HashMap<u64, f64> = HashMap::new();
     for &(_, source, _, at) in hits.iter().filter(|hit| hit.0 == MAGUS && hit.2 == 317792) {
         if let Some(previous) = last.insert(source, at) {
-            assert!(at - previous >= 5.95, "Magus Frostbolt {previous} -> {at}");
+            assert!(at - previous >= 7.0, "Magus Frostbolt {previous} -> {at}");
         }
     }
 }
