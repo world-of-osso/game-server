@@ -331,6 +331,7 @@ register_modules! {
     mistweaver_gust: (2700, "modules/mistweaver_gust.rs"),
     mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
     mistweaver_rushing_wind: (2700, "modules/mistweaver_rushing_wind.rs"),
+    mistweaver_way_of_the_crane: (2700, "modules/mistweaver_way_of_the_crane.rs"),
     preservation_empower: (2700, "modules/preservation_empower.rs"),
     enhancement_imbue_mask: (2636, "modules/enhancement_imbue_mask.rs"),
     outlaw_ace: (2605, "modules/outlaw_ace.rs"),

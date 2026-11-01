@@ -225,6 +225,72 @@ fn mistweaver_chiji_blackout_kick_heals_injured_party_members() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_way_of_the_crane_doubles_tiger_palm_and_heals_from_crane_kick_hits() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    let enemy = run.sources[0];
+    assert!(crate::auras::has_aura(run.app.world(), healer, 388779));
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.2;
+    }
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
+    let cast = |run: &mut super::healer_simc_replay::ClassParty, spell| {
+        let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        // Untriggered, like the follower's own casts: Way of the Crane repeats only depth-0 palms.
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, spell, Some(enemy), false)
+            .unwrap();
+        for _ in 0..80 {
+            run.app.update();
+        }
+        run.app.world().resource::<ObservedCombatEvents>().0[start..].to_vec()
+    };
+    let palm = cast(&mut run, 100780);
+    let strikes = palm
+        .iter()
+        .filter(|e| {
+            matches!(e.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+                && e.spell_id == Some(100780)
+                && e.source == Some(healer.to_bits())
+        })
+        .count();
+    assert_eq!(strikes, 2, "Tiger Palm must strike twice: {palm:?}");
+    let kick = cast(&mut run, 101546);
+    let hits: Vec<_> = kick
+        .iter()
+        .filter(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(107270))
+        .collect();
+    let heals: Vec<_> = kick
+        .iter()
+        .filter(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(389325))
+        .collect();
+    assert!(!hits.is_empty());
+    assert_eq!(heals.len(), hits.len(), "one heal per kick hit: {kick:?}");
+    for (hit, heal) in hits.iter().zip(&heals) {
+        // 388779 s1 = 280% before healing-done modifiers; WCL deciles span 2.77-3.18.
+        let ratio = heal.amount as f32 / hit.amount as f32;
+        assert!(
+            (2.79..=3.2).contains(&ratio),
+            "heal {heal:?} for hit {hit:?}"
+        );
+        assert!(
+            run.slots
+                .iter()
+                .any(|unit| Some(unit.to_bits()) == heal.target)
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_celestial_harmony_cocoons_party_when_chiji_is_invoked() {
     use shared::components::{Health, Npc, UnitSummonedBy};
 
