@@ -2116,6 +2116,16 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.spell_id == Some(1263382)),
         "Eclipse must grant Ascendant Stars"
     );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1271222)
+                && event.amount > 0),
+        "actual Starfire hits must produce selected Star Cascade damage"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {

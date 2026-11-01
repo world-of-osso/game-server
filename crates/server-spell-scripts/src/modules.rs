@@ -278,6 +278,7 @@ register_modules! {
     druid_balance_of_all_things: (1054, "modules/druid_balance_of_all_things.rs"),
     druid_eclipse: (1054, "modules/druid_eclipse.rs"),
     druid_shooting_stars: (1054, "modules/druid_shooting_stars.rs"),
+    druid_star_cascade: (1054, "modules/druid_star_cascade.rs"),
     druid_touch_cosmos: (1054, "modules/druid_touch_cosmos.rs"),
     druid_umbral: (1054, "modules/druid_umbral.rs"),
     druid_fury_of_elune: (1054, "modules/druid_fury_of_elune.rs"),
