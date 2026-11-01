@@ -1,7 +1,7 @@
 //! Earned Outlaw builder procs; native records retain values and payload damage.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras};
+use combat::auras;
 use combat::random::Rng;
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
