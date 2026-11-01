@@ -405,6 +405,7 @@ pub fn install_class(
         None => world.entity_mut(entity).remove::<LoggedHeroTree>(),
     };
     crate::spell_cast::powers::install_class_powers(world, entity, pools);
+    (provider.before_passives)(world, entity, source.spec_id)?;
     crate::auras::sync_passives(
         world,
         entity,

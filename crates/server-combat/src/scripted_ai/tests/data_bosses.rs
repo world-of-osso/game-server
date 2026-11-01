@@ -687,6 +687,7 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     crate::followers::native_fixture::install_class_sources(h.app.world_mut());
     h.app
         .insert_resource(crate::followers::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
             source_actions: |_, _, _| Ok(Vec::new()),
             equipped_actions: |_, _, _| Ok(Vec::new()),
         });

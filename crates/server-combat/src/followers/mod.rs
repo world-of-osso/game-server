@@ -188,6 +188,8 @@ pub struct FollowerActionSpells(pub Vec<u32>);
 /// Installed by the class APL host before any class follower spawns.
 #[derive(Resource, Clone, Copy)]
 pub struct FollowerActionProvider {
+    /// Configure acquisition observers before passive auras are installed.
+    pub before_passives: fn(&mut World, Entity, u32) -> Result<(), String>,
     /// Program-bound class actions, available after class progression and before gear.
     pub source_actions: fn(&mut World, Entity, u32) -> Result<Vec<u32>, String>,
     /// Program-selected equipped on-use actions, available after gear is equipped.

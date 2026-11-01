@@ -1969,6 +1969,49 @@ fn follower_attacks_with_its_equipped_weapon_type() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn frost_follower_seed_seven_continues_after_reactive_passive_acquisition() {
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let _seed = crate::random::seed_scope(7);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 64, level);
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        for _ in 0..5 {
+            app.update();
+        }
+        start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+        for _ in 0..FIXED_FIGHT_FRAMES {
+            app.update();
+        }
+        assert!(
+            app.world()
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_none(),
+            "Frost level {level} must not fail after tracked aura acquisition"
+        );
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "Frost level {level} must damage its target"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
