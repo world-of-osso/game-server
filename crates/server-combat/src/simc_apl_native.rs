@@ -675,13 +675,52 @@ impl<'a> NativeFacts<'a> {
             // output (Fel-Scarred → felscarred, Elune's Chosen → elunes_chosen).
             .find(|tree| simc_tokenize(&tree.name) == alias)
             .ok_or_else(|| format!("unknown native APL hero tree {alias}"))?;
+        Ok(bool_value(self.apl_sub_tree()? == Some(tree.id)))
+    }
+
+    /// The selected hero tree. Below hero level a class follower has none, and SimC APLs
+    /// assume the hero level: there the APL reads the profile's logged tree.
+    fn apl_sub_tree(&self) -> Result<Option<u32>, String> {
+        let classes = self.world.resource::<crate::spell_info::ClassSpells>();
         let traits = self
             .world
             .get::<crate::class_progression::TraitLoadout>(self.actor)
             .ok_or("native APL selected TraitLoadout unavailable")?;
-        Ok(bool_value(
-            traits.selected_sub_tree(classes) == Some(tree.id),
-        ))
+        Ok(traits.selected_sub_tree(classes).or_else(|| {
+            self.world
+                .get::<crate::followers::class_spawn::LoggedHeroTree>(self.actor)
+                .map(|tree| tree.0)
+        }))
+    }
+
+    /// `spell` is the keystone talent of the logged hero tree the APL reads below hero
+    /// level: a node of that tree with no parent inside it.
+    fn logged_keystone(&self, spell: u32) -> bool {
+        let classes = self.world.resource::<crate::spell_info::ClassSpells>();
+        let selected = self
+            .world
+            .get::<crate::class_progression::TraitLoadout>(self.actor)
+            .and_then(|traits| traits.selected_sub_tree(classes));
+        let Some(logged) = self
+            .world
+            .get::<crate::followers::class_spawn::LoggedHeroTree>(self.actor)
+        else {
+            return false;
+        };
+        if selected.is_some() {
+            return false;
+        }
+        classes.classes.iter().any(|class| {
+            let tree = &class.traits;
+            tree.nodes.iter().any(|node| {
+                node.sub_tree_id == logged.0
+                    && node.entries.iter().any(|entry| entry.spell_id == spell)
+                    && node.parents.iter().all(|(parent, _)| {
+                        tree.node(*parent)
+                            .is_none_or(|parent| parent.sub_tree_id != logged.0)
+                    })
+            })
+        })
     }
 
     fn talent(&self, operand: &str) -> Result<f64, String> {
@@ -694,7 +733,8 @@ impl<'a> NativeFacts<'a> {
             .ok_or("native APL selected TraitLoadout unavailable")?;
         let enabled = traits
             .active_talent_spells()
-            .any(|spell| spell.spell_id == id);
+            .any(|spell| spell.spell_id == id)
+            || self.logged_keystone(id);
         match property {
             "enabled" => Ok(bool_value(enabled)),
             "disabled" => Ok(bool_value(!enabled)),

@@ -311,6 +311,11 @@ pub fn spawn_class(
     }
 }
 
+/// The hero sub-tree the class profile's logged build selects. SimC APLs assume the
+/// hero level: below it the APL reads its hero conditions against this tree.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LoggedHeroTree(pub u32);
+
 /// Give `entity` the class actor `source` at the owner's level: native
 /// progression and talents, base stats and pools, and real gear. `entity`
 /// follows `owner`; the owner itself is a valid entity for a headless leader.
@@ -333,6 +338,10 @@ pub fn install_class(
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
+    let logged = source
+        .talent_entries
+        .as_ref()
+        .ok_or("follower talents unavailable")?;
     let (known, traits, talent_source) = crate::class_progression::evaluate_follower_progression(
         classes,
         source.class_id,
@@ -340,11 +349,15 @@ pub fn install_class(
         source.spec_id,
         level,
         source.talent_source()?,
-        source
-            .talent_entries
-            .as_ref()
-            .ok_or("follower talents unavailable")?,
+        logged,
     )?;
+    let class_tree = &classes
+        .classes
+        .iter()
+        .find(|class| class.class_id == source.class_id)
+        .ok_or("follower class unavailable")?
+        .traits;
+    let hero_tree = crate::trait_config::logged_sub_tree(class_tree, logged)?.map(LoggedHeroTree);
     let store = world
         .get_resource::<crate::spell_info::SpellStore>()
         .ok_or("follower spell store unavailable")?;
@@ -405,6 +418,10 @@ pub fn install_class(
             ),
             traits,
         ));
+    match hero_tree {
+        Some(tree) => world.entity_mut(entity).insert(tree),
+        None => world.entity_mut(entity).remove::<LoggedHeroTree>(),
+    };
     crate::spell_cast::powers::install_class_powers(world, entity, pools);
     crate::auras::sync_passives(
         world,

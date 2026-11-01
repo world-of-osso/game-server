@@ -178,12 +178,11 @@ pub fn build_follower_config(
     Ok((source, build_logged_config(tree, ctx, logged)?))
 }
 
-fn select_profile_hero(
-    tree: &TraitTree,
-    ctx: TraitContext,
+/// The profile's logged hero-tree selection node and entry, if it logs one.
+fn logged_hero_choice<'a>(
+    tree: &'a TraitTree,
     logged: &[(u32, u32)],
-    purchases: &mut Vec<Purchase>,
-) -> Result<(), String> {
+) -> Result<Option<(&'a TraitNode, &'a TraitNodeEntry)>, String> {
     let choices: Vec<_> = logged
         .iter()
         .filter(|(_, ranks)| *ranks > 0)
@@ -195,12 +194,26 @@ fn select_profile_hero(
             })
         })
         .collect();
-    let [(node, entry)] = choices.as_slice() else {
-        return if choices.is_empty() {
-            Ok(())
-        } else {
-            Err("follower profile selects multiple hero trees".into())
-        };
+    match choices.as_slice() {
+        [] => Ok(None),
+        [choice] => Ok(Some(*choice)),
+        _ => Err("follower profile selects multiple hero trees".into()),
+    }
+}
+
+/// The hero sub-tree the profile's logged build selects, whatever the follower's level.
+pub fn logged_sub_tree(tree: &TraitTree, logged: &[(u32, u32)]) -> Result<Option<u32>, String> {
+    Ok(logged_hero_choice(tree, logged)?.map(|(_, entry)| entry.sub_tree_id))
+}
+
+fn select_profile_hero(
+    tree: &TraitTree,
+    ctx: TraitContext,
+    logged: &[(u32, u32)],
+    purchases: &mut Vec<Purchase>,
+) -> Result<(), String> {
+    let Some((node, entry)) = logged_hero_choice(tree, logged)? else {
+        return Ok(());
     };
     let starter = build_config(tree, ctx, purchases)?;
     if Checker::new(tree, ctx, &starter)
