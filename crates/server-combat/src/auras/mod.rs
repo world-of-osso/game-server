@@ -2323,9 +2323,9 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     let primary_support = ebon_might::primary_bonus(&auras);
-    // TC HandleModPercentStat returns for non-Players, including controlled
-    // NPCs that happen to carry the follower class-stat bridge.
-    if world.get::<Player>(unit).is_none() {
+    // Class-built followers use the same combat-stat modifiers as players;
+    // ordinary controlled NPCs retain the native non-player restrictions.
+    if !crate::followers::is_player_like_combatant(world, unit) {
         stats.primary_base_pct = UnitStats::default();
         // FOLLOWER_CLASS_ACTOR_PLAYER_EQUIVALENT_ARMOR_PENETRATION:
         // approved class-follower policy; TC Unit.cpp1720 still excludes ordinary NPCs.
