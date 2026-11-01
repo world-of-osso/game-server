@@ -386,6 +386,8 @@ impl Plugin for FollowerPlugin {
 #[cfg(test)]
 mod ara_kara_ixin_tests;
 #[cfg(test)]
+mod ara_kara_ledge_tests;
+#[cfg(test)]
 mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;

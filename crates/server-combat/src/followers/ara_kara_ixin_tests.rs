@@ -18,7 +18,7 @@ const KILLED_BEFORE_IXIN: &[u32] = &[
 ];
 const LIVE_PARTY_REACH: f32 = 100.0;
 
-fn at(point: Vec3) -> Position {
+pub(super) fn at(point: Vec3) -> Position {
     Position {
         x: point.x,
         y: point.y,
@@ -26,9 +26,11 @@ fn at(point: Vec3) -> Position {
     }
 }
 
-#[test]
-#[ignore = "requires actual Ara-Kara navigation, ground and line-of-sight assets"]
-fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
+/// A Normal-difficulty Ara-Kara copy with real ground, line of sight and navmesh,
+/// populated by the source spawns `keep` selects by GUID and position.
+pub(super) fn ara_kara_copy(
+    keep: impl Fn(u32, Vec3) -> bool,
+) -> (crate::spell_cast::test_harness::Harness, InMap) {
     let (mut h, placeholder, _) =
         super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {
             app.insert_resource(crate::test_data::world_data().clone());
@@ -73,11 +75,6 @@ fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
         .unwrap()
         .map;
     h.app.insert_resource(instances);
-    // Live 2026-11-01 14:11-14:35 UTC: Ixin (TDB GUID 10003734) was the party's only
-    // engaged enemy. The map copy at that moment: every source spawn within 125 yd of the
-    // tank except KILLED_BEFORE_IXIN.
-    let ixin_at = Vec3::new(-235.422, 148.564, -514.12);
-    let tank_at = Vec3::new(-241.75, 140.37, -492.37);
     let source = crate::test_data::world_data();
     let mut data = source.clone();
     let spawns: Vec<_> = source
@@ -85,9 +82,7 @@ fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
         .iter()
         .filter(|spawn| {
             let point = Vec3::new(spawn.position_x, spawn.position_z, -spawn.position_y);
-            spawn.map == 2660
-                && point.distance(tank_at) <= 125.0
-                && !KILLED_BEFORE_IXIN.contains(&(spawn.guid - TDB_GUID_OFFSET))
+            spawn.map == 2660 && keep(spawn.guid, point)
         })
         .cloned()
         .collect();
@@ -127,6 +122,21 @@ fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
         });
     crate::navigation::install_fixture(&mut h.app, crate::navigation::Navigation::new(&nav));
+    (h, map)
+}
+
+#[test]
+#[ignore = "requires actual Ara-Kara navigation, ground and line-of-sight assets"]
+fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
+    // Live 2026-11-01 14:11-14:35 UTC: Ixin (TDB GUID 10003734) was the party's only
+    // engaged enemy. The map copy at that moment: every source spawn within 125 yd of the
+    // tank except KILLED_BEFORE_IXIN.
+    let ixin_at = Vec3::new(-235.422, 148.564, -514.12);
+    let tank_at = Vec3::new(-241.75, 140.37, -492.37);
+    let (mut h, map) = ara_kara_copy(|guid, point| {
+        point.distance(tank_at) <= 125.0 && !KILLED_BEFORE_IXIN.contains(&(guid - TDB_GUID_OFFSET))
+    });
+    let owner = h.caster;
     let spawned: Vec<_> = h
         .app
         .world_mut()
