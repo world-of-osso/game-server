@@ -45,7 +45,9 @@ fn resolve_fatality(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: b
 
 fn roll_fatal_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     let Some((instance, chance)) = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
-        let aura = auras.iter().find(|aura| aura.spell_id == FATALITY && aura.caster == ctx.caster)?;
+        let aura = auras
+            .iter()
+            .find(|aura| aura.spell_id == FATALITY && aura.caster == ctx.caster)?;
         let effect = aura.effects.iter().find(|effect| effect.index == 0)?;
         Some((aura.instance_id, effect.amount))
     }) else {
@@ -54,7 +56,13 @@ fn roll_fatal_mark(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     // SimC76f8118 sc_warrior.cpp3119–3120: each Mortal Strike impact rolls
     // the selected talent's native effect1 chance to apply Fatal Mark.
     if procs::try_policy_proc(world, ctx.caster, instance, chance)
-        && !combat::spell_cast::try_cast_triggered(world, ctx.caster, FATAL_MARK, Some(target), ctx.depth + 1)
+        && !combat::spell_cast::try_cast_triggered(
+            world,
+            ctx.caster,
+            FATAL_MARK,
+            Some(target),
+            ctx.depth + 1,
+        )
     {
         warn!(caster = ?ctx.caster, ?target, "Native Fatal Mark cast refused");
     }

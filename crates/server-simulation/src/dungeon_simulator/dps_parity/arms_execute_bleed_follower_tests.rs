@@ -1,5 +1,5 @@
-use super::*;
 use super::follower_dps_diagnostic::*;
+use super::*;
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
