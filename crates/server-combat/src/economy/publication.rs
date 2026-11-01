@@ -126,7 +126,7 @@ fn queue_market_cycle(
         &economy.state,
         config,
         cycle,
-        &mut rand::random::<u64>,
+        &mut crate::random::random::<u64>,
     );
     match plan {
         Ok(plan) => {

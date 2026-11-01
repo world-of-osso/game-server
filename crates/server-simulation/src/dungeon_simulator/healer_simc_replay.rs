@@ -433,9 +433,7 @@ fn replay(
                     event.amount.max(0) as u64;
             }
             #[cfg(test)]
-            if std::env::var_os("HEALER_TANK_TRACE_EVENTS").is_some()
-                && (event.source == Some(healer.to_bits()) || event.target == Some(tank.to_bits()))
-            {
+            if std::env::var_os("HEALER_TANK_TRACE_EVENTS").is_some() {
                 eprintln!(
                     "HEALER_REPLAY_EVENT {}",
                     json!({"tick":tick,"event":event,"tank_health":world.get::<Health>(tank).map(|health| (health.current, health.max))})

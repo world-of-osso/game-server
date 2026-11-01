@@ -84,7 +84,7 @@ pub(super) fn catch_landed_coins(world: &mut World) {
     };
     for caster in landed {
         if is_located_player(world, caster) {
-            let face = rand::Rng::gen_bool(&mut rand::thread_rng(), 0.5);
+            let face = rand::Rng::gen_bool(&mut crate::random::thread_rng(), 0.5);
             let text = if face { TEXT_HEADS } else { TEXT_TAILS };
             send_text_emote(world, caster, text);
         }

@@ -37,7 +37,7 @@ impl SeethingRuntime {
     }
 
     pub fn advance(&mut self, world: &mut World, map: InMap, delta_ms: u64) {
-        let mut rng = rand::thread_rng();
+        let mut rng = crate::random::thread_rng();
         for event in self
             .battle
             .advance(delta_ms, &mut |count| rng.gen_range(0..count))

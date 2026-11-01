@@ -377,6 +377,10 @@ fn start_collision_drop(
     Ok(())
 }
 
+pub fn follower_routing(world: &World, unit: Entity) -> bool {
+    crate::followers::transport_follow::in_progress(world, unit)
+}
+
 pub fn in_progress(world: &World, unit: Entity) -> bool {
     world
         .get::<crate::navigation::collision_drop::CollisionDropMovement>(unit)

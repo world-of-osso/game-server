@@ -65,6 +65,7 @@ fn ranged_hunters_spawn_with_ranged_journal_weapons_at_queue_levels() {
         effects: crate::item_instance::load::load_item_effect_tables(&db).unwrap(),
     });
     h.app.insert_resource(super::super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
         source_actions: |_, _, _| Ok(vec![75]),
         equipped_actions: |_, _, _| Ok(Vec::new()),
     });
@@ -215,6 +216,7 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         .entity_mut(h.caster)
         .insert((copy, Level(90)));
     h.app.insert_resource(super::super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
         source_actions: |world, actor, spec| {
             assert!(
                 world

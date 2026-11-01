@@ -25,7 +25,7 @@ The replay applies recorded incoming hits to native combat actors. The SimC dumm
 
 `scripts/healer_tank_replay.py` runs the replay and reports healer and tank metrics. The [replay specification](../../specs/healer-tank-replay.md) defines the traces, metrics and profiles. [Holy Paladin](../../specs/healer-tank-replay/65.md) and [Preservation Evoker](../../specs/healer-tank-replay/1468.md) contain their WCL references, native results and named gaps. WCL full-dungeon spell rates and overheal describe different damage intake and cannot establish numerical parity with the synthetic pulse.
 
-The Preservation path resolves Lifebind transfers, Consume Flame healing and Life-Giver's Flame from native effects. The specialization specification records their current proof boundaries and the WCL/tooltip target-cap discrepancy.
+The Preservation path resolves Lifebind transfers, Consume Flame healing and Life-Giver's Flame from native effects. It also resolves Temporal Anomaly shields and partial Echoes, and Echo replication of healing casts, using geometry-free source models. The specialization specification records their current proof boundaries and the WCL/tooltip target-cap discrepancy.
 
 ## Sources
 

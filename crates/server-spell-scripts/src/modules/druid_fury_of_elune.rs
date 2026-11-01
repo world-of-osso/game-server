@@ -4,20 +4,47 @@ use shared::components::Position;
 
 use super::combat;
 use combat::spell_cast::{
-    self, area_trigger::SpellAreaTrigger, effects::EffectCtx, script_registry::SpellScriptHook,
+    self,
+    area_trigger::SpellAreaTrigger,
+    effects::EffectCtx,
+    script_registry::{ScriptReach, SpellScriptHook},
+    targets,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const FURY: u32 = 202770;
 const DAMAGE: u32 = 211545;
+const FIRMAMENT_FIELD: u32 = 394106;
+const FIRMAMENT_DAMAGE: u32 = 394111;
+const FIRMAMENT_TALENT: u32 = 394094;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterNativeCastUpdate(update_fields),
     SpellScriptHook::TargetContextDamageMultiplier(reduce_secondary_targets),
 ];
 
 #[derive(Component)]
 struct FuryPulse(f64);
+
+/// Native 202770 effect1 places the field its radius from the target toward the
+/// caster (TARGET_DEST_DEST_TARGET_TOWARDS_CASTER); each 211545 pulse hits its
+/// area radius around the field.
+fn declared_reach(world: &World, _caster: Entity, spell: &SpellInfo) -> ScriptReach {
+    if spell.id != FURY {
+        return ScriptReach::None;
+    }
+    let field = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Fury of Elune field effect");
+    let pulse = world
+        .resource::<SpellStore>()
+        .get(DAMAGE)
+        .expect("native Fury of Elune damage child");
+    ScriptReach::target(targets::radius(field, 0) + targets::radius(&pulse.effects[0], 1))
+}
 
 fn pulse_period(world: &World, caster: Entity) -> f64 {
     let period = world
@@ -40,19 +67,21 @@ fn update_fields(world: &mut World) {
         .query::<(Entity, &SpellAreaTrigger, &Position, Option<&FuryPulse>)>()
         .iter(world)
         .filter(|(_, field, _, _)| {
-            field.spell_id == FURY && field.expires_at.is_none_or(|end| now < end)
+            matches!(field.spell_id, FURY | FIRMAMENT_FIELD)
+                && field.expires_at.is_none_or(|end| now < end)
         })
         .map(|(entity, field, position, pulse)| {
             (
                 entity,
                 field.caster,
+                field.spell_id,
                 field.primary_target,
                 *position,
                 pulse.map(|p| p.0),
             )
         })
         .collect();
-    for (entity, caster, primary, position, next) in fields {
+    for (entity, caster, field, primary, position, next) in fields {
         let period = pulse_period(world, caster);
         let Some(next) = next else {
             world.entity_mut(entity).insert(FuryPulse(now + period));
@@ -61,9 +90,20 @@ fn update_fields(world: &mut World) {
         if now < next {
             continue;
         }
+        let damage = if field == FURY {
+            DAMAGE
+        } else {
+            FIRMAMENT_DAMAGE
+        };
         let mut spell =
-            spell_cast::load_triggered_spell(world, DAMAGE, 1).expect("Fury of Elune damage child");
+            spell_cast::load_triggered_spell(world, damage, 1).expect("Fury of Elune damage child");
         spell.cast_destination = Some([position.x, position.y, position.z]);
+        if field == FIRMAMENT_FIELD {
+            spell.cast_damage_multiplier = Some(
+                spell_cast::scripts::script_effect_value(world, caster, FIRMAMENT_TALENT, 0)
+                    / 100.0,
+            );
+        }
         spell_cast::launch_triggered_spell_with_primary(world, caster, &spell, None, primary, 1);
         world.entity_mut(entity).insert(FuryPulse(next + period));
     }
@@ -71,7 +111,7 @@ fn update_fields(world: &mut World) {
 
 /// SimC leaves the primary at full damage and soft-caps secondary hits at one target.
 fn reduce_secondary_targets(world: &World, ctx: &EffectCtx, target: Entity, _: bool) -> f32 {
-    if ctx.spell.id != DAMAGE {
+    if !matches!(ctx.spell.id, DAMAGE | FIRMAMENT_DAMAGE) {
         return 1.0;
     }
     // Native child effect 1 also targets the caster; it is not an AoE damage recipient.

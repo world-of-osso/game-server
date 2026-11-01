@@ -3116,6 +3116,32 @@ pub fn replay_healer_hit(
     victim: Entity,
     hit: &crate::test_support::healer_intake::Hit,
 ) -> Result<(), String> {
+    replay_healer_hit_inner(world, attacker, victim, hit, None)
+}
+
+/// Replay the expected swing damage while preserving the sampled outcome for procs.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_expected_healer_hit(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    hit: &crate::test_support::healer_intake::Hit,
+    expected_landed: f32,
+) -> Result<(), String> {
+    if !expected_landed.is_finite() || !(0.0..=1.0).contains(&expected_landed) {
+        return Err("EXPECTED_SWING_PROBABILITY_INVALID".into());
+    }
+    replay_healer_hit_inner(world, attacker, victim, hit, Some(expected_landed))
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn replay_healer_hit_inner(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    hit: &crate::test_support::healer_intake::Hit,
+    expected_landed: Option<f32>,
+) -> Result<(), String> {
     use crate::test_support::healer_intake::HitKind;
     let HitKind::Melee {
         hand,
@@ -3172,8 +3198,9 @@ pub fn replay_healer_hit(
         &attacker_scaling,
     );
     let armor = crate::auras::combat_stats::armor_after_bypass(auras, attacker, raw_armor);
+    let expected_raw = hit.raw * expected_landed.unwrap_or(1.0);
     let armored = armor_mitigated(
-        (hit.raw * summon_taken * taken).max(0.0).round(),
+        (expected_raw * summon_taken * taken).max(0.0).round(),
         armor,
         &attacker_scaling,
         &target,
@@ -3188,25 +3215,31 @@ pub fn replay_healer_hit(
         level_difference,
         false,
     );
-    let (amount, blocked) = melee::outcome_damage(
-        armored,
-        kind,
-        level_difference,
-        blocked_pct(
-            victim_kind,
-            &attacker_scaling,
-            &target,
-            world.get_resource::<ArmorConstants>(),
-            auras,
-        ),
-    );
+    let (amount, blocked) = if expected_landed.is_some() {
+        (armored, 0.0)
+    } else {
+        melee::outcome_damage(
+            armored,
+            kind,
+            level_difference,
+            blocked_pct(
+                victim_kind,
+                &attacker_scaling,
+                &target,
+                world.get_resource::<ArmorConstants>(),
+                auras,
+            ),
+        )
+    };
     let immune = crate::auras::immune_to_school(auras, 1);
-    let (amount, blocked) =
-        if matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock) && !immune {
-            roll_critical_block_damage(auras, amount, blocked, mods)
-        } else {
-            (amount, blocked)
-        };
+    let (amount, blocked) = if expected_landed.is_none()
+        && matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock)
+        && !immune
+    {
+        roll_critical_block_damage(auras, amount, blocked, mods)
+    } else {
+        (amount, blocked)
+    };
     let amount = if immune {
         0.0
     } else {
@@ -3218,8 +3251,10 @@ pub fn replay_healer_hit(
         blocked
     };
     if !immune {
-        let source_damage = melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0
-            * critical_multiplier
+        let source_damage = expected_landed.map_or_else(
+            || melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0,
+            |landed| hit.raw * landed,
+        ) * critical_multiplier
             * attacker_scaling.keystone_damage_multiplier();
         crate::spell_cast::script_registry::incoming_damage_before_mitigation(
             world,
@@ -3254,16 +3289,20 @@ pub fn replay_healer_hit(
             ))
         });
     let raw = if versus > 0.0 { hit.raw / versus } else { 0.0 };
-    let residual_source =
-        melee::outcome_damage(raw, kind, level_difference, 0.0).0 * critical_multiplier;
+    let residual_source = expected_landed.map_or_else(
+        || melee::outcome_damage(raw, kind, level_difference, 0.0).0,
+        |landed| raw * landed,
+    ) * critical_multiplier;
     let mut outcome = SwingOutcome {
         hand,
         kind,
         immune,
         absorbed,
         residual_source,
-        transfer_source: melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0
-            * critical_multiplier,
+        transfer_source: expected_landed.map_or_else(
+            || melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0,
+            |landed| hit.raw * landed,
+        ) * critical_multiplier,
         damage,
         scaled_loss,
         incoming_loss: health_loss(world.get::<TrainingDummy>(victim).is_some(), scaled_loss),

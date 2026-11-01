@@ -786,7 +786,9 @@ fn start_encounter(
     );
     world.entity_mut(owner).insert(ActiveEncounter {
         encounter,
-        rng: RuntimeRng(rand::rngs::StdRng::from_entropy()),
+        rng: RuntimeRng(
+            rand::rngs::StdRng::from_rng(crate::random::thread_rng()).expect("seed pet battle RNG"),
+        ),
         connection,
     });
     world.entity_mut(creature).insert(WildPetClaim(owner));

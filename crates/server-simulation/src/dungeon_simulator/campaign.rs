@@ -127,18 +127,133 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
             )
         })
         .collect();
-    run.app.world_mut().entity_mut(owner).insert(source);
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for &unit in &members {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
-        Ok(5)
+        Ok(1)
     );
-    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+    for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
         let world = run.app.world();
-        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
         assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
         assert_eq!(world.get::<Health>(unit).unwrap().current, health);
         assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
     }
+    for &unit in &run.party.members {
+        assert_eq!(
+            run.app.world().get::<Position>(unit),
+            Some(&source),
+            "owner interaction must not teleport followers"
+        );
+    }
+    let mut arrived = std::collections::HashSet::new();
+    for _ in 0..2000 {
+        run.app.update();
+        for (&unit, &(copy, _, _)) in members.iter().zip(&before) {
+            let world = run.app.world();
+            let position = world.get::<Position>(unit).unwrap();
+            if Vec3::new(position.x, position.y, position.z)
+                .distance(Vec3::new(endpoint.x, endpoint.y, endpoint.z))
+                < 3.0
+            {
+                arrived.insert(unit);
+            }
+            assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        }
+        if arrived.len() == members.len() {
+            break;
+        }
+    }
+    assert_eq!(
+        arrived.len(),
+        members.len(),
+        "each follower must independently use the book"
+    );
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    assert_eq!(run.graph.map_id, 2825);
+    let owner = run.party.owner;
+    let edge = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.from == 3276416805)
+        .unwrap()
+        .clone();
+    let pyre = run.objects[&edge.source_guid];
+    let source = *run.app.world().get::<Position>(pyre).unwrap();
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for unit in run.members().collect::<Vec<_>>() {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
+    server::test_support::transport::activate(run.app.world_mut(), owner, Some(pyre), &edge)
+        .unwrap();
+    let destination = *run.app.world().get::<Position>(owner).unwrap();
+    assert!(
+        run.wait_for_tank().unwrap(),
+        "leader must wait for the tank's pyre route"
+    );
+    for _ in 0..2000 {
+        run.app.update();
+        if !run.wait_for_tank().unwrap() {
+            let tank = run.app.world().get::<Position>(run.party.tank).unwrap();
+            assert!(
+                Vec3::new(tank.x, tank.y, tank.z).distance(Vec3::new(
+                    destination.x,
+                    destination.y,
+                    destination.z
+                )) < 20.0
+            );
+            return;
+        }
+        assert_eq!(run.app.world().get::<Position>(owner), Some(&destination));
+    }
+    panic!("tank did not independently use the Den pyre");
 }
 
 #[test]
@@ -919,6 +1034,15 @@ fn released_leader_rejoins_party_through_azure_book() {
         .clone();
     server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
         .unwrap();
+    for member in run.party.members.clone() {
+        server::test_support::transport::activate(
+            run.app.world_mut(),
+            member,
+            Some(book),
+            &transport,
+        )
+        .unwrap();
+    }
     super::movement::forget_party_travel(run.app.world_mut(), owner);
     let cleared: Vec<_> = run
         .actors
@@ -940,14 +1064,28 @@ fn released_leader_rejoins_party_through_azure_book() {
     for _ in 0..10 {
         run.app.update();
     }
+    let target = *run.app.world().get::<Position>(tank).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(MoveIntent(Vec3::new(target.x, target.y, target.z)));
     run.control().unwrap();
     assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    assert!(
+        run.app.world().get::<MoveIntent>(owner).is_none(),
+        "release must discard the pre-death movement target"
+    );
     let positions_before_return: Vec<_> = run
         .party
         .members
         .iter()
         .map(|member| (*member, *run.app.world().get::<Position>(*member).unwrap()))
         .collect();
+    // The normal run loop advances once immediately after release, before the next control call.
+    run.app.update();
+    for (member, position) in &positions_before_return {
+        assert_eq!(run.app.world().get::<Position>(*member).unwrap(), position);
+    }
     let mut reunited = false;
     for _ in 0..7000 {
         assert!(
@@ -960,19 +1098,12 @@ fn released_leader_rejoins_party_through_azure_book() {
             break;
         }
         run.app.update();
-        if !run
-            .report
-            .pulls
-            .iter()
-            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
-        {
-            for (member, position) in &positions_before_return {
-                assert_eq!(
-                    *run.app.world().get::<Position>(*member).unwrap(),
-                    *position,
-                    "living followers must hold until the leader uses the book"
-                );
-            }
+        for (member, position) in &positions_before_return {
+            assert_eq!(
+                *run.app.world().get::<Position>(*member).unwrap(),
+                *position,
+                "living followers must hold throughout the leader's return"
+            );
         }
     }
     assert!(
@@ -2533,13 +2664,16 @@ pub(super) fn run_keystone(
     options: super::keystone::Options,
 ) -> super::keystone_record::RunRecord {
     let _rng_scope = crate::random::seed_scope(seed);
+    let mut planned_route = None;
     let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        spawn_run_mode(seed, &mut None, Some(options))
+        spawn_run_mode_record(seed, &mut None, Some(options), &mut planned_route)
     }));
     let mut run = match initialized {
         Ok(Ok(run)) => run,
-        Ok(Err(error)) => return failed_keystone_record(seed, options, error),
-        Err(panic) => return failed_keystone_record(seed, options, panic_reason(panic)),
+        Ok(Err(error)) => return failed_keystone_record(seed, options, error, planned_route),
+        Err(panic) => {
+            return failed_keystone_record(seed, options, panic_reason(panic), planned_route);
+        }
     };
     run.last_progress = run.now();
     let outcome =
@@ -2587,6 +2721,12 @@ pub(super) fn run_keystone(
     };
     let diagnostics = serde_json::json!({
         "current_pack": run.current_pack,
+        "active_enemies": crate::followers::simulator::active_enemies(run.app.world(), run.party.owner).into_iter().map(Entity::to_bits).collect::<Vec<_>>(),
+        "uncleared_fight": crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "tank_transport_pending": server::test_support::transport::follower_routing(run.app.world(), run.party.tank),
+        "returning_to_party": run.returning_to_party,
+        "waiting_for_tank": run.waiting_for_tank,
+        "owner_move_intent": run.app.world().get::<MoveIntent>(run.party.owner).map(|intent| intent.0.to_array()),
         "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
         "terminal_units": run.inspect_units(),
         "pull_decisions": &run.report.pulls,
@@ -2601,13 +2741,47 @@ pub(super) fn run_keystone(
             run.report.detail,
             diagnostics,
         )
-        .unwrap_or_else(|error| failed_keystone_record(seed, options, error))
+        .unwrap_or_else(|error| failed_keystone_record(seed, options, error, planned_route))
+}
+
+fn start_with_recorded_route<T>(
+    saved: &mut Option<super::keystone_route::PlannedRoute>,
+    plan: super::keystone_route::PlannedRoute,
+    start: impl FnOnce(super::keystone_route::PlannedRoute) -> Result<T, String>,
+) -> Result<T, String> {
+    *saved = Some(plan.clone());
+    start(plan)
+}
+
+#[test]
+fn font_initialization_failure_retains_the_planned_force_route() {
+    let options = super::keystone::Options {
+        map_id: 2825,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let plan = super::keystone_route::PlannedRoute {
+        steps: Vec::new(),
+        added_packs: vec![17, 21],
+        planned_forces: 734,
+    };
+    let mut saved = None;
+    let error =
+        start_with_recorded_route(&mut saved, plan, |_| Err::<(), _>("missing Font".into()))
+            .unwrap_err();
+    let record = failed_keystone_record(1, options, error, saved);
+    let json = serde_json::to_value(record).unwrap();
+    assert_eq!(json["outcome"]["status"], "aborted");
+    assert_eq!(json["outcome"]["reason"], "missing Font");
+    assert_eq!(json["route"]["planned_forces"], 734);
+    assert_eq!(json["route"]["added_packs"], serde_json::json!([17, 21]));
 }
 
 fn failed_keystone_record(
     seed: u64,
     options: super::keystone::Options,
     reason: String,
+    planned_route: Option<super::keystone_route::PlannedRoute>,
 ) -> super::keystone_record::RunRecord {
     super::keystone_record::RunRecord {
         schema_version: 1,
@@ -2618,7 +2792,7 @@ fn failed_keystone_record(
         key_level: options.level,
         affixes: None,
         party: Vec::new(),
-        route: None,
+        route: planned_route,
         scaling: None,
         outcome: super::keystone_record::Outcome {
             status: "aborted".into(),
@@ -2761,6 +2935,15 @@ fn spawn_run_mode(
     catalogs: &mut Option<super::catalogs::Catalogs>,
     options: Option<super::keystone::Options>,
 ) -> Result<Run, String> {
+    spawn_run_mode_record(seed, catalogs, options, &mut None)
+}
+
+fn spawn_run_mode_record(
+    seed: u64,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+    options: Option<super::keystone::Options>,
+    planned_route: &mut Option<super::keystone_route::PlannedRoute>,
+) -> Result<Run, String> {
     let mut graph = super::graph::read_graph()?;
     if let Some(options) = options
         && options.map_id != graph.map_id
@@ -2868,13 +3051,8 @@ fn spawn_run_mode(
     }
     let keystone = match (options, planned) {
         (Some(options), Some((definition, _))) => {
-            let hostile_sources = actors
-                .iter()
-                .filter_map(|(guid, actor)| {
-                    crate::spell_cast::targets::is_hostile(app.world(), party.owner, *actor)
-                        .then_some(*guid)
-                })
-                .collect();
+            let hostile_sources =
+                super::keystone_route::attackable_sources(app.world(), party.owner, &actors);
             let plan = super::keystone_route::plan(
                 &graph,
                 &definition.creature_weights,
@@ -2887,7 +3065,9 @@ fn spawn_run_mode(
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
             app.insert_resource(server::navigation::Navigation::new(&nav));
-            Some(super::keystone::start(&mut app, &party, plan, options)?)
+            Some(start_with_recorded_route(planned_route, plan, |plan| {
+                super::keystone::start(&mut app, &party, plan, options)
+            })?)
         }
         (None, None) => None,
         _ => return Err("keystone planning state is inconsistent".into()),
@@ -3180,6 +3360,13 @@ impl Run {
 
     fn wait_for_tank(&mut self) -> Result<bool, String> {
         let world = self.app.world();
+        if server::test_support::transport::follower_routing(world, self.party.tank) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(true);
+        }
         if !crate::spell_cast::targets::is_alive(world, self.party.tank)
             || server::test_support::transport::in_progress(world, self.party.tank)
         {
@@ -3309,6 +3496,10 @@ impl Run {
                     self.party.owner,
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
                 self.returning_to_party = true;
             }
             return Ok(());

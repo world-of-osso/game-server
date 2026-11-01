@@ -128,6 +128,8 @@ impl TankScenario {
                                 "damage_taken": world.get::<crate::auras::AuraStatMods>(self.tank).map(|mods| mods.damage_taken(1)),
                                 "sentinel_stacks": stacks(389539),
                                 "sotr_stacks": stacks(132403),
+                                "health": world.get::<Health>(self.tank).map(|health| (health.current, health.max)),
+                                "stagger_pool": crate::auras::stagger::pool_size(world, self.tank),
                             })
                         );
                     }
@@ -165,6 +167,17 @@ impl TankScenario {
                                     | crate::melee::MeleeOutcome::CritBlock
                             ),
                         );
+                    } else if std::env::var_os("FOLLOWER_DPS_EXPECTED_AVOIDANCE").is_some() {
+                        if table.crit != 0.0 {
+                            return Err("EXPECTED_SWING_CRIT_UNSUPPORTED".into());
+                        }
+                        crate::combat::replay_expected_healer_hit(
+                            world,
+                            self.source,
+                            self.tank,
+                            &recorded,
+                            table.expected_landed(),
+                        )?;
                     } else {
                         crate::combat::replay_healer_hit(world, self.source, self.tank, &recorded)?;
                     }

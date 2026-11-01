@@ -720,6 +720,7 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     crate::followers::native_fixture::install_class_sources(h.app.world_mut());
     h.app
         .insert_resource(crate::followers::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
             source_actions: |_, _, _| Ok(Vec::new()),
             equipped_actions: |_, _, _| Ok(Vec::new()),
         });
@@ -781,8 +782,12 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), player, book)
             .unwrap(),
-        5
+        1
     );
+    for unit in &followers {
+        crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), *unit, book)
+            .unwrap();
+    }
     assert_eq!(h.app.world().get::<InMap>(player), Some(&map));
     assert!(
         h.app

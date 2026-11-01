@@ -388,7 +388,7 @@ fn receive_summons(world: &mut World) {
     for (connection, _, player, _) in requests::<SummonRandomFavouriteMount>(world) {
         let candidates = random_candidates(world, player);
         let result = candidates
-            .choose(&mut rand::thread_rng())
+            .choose(&mut crate::random::thread_rng())
             .copied()
             .ok_or_else(|| "No usable favourite mounts.".to_string())
             .and_then(|id| summon(world, player, id));

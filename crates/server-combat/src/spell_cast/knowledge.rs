@@ -171,6 +171,14 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         {
             1245483
         }
+        // SimC76f8118 sc_paladin.cpp3407–3412: Ret's selected Hammer talent exposes 24275.
+        1241288
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 70) =>
+        {
+            24275
+        }
         // SimC76f8118 sc_paladin.cpp3407–3410 constructs Protection's Hammer of Wrath as 1241413.
         1241288
             if world
