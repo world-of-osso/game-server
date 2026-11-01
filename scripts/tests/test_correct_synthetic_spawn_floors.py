@@ -50,7 +50,8 @@ class SyntheticFloorTest(unittest.TestCase):
             self.assertTrue(all(abs(row['new_z'] - 101.281906) < 0.001 for row in result['changes']))
             with sqlite3.connect(db_path) as db:
                 self.assertEqual(db.execute('SELECT DISTINCT position_z FROM content_creature').fetchall(), [(97.504312,)])
-            subprocess.run(command + ['--apply'], check=True)
+            subprocess.run(['python3', str(SCRIPT), '--world-db', str(db_path),
+                            '--output', str(report), '--apply'], check=True)
             with sqlite3.connect(db_path) as db:
                 self.assertAlmostEqual(db.execute('SELECT MIN(position_z) FROM content_creature').fetchone()[0], 101.281906, places=4)
             subprocess.run(command, check=True)
