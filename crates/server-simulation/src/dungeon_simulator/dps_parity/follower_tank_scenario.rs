@@ -128,6 +128,8 @@ impl TankScenario {
                                 "damage_taken": world.get::<crate::auras::AuraStatMods>(self.tank).map(|mods| mods.damage_taken(1)),
                                 "sentinel_stacks": stacks(389539),
                                 "sotr_stacks": stacks(132403),
+                                "health": world.get::<Health>(self.tank).map(|health| (health.current, health.max)),
+                                "stagger_pool": crate::auras::stagger::pool_size(world, self.tank),
                             })
                         );
                     }

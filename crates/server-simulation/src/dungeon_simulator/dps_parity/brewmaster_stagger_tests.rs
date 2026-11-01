@@ -126,6 +126,58 @@ fn expected_swing_damage_enters_stagger_before_purify() {
     }
 }
 
+/// SimC76f8118 unique_gear_dragonflight.cpp963–1006 at the 268/70 profile's
+/// ilvl 73 seed: four pods become four Supernatural stacks of 1,447 max health.
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn burgeoning_seed_consumes_pods_into_supernatural_max_health() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    assert!(crate::spell_cast::cast_triggered_with_overrides(
+        run.app.world_mut(),
+        actor,
+        384646,
+        Some(actor),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            item_level: Some(73),
+            aura_stacks: Some(4),
+            ..Default::default()
+        },
+    ));
+    run.app.update();
+    let before = run.app.world().get::<Health>(actor).unwrap().max;
+    crate::spell_cast::cast_item_spell(
+        run.app.world_mut(),
+        actor,
+        384636,
+        Some(actor),
+        crate::spell_cast::ItemCooldown {
+            category: 0,
+            category_ms: 0,
+        },
+        73,
+        Some(193634),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    let stacks = world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 384658)
+        .map(|aura| aura.stacks);
+    assert_eq!(stacks, Some(4));
+    assert!(!crate::auras::has_aura(world, actor, 384646));
+    let gained = world.get::<Health>(actor).unwrap().max - before;
+    assert_eq!(gained, 4.0 * 1447.0);
+}
+
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn stagger_absorb_records_self_damage_scale() {

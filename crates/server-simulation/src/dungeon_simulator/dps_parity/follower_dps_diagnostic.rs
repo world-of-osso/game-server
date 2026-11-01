@@ -2106,6 +2106,63 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
     assert_eq!((non_unit, unknown), (0.0, 0.0));
 }
 
+/// SimC76f8118 sc_monk.cpp7245–7252 trace: each dodged dummy swing reduces every
+/// running Brew by the 268/70 profile's rank-2 Anvil and Stave value, 1s.
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_brewmaster_avoidance_reduces_running_brews() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let _seed = crate::random::seed_scope(70448);
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 268, 70);
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 115203, Some(actor), false).unwrap();
+    app.update();
+    let remaining = |app: &App| {
+        let world = app.world();
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(115203)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+    };
+    let swing = |outcome: &str| Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: 1_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: outcome.into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let mut spent = |outcome: &str| {
+        let before = remaining(&app);
+        crate::combat::replay_healer_hit(app.world_mut(), target, actor, &swing(outcome)).unwrap();
+        app.update();
+        before - remaining(&app)
+    };
+    // A landed swing only advances the running Brew by one frame.
+    let frame = spent("Hit");
+    for outcome in ["Dodge", "Miss"] {
+        let reduction = spent(outcome) - frame;
+        assert!(
+            (999..=1001).contains(&reduction),
+            "{outcome} reduced the running Brew by {reduction}ms"
+        );
+    }
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_attacks_with_its_equipped_weapon_type() {
