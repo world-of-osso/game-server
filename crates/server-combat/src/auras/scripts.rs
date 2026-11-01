@@ -296,6 +296,24 @@ pub(super) fn absorb_amount(
         let amount = crate::spell_cast::effects::scaled_amount(world, caster, spell, effect);
         return Some(amount * crate::spell_cast::effects::versatility_multiplier(world, caster));
     }
+    // TC a352b1fa spell_monk.cpp:224–228; native DescriptionVariables 260:
+    // caster max health * effect 3 / 100 * (1 + versatility).
+    if (spell.id, effect.index) == (116849, 0) {
+        let percent = spell
+            .effects
+            .iter()
+            .find(|e| e.index == 2)
+            .expect("Life Cocoon shield percentage");
+        let health = world
+            .get::<shared::components::Health>(caster)
+            .expect("Life Cocoon caster health");
+        return Some(
+            health.max
+                * crate::spell_cast::effects::modded_base_points(world, caster, spell, percent)
+                / 100.0
+                * crate::spell_cast::effects::versatility_multiplier(world, caster),
+        );
+    }
     let percent_index = match (spell.id, effect.index) {
         (740, 4) => 5,
         //122470s3: shield capacity is50% max health. Redirect s4 remains separate.

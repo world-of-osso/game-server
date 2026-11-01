@@ -371,6 +371,15 @@ fn replay(
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            #[cfg(test)]
+            if std::env::var_os("HEALER_TANK_TRACE_EVENTS").is_some()
+                && (event.source == Some(healer.to_bits()) || event.target == Some(tank.to_bits()))
+            {
+                eprintln!(
+                    "HEALER_REPLAY_EVENT {}",
+                    json!({"tick":tick,"event":event,"tank_health":world.get::<Health>(tank).map(|health| (health.current, health.max))})
+                );
+            }
             if event.kind != shared::protocol::CombatLogKind::CastSuccess {
                 continue;
             }

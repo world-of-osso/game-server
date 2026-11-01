@@ -41,6 +41,8 @@ mod kit_interrupt;
 mod kit_light_of_titans_tests;
 pub(crate) mod live_facts;
 #[cfg(test)]
+mod mistweaver_defensive_tests;
+#[cfg(test)]
 mod native_action_override_tests;
 #[cfg(test)]
 mod native_book_tests;

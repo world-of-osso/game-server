@@ -784,9 +784,29 @@ pub(super) fn select_targets_and_destination(
                     .or_else(|| spell.cast_destination.map(Vec3::from_array))
                     .or_else(|| explicit.and_then(|target| position(world, target)))
                     .unwrap_or(caster_pos);
-                let candidates = area_units(world, caster, dest, radius(effect, slot), relation, 0);
-                let candidates =
-                    limit_implicit_targets(world, spell, caster, candidates, max_targets);
+                let mut candidates =
+                    area_units(world, caster, dest, radius(effect, slot), relation, 0);
+                let cap = if spell.id == 399491 && effect.index == 0 {
+                    // Native399491s2 counts the primary target plus nearby party allies.
+                    candidates.retain(|&unit| direct_party_member(world, caster, unit));
+                    if let Some(primary) = explicit {
+                        candidates.sort_by_key(|unit| *unit != primary);
+                    }
+                    crate::spell_cast::effects::modded_base_points(
+                        world,
+                        caster,
+                        spell,
+                        spell
+                            .effects
+                            .iter()
+                            .find(|e| e.index == 1)
+                            .expect("Sheilun's Gift target count"),
+                    )
+                    .max(0.0) as u32
+                } else {
+                    max_targets
+                };
+                let candidates = limit_implicit_targets(world, spell, caster, candidates, cap);
                 units.extend(filter_area_sight(
                     world, caster, spell, effect, dest, candidates,
                 ));
@@ -1000,6 +1020,27 @@ pub(super) fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
     world
         .get::<crate::persistence::ClientId>(controller)
         .map(|id| id.0)
+}
+
+fn direct_party_member(world: &World, caster: Entity, target: Entity) -> bool {
+    if caster == target {
+        return true;
+    }
+    let direct_id = |unit| {
+        if world.get::<crate::followers::Follower>(unit).is_some() {
+            Some(crate::followers::Follower::member_id(unit))
+        } else {
+            world
+                .get::<crate::persistence::ClientId>(unit)
+                .map(|id| id.0)
+        }
+    };
+    match (direct_id(caster), direct_id(target)) {
+        (Some(caster), Some(target)) => world
+            .resource::<crate::group::GroupRegistry>()
+            .is_in_same_group(caster, target),
+        _ => false,
+    }
 }
 
 /// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
