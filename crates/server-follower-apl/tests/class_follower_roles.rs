@@ -546,6 +546,23 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
                 pull.follower,
                 taunt,
             );
+            let candidates: Vec<_> = world
+                .get::<server_combat::class_progression::KnownSpells>(pull.follower)
+                .unwrap()
+                .iter()
+                .filter(|&id| {
+                    world
+                        .resource::<server_combat::spell_info::SpellStore>()
+                        .get(id)
+                        .is_some_and(|spell| {
+                            spell.effects.iter().any(|effect| {
+                                effect.effect
+                                    == server_combat::spell_cast::effects::EFFECT_ATTACK_ME
+                                    || effect.aura == server_combat::auras::handlers::MOD_TAUNT
+                            })
+                        })
+                })
+                .collect();
             let spell = world
                 .resource::<server_combat::spell_info::SpellStore>()
                 .get(taunt)
@@ -558,7 +575,7 @@ fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
                 enemy,
             );
             panic!(
-                "spec {spec} did not cast {taunt}: target={target:?} victim={victim:?} known={known:?} admission={admission:?}"
+                "spec {spec} did not cast {taunt}: target={target:?} victim={victim:?} known={known:?} candidates={candidates:?} admission={admission:?}"
             );
         }
         assert_eq!(
