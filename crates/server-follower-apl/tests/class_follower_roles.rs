@@ -347,6 +347,24 @@ fn class_rotation_pure_metadata_matches_shadow_shaman_and_brewmaster_programs() 
 }
 
 #[test]
+fn class_rotation_pure_metadata_matches_assassination_program() {
+    let spec = 259;
+    let mut pull = spawn(spec);
+    let rotation =
+        server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
+            .unwrap();
+    let traits = pull
+        .harness
+        .app
+        .world()
+        .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
+        .unwrap();
+    let pure = server_follower_apl::action_metadata::action_spells(spec, traits).unwrap();
+    assert!(!pure.is_empty());
+    assert_eq!(pure, rotation.action_spells());
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;

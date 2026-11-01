@@ -69,6 +69,9 @@ pub fn action_spells(spec: u32, traits: &TraitLoadout) -> Result<Vec<u32>, Strin
             &shadow_rotation::program()?,
             &shadow_rotation::bindings::build(),
         )),
+        259 => assassination_rotation::action_spells(&assassination_rotation::action_source(
+            &profile(spec)?,
+        )?),
         260 => Ok(program_action_spells(
             &outlaw_rotation::load_program(&profile(spec)?)?,
             &outlaw_rotation::bindings(),
