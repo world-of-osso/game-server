@@ -371,6 +371,7 @@ register_modules! {
     restoration_ancestral_awakening: (2640, "modules/restoration_ancestral_awakening.rs"),
     restoration_earthliving: (2640, "modules/restoration_earthliving.rs"),
     restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),
+    restoration_grove_guardians: (1050, "modules/restoration_grove_guardians.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
     restoration_master_shapeshifter: (1050, "modules/restoration_master_shapeshifter.rs"),
     restoration_resurgence: (2640, "modules/restoration_resurgence.rs"),
