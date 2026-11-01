@@ -464,3 +464,118 @@ fn class_follower_frost_mage_apl_reacts_to_its_procs() {
         pull.casts()
     );
 }
+
+const SHADOW_BOLT: u32 = 686;
+const HAND_OF_GULDAN: u32 = 105174;
+const KEG_SMASH: u32 = 121253;
+
+/// Casts of `spells` in this pull and in the next one, which loads a fresh APL.
+fn two_pull_casts(pull: &mut Pull, spells: &[u32]) -> [usize; 2] {
+    let count = |pull: &Pull| {
+        pull.casts()
+            .iter()
+            .filter(|spell| spells.contains(spell))
+            .count()
+    };
+    pull.fight();
+    assert!(!pull.apl_failed(), "first pull casts {:?}", pull.casts());
+    let first = count(pull);
+    let follower = pull.follower;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(follower)
+        .remove::<FollowerApl>();
+    pull.fight();
+    assert!(!pull.apl_failed(), "second pull casts {:?}", pull.casts());
+    [first, count(pull) - first]
+}
+
+fn hero_facts(pull: &Pull, names: &[&str]) -> Vec<f64> {
+    use server_combat::simc_apl::Facts;
+    let bindings = server_follower_apl::demonology_rotation::bindings::build();
+    let facts = server_combat::simc_apl_native::NativeFacts::new(
+        pull.harness.app.world(),
+        pull.follower,
+        &bindings,
+        server_combat::simc_apl_native::Encounter::Dungeon { started_at: 0.0 },
+        1,
+    );
+    names
+        .iter()
+        .map(|name| facts.value(name).unwrap())
+        .collect()
+}
+
+const DEMONOLOGY_HERO: [&str; 4] = [
+    "hero_tree.diabolist",
+    "hero_tree.soul_harvester",
+    "talent.diabolic_ritual",
+    "talent.demonic_soul",
+];
+
+/// SimC APLs assume the hero level: a level-70 Demonology follower has no hero tree,
+/// so its hero-gated lists read the profile's logged tree and it keeps casting.
+#[test]
+fn class_follower_demonology_casts_below_hero_level_on_every_pull() {
+    let mut pull = spawn_at(266, 70);
+    let hero = hero_facts(&pull, &DEMONOLOGY_HERO);
+    assert_eq!(
+        hero[0] + hero[1],
+        1.0,
+        "one logged hero tree reads selected: {hero:?}"
+    );
+    assert_eq!(
+        hero[2] + hero[3],
+        1.0,
+        "the logged tree's keystone reads enabled: {hero:?}"
+    );
+    // The live failure cast only the precombat Shadow Bolt each pull.
+    let casts = two_pull_casts(&mut pull, &[SHADOW_BOLT, HAND_OF_GULDAN]);
+    assert!(
+        casts.iter().all(|&count| count >= 2),
+        "Shadow Bolt/Hand of Gul'dan per pull {casts:?}; casts {:?}",
+        pull.casts()
+    );
+}
+
+#[test]
+fn class_follower_brewmaster_casts_keg_smash_below_hero_level_on_every_pull() {
+    let mut pull = spawn_at(268, 70);
+    let casts = two_pull_casts(&mut pull, &[KEG_SMASH]);
+    assert!(
+        casts.iter().all(|&count| count >= 1),
+        "Keg Smash per pull {casts:?}; casts {:?}",
+        pull.casts()
+    );
+}
+
+/// At hero level the follower's real selected tree decides; the logged tree is unused.
+#[test]
+fn class_follower_at_hero_level_reads_its_selected_hero_tree() {
+    let mut pull = spawn_at(266, 90);
+    let selected = hero_facts(&pull, &DEMONOLOGY_HERO);
+    assert_eq!(selected[0] + selected[1], 1.0, "{selected:?}");
+    let world = pull.harness.app.world();
+    let logged = world
+        .get::<server_combat::followers::class_spawn::LoggedHeroTree>(pull.follower)
+        .copied()
+        .expect("Demonology profile logs a hero tree");
+    let other = world
+        .resource::<server_combat::spell_info::ClassSpells>()
+        .classes
+        .iter()
+        .flat_map(|class| &class.traits.sub_trees)
+        .find(|tree| {
+            let name = tree.name.to_lowercase();
+            tree.id != logged.0 && (name == "diabolist" || name == "soul harvester")
+        })
+        .expect("the other Demonology hero tree")
+        .id;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(pull.follower)
+        .insert(server_combat::followers::class_spawn::LoggedHeroTree(other));
+    assert_eq!(hero_facts(&pull, &DEMONOLOGY_HERO), selected);
+}
