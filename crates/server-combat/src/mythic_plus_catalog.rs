@@ -120,7 +120,16 @@ pub fn load_by_map(conn: &Connection, map: u32) -> rusqlite::Result<Option<Chall
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    if bosses.is_empty() || forces_required == 0 || timers.contains(&0) {
+    let boss_count: usize = conn.query_row(
+        "SELECT COUNT(*) FROM criteria_tree t JOIN criteria c ON c.ID=t.CriteriaID WHERE t.Parent=?1 AND c.Type=165",
+        [tree],
+        |row| row.get(0),
+    )?;
+    if bosses.is_empty()
+        || bosses.len() != boss_count
+        || forces_required == 0
+        || timers.contains(&0)
+    {
         return Err(rusqlite::Error::InvalidQuery);
     }
     Ok(Some(ChallengeDefinition {
