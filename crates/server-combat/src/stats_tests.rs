@@ -59,6 +59,45 @@ fn level_80_human_holy_paladin_base_stats() {
 }
 
 #[test]
+fn ranged_attack_power_uses_agility_and_weapon_without_a_level_bonus() {
+    for level in [70, 90] {
+        let base_agility = base_primary_stats(3, HUMAN, level).unwrap().agility;
+        let input = StatInputs {
+            class: 3,
+            race: HUMAN,
+            level,
+            primary_stat: Some(PrimaryStat::Agility),
+            mastery_coefficient: 0.0,
+            attack_power_per_strength: 0.0,
+            attack_power_per_agility: 1.0,
+            ranged_attack_power_per_agility: 1.0,
+            gear_primary: UnitStats {
+                agility: 3030.0 - base_agility,
+                ..default()
+            },
+            gear_ratings: CombatRatings::default(),
+        };
+        let mut stats = compute_character_stats(&input, None).unwrap();
+        stats.weapon_attack_power.ranged = 934.0;
+        assert_eq!(stats.ranged_attack_power, 3030.0);
+        assert_eq!(
+            stats.total_attack_power(WeaponAttackType::Ranged, None),
+            3964.0
+        );
+        let mods = StatModifiers {
+            ranged_attack_power_pct: 5.0,
+            ..default()
+        };
+        let mut buffed = compute_character_stats(&input, Some(&mods)).unwrap();
+        buffed.weapon_attack_power.ranged = 934.0;
+        assert!(
+            (buffed.total_attack_power(WeaponAttackType::Ranged, Some(&mods)) - 4162.2).abs()
+                < 0.01
+        );
+    }
+}
+
+#[test]
 fn level_10_orc_warrior_base_stats_include_racial_mods() {
     let input = StatInputs {
         class: WARRIOR,

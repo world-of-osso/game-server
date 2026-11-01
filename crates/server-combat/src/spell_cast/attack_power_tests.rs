@@ -664,7 +664,9 @@ fn class_completeness_native_mastery_ap_percent_consumes_live_raw_mastery_points
 
 #[test]
 fn class_completeness_native_owner_wire_publishes_distinct_ranged_attack_power() {
-    let h = actor(3);
+    let mut h = actor(3);
+    let caster = h.caster;
+    apply_mask(&mut h, BATTLE_SHOUT, caster, 2);
     let stats = h.app.world().get::<CharacterStats>(h.caster).unwrap();
     assert!(stats.ranged_attack_power > stats.attack_power);
     let owner_wire = serde_json::to_value(stats.derived()).unwrap();

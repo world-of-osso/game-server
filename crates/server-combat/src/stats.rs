@@ -576,8 +576,9 @@ pub fn compute_character_stats(
     let base_attack_power = primary.strength * input.attack_power_per_strength
         + primary.agility * input.attack_power_per_agility;
     let attack_power = base_attack_power * (1.0 + mods.attack_power_pct / 100.0);
-    let base_ranged_attack_power =
-        (f32::from(input.level) + primary.agility.max(0.0)) * input.ranged_attack_power_per_agility;
+    // WCL 6Lg4hCVtj12JNbXc fight41: 3030 agility + 934 weapon AP = 3964,
+    // with no additional level term; TC's level term is not present in retail.
+    let base_ranged_attack_power = primary.agility.max(0.0) * input.ranged_attack_power_per_agility;
     let ranged_attack_power =
         base_ranged_attack_power * (1.0 + mods.ranged_attack_power_pct / 100.0);
     let (spell_power, healing_power) = if mods.spell_power_from_ap_pct > 0.0 {
