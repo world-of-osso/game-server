@@ -379,6 +379,91 @@ fn wow(x: f32, y: f32, z: f32) -> Position {
 fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
+#[test]
+#[ignore = "requires actual Ara-Kara navigation and ground assets"]
+fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
+    use crate::creature_ai::{FollowOwner, PartyFollowSlot};
+    use crate::navigation::Navigation;
+    use shared::components::Rotation;
+
+    let (mut h, tank, _) = spawn_profile_fixture(209057);
+    h.app.world_mut().despawn(h.npc);
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(h.caster)
+        .unwrap()
+        .0 = None;
+    let from = Position {
+        x: -84.49721,
+        y: 133.57056,
+        z: -349.0956,
+    };
+    let owner_at = Position {
+        x: -90.0,
+        y: 136.5,
+        z: -367.2,
+    };
+    let map = InMap {
+        map_id: 2660,
+        instance_id: 16,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        owner_at,
+        map,
+        Rotation {
+            x: 0.0,
+            y: crate::creature_ai::facing_along(-1.4, -3.2).unwrap(),
+            z: 0.0,
+        },
+    ));
+    h.app.world_mut().entity_mut(tank).insert((
+        from,
+        map,
+        FollowOwner::new(h.caster),
+        PartyFollowSlot::new(0, 4),
+    ));
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    h.app.insert_resource(GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
+    ));
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap();
+    h.app.insert_resource(Navigation::new(&nav));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut previous = from;
+    let mut greatest_step = 0.0_f32;
+    let mut destination = None;
+    for _ in 0..400 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(tank).unwrap();
+        greatest_step = greatest_step.max(point(at).distance(point(previous)));
+        destination = destination.or(h
+            .app
+            .world()
+            .resource::<Navigation>()
+            .current_destination(tank));
+        previous = at;
+    }
+    eprintln!(
+        "recorded follow: start={from:?} owner={owner_at:?} destination={destination:?} end={previous:?} greatest_step={greatest_step}"
+    );
+    assert!(
+        greatest_step < 1.0,
+        "tank must not teleport during recovery"
+    );
+    assert!(
+        point(previous).distance(point(owner_at)) < point(from).distance(point(owner_at)) - 1.0,
+        "tank must make real progress toward owner"
+    );
+}
+
 pub(super) fn stockade_fixture(from: Position) -> (Harness, Entity, PathBuf) {
     let (mut h, unit, _) = spawn_profile_fixture(209057);
     h.app.world_mut().despawn(h.npc);
