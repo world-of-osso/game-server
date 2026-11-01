@@ -2018,6 +2018,24 @@ fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
                 && matches!(event.spell_id, Some(48517 | 48518))),
         "Eclipse must apply a real Solar or Lunar buff"
     );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(202497)
+                && event.amount > 0),
+        "Shooting Stars must damage an affected target"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(202497)
+                && event.amount > 0),
+        "Shooting Stars must generate Astral Power"
+    );
     let fury = events
         .iter()
         .position(|event| {
