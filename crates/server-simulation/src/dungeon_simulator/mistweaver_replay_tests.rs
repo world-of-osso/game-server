@@ -2,6 +2,64 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_rushing_wind_heals_only_own_misted_allies() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    let [tank, _, friend, outsider, _] = run.slots;
+    for unit in [tank, friend, outsider] {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.3;
+    }
+    for (caster, target) in [(healer, tank), (healer, friend), (friend, outsider)] {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster,
+                target,
+                spell_id: 119611,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        healer,
+        467307,
+        Some(run.sources[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let targets: std::collections::HashSet<_> = run
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(1269159)
+                && event.source == Some(healer.to_bits())
+                && event.amount > event.overflow
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    assert!(targets.contains(&tank.to_bits()), "{targets:?}");
+    assert!(targets.contains(&friend.to_bits()), "{targets:?}");
+    assert!(!targets.contains(&outsider.to_bits()), "{targets:?}");
+    assert!(!targets.contains(&run.sources[0].to_bits()), "{targets:?}");
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_gust_heals_primary_and_scales_with_mastery_rating() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Health;
