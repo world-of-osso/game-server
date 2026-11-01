@@ -133,6 +133,11 @@ pub(super) fn check_proc(
     {
         return false;
     }
+    // SimC76f8118 sc_warrior.cpp2123–2125: Wild Strikes is earned by
+    // critical auto-attacks, not ordinary swings.
+    if aura.spell_id == 382946 && event.hit_mask & super::procs::PROC_HIT_CRITICAL == 0 {
+        return false;
+    }
     if crate::spell_cast::scripts::owns_policy_proc(world, aura.spell_id) {
         return false;
     }
