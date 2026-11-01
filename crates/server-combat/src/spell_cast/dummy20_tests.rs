@@ -123,11 +123,48 @@ fn dummy20_barbed_completed_cast_grants_native_periodic_focus_child() {
     assert_eq!(grants.iter().map(|e| e.amount).sum::<i32>(), 20);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, 246152));
 }
+fn stormkeeper_fixture(ids: &[u32]) -> Harness {
+    let mut h = fixture(ids, 7);
+    let path = crate::test_data::world_db_path();
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (_, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+    let profile = crate::followers::class_profiles::read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == 262)
+        .unwrap();
+    let (_, traits, _) = crate::class_progression::evaluate_follower_progression(
+        &classes,
+        profile.class_id,
+        profile.race,
+        profile.spec_id,
+        90,
+        crate::trait_config::TalentSource::SimcProfile,
+        profile.talent_entries.as_deref().unwrap(),
+    )
+    .unwrap();
+    assert!(
+        traits
+            .active_talent_spells()
+            .any(|spell| spell.spell_id == 191634)
+    );
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::class_progression::ActiveSpec(262),
+        shared::components::Level(90),
+        traits,
+    ));
+    h
+}
+
 fn stormkeeper_uses(id: u32) {
-    let mut h = fixture(&[191634, 188196, 188443, 188389], 7);
+    let mut h = stormkeeper_fixture(&[191634, 188196, 188443, 188389]);
     let caster = h.caster;
     let npc = h.npc;
-    apply(&mut h, caster, caster, 191634);
+    h.cast_and_deliver(191634, Some(caster));
+    h.advance(50);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 191634));
     execute(&mut h, 188389, npc);
     h.advance(4);
     assert!(
@@ -266,7 +303,7 @@ fn dummy20_barbed_rejected_friendly_target_does_not_start_focus() {
 #[test]
 fn dummy20_stormkeeper_root_completion_and_cancellation() {
     for cancel in [false, true] {
-        let mut h = fixture(&[191634, 188196], 7);
+        let mut h = stormkeeper_fixture(&[191634, 188196]);
         let caster = h.caster;
         let npc = h.npc;
         h.cast_and_deliver(191634, Some(caster));
