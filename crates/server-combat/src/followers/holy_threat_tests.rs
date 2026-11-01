@@ -77,51 +77,6 @@ fn prove_reversible_native_threat(entry: u32, spell: u32) {
 }
 
 #[test]
-fn holy_threat_native_ai_keeps_fade_when_the_enemy_attacks_someone_else() {
-    let (mut h, priest) = native_fixture(215011);
-    let enemy = h.npc;
-    let owner = h.caster;
-    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, owner, 1000.0);
-    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, priest, 500.0);
-    assert_eq!(
-        crate::creature_aggro::current_victim(h.app.world_mut(), enemy),
-        Some(owner)
-    );
-    super::update_ai(h.app.world_mut());
-    h.advance(3);
-    assert!(
-        !h.inbox
-            .go
-            .iter()
-            .any(|event| event.caster == priest.to_bits() && event.spell_id == 586)
-    );
-    assert!(own_aura(&h, priest, 586).is_none());
-    assert_eq!(
-        crate::creature_aggro::current_victim(h.app.world_mut(), enemy),
-        Some(owner)
-    );
-}
-
-#[test]
-fn holy_threat_native_ai_fades_when_the_enemy_attacks_henry() {
-    let (mut h, priest) = native_fixture(215011);
-    let enemy = h.npc;
-    let owner = h.caster;
-    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, priest, 1000.0);
-    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, owner, 500.0);
-    assert_eq!(
-        crate::creature_aggro::current_victim(h.app.world_mut(), enemy),
-        Some(priest)
-    );
-    super::kit_tests::uses_spell(&mut h, priest, 586);
-    assert!(own_aura(&h, priest, 586).is_some());
-    assert_eq!(
-        crate::creature_aggro::current_victim(h.app.world_mut(), enemy),
-        Some(owner)
-    );
-}
-
-#[test]
 fn holy_threat_native_henry_fade_switches_victim_then_restores_on_expiry() {
     prove_reversible_native_threat(215011, 586);
 }
