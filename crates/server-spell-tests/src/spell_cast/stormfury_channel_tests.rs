@@ -1,8 +1,9 @@
 //! The real Primal Storm Elemental's Stormfury keeps its own channel when the
 //! owner-driven guardian target changes mid-channel.
+use super::effects::factor_capture::FactorCapture;
 use super::script_registry;
 use super::summon::{SummonedCreature, load_summon_properties};
-use super::test_harness::{Harness, harness, prepare_class_world, world_db};
+use super::test_harness::{Harness, harness, prepare_class_world, spawn_npc, world_db};
 use bevy::prelude::*;
 use server::networking::CombatTarget;
 use shared::components::{Health, Npc};
@@ -126,4 +127,60 @@ fn stormfury_keeps_its_channel_tick_after_the_owner_clears_its_target() {
         script_registry::target_damage_multiplier(h.app.world(), actor, h.npc, &spell),
         1.05f32.powf(ticks as f32)
     );
+}
+
+#[test]
+fn stormfury_recipients_after_a_primary_killed_mid_tick_keep_that_tick() {
+    let (mut h, actor) = summoned_storm_elemental();
+    let primary = h.npc;
+    let secondary = spawn_npc(&mut h.app, 3.0);
+    h.app.world_mut().entity_mut(secondary).insert(Health {
+        current: 10_000_000.0,
+        max: 10_000_000.0,
+    });
+    h.select(Some(primary));
+    advance_until(&mut h, 400, |h| paid_ticks(h, actor) > 0);
+    let killing_tick = paid_ticks(&h, actor) + 1;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    h.app.insert_resource(FactorCapture::new(
+        actor,
+        secondary,
+        STORMFURY_AOE,
+        "stormfury",
+        1,
+    ));
+    advance_until(&mut h, 40, |h| h.health(primary) == 0.0);
+    let aoe_on = |target: Entity| {
+        move |event: &&shared::protocol::CombatLogEvent| {
+            event.spell_id == Some(STORMFURY_AOE) && event.target == Some(target.to_bits())
+        }
+    };
+    let lethal = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| aoe_on(primary)(&event) && event.overflow > 0)
+        .expect("the killing Stormfury hit on the primary");
+    assert!(
+        h.inbox.log[lethal..]
+            .iter()
+            .any(|event| aoe_on(secondary)(&event)),
+        "the secondary resolves after the primary's death in the same tick"
+    );
+    let capture = h.app.world().resource::<FactorCapture>().export();
+    let multiplier = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|event| event["applied_multipliers"].as_array())
+        .flatten()
+        .find(|row| row["factor"] == "giantkiller")
+        .and_then(|row| row["value"].as_f64())
+        .expect("the secondary's Stormfury hit on the killing tick");
+    // SimC76f8118 sc_shaman.cpp4204–4207 fixes tick_number before the child executes.
+    assert_eq!(multiplier as f32, 1.05f32.powf(killing_tick as f32));
 }
