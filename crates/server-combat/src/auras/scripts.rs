@@ -123,11 +123,11 @@ pub(super) fn check_proc(
     event: &super::procs::AuraEvent,
 ) -> bool {
     // SimC76f8118 sc_warrior.cpp4243–4249/4452–4456: the Execute
-    // damage impact owns Deep Wounds for Protection and Fury.
+    // damage impact owns Deep Wounds for Arms, Protection and Fury.
     if aura.spell_id == 1261060
         && world
             .get::<shared::components::ActiveSpec>(aura.caster)
-            .is_some_and(|spec| matches!(spec.0, 72 | 73))
+            .is_some_and(|spec| matches!(spec.0, 71..=73))
     {
         return false;
     }

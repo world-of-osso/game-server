@@ -45,6 +45,19 @@ const POLICIES: &[Policy] = &[
             primary_only: false,
         },
     },
+    // SimC76f8118 sc_warrior.cpp4243–4249: Arms Execute's damage impact
+    // applies one native Deep Wounds, not the zero-damage parent cast.
+    Policy {
+        name: "SIMC_ARMS_EXECUTE_DEEP_WOUNDS",
+        spec: 71,
+        talent: 1261060,
+        relationship: Relationship::HitPayload {
+            parent: 260798,
+            payload: 262115,
+            self_target: false,
+            primary_only: false,
+        },
+    },
     // SimC76f8118 sc_warrior.cpp4243–4249: Protection Execute's damage
     // impact applies one native Deep Wounds, not its zero-damage parent.
     Policy {
