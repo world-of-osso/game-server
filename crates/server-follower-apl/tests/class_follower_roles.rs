@@ -497,6 +497,61 @@ fn class_healer_pull_readiness_uses_program_heals_without_the_kit_catalog() {
 }
 
 #[test]
+fn every_class_tank_taunts_the_healers_attacker_with_its_known_spell() {
+    for (spec, taunt) in [
+        (66, 62124),
+        (73, 355),
+        (104, 6795),
+        (250, 56222),
+        (268, 115546),
+        (581, 185245),
+    ] {
+        let mut pull = spawn(spec);
+        let owner = pull.harness.caster;
+        let enemy = pull.harness.npc;
+        let healer_profile = read_profiles()
+            .unwrap()
+            .into_iter()
+            .find(|profile| profile.spec_id == 257)
+            .unwrap();
+        let world = pull.harness.app.world_mut();
+        let healer = spawn_class(world, owner, &healer_profile, 2, 0, GearSource::Journal).unwrap();
+        world
+            .get_mut::<server_combat::followers::Follower>(pull.follower)
+            .unwrap()
+            .profile
+            .taunt_spell = 0;
+        world.entity_mut(enemy).insert((
+            shared::components::ThreatTable::default(),
+            server_combat::networking::CombatTarget(Some(healer)),
+            server_combat::creature_ai::CreatureState::Pursuing {
+                target: healer.to_bits(),
+            },
+        ));
+        server_combat::creature_aggro::add_threat(world, enemy, healer, 100.0);
+        for _ in 0..20 {
+            server_combat::followers::update_ai(pull.harness.app.world_mut());
+            pull.harness.app.update();
+        }
+        assert!(
+            pull.casts().contains(&taunt),
+            "spec {spec} did not cast {taunt}: {:?}",
+            pull.casts()
+        );
+        assert_eq!(
+            pull.harness
+                .app
+                .world()
+                .get::<server_combat::networking::CombatTarget>(enemy)
+                .unwrap()
+                .0,
+            Some(pull.follower),
+            "spec {spec} did not take the enemy from the healer"
+        );
+    }
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;

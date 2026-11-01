@@ -97,17 +97,28 @@ pub(super) fn profile_for(
 
 fn taunt_spell(
     store: &crate::spell_info::SpellStore,
-    known: &[crate::class_progression::KnownSpell],
+    known: impl Iterator<Item = u32>,
 ) -> Result<u32, String> {
     let taunts: Vec<_> = known
-        .iter()
-        .filter(|spell| !spell.passive)
-        .filter_map(|spell| store.get(spell.spell_id))
+        .filter_map(|id| store.get(id))
+        .filter(|spell| !crate::auras::is_passive(spell))
         .filter(|spell| {
-            spell.effects.iter().any(|effect| {
-                effect.effect == crate::spell_cast::effects::EFFECT_ATTACK_ME
-                    && effect.implicit_targets[0] == 6 // TARGET_UNIT_TARGET_ENEMY
-            }) || spell.id == 115546 // Provoke's native dummy script casts the taunt 116189.
+            let scripted = crate::spell_cast::scripts::scripted_enemy_trigger(spell.id);
+            std::iter::once(spell)
+                .chain(
+                    spell
+                        .effects
+                        .iter()
+                        .filter_map(|effect| store.get(effect.trigger_spell)),
+                )
+                .chain(scripted.and_then(|child| store.get(child)))
+                .any(|action| {
+                    action.effects.iter().any(|effect| {
+                        (effect.effect == crate::spell_cast::effects::EFFECT_ATTACK_ME
+                            || effect.aura == crate::auras::handlers::MOD_TAUNT)
+                            && effect.implicit_targets[0] == 6 // TARGET_UNIT_TARGET_ENEMY
+                    })
+                })
         })
         .map(|spell| spell.id)
         .collect();
@@ -116,6 +127,18 @@ fn taunt_spell(
         _ => Err(format!(
             "tank follower requires one native taunt, found {taunts:?}"
         )),
+    }
+}
+
+pub(super) fn known_taunt(world: &World, unit: Entity) -> Option<u32> {
+    let known = world.get::<crate::class_progression::KnownSpells>(unit)?;
+    let store = world.get_resource::<crate::spell_info::SpellStore>()?;
+    match taunt_spell(store, known.iter()) {
+        Ok(spell) => Some(spell),
+        Err(error) => {
+            warn!("Follower {unit}: {error}");
+            None
+        }
     }
 }
 
@@ -373,7 +396,13 @@ pub fn install_class(
     let attack_spell = attack_spell(classes, store, source, &known)?;
     let mut profile = profile_for(source, slot, attack_spell)?;
     if profile.role == shared::group::GroupRole::Tank {
-        profile.taunt_spell = taunt_spell(store, &known)?;
+        profile.taunt_spell = taunt_spell(
+            store,
+            known
+                .iter()
+                .filter(|spell| !spell.passive)
+                .map(|spell| spell.spell_id),
+        )?;
     }
     let (stats, pools, _) = class_stats(world, &profile, level, source.race)?;
     let passives: Vec<_> = known

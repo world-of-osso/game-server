@@ -100,7 +100,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     if follower.profile.role != GroupRole::Tank
         && super::tank_pull_back::party_should_wait(world, follower.owner)
     {
-        wait_for_tank_pull_back(world, unit, follower, &party);
+        wait_for_tank_pull_back(world, unit, &party);
         return;
     }
     super::tank_pull_back_party::restore_pets(world, unit);
@@ -137,59 +137,15 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         _ => None,
     };
     trace_target_selection(world, unit, follower.owner, &party, enemy);
-    if world.get::<AplControlled>(unit).is_some() {
-        position_for_apl(world, unit, follower, selection);
-        return;
-    }
-    update_auto_shot(world, unit, follower, enemy);
-    if enemy.is_some() {
-        use_freightrunners_flask(world, unit);
-    }
-    if super::kit_ai::update(world, unit, follower, &party, enemy, &enemies) {
-        return;
-    }
-    if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
-        return;
-    }
-    if enemy.is_some_and(|enemy| defend_follower(world, unit, enemy, follower.profile.class_id)) {
-        return;
-    }
-    if world.get::<CastState>(unit).is_some() {
-        return;
-    }
-    if prepare_pet(world, unit, follower) {
-        return;
-    }
-    if heal_party_member(world, unit, follower, &party) {
-        return;
-    }
-    let Some(enemy) = enemy else {
-        if matches!(selection, EnemySelection::Hold) {
-            hold_combat(world, unit);
-        } else {
-            regroup(world, unit, follower.owner);
-        }
-        return;
-    };
-    attack_enemy(world, unit, follower, enemy);
+    position_for_apl(world, unit, follower, selection);
 }
 
-fn wait_for_tank_pull_back(world: &mut World, unit: Entity, follower: &Follower, party: &[Entity]) {
+fn wait_for_tank_pull_back(world: &mut World, unit: Entity, party: &[Entity]) {
     super::tank_pull_back_party::stop_damage(world, unit);
     if let Some(tank) = super::tank_pull_back_party::find_tank(world, party) {
         super::tank_pull_back_party::follow_tank(world, unit, tank);
     } else {
         hold_combat(world, unit);
-    }
-    if world.get::<AplControlled>(unit).is_some() {
-        return;
-    }
-    if !super::kit_ai::update(world, unit, follower, party, None, &[])
-        && follower.profile.heal_spell != 0
-        && let Some(patient) = lowest_health(world, party, unit)
-        && pursue(world, unit, patient, follower.profile.heal_spell, false)
-    {
-        cast(world, unit, patient, follower.profile.heal_spell);
     }
 }
 
@@ -445,11 +401,18 @@ fn position_for_apl(
 ) {
     match selection {
         EnemySelection::Attack(enemy) => {
-            let profile = &follower.profile;
-            if pursue(world, unit, enemy, profile.attack_spell, profile.melee) {
+            let reach = if follower.profile.melee {
+                Some(MELEE_REACH)
+            } else {
+                super::target_reach::attack_range(world, unit, follower)
+                    .map(|range| (range - 1.0).max(MELEE_REACH))
+            };
+            if reach.is_some_and(|reach| pursue_at_reach(world, unit, enemy, reach)) {
                 order_pet_attack(world, unit, enemy);
-                if needs_taunt(world, unit, enemy, follower) {
-                    cast(world, unit, enemy, profile.taunt_spell);
+                if needs_taunt(world, unit, enemy, follower)
+                    && let Some(spell) = super::class_spawn::known_taunt(world, unit)
+                {
+                    cast(world, unit, enemy, spell);
                 }
             } else {
                 regroup(world, unit, follower.owner);
@@ -707,7 +670,7 @@ fn defensive_spell(class: u8) -> Option<u32> {
 }
 
 fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) -> bool {
-    follower.profile.taunt_spell != 0
+    follower.profile.role == GroupRole::Tank
         && world
             .get::<CombatTarget>(enemy)
             .and_then(|target| target.0)
@@ -721,16 +684,6 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
-    debug!(target: "game_server::follower_target", ?unit, ?target, spell_id, melee, "spell approach requested");
-    if super::candlelight::hold_pursuit(world, unit, target) {
-        return true;
-    }
-    if super::tank_planner::apply_admitted_position(world, unit, Some(target))
-        || super::tank_planner::apply_admitted_caster_target(world, unit)
-        || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
-    {
-        return true;
-    }
     let reach = if melee {
         Some(MELEE_REACH)
     } else {
@@ -740,6 +693,19 @@ pub(super) fn pursue(
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
+    pursue_at_reach(world, unit, target, reach)
+}
+
+fn pursue_at_reach(world: &mut World, unit: Entity, target: Entity, reach: f32) -> bool {
+    if super::candlelight::hold_pursuit(world, unit, target) {
+        return true;
+    }
+    if super::tank_planner::apply_admitted_position(world, unit, Some(target))
+        || super::tank_planner::apply_admitted_caster_target(world, unit)
+        || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
+    {
+        return true;
+    }
     let in_range_and_visible = crate::spell_cast::targets::position(world, unit)
         .zip(crate::spell_cast::targets::position(world, target))
         .is_some_and(|(from, to)| from.distance(to) <= reach)

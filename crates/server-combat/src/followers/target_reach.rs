@@ -139,7 +139,7 @@ mod tests {
     }
 }
 
-fn attack_range(world: &World, unit: Entity, follower: &Follower) -> Option<f32> {
+pub(super) fn attack_range(world: &World, unit: Entity, follower: &Follower) -> Option<f32> {
     let store = world.get_resource::<crate::spell_info::SpellStore>()?;
     super::action_spells::available(world, unit)
         .expect("follower available action resolution failed")
