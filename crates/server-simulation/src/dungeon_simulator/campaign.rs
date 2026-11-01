@@ -207,7 +207,7 @@ fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
         .graph
         .transports
         .iter()
-        .find(|edge| edge.source_guid == 3276416805)
+        .find(|edge| edge.from == 3276416805)
         .unwrap()
         .clone();
     let pyre = run.objects[&edge.source_guid];
