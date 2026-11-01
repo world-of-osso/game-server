@@ -208,6 +208,40 @@ impl Pull {
 }
 
 #[test]
+fn class_rotation_reports_its_program_bound_spells() {
+    for (spec, spell) in [(63, 133), (257, 2061), (66, 31935)] {
+        let mut pull = spawn(spec);
+        let rotation =
+            server_follower_apl::registry::load(pull.harness.app.world_mut(), pull.follower, spec)
+                .unwrap();
+        let actions = rotation.action_spells();
+        let pure = match spec {
+            63 => server_follower_apl::fire_rotation::action_spells(
+                &server_follower_apl::profiles::profile(spec).unwrap(),
+                pull.harness
+                    .app
+                    .world()
+                    .get::<server_combat::class_progression::TraitLoadout>(pull.follower)
+                    .unwrap(),
+            )
+            .unwrap(),
+            257 => server_follower_apl::holy_priest_rotation::action_spells().unwrap(),
+            66 => server_follower_apl::protection_paladin_rotation::action_spells(
+                &server_follower_apl::profiles::profile(spec).unwrap(),
+            )
+            .unwrap(),
+            _ => unreachable!(),
+        };
+        assert_eq!(pure, actions, "spec{spec} pure and runtime actions differ");
+        assert!(
+            actions.contains(&spell),
+            "spec{spec} missing {spell}: {actions:?}"
+        );
+        assert!(actions.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;

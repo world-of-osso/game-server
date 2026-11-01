@@ -558,3 +558,60 @@ fn navigation_corrupt_tile_is_blocked_not_legacy() {
         Step::Blocked
     ));
 }
+
+#[derive(Clone, Default)]
+struct CapturedLog(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for CapturedLog {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[test]
+fn goal_trace_logs_each_goal_change_once_and_not_a_moving_formation_slot() {
+    let log = CapturedLog::default();
+    let writer = log.clone();
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .with_max_level(bevy::log::tracing::Level::DEBUG)
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    let dir = tempfile::tempdir().unwrap();
+    let tank = Entity::from_bits(41);
+    let request = |goal, x: f32| MoveRequest {
+        map_id: 2527,
+        goal,
+        from: Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        to: Position { x, y: 0.0, z: 0.0 },
+        distance: 0.0,
+        reach: 0.0,
+    };
+    bevy::log::tracing::subscriber::with_default(subscriber, || {
+        let mut nav = Navigation::new(dir.path());
+        nav.advance(tank, request(Goal::FollowFormation(7, Vec3::X), 3.0));
+        nav.advance(tank, request(Goal::FollowFormation(7, Vec3::Z), 4.0));
+        nav.advance(tank, request(Goal::Chase(9), 5.0));
+        nav.advance(tank, request(Goal::Chase(9), 6.0));
+    });
+    let text = String::from_utf8(log.0.lock().unwrap().clone()).unwrap();
+    let goals: Vec<_> = text
+        .lines()
+        .filter(|line| line.contains("navigation goal"))
+        .collect();
+    assert_eq!(goals.len(), 2, "{text}");
+    assert!(goals[0].contains("FollowFormation(7"), "{}", goals[0]);
+    assert!(
+        goals[1].contains("Chase(9)") && goals[1].contains("actor=41"),
+        "{}",
+        goals[1]
+    );
+}

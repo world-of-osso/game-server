@@ -232,6 +232,10 @@ impl Restoration {
 }
 
 impl crate::follower::SpecRotation for Restoration {
+    fn action_spells(&self) -> Vec<u32> {
+        self.driver.action_spells(&self.bindings)
+    }
+
     fn poll_precombat(
         &mut self,
         _world: &mut World,

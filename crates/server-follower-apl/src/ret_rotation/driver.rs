@@ -7,8 +7,8 @@ use crate::literal_rotation::{Driver, PrecombatPoll, equipment::Equipment, execu
 use crate::simc_apl_native::{Bindings, Encounter};
 
 pub struct Rotation {
-    driver: Driver,
-    bindings: Bindings,
+    pub(super) driver: Driver,
+    pub(super) bindings: Bindings,
     equipment: Equipment,
     encounter: Encounter,
 }
