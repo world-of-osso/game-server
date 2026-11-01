@@ -149,6 +149,26 @@ pub(crate) fn owned_companions(world: &mut World, owner: Entity) -> Vec<Entity> 
     companions.into_iter().collect()
 }
 
+/// Move one transport user and its owned companions, never the rest of its party.
+pub(crate) fn teleport_transport_user(
+    world: &mut World,
+    unit: Entity,
+    destination: WorldLocation,
+) -> Result<(), String> {
+    if world.get::<shared::components::Player>(unit).is_some() {
+        if !teleport_to(world, unit, destination, TeleportOptions::default()) {
+            return Err(format!("transport user {unit:?} near teleport refused"));
+        }
+    } else if world.get::<crate::followers::Follower>(unit).is_some() {
+        teleport_creature_with_companions(world, unit, &destination);
+    } else {
+        return Err(format!(
+            "transport user {unit:?} is not a player or follower"
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) fn teleport_creature_with_companions(
     world: &mut World,
     unit: Entity,

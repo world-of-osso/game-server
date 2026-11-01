@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use shared::protocol::GameObjectInfo;
 
 use super::gossip::{GossipAction, Opening, gossip_opening};
-use crate::maps::{InMap, TeleportOptions, WorldLocation};
+use crate::maps::{InMap, WorldLocation};
 
 pub(crate) const MAP: u32 = 2825;
 pub(crate) const PYRES: &[(u32, u32, Vec3, f32)] = &[
@@ -58,21 +58,14 @@ pub(crate) fn traverse(world: &mut World, player: Entity, pyre: Entity) -> Resul
         .ok_or("pyre lacks object info")?
         .entry;
     let destination = destination(entry).ok_or("unknown pyre")?;
-    let followers: Vec<_> = world
-        .query::<(Entity, &crate::followers::Follower, &InMap)>()
-        .iter(world)
-        .filter_map(|(entity, follower, map)| {
-            (follower.owner == player
-                && *map == copy
-                && world.get::<crate::combat::DeathState>(entity).is_none())
-            .then_some(entity)
-        })
-        .collect();
-    if !crate::maps::teleport_to(world, player, destination, TeleportOptions::default()) {
-        return Err("pyre user near teleport refused".into());
-    }
-    for unit in followers {
-        crate::maps::transfer::teleport_creature_with_companions(world, unit, &destination);
+    crate::maps::transfer::teleport_transport_user(world, player, destination)?;
+    if world.get::<shared::components::Player>(player).is_some() {
+        crate::followers::transport_follow::record_use(
+            world,
+            player,
+            pyre,
+            crate::followers::transport_follow::TransportKind::NalorakkPyre,
+        );
     }
     info!(?player, ?pyre, "NALORAKK_PYRE_TELEPORT");
     Ok(())

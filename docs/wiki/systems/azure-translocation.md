@@ -14,7 +14,7 @@ Source chain: `tdb_creature_template_gossip` → `tdb_gossip_menu` → `tdb_npc_
 |194714 /29001918|29012 /228351|bottom ring within the Crystal Chambers|199545 /29002013|
 |194715 /29002014,29002015,29002016|29013 /228354|Sindragosa's Lament|AreaPOI7116; no receiver book exists|
 
-Receiver positions come directly from `content_creature`/TDB source spawns. No offset is added. All13 book spawns are accounted for above (nine sending books, four receiving-only books).
+Receiver positions come directly from `content_creature`/TDB source spawns. No offset is added. All13 book spawns are accounted for above (nine sending books, four receiving-only books). Each reader and its controlled pets travel independently; followers use the book themselves when a direct walking route to their owner is unavailable. This is the user-directed follower policy, not a recovered ActionSet rule.
 
 Native `NavigationMap::path`143 candidate queries qualified these component sets:
 

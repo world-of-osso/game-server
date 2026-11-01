@@ -38,6 +38,9 @@ mod native_action_override_tests;
 mod native_book_tests;
 #[cfg(test)]
 mod proc_definition_tests;
+pub(crate) mod transport_follow;
+#[cfg(test)]
+mod transport_follow_tests;
 
 #[cfg(test)]
 mod fire_efficiency_tests;
