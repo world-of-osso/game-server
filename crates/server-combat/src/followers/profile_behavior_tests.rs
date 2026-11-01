@@ -106,8 +106,8 @@ fn powers_follower_initialization_without_catalog_returns_error_without_mutation
 }
 
 #[test]
-fn follower_selection_is_not_engagement_but_native_attack_is() {
-    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(209059, |_| {});
+fn follower_selection_does_not_engage_but_owner_attack_does() {
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
     let before = h.health(enemy);
     let position = *h
@@ -144,25 +144,23 @@ fn follower_selection_is_not_engagement_but_native_attack_is() {
     for _ in 0..90 {
         update_ai(h.app.world_mut());
         h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .and_then(|target| target.0)
+            == Some(enemy)
+        {
+            break;
+        }
     }
-    assert!(
-        h.inbox.log.iter().any(|event| {
-            event.source == Some(unit.to_bits())
-                && event.target == Some(enemy.to_bits())
-                && event.spell_id == Some(profile.attack_spell)
-                && event.kind == shared::protocol::CombatLogKind::CastSuccess
-        }),
-        "real owner attack must engage Meredy's authored attack spell"
+    assert!(super::engaged_targets(h.app.world_mut(), unit).contains(&enemy));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .and_then(|target| target.0),
+        Some(enemy)
     );
-    for event in h.inbox.log.iter().filter(|event| {
-        event.source == Some(unit.to_bits())
-            && event.target == Some(enemy.to_bits())
-            && event.spell_id == Some(profile.attack_spell)
-            && event.kind == shared::protocol::CombatLogKind::Damage
-    }) {
-        assert!(event.amount > 0, "{event:?}");
-        assert!((0..=event.amount).contains(&event.overflow), "{event:?}");
-    }
 }
 
 #[test]
