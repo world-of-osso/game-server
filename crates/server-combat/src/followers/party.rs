@@ -109,6 +109,11 @@ pub(super) fn read_admission(
 }
 
 #[cfg(test)]
+pub(crate) fn update_test_releases(world: &mut World) {
+    super::release::update(world);
+}
+
+#[cfg(test)]
 pub(crate) fn spawn_keystone_test_party(
     world: &mut World,
     owner: Entity,

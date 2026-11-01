@@ -732,6 +732,24 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
             .difficulty_id,
         8
     );
+    let position = *h.app.world().get::<Position>(followers[0]).unwrap();
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let current = crate::maps::WorldLocation {
+        map_id: map.map_id,
+        position: Vec3::new(x, y, z),
+        orientation: 0.0,
+    };
+    let maps = h.app.world().resource::<MapStore>();
+    let release =
+        crate::death::dungeon_release_location(&current, maps.map(map.map_id).unwrap(), maps)
+            .expect("Azure dungeon release");
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(release.bevy_position());
+    h.app.insert_resource(crate::navigation::Navigation::new(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+    ));
     h.app
         .world_mut()
         .get_mut::<Health>(followers[0])
@@ -747,6 +765,38 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
             .world()
             .get::<crate::combat::Corpse>(followers[0])
             .is_some()
+    );
+    crate::followers::party::update_test_releases(h.app.world_mut());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(followers[0])
+            .is_some(),
+        "follower waits during combat"
+    );
+    crate::combat::combat_stop(h.app.world_mut(), player);
+    for &unit in &followers {
+        crate::combat::combat_stop(h.app.world_mut(), unit);
+    }
+    crate::followers::party::update_test_releases(h.app.world_mut());
+    h.app
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>()
+        .drain_until_idle();
+    crate::followers::party::update_test_releases(h.app.world_mut());
+    assert!(
+        h.app.world().get::<Health>(followers[0]).unwrap().current > 0.0,
+        "follower releases after combat on a complete route"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(followers[0])
+            .is_none()
+    );
+    assert_eq!(
+        crate::mythic_plus::fixture::snapshot(h.app.world(), map).deaths,
+        1
     );
     let targets: Vec<_> = h
         .app

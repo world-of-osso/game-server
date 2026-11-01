@@ -29,7 +29,7 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 ## Tests asserting this spec
 
 - `scripts/tests/test_import_mythic_plus.py` (requires named extracted local DB2 and read-only world sources).
-- `scripted_ai::tests::data_bosses::mythic_follower_party_completes_azure_with_owner_key_and_follower_death` exercises real class-party and Azure population spawning, the Font, death transition and owner-key settlement.
+- `scripted_ai::tests::data_bosses::mythic_follower_party_completes_azure_with_owner_key_and_follower_death` exercises real class-party and Azure population spawning, the Font, follower death and release, and owner-key settlement.
 
 ## Known gaps (current cycle)
 
