@@ -113,11 +113,10 @@ fn healing_modifier_permissions(spell: &SpellInfo) -> (bool, bool) {
     (allow_positive, allow_negative)
 }
 
-/// TC a352b1fa Unit.cpp7512–7594: ignored heals retain only permitted
+/// TC a352b1fa Unit.cpp7512–7550: ignored heals retain only permitted
 /// negative healing-taken effects; 118 selects the strongest reduction.
 pub(crate) fn ignored_healing_taken_multiplier(
     world: &World,
-    caster: Entity,
     target: Entity,
     spell: &SpellInfo,
 ) -> f32 {
@@ -137,24 +136,11 @@ pub(crate) fn ignored_healing_taken_multiplier(
                 .map(move |effect| effect.amount * aura.stack_multiplier())
         })
         .fold(0.0_f32, f32::min);
-    let caster_factor: f32 = auras
-        .iter()
-        .filter(|aura| aura.caster == caster)
-        .flat_map(|aura| {
-            aura.effects
-                .iter()
-                .filter(|effect| {
-                    effect.aura_type == handlers::MOD_HEALING_RECEIVED
-                        && effect.amount < 0.0
-                        && affects_spell(aura, effect, spell)
-                })
-                .map(move |effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
-        })
-        .product();
-    (1.0 + negative / 100.0) * caster_factor
+    1.0 + negative / 100.0
 }
 
-/// TC a352b1fa Unit.cpp7579–7594: every504 factor belongs to this healer.
+/// TC a352b1fa Unit.cpp7579–7594: every504 factor belongs to this healer; 283
+/// also belongs to this healer and must match the heal's class mask.
 pub(crate) fn caster_healing_taken_multiplier(
     world: &World,
     caster: Entity,
@@ -177,7 +163,10 @@ pub(crate) fn caster_healing_taken_multiplier(
                     } else {
                         allow_negative
                     };
-                    effect.aura_type == handlers::MOD_HEALING_TAKEN_FROM_CASTER && allowed
+                    let scoped = effect.aura_type == handlers::MOD_HEALING_TAKEN_FROM_CASTER
+                        || (effect.aura_type == handlers::MOD_HEALING_RECEIVED
+                            && affects_spell(aura, effect, spell));
+                    scoped && allowed
                 })
                 .map(move |effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
         })

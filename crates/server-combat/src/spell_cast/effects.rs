@@ -2679,9 +2679,7 @@ fn apply_heal_with_raw(
         world, ctx.caster, target, ctx.spell,
     );
     let general_taken = if ignore_healing {
-        crate::auras::combat_stats::ignored_healing_taken_multiplier(
-            world, ctx.caster, target, ctx.spell,
-        )
+        crate::auras::combat_stats::ignored_healing_taken_multiplier(world, target, ctx.spell)
     } else {
         stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
     };

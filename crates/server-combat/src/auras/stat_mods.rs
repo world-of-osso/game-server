@@ -45,7 +45,8 @@ pub struct AuraStatMods {
     pub temporary_threat: f32,
     /// Aura57: spell-only critical chance; never affects weapon attacks.
     pub spell_crit_pct: f32,
-    /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
+    /// MOD_HEALING_PCT 118. MOD_HEALING_RECEIVED 283 is per healer and spell:
+    /// `combat_stats::caster_healing_taken_multiplier`.
     pub healing_taken_mult: f32,
     /// Raw signed MOD_CRIT_PCT290 for NPCs without folded CharacterStats.
     pub npc_crit_pct: f32,
@@ -723,7 +724,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance, sanlayn: bool) {
                 combat.damage_taken_mult[school] *= pct(amount)
             }),
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
-            MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
+            MOD_HEALING_PCT => combat.healing_taken_mult *= pct(amount),
             MOD_WEAPON_CRIT_PERCENT => combat.npc_weapon_crit_pct += amount,
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),

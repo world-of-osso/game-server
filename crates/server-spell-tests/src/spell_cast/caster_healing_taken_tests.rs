@@ -1,4 +1,4 @@
-//! Native70448 aura504; TC a352b1fa Unit.cpp7579–7594.
+//! Native70448 aura504 and aura283; TC a352b1fa Unit.cpp7579–7594.
 use super::test_harness::*;
 use crate::auras::{self, AuraApplication, AuraSource, RemoveReason};
 use bevy::prelude::*;
@@ -12,6 +12,9 @@ const REJUVENATION: u32 = 774;
 const COPIED_REJUVENATION: u32 = 70_691;
 const DARK_REGENERATION: u32 = 108_359;
 const MORTAL_WOUND: u32 = 25_646;
+const SERENE_VITALITY: u32 = 1_285_660;
+const VIVIFY: u32 = 116_670;
+const WAY_OF_THE_CRANE_HEAL: u32 = 389_325;
 
 fn fixture() -> Harness {
     harness(
@@ -160,4 +163,24 @@ fn census_tail_504_native_zero_reversion_does_not_invent_healing_bonus() {
     apply(&mut h, REVERSION, target, target);
     assert_eq!(healed_amount(&mut h, REJUVENATION, false), 100);
     assert_eq!(healed_amount(&mut h, REJUVENATION, true), 100);
+}
+
+/// 1285660 effect 0 is aura283 +60% masked to Vivify and Sheilun's Gift; it must not
+/// raise other spells or heals from anyone but the aura's caster.
+#[test]
+fn aura283_applies_only_to_the_aura_casters_matching_spells() {
+    let mut h = harness(
+        Vec::new(),
+        &[SERENE_VITALITY, VIVIFY, WAY_OF_THE_CRANE_HEAL],
+        5,
+    )
+    .unwrap();
+    let target = h.caster;
+    apply(&mut h, SERENE_VITALITY, target, target);
+    assert_eq!(healed_amount(&mut h, VIVIFY, false), 160);
+    assert_eq!(healed_amount(&mut h, WAY_OF_THE_CRANE_HEAL, false), 100);
+    remove(&mut h, SERENE_VITALITY);
+    let foreign = h.npc;
+    apply(&mut h, SERENE_VITALITY, foreign, target);
+    assert_eq!(healed_amount(&mut h, VIVIFY, false), 100);
 }
