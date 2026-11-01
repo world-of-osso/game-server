@@ -261,20 +261,60 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     }
 }
 
-/// [`sees_in_world`] with `target`'s feet projected to `feet`.
-pub(crate) fn sees_at(world: &World, watcher: Entity, target: Entity, feet: Position) -> bool {
-    let Some(map) = world.get::<InMap>(watcher).copied() else {
-        return true;
-    };
-    match (
-        parts_in_world(world, watcher),
-        parts_in_world(world, target),
-    ) {
-        (Some(watcher), Some(mut target)) => {
-            target.2 = &feet;
-            unit_sees(world.get_resource::<LineOfSight>(), map, watcher, target)
+/// An immutable snapshot of two bodies for projected movement checks.
+#[derive(Clone, Copy)]
+pub(crate) enum ProjectedSight {
+    Open,
+    Unavailable,
+    Bodies {
+        map: InMap,
+        watcher: Body,
+        target: Body,
+    },
+}
+
+impl ProjectedSight {
+    pub(crate) fn capture(world: &World, watcher: Entity, target: Entity) -> Self {
+        let Some(map) = world.get::<InMap>(watcher).copied() else {
+            return Self::Open;
+        };
+        let (Some(watcher), Some(target)) = (
+            parts_in_world(world, watcher),
+            parts_in_world(world, target),
+        ) else {
+            return Self::Open;
+        };
+        let Some(los) = world.get_resource::<LineOfSight>() else {
+            return Self::Open;
+        };
+        if los.is_open_arena() {
+            return Self::Open;
         }
-        _ => true,
+        match (los.body(watcher), los.body(target)) {
+            (Some(watcher), Some(target)) => Self::Bodies {
+                map,
+                watcher,
+                target,
+            },
+            _ => Self::Unavailable,
+        }
+    }
+
+    pub(crate) fn sees(self, los: Option<&LineOfSight>, feet: Vec3) -> bool {
+        match self {
+            Self::Open => true,
+            Self::Unavailable => false,
+            Self::Bodies {
+                map,
+                watcher,
+                mut target,
+            } => {
+                let delta = feet - target.feet;
+                target.feet += delta;
+                target.eyes += delta;
+                los.is_some_and(|los| los.sees(map, &watcher, &target))
+            }
+        }
     }
 }
 
