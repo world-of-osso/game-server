@@ -74,6 +74,7 @@ fn grant_building(world: &mut World, actor: Entity, count: usize) {
                     "native Voidfall spending"
                 );
             }
+            break;
         }
     }
 }
@@ -238,7 +239,14 @@ fn update(world: &mut World) {
             if !spell_cast::targets::is_alive(world, impact.target) {
                 continue;
             }
-            if !spell_cast::try_cast_triggered(world, actor, impact.spell, Some(impact.target), 1) {
+            let mut damage = spell_cast::load_triggered_spell(world, impact.spell, 1)
+                .expect("native Voidfall damage");
+            damage.cast_destination = Some(
+                spell_cast::targets::position(world, impact.target)
+                    .expect("Voidfall target position")
+                    .to_array(),
+            );
+            if !spell_cast::launch_triggered_spell(world, actor, &damage, Some(impact.target), 1) {
                 error!(
                     ?actor,
                     spell = impact.spell,
