@@ -884,6 +884,12 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     };
     assert!(!melee(rune), "rune hit the owner");
     assert!(melee(hostile), "nearby hostile did not melee the owner");
+    let observed = super::diagnostics::inspect_unit(run.app.world(), Some(29001878), hostile);
+    assert!(
+        observed["creature_swing_range"].is_array(),
+        "missing native swing range: {observed}"
+    );
+    assert_eq!(observed["keystone_damage_multiplier"], 1.0);
 }
 
 #[test]
