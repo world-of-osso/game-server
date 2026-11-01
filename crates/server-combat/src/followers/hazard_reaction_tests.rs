@@ -157,9 +157,12 @@ fn follower_hazard_reaction_held_worker_stands_inside_then_moves_at_publication(
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh/34");
     let tile = navigation::tile_of(Vec3::new(FROM.x, FROM.y, FROM.z));
     let held_name = format!("{}_{}.nav", tile.0, tile.1);
+    // Tiles only: the worker verifies a portal graph by hashing every tile at startup,
+    // which would consume the held read meant for the escape query.
     for entry in std::fs::read_dir(&original).unwrap() {
         let entry = entry.unwrap();
-        if entry.file_name() != held_name.as_str() {
+        let is_tile = entry.path().extension().is_some_and(|ext| ext == "nav");
+        if is_tile && entry.file_name() != held_name.as_str() {
             std::fs::copy(entry.path(), map.join(entry.file_name())).unwrap();
         }
     }
@@ -191,6 +194,11 @@ fn follower_hazard_reaction_held_worker_stands_inside_then_moves_at_publication(
             "late worker permits standing in the hazard"
         );
     }
+    // Detour grid setup reopens every tile to size the mesh: later opens read a regular
+    // copy, while the held descriptor still receives its single write.
+    let regular = map.join("held.tmp");
+    std::fs::copy(original.join(&held_name), &regular).unwrap();
+    std::fs::rename(&regular, map.join(&held_name)).unwrap();
     let _ = release_tx.send(());
     assert!(
         !writer.join().unwrap().unwrap(),
