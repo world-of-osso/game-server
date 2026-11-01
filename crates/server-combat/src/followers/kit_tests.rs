@@ -33,26 +33,3 @@ pub(crate) fn at_level_unengaged(
     spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
     (h, unit)
 }
-
-pub(super) fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
-    for _ in 0..600 {
-        update_ai(h.app.world_mut());
-        h.advance(1);
-        if h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == unit.to_bits() && go.spell_id == spell)
-        {
-            return;
-        }
-    }
-    panic!(
-        "follower did not cast native spell {spell}; casts: {:?}",
-        h.inbox
-            .go
-            .iter()
-            .filter(|go| go.caster == unit.to_bits())
-            .map(|go| go.spell_id)
-            .collect::<Vec<_>>()
-    );
-}
