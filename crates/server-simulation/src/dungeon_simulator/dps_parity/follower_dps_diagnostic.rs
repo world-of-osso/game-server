@@ -220,6 +220,48 @@ fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_new_mark_survives_in_flight_rapid_tick() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false).unwrap();
+    for _ in 0..100 {
+        app.update();
+        if !crate::auras::has_aura(app.world(), actor, 257044) {
+            break;
+        }
+    }
+    let count = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(257045) && event.kind == CombatLogKind::Damage)
+            .count()
+    };
+    let before = count(&app);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 1301098, Some(target), 1);
+    assert!(crate::auras::has_aura(app.world(), target, 1301098));
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(
+        count(&app) > before,
+        "a Rapid Fire missile actually landed after the channel"
+    );
+    assert!(
+        crate::auras::has_aura(app.world(), target, 1301098),
+        "a previously launched missile must not consume the new mark"
+    );
+}
+
 fn take_aim_damage_receipt(marked: bool, spell: u32) -> (f64, Vec<i32>) {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
