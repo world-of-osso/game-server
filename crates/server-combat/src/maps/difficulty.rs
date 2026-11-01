@@ -1135,8 +1135,9 @@ mod admin_npc_combat_tests {
             panic!("npc-info did not return its live rows");
         };
         assert!(
-            lines[0]
-                .contains(" at Some([355.5, 86.5, -26.25]) state Some(Idle) dormant true combat="),
+            lines[0].contains(
+                " at Some([355.5, 86.5, -26.25]) state Some(Idle) dormant true aggro_to=[] combat="
+            ),
             "{}",
             lines[0]
         );
@@ -1149,7 +1150,15 @@ mod admin_npc_combat_tests {
         assert_eq!(
             inspect(&mut world),
             serde_json::json!({
-                "stats": null, "creature_armor": null, "victim": null, "threat": null
+                "stats": null, "creature_armor": null, "victim": null, "threat": null,
+                "protection": {
+                    "unit_flags": null, "unit_flags2": null, "unit_flags3": null, "immunities": null
+                },
+                "movement": {
+                    "follow": null, "cast": null, "speed_modifier": null,
+                    "jump": false, "fall": false, "knockback": false,
+                    "confused": false, "feared": false
+                }
             })
         );
     }
