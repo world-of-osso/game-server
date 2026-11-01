@@ -35,10 +35,10 @@ fn projected_granyth(difficulty: u32) -> (Harness, Entity, InMap) {
     h.app.world_mut().entity_mut(peer).insert(other_map);
     let position = *h.app.world().get::<Position>(boss).unwrap();
     for (player, _, _) in &h.players {
-        *h.app.world_mut().get_mut::<Position>(*player).unwrap() = Position {
+        h.app.world_mut().entity_mut(*player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
     }
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
@@ -64,6 +64,8 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
                 .expect("native Granyth area cast");
             h.advance(5.0);
             assert_eq!(completed_casts(&h, boss, spell), 1);
+            let player = h.player();
+            let selection = super::describe_enemy_selection(&mut h, boss, player);
             assert!(
                 h.inbox(0).log.iter().any(|event| {
                     event.kind == CombatLogKind::Damage
@@ -72,7 +74,17 @@ fn encounter_coverage_granyth_projected_native_damage_and_isolation() {
                         && event.source == Some(boss.to_bits())
                         && event.target == Some(h.player().to_bits())
                 }),
-                "native{spell} projected{difficulty}"
+                "native{spell} projected{difficulty}: {selection}, receipts={:?}, events={:?}",
+                h.inbox(0)
+                    .spell_gos
+                    .iter()
+                    .filter(|go| go.spell_id == spell)
+                    .collect::<Vec<_>>(),
+                h.inbox(0)
+                    .log
+                    .iter()
+                    .filter(|event| event.spell_id == Some(spell))
+                    .collect::<Vec<_>>()
             );
             assert!(
                 h.inbox(1)
@@ -183,7 +195,9 @@ fn encounter_coverage_granyth_projected_evade_rearms_first_shards() {
             Some(EncounterState::NotStarted)
         );
         let player = h.player();
-        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 500.0;
+        let mut away = *h.app.world().get::<Position>(player).unwrap();
+        away.x += 500.0;
+        h.app.world_mut().entity_mut(player).insert(away);
         for _ in 0..100 {
             if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
                 != Some(&crate::creature_ai::CreatureState::Returning)
@@ -197,10 +211,10 @@ fn encounter_coverage_granyth_projected_evade_rearms_first_shards() {
             Some(&crate::creature_ai::CreatureState::Returning)
         );
         let position = *h.app.world().get::<Position>(boss).unwrap();
-        *h.app.world_mut().get_mut::<Position>(player).unwrap() = Position {
+        h.app.world_mut().entity_mut(player).insert(Position {
             x: position.x + 3.0,
             ..position
-        };
+        });
         h.engage(boss);
         h.advance(10.4);
         assert!(h.app.world().get::<CastState>(boss).is_none());
