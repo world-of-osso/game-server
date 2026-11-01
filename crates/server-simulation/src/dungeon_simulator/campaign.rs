@@ -644,6 +644,49 @@ fn dead_leader_releases_at_dungeon_entrance_and_resumes_walking() {
 }
 
 #[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_death_time_starts_after_native_countdown() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    for _ in 0..240 {
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    let attacker = *run.actors.values().next().unwrap();
+    crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
+    run.app.update();
+    run.keystone
+        .as_mut()
+        .unwrap()
+        .update(run.app.world_mut())
+        .unwrap();
+    let state = run.keystone.take().unwrap();
+    let record = state
+        .finish(
+            run.app.world(),
+            1,
+            options,
+            "blocked".into(),
+            "test".into(),
+            serde_json::Value::Null,
+        )
+        .unwrap();
+    assert_eq!(record.deaths.len(), 1);
+    let death = record.deaths[0].elapsed_ms;
+    assert!((1_500..3_000).contains(&death), "death elapsed {death}");
+    assert!(record.outcome.elapsed_ms.unwrap().abs_diff(death) <= 1000);
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
