@@ -2273,6 +2273,14 @@ fn balance_ascendant_stars_boosts_three_starsurges() {
             ..Default::default()
         },
     );
+    let initial = app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1263382)
+        .map_or(0, |aura| aura.stacks);
+    assert_eq!(initial, 3, "fixture must start with three stacks");
     for remaining in (0..3).rev() {
         fire(&mut app);
         let stacks = app
