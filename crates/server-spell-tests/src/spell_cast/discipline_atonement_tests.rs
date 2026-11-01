@@ -928,6 +928,10 @@ fn ultimate_penitence_channels_bolts_extends_pain_and_transfers_atonement() {
         .init_resource::<super::test_harness::ObservedCombatEvents>();
     let caster = h.caster;
     let enemy = h.npc;
+    *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+        current: 1_000_000.0,
+        max: 1_000_000.0,
+    };
     let ally = spawn_player(&mut h.app, 5, 1.0);
     h.app.world_mut().entity_mut(caster).insert((
         ActiveSpec(256),
@@ -978,7 +982,15 @@ fn ultimate_penitence_channels_bolts_extends_pain_and_transfers_atonement() {
                 && event.target == Some(ally.to_bits())
         })
         .count();
-    assert_eq!(damage, 25, "full native channel must deal 25 bolts");
+    assert_eq!(
+        damage,
+        25,
+        "full native channel must deal 25 bolts: {:?}",
+        events
+            .iter()
+            .filter(|event| matches!(event.spell_id, Some(421453 | 421434 | 421543)))
+            .collect::<Vec<_>>()
+    );
     assert_eq!(transfers, damage, "each landed bolt transfers Atonement");
     let pain = h
         .app
