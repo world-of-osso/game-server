@@ -325,13 +325,23 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         crate::creature_aggro::AggroRange,
         crate::creature_ai::CreatureState::Idle,
     ));
-    for point in trail {
+    for (index, point) in trail.into_iter().enumerate() {
+        if index == 2 {
+            h.app
+                .world_mut()
+                .entity_mut(owner)
+                .insert(CombatStatus(true));
+        }
         h.app
             .world_mut()
             .entity_mut(owner)
             .insert(as_position(point));
         super::owner_trail::record(h.app.world_mut(), owner);
     }
+    assert_eq!(
+        super::owner_trail::points(h.app.world(), owner, map).last(),
+        trail.last()
+    );
     let exclusion = positioning::SightExclusion {
         center,
         radius: 17.0,
