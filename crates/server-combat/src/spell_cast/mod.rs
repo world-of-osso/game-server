@@ -31,6 +31,8 @@ pub(crate) mod auto_repeat;
 mod auto_shot_repeat_tests;
 pub(crate) mod cooldown_query;
 mod equipped_items;
+#[cfg(any(test, feature = "test-support"))]
+pub use equipped_items::check_cast as check_equipped_item_requirements;
 #[cfg(test)]
 mod equipped_items_tests;
 #[cfg(test)]

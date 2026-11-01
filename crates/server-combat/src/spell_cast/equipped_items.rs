@@ -25,11 +25,7 @@ fn matches_item(
     })
 }
 
-pub(super) fn check_cast(
-    world: &World,
-    caster: Entity,
-    spell: &SpellInfo,
-) -> Result<(), CastFailure> {
+pub fn check_cast(world: &World, caster: Entity, spell: &SpellInfo) -> Result<(), CastFailure> {
     let Some(required) = spell
         .equipped_items
         .as_deref()
