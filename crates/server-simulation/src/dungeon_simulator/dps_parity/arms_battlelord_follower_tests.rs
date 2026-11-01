@@ -27,6 +27,9 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         !crate::auras::has_aura(app.world(), actor, 386631),
         "Slam must not earn Battlelord"
     );
+    for _ in 0..40 {
+        app.update();
+    }
     app.world_mut()
         .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
         .unwrap()
