@@ -26,6 +26,7 @@ pub(super) struct Recorder {
     party_healing: BTreeMap<u64, (u64, u64)>,
     mana_curve: Vec<Value>,
     first_death_seconds: Option<f64>,
+    party_death_times: BTreeMap<u64, f64>,
     tank_damage: u64,
     tank_health_curve: Vec<Value>,
     tank_minimum_pct: f32,
@@ -56,6 +57,7 @@ impl Recorder {
             party_healing: BTreeMap::new(),
             mana_curve: Vec::new(),
             first_death_seconds: None,
+            party_death_times: BTreeMap::new(),
             tank_damage: 0,
             tank_health_curve: Vec::new(),
             tank_minimum_pct: 100.0,
@@ -161,6 +163,9 @@ impl Recorder {
             }
             if event.kind == CombatLogKind::Death {
                 self.first_death_seconds.get_or_insert(seconds);
+                self.party_death_times
+                    .entry(target.expect("party death target").to_bits())
+                    .or_insert(seconds);
             } else if event.kind == CombatLogKind::Damage {
                 let damage = (event.amount - event.overflow.max(0)).max(0) as u64;
                 if let Some(target) = target {
@@ -248,6 +253,7 @@ impl Recorder {
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
             "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
+            "party_death_times":self.party_death_times,
             "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
             "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0,
             "mana_min":self.mana_min,"tank_health_min":self.tank_health_min,

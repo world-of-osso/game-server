@@ -5,6 +5,82 @@ use shared::components::{ActiveSpec, Health};
 use shared::protocol::CombatLogKind;
 
 #[test]
+fn encroaching_shadows_spreads_owned_pain_from_real_penance() {
+    for (selected, marked, revel, expected) in [
+        (false, true, false, 0),
+        (true, false, false, 0),
+        (true, true, false, 1),
+        (true, true, true, 2),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[589, 47540, 47758, 47757, 47666, 47750, 472568, 373003],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let primary = h.npc;
+        let near_a = spawn_npc(&mut h.app, 4.0);
+        let near_b = spawn_npc(&mut h.app, 5.0);
+        let already_marked = spawn_npc(&mut h.app, 6.0);
+        let far = spawn_npc(&mut h.app, 12.0);
+        let mut known = vec![589, 47540];
+        if selected {
+            known.push(472568);
+        }
+        if revel {
+            known.push(373003);
+        }
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(known),
+        ));
+        if marked {
+            for target in [primary, already_marked] {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster,
+                        target,
+                        spell_id: 589,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+        }
+        h.app
+            .init_resource::<super::test_harness::ObservedCombatEvents>();
+        h.cast_and_deliver(47540, Some(primary));
+        h.advance(40);
+        let count = [near_a, near_b]
+            .into_iter()
+            .filter(|&target| crate::auras::has_aura(h.app.world(), target, 589))
+            .count();
+        assert_eq!(
+            count, expected,
+            "talent={selected}, primary marked={marked}, revel={revel}"
+        );
+        assert!(
+            !crate::auras::has_aura(h.app.world(), far, 589),
+            "Pain must not spread beyond eight yards"
+        );
+        let events = &h
+            .app
+            .world()
+            .resource::<super::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            !events.iter().any(|event| event.spell_id == Some(589)
+                && event.target == Some(already_marked.to_bits())
+                && event.kind == CombatLogKind::AuraRefreshed),
+            "unmarked enemies take priority"
+        );
+    }
+}
+
+#[test]
 fn searing_light_banks_real_penance_bolts_and_transfers_atonement() {
     for selected in [false, true] {
         let _seed = crate::random::seed_scope(70448);
