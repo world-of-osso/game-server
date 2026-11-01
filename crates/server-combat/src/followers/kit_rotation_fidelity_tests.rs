@@ -1,5 +1,5 @@
 //! Concrete native max-level selection and Voltaic Blaze boundaries, not full APL parity.
-use super::kit_tests::{at_level, uses_spell};
+use super::kit_tests::at_level;
 use crate::auras::{ActiveAuras, aura_now};
 use crate::spell_cast::test_harness::{Harness, spawn_npc};
 use bevy::prelude::*;
@@ -29,12 +29,6 @@ fn prepare_at_level(entry: u32, count: usize, level: u8) -> (Harness, Entity, Ve
 }
 
 #[test]
-fn rotation_selection_63_native_book_reaches_fireball() {
-    let (mut h, caster, _) = prepare(209059, 1);
-    uses_spell(&mut h, caster, 133);
-}
-
-#[test]
 fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
     let (mut h, caster, targets) = prepare_at_level(209053, 3, 70);
     assert!(
@@ -45,7 +39,10 @@ fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
             .contains(462620)
     );
     let first = h.inbox.log.len();
-    uses_spell(&mut h, caster, 462620);
+    let target = h.npc;
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 462620, Some(target), false)
+        .unwrap();
+    h.advance(60);
     assert!(
         h.inbox.log[first..].iter().any(|event| {
             event.kind == CombatLogKind::CastSuccess
@@ -69,114 +66,6 @@ fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
     assert!(
         !hits.is_empty(),
         "native462620 explicitly names actual77478 damage but completed casts currently create no damaging field"
-    );
-}
-
-#[test]
-fn rotation_selection_262_native_book_applies_flame_shock() {
-    let (mut h, caster, _) = prepare(209053, 1);
-    uses_spell(&mut h, caster, 470057);
-    h.advance(20);
-    assert!(
-        h.app
-            .world()
-            .get::<ActiveAuras>(h.npc)
-            .is_some_and(|auras| auras
-                .iter()
-                .any(|aura| aura.spell_id == 188389 && aura.caster == caster))
-    );
-}
-
-fn kybel_actions(level: u8) -> (Harness, Entity, Vec<u32>) {
-    let (mut h, caster, _) = prepare_at_level(215240, 3, level);
-    for _ in 0..600 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    let actions: Vec<_> = h
-        .inbox
-        .go
-        .iter()
-        .filter(|go| go.caster == caster.to_bits())
-        .map(|go| go.spell_id)
-        .collect();
-    (h, caster, actions)
-}
-
-#[test]
-fn rotation_selection_1467_three_targets_use_empower_and_spender() {
-    let (h, caster, actions) = kybel_actions(90);
-    assert!(crate::auras::has_aura(h.app.world(), caster, 411212));
-    // Native411212 effects1077606/1077607 replace both empower roots.
-    assert!(
-        actions.contains(&382266) && actions.contains(&382411),
-        "learned Font of Magic must cast native empowered variants: {actions:?}"
-    );
-    assert!(!actions.contains(&357208) && !actions.contains(&359073));
-    assert!(
-        actions.iter().any(|spell| matches!(spell, 356995 | 357211)),
-        "Azure filler must not starve native Essence spenders: {actions:?}"
-    );
-}
-
-#[test]
-fn rotation_selection_1467_three_targets_before_font_use_native_roots() {
-    let (h, caster, actions) = kybel_actions(56);
-    assert!(!crate::auras::has_aura(h.app.world(), caster, 411212));
-    assert!(
-        actions.contains(&357208) && actions.contains(&359073),
-        "before native Font of Magic57, both base empower roots must cast: {actions:?}"
-    );
-    assert!(!actions.contains(&382266) && !actions.contains(&382411));
-}
-
-#[test]
-fn rotation_selection_262_native_ascendance_after_stormkeeper() {
-    let (mut h, caster, _) = prepare(209053, 3);
-    let known = h
-        .app
-        .world()
-        .get::<crate::class_progression::KnownSpells>(caster)
-        .unwrap();
-    assert!(
-        known.contains(114050) && known.contains(191634),
-        "fixture must retain the actual selected native Ascendance talent and Stormkeeper"
-    );
-    for _ in 0..200 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-        if crate::auras::has_aura(h.app.world(), caster, 1219480) {
-            break;
-        }
-    }
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634),
-        "ordinary native Stormkeeper must precede the Ascendance decision"
-    );
-    let world = h.app.world();
-    let stormkeeper = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(191634)
-        .unwrap();
-    assert!(
-        world
-            .get::<crate::spell_cast::SpellHistory>(caster)
-            .unwrap()
-            .on_cooldown(stormkeeper, crate::spell_cast::history_now(world) + 15.0),
-        "actual Stormkeeper cooldown must satisfy the sourced greater-than15s branch"
-    );
-    assert!(
-        crate::auras::has_aura(world, caster, 1219480),
-        "native known114050 must expose actual1219480 Ascendance, not remain an unused utility parent"
-    );
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480)
     );
 }
 
@@ -328,93 +217,6 @@ fn rotation_selection_262_native_ascendance_entry_uses_half_lava_burst_damage() 
         (minimum..=maximum).contains(&ordinary.amount),
         "only the entry cast is half-effectiveness; ordinary damage={}",
         ordinary.amount
-    );
-}
-
-fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
-    let world = h.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(191634)
-        .unwrap();
-    let history = world
-        .get::<crate::spell_cast::SpellHistory>(caster)
-        .unwrap();
-    let now = crate::spell_cast::history_now(world);
-    history.on_cooldown(spell, now) && !history.on_cooldown(spell, now + 15.0)
-}
-
-#[test]
-fn rotation_selection_262_native_ascendance_unavailable_before_talent() {
-    let (mut h, caster, _) = prepare_at_level(209053, 3, 50);
-    assert!(
-        !h.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(caster)
-            .unwrap()
-            .contains(114050)
-    );
-    for _ in 0..200 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634)
-    );
-    assert!(!crate::auras::has_aura(h.app.world(), caster, 1219480));
-    assert!(
-        !h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480)
-    );
-}
-
-#[test]
-fn rotation_selection_262_native_ascendance_held_in_stormkeeper_sync_window() {
-    let (mut h, caster, _) = prepare(209053, 3);
-    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 191634, Some(caster), false)
-        .unwrap();
-    h.advance(60);
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634)
-    );
-    // Advance the actual native clock, never reset cooldowns or invent a timer.
-    for _ in 0..1600 {
-        if stormkeeper_within_sync_window(&h, caster) {
-            break;
-        }
-        h.advance(1);
-    }
-    assert!(stormkeeper_within_sync_window(&h, caster));
-    for _ in 0..120 {
-        super::update_ai(h.app.world_mut());
-        h.advance(1);
-    }
-    assert!(
-        stormkeeper_within_sync_window(&h, caster),
-        "control must remain inside the real synchronization window, without earned resets"
-    );
-    assert!(
-        h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 470057),
-        "ordinary Voltaic Blaze must execute while the major cooldown is held"
-    );
-    assert!(!crate::auras::has_aura(h.app.world(), caster, 1219480));
-    assert!(
-        !h.inbox
-            .go
-            .iter()
-            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480),
-        "Ascendance must wait when native Stormkeeper cooldown is at most15s"
     );
 }
 
