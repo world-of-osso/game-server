@@ -16,6 +16,8 @@ struct PullBack {
     next: usize,
     goal: Option<Vec3>,
     owns_position: bool,
+    /// No safe point for these exclusions: ordinary defense owns the tank.
+    released: bool,
 }
 
 #[derive(Component)]
@@ -30,7 +32,9 @@ pub(super) fn party_should_wait(world: &World, owner: Entity) -> bool {
 }
 
 pub(super) fn active(world: &World, tank: Entity) -> bool {
-    world.get::<PullBack>(tank).is_some()
+    world
+        .get::<PullBack>(tank)
+        .is_some_and(|state| !state.released)
 }
 
 pub(super) fn read_exclusions(
@@ -179,6 +183,7 @@ pub(super) fn update(
                     next: 0,
                     goal: None,
                     owns_position: false,
+                    released: false,
                 });
             }
             if let Some(here) = targets::position(world, tank) {
@@ -194,6 +199,15 @@ pub(super) fn update(
             return;
         }
     };
+    if let Some(state) = world.get::<PullBack>(tank)
+        && state.released
+    {
+        if state.exclusions == exclusions {
+            return;
+        }
+        // Changed idle geometry may now offer a safe point: plan again.
+        clear(world, tank, follower.owner);
+    }
     if world.get::<PullBack>(tank).is_none() {
         let Some(map) = world.get::<InMap>(tank).copied() else {
             return;
@@ -207,6 +221,7 @@ pub(super) fn update(
             next: 0,
             goal: None,
             owns_position: false,
+            released: false,
         });
         world
             .entity_mut(follower.owner)
@@ -324,7 +339,23 @@ pub(super) fn update(
             state.next = 0;
         }
     }
-    // Keep the tank in place while route admission is pending or no safe point exists.
+    if state.goal.is_none() && state.next >= state.candidates.len() {
+        // No safe point: release to ordinary defense; per-action idle-pack spell
+        // safety and movement no-pull checks still apply.
+        if state.owns_position {
+            world
+                .entity_mut(tank)
+                .remove::<tank_planner::AdmittedPosition>();
+        }
+        state.owns_position = false;
+        state.released = true;
+        world
+            .entity_mut(follower.owner)
+            .remove::<WaitingForPullBack>();
+        world.entity_mut(tank).insert(state);
+        return;
+    }
+    // Keep the tank in place while route admission is pending.
     let point = state.goal.unwrap_or(here);
     state.owns_position = true;
     world
