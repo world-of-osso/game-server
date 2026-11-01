@@ -1957,7 +1957,7 @@ fn follower_dps_production_dummy() {
     for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
-                .advance(app.world_mut(), (frame + 1) * 50)
+                .advance(app.world_mut(), u64::from(frame + 1) * 50)
                 .expect("replay SimC tank pressure");
         }
         // SimC fixed-time Patchwerk uses a 100% to 0% target-health timeline.
