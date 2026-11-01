@@ -246,6 +246,32 @@ pub fn parse(
     }
 }
 
+/// Resolve the equipped on-use spells that this program can select.
+pub fn equipped_action_spells(
+    world: &World,
+    actor: Entity,
+    program: &server::simc_apl::Program,
+    bindings: &mut crate::simc_apl_native::Bindings,
+) -> Result<Vec<u32>, String> {
+    let equipment = crate::literal_rotation::equipment::Equipment::load(world, actor, bindings)?;
+    let mut spells = Vec::new();
+    for (_, action) in program.actions() {
+        let slots = match action.name.as_str() {
+            "use_item" => equipment.slot_for_action(action)?.into_iter().collect(),
+            "use_items" => equipment.use_items_slots(action, program)?,
+            _ => continue,
+        };
+        for slot in slots {
+            if let Some(item) = equipment.slots[slot].on_use {
+                spells.push(item.on_use.spell_id);
+            }
+        }
+    }
+    spells.sort_unstable();
+    spells.dedup();
+    Ok(spells)
+}
+
 /// Read a class's program-bound native action IDs without initializing its runtime.
 pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, String> {
     let (program, bindings) = parse(spec, input)?;

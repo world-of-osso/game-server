@@ -241,6 +241,60 @@ fn pure_action_metadata_matches_every_class_rotation() {
 }
 
 #[test]
+fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_items() {
+    let mut pull = spawn(63);
+    let world = pull.harness.app.world_mut();
+    let mut items = world
+        .get_mut::<server_combat::stats::EquippedItems>(pull.follower)
+        .unwrap();
+    items
+        .items
+        .retain(|(slot, _, _)| *slot != shared::protocol::EquipmentSlot::Trinket1);
+    items.items.push((
+        shared::protocol::EquipmentSlot::Trinket1,
+        shared::item_data::ItemDefinitionSource::Retail,
+        204736,
+    ));
+    let input =
+        server_follower_apl::action_metadata::read_inputs(world, pull.follower, 63).unwrap();
+    let (program, mut bindings) = server_follower_apl::action_metadata::parse(63, &input).unwrap();
+    let spells = server_follower_apl::action_metadata::equipped_action_spells(
+        world,
+        pull.follower,
+        &program,
+        &mut bindings,
+    )
+    .unwrap();
+    assert!(
+        spells.contains(&407512),
+        "equipped hostile item spell missing: {spells:?}"
+    );
+    let reach = server_combat::followers::spell_unintended_reach(
+        world,
+        pull.follower,
+        407512,
+        pull.follower,
+    )
+    .unwrap();
+    assert!(
+        reach.0 > 0.0 || reach.1 > 0.0,
+        "item must have real hostile area reach: {reach:?}"
+    );
+    let no_items = server_combat::simc_apl::Program::parse(&[("default", "fireball")]).unwrap();
+    let absent = server_follower_apl::action_metadata::equipped_action_spells(
+        world,
+        pull.follower,
+        &no_items,
+        &mut bindings,
+    )
+    .unwrap();
+    assert!(
+        absent.is_empty(),
+        "item not named by program must not enter metadata: {absent:?}"
+    );
+}
+
+#[test]
 fn class_follower_tank_casts_protection_apl_spells_on_dummy_pull() {
     let pull = pull(66);
     let table = server_follower_apl::protection_paladin_rotation::context::ACTIONS;
