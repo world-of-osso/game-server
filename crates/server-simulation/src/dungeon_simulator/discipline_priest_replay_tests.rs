@@ -369,6 +369,82 @@ fn discipline_apl_uses_evangelism_without_injury_gate() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_void_shield_secondaries_exclude_party_pets_and_guardians() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use bevy::prelude::Entity;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(1);
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let (tank, healer) = (run.tank, run.healer);
+    super::healer_simc_replay::finish_precombat(&mut run.app, &[tank, healer]).unwrap();
+    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..200 {
+        run.app.update();
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+        if events
+            .iter()
+            .filter(|event| {
+                event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(1253593)
+                    && matches!(
+                        event.kind,
+                        CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                    )
+            })
+            .count()
+            >= 3
+        {
+            break;
+        }
+    }
+    let world = run.app.world();
+    let events = &world.resource::<ObservedCombatEvents>().0[cursor..];
+    let recipients: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(healer.to_bits())
+                && event.spell_id == Some(1253593)
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+        })
+        .filter_map(|event| event.target.and_then(Entity::try_from_bits))
+        .take(3)
+        .collect();
+    let companions: Vec<_> = recipients
+        .iter()
+        .filter(|unit| !run.slots.contains(unit))
+        .map(|&unit| {
+            (
+                unit,
+                world
+                    .get::<shared::components::Npc>(unit)
+                    .map(|npc| npc.name.clone()),
+                world
+                    .get::<crate::hunter_pet::HunterPet>(unit)
+                    .map(|pet| pet.owner),
+                world
+                    .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+                    .map(|summon| (summon.owner, summon.spell_id)),
+            )
+        })
+        .collect();
+    assert_eq!(
+        recipients.len(),
+        3,
+        "the real Void Shield cast must select three recipients: {events:?}"
+    );
+    assert!(
+        companions.is_empty(),
+        "secondary recipients must be party members, not pets/guardians: {companions:?}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_emergency_uses_void_shield_and_radiance() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Health;
