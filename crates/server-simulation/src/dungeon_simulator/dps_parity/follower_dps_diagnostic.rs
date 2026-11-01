@@ -150,6 +150,45 @@ fn follower_ret_radiant_glory_wake_activates_wrath_only_when_selected() {
     }
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Ret follower profiles"]
+fn follower_ret_hammer_selected_talent_admits_real_wrath_cast() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    for (level, map) in [(70, 2515), (90, 2813)] {
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 70, level);
+        let known = app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(actor)
+            .unwrap();
+        assert!(known.contains(1241288));
+        assert!(!known.contains(24275));
+        assert_eq!(
+            crate::spell_cast::knowledge::resolve_action(app.world(), actor, 24275).unwrap(),
+            Some(24275)
+        );
+        crate::spell_cast::cast_triggered(app.world_mut(), actor, 31884, Some(actor), 0);
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 24275, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            app.update();
+        }
+        let events = &app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(24275)
+                    && event.amount > 0)
+        );
+    }
+}
+
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();

@@ -376,7 +376,7 @@ pub(super) fn install_traits(
         })
         .collect();
     let classes = world.resource::<crate::spell_info::ClassSpells>();
-    let (spec, evaluated) = if let Some(player) = world.get::<shared::components::Player>(unit) {
+    let (_spec, evaluated) = if let Some(player) = world.get::<shared::components::Player>(unit) {
         let spec = world
             .get::<crate::class_progression::ActiveSpec>(unit)
             .ok_or("reference player lacks native ActiveSpec")?
@@ -417,34 +417,8 @@ pub(super) fn install_traits(
     };
     let (known, traits) =
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
-    let known = apply_ret_hammer_of_wrath_known_from_selected_talent_simc(spec, known, &traits);
     world.entity_mut(unit).insert((known, traits));
     Ok(())
-}
-
-/// RET_HAMMER_OF_WRATH_KNOWN_FROM_SELECTED_TALENT_SIMC: reference actors only.
-/// SimC76f8118 sc_paladin.cpp3407–3412/4192 links the selected class talent
-///1241288 to action24275. Native70448 has no learn edge; NeverLearned stays native.
-fn apply_ret_hammer_of_wrath_known_from_selected_talent_simc(
-    spec: u32,
-    known: crate::class_progression::KnownSpells,
-    traits: &crate::class_progression::TraitLoadout,
-) -> crate::class_progression::KnownSpells {
-    const RETRIBUTION: u32 = 70;
-    const HAMMER_OF_WRATH_TALENT: u32 = 1241288;
-    const HAMMER_OF_WRATH_ACTION: u32 = 24275;
-    let selected = traits
-        .active_talent_spells()
-        .any(|spell| spell.spell_id == HAMMER_OF_WRATH_TALENT);
-    if spec != RETRIBUTION || !selected || known.contains(HAMMER_OF_WRATH_ACTION) {
-        return known;
-    }
-    crate::class_progression::KnownSpells::from_baseline(
-        known
-            .iter()
-            .chain(std::iter::once(HAMMER_OF_WRATH_ACTION))
-            .collect(),
-    )
 }
 
 #[test]
@@ -462,15 +436,14 @@ fn dps_parity_ret_hammer_knowledge_is_scoped_to_selected_reference_actors() {
             known.contains(1241288),
             "native selected class talent is known"
         );
-        assert!(
-            known.contains(24275),
-            "selected parity actor must know Hammer of Wrath24275"
-        );
+        assert!(!known.contains(24275), "native spellbook remains unchanged");
+        assert_eq!(crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275).unwrap(), Some(24275));
         install_traits(run.app.world_mut(), run.actor, &[]).unwrap();
         let known = run.app.world().get::<KnownSpells>(run.actor).unwrap();
         // Native Ret grants its root class talent even with no purchases.
         assert!(known.contains(1241288));
-        assert!(known.contains(24275));
+        assert!(!known.contains(24275));
+        assert_eq!(crate::spell_cast::knowledge::resolve_action(run.app.world(), run.actor, 24275).unwrap(), Some(24275));
     }
 }
 
