@@ -558,6 +558,93 @@ fn blood_follower_death_strike_counts_damage_beyond_current_health() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn blood_draw_triggers_only_once_during_its_cooldown() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    use shared::components::Health;
+    use std::time::Duration;
+
+    let _seed = crate::random::seed_scope(1);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 250, 70);
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(crate::auras::has_aura(app.world(), actor, 374598));
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(server::test_support::SimcInfiniteHealth);
+    let max = app.world().get::<Health>(actor).unwrap().max;
+    let hit = Hit {
+        tick: 0,
+        source_guid: 0,
+        pack: 0,
+        target_slot: 0,
+        school: 1,
+        raw: max * 0.1,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let hit_below_threshold = |app: &mut App| {
+        app.world_mut().get_mut::<Health>(actor).unwrap().current = max * 0.2;
+        crate::combat::replay_healer_hit(app.world_mut(), target, actor, &hit).unwrap();
+        for _ in 0..4 {
+            app.update();
+        }
+    };
+    let reduction_applications = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.target == Some(actor.to_bits())
+                    && event.spell_id == Some(454871)
+                    && matches!(
+                        event.kind,
+                        CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                    )
+            })
+            .count()
+    };
+    hit_below_threshold(&mut app);
+    assert!(crate::auras::has_aura(app.world(), actor, 374609));
+    assert!(crate::auras::has_aura(app.world(), actor, 454871));
+    assert_eq!(reduction_applications(&app), 1);
+    hit_below_threshold(&mut app);
+    assert_eq!(
+        reduction_applications(&app),
+        1,
+        "cooldown must block another Blood Draw"
+    );
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(250),
+    ));
+    for _ in 0..484 {
+        app.update();
+    }
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
+    assert!(!crate::auras::has_aura(app.world(), actor, 374609));
+    assert!(!crate::auras::has_aura(app.world(), actor, 454871));
+    hit_below_threshold(&mut app);
+    assert_eq!(
+        reduction_applications(&app),
+        2,
+        "Blood Draw must become available after its cooldown"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_dummy_starts_measurement_after_precombat() {
     let (mut app, actor, target, _) = prepare_follower(209059, 70, 2515);
     let owner = app
