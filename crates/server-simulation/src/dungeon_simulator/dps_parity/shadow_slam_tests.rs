@@ -91,6 +91,27 @@ fn shadow_slam_delays_native_damage_and_vt_then_hits_each_nearby_enemy_once() {
 }
 
 #[test]
+#[ignore = "requires native258 Player/profile/traits"]
+fn shadow_slam_applies_pain_through_selected_misery() {
+    for selected in [true, false] {
+        let mut run = prepare_literal(258, 1).unwrap();
+        let actor = run.actor;
+        let target = run.targets[0];
+        assert!(run.app.world().get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap().active_talent_spells().any(|spell| spell.spell_id == 238558));
+        cast_slam(&mut run);
+        if !selected {
+            run.app.world_mut().entity_mut(actor).remove::<crate::class_progression::TraitLoadout>();
+        }
+        for _ in 0..20 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), target, VT));
+        assert_eq!(crate::auras::has_aura(run.app.world(), target, 589), selected);
+    }
+}
+
+#[test]
 #[ignore = "native Tentacle Slam impact after its primary dies"]
 fn shadow_slam_hits_survivor_after_primary_dies() {
     use shared::components::Health;

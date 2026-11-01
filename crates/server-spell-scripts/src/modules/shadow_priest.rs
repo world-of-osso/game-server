@@ -22,12 +22,18 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
-    (spell == SLAM && index == 0).then_some(slam_impact)
+    match (spell, index) {
+        (SLAM, 0) => Some(slam_impact),
+        (VT, 1) => Some(apply_misery),
+        _ => None,
+    }
 }
 
 pub(super) const SLAM: u32 = 1227280;
 const DAMAGE: u32 = 1227621;
 const VT: u32 = 34914;
+const MISERY: u32 = 238558;
+const PAIN: u32 = 589;
 const MADDENING_TENTACLES: u32 = 1279353;
 const MADNESS: u32 = 335467;
 const SHADOW_WEAVING: u32 = 343690;
@@ -130,6 +136,13 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     }
     for target in units {
         spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
+    }
+}
+
+fn apply_misery(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    // SimC76f8118 sc_priest_shadow.cpp754–796,1723–1732: cast VT, including Slam's VT.
+    if selected(world, caster, MISERY) {
+        spell_cast::cast_triggered(world, caster, PAIN, Some(target), depth + 1);
     }
 }
 
