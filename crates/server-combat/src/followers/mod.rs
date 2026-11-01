@@ -7,6 +7,7 @@ mod candlelight;
 mod catalog;
 pub mod class_profiles;
 pub mod class_spawn;
+mod damage_history;
 #[cfg(test)]
 mod darkflame_drop_tests;
 mod empower_policy;

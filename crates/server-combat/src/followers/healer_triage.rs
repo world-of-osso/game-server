@@ -2,8 +2,6 @@
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 use shared::components::{Health, Mana};
-use shared::protocol::{CombatLogEvent, CombatLogKind};
-use std::collections::VecDeque;
 
 use super::kit::{Entry, Slot, Target};
 use super::{Follower, ai, kit_ai};
@@ -12,8 +10,6 @@ use crate::spell_cast::{self, CostPool};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(super) const EMERGENCY_SECONDS: f32 = 3.0;
-const DAMAGE_WINDOW_SECONDS: f64 = 10.0;
-const MIN_RATE_WINDOW_SECONDS: f64 = 1.0;
 const TANK_WEIGHT: f32 = 1.25;
 const EMERGENCY_HEALTH: f32 = 0.25;
 pub(super) const LOW_MANA: f32 = 0.30;
@@ -136,89 +132,13 @@ pub(super) struct Outcome {
     pub safe_to_dps: bool,
 }
 
-#[derive(Component)]
-struct IncomingDamage {
-    map: InMap,
-    started: f64,
-    samples: VecDeque<(f64, f32)>,
-}
-
-pub(super) fn record_damage(world: &mut World, event: &CombatLogEvent) {
-    if !matches!(
-        event.kind,
-        CombatLogKind::Damage | CombatLogKind::Environmental(_)
-    ) {
-        return;
-    }
-    let Some(target) = event.target.and_then(Entity::try_from_bits) else {
-        return;
-    };
-    let Some(map) = world.get::<InMap>(target).copied() else {
-        return;
-    };
-    let amount = effective_health_loss(world, target, event);
-    if amount <= 0.0 {
-        return;
-    }
-    let now = crate::auras::aura_now(world);
-    let same_copy = world
-        .get::<IncomingDamage>(target)
-        .is_some_and(|history| history.map == map);
-    if !same_copy {
-        world.entity_mut(target).insert(IncomingDamage {
-            map,
-            started: now,
-            samples: VecDeque::new(),
-        });
-    }
-    let mut history = world.get_mut::<IncomingDamage>(target).unwrap();
-    while history
-        .samples
-        .front()
-        .is_some_and(|(at, _)| *at < now - DAMAGE_WINDOW_SECONDS)
-    {
-        history.samples.pop_front();
-    }
-    if history.samples.is_empty() {
-        history.started = now;
-    }
-    history.samples.push_back((now, amount));
-}
-
-fn effective_health_loss(world: &World, target: Entity, event: &CombatLogEvent) -> f32 {
-    let amount = event.amount.saturating_sub(event.overflow.max(0)).max(0) as f32;
-    let Some(source) = event.source.and_then(Entity::try_from_bits) else {
-        return amount;
-    };
-    let source = crate::level_scaling::UnitScaling::of(world, source);
-    let target = crate::level_scaling::UnitScaling::of(world, target);
-    crate::level_scaling::health_loss(&source, &target, amount)
-}
-
-fn incoming_rate(world: &World, target: Entity, now: f64) -> f32 {
-    let Some(history) = world.get::<IncomingDamage>(target) else {
-        return 0.0;
-    };
-    if world.get::<InMap>(target) != Some(&history.map) {
-        return 0.0;
-    }
-    let amount: f32 = history
-        .samples
-        .iter()
-        .filter(|(at, _)| *at >= now - DAMAGE_WINDOW_SECONDS)
-        .map(|(_, amount)| amount)
-        .sum();
-    let seconds = (now - history.started).clamp(MIN_RATE_WINDOW_SECONDS, DAMAGE_WINDOW_SECONDS);
-    amount / seconds as f32
-}
-
 pub(super) fn read_patient(world: &World, target: Entity) -> Option<Patient> {
     let health = world.get::<Health>(target)?;
     if health.current <= 0.0 || health.max <= 0.0 {
         return None;
     }
     let now = crate::auras::aura_now(world);
-    let incoming = incoming_rate(world, target, now);
+    let incoming = super::damage_history::incoming_rate(world, target, now);
     let (periodic, absorb) = world
         .get::<crate::auras::ActiveAuras>(target)
         .map_or((0.0, 0.0), |auras| {
