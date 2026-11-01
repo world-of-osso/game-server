@@ -152,6 +152,12 @@ pub fn has_owned_hot(world: &World, healer: Entity, target: Entity, spell: u32) 
         })
 }
 
+/// Native triage, not SimC: a party member below this health fraction counts
+/// toward group heals. WCL key-17 druids cast Wild Growth 2.38/min
+/// (kD8MqXLV6CFYHN2p fight 3); a 90% gate never admitted it against party-wide
+/// pulses that leave members at ~93%.
+const INJURED_FRACTION: f32 = 0.95;
+
 impl Restoration {
     /// Heal the party; damage `enemy` when no heal is due.
     pub fn drive(
@@ -179,7 +185,7 @@ impl Restoration {
             .filter(|unit| {
                 world
                     .get::<Health>(**unit)
-                    .is_some_and(|h| h.current > 0.0 && h.current < h.max * 0.90)
+                    .is_some_and(|h| h.current > 0.0 && h.current < h.max * INJURED_FRACTION)
             })
             .count();
         let efflorescence_up = world
