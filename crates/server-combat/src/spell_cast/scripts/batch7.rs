@@ -2,7 +2,6 @@
 //! and local 12.1.0.69933 descriptions/effects (see spell-dummy-scripts contract).
 use crate::random as rand;
 use bevy::prelude::*;
-use shared::components::Health;
 
 use super::script_effect_value;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
@@ -95,7 +94,7 @@ fn select_secondary_atonement_allies(
     units
 }
 
-///194509s3: primary plus four injured allies. TC radiance priority first
+///194509s3: primary plus four allies, including full-health allies. Priority first
 /// favors allies without THIS priest's Atonement. Keep native radius/order;
 /// raid/pet priority and actual Atonement application are separate contracts.
 pub(super) fn radiance_plan(
@@ -196,11 +195,6 @@ fn select_radiance_allies(
     index: usize,
 ) -> Vec<Entity> {
     let mut units = select_secondary_atonement_allies(world, caster, spell, primary, index);
-    units.retain(|&unit| {
-        world
-            .get::<Health>(unit)
-            .is_some_and(|health| health.current < health.max)
-    });
     // Stable sorting retains native nearest-first ordering within each priority.
     units.sort_by_key(|&unit| {
         world.get::<ActiveAuras>(unit).is_some_and(|auras| {
