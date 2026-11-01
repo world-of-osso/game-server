@@ -191,7 +191,16 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
 #[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
-    let mut run = spawn_run(1, &mut None).unwrap();
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
     assert_eq!(run.graph.map_id, 2825);
     let owner = run.party.owner;
     let edge = run
