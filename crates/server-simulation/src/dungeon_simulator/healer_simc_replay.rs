@@ -440,6 +440,18 @@ fn replay(
                     "HEALER_REPLAY_EVENT {}",
                     json!({"tick":tick,"event":event,"tank_health":world.get::<Health>(tank).map(|health| (health.current, health.max))})
                 );
+                if event.spell_id == Some(1253593)
+                    && let Some(target) = event.target.and_then(Entity::try_from_bits)
+                    && !slots.contains(&target)
+                {
+                    eprintln!(
+                        "HEALER_REPLAY_NONPARTY {}",
+                        json!({"tick": tick, "target": target.to_bits(),
+                            "npc": world.get::<shared::components::Npc>(target).map(|npc| &npc.name),
+                            "summon": format!("{:?}", world.get::<crate::spell_cast::summon::SummonedCreature>(target)),
+                            "hunter_pet": format!("{:?}", world.get::<crate::hunter_pet::HunterPet>(target))})
+                    );
+                }
             }
             if event.source == Some(healer.to_bits())
                 && event.spell_id == Some(589)
