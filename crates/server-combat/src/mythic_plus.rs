@@ -323,9 +323,11 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .resource::<crate::maps::MapStore>()
         .map_difficulty(map.map_id, 8)
         .ok_or("Dungeon has no authored Keystone difficulty")?;
+    let retuned = crate::zones::prepare_difficulty_retune(world, map, difficulty.difficulty_id)?;
     world
         .resource_mut::<InstanceManager>()
         .activate_challenge_difficulty(map, difficulty)?;
+    crate::zones::apply_difficulty_retune(world, retuned);
     // Deplete at activation, so abandoning or restarting cannot duplicate an upgrade.
     let mut depleted = key;
     depleted.level = active.run.depleted_level();
@@ -808,6 +810,42 @@ mod tests {
             .map;
         h.app.insert_resource(maps).insert_resource(manager);
         h.app.world_mut().entity_mut(h.player).insert(map);
+        // A real CT0 template inherits this copy's map tuning. Its spawn is a fixture,
+        // because the actual Azure population uses explicit creature tuning.
+        let mut data = crate::zones::context_tuning_tests::sourced_nazan_fixture();
+        data.spawns[0].map = 2515;
+        data.spawns_by_map = HashMap::from([(2515, vec![0])]);
+        let spawn = data.spawns[0].clone();
+        let template = data.template_for(spawn.template_entry, 23).unwrap().clone();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, h.app.world());
+        let npc = crate::zones::spawn_creature(
+            &mut commands,
+            &data,
+            &template,
+            &mut crate::zones::CreatureSpawnContext {
+                map,
+                difficulty_id: 23,
+                ground: None,
+                temporary: false,
+            },
+            false,
+            &spawn,
+            &mut crate::random::thread_rng(),
+        )
+        .unwrap();
+        queue.apply(h.app.world_mut());
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::level_scaling::LevelScaling>(npc)
+                .unwrap()
+                .content_tuning_id,
+            2157
+        );
+        let before = h.app.world().get::<Health>(npc).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(npc).unwrap().current = before / 2.0;
+        h.app.insert_resource(data);
         h.app.world_mut().remove_resource::<GameDatabase>();
         let mut session =
             headless::Session::prepare(h.app.world_mut(), &path, h.player, 8).unwrap();
@@ -819,6 +857,15 @@ mod tests {
         h.app.world_mut().entity_mut(h.player).insert(position);
         assert!(session.in_font_range(h.app.world()).unwrap());
         session.activate(h.app.world_mut()).unwrap();
+        let scaling = h
+            .app
+            .world()
+            .get::<shared::level_scaling::LevelScaling>(npc)
+            .unwrap();
+        assert_eq!((scaling.content_tuning_id, scaling.max_level), (1279, 90));
+        let health = h.app.world().get::<Health>(npc).unwrap();
+        assert!(health.max > before);
+        assert!((health.current / health.max - 0.5).abs() < 0.0001);
         assert_eq!(
             h.app
                 .world()
