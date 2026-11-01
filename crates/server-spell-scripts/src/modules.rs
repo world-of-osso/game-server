@@ -272,6 +272,7 @@ register_modules! {
     guardian_vicious_brambles: (1052, "modules/guardian_vicious_brambles.rs"),
     guardian_star_cascade: (1053, "modules/guardian_star_cascade.rs"),
     druid_ascendant_bolts: (1054, "modules/druid_ascendant_bolts.rs"),
+    druid_ascendant_stars: (1054, "modules/druid_ascendant_stars.rs"),
     druid_astral_smolder: (1054, "modules/druid_astral_smolder.rs"),
     druid_atmospheric_exposure: (1054, "modules/druid_atmospheric_exposure.rs"),
     druid_eclipse: (1054, "modules/druid_eclipse.rs"),

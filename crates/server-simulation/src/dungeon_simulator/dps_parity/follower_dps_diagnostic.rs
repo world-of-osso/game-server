@@ -2105,6 +2105,17 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.spell_id == Some(450360)),
         "the real follower must proc Touch the Cosmos from generators"
     );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(1263382)),
+        "Eclipse must grant Ascendant Stars"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {
@@ -2207,6 +2218,85 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.amount > 0),
         "Eclipse critical hits must produce Astral Smolder periodic damage"
     );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_ascendant_stars_boosts_three_starsurges() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -100.0;
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    let power = shared::components::PowerType::LunarPower;
+    let fire = |app: &mut App| {
+        app.world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(power)
+            .unwrap()
+            .current = 1000.0;
+        crate::spell_cast::execute_cast(app.world_mut(), actor, &spell, Some(target)).unwrap();
+        for _ in 0..20 {
+            app.update();
+        }
+    };
+    fire(&mut app);
+    crate::spell_cast::cast_triggered_with_overrides(
+        app.world_mut(),
+        actor,
+        1263382,
+        Some(actor),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(3),
+            ..Default::default()
+        },
+    );
+    for _ in 0..3 {
+        fire(&mut app);
+    }
+    assert!(
+        !crate::auras::has_aura(app.world(), actor, 1263382),
+        "three Starsurges consume three stacks"
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(78674)
+        })
+        .map(|event| event.amount)
+        .collect();
+    assert_eq!(hits.len(), 4, "one damage result per Starsurge: {hits:?}");
+    for hit in &hits[1..] {
+        assert!(
+            *hit > hits[0] * 11 / 10,
+            "Ascendant Stars amplifies each spender: {hits:?}"
+        );
+    }
 }
 
 #[test]

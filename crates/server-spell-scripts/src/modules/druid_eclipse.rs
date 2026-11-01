@@ -133,6 +133,7 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
 }
 
 fn trigger_eclipse_benefits(world: &mut World, caster: Entity) {
+    super::druid_ascendant_stars::on_eclipse(world, caster);
     if selected(world, caster, ASCENDANT_ECLIPSES) {
         spell_cast::cast_triggered(world, caster, ASCENDANT_FIRES, Some(caster), 1);
     }
