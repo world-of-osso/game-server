@@ -448,7 +448,7 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         goal: crate::navigation::Goal::FollowFormation(h.caster.to_bits(), point(owner_at)),
         from,
         to: target,
-        distance: 0.1,
+        distance: 0.455,
         reach: 0.0,
     };
     let _ = probe.advance(tank, request);

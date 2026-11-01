@@ -1436,6 +1436,13 @@ fn follow_owner_system(
                 let Some(height) =
                     follower_footprint_ground(ground.as_deref_mut(), map, *pos, next_position)
                 else {
+                    #[cfg(test)]
+                    if map.is_some_and(|map| map.map_id == 2660) {
+                        eprintln!(
+                            "ara trace: footprint rejected from={:?} to={next_position:?}",
+                            *pos
+                        );
+                    }
                     if let Some(nav) = nav.as_deref_mut() {
                         nav.cancel_route(entity);
                     }
@@ -1450,6 +1457,13 @@ fn follow_owner_system(
             };
         }
         if !queues.combat_step_safe(entity, *pos, next_position) {
+            #[cfg(test)]
+            if map.is_some_and(|map| map.map_id == 2660) {
+                eprintln!(
+                    "ara trace: combat step rejected from={:?} to={next_position:?}",
+                    *pos
+                );
+            }
             if let Some(nav) = nav.as_deref_mut() {
                 nav.cancel_route(entity);
             }
