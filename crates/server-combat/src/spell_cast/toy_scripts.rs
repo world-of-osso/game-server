@@ -264,7 +264,10 @@ fn check_compass_cast(world: &World, caster: Entity, spell: &SpellInfo) -> Resul
 }
 
 fn turn_compass_caster_randomly(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
-    let orientation = rand::Rng::gen_range(&mut rand::thread_rng(), 0.0..=std::f32::consts::TAU);
+    let orientation = rand::Rng::gen_range(
+        &mut crate::random::thread_rng(),
+        0.0..=std::f32::consts::TAU,
+    );
     let yaw = orientation + std::f32::consts::FRAC_PI_2;
     crate::networking::face_player(world, ctx.caster, yaw);
 }
@@ -325,7 +328,7 @@ fn read_text_emote(world: &World, caster: Entity, text_id: u32) -> ChatMessage {
 fn emit_dice_rolls(world: &mut World, caster: Entity, name: &str, plan: DicePlan) {
     let recipients = roll_recipients(world, caster);
     for _ in 0..plan.rolls {
-        let roll = rand::Rng::gen_range(&mut rand::thread_rng(), 1..=plan.maximum);
+        let roll = rand::Rng::gen_range(&mut crate::random::thread_rng(), 1..=plan.maximum);
         // Retail69933 GlobalStrings11691: "%s rolls %d (%d-%d)".
         let message = ChatMessage {
             sender: name.to_string(),

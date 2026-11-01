@@ -809,7 +809,7 @@ pub(in crate::spell_cast) fn cast_earthquake_knockdown(
         .find(|effect| effect.index == 1)
         .expect("native Earthquake tick chance E1")
         .base_points;
-    if rand::random::<f32>() * 100.0 >= chance {
+    if crate::random::random::<f32>() * 100.0 >= chance {
         return;
     }
     let Some(field) = ctx.spell.cast_original_caster else {

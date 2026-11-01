@@ -286,7 +286,9 @@ fn start_match(world: &mut World, id: u64, owners: [Entity; 2]) -> Result<(), St
         expires_at: now(world) + PET_BATTLE_PVP_TIMERS,
         consecutive_timeouts: [0; 2],
         participated: Default::default(),
-        rng: RuntimeRng(rand::rngs::StdRng::from_entropy()),
+        rng: RuntimeRng(
+            rand::rngs::StdRng::from_rng(crate::random::thread_rng()).expect("seed pet battle RNG"),
+        ),
     };
     for (team, owner) in owners.iter().enumerate() {
         world.resource_mut::<Matchmaker>().queued_at.remove(owner);

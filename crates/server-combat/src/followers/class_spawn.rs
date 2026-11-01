@@ -190,7 +190,7 @@ fn spawn_neutral(
             &mut context,
             replicate,
             &spawn,
-            &mut rand::thread_rng(),
+            &mut crate::random::thread_rng(),
         )?;
         commands
             .entity(entity)

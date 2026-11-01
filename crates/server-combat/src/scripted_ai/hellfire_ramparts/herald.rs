@@ -220,7 +220,7 @@ impl HeraldIntro {
             .into_iter()
             .filter(|spell| *spell != self.last_fly_spell)
             .collect();
-        self.last_fly_spell = *available.choose(&mut rand::thread_rng()).unwrap();
+        self.last_fly_spell = *available.choose(&mut crate::random::thread_rng()).unwrap();
         ctx.do_cast_self(self.last_fly_spell);
         self.boss.events.repeat_range(20_000, 30_000);
     }
@@ -419,7 +419,7 @@ fn morph_to_nazan(ctx: &mut Ctx) -> bool {
         },
         &placement,
         Some(source),
-        &mut rand::thread_rng(),
+        &mut crate::random::thread_rng(),
     );
     let Some(projection) = projection else {
         return false;
