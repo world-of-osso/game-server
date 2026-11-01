@@ -337,6 +337,7 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- Selected Danse Macabre triggers native Lashe Macabre once per distinct foreground combo-point generator or spender during each Shadow Dance. A new Dance clears the tracked abilities; off-GCD and triggered actions do not qualify. Source: SimC 76f8118 `sc_rogue.cpp:7482–7505,8579–8599`.
 - Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
 - Selected Lingering Darkness457056 grants native457273 when Shadow Blades expires. Subtlety keeps its effect2/effect4 Shadow mods, label and Dark Brew effects; Assassination's poison effect1/effect3 never apply (`sc_rogue.cpp10924–10932,10982–11010`).
 - Selected Shadow Focus108209 grants native112942 when Stealth, Vanish or Shadow Dance applies and removes it once none remain (`sc_rogue.cpp7345–7362,7381–7390`).
