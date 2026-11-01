@@ -47,6 +47,30 @@ fn damage(h: &Harness, id: u32) -> Vec<i32> {
         .map(|e| e.amount)
         .collect()
 }
+
+fn refreshed_barbed_tick(h: &Harness) -> i32 {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(217200)
+        .unwrap();
+    let coefficient = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .bonus_coefficient_from_ap;
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    let attack_power = stats.total_attack_power(crate::stats::WeaponAttackType::Ranged, None);
+    // Refresh at 2.25s carries five unpaid ticks plus six fresh ticks over
+    // seven scheduled payments. The extra refresh tick uses that same amount.
+    (attack_power * coefficient * (5.0 + 6.0) / 7.0).round() as i32
+}
 #[test]
 fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_per_tick_amount() {
     let mut h = fixture(&[217200], 3);
@@ -70,10 +94,11 @@ fn dummy20_barbed_reapplication_adds_unpaid_damage_to_native_per_tick_amount() {
         7,
         "native twelve-second nonstacking recast resets its extra-initial schedule"
     );
+    let expected = refreshed_barbed_tick(&h);
     assert_eq!(
-        rolled.iter().sum::<i32>(),
-        1029,
-        "fresh85.7 per tick plus five unpaid85.7 ticks over seven fresh payments"
+        rolled,
+        vec![expected; 7],
+        "refresh uses the native AP coefficient and rolling budget"
     );
 }
 #[test]
@@ -150,6 +175,37 @@ fn dummy20_barbed_native_clock_pays_db2_amount_each_tick_and_expires() {
 }
 
 #[test]
+fn barbed_shot_refresh_ticks_immediately_without_moving_the_next_tick() {
+    let mut h = fixture(&[217200], 3);
+    let caster = h.caster;
+    let target = h.npc;
+    apply(&mut h, caster, target, 217200);
+    h.advance(45);
+    assert_eq!(damage(&h, 217200), vec![86, 86]);
+    h.inbox.log.clear();
+
+    apply(&mut h, caster, target, 217200);
+    h.advance(1);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        1,
+        "refresh pays one immediate tick"
+    );
+    h.advance(33);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        1,
+        "next scheduled tick is not early"
+    );
+    h.advance(3);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        2,
+        "original scheduled tick is retained"
+    );
+}
+
+#[test]
 fn dummy20_barbed_foreign_owner_gets_only_its_fresh_budget() {
     let mut h = fixture(&[217200], 3);
     let caster = h.caster;
@@ -193,7 +249,8 @@ fn dummy20_barbed_refresh_resnapshots_new_power_without_rescaling_unpaid_old_dam
     h.inbox.log.clear();
     apply(&mut h, caster, npc, 217200);
     h.advance(250);
-    assert_eq!(damage(&h, 217200), vec![233; 7]);
+    let expected = refreshed_barbed_tick(&h);
+    assert_eq!(damage(&h, 217200), vec![expected; 7]);
 }
 
 #[test]

@@ -242,48 +242,78 @@ fn run_matching_ticks(world: &mut World, unit: Entity, until: f64, only: Option<
 }
 
 fn run_ticks(world: &mut World, unit: Entity, ticks: Vec<Tick>) {
-    for mut tick in ticks {
-        let alive = world
-            .get::<ActiveAuras>(unit)
-            .is_some_and(|auras| auras.get(tick.instance_id).is_some());
-        if !alive || !crate::spell_cast::targets::is_alive(world, unit) {
-            continue;
-        }
-        if end_aura_at_full_health(world, unit, &tick) {
-            continue;
-        }
-        let Some(mut spell) = world
-            .get_resource::<SpellStore>()
-            .and_then(|store| store.get(tick.spell_id))
-            .cloned()
-        else {
-            continue;
-        };
-        let aura = world
-            .get::<ActiveAuras>(unit)
-            .and_then(|auras| auras.get(tick.instance_id))
-            .expect("retained periodic aura");
-        let effect = aura
-            .effects
-            .iter()
-            .find(|effect| effect.index == tick.effect_index)
-            .expect("retained periodic effect");
-        let stacks = if world
-            .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
-            .counter_only_dot_stacks(aura.spell_id)
-        {
-            1.0
-        } else {
-            aura.stack_multiplier()
-        };
-        tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
-        spell.cast_periodic_fraction = Some(tick.fraction);
-        spell.cast_periodic_ordinal = Some(tick.ordinal);
-        spell.cast_primary_target = tick.cast_primary_target;
-        run_tick(world, unit, &spell, &tick);
-        schedule_next_tick(world, unit, &mut spell, &tick);
-        end_aura_at_full_health(world, unit, &tick);
+    for tick in ticks {
+        run_periodic_tick(world, unit, tick, true);
     }
+}
+
+/// Pay an additional refresh tick without moving the existing periodic deadline.
+pub(super) fn run_refresh_tick(world: &mut World, unit: Entity, aura: &super::AuraInstance) {
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.aura_type == PERIODIC_DAMAGE && effect.period_ms > 0)
+        .expect("refresh-tick aura requires a periodic damage effect");
+    let tick = Tick {
+        instance_id: aura.instance_id,
+        caster: aura.caster,
+        cast_primary_target: aura.cast_primary_target,
+        spell_id: aura.spell_id,
+        effect_index: effect.index,
+        aura_type: effect.aura_type,
+        amount: effect.amount,
+        fraction: 1.0,
+        scheduled_at: super::aura_now(world),
+        ordinal: effect.periodic_ticks,
+        misc: effect.misc_values[0],
+        trigger_spell: effect.trigger_spell,
+    };
+    run_periodic_tick(world, unit, tick, false);
+}
+
+fn run_periodic_tick(world: &mut World, unit: Entity, mut tick: Tick, scheduled: bool) {
+    let alive = world
+        .get::<ActiveAuras>(unit)
+        .is_some_and(|auras| auras.get(tick.instance_id).is_some());
+    if !alive || !crate::spell_cast::targets::is_alive(world, unit) {
+        return;
+    }
+    if end_aura_at_full_health(world, unit, &tick) {
+        return;
+    }
+    let Some(mut spell) = world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(tick.spell_id))
+        .cloned()
+    else {
+        return;
+    };
+    let aura = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(tick.instance_id))
+        .expect("retained periodic aura");
+    let effect = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == tick.effect_index)
+        .expect("retained periodic effect");
+    let stacks = if world
+        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+        .counter_only_dot_stacks(aura.spell_id)
+    {
+        1.0
+    } else {
+        aura.stack_multiplier()
+    };
+    tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
+    spell.cast_periodic_fraction = Some(tick.fraction);
+    spell.cast_periodic_ordinal = Some(tick.ordinal);
+    spell.cast_primary_target = tick.cast_primary_target;
+    run_tick(world, unit, &spell, &tick);
+    if scheduled {
+        schedule_next_tick(world, unit, &mut spell, &tick);
+    }
+    end_aura_at_full_health(world, unit, &tick);
 }
 
 fn read_periodic_effect<'a>(

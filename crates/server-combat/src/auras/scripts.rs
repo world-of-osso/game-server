@@ -420,6 +420,15 @@ pub(super) fn register_class_scripts(
     registry: Res<crate::spell_cast::script_registry::SpellScriptRegistry>,
 ) {
     registry.register_early_auras(&mut scripts);
+    // SimC76f8118 sc_hunter.cpp:5074-5077 and dot.cpp:962-977; WCL
+    // fD6K4vVW82PqxCmZ fight1 confirms a refresh tick without phase reset.
+    scripts.0.insert(
+        217200,
+        AuraScript {
+            on_refresh: Some(super::periodic::run_refresh_tick),
+            ..Default::default()
+        },
+    );
     crate::consumables::register_liquid_luster(&mut scripts);
     scripts.0.insert(
         1236994,
