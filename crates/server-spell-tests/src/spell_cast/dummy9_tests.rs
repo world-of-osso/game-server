@@ -309,7 +309,8 @@ fn dummy9_radiance_applies_nine_second_atonement_to_selected_allies_preserves_fo
     h.cast_and_deliver(194509, Some(primary));
     h.advance(45);
     landed(&h);
-    let owned: Vec<_> = std::iter::once(primary)
+    let owned: Vec<_> = [primary, foreign, h.caster]
+        .into_iter()
         .chain(allies.iter().copied())
         .filter(|&u| {
             h.app

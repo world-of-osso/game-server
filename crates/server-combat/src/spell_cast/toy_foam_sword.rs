@@ -48,7 +48,7 @@ pub(super) fn create_one_foam_sword(world: &mut World, ctx: &EffectCtx, _effect:
             return;
         }
     }
-    let choice = rand::Rng::gen_range(&mut rand::thread_rng(), 0..FOAM_SWORDS.len());
+    let choice = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..FOAM_SWORDS.len());
     if let Err(error) =
         crate::profession::store_created_item(world, ctx.caster, FOAM_SWORDS[choice], 1, None)
     {

@@ -167,6 +167,7 @@ fn ara_kara_party_fights_sessile_ixin_inside_idle_pack_reach() {
     // Class rotations live in the APL crate; this fixture proves the positioning and
     // hold state that gates them (`holding_pull_damage`).
     h.app.insert_resource(super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
         source_actions: |_, _, _| Ok(Vec::new()),
         equipped_actions: |_, _, _| Ok(Vec::new()),
     });

@@ -120,6 +120,11 @@ fn finish_request(world: &mut World, unit: Entity) {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) fn in_progress(world: &World, unit: Entity) -> bool {
+    world.get::<Pending>(unit).is_some()
+}
+
 /// True while transport routing owns the follower's movement.
 pub(super) fn update(world: &mut World, unit: Entity, follower: &super::Follower) -> bool {
     let Some(request) = world

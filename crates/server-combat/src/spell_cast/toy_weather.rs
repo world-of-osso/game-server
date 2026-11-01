@@ -49,7 +49,10 @@ fn is_self_weather_aura(effect: &SpellEffect, aura: u32) -> bool {
 }
 
 pub(super) fn cast_personal_weather(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect) {
-    let choice = rand::Rng::gen_range(&mut rand::thread_rng(), 0..PERSONALIZED_WEATHER.len());
+    let choice = rand::Rng::gen_range(
+        &mut crate::random::thread_rng(),
+        0..PERSONALIZED_WEATHER.len(),
+    );
     let weather = PERSONALIZED_WEATHER[choice];
     super::cast_triggered(world, ctx.caster, weather, Some(ctx.caster), ctx.depth + 1);
 }

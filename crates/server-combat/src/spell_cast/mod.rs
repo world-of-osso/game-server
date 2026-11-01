@@ -1350,6 +1350,11 @@ fn send_inventory_rejection(
 /// wall clock; damage also counts on the damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
+    #[cfg(any(test, feature = "test-support"))]
+    if world.contains_resource::<test_harness::ReplayCombatClock>() {
+        const REPLAY_EPOCH_MS: u64 = 1_792_454_400_000;
+        event.timestamp_unix_ms = REPLAY_EPOCH_MS + (history_now(world) * 1000.0) as u64;
+    }
     crate::followers::pull_history::record_event(world, &event);
     crate::followers::live_facts::record_event(world, &event);
     #[cfg(any(test, feature = "test-support"))]
@@ -4133,6 +4138,26 @@ pub fn cast_triggered(
     depth: u8,
 ) {
     cast_triggered_with_item_level(world, caster, spell_id, explicit, depth, None);
+}
+
+/// Launch an automatic action using the same native charge pool as its manual cast.
+pub(crate) fn cast_triggered_with_shared_charge(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    depth: u8,
+) {
+    let Some(spell) = load_triggered_spell(world, spell_id, depth) else {
+        return;
+    };
+    if cooldown_query::cooldown_value(world, caster, &spell, "charges")
+        .expect("native charge query")
+        <= 0.0
+    {
+        return;
+    }
+    start_cooldowns(world, caster, &spell);
+    launch_triggered_spell(world, caster, &spell, Some(caster), depth);
 }
 
 /// `cast_triggered`, reporting whether the cast went off (TC `SPELL_CAST_OK`).
