@@ -325,6 +325,7 @@ fn fixture() -> Fixture {
         class_profiles: Vec::new(),
         seed: 0,
         gear: super::super::class_spawn::GearSource::Journal,
+        keystone: None,
         members,
         copy: Some(map),
         previous_difficulty: 1,
