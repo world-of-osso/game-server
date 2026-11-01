@@ -296,6 +296,15 @@ impl Mistweaver {
                     .find(|aura| aura.spell_id == 115867 && aura.caster == healer)
             })
             .map_or(0, |aura| aura.stacks);
+        // WCL TQXmJ6YVr71Pdycw/6Lg4hCVtj12JNbXc: Chi-Ji windows average 10-18 kicks and
+        // under two heals; kicks are the window's healing. Life Cocoon's 35% emergency stays first.
+        if lowest_ratio >= 0.35
+            && crate::auras::has_aura(world, healer, 325197)
+            && let Some(enemy) = enemy
+            && self.select_damage(world, healer, enemy)?
+        {
+            return Ok(());
+        }
         if lowest_ratio >= 0.65
             && let Some(enemy) = enemy
         {
@@ -350,9 +359,19 @@ impl Mistweaver {
             self.driver.execute(world, healer, action, execution)?;
             return Ok(());
         }
-        let Some(enemy) = enemy else {
-            return Ok(());
-        };
+        if let Some(enemy) = enemy {
+            self.select_damage(world, healer, enemy)?;
+        }
+        Ok(())
+    }
+
+    /// Cast the damage list's first ready action at `enemy`; whether one was cast.
+    fn select_damage(
+        &mut self,
+        world: &mut World,
+        healer: Entity,
+        enemy: Entity,
+    ) -> Result<bool, String> {
         let pulse = world
             .resource::<crate::spell_info::SpellStore>()
             .get(107270)
@@ -388,13 +407,14 @@ impl Mistweaver {
         let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
         let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
             .with_targets(Some(enemy), &enemies);
-        if let Some((action, execution)) =
+        let Some((action, execution)) =
             self.driver
                 .select("damage", &facts, &prepared, &self.equipment)?
-        {
-            self.driver.execute(world, healer, action, execution)?;
-        }
-        Ok(())
+        else {
+            return Ok(false);
+        };
+        self.driver.execute(world, healer, action, execution)?;
+        Ok(true)
     }
 }
 
