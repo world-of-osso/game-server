@@ -46,7 +46,9 @@ fn every_player_role_forms_exactly_one_tank_one_healer_three_damage() {
 fn spawn_follower(h: &mut crate::spell_cast::test_harness::Harness, profile: Profile) -> Entity {
     let owner = h.caster;
     let unit = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let actions = FollowerActionSpells(super::spawning::profile_actions(&profile));
     h.app.world_mut().entity_mut(unit).insert((
+        actions,
         Npc {
             template_id: profile.entry,
             name: profile.name.clone(),
