@@ -265,13 +265,14 @@ fn healer_prioritizes_the_lowest_health_party_member_over_damage() {
         passives.contains(&137031),
         "Holy Priest's authored passive activates Flash Heal's native cost"
     );
+    let mut known = super::spawning::profile_actions(&holy);
+    known.extend(passives);
     let healer = spawn_follower(&mut h, holy);
-    crate::auras::sync_passives(
-        h.app.world_mut(),
-        healer,
-        crate::auras::AuraSource::KnownSpell,
-        &passives,
-    );
+    // The ordinary passive sync owns KnownSpell passives, as for spawned followers.
+    h.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::class_progression::KnownSpells::from_baseline(known));
     let injured = spawn_follower(&mut h, profile(209059, GroupRole::Dps, 0, 0));
     h.app
         .world_mut()
