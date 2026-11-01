@@ -171,7 +171,12 @@ pub(super) fn load_startup(mut commands: Commands) {
 }
 
 /// Equip source items at the current dungeon loot level through normal item instances.
-pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Result<(), String> {
+pub fn equip(
+    world: &mut World,
+    actor: Entity,
+    profile: &super::Profile,
+    actions: &[u32],
+) -> Result<(), String> {
     let source = world
         .get_resource::<FollowerGearSource>()
         .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;
@@ -216,6 +221,14 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
     let spells = world
         .get_resource::<crate::spell_info::SpellStore>()
         .ok_or("follower gear spells unavailable")?;
+    let action_info = actions
+        .iter()
+        .map(|id| {
+            spells
+                .get(*id)
+                .ok_or_else(|| format!("follower gear action {id} missing spell data"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     let selection = select::select_items(
         pool,
         copy.map_id,
@@ -227,6 +240,7 @@ pub fn equip(world: &mut World, actor: Entity, profile: &super::Profile) -> Resu
         spells,
         templates,
         &source.item_specs,
+        &action_info,
     );
     if !selection.missing.is_empty() {
         if copy.map_id == STOCKADE_SIMULATOR_MAP {

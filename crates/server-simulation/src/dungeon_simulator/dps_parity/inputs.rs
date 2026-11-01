@@ -344,7 +344,11 @@ pub(crate) fn equip_companions(
             let profile: Profile = read_json(&path)?;
             equip(world, unit, &profile)?;
         } else {
-            crate::followers::gear::equip(world, unit, &follower)?;
+            let provider = *world
+                .get_resource::<crate::followers::FollowerActionProvider>()
+                .ok_or("class follower action metadata provider unavailable")?;
+            let actions = (provider.source_actions)(world, unit, follower.spec_id)?;
+            crate::followers::gear::equip(world, unit, &follower, &actions)?;
         }
     }
     Ok(())

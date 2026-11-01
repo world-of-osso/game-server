@@ -434,10 +434,18 @@ pub fn install_class(
     );
     let mut spells = (provider.source_actions)(world, entity, source.spec_id)?;
     match gear {
-        GearSource::Journal => super::gear::equip(world, entity, &profile),
+        GearSource::Journal => super::gear::equip(world, entity, &profile, &spells),
     }
     .and_then(|()| super::gear::publish_appearance(world, entity))?;
     spells.extend((provider.equipped_actions)(world, entity, source.spec_id)?);
+    for id in &spells {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(*id)
+            .ok_or_else(|| format!("follower action {id} missing spell data"))?;
+        crate::spell_cast::equipped_items::check_cast(world, entity, spell)
+            .map_err(|error| format!("follower action {id} equipment: {error:?}"))?;
+    }
     spells.sort_unstable();
     spells.dedup();
     world

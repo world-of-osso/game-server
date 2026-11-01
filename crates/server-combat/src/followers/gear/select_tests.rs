@@ -43,6 +43,7 @@ fn follower_gear_selects_all_native_dragonflight_slots_for_every_spec() {
             &spells,
             &templates,
             &item_specs,
+            &[],
         );
         eprintln!(
             "GEAR spec={} items={:?} missing={:?}",
@@ -133,6 +134,7 @@ fn follower_weapons_follow_native_loot_specializations() {
                 &spells,
                 &templates,
                 &item_specs,
+                &[],
             );
             eprintln!(
                 "class{} spec{} level{level}: {:?}",
@@ -208,6 +210,7 @@ fn druid_followers_take_a_two_hander_when_no_off_hand_is_usable() {
                 &spells,
                 &templates,
                 &item_specs,
+                &[],
             );
             assert!(
                 gear.missing.is_empty(),

@@ -213,7 +213,7 @@ impl Pull {
 }
 
 #[test]
-fn fury_follower_gear_satisfies_bound_actions_at_both_levels() {
+fn follower_weapon_action_fury_satisfies_both_levels() {
     for (level, map) in [(70, 2515), (90, 2813)] {
         let mut pull = spawn_at_map(72, level, map);
         let actor = pull.follower;
@@ -233,6 +233,20 @@ fn fury_follower_gear_satisfies_bound_actions_at_both_levels() {
                 .unwrap_or_else(|error| panic!("level {level}, spell {spell}: {error:?}"));
         }
     }
+}
+
+#[test]
+fn follower_weapon_action_elemental_equips_shield() {
+    let mut pull = spawn_at_map(262, 90, 2813);
+    let actor = pull.follower;
+    let world = pull.harness.app.world_mut();
+    let rotation = server_follower_apl::registry::load(world, actor, 262).unwrap();
+    assert!(rotation.action_spells().contains(&462757));
+    let info = world
+        .resource::<server_combat::spell_info::SpellStore>()
+        .get(462757)
+        .unwrap();
+    server_combat::spell_cast::check_equipped_item_requirements(world, actor, info).unwrap();
 }
 
 #[test]
