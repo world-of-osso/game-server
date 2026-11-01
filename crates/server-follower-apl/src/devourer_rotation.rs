@@ -13,6 +13,7 @@ pub struct Rotation {
     pub bindings: Bindings,
     pub equipment: Equipment,
     pub encounter: Encounter,
+    entropy_initialized: bool,
 }
 
 pub fn configure_actor_reactions(world: &mut World, actor: Entity) -> Result<(), String> {
@@ -66,6 +67,7 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
+            entropy_initialized: false,
         })
     }
 
@@ -79,6 +81,10 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
+        if !self.entropy_initialized {
+            self.initialize_entropy(world, actor)?;
+            self.entropy_initialized = true;
+        }
         let prepared = self.prepare(world, actor, targets)?;
         let facts = DevourerFacts {
             native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
@@ -102,20 +108,46 @@ impl Rotation {
         }
     }
 
+    fn initialize_entropy(&self, world: &mut World, actor: Entity) -> Result<(), String> {
+        if !world
+            .get::<server::class_progression::KnownSpells>(actor)
+            .is_some_and(|known| known.contains(1261684))
+        {
+            return Ok(());
+        }
+        // SimC76f8118 cpp9824–9835 seeds Entropy's native effect2 at precombat begin.
+        let count =
+            server::spell_cast::scripts::script_effect_value(world, actor, 1261684, 1) as usize;
+        for _ in 0..count {
+            if !server::spell_cast::try_cast_triggered(world, actor, 1225789, Some(actor), 0) {
+                return Err("Entropy precombat Meta stack cast refused".into());
+            }
+        }
+        Ok(())
+    }
+
     pub fn prepare(
         &self,
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
     ) -> Result<Prepared, String> {
-        Prepared::read(
+        let mut prepared = Prepared::read(
             world,
             actor,
             targets,
             &self.equipment,
             bindings::execution_actions(),
             self.driver.snapshot.is_none(),
-        )
+        )?;
+        // SimC76f8118 cpp6254–6296 selects Eradicate only while its buff is active.
+        if server::auras::has_aura(world, actor, 1239524) {
+            prepared.suppress_action("reap");
+            prepared.suppress_action("cull");
+        } else {
+            prepared.suppress_action("eradicate");
+        }
+        Ok(prepared)
     }
 
     pub fn drive(

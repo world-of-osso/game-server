@@ -497,20 +497,36 @@ pub(crate) struct MoveQueues<'w, 's> {
     replication: Option<Res<'w, ReplicationDirtyQueue>>,
     flags2: Query<'w, 's, &'static shared::components::UnitFlags2>,
     combat_exclusions: Query<'w, 's, &'static crate::followers::CombatMovementExclusions>,
+    followers: Query<
+        'w,
+        's,
+        (
+            &'static crate::followers::Follower,
+            Option<&'static shared::components::CombatStatus>,
+        ),
+    >,
     los: Option<Res<'w, crate::line_of_sight::LineOfSight>>,
 }
 
 impl MoveQueues<'_, '_> {
     fn combat_step_safe(&self, entity: Entity, from: Position, to: Position) -> bool {
-        self.combat_exclusions
-            .get(entity)
-            .map_or(true, |exclusions| {
-                exclusions.permits(
-                    self.los.as_deref(),
-                    Vec3::new(from.x, from.y, from.z),
-                    Vec3::new(to.x, to.y, to.z),
-                )
-            })
+        // Specs follower-dungeons.md 253/577: out of combat only non-tank followers keep
+        // outside idle hostiles; the tank retains its pull planner.
+        let idle_tank = self.followers.get(entity).is_ok_and(|(follower, combat)| {
+            follower.profile.role == shared::group::GroupRole::Tank
+                && !combat.is_some_and(|status| status.0)
+        });
+        idle_tank
+            || self
+                .combat_exclusions
+                .get(entity)
+                .map_or(true, |exclusions| {
+                    exclusions.permits(
+                        self.los.as_deref(),
+                        Vec3::new(from.x, from.y, from.z),
+                        Vec3::new(to.x, to.y, to.z),
+                    )
+                })
     }
 
     /// Write `stride` back: the position (interest), the facing and motion (replication)

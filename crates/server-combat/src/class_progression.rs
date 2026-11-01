@@ -156,6 +156,11 @@ impl TraitLoadout {
         self.spells.iter().map(|spell| spell.known)
     }
 
+    /// Rank of the selected native talent, if the definition is applied.
+    pub fn talent_rank(&self, spell_id: u32) -> Option<u32> {
+        self.spell_trait(spell_id).map(|trait_info| trait_info.rank)
+    }
+
     /// TC GetTraitInfoForSpell: metadata belongs to this learned definition spell,
     /// not arbitrary triggered children or matching spell names.
     pub(crate) fn spell_trait(&self, spell_id: u32) -> Option<SpellTrait> {

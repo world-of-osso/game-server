@@ -74,6 +74,9 @@ pub(super) const WHIRLING_DRAGON_PUNCH: u32 = 152175;
 const WDP_ENABLER: u32 = 196742;
 const WDP_SINGLE_DAMAGE: u32 = 451767;
 const WDP_AREA_DAMAGE: u32 = 158221;
+const THUNDERFIST_TALENT: u32 = 392985;
+const THUNDERFIST_BUFF: u32 = 393565;
+pub(super) const WINDLORD_OFF_HAND: u32 = 395521;
 
 /// SIMC_WW_WDP_DAMAGE_CHILDREN: SimC76f8118 sc_monk.cpp1888–1906/5825–5826.
 /// SimC schedules the initial area hit and skips the final two native periods.
@@ -83,6 +86,74 @@ pub(crate) fn register_wdp_relationship(scripts: &mut auras::scripts::AuraScript
         WHIRLING_DRAGON_PUNCH,
         auras::scripts::AuraScript {
             on_periodic: Some(cast_wdp_area_tick),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        THUNDERFIST_BUFF,
+        auras::scripts::AuraScript {
+            check_proc: Some(thunderfist_swing),
+            on_proc: Some(spend_thunderfist_stack),
+            ..Default::default()
+        },
+    );
+}
+
+fn thunderfist_swing(
+    _world: &World,
+    aura: &auras::AuraInstance,
+    event: &auras::procs::AuraEvent,
+) -> bool {
+    event.actor == aura.caster && event.actor_mask[0] & auras::procs::PROC_DEAL_MELEE_SWING != 0
+}
+
+fn spend_thunderfist_stack(
+    world: &mut World,
+    unit: Entity,
+    aura: &auras::AuraInstance,
+    _target: Option<Entity>,
+) {
+    auras::spend_stack(world, unit, aura.instance_id);
+}
+
+/// SimC76f8118 sc_monk.cpp1971–1983: landed Windlord off-hand hits
+/// grant native Thunderfist stacks; later landed white swings consume them.
+pub(super) fn grant_windlord_thunderfist(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+) {
+    let Some(talent) = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.caster == ctx.caster && aura.spell_id == THUNDERFIST_TALENT)
+    }) else {
+        return;
+    };
+    let Some(first) = crate::spell_cast::resolving_targets(world, ctx)
+        .and_then(|targets| targets.first())
+        .copied()
+    else {
+        return;
+    };
+    let stacks = if target == first {
+        talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("Thunderfist native stacks")
+            .amount as u8
+    } else {
+        1
+    };
+    crate::spell_cast::cast_triggered_with_overrides(
+        world,
+        ctx.caster,
+        THUNDERFIST_BUFF,
+        Some(ctx.caster),
+        ctx.depth + 1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(stacks),
             ..Default::default()
         },
     );
