@@ -6,7 +6,6 @@
 //! slot must hold an item of the required class and subclass (Item::IsFitToSpellRequirements,
 //! Item.cpp1477–1509). Weapon and other armor requirements still apply unconditionally.
 use bevy::prelude::*;
-use shared::components::Player;
 use shared::protocol::EquipmentSlot;
 
 use super::attributes;
@@ -35,7 +34,7 @@ pub(super) fn passive_items_fit(world: &World, unit: Entity, spell: &SpellInfo) 
     };
     let all_armor_slots = required.item_class == ITEM_CLASS_ARMOR
         && attributes(spell, 8) & SPELL_ATTR8_REQUIRES_EQUIPPED_INV_TYPES != 0;
-    if !all_armor_slots || world.get::<Player>(unit).is_none() {
+    if !all_armor_slots || !crate::followers::is_player_like_combatant(world, unit) {
         return true;
     }
     let Some(equipped) = world.get::<EquippedItems>(unit) else {

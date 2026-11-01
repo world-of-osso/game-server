@@ -12,6 +12,8 @@ const TICKS: u32 = 6_000;
 const ADD_WAVE_TICKS: u32 = 600;
 const LAST_30S_START: u32 = TICKS - ADD_WAVE_TICKS;
 #[cfg(test)]
+mod class_follower_stat_parity_tests;
+#[cfg(test)]
 mod consecration_vision_tests;
 #[cfg(test)]
 mod elemental_rod_tests;
