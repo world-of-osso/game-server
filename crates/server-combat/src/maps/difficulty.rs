@@ -568,6 +568,7 @@ pub(crate) struct AdminInstances<'w, 's> {
             Option<&'static shared::components::Position>,
             Option<&'static crate::creature_ai::CreatureState>,
             Has<crate::grid_activity::GridDormant>,
+            Has<crate::followers::Follower>,
         ),
         // Creatures only: disjoint from the admin player query's `&mut Position`.
         Without<crate::persistence::ClientId>,
@@ -681,6 +682,7 @@ impl AdminInstances<'_, '_> {
                             position,
                             state,
                             dormant,
+                            follower,
                         )| {
                             format!(
                                 "{} (entity {}) level {} health {}/{} difficulty {} at {:?} state {:?} dormant {} aggro_to={} combat={}",
@@ -693,7 +695,9 @@ impl AdminInstances<'_, '_> {
                                 position.map(|p| [p.x, p.y, p.z]),
                                 state,
                                 dormant,
-                                serde_json::Value::Array(self.players.iter().filter(|(_, player_map, _)| **player_map == map).map(|(player, _, player_level)| serde_json::json!({
+                                // Followers are player-like: spawning removes their AggroRange and
+                                // they have no creature template, so they aggro no one.
+                                serde_json::Value::Array(self.players.iter().filter(|(_, player_map, _)| !follower && **player_map == map).map(|(player, _, player_level)| serde_json::json!({
                                     "entity": player.to_bits(),
                                     "radius": level.and_then(|level| self.aggro.center_radius(entity, player, level.0, player_level.0))
                                 })).collect()),
@@ -906,6 +910,99 @@ mod admin_npc_combat_tests {
     }
 
     #[test]
+    fn npc_info_evaluates_no_aggro_radius_for_class_followers() {
+        use shared::components::{CharacterAppearance, CharacterVisual, Player, UnitLevel};
+        const CLASS_FOLLOWER_ENTRY: u32 = u32::MAX - 1;
+        let mut world = World::new();
+        world.insert_resource(crate::test_data::world_data().clone());
+        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+            Default::default(),
+        ));
+        let ara_kara = InMap {
+            map_id: 2660,
+            instance_id: 16,
+        };
+        let player = world
+            .spawn((
+                Player {
+                    name: "Owner".into(),
+                    race: 1,
+                    class: 2,
+                    appearance: CharacterAppearance::default(),
+                },
+                UnitLevel(80),
+                ara_kara,
+            ))
+            .id();
+        let profile = crate::followers::Profile {
+            entry: CLASS_FOLLOWER_ENTRY,
+            name: "Tank".into(),
+            class_id: 2,
+            spec_id: 66,
+            role: shared::group::GroupRole::Tank,
+            attack_spell: 0,
+            cooldown_spell: 0,
+            heal_spell: 0,
+            taunt_spell: 0,
+            form_spell: 0,
+            melee: true,
+        };
+        let follower = world
+            .spawn((
+                Npc {
+                    template_id: CLASS_FOLLOWER_ENTRY,
+                    name: "Tank".into(),
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                ara_kara,
+                UnitLevel(80),
+                crate::zones::CreatureDifficulty(205),
+                CharacterVisual {
+                    race: 1,
+                    class: 2,
+                    appearance: CharacterAppearance::default(),
+                },
+                crate::followers::Follower {
+                    owner: player,
+                    profile,
+                },
+            ))
+            .id();
+        let db = GameDatabase::new(crate::persistence::temp_database());
+        let mut state = SystemState::<AdminInstances>::new(&mut world);
+        let response = state
+            .get_mut(&mut world)
+            .unwrap()
+            .dispatch(
+                &crate::admin_types::AdminRequest::NpcInfo {
+                    map_id: 2660,
+                    instance_id: 16,
+                    entry: CLASS_FOLLOWER_ENTRY,
+                },
+                &db,
+            )
+            .unwrap();
+        let crate::admin_types::AdminResponse::NpcInfoList { lines } = response else {
+            panic!("npc-info did not return its live rows");
+        };
+        assert_eq!(lines.len(), 1);
+        assert!(
+            lines[0].contains(&format!(
+                "(entity {}) level 80 health 100/100 difficulty 205",
+                follower.to_bits()
+            )),
+            "{}",
+            lines[0]
+        );
+        let (_, aggro) = lines[0].split_once(" aggro_to=").unwrap();
+        let (aggro, _) = aggro.split_once(" combat=").unwrap();
+        assert_eq!(aggro, "[]");
+    }
+
+    #[test]
     fn npc_info_exposes_native_stats_victim_threat_without_mutating_them() {
         let mut world = World::new();
         let victim = world.spawn_empty().id();
@@ -1038,8 +1135,9 @@ mod admin_npc_combat_tests {
             panic!("npc-info did not return its live rows");
         };
         assert!(
-            lines[0]
-                .contains(" at Some([355.5, 86.5, -26.25]) state Some(Idle) dormant true combat="),
+            lines[0].contains(
+                " at Some([355.5, 86.5, -26.25]) state Some(Idle) dormant true aggro_to=[] combat="
+            ),
             "{}",
             lines[0]
         );
@@ -1052,7 +1150,15 @@ mod admin_npc_combat_tests {
         assert_eq!(
             inspect(&mut world),
             serde_json::json!({
-                "stats": null, "creature_armor": null, "victim": null, "threat": null
+                "stats": null, "creature_armor": null, "victim": null, "threat": null,
+                "protection": {
+                    "unit_flags": null, "unit_flags2": null, "unit_flags3": null, "immunities": null
+                },
+                "movement": {
+                    "follow": null, "cast": null, "speed_modifier": null,
+                    "jump": false, "fall": false, "knockback": false,
+                    "confused": false, "feared": false
+                }
             })
         );
     }
