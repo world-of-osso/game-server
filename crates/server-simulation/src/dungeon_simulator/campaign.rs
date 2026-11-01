@@ -728,7 +728,7 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     let melee = |source: Entity| {
         events.iter().any(|event| {
             event.kind == shared::protocol::CombatLogKind::Damage
-                && event.source == source.to_bits()
+                && event.source == Some(source.to_bits())
                 && event.target == Some(owner.to_bits())
                 && event.spell_id.is_none()
         })
