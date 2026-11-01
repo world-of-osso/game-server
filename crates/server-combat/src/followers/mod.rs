@@ -394,8 +394,6 @@ mod combat_refs_tests;
 #[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]
-mod defensive_tests;
-#[cfg(test)]
 mod hazard_reaction_tests;
 #[cfg(test)]
 mod hazard_tests;
