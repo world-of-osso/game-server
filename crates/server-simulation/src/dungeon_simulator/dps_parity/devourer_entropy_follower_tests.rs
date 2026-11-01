@@ -1,10 +1,8 @@
 //! Production follower precombat initialization for Devourer Entropy.
 use super::follower_dps_diagnostic::*;
 use super::*;
-use server_follower_apl::{
-    devourer_rotation::Rotation,
-    simc_apl_native::{Encounter, FightStyle},
-};
+use crate::simc_apl_native::{Encounter, FightStyle};
+use server_follower_apl::devourer_rotation::Rotation;
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
