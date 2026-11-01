@@ -2088,6 +2088,37 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let umbral_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(393763)
+        })
+        .count();
+    let generators = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(194153 | 190984))
+        })
+        .count();
+    assert!(
+        umbral_applications > 0 && umbral_applications < generators,
+        "Umbral procs {umbral_applications} must be intermittent across {generators} generators"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::AuraRemoved
+                && event.spell_id == Some(393763)),
+        "a generator must consume Umbral Embrace"
+    );
     let fires_applications = events
         .iter()
         .filter(|event| {
@@ -2131,6 +2162,60 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.spell_id == Some(1263250)
                 && event.amount > 0),
         "Eclipse critical hits must produce Astral Smolder periodic damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_umbral_starfire_amplifies_only_during_eclipse() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -100.0;
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 48518, Some(actor), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 393763, Some(actor), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 48517 | 48518),
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(194153)
+        })
+        .map(|event| event.amount)
+        .collect();
+    assert_eq!(hits.len(), 3, "one Starfire hit per cast: {hits:?}");
+    assert!(
+        hits[1] > hits[0] * 3 / 2,
+        "Umbral must amplify Starfire: {hits:?}"
+    );
+    assert!(
+        hits[2] < hits[1],
+        "the same buff must not amplify outside Eclipse: {hits:?}"
     );
 }
 

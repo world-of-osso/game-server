@@ -275,6 +275,7 @@ register_modules! {
     druid_atmospheric_exposure: (1054, "modules/druid_atmospheric_exposure.rs"),
     druid_eclipse: (1054, "modules/druid_eclipse.rs"),
     druid_shooting_stars: (1054, "modules/druid_shooting_stars.rs"),
+    druid_umbral: (1054, "modules/druid_umbral.rs"),
     druid_fury_of_elune: (1054, "modules/druid_fury_of_elune.rs"),
     guardian_blood_frenzy: (1042, "modules/guardian_blood_frenzy.rs"),
     guardian_berserk_form: (1046, "modules/guardian_berserk_form.rs"),
