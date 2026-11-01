@@ -1677,6 +1677,88 @@ fn atonement_shadow_word_pain_uses_native_abyssal_reverie() {
 }
 
 #[test]
+fn atonement_smite_applies_matching_direct_heal_talent_modifiers() {
+    for (auras, multiplier) in [
+        (vec![], 1.0_f32),
+        (vec![415416], 1.03),
+        (vec![1253845], 1.03),
+        (vec![415416, 1253845], 1.03 * 1.03),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut h = harness(
+            Vec::new(),
+            &[17, 194384, 81749, 94472, 585, 415416, 1253845],
+            5,
+        )
+        .unwrap();
+        let caster = h.caster;
+        let enemy = h.npc;
+        h.app.world_mut().entity_mut(caster).insert((
+            ActiveSpec(256),
+            crate::class_progression::KnownSpells::fixture(vec![17, 585]),
+        ));
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            caster,
+            crate::auras::RemoveReason::Consumed,
+            |aura| matches!(aura.spell_id, 415416 | 1253845),
+        );
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .crit_pct = 0.0;
+        for aura in auras {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id: aura,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        let ally = spawn_player(&mut h.app, 5, 1.0);
+        *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+            current: 1_000.0,
+            max: 10_000.0,
+        };
+        *h.app.world_mut().get_mut::<Health>(enemy).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        h.cast_and_deliver(17, Some(ally));
+        h.advance(35);
+        h.inbox.log.clear();
+        h.cast_and_deliver(585, Some(enemy));
+        h.advance(60);
+        let damage = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(585))
+            .unwrap();
+        let transfer = h
+            .inbox
+            .log
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.spell_id == Some(94472)
+                    && event.target == Some(ally.to_bits())
+            })
+            .unwrap();
+        let expected = (damage.amount as f32 * 0.46 * multiplier).round() as i32;
+        assert!(
+            (transfer.amount - expected).abs() <= 1,
+            "multiplier={multiplier}: {damage:?} {transfer:?}"
+        );
+    }
+}
+
+#[test]
 fn atonement_smite_uses_native_oracle_and_voidheart_bonuses() {
     for (aura, multiplier) in [(1272359, 1.15_f32), (449887, 1.20_f32)] {
         let mut h = harness(Vec::new(), &[17, 194384, 81749, 94472, 585, aura], 5).unwrap();
