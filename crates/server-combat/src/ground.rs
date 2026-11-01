@@ -513,6 +513,7 @@ impl GroundMap {
 
     /// TC Map::GetHeight: terrain plus collision faces within 50 yards below z.
     pub(crate) fn map_height_in(&mut self, map: crate::maps::InMap, point: Vec3) -> GroundProbe {
+        let probe = point.with_y(point.y - shared::ground::STEP_UP_HEIGHT);
         if let Some(height) = self.flat_arena_height {
             let terrain = (height <= point.y + 0.05).then_some(height);
             let live = self
@@ -520,8 +521,8 @@ impl GroundMap {
                 .get(&map)
                 .into_iter()
                 .flatten()
-                .flat_map(|hull| hull.floor_heights(point.x, point.z))
-                .filter(|height| *height <= point.y && *height >= point.y - 50.0);
+                .filter_map(|hull| hull.solid_height(probe))
+                .filter(|height| *height >= point.y - 50.0);
             return terrain
                 .into_iter()
                 .chain(live)
@@ -547,31 +548,36 @@ impl GroundMap {
         if let Some(terrain) = terrain.filter(|height| *height <= point.y + 0.05) {
             heights.push(terrain);
         }
+        let check = self
+            .m2_solid_checks
+            .entry(map.map_id)
+            .or_insert_with(|| validate_m2_solid_files(&self.data_dir, map.map_id));
+        if let Err(error) = check {
+            error!(map = map.map_id, %error, "M2 solid collision unavailable");
+            return GroundProbe::Unloaded;
+        }
         let m2 = self
-            .m2_floors
+            .m2_solids
             .entry(map.map_id)
             .or_insert_with(|| {
-                los::LosMap::new(&self.data_dir.join(format!("los/{}/m2", map.map_id)))
+                los::LosMap::new(&self.data_dir.join(format!("los/{}/m2-solid", map.map_id)))
             })
-            .floor_heights(point.x, point.z);
+            .solid_height(probe);
         let m2 = match m2 {
-            Ok(heights) => heights,
+            Ok(height) => height,
             Err(error) => {
                 error!(map = map.map_id, %error, "M2 map-height query failed");
                 return GroundProbe::Unsupported;
             }
         };
-        heights.extend(
-            m2.into_iter()
-                .filter(|height| *height <= point.y && *height >= point.y - 50.0),
-        );
+        heights.extend(m2.filter(|height| *height >= point.y - 50.0));
         heights.extend(
             self.live_hulls
                 .get(&map)
                 .into_iter()
                 .flatten()
-                .flat_map(|hull| hull.floor_heights(point.x, point.z))
-                .filter(|height| *height <= point.y && *height >= point.y - 50.0),
+                .filter_map(|hull| hull.solid_height(probe))
+                .filter(|height| *height >= point.y - 50.0),
         );
         heights
             .into_iter()
