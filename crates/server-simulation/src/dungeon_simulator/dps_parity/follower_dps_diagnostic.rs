@@ -134,6 +134,38 @@ fn prepare_marksmanship_70() -> (App, Entity, Entity) {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 288613, Some(target), false).unwrap();
+    for _ in 0..10 {
+        app.update();
+    }
+    assert!(
+        crate::auras::has_aura(app.world(), target, 1301098),
+        "real Trueshot earns Take Aim mark"
+    );
+    for _ in 0..40 {
+        app.update();
+    }
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false).unwrap();
+    for _ in 0..60 {
+        app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(app.world(), target, 1301098),
+        "Rapid Fire consumes earned mark"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_mm_lock_and_load_explosive_restores_one_aimed_charge() {
     let _seed = crate::random::seed_scope(70448);
     let (mut app, actor, target) = prepare_marksmanship_70();
