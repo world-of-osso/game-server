@@ -121,6 +121,35 @@ fn prepare_class_follower(
     (app, actor, target, profile)
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with level-specific Ret profiles"]
+fn follower_ret_radiant_glory_wake_activates_wrath_only_when_selected() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    for (level, map, selected) in [(70, 2515, true), (90, 2813, false)] {
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, map).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 70, level);
+        let traits = app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(actor)
+            .unwrap();
+        assert_eq!(
+            traits
+                .active_talent_spells()
+                .any(|spell| spell.spell_id == 458359),
+            selected
+        );
+        assert!(!crate::auras::has_aura(app.world(), actor, 454351));
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 255937, Some(target), false)
+            .unwrap();
+        assert_eq!(crate::auras::has_aura(app.world(), actor, 454351), selected);
+        assert_eq!(
+            crate::auras::has_aura(app.world(), actor, 1277026),
+            selected
+        );
+    }
+}
+
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
