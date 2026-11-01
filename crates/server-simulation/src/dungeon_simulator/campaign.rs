@@ -688,6 +688,94 @@ fn keystone_death_time_starts_after_native_countdown() {
 
 #[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_two_pulls_do_not_repeat_precombat_setup() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    let mage = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<shared::components::ActiveSpec>(*unit)
+                .is_some_and(|spec| spec.0 == 63)
+        })
+        .unwrap();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..2000 {
+        run.control().unwrap();
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        let kills = events
+            .iter()
+            .filter(|event| {
+                event.kind == shared::protocol::CombatLogKind::Death
+                    && event.target.is_some_and(|target| {
+                        run.actors.values().any(|actor| actor.to_bits() == target)
+                    })
+            })
+            .count();
+        let pulls = run
+            .report
+            .pulls
+            .iter()
+            .filter(|pull| pull.decision.starts_with("Allow"))
+            .count();
+        if kills >= 5 && pulls >= 5 {
+            let casts = |actor: Entity, spell| {
+                events
+                    .iter()
+                    .filter(|event| {
+                        event.kind == shared::protocol::CombatLogKind::CastSuccess
+                            && event.source == Some(actor.to_bits())
+                            && event.spell_id == Some(spell)
+                    })
+                    .count()
+            };
+            assert_eq!(
+                casts(owner, 883),
+                1,
+                "Call Pet must not repeat between pulls"
+            );
+            assert_eq!(
+                casts(mage, 1459),
+                1,
+                "Arcane Intellect must not repeat between pulls"
+            );
+            assert_eq!(
+                casts(run.party.tank, 465),
+                1,
+                "Devotion Aura must not repeat when Consecration expires"
+            );
+            return;
+        }
+    }
+    panic!("five native source deaths and pulls were not observed");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn keystone_driver_waits_for_countdown_before_pulling() {
     let options = super::keystone::Options {
         map_id: 2515,
@@ -761,6 +849,7 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     };
     let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
+    crate::followers::simulator::stop_leader_driver(run.app.world_mut(), owner);
     let rune = run.actors[&29001892];
     // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
     let hostile = run.actors[&29001878];
@@ -793,14 +882,22 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
         .0[cursor..];
     let melee = |source: Entity| {
         events.iter().any(|event| {
-            event.kind == shared::protocol::CombatLogKind::Damage
-                && event.source == Some(source.to_bits())
+            matches!(
+                event.kind,
+                shared::protocol::CombatLogKind::Damage | shared::protocol::CombatLogKind::Miss(_)
+            ) && event.source == Some(source.to_bits())
                 && event.target == Some(owner.to_bits())
                 && event.spell_id.is_none()
         })
     };
-    assert!(!melee(rune), "rune hit the owner");
+    assert!(!melee(rune), "rune attempted to melee the owner");
     assert!(melee(hostile), "nearby hostile did not melee the owner");
+    let observed = super::diagnostics::inspect_unit(run.app.world(), Some(29001878), hostile);
+    assert!(
+        observed["creature_swing_range"].is_array(),
+        "missing native swing range: {observed}"
+    );
+    assert_eq!(observed["keystone_damage_multiplier"], 1.0);
 }
 
 #[test]
@@ -2493,7 +2590,6 @@ pub(super) fn run_keystone(
         "cleared_sources": crate::followers::simulator::observed_cleared_sources(run.app.world(), run.party.owner),
         "terminal_units": run.inspect_units(),
         "pull_decisions": &run.report.pulls,
-        "native_combat_events_wall_timestamps": &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0,
     });
     let state = run.keystone.take().expect("keystone state after run");
     state
