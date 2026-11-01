@@ -26,8 +26,10 @@ use wow_wmo::parser::parse_root_group_file_ids as group_file_data_ids;
 
 use bevy::math::{Affine3A, Vec3};
 use bevy::prelude::*;
+use game_engine_core::player_physics_data::WALL_RAY_HEIGHT;
+use game_engine_core::step_clearance::{step_obstacle_top, step_wall_blocked};
 use shared::ground::{
-    WmoCollision, WmoGroupCollision, global_wmo_placement_position, placement_position,
+    Surface, WmoCollision, WmoGroupCollision, global_wmo_placement_position, placement_position,
     placement_rotation,
 };
 
@@ -451,6 +453,48 @@ impl GroundMap {
             .map(|(entity, _)| entity)
     }
 
+    /// The client's WMO step admission (`TerrainGround::wmo_step_is_clear`): a walkable WMO
+    /// landing at `probe` no more than `STEP_UP_HEIGHT` over `current`, behind solid faces
+    /// topping out no lower than `obstacle`, with room for the raised body to cross and
+    /// to stand on the landing.
+    pub(crate) fn wmo_step_is_clear(
+        &mut self,
+        map: crate::maps::InMap,
+        current: Vec3,
+        probe: Vec3,
+        obstacle: f32,
+    ) -> bool {
+        if !self.maps.contains_key(&map.map_id) {
+            let loaded = self.open_map(map.map_id);
+            self.maps.insert(map.map_id, loaded);
+        }
+        let Some(Some(ground)) = self.maps.get_mut(&map.map_id) else {
+            return false;
+        };
+        let Some((terrain, wmos)) = ground.collision_at(probe) else {
+            return false;
+        };
+        let step_top = current.y + shared::ground::STEP_UP_HEIGHT;
+        let Some(landing) = shared::ground::ground_at(probe, terrain, wmos)
+            .filter(|landing| landing.surface == Surface::Wmo && landing.height <= step_top)
+        else {
+            return false;
+        };
+        let faces = step_corridor_faces(wmos, current, probe);
+        let Some(top) = step_obstacle_top(faces.iter().copied(), current, probe, step_top)
+            .filter(|top| *top >= obstacle)
+        else {
+            return false;
+        };
+        let raised = current.with_y(top.max(landing.height));
+        let destination = probe.with_y(raised.y);
+        let landing_feet = probe.with_y(landing.height);
+        let normal = shared::ground::min_walkable_normal_y();
+        !step_wall_blocked(&faces, raised, destination, step_top, normal)
+            && !step_wall_blocked(&faces, landing_feet, landing_feet, landing.height, normal)
+            && self.clamp_live_movement(map, raised, destination) == destination
+    }
+
     /// Static ground plus enabled live GO collision in this exact map copy.
     pub(crate) fn ground_in(&mut self, map: crate::maps::InMap, feet: Vec3) -> GroundProbe {
         let base = self.ground_at(map.map_id, feet);
@@ -794,6 +838,19 @@ impl MapGround {
         })
     }
 
+    /// The terrain height and WMOs around `feet`; `None` off loaded terrain.
+    fn collision_at(&mut self, feet: Vec3) -> Option<(Option<f32>, &[WmoCollision])> {
+        if self.global_wmo.is_some() {
+            return Some((None, std::slice::from_ref(self.global_wmo.as_ref()?)));
+        }
+        let tile = self.load_collision_tile(bevy_to_tile(feet.x, feet.z))?;
+        let wmos = tile
+            .wmos
+            .as_deref()
+            .expect("collision tile has loaded WMOs");
+        Some((tile.terrain.height_at_bevy(feet.x, feet.z), wmos))
+    }
+
     fn min_height(&mut self, feet: Vec3) -> Option<f32> {
         if self.global_wmo.is_some() {
             return Some(DEFAULT_MIN_HEIGHT);
@@ -1009,6 +1066,52 @@ fn validate_m2_solid_files(data: &Path, map_id: u32) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// World collision faces of `wmos` near a step from `from` to `to`, as the client's
+/// physics query gathers them: over-broad in x/z (`WALL_RAY_HEIGHT` around the step),
+/// since only the exact faces crossing the step decide.
+fn step_corridor_faces(wmos: &[WmoCollision], from: Vec3, to: Vec3) -> Vec<[Vec3; 3]> {
+    let reach = Vec3::new(WALL_RAY_HEIGHT, f32::INFINITY, WALL_RAY_HEIGHT);
+    let (min, max) = (from.min(to) - reach, from.max(to) + reach);
+    let overlaps = |points: &[Vec3]| {
+        let low = points
+            .iter()
+            .fold(Vec3::INFINITY, |low, point| low.min(*point));
+        let high = points
+            .iter()
+            .fold(Vec3::NEG_INFINITY, |high, point| high.max(*point));
+        low.cmple(max).all() && high.cmpge(min).all()
+    };
+    let mut faces = Vec::new();
+    for wmo in wmos {
+        let world = wmo.world_from_local();
+        for group in wmo.groups() {
+            let (low, high) = group.local_bounds();
+            let corners: Vec<_> = (0..8)
+                .map(|corner: u32| {
+                    let pick = |bit: u32, low: f32, high: f32| {
+                        if corner & bit == 0 { low } else { high }
+                    };
+                    world.transform_point3(Vec3::new(
+                        pick(1, low.x, high.x),
+                        pick(2, low.y, high.y),
+                        pick(4, low.z, high.z),
+                    ))
+                })
+                .collect();
+            if !overlaps(&corners) {
+                continue;
+            }
+            faces.extend(
+                group
+                    .collidable_triangles()
+                    .map(|face| face.map(|point| world.transform_point3(point)))
+                    .filter(|face| overlaps(face)),
+            );
+        }
+    }
+    faces
 }
 
 fn probe_collision_height<'a>(

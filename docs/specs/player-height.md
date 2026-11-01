@@ -15,6 +15,7 @@ References:
   - without a jump, the ground plus `GROUND_SNAP_THRESHOLD` or the server's height, whichever is higher (no rising off the ground);
   - for a jumping input on the ground, the server's height plus the `JUMP_IMPULSE` apex (2.07 yd) plus 0.25;
   - off the ground, the takeoff height plus the highest point of the arc (`JUMP_IMPULSE` for a jump, 0 for walking off) within the movement bank (±0.5 s) of the time since takeoff, plus 0.25.
+- [x] A grounded move onto a steep WMO face is admitted when the client's WMO step rule admits it (game-engine `TerrainGround::wmo_step_is_clear`, shared `step_clearance`): a walkable WMO landing 0.25-2 yd ahead, at most `STEP_UP_HEIGHT` over the feet, behind faces topping out no lower than the face, with the raised body clear across and headroom on the landing. On Windrunner Spire's corridor step at (5118.3, 136.7, 3060.5) the server otherwise stopped at its edge while the client climbed on (2026-11-01).
 - [x] A report out of bounds is corrected to the bound, as x/z are shortened to the bank; the server sends no correction.
 - [x] Gravity leaves a height an input set that tick to the client; fall damage still lands on the server from the tracked peak. Without inputs gravity pulls the player to the ground as before.
 - [x] Without ground data (no `GroundMap`, unloaded tile) the height stays the server's.
@@ -32,5 +33,6 @@ References:
 ## Tests
 
 - `crates/server/src/terrain_height_tests.rs` `swim_spot_liquid_is_the_surface_the_client_floats_under`, `water_surface_height_separate_from_terrain`.
+- `crates/server-combat/src/networking_tests/windrunner_step.rs` `windrunner_player_climbs_the_corridor_wmo_step_with_the_client` (Lightyear receive path, real 2805 ground, the live run's 0.1 s pulses of 60 fps reports).
 - `crates/server/src/networking_tests/client_height.rs` (Lightyear receive path, fixed-tick input and gravity): ascend with the client and float at the surface, held at the float height, swim-speed × bank limit, seabed floor on real Azeroth 32,48 terrain; the Godot jump arc followed and landed, a report 20 yd up held to a jump, a report under the ground, a hover brought down, a reported 10 yd fall with fall damage on flat ground.
 - shared-protocol `movement.rs` `swimming_starts_where_the_water_stands_swim_depth_over_the_feet`.

@@ -428,6 +428,7 @@ fn prevent_steep_ascent(ground: &mut GroundMap, map: InMap, current: Vec3, next:
     if rise > 0.0
         && rise.atan2(distance) > shared::movement::MAX_SLOPE_ANGLE
         && !has_step_landing(ground, map, current, next)
+        && !has_wmo_step(ground, map, current, next, solid)
     {
         current
     } else {
@@ -449,6 +450,25 @@ fn has_step_landing(ground: &mut GroundMap, map: InMap, current: Vec3, next: Vec
     let raised = current.with_y(landing);
     let destination = probe.with_y(landing);
     ground.clamp_live_movement(map, raised, destination) == destination
+}
+
+/// A WMO step the client climbs (`TerrainGround::wmo_step_is_clear`): a landing up to
+/// 2 yd ahead, probed every 0.25 yd past the move.
+fn has_wmo_step(
+    ground: &mut GroundMap,
+    map: InMap,
+    current: Vec3,
+    next: Vec3,
+    obstacle: f32,
+) -> bool {
+    let movement = (next - current).with_y(0.0);
+    let direction = movement.normalize_or_zero();
+    (1..=8)
+        .map(|index| index as f32 * 0.25)
+        .filter(|distance| *distance >= movement.length())
+        .any(|distance| {
+            ground.wmo_step_is_clear(map, current, current + direction * distance, obstacle)
+        })
 }
 
 /// The highest height on land: without a jump the ground or where the player already is
