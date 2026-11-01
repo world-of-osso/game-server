@@ -916,6 +916,8 @@ mod tests {
         let mut data = crate::zones::context_tuning_tests::sourced_nazan_fixture();
         data.spawns[0].map = 2515;
         let production = crate::test_data::world_data();
+        data.summon_levels
+            .extend_fixture_deltas(&production.summon_levels, 186644);
         let boss_spawn = production
             .spawns
             .iter()

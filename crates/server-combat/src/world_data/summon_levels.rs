@@ -82,6 +82,17 @@ impl SummonLevels {
         })
     }
 
+    #[cfg(test)]
+    pub(crate) fn extend_fixture_deltas(&mut self, source: &Self, entry: u32) {
+        self.deltas.extend(
+            source
+                .deltas
+                .iter()
+                .filter(|((id, _), _)| *id == entry)
+                .map(|(key, value)| (*key, *value)),
+        );
+    }
+
     /// Active Keystone health uses the map difficulty's tuning and the creature's source delta.
     pub(crate) fn keystone_range(
         &self,
