@@ -30,6 +30,16 @@ pub fn program(actions: &serde_json::Value) -> Result<server::simc_apl::Program,
     server::simc_apl::Program::parse(&rows)
 }
 
+/// Resolve the Protection program's native action identities without mutating the world.
+pub fn action_spells(
+    profile: &server::followers::parity_profile::Profile,
+) -> Result<Vec<u32>, String> {
+    Ok(crate::literal_rotation::program_action_spells(
+        &program(&profile.options["actions"])?,
+        &context::bindings(),
+    ))
+}
+
 pub struct Rotation {
     pub driver: Driver,
     pub bindings: Bindings,

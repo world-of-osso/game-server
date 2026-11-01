@@ -51,6 +51,10 @@ pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
     let traits = world
         .get::<crate::class_progression::TraitLoadout>(actor)
         .ok_or("native Fire selected traits absent")?;
+    Ok(build_for_traits(traits))
+}
+
+pub fn build_for_traits(traits: &crate::class_progression::TraitLoadout) -> Bindings {
     // SimC76f8118 sc_mage.cpp3888–3891: selected2120, otherwise selected1254851.
     let flamestrike = if traits
         .active_talent_spells()
@@ -76,7 +80,7 @@ pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
         global_cooldown_spell: 133,
     };
     bindings.actions.insert("flamestrike".into(), flamestrike);
-    Ok(bindings)
+    bindings
 }
 
 pub fn execution_actions(bindings: &Bindings) -> impl Iterator<Item = NativeAction<'static>> + '_ {

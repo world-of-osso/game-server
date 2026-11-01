@@ -46,6 +46,21 @@ mod action_metadata_tests {
     }
 }
 
+/// Extract only spells bound to actions present in the parsed APL.
+pub fn program_action_spells(
+    program: &Program,
+    bindings: &crate::simc_apl_native::Bindings,
+) -> Vec<u32> {
+    let mut spells: Vec<_> = program
+        .actions()
+        .filter_map(|(_, action)| bindings.actions.get(&action.name).copied())
+        .filter(|spell| *spell != 0)
+        .collect();
+    spells.sort_unstable();
+    spells.dedup();
+    spells
+}
+
 /// The same encounter with its combat clock restarted when precombat finishes.
 pub fn encounter_starting_at(
     encounter: crate::simc_apl_native::Encounter,
@@ -144,15 +159,7 @@ impl Driver {
 
     /// Native spells bound to actions actually present in this APL program.
     pub fn action_spells(&self, bindings: &crate::simc_apl_native::Bindings) -> Vec<u32> {
-        let mut spells: Vec<_> = self
-            .program
-            .actions()
-            .filter_map(|(_, action)| bindings.actions.get(&action.name).copied())
-            .filter(|spell| *spell != 0)
-            .collect();
-        spells.sort_unstable();
-        spells.dedup();
-        spells
+        program_action_spells(&self.program, bindings)
     }
 
     pub fn precombat_exhausted(&self) -> bool {
