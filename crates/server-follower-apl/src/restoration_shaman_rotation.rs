@@ -40,7 +40,7 @@ pub struct Restoration {
     encounter: Encounter,
 }
 
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS
             .iter()
@@ -53,7 +53,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("default", "earthliving_weapon,if=player.earthliving_up=0"),
         ("default", "water_shield,if=player.water_shield_up=0"),

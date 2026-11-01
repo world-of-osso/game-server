@@ -32,7 +32,7 @@ pub struct Holy {
     equipment: Equipment,
     encounter: Encounter,
 }
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS
             .iter()
@@ -44,7 +44,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("default", "guardian_spirit,if=target.health.pct<30"),
         ("default", "divine_hymn,if=party.injured>=3"),

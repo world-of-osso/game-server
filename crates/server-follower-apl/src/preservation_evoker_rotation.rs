@@ -32,7 +32,7 @@ pub struct Preservation {
     encounter: Encounter,
 }
 
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS
             .iter()
@@ -44,7 +44,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
     Program::parse(&[
         ("default", "emerald_communion,if=mana.pct<65"),

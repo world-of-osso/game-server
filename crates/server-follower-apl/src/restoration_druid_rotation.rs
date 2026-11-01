@@ -34,7 +34,7 @@ pub struct Restoration {
     encounter: Encounter,
 }
 
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS
             .iter()
@@ -47,7 +47,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     // Pinned SimC has no supported Restoration healing APL; these are explicit
     // native triage decisions, not a claim of a SimC healer rotation.
     Program::parse(&[

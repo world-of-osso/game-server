@@ -1,6 +1,5 @@
 //! Pure action metadata from the same programs and bindings used by the rotations.
 use crate::class_progression::TraitLoadout;
-use crate::literal_rotation::program_action_spells;
 use crate::profiles::profile;
 use bevy::prelude::{Entity, World};
 
@@ -61,112 +60,128 @@ pub fn read_inputs(world: &World, actor: Entity, spec: u32) -> Result<ActionInpu
     })
 }
 
-/// Read a class's program-bound native action IDs without initializing its runtime.
-pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, String> {
+/// Parse the program and its bindings without initializing the actor.
+pub fn parse(
+    spec: u32,
+    input: &ActionInputs<'_>,
+) -> Result<(server::simc_apl::Program, crate::simc_apl_native::Bindings), String> {
     use crate::*;
     match spec {
-        62 => Ok(program_action_spells(
-            &arcane_rotation::program(&profile(spec)?)?,
-            &arcane_rotation::bindings(),
+        62 => Ok((
+            arcane_rotation::program(&profile(spec)?)?,
+            arcane_rotation::bindings(),
         )),
-        63 => fire_rotation::action_spells(&profile(spec)?, input.traits),
-        64 => Ok(program_action_spells(
-            &frost_mage_rotation::program(&profile(spec)?)?,
-            &frost_mage_rotation::bindings::build(),
+        63 => Ok((
+            fire_rotation::source::load(&profile(spec)?)?,
+            fire_rotation::bindings::build_for_traits(input.traits),
         )),
-        65 => holy_paladin_rotation::action_spells(),
-        66 => protection_paladin_rotation::action_spells(&profile(spec)?),
-        70 => Ok(program_action_spells(
-            &ret_rotation::read_program()?,
-            &ret_rotation::bindings(),
+        64 => Ok((
+            frost_mage_rotation::program(&profile(spec)?)?,
+            frost_mage_rotation::bindings::build(),
         )),
-        71 => Ok(program_action_spells(
-            &arms_rotation::program(&profile(spec)?)?,
-            &arms_rotation::bindings(),
+        65 => Ok((
+            holy_paladin_rotation::program()?,
+            holy_paladin_rotation::bindings(),
         )),
-        72 => Ok(program_action_spells(
-            &fury_rotation::program()?,
-            &fury_rotation::bindings(),
+        66 => Ok((
+            protection_paladin_rotation::program(&profile(spec)?.options["actions"])?,
+            protection_paladin_rotation::context::bindings(),
         )),
-        73 => Ok(program_action_spells(
-            &protection_warrior_rotation::program(&profile(spec)?)?,
-            &protection_warrior_rotation::bindings(),
+        70 => Ok((ret_rotation::read_program()?, ret_rotation::bindings())),
+        71 => Ok((
+            arms_rotation::program(&profile(spec)?)?,
+            arms_rotation::bindings(),
         )),
-        102 => Ok(program_action_spells(
-            &balance_rotation::read_program(&profile(spec)?)?,
-            &balance_rotation::bindings::build_for_actions(
+        72 => Ok((fury_rotation::program()?, fury_rotation::bindings())),
+        73 => Ok((
+            protection_warrior_rotation::program(&profile(spec)?)?,
+            protection_warrior_rotation::bindings(),
+        )),
+        102 => Ok((
+            balance_rotation::read_program(&profile(spec)?)?,
+            balance_rotation::bindings::build_for_actions(
                 input.balance_alignment,
                 input.lunar_calling,
             ),
         )),
-        103 => Ok(program_action_spells(
-            &feral_rotation::source::load()?,
-            &feral_rotation::bindings::build_for_berserk(
+        103 => Ok((
+            feral_rotation::source::load()?,
+            feral_rotation::bindings::build_for_berserk(
                 input
                     .feral_berserk
                     .ok_or("Feral selected action unavailable")?,
             ),
         )),
-        104 => Ok(program_action_spells(
-            &guardian_tank_rotation::program()?,
-            &guardian_tank_rotation::bindings(),
+        104 => Ok((
+            guardian_tank_rotation::program()?,
+            guardian_tank_rotation::bindings(),
         )),
-        105 => restoration_druid_rotation::action_spells(),
-        250 => Ok(program_action_spells(
-            &blood_tank_rotation::program()?,
-            &blood_tank_rotation::bindings(),
+        105 => Ok((
+            restoration_druid_rotation::program()?,
+            restoration_druid_rotation::bindings(),
         )),
-        251 => Ok(program_action_spells(
-            &frost_rotation::read_program(&profile(spec)?)?,
-            &frost_rotation::bindings::build(),
+        250 => Ok((
+            blood_tank_rotation::program()?,
+            blood_tank_rotation::bindings(),
         )),
-        252 => Ok(program_action_spells(
-            &unholy_rotation::load_program(&profile(spec)?)?,
-            &unholy_rotation::bindings(),
+        251 => Ok((
+            frost_rotation::read_program(&profile(spec)?)?,
+            frost_rotation::bindings::build(),
         )),
-        253 => Ok(program_action_spells(
-            &beast_mastery_rotation::program()?,
-            &beast_mastery_rotation::bindings::build(),
+        252 => Ok((
+            unholy_rotation::load_program(&profile(spec)?)?,
+            unholy_rotation::bindings(),
         )),
-        254 => Ok(program_action_spells(
-            &marksmanship_rotation::program()?,
-            &marksmanship_rotation::bindings::build(),
+        253 => Ok((
+            beast_mastery_rotation::program()?,
+            beast_mastery_rotation::bindings::build(),
         )),
-        255 => Ok(program_action_spells(
-            &survival_rotation::program()?,
-            &survival_rotation::bindings::build(),
+        254 => Ok((
+            marksmanship_rotation::program()?,
+            marksmanship_rotation::bindings::build(),
         )),
-        256 => discipline_priest_rotation::action_spells(),
-        257 => holy_priest_rotation::action_spells(),
-        258 => Ok(program_action_spells(
-            &shadow_rotation::program()?,
-            &shadow_rotation::bindings::build(),
+        255 => Ok((
+            survival_rotation::program()?,
+            survival_rotation::bindings::build(),
         )),
-        259 => assassination_rotation::action_spells(
-            &assassination_rotation::action_source(&profile(spec)?)?,
-            &input.coatings,
-        ),
-        260 => Ok(program_action_spells(
-            &outlaw_rotation::load_program(&profile(spec)?)?,
-            &outlaw_rotation::bindings(),
+        256 => Ok((
+            discipline_priest_rotation::program()?,
+            discipline_priest_rotation::bindings(),
         )),
-        261 => Ok(
-            crate::literal_rotation::program_action_spells_with_composite(
-                &subtlety_rotation::load_program(&profile(spec)?)?,
-                &subtlety_rotation::bindings(),
-                "apply_poison",
-                input.coatings.iter().copied(),
-            ),
-        ),
-        262 => Ok(program_action_spells(
-            &elemental_rotation::read_program(&profile(spec)?)?,
-            &elemental_rotation::bindings::build(),
+        257 => Ok((
+            holy_priest_rotation::program()?,
+            holy_priest_rotation::bindings(),
         )),
-        263 => Ok(program_action_spells(
-            &enhancement_rotation::read_program()?,
-            &enhancement_rotation::bindings::build(),
+        258 => Ok((
+            shadow_rotation::program()?,
+            shadow_rotation::bindings::build(),
         )),
-        264 => restoration_shaman_rotation::action_spells(),
+        259 => Ok((
+            assassination_rotation::program(&assassination_rotation::action_source(&profile(
+                spec,
+            )?)?)?,
+            assassination_rotation::bindings(),
+        )),
+        260 => Ok((
+            outlaw_rotation::load_program(&profile(spec)?)?,
+            outlaw_rotation::bindings(),
+        )),
+        261 => Ok((
+            subtlety_rotation::load_program(&profile(spec)?)?,
+            subtlety_rotation::bindings(),
+        )),
+        262 => Ok((
+            elemental_rotation::read_program(&profile(spec)?)?,
+            elemental_rotation::bindings::build(),
+        )),
+        263 => Ok((
+            enhancement_rotation::read_program()?,
+            enhancement_rotation::bindings::build(),
+        )),
+        264 => Ok((
+            restoration_shaman_rotation::program()?,
+            restoration_shaman_rotation::bindings(),
+        )),
         265..=267 => {
             let mut bindings = match spec {
                 265 => affliction_rotation::bindings::build(),
@@ -193,34 +208,53 @@ pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, St
                 267 => destruction_rotation::read_program(&profile)?,
                 _ => unreachable!(),
             };
-            Ok(program_action_spells(&program, &bindings))
+            Ok((program, bindings))
         }
-        268 => Ok(program_action_spells(
-            &brewmaster_rotation::program(&profile(spec)?)?,
-            &brewmaster_rotation::bindings(),
+        268 => Ok((
+            brewmaster_rotation::program(&profile(spec)?)?,
+            brewmaster_rotation::bindings(),
         )),
-        269 => Ok(program_action_spells(
-            &windwalker_rotation::source::load()?,
-            &windwalker_rotation::bindings::build(),
+        269 => Ok((
+            windwalker_rotation::source::load()?,
+            windwalker_rotation::bindings::build(),
         )),
-        270 => mistweaver_rotation::action_spells(),
-        577 => Ok(program_action_spells(
-            &havoc_rotation::load_program()?,
-            &havoc_rotation::bindings::build(),
+        270 => Ok((
+            mistweaver_rotation::program()?,
+            mistweaver_rotation::bindings(),
         )),
-        581 => Ok(program_action_spells(
-            &vengeance_tank_rotation::program()?,
-            &vengeance_tank_rotation::bindings(),
+        577 => Ok((
+            havoc_rotation::load_program()?,
+            havoc_rotation::bindings::build(),
         )),
-        1467 => Ok(program_action_spells(
-            &devastation_rotation::source::load()?,
-            &devastation_rotation::bindings::build(),
+        581 => Ok((
+            vengeance_tank_rotation::program()?,
+            vengeance_tank_rotation::bindings(),
         )),
-        1468 => preservation_evoker_rotation::action_spells(),
-        1480 => Ok(program_action_spells(
-            &devourer_rotation::load_program()?,
-            &devourer_rotation::bindings::build(),
+        1467 => Ok((
+            devastation_rotation::source::load()?,
+            devastation_rotation::bindings::build(),
+        )),
+        1468 => Ok((
+            preservation_evoker_rotation::program()?,
+            preservation_evoker_rotation::bindings(),
+        )),
+        1480 => Ok((
+            devourer_rotation::load_program()?,
+            devourer_rotation::bindings::build(),
         )),
         _ => Err(format!("spec{spec} has no pure follower action metadata")),
     }
+}
+
+/// Read a class's program-bound native action IDs without initializing its runtime.
+pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, String> {
+    let (program, bindings) = parse(spec, input)?;
+    Ok(
+        crate::literal_rotation::program_action_spells_with_composite(
+            &program,
+            &bindings,
+            "apply_poison",
+            input.coatings.iter().copied(),
+        ),
+    )
 }

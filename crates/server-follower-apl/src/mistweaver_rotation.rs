@@ -37,7 +37,7 @@ pub struct Mistweaver {
     last_tank_heal: f32,
 }
 
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS
             .iter()
@@ -49,7 +49,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     // SimC76f8118 apl_monk.cpp supplies only Brewmaster and Windwalker defaults.
     Program::parse(&[
         ("default", "life_cocoon,if=target.health.pct<35"),

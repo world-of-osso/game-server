@@ -52,7 +52,7 @@ pub struct Rotation {
     pub coatings: Vec<NativeAction<'static>>,
 }
 
-fn program(source: &str) -> Result<Program, String> {
+pub(crate) fn program(source: &str) -> Result<Program, String> {
     // SimC76f8118 apl_rogue.cpp73–129: preserve every source row, order and predicate.
     let rows = source
         .lines()
@@ -72,7 +72,7 @@ fn program(source: &str) -> Result<Program, String> {
     Program::parse(&rows)
 }
 
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     let mut bindings = Bindings {
         actions: ACTIONS
             .iter()

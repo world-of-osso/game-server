@@ -34,7 +34,7 @@ pub struct Discipline {
     /// them, not the heal or shield target.
     enemies: Vec<Entity>,
 }
-fn bindings() -> Bindings {
+pub(crate) fn bindings() -> Bindings {
     Bindings {
         actions: SPELLS.iter().map(|(n, id, _)| ((*n).into(), *id)).collect(),
         resources: [("mana".into(), PowerType::Mana)].into(),
@@ -52,7 +52,7 @@ fn bindings() -> Bindings {
     }
 }
 
-fn program() -> Result<Program, String> {
+pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         (
             "item",
