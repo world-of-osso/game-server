@@ -28,7 +28,7 @@ fn navigation_deferred_hazard_probe_waits_for_publication_before_pursuit() {
         .entity_mut(unit)
         .remove::<crate::creature_ai::FollowOwner>()
         .insert(crate::creature_ai::CreatureState::Idle);
-    super::ai::pursue(h.app.world_mut(), unit, target, 0, true);
+    super::ai::pursue_at_reach(h.app.world_mut(), unit, target, super::ai::MELEE_REACH);
     assert!(
         matches!(
             h.app.world().get::<crate::creature_ai::CreatureState>(unit),
@@ -37,7 +37,7 @@ fn navigation_deferred_hazard_probe_waits_for_publication_before_pursuit() {
         "an unpublished hazard probe must not become a clear approach"
     );
     crate::navigation::drain_fixture(&mut h.app);
-    super::ai::pursue(h.app.world_mut(), unit, target, 0, true);
+    super::ai::pursue_at_reach(h.app.world_mut(), unit, target, super::ai::MELEE_REACH);
     assert!(
         matches!(
             h.app.world().get::<crate::creature_ai::CreatureState>(unit),

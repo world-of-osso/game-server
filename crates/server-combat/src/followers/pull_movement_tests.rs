@@ -164,12 +164,11 @@ fn production_tank_pending_admission_holds_native_chase_without_losing_victim() 
         None,
         "first real run route request must await worker publication"
     );
-    assert!(super::ai::pursue(
+    assert!(super::ai::pursue_at_reach(
         h.app.world_mut(),
         tank,
         target,
-        31935,
-        true
+        super::ai::MELEE_REACH
     ));
     assert_eq!(
         h.app.world().get::<crate::creature_ai::CreatureState>(tank),
@@ -386,12 +385,11 @@ fn production_tank_incomplete_run_admission_keeps_pursuit_held() {
         .unwrap()
         .copy
         .instance_id += 1;
-    assert!(super::ai::pursue(
+    assert!(super::ai::pursue_at_reach(
         h.app.world_mut(),
         tank,
         target,
-        31935,
-        true
+        super::ai::MELEE_REACH
     ));
     assert_eq!(
         h.app.world().get::<crate::creature_ai::CreatureState>(tank),

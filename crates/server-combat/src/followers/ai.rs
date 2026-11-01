@@ -394,26 +394,7 @@ fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) 
             .is_some_and(|victim| victim != tank)
 }
 
-pub(super) fn pursue(
-    world: &mut World,
-    unit: Entity,
-    target: Entity,
-    spell_id: u32,
-    melee: bool,
-) -> bool {
-    let reach = if melee {
-        Some(MELEE_REACH)
-    } else {
-        spell_reach(world, spell_id)
-    };
-    let Some(reach) = reach else {
-        warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
-        return false;
-    };
-    pursue_at_reach(world, unit, target, reach)
-}
-
-fn pursue_at_reach(world: &mut World, unit: Entity, target: Entity, reach: f32) -> bool {
+pub(super) fn pursue_at_reach(world: &mut World, unit: Entity, target: Entity, reach: f32) -> bool {
     if super::candlelight::hold_pursuit(world, unit, target) {
         return true;
     }
@@ -447,17 +428,6 @@ fn pursue_at_reach(world: &mut World, unit: Entity, target: Entity, reach: f32) 
         CombatTarget(Some(target)),
     ));
     true
-}
-
-fn spell_reach(world: &World, spell_id: u32) -> Option<f32> {
-    world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(spell_id)
-        .and_then(|spell| spell.misc.as_ref())
-        .and_then(|misc| misc.range)
-        .map(|range| range.max_hostile.max(range.max_friendly))
-        .filter(|range| *range > 0.0)
-        .map(|range| (range - 1.0).max(2.0))
 }
 
 fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
