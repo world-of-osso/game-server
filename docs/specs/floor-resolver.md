@@ -14,6 +14,8 @@ The floor resolver supplies WoW-coordinate heights for log positions without ass
 
 Usage: `floor-resolver INPUT.json OUTPUT.json GEOMETRY_DIR NAVMESH_DIR WORLD_DB [PRIOR_INPUT.json PRIOR_OUTPUT.json]...`. Prior pairs supply resolved hints from other batches. The world database is read-only; `GEOMETRY_DIR` contains `terrain/`, `models/`, and `los/`, and `NAVMESH_DIR` contains map directories.
 
+`scripts/correct_synthetic_spawn_floors.py` reviews Wowhead-derived creature placements against TDB spawns and supplied route points, not other derived creatures. It proposes a floor change only when independent anchors select a connected floor more than one agent climb from the stored height. It reports unsupported or ambiguous rows without changing them. Dry-run writes a report; apply uses that report and rejects the transaction if any changed row no longer matches its recorded identity and position.
+
 ## How it works
 
 See [ground assets](../wiki/systems/ground-assets.md).
