@@ -64,6 +64,7 @@ pub(crate) fn avoidance_radius_at(
 #[derive(Component, Debug, Clone)]
 pub struct SpellAreaTrigger {
     pub caster: Entity,
+    pub primary_target: Option<Entity>,
     pub spell_id: u32,
     pub trigger_spell: u32,
     pub radius: f32,
@@ -149,6 +150,7 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
         .spawn((
             SpellAreaTrigger {
                 caster: ctx.caster,
+                primary_target: ctx.spell.cast_primary_target,
                 spell_id: ctx.spell.id,
                 trigger_spell,
                 radius,

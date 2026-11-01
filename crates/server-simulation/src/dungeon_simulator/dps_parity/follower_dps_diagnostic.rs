@@ -2018,6 +2018,131 @@ fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
                 && event.spell_id != Some(202770)),
         "the rotation must continue after Fury of Elune"
     );
+    assert!(
+        events[fury + 1..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(211545)
+                && event.amount > 0),
+        "the real Fury field must damage its target with native child 211545"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    let second = spawn_level_dummy(&mut app, actor, 70, 1).unwrap();
+    let position = *app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    app.world_mut()
+        .entity_mut(second)
+        .insert(shared::components::Position {
+            x: position.x + 1.0,
+            ..position
+        });
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, second);
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 202770, Some(target), false).unwrap();
+    let hits = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(211545)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    for _ in 0..4 {
+        app.update();
+    }
+    assert!(
+        hits(&app).is_empty(),
+        "no immediate pulse before the hasted 500ms period"
+    );
+    for _ in 0..36 {
+        app.update();
+    }
+    let first = hits(&app);
+    assert!(
+        first
+            .iter()
+            .any(|event| event.target == Some(target.to_bits()))
+    );
+    assert!(
+        first
+            .iter()
+            .any(|event| event.target == Some(second.to_bits()))
+    );
+    let primary = first
+        .iter()
+        .find(|event| event.target == Some(target.to_bits()) && !event.crit)
+        .unwrap();
+    let secondary = first
+        .iter()
+        .find(|event| event.target == Some(second.to_bits()) && !event.crit)
+        .unwrap();
+    let hit_targets: std::collections::HashSet<_> =
+        first.iter().filter_map(|event| event.target).collect();
+    let reduction = (1.0 / hit_targets.len() as f32).sqrt();
+    assert!(
+        (secondary.amount as f32 / primary.amount as f32 - reduction).abs() < 0.03,
+        "secondary hits receive the source one-target soft cap: primary={primary:?}, secondary={secondary:?}, targets={hit_targets:?}"
+    );
+    app.world_mut()
+        .entity_mut(second)
+        .insert(shared::components::Position {
+            x: position.x + 100.0,
+            ..position
+        });
+    let before = first
+        .iter()
+        .filter(|event| event.target == Some(second.to_bits()))
+        .count();
+    for _ in 0..150 {
+        app.update();
+    }
+    let after = hits(&app);
+    assert_eq!(
+        after
+            .iter()
+            .filter(|event| event.target == Some(second.to_bits()))
+            .count(),
+        before,
+        "units outside the fixed field take no further pulses"
+    );
+    let total = after.len();
+    for _ in 0..30 {
+        app.update();
+    }
+    assert_eq!(
+        hits(&app).len(),
+        total,
+        "the field stops pulsing after its native duration"
+    );
 }
 
 #[test]
