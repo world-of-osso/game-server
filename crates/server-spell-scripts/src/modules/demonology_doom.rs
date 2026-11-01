@@ -3,7 +3,12 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::scripts::AuraScripts;
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
-use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_cast::{
+    self,
+    effects::EffectCtx,
+    script_registry::{DeclaredReach, ScriptReach, SpellScriptHook},
+    targets,
+};
 use combat::spell_info::SpellInfo;
 
 const CORE: u32 = 264173;
@@ -14,11 +19,53 @@ const DAMAGE: u32 = 460555;
 const HAND_OF_GULDAN: u32 = 105174;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::LateAuraRegistration(register),
     SpellScriptHook::BeforeDamageSnapshot(snapshot_core),
     SpellScriptHook::ResolvedDamage(apply_doom),
     SpellScriptHook::AfterForegroundSpecial(shorten_doom),
 ];
+
+fn declared_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptReach {
+    if !combat::spell_cast::script_registry::reach_source_selected(world, caster, TALENT) {
+        return ScriptReach::None;
+    }
+    if spell.id == DEMONBOLT {
+        return ScriptReach::Child(DAMAGE);
+    }
+    if spell.id != HAND_OF_GULDAN {
+        return ScriptReach::None;
+    }
+    let Some(origin) = targets::position(world, caster) else {
+        return ScriptReach::None;
+    };
+    let radius = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(DAMAGE)
+        .and_then(|damage| damage.effects.iter().find(|effect| effect.index == 0))
+        .map(|effect| targets::radius(effect, 1))
+        .expect("native Doom damage radius");
+    let map = world.get::<combat::maps::InMap>(caster);
+    let maximum = world
+        .iter_entities()
+        .filter(|unit| unit.get::<combat::maps::InMap>() == map)
+        .filter(|unit| {
+            unit.get::<ActiveAuras>().is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.caster == caster && aura.spell_id == DOOM)
+            })
+        })
+        .filter_map(|unit| targets::position(world, unit.id()))
+        .map(|position| origin.distance(position) + radius)
+        .reduce(f32::max);
+    maximum.map_or(ScriptReach::None, |caster_radius| {
+        ScriptReach::Area(DeclaredReach {
+            caster_radius,
+            target_radius: 0.0,
+        })
+    })
+}
 
 fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(DOOM).or_default().on_natural_end = Some(explode);
