@@ -221,6 +221,36 @@ fn register_shield_discipline(scripts: &mut auras::scripts::AuraScripts) {
     for spell in [17, 1253593] {
         scripts.0.entry(spell).or_default().on_remove = Some(shield_discipline);
     }
+    let ultimate = scripts.0.entry(421434).or_default();
+    ultimate.on_apply = Some(ultimate_penance_start);
+    ultimate.on_periodic = Some(ultimate_penance_tick);
+}
+
+fn ultimate_penance_start(world: &mut World, caster: Entity, _aura: &AuraInstance) {
+    cast_ultimate_penance_bolt(world, caster);
+}
+
+fn ultimate_penance_tick(world: &mut World, caster: Entity, _aura: &AuraInstance, index: u8) {
+    if index == 1 {
+        cast_ultimate_penance_bolt(world, caster);
+    }
+}
+
+fn cast_ultimate_penance_bolt(world: &mut World, caster: Entity) {
+    let Some(target) = world
+        .get::<shared::casting::CastState>(caster)
+        .filter(|cast| cast.spell_id == 421434)
+        .and_then(|cast| Entity::try_from_bits(cast.target))
+    else {
+        return;
+    };
+    if !combat::spell_cast::try_cast_triggered(world, caster, 421543, Some(target), 1) {
+        warn!(
+            ?caster,
+            ?target,
+            "Ultimate Penitence bolt could not be cast"
+        );
+    }
 }
 
 fn shield_discipline(
@@ -659,9 +689,11 @@ fn transfer_damage(
         pet_spell,
         false,
     );
-    if damage.spell.id == 47666 && is_discipline(world, caster) {
+    if is_discipline(world, caster) && matches!(damage.spell.id, 47666 | 421543) {
         extend_pain_from_penance(world, caster, target);
-        finish_penance_bolt(world, caster);
+        if damage.spell.id == 47666 {
+            finish_penance_bolt(world, caster);
+        }
     }
 }
 
