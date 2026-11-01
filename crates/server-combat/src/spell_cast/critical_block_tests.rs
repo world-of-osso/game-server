@@ -835,6 +835,7 @@ fn class_completeness_native_weapon_spell_miss_and_block_share_one_hit_table() {
 #[test]
 fn class_completeness_native_ranged_deflection_and_block_share_one_hit_table() {
     let mut h = creature_block_duel(6, 3);
+    equip_for_spells(&mut h, &[19434]);
     let target = h.npc;
     crate::auras::remove_auras(
         h.app.world_mut(),
@@ -1090,6 +1091,7 @@ fn class_completeness_native_evasion_honors_no_active_defense_and_no_attack_dodg
 #[test]
 fn class_completeness_native_evasion_does_not_dodge_ranged_aimed_shot() {
     let (mut h, defender) = evasion_duel(3);
+    equip_for_spells(&mut h, &[19434]);
     h.app
         .world_mut()
         .get_mut::<shared::components::Position>(defender)
