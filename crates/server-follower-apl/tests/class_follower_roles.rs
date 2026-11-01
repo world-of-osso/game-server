@@ -280,10 +280,11 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
         shared::item_data::ItemDefinitionSource::Retail,
         204736,
     ));
-    let provider = world
-        .resource::<server_combat::followers::FollowerActionProvider>()
-        .0;
-    let action_spells = provider(world, pull.follower, 63).unwrap();
+    let provider = *world.resource::<server_combat::followers::FollowerActionProvider>();
+    let mut action_spells = (provider.source_actions)(world, pull.follower, 63).unwrap();
+    action_spells.extend((provider.equipped_actions)(world, pull.follower, 63).unwrap());
+    action_spells.sort_unstable();
+    action_spells.dedup();
     world
         .entity_mut(pull.follower)
         .insert(server_combat::followers::FollowerActionSpells(

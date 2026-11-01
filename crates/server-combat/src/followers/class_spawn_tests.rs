@@ -113,8 +113,23 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         .world_mut()
         .entity_mut(h.caster)
         .insert((copy, Level(90)));
-    h.app
-        .insert_resource(super::super::FollowerActionProvider(|_, _, spec| {
+    h.app.insert_resource(super::super::FollowerActionProvider {
+        source_actions: |world, actor, spec| {
+            assert!(
+                world
+                    .get::<EquippedItems>(actor)
+                    .is_none_or(|items| items.items.is_empty())
+            );
+            assert!(
+                world
+                    .get::<crate::class_progression::TraitLoadout>(actor)
+                    .is_some()
+            );
+            assert!(
+                world
+                    .get::<crate::class_progression::KnownSpells>(actor)
+                    .is_some()
+            );
             let spell = match spec {
                 581 => 203720,
                 73 => 23922,
@@ -127,7 +142,16 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
                 _ => return Err(format!("no fixture action for spec{spec}")),
             };
             Ok(vec![spell])
-        }));
+        },
+        equipped_actions: |world, actor, _| {
+            assert!(
+                world
+                    .get::<EquippedItems>(actor)
+                    .is_some_and(|items| !items.items.is_empty())
+            );
+            Ok(Vec::new())
+        },
+    });
     let profiles = super::super::class_profiles::read_profiles().unwrap();
     for (slot, spec) in [581, 73, 66, 250, 268, 104, 257, 62]
         .into_iter()

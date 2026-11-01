@@ -28,10 +28,17 @@ struct ActionCache(BTreeMap<CacheKey, Arc<CachedActions>>);
 /// Register the pure metadata provider before spawning class followers.
 pub fn install_provider(app: &mut App) {
     app.init_resource::<ActionCache>()
-        .insert_resource(server::followers::FollowerActionProvider(provide_actions));
+        .insert_resource(server::followers::FollowerActionProvider {
+            source_actions: provide_source_actions,
+            equipped_actions: provide_equipped_actions,
+        });
 }
 
-fn provide_actions(world: &mut World, actor: Entity, spec: u32) -> Result<Vec<u32>, String> {
+fn cached_actions(
+    world: &mut World,
+    actor: Entity,
+    spec: u32,
+) -> Result<Arc<CachedActions>, String> {
     let input = read_inputs(world, actor, spec)?;
     let key = CacheKey {
         spec,
@@ -73,17 +80,21 @@ fn provide_actions(world: &mut World, actor: Entity, spec: u32) -> Result<Vec<u3
             cached
         }
     };
+    Ok(cached)
+}
+
+fn provide_source_actions(world: &mut World, actor: Entity, spec: u32) -> Result<Vec<u32>, String> {
+    Ok(cached_actions(world, actor, spec)?.spells.clone())
+}
+
+fn provide_equipped_actions(
+    world: &mut World,
+    actor: Entity,
+    spec: u32,
+) -> Result<Vec<u32>, String> {
+    let cached = cached_actions(world, actor, spec)?;
     let mut bindings = crate::simc_apl_native::Bindings::default();
-    let mut spells = cached.spells.clone();
-    spells.extend(equipped_action_spells(
-        world,
-        actor,
-        &cached.program,
-        &mut bindings,
-    )?);
-    spells.sort_unstable();
-    spells.dedup();
-    Ok(spells)
+    equipped_action_spells(world, actor, &cached.program, &mut bindings)
 }
 
 /// Actor-specific inputs selected before pure program parsing.
