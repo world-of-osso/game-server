@@ -940,14 +940,28 @@ fn released_leader_rejoins_party_through_azure_book() {
     for _ in 0..10 {
         run.app.update();
     }
+    let target = *run.app.world().get::<Position>(tank).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(MoveIntent(Vec3::new(target.x, target.y, target.z)));
     run.control().unwrap();
     assert!(crate::spell_cast::targets::is_alive(run.app.world(), owner));
+    assert!(
+        run.app.world().get::<MoveIntent>(owner).is_none(),
+        "release must discard the pre-death movement target"
+    );
     let positions_before_return: Vec<_> = run
         .party
         .members
         .iter()
         .map(|member| (*member, *run.app.world().get::<Position>(*member).unwrap()))
         .collect();
+    // The normal run loop advances once immediately after release, before the next control call.
+    run.app.update();
+    for (member, position) in &positions_before_return {
+        assert_eq!(run.app.world().get::<Position>(*member).unwrap(), position);
+    }
     let mut reunited = false;
     for _ in 0..7000 {
         assert!(
@@ -3352,6 +3366,10 @@ impl Run {
                     self.party.owner,
                 )?;
                 super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
                 self.returning_to_party = true;
             }
             return Ok(());
