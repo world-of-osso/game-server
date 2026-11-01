@@ -591,6 +591,11 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
         .world_mut()
         .resource_mut::<Navigation>()
         .cancel_route(tank);
+    h.app
+        .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(10),
+        ));
+    h.app.insert_resource(Time::<Fixed>::from_seconds(0.01));
     let mut minimum_y = approach_start.y;
     let mut prior_leader = Position {
         x: -81.8,
@@ -601,14 +606,14 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
     let mut nav_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
     let mut descents = 0;
     for (leader, frames) in [
-        (prior_leader, 30),
+        (prior_leader, 150),
         (
             Position {
                 x: -82.5,
                 y: 137.1,
                 z: -349.9,
             },
-            180,
+            900,
         ),
         (
             Position {
@@ -616,7 +621,7 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 137.0,
                 z: -350.9,
             },
-            160,
+            800,
         ),
         (
             Position {
@@ -624,7 +629,7 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 136.9,
                 z: -351.8,
             },
-            160,
+            800,
         ),
         (
             Position {
@@ -632,11 +637,11 @@ fn ara_kara_recorded_tank_regroups_from_below_route_without_teleporting() {
                 y: 136.8,
                 z: -355.0,
             },
-            160,
+            800,
         ),
     ] {
         for frame in 1..=frames {
-            let fraction = (frame as f32 / 5.0).min(1.0);
+            let fraction = (frame as f32 / 25.0).min(1.0);
             let interpolated = point(prior_leader).lerp(point(leader), fraction);
             h.app.world_mut().entity_mut(h.caster).insert(Position {
                 x: interpolated.x,
