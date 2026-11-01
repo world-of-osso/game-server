@@ -58,6 +58,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - The equipped Heart's native proc applies item-level-scaled Crystal Sickness. Each tick raises its stack up to ten; on a non-boss at or below the native threshold, it executes that target and jumps to another enemy, subject to the native jump-counter cap (SimC76f8118 `unique_gear_dragonflight.cpp:7575–7685`).
 
+### Tome of Unstable Power
+
+- Each proc of the equipped Tome's native driver432777 fires one Unstable Barrage434021 at the proc recipient after the native channel434070 duration. Barrage deals the driver's item-scaled effect1 budget times 0.9, 1.0 or 1.1 (uniform), only its damage effect executes, and area damage uses SimC's reduced AoE target count of8 (SimC76f8118 `unique_gear_dragonflight.cpp:7404–7467`).
+
 ### Fire Spontaneous Combustion
 
 - Casting Combustion restores the number of Fire Blast charges in selected Spontaneous Combustion's native effect1 (SimC76f8118 `sc_mage.cpp:3527–3536`).
@@ -147,8 +151,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Eradicate1225826 requires and consumes its ready buff, consumes actual lesser fragments, and delivers delayed1225827 outside Meta or1279200 in Meta. Reap and Cull are not selected while that buff is active (SimC76f8118 `sc_demon_hunter.cpp`6110–6296).
 - Selected Annihilator Voidfall builds from Consume/Devour, completed Void Ray with Meteoric Rise, and Meta with Mass Acceleration. Reap-family spenders launch meteors, spending one stack per launch; Meteoric Fall can launch the full stack, with selected World Killer replacing the last meteor and spawning its native fragment count (SimC76f8118 `sc_demon_hunter.cpp`2977–3085,3141–3168,6392–6415,6570–6635,9336–9379).
 - L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled: native 30,832 DPS, SimC 31,152; mean paired percentage difference −0.81% ±5.23 pp (95% t interval). The point estimate is within ±5%; its interval is not.
-- L70 follower, map2515, same seeds and settings, CONDITION-ONLY reference: no hero talents are selected, matching native below hero level, and the pinned literal APL substitutes `hero_tree.annihilator=1` and `hero_tree.voidscarred=0` because native reads the logged Annihilator tree for those predicates. Native 6,224 DPS, SimC 6,262; −0.20% ±5.71 pp. The point estimate is within ±5%; its interval is not.
-- [ ] Selected Scythe's Embrace1246558 (L70 only) makes Reap, Cull and Eradicate execute native energize1261679 (10 Fury); native does not (SimC76f8118 `sc_demon_hunter.cpp`6003–6007,6145–6149). SimC gains 278 Fury per fight from it at L70.
+- L70 follower, map2515, same seeds and settings, CONDITION-ONLY reference: no hero talents are selected, matching native below hero level, and the pinned literal APL substitutes `hero_tree.annihilator=1` and `hero_tree.voidscarred=0` because native reads the logged Annihilator tree for those predicates. After Scythe's Embrace and Tome of Unstable Power: native 6,380 DPS, SimC 6,262; +2.26% ±6.22 pp. The point estimate is within ±5%; its interval is not.
+- Selected Scythe's Embrace1246558 (L70 only) makes Reap, Cull and Eradicate execute native energize1261679 (10 Fury) (SimC76f8118 `sc_demon_hunter.cpp`6003–6007,6145–6149).
+- Reference gap: the pinned SimC Devourer APL has no `auto_attack` (`apl_demon_hunter.cpp`75–196), so SimC Devourer never swings. Native follower Devourers do (about 22 DPS at L70), as retail Devourers do (WCL 2qmYJj8M9CT7cnP4 fight44: the Devourer lands 206 Melee events). Native keeps the retail behavior.
 ### Devourer Singular Strikes
 
 - Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
