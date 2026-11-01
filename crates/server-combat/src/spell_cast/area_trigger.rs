@@ -33,6 +33,11 @@ pub fn install_native_catalog(
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
+/// The unit an aura-owned field follows; other fields stay where they were placed.
+pub(crate) fn attached_unit(world: &World, entity: Entity) -> Option<Entity> {
+    aura_owned::attached_unit(world, entity)
+}
+
 /// Maximum authored radius, including any later growth of an active field.
 pub(crate) fn maximum_field_radius(world: &World, entity: Entity) -> Option<f32> {
     if world.get::<frozen_ground::FrozenGround>(entity).is_some() {

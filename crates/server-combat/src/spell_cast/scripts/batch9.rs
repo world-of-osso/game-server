@@ -502,27 +502,6 @@ pub(crate) fn hostile_ground_pulse_radius(
     (field.relation == targets::Relation::Enemy).then_some(field.radius)
 }
 
-/// Actual centers of active hostile fields owned by this unit.
-pub(crate) fn owned_hostile_ground_fields(world: &mut World, caster: Entity) -> Vec<(Vec3, f32)> {
-    let now = crate::auras::aura_now(world);
-    let map = world.get::<crate::maps::InMap>(caster).copied();
-    world
-        .query::<(
-            &GroundPulses,
-            &shared::components::Position,
-            &crate::maps::InMap,
-        )>()
-        .iter(world)
-        .filter(|(field, _, field_map)| {
-            field.caster == caster
-                && field.relation == targets::Relation::Enemy
-                && field.expires_at > now
-                && Some(**field_map) == map
-        })
-        .map(|(field, center, _)| (Vec3::new(center.x, center.y, center.z), field.radius))
-        .collect()
-}
-
 /// Active harmful bound fields affecting this unit, not friendly healing fields.
 pub(crate) fn hostile_ground_fields(world: &mut World, unit: Entity) -> Vec<(Entity, Vec3, f32)> {
     let now = crate::auras::aura_now(world);
