@@ -654,7 +654,15 @@ fn form_override_guardian_swipe_and_form_switch() {
     for _ in 0..5 {
         app.update();
     }
-    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+    let trace = std::env::var_os("FOLLOWER_DPS_TANK_TRACE").expect("Guardian pressure trace");
+    let mut scenario = super::follower_tank_scenario::TankScenario::read(
+        std::path::Path::new(&trace),
+        app.world_mut(),
+        target,
+        actor,
+        70,
+    )
+    .unwrap();
     let owner = app
         .world()
         .get::<crate::followers::Follower>(actor)
@@ -685,13 +693,22 @@ fn form_override_guardian_swipe_and_form_switch() {
         crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 213764).unwrap(),
         213771
     );
-    for _ in 0..600 {
+    for tick in 0..600 {
+        scenario.advance(app.world_mut(), tick * 50).unwrap();
         app.update();
     }
     let events = &app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(213771)
+                && event.kind == CombatLogKind::CastSuccess),
+        "Guardian APL must cast Bear Swipe"
+    );
     assert!(
         events
             .iter()
@@ -803,6 +820,9 @@ fn form_override_player_presets_end_with_form() {
             .get::<shared::components::Player>(actor)
             .is_some()
     );
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
     assert!(
         !app.world()
             .get::<crate::class_progression::KnownSpells>(actor)
