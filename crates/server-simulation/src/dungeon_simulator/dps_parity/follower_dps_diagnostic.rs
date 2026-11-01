@@ -1891,10 +1891,18 @@ fn follower_tank_reports_only_the_actors_consumed_absorbs() {
         app.world_mut(),
         actor,
         actor,
+        None,
         1_266_619,
         125.0,
     );
-    server::test_support::healer_intake::record_absorb(app.world_mut(), other, actor, 17, 50.0);
+    server::test_support::healer_intake::record_absorb(
+        app.world_mut(),
+        other,
+        actor,
+        None,
+        17,
+        50.0,
+    );
     let (spells, non_unit, unknown) = self_absorb_receipts(app.world(), actor);
     assert_eq!(spells, [(1_266_619, 125.0)].into());
     assert_eq!((non_unit, unknown), (0.0, 0.0));
@@ -2675,10 +2683,15 @@ fn follower_dps_production_dummy() {
     let mut casts = BTreeMap::<u32, usize>::new();
     let mut aura_applications = BTreeMap::<u32, usize>::new();
     let mut energize = BTreeMap::<u32, i64>::new();
+    let expected_avoidance = std::env::var_os("FOLLOWER_DPS_EXPECTED_AVOIDANCE").is_some();
     let incoming: Vec<_> = events
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage && event.target == Some(actor.to_bits())
+            event.target == Some(actor.to_bits())
+                && (event.kind == CombatLogKind::Damage
+                    || (expected_avoidance
+                        && event.source == Some(target.to_bits())
+                        && event.spell_id.is_none()))
         })
         .collect();
     for event in events {

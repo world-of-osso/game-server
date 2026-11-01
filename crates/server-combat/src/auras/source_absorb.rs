@@ -79,6 +79,13 @@ pub fn finish(world: &mut World, target: Entity, source: Entity, spell: u32, amo
         aura.spell_id == spell && aura.caster == target
     });
     #[cfg(any(test, feature = "test-support"))]
-    crate::test_support::healer_intake::record_absorb(world, target, target, spell, amount);
+    crate::test_support::healer_intake::record_absorb(
+        world,
+        target,
+        target,
+        Some(source),
+        spell,
+        amount,
+    );
     crate::damage_meter::record_absorb(world, target, amount);
 }
