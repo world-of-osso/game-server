@@ -97,7 +97,7 @@ fn prepare_follower(
     prepare_class_follower(app, copy, profile.spec_id, level)
 }
 
-fn prepare_class_follower(
+pub(super) fn prepare_class_follower(
     mut app: App,
     copy: crate::maps::InMap,
     spec: u32,
