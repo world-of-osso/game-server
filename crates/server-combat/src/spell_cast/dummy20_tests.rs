@@ -150,6 +150,37 @@ fn dummy20_barbed_native_clock_pays_db2_amount_each_tick_and_expires() {
 }
 
 #[test]
+fn barbed_shot_refresh_ticks_immediately_without_moving_the_next_tick() {
+    let mut h = fixture(&[217200], 3);
+    let caster = h.caster;
+    let target = h.npc;
+    apply(&mut h, caster, target, 217200);
+    h.advance(45);
+    assert_eq!(damage(&h, 217200), vec![86, 86]);
+    h.inbox.log.clear();
+
+    apply(&mut h, caster, target, 217200);
+    h.advance(1);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        1,
+        "refresh pays one immediate tick"
+    );
+    h.advance(33);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        1,
+        "next scheduled tick is not early"
+    );
+    h.advance(3);
+    assert_eq!(
+        damage(&h, 217200).len(),
+        2,
+        "original scheduled tick is retained"
+    );
+}
+
+#[test]
 fn dummy20_barbed_foreign_owner_gets_only_its_fresh_budget() {
     let mut h = fixture(&[217200], 3);
     let caster = h.caster;
