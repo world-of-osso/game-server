@@ -87,6 +87,11 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
     let mut position = run.app.world_mut().get_mut::<Position>(chiji).unwrap();
     position.x = center.x + 20.0;
     position.y = center.y;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
     crate::spell_cast::creature_cast(
         run.app.world_mut(),
@@ -119,7 +124,8 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
     assert!(
         heals
             .iter()
-            .all(|event| event.amount > 0 && event.amount > event.overflow && !event.crit)
+            .all(|event| event.amount > 0 && event.amount > event.overflow && !event.crit),
+        "{heals:?}"
     );
     let target = heals[0].target.unwrap();
     let chiji_amount = heals[0].amount;
@@ -179,11 +185,12 @@ fn mistweaver_chiji_makes_enveloping_mist_instant_and_cheaper() {
             .world()
             .get::<shared::casting::CastState>(healer)
             .is_some();
+        let mut minimum = run.app.world().get::<Mana>(healer).unwrap().current;
         for _ in 0..80 {
             run.app.update();
+            minimum = minimum.min(run.app.world().get::<Mana>(healer).unwrap().current);
         }
-        let after = run.app.world().get::<Mana>(healer).unwrap().current;
-        (casting, before - after)
+        (casting, before - minimum)
     };
     let (normal_cast, normal_cost) = cast(false);
     let (active_cast, active_cost) = cast(true);
