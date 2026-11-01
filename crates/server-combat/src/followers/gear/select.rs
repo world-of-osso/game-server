@@ -135,7 +135,7 @@ pub(super) fn select_items(
             .get(spell)
             .is_some_and(|info| info.effects.iter().any(|effect| effect.effect == 40))
     });
-    let titan_grip = crate::inventory_model::find_titan_grip(Some(known), Some(spells));
+    let titan_grip = crate::inventory::inventory_model::find_titan_grip(Some(known), Some(spells));
     let pick = |slot: EquipmentSlot, used: &BTreeSet<u32>, two_hand_only: bool| {
         candidates.iter().find_map(|row| {
             let item = templates.get(ItemDefinitionSource::Retail, row.item_id)?;
