@@ -44,7 +44,7 @@ fn first_dreadbite(dreadlash: bool) -> Bite {
     health.max = health.current;
     crate::spell_cast::creature_cast(app.world_mut(), actor, 193331, Some(actor), true)
         .expect("native Dreadstalker summon");
-    app.update();
+    // A dog summoned within 5yd bites on its first frame; capture before it runs.
     let dog = app
         .world_mut()
         .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
@@ -90,7 +90,20 @@ fn first_dreadbite(dreadlash: bool) -> Bite {
             expected_crit_pct: f64::from(owner_crit + ferocity),
         };
     }
-    panic!("actual Dreadstalker must land Dreadbite within ten seconds");
+    let dog_events: Vec<_> = app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.source == Some(dog.to_bits()))
+        .map(|event| format!("{:?}/{:?}/{:?}", event.spell_id, event.kind, event.target))
+        .collect();
+    let capture = app.world().resource::<FactorCapture>().export();
+    panic!(
+        "actual Dreadstalker must land Dreadbite within ten seconds: target={} dog={dog_events:?} capture={}",
+        target.to_bits(),
+        capture["events"]
+    );
 }
 
 #[test]
