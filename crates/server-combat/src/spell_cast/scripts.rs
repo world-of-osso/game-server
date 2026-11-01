@@ -227,8 +227,7 @@ pub(crate) use batch3::{
 };
 pub use batch9::spawn_delayed_ground_pulses;
 pub(crate) use batch9::{
-    ground_pulse_radius, hostile_ground_fields, hostile_ground_pulse_radius, owned_ground_fields,
-    owned_hostile_ground_fields,
+    hostile_ground_fields, hostile_ground_pulse_radius, owned_hostile_ground_fields,
 };
 pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};

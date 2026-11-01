@@ -466,11 +466,6 @@ pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bo
         })
 }
 
-/// Native field radius for policy callers; no substitute radius for other spells.
-pub(crate) fn ground_pulse_radius(world: &World, caster: Entity, spell_id: u32) -> Option<f32> {
-    Some(ground_pulses_for_spell(world, caster, spell_id)?.radius)
-}
-
 fn ground_pulses_for_spell(world: &World, caster: Entity, spell_id: u32) -> Option<GroundPulses> {
     if !matches!(
         spell_id,
@@ -505,31 +500,6 @@ pub(crate) fn hostile_ground_pulse_radius(
 ) -> Option<f32> {
     let field = ground_pulses_for_spell(world, caster, spell_id)?;
     (field.relation == targets::Relation::Enemy).then_some(field.radius)
-}
-
-/// Owned fields keep their actual centers when their caster moves.
-pub(crate) fn owned_ground_fields(
-    world: &mut World,
-    caster: Entity,
-    spell_id: u32,
-) -> Vec<(Vec3, f32)> {
-    let now = crate::auras::aura_now(world);
-    let map = world.get::<crate::maps::InMap>(caster).copied();
-    world
-        .query::<(
-            &GroundPulses,
-            &shared::components::Position,
-            &crate::maps::InMap,
-        )>()
-        .iter(world)
-        .filter(|(field, _, field_map)| {
-            field.caster == caster
-                && field.root == spell_id
-                && field.expires_at > now
-                && Some(**field_map) == map
-        })
-        .map(|(field, center, _)| (Vec3::new(center.x, center.y, center.z), field.radius))
-        .collect()
 }
 
 /// Actual centers of active hostile fields owned by this unit.
