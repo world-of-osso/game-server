@@ -396,6 +396,7 @@ register_modules! {
     restoration_grove_guardians: (1050, "modules/restoration_grove_guardians.rs"),
     restoration_healing_stream: (2640, "modules/restoration_healing_stream.rs"),
     restoration_master_shapeshifter: (1050, "modules/restoration_master_shapeshifter.rs"),
+    restoration_regenerative_heartwood: (1050, "modules/restoration_regenerative_heartwood.rs"),
     restoration_resurgence: (2640, "modules/restoration_resurgence.rs"),
     restoration_symbiotic_blooms: (1050, "modules/restoration_symbiotic_blooms.rs"),
     restoration_tidewaters: (2640, "modules/restoration_tidewaters.rs"),
