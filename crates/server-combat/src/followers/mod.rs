@@ -414,7 +414,7 @@ mod pet_coverage_tests;
 #[cfg(test)]
 mod pet_tests;
 #[cfg(test)]
-mod profile_behavior_tests;
+pub(crate) mod profile_behavior_tests;
 #[cfg(test)]
 mod pyroclasm_tests;
 #[cfg(test)]

@@ -2809,6 +2809,7 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
         crate::achievement::record_creature_death(world, npc, killer);
         crate::pvp::record_creature_death(world, npc, killer);
         crate::mythic_plus::record_kill(world, npc);
+        crate::mythic_plus::record_follower_death(world, npc);
         crate::maps::raid::record_creature_death(world, npc);
         crate::scripted_ai::hellfire_ramparts::on_unit_death(world, npc);
         crate::scripted_ai::algethar_academy::on_unit_death(world, npc);
