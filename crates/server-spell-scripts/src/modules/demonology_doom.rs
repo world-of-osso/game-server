@@ -1,7 +1,7 @@
 //! SimC76f8118 Demonbolt-earned Doom and Hand of Gul'dan expiry.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::scripts::{AuraScript, AuraScripts};
+use combat::auras::scripts::AuraScripts;
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 use combat::spell_info::SpellInfo;

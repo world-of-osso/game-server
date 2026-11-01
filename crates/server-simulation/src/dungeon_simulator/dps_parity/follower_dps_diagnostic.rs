@@ -432,6 +432,13 @@ fn follower_demonology_core_doom_expires_from_hand_of_guldan() {
     app.world_mut()
         .entity_mut(actor)
         .remove::<crate::followers::Follower>();
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 264173,
+    );
+    assert!(!crate::auras::has_aura(app.world(), actor, 264173));
     crate::spell_cast::creature_cast(app.world_mut(), actor, 264178, Some(target), false).unwrap();
     for _ in 0..120 {
         app.update();
