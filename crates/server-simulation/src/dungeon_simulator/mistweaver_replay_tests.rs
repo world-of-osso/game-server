@@ -57,6 +57,15 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
         run.app.update();
     }
     assert!(crate::auras::has_aura(run.app.world(), healer, 325197));
+    let aura = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(healer)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 325197)
+        .unwrap();
+    assert_eq!(aura.duration_ms, 25_000);
     let mut query = run.app.world_mut().query::<(&Npc, &UnitSummonedBy)>();
     assert!(
         query
@@ -127,6 +136,12 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
             .all(|event| event.amount > 0 && event.amount > event.overflow && !event.crit),
         "{heals:?}"
     );
+    for target in &targets {
+        assert_eq!(
+            heals.iter().filter(|event| &event.target == target).count(),
+            3
+        );
+    }
     let target = heals[0].target.unwrap();
     let chiji_amount = heals[0].amount;
     let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
@@ -147,6 +162,31 @@ fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
     assert!(
         (0.45..=0.55).contains(&ratio),
         "Chi-Ji Gust {chiji_amount} versus unscaled {direct}"
+    );
+    for _ in 0..600 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), healer, 325197));
+    assert!(
+        run.app.world().get_entity(chiji).is_err(),
+        "Chi-Ji must despawn when its 25-second summon ends"
+    );
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        healer,
+        100784,
+        Some(run.sources[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert!(
+        !run.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
     );
 }
 
