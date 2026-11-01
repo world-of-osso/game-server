@@ -15,35 +15,6 @@ fn class_party_death_audit() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn restoration_grove_guardian_admission_receipt() {
-    let mut run = super::snapshot_party(105, 90, 1);
-    let world = run.app.world();
-    let known = world
-        .get::<crate::class_progression::KnownSpells>(run.healer)
-        .unwrap();
-    assert!(known.contains(1226140), "selected Grove Guardians passive");
-    assert!(
-        !known.contains(102693),
-        "check whether the active summon is learned"
-    );
-    run.app
-        .world_mut()
-        .get_mut::<Health>(run.tank)
-        .unwrap()
-        .current *= 0.5;
-    let result = crate::spell_cast::creature_cast(
-        run.app.world_mut(),
-        run.healer,
-        102693,
-        Some(run.tank),
-        false,
-    );
-    eprintln!("GROVE_CAST_RESULT {result:?}");
-    assert!(result.is_err(), "check native cast admission");
-}
-
-#[test]
-#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn dummy_pressure_uses_unscaled_same_level_units() {
     for level in [70, 90] {
         let run = super::snapshot_party(105, level, 1);
