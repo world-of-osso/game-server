@@ -201,7 +201,12 @@ fn twin_moonfire_copies_only_within_fifteen_yards_of_the_primary() {
     world.entity_mut(far).insert(place(25.0));
     world.entity_mut(near).insert(place(10.0));
     let caster_distance = |target: Position| {
-        Vec3::new(target.x - origin.x, target.y - origin.y, target.z - origin.z).length()
+        Vec3::new(
+            target.x - origin.x,
+            target.y - origin.y,
+            target.z - origin.z,
+        )
+        .length()
     };
     assert!(
         caster_distance(place(25.0)) < 40.0,
@@ -236,7 +241,10 @@ fn twin_moonfire_copies_only_within_fifteen_yards_of_the_primary() {
         }
     }
     assert!(dotted(&run, primary) && dotted(&run, near));
-    assert!(!dotted(&run, far), "Twin Moonfire must not copy 25 yd from the primary");
+    assert!(
+        !dotted(&run, far),
+        "Twin Moonfire must not copy 25 yd from the primary"
+    );
 }
 
 #[test]
