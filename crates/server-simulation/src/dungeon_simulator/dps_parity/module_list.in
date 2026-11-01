@@ -426,6 +426,7 @@ mod shared_liquid_luster_tests;
 mod shared_oil_tests;
 pub(crate) mod single_spell;
 mod snakeskin_tests;
+#[cfg(test)] mod subtlety_danse_follower_tests;
 mod subtlety_ancient_tests;
 mod subtlety_blades_tests;
 mod subtlety_clone_funding_tests;
