@@ -25,7 +25,9 @@ fn native_effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -
 }
 
 fn is_blood(world: &World, unit: Entity) -> bool {
-    world.get::<ActiveSpec>(unit).is_some_and(|spec| spec.0 == 250)
+    world
+        .get::<ActiveSpec>(unit)
+        .is_some_and(|spec| spec.0 == 250)
 }
 
 fn blood_draw_on_damage(world: &mut World, event: &CombatLogEvent) {
@@ -41,11 +43,19 @@ fn blood_draw_on_damage(world: &mut World, event: &CombatLogEvent) {
     {
         return;
     }
-    let threshold = world.resource::<SpellStore>().get(TALENT)
+    let threshold = world
+        .resource::<SpellStore>()
+        .get(TALENT)
         .expect("Blood Draw talent")
-        .effects.iter().find(|effect| effect.index == 0)
-        .expect("Blood Draw health threshold").base_points;
-    if !world.get::<Health>(unit).is_some_and(|health| health.current <= health.max * threshold / 100.0) {
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Blood Draw health threshold")
+        .base_points;
+    if !world
+        .get::<Health>(unit)
+        .is_some_and(|health| health.current <= health.max * threshold / 100.0)
+    {
         return;
     }
     spell_cast::cast_triggered(world, unit, REDUCTION, Some(unit), 1);
