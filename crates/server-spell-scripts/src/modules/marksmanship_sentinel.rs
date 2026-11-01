@@ -77,7 +77,18 @@ fn rapid_mark_damage(world: &mut World, ctx: &EffectCtx, target: Entity) -> f32 
         .get_resource::<RapidMarkedTargets>()
         .is_some_and(|marked| marked.0.contains(&(caster, target)))
     {
-        1.0 + script_effect_value(world, caster, RAPID_MARK, 0) / 100.0
+        // SimC reads the native debuff's raw effect, not caster spell modifiers.
+        let mark = world
+            .resource::<combat::spell_info::SpellStore>()
+            .get(RAPID_MARK)
+            .expect("native Rapid Fire mark");
+        1.0 + mark
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Rapid Fire mark damage")
+            .base_points
+            / 100.0
     } else {
         1.0
     }

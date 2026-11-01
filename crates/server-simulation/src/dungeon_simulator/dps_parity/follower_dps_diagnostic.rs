@@ -164,6 +164,79 @@ fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
     );
 }
 
+fn take_aim_damage_receipt(marked: bool, spell: u32) -> (f64, Vec<i32>) {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    if marked {
+        crate::spell_cast::cast_triggered(app.world_mut(), actor, 1301098, Some(target), 1);
+    }
+    let observed_spell = if spell == 257044 { 257045 } else { spell };
+    app.world_mut().insert_resource(
+        crate::spell_cast::effects::factor_capture::FactorCapture::new(
+            actor,
+            target,
+            observed_spell,
+            "take_aim",
+            20,
+        ),
+    );
+    crate::spell_cast::creature_cast(app.world_mut(), actor, spell, Some(target), false).unwrap();
+    for _ in 0..90 {
+        app.update();
+    }
+    let receipt = app
+        .world()
+        .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+        .export();
+    let first = receipt["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "result" && event["spell_id"] == observed_spell)
+        .expect("actual landed damage");
+    let crit = first["factors"]["crit"].as_f64().unwrap();
+    let damage = app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(observed_spell) && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .collect();
+    (crit, damage)
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_mark_increases_actual_aimed_crit_and_all_rapid_ticks() {
+    let (plain_crit, _) = take_aim_damage_receipt(false, 19434);
+    let (marked_crit, _) = take_aim_damage_receipt(true, 19434);
+    assert!(
+        (marked_crit - plain_crit - 0.5).abs() < 0.001,
+        "actual Aimed crit {plain_crit} -> {marked_crit}"
+    );
+    let (_, plain) = take_aim_damage_receipt(false, 257044);
+    let (_, marked) = take_aim_damage_receipt(true, 257044);
+    assert!(
+        plain.len() >= 3 && plain.len() == marked.len(),
+        "Rapid Fire ticks {plain:?} / {marked:?}"
+    );
+    for (a, b) in plain.iter().zip(&marked) {
+        assert!(
+            (*b as f64 / *a as f64 - 1.2).abs() < 0.05,
+            "each actual Rapid tick must retain the consumed mark: {plain:?} / {marked:?}"
+        );
+    }
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_mm_lock_and_load_explosive_restores_one_aimed_charge() {

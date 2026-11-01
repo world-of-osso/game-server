@@ -44,6 +44,7 @@ fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
         RAPID_FIRE,
         AuraScript {
+            on_apply: Some(begin_rapid_fire),
             on_periodic: Some(cast_rapid_fire_tick),
             on_remove: Some(expire_focus_fire),
             on_natural_end: Some(finish_rapid),
@@ -206,13 +207,16 @@ fn roll_surging_shots(world: &mut World, caster: Entity, spell: u32, depth: u8) 
     }
 }
 
+fn begin_rapid_fire(world: &mut World, _unit: Entity, aura: &AuraInstance) {
+    super::marksmanship_sentinel::clear_rapid_marks(world, aura.caster);
+}
+
 fn expire_focus_fire(
     world: &mut World,
     _unit: Entity,
     aura: &AuraInstance,
     _: auras::RemoveReason,
 ) {
-    super::marksmanship_sentinel::clear_rapid_marks(world, aura.caster);
     // sc_hunter.cpp5832–5837: the finished Rapid Fire consumes Focus Fire.
     auras::remove_auras(
         world,
