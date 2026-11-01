@@ -134,6 +134,62 @@ fn prepare_marksmanship_70() -> (App, Entity, Entity) {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_steady_shot_reduces_running_aimed_recharge() {
+    use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
+    use server::simc_apl::Facts;
+    for trueshot in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+        app.world_mut()
+            .entity_mut(actor)
+            .remove::<crate::followers::Follower>();
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 19434, Some(target), false)
+            .unwrap();
+        for _ in 0..70 {
+            app.update();
+        }
+        if trueshot {
+            crate::spell_cast::cast_triggered(app.world_mut(), actor, 288613, Some(actor), 1);
+            for _ in 0..2 {
+                app.update();
+            }
+        }
+        let bindings = Bindings {
+            actions: [("aimed_shot".into(), 19434)].into(),
+            ..default()
+        };
+        let encounter = Encounter::Fixture {
+            started_at: 0.0,
+            duration: 120.0,
+            style: FightStyle::Patchwerk,
+        };
+        let recharge = |app: &App| {
+            NativeFacts::new(app.world(), actor, &bindings, encounter, 1)
+                .value("cooldown.aimed_shot.full_recharge_time")
+                .unwrap()
+        };
+        let before = recharge(&app);
+        let start = crate::spell_cast::history_now(app.world());
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 56641, Some(target), false)
+            .unwrap();
+        for _ in 0..55 {
+            app.update();
+        }
+        let elapsed = crate::spell_cast::history_now(app.world()) - start;
+        let reduction = before - elapsed - recharge(&app);
+        let expected = if trueshot { 2.0 / 1.4 } else { 2.0 };
+        assert!(
+            (reduction - expected).abs() < 0.1,
+            "Steady Shot recharge reduction={reduction}, expected={expected}, Trueshot={trueshot}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
