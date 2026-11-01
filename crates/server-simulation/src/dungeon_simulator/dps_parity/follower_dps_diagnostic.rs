@@ -229,6 +229,68 @@ fn follower_arms_execute_applies_one_deep_wounds_deposit() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 266, 70);
+    app.world_mut()
+        .get_mut::<crate::networking::CombatTarget>(actor)
+        .unwrap()
+        .0 = Some(target);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 1276672, Some(target), false).unwrap();
+    for _ in 0..40 {
+        app.update();
+    }
+    let pet = {
+        let mut query = app.world_mut().query::<(
+            Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+            &shared::components::Npc,
+        )>();
+        query
+            .iter(app.world())
+            .find(|(_, summon, npc)| {
+                summon.owner == actor && summon.spell_id == 1276672 && npc.template_id == 250785
+            })
+            .map(|(entity, _, _)| entity)
+            .expect("real selected Doomguard must be summoned")
+    };
+    for _ in 0..160 {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let volleys = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(pet.to_bits())
+                && event.spell_id == Some(1251989)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        volleys >= 2,
+        "actual Doomguard must repeatedly land native volleys: {volleys}"
+    );
+    for _ in 0..80 {
+        app.update();
+    }
+    assert!(
+        app.world().get_entity(pet).is_err(),
+        "native Doomguard expires after its authored lifetime"
+    );
+}
+
 fn prepare_marksmanship_70() -> (App, Entity, Entity) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
