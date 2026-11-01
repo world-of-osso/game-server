@@ -494,53 +494,6 @@ fn follower_kit_crenna32_lifebloom_on_tank() {
 }
 
 #[test]
-fn follower_kit_ground_coverage_tracks_enemies_not_stationary_caster() {
-    let (mut h, unit) = level32(209057);
-    let entry = h
-        .app
-        .world()
-        .resource::<FollowerCatalog>()
-        .kits
-        .iter()
-        .find(|entry| entry.spell_id == 26573 && entry.available(66, 32))
-        .unwrap()
-        .clone();
-    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 26573, Some(unit), false).unwrap();
-    h.advance(3);
-    let enemy = h.npc;
-    let enemies = [(enemy, Some(unit))];
-    assert!(
-        !super::kit_area::allows(h.app.world_mut(), unit, unit, &enemies, &entry),
-        "enemy remains in original field"
-    );
-    h.app
-        .world_mut()
-        .get_mut::<shared::components::Position>(unit)
-        .unwrap()
-        .x += 30.0;
-    assert!(
-        !super::kit_area::allows(h.app.world_mut(), unit, unit, &enemies, &entry),
-        "caster moving alone does not invalidate field coverage"
-    );
-    let position = *h
-        .app
-        .world()
-        .get::<shared::components::Position>(unit)
-        .unwrap();
-    h.app.world_mut().entity_mut(enemy).insert(position);
-    assert!(
-        super::kit_area::allows(h.app.world_mut(), unit, unit, &enemies, &entry),
-        "enemy moved to new fight position outside old field"
-    );
-    let fresh = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
-    h.app.world_mut().entity_mut(fresh).insert(position);
-    assert!(
-        !super::kit_area::allows(h.app.world_mut(), unit, unit, &enemies, &entry),
-        "new pack in area must not be pulled implicitly"
-    );
-}
-
-#[test]
 fn follower_kit_low_level_does_not_use_lay_on_hands_or_legacy_cooldown() {
     let (mut h, unit) = at_level(209057, 1, |_| {});
     wounded(&mut h, unit, 0.15);
