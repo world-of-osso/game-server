@@ -277,7 +277,11 @@ impl ActionFacts for SubtletyFacts<'_> {
 
 impl crate::follower::SpecRotation for Rotation {
     fn action_spells(&self) -> Vec<u32> {
-        self.driver.action_spells(&self.bindings)
+        self.driver.action_spells_with_composite(
+            &self.bindings,
+            "apply_poison",
+            self.coatings.iter().map(|action| action.spell),
+        )
     }
 
     fn poll_precombat(

@@ -11,6 +11,7 @@ pub struct ActionInputs<'a> {
     pub balance_alignment: u32,
     pub lunar_calling: bool,
     pub pet_summon: Option<u32>,
+    pub coatings: Vec<u32>,
 }
 
 /// Read selected class actions without changing the actor or world.
@@ -42,12 +43,21 @@ pub fn read_inputs(world: &World, actor: Entity, spec: u32) -> Result<ActionInpu
     } else {
         None
     };
+    let coatings = if matches!(spec, 259 | 261) {
+        crate::assassination_rotation::read_coatings(world, actor)
+            .into_iter()
+            .map(|action| action.spell)
+            .collect()
+    } else {
+        Vec::new()
+    };
     Ok(ActionInputs {
         traits,
         feral_berserk,
         balance_alignment,
         lunar_calling,
         pet_summon,
+        coatings,
     })
 }
 
@@ -132,17 +142,22 @@ pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, St
             &shadow_rotation::program()?,
             &shadow_rotation::bindings::build(),
         )),
-        259 => assassination_rotation::action_spells(&assassination_rotation::action_source(
-            &profile(spec)?,
-        )?),
+        259 => assassination_rotation::action_spells(
+            &assassination_rotation::action_source(&profile(spec)?)?,
+            &input.coatings,
+        ),
         260 => Ok(program_action_spells(
             &outlaw_rotation::load_program(&profile(spec)?)?,
             &outlaw_rotation::bindings(),
         )),
-        261 => Ok(program_action_spells(
-            &subtlety_rotation::load_program(&profile(spec)?)?,
-            &subtlety_rotation::bindings(),
-        )),
+        261 => Ok(
+            crate::literal_rotation::program_action_spells_with_composite(
+                &subtlety_rotation::load_program(&profile(spec)?)?,
+                &subtlety_rotation::bindings(),
+                "apply_poison",
+                input.coatings.iter().copied(),
+            ),
+        ),
         262 => Ok(program_action_spells(
             &elemental_rotation::read_program(&profile(spec)?)?,
             &elemental_rotation::bindings::build(),

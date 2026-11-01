@@ -23,6 +23,21 @@ mod action_metadata_tests {
     use super::*;
 
     #[test]
+    fn composite_spells_are_included_only_when_the_program_uses_the_composite() {
+        let bindings = crate::simc_apl_native::Bindings::default();
+        let with = Program::parse(&[("precombat", "apply_poison")]).unwrap();
+        let without = Program::parse(&[("default", "wait,sec=1")]).unwrap();
+        assert_eq!(
+            program_action_spells_with_composite(&with, &bindings, "apply_poison", [2823, 3408]),
+            vec![2823, 3408]
+        );
+        assert!(
+            program_action_spells_with_composite(&without, &bindings, "apply_poison", [2823, 3408])
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn action_spells_only_includes_bound_actions_used_by_the_program() {
         let program = Program::parse(&[
             ("default", "fireball"),
@@ -59,6 +74,21 @@ pub fn program_action_spells(
     spells.sort_unstable();
     spells.dedup();
     spells
+}
+
+pub fn program_action_spells_with_composite(
+    program: &Program,
+    bindings: &crate::simc_apl_native::Bindings,
+    name: &str,
+    spells: impl IntoIterator<Item = u32>,
+) -> Vec<u32> {
+    let mut result = program_action_spells(program, bindings);
+    if program.actions().any(|(_, action)| action.name == name) {
+        result.extend(spells);
+        result.sort_unstable();
+        result.dedup();
+    }
+    result
 }
 
 /// The same encounter with its combat clock restarted when precombat finishes.
@@ -160,6 +190,15 @@ impl Driver {
     /// Native spells bound to actions actually present in this APL program.
     pub fn action_spells(&self, bindings: &crate::simc_apl_native::Bindings) -> Vec<u32> {
         program_action_spells(&self.program, bindings)
+    }
+
+    pub fn action_spells_with_composite(
+        &self,
+        bindings: &crate::simc_apl_native::Bindings,
+        name: &str,
+        spells: impl IntoIterator<Item = u32>,
+    ) -> Vec<u32> {
+        program_action_spells_with_composite(&self.program, bindings, name, spells)
     }
 
     pub fn precombat_exhausted(&self) -> bool {

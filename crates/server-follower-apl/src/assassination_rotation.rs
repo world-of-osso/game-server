@@ -117,11 +117,15 @@ fn bindings() -> Bindings {
     bindings
 }
 
-pub fn action_spells(source: &str) -> Result<Vec<u32>, String> {
-    Ok(crate::literal_rotation::program_action_spells(
-        &program(source)?,
-        &bindings(),
-    ))
+pub fn action_spells(source: &str, coatings: &[u32]) -> Result<Vec<u32>, String> {
+    Ok(
+        crate::literal_rotation::program_action_spells_with_composite(
+            &program(source)?,
+            &bindings(),
+            "apply_poison",
+            coatings.iter().copied(),
+        ),
+    )
 }
 
 impl Rotation {
@@ -447,7 +451,11 @@ pub fn action_source(
 
 impl crate::follower::SpecRotation for Rotation {
     fn action_spells(&self) -> Vec<u32> {
-        self.driver.action_spells(&self.bindings)
+        self.driver.action_spells_with_composite(
+            &self.bindings,
+            "apply_poison",
+            self.coatings.iter().map(|action| action.spell),
+        )
     }
 
     fn poll_precombat(
