@@ -6,8 +6,8 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 fn atonement_area_spells_preserve_explicit_pet_but_exclude_secondary_pets() {
-    use crate::hunter_pet::HunterPet;
     use crate::spell_cast::summon::{SummonProperties, SummonedCreature};
+    use server::hunter_pet::HunterPet;
     use shared::components::UnitFactionTemplate;
 
     for spell in [1253593, 194509] {
