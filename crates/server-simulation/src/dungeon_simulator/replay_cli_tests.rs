@@ -140,7 +140,14 @@ fn party_pulse_seed_replays_identical_events_and_outcome() {
     }
     let first = replay();
     let second = replay();
-    assert_eq!(first.1, second.1, "combat event streams diverged");
+    for (index, (left, right)) in first.1.iter().zip(&second.1).enumerate() {
+        assert_eq!(left, right, "combat event {index} diverged");
+    }
+    assert_eq!(
+        first.1.len(),
+        second.1.len(),
+        "combat event counts diverged"
+    );
     assert_eq!(first.0, second.0, "replay outcomes diverged");
 }
 
