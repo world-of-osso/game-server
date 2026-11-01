@@ -643,6 +643,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
+- Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
+- Selected Arms Imminent Demise adds Bladestorm ticks within its hasted duration and expires its earned stacks when Bladestorm ends (`sc_warrior.cpp:3279–3299,3344–3349`).
+
 - With selected Bloodletting383154 and Rend772, actual Mortal Strike impacts (including background Unhinged) apply native Rend388539 only below Bloodletting's native effect3 health threshold. Ordinary higher-health impacts cannot grant it (`sc_warrior.cpp3122–3123`).
 
 - Equipped MID2 Arms4pc1296644 grants native Winding Up1300670 once per Mortal Strike/Overpower execution, including background MS, preserving its native ICD/magnitude/cap. Slam-family executions (1464/1269383) cannot produce it and expire all current stacks only after their damage resolves (`sc_warrior.cpp3111–3112,5494–5495,3537–3538`).

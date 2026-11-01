@@ -285,6 +285,7 @@ register_modules! {
     druid_eclipse: (1054, "modules/druid_eclipse.rs"),
     druid_shooting_stars: (1054, "modules/druid_shooting_stars.rs"),
     druid_star_cascade: (1054, "modules/druid_star_cascade.rs"),
+    druid_starlord: (1054, "modules/druid_starlord.rs"),
     druid_sundered_firmament: (1054, "modules/druid_sundered_firmament.rs"),
     druid_touch_cosmos: (1054, "modules/druid_touch_cosmos.rs"),
     druid_umbral: (1054, "modules/druid_umbral.rs"),

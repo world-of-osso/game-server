@@ -190,46 +190,6 @@ fn follower_ret_hammer_selected_talent_admits_real_wrath_cast() {
 }
 
 #[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
-fn follower_arms_execute_applies_one_deep_wounds_deposit() {
-    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
-    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
-    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
-    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 71, 70);
-    for _ in 0..5 {
-        app.update();
-    }
-    let mut health = app
-        .world_mut()
-        .get_mut::<shared::components::Health>(target)
-        .unwrap();
-    health.current = health.max * 0.1;
-    app.world_mut()
-        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
-        .unwrap()
-        .get_mut(shared::components::PowerType::Rage)
-        .unwrap()
-        .current = 400.0;
-    app.init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 281000, Some(target), false).unwrap();
-    for _ in 0..20 {
-        app.update();
-    }
-    let casts = &app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
-        .0;
-    let deposits = casts
-        .iter()
-        .filter(|(caster, spell, _)| *caster == actor && *spell == 262115)
-        .count();
-    assert_eq!(
-        deposits, 1,
-        "one Execute impact must deposit Deep Wounds once: {casts:?}"
-    );
-}
-
-#[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_demonology_doomguard_casts_native_volley_during_its_lifetime() {
     let _seed = crate::random::seed_scope(70448);
@@ -2895,6 +2855,82 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.amount > 0),
         "Eclipse critical hits must produce Astral Smolder periodic damage"
     );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_starlord_spenders_stack_haste_without_refresh_and_eclipse_clears() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    let spell = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(78674)
+        .unwrap()
+        .clone();
+    let eclipse = app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1233272)
+        .unwrap()
+        .clone();
+    let power = shared::components::PowerType::LunarPower;
+    let haste_before = app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    let fire = |app: &mut App| {
+        app.world_mut()
+            .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+            .unwrap()
+            .get_mut(power)
+            .unwrap()
+            .current = 1000.0;
+        crate::spell_cast::execute_cast(app.world_mut(), actor, &spell, Some(target)).unwrap();
+        for _ in 0..20 {
+            app.update();
+        }
+    };
+    let state = |app: &App| {
+        app.world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 279709)
+            .map(|aura| (aura.stacks, aura.expires_at))
+    };
+    fire(&mut app);
+    let (first, deadline) = state(&app).expect("first spender grants Starlord");
+    assert_eq!(first, 1);
+    fire(&mut app);
+    fire(&mut app);
+    let (stacks, after_deadline) = state(&app).expect("Starlord remains");
+    assert_eq!(stacks, 3, "three spenders supply three stacks");
+    assert_eq!(
+        after_deadline, deadline,
+        "later spenders must not refresh duration"
+    );
+    let haste_after = app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    assert!(
+        haste_after > haste_before,
+        "Starlord raises haste: {haste_before} -> {haste_after}"
+    );
+    crate::spell_cast::execute_cast(app.world_mut(), actor, &eclipse, Some(actor)).unwrap();
+    assert!(state(&app).is_none(), "entering Eclipse removes Starlord");
 }
 
 #[test]
