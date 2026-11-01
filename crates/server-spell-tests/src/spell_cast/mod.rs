@@ -41,4 +41,5 @@ mod proc_recipient_tests;
 mod readiness_lifetime_tests;
 mod recovery_rate_tests;
 mod rogue_stealth_tests;
+mod stormfury_channel_tests;
 mod summon_lifetime_tests;
