@@ -8,21 +8,30 @@ const MOGP_HEADER_SIZE: usize = 0x44;
 
 /// Read every group named by a WMO root from the extracted model cache.
 pub fn load_model(data: &std::path::Path, root_fdid: u32) -> Result<Vec<LiquidTriangle>, String> {
+    Ok(load_model_groups(data, root_fdid)?
+        .into_iter()
+        .flatten()
+        .collect())
+}
+
+/// Each group's liquid, in the root's group order (`GFID`, as its collision loads).
+pub fn load_model_groups(
+    data: &std::path::Path,
+    root_fdid: u32,
+) -> Result<Vec<Vec<LiquidTriangle>>, String> {
     let read = |fdid| {
         let path = data.join("models").join(format!("{fdid}.wmo"));
         std::fs::read(&path).map_err(|error| format!("{}: {error}", path.display()))
     };
     let root = read(root_fdid)?;
     let parsed = parser::load_wmo_root(&root)?;
-    let mut triangles = Vec::new();
-    for fdid in parser::parse_root_group_file_ids(&root)? {
-        let group = read(fdid)?;
-        triangles.extend(
-            group_triangles(parsed.flags, &group)
-                .map_err(|error| format!("group {fdid}: {error}"))?,
-        );
-    }
-    Ok(triangles)
+    parser::parse_root_group_file_ids(&root)?
+        .into_iter()
+        .map(|fdid| {
+            group_triangles(parsed.flags, &read(fdid)?)
+                .map_err(|error| format!("group {fdid}: {error}"))
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug)]

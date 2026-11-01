@@ -31,6 +31,8 @@ pub(super) struct MovementChanges {
     pub(super) replicated_state_changed: bool,
     /// The latest input's report is still ahead of the player.
     pub(super) behind: bool,
+    /// Collision or height rules prevented the reported movement.
+    pub(super) constrained: bool,
 }
 
 /// Longest movement one input may apply (a client frame of 4 fps).
@@ -57,6 +59,7 @@ pub(crate) struct MovementClocks {
     unreached: HashMap<Entity, PlayerInput>,
     skyriding: HashMap<Entity, f32>,
     launches: HashMap<Entity, f32>,
+    correction_wait: HashMap<Entity, f32>,
 }
 
 impl MovementClocks {
@@ -107,6 +110,35 @@ impl MovementClocks {
         self.unreached.retain(|player, _| exists(*player));
         self.skyriding.retain(|player, _| exists(*player));
         self.launches.retain(|player, _| exists(*player));
+        self.correction_wait.retain(|player, _| exists(*player));
+    }
+
+    pub(super) fn clear_correction(&mut self, player: Entity) {
+        self.correction_wait.remove(&player);
+    }
+
+    /// Correct a sustained rejected report, not ordinary movement-bank jitter.
+    pub(super) fn needs_correction(
+        &mut self,
+        player: Entity,
+        constrained: bool,
+        distance: f32,
+        delta: f32,
+    ) -> bool {
+        const CORRECTION_DISTANCE: f32 = 3.0;
+        const CORRECTION_DELAY: f32 = 1.0;
+        if !constrained || distance <= CORRECTION_DISTANCE {
+            self.correction_wait.remove(&player);
+            return false;
+        }
+        let elapsed = self.correction_wait.entry(player).or_default();
+        *elapsed += delta;
+        if *elapsed < CORRECTION_DELAY {
+            return false;
+        }
+        self.correction_wait.remove(&player);
+        self.unreached.remove(&player);
+        true
     }
 }
 
@@ -117,6 +149,7 @@ impl MovementChanges {
             replicated_state_changed: self.replicated_state_changed
                 || other.replicated_state_changed,
             behind: other.behind,
+            constrained: self.constrained || other.constrained,
         }
     }
 }
@@ -200,7 +233,8 @@ pub(super) fn apply_movement_input(
             next = prevent_steep_ascent(ground, *map, current, next);
         }
     }
-    let behind = behind || leg.cut || next != unclamped;
+    let constrained = leg.cut || next != unclamped;
+    let behind = behind || constrained;
     // Short of a landing report the player still flies.
     let state = PlayerInput {
         flying: if behind { flown } else { flying },
@@ -215,6 +249,8 @@ pub(super) fn apply_movement_input(
         update_rotation_and_speed(&state, state.flying, auras, &mut rotation, &mut speed)
             .merge(set_motion(&mut motion, next_motion));
     changes.behind = behind;
+    changes.constrained = constrained;
+    let reported_height = next.y;
     next.y = match terrain {
         Some((ground, map_id)) if flown => flight_height(ground, map_id, current, next),
         Some((ground, map_id)) => {
@@ -230,6 +266,7 @@ pub(super) fn apply_movement_input(
         }
         None => current.y,
     };
+    changes.constrained |= next.y != reported_height;
     match energy {
         Some(energy) => {
             let left = speed_after(&SKYRIDING, energy, current.y - next.y).unwrap_or(0.0);
@@ -584,6 +621,7 @@ fn set_motion(motion: &mut Mut<'_, PlayerMotion>, next: PlayerMotion) -> Movemen
         position_changed: false,
         replicated_state_changed: motion.set_if_neq(next),
         behind: false,
+        constrained: false,
     }
 }
 
@@ -609,6 +647,7 @@ fn stop_for_blocking_cast(
         position_changed: false,
         replicated_state_changed: speed_changed,
         behind: false,
+        constrained: false,
     })
 }
 
@@ -633,6 +672,7 @@ fn update_rotation_and_speed(
         position_changed: false,
         replicated_state_changed: rotation_changed || speed_changed,
         behind: false,
+        constrained: false,
     }
 }
 

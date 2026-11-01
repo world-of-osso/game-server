@@ -61,6 +61,77 @@ pub(super) fn deliver_and_tick(app: &mut App, connection: Entity, inputs: Vec<Pl
     );
 }
 
+#[test]
+fn blocked_position_report_is_corrected_and_stale_input_is_rejected() {
+    let (mut app, player, connection) = receiver_app();
+    let mut ground = GroundMap::flat_arena(0.0);
+    let vertices = vec![
+        Vec3::new(-5.0, -1.0, 1.0),
+        Vec3::new(5.0, -1.0, 1.0),
+        Vec3::new(5.0, 5.0, 1.0),
+        Vec3::new(-5.0, 5.0, 1.0),
+    ];
+    let wall = shared::los::LosTile::build(0, 0, vertices, vec![[0, 1, 2], [0, 2, 3]]);
+    ground.set_live_hulls(std::collections::HashMap::from([(
+        InMap::continent(0),
+        vec![std::sync::Arc::new(wall)],
+    )]));
+    app.insert_resource(ground);
+    let report = reporting([0.0, 0.0, 10.0], make_input(0.0, 0.0, 1.0));
+    for _ in 0..60 {
+        deliver_and_tick(&mut app, connection, vec![report.clone()]);
+        if app
+            .world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .epoch
+            == 1
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        app.world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .epoch,
+        1
+    );
+    let position = *app.world().get::<Position>(player).unwrap();
+    assert!(
+        position.z < 1.0,
+        "correction must retain the server side of the wall: {position:?}"
+    );
+    deliver_and_tick(&mut app, connection, vec![report]);
+    assert_eq!(
+        *app.world().get::<Position>(player).unwrap(),
+        position,
+        "stale report after correction must not move the player"
+    );
+    let adopted = PlayerInput {
+        epoch: 1,
+        ..reporting([0.0, 0.0, 0.0], make_input(0.0, 0.0, -1.0))
+    };
+    deliver_and_tick(&mut app, connection, vec![adopted]);
+    assert!(app.world().get::<Position>(player).unwrap().z < position.z);
+}
+
+#[test]
+fn ordinary_movement_does_not_trigger_position_correction() {
+    let (mut app, player, connection) = receiver_app();
+    for step in 1..=60 {
+        deliver_and_tick(&mut app, connection, run_north(step..=step));
+    }
+    assert_eq!(
+        app.world()
+            .get::<shared::components::MovementControl>(player)
+            .unwrap()
+            .epoch,
+        0
+    );
+    assert_position(&app, player, [0.0, 0.0, 60.0 * RUN_STEP]);
+}
+
 fn assert_position(app: &App, player: Entity, expected: [f32; 3]) {
     let position = app.world().get::<Position>(player).unwrap();
     for (actual, expected) in [position.x, position.y, position.z]

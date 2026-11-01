@@ -227,7 +227,7 @@ fn load_strict_tile_wmos(
 struct TileGround {
     terrain: TerrainHeightMap,
     wmos: Option<Vec<WmoCollision>>,
-    liquids: Option<Vec<LiquidTriangle>>,
+    liquids: Option<Vec<PlacedLiquid>>,
     /// Root ADT MFBO minimum corner heights (flight bounds), in file order.
     flight_min: Option<[i16; 9]>,
 }
@@ -789,8 +789,8 @@ impl GroundMap {
 struct MapGround {
     source: Option<TileSource>,
     global_wmo: Option<WmoCollision>,
-    global_liquids: Vec<LiquidTriangle>,
-    liquid_models: HashMap<u32, Vec<LiquidTriangle>>,
+    global_liquids: Vec<PlacedLiquid>,
+    liquid_models: HashMap<u32, Vec<Vec<LiquidTriangle>>>,
     /// `None`: the tile's terrain is not available.
     tiles: HashMap<(u32, u32), Option<TileGround>>,
     /// WMO group collision by root FileDataID, shared by the tiles a WMO spans.
@@ -827,12 +827,15 @@ impl MapGround {
             placement_rotation(placement.rotation),
             global_wmo_placement_position(placement.position),
         );
-        let global_liquids = load_wmo_liquids(data_dir, placement.fdid)?
-            .iter()
-            .map(|triangle| triangle.transformed(world_from_local))
-            .collect();
+        let collision = WmoCollision::new(world_from_local, groups);
+        let global_liquids = PlacedLiquid::new(
+            collision.clone(),
+            &load_wmo_liquids(data_dir, placement.fdid)?,
+        )
+        .into_iter()
+        .collect();
         Ok(Self {
-            global_wmo: Some(WmoCollision::new(world_from_local, groups)),
+            global_wmo: Some(collision),
             global_liquids,
             ..default()
         })
@@ -897,7 +900,7 @@ impl MapGround {
         })
     }
 
-    fn load_tile_liquids(&mut self, coordinates: (u32, u32)) -> Vec<LiquidTriangle> {
+    fn load_tile_liquids(&mut self, coordinates: (u32, u32)) -> Vec<PlacedLiquid> {
         let source = self.source.as_ref().expect("terrain map has a tile source");
         let data_dir = source.data_dir.clone();
         let files: Vec<u32> = nearby_source_tiles(self, coordinates)
@@ -925,11 +928,16 @@ impl MapGround {
                         }
                     }
                 }
-                surfaces.extend(
-                    self.liquid_models[&placement.fdid]
-                        .iter()
-                        .map(|triangle| triangle.transformed(placement.world_from_local())),
-                );
+                if self.liquid_models[&placement.fdid]
+                    .iter()
+                    .all(Vec::is_empty)
+                {
+                    continue;
+                }
+                let liquids = self.liquid_models[&placement.fdid].clone();
+                if let Some(collision) = self.place_wmo(&data_dir, placement) {
+                    surfaces.extend(PlacedLiquid::new(collision, &liquids));
+                }
             }
         }
         surfaces
@@ -1408,13 +1416,58 @@ fn parse_modf_entry(entry: &[u8]) -> Result<WmoPlacement, String> {
     })
 }
 
-fn load_wmo_liquids(data_dir: &Path, root_fdid: u32) -> Result<Vec<LiquidTriangle>, String> {
-    los::wmo_liquid::load_model(data_dir, root_fdid)
+fn load_wmo_liquids(data_dir: &Path, root_fdid: u32) -> Result<Vec<Vec<LiquidTriangle>>, String> {
+    los::wmo_liquid::load_model_groups(data_dir, root_fdid)
 }
 
-fn sample_wmo_liquid(triangles: &[LiquidTriangle], feet: Vec3) -> Option<LiquidSample> {
-    triangles
+struct PlacedLiquid {
+    collision: WmoCollision,
+    groups: Vec<Vec<LiquidTriangle>>,
+}
+
+impl PlacedLiquid {
+    fn new(collision: WmoCollision, groups: &[Vec<LiquidTriangle>]) -> Option<Self> {
+        if groups.iter().all(Vec::is_empty) {
+            return None;
+        }
+        let transform = collision.world_from_local();
+        let groups = groups
+            .iter()
+            .map(|group| {
+                group
+                    .iter()
+                    .map(|triangle| triangle.transformed(transform))
+                    .collect()
+            })
+            .collect();
+        Some(Self { collision, groups })
+    }
+
+    fn triangles_at(&self, feet: Vec3) -> impl Iterator<Item = &LiquidTriangle> {
+        let local = self
+            .collision
+            .world_from_local()
+            .inverse()
+            .transform_point3(feet);
+        self.groups
+            .iter()
+            .zip(self.collision.groups())
+            .filter(move |(_, group)| {
+                let (low, high) = group.local_bounds();
+                local.x >= low.x
+                    && local.x <= high.x
+                    && local.z >= low.z
+                    && local.z <= high.z
+                    && local.y >= low.y
+            })
+            .flat_map(|(triangles, _)| triangles)
+    }
+}
+
+fn sample_wmo_liquid(placements: &[PlacedLiquid], feet: Vec3) -> Option<LiquidSample> {
+    placements
         .iter()
+        .flat_map(|placement| placement.triangles_at(feet))
         .filter_map(|triangle| {
             triangle.level_at(feet.x, feet.z).map(|level| LiquidSample {
                 level,

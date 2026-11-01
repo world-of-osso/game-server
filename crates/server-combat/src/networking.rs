@@ -572,7 +572,7 @@ pub(crate) struct PlayerInputParams<'w, 's> {
         With<Player>,
     >,
     mounted: Query<'w, 's, Entity, (With<Player>, With<Mounted>)>,
-    controls: Query<'w, 's, &'static shared::components::MovementControl>,
+    controls: Query<'w, 's, &'static mut shared::components::MovementControl>,
     passengers: Query<'w, 's, &'static shared::components::TransportPassenger>,
     awaiting_board: Query<'w, 's, (), With<crate::transport::AwaitingBoardAck>>,
     ships: crate::transport::ShipQuery<'w, 's>,
@@ -604,9 +604,9 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
     for (mut receiver, link) in &mut params.receivers {
         let control = params
             .controls
-            .get(link.0)
+            .get_mut(link.0)
             .ok()
-            .copied()
+            .map(|control| *control)
             .unwrap_or_default();
         // Input sent before the client adopted a server teleport is stale
         // (`HandleMovementOpcode` ignores movement while `IsBeingTeleported`).
@@ -618,7 +618,10 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
         let inputs = if resumed {
             match params.clocks.unreached(link.0, control.epoch) {
                 Some(unreached) => vec![unreached],
-                None => continue,
+                None => {
+                    params.clocks.clear_correction(link.0);
+                    continue;
+                }
             }
         } else {
             received
@@ -634,6 +637,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .get(link.0)
             .is_ok_and(|death| death.state == DeathState::Dead);
         if controlled || corpse || !params.on_map.contains(link.0) {
+            params.clocks.clear_correction(link.0);
             params.clocks.track(link.0, latest, false);
             stop_held_player(
                 link.0,
@@ -705,7 +709,23 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 terrain,
             ));
         }
-        params.clocks.track(link.0, latest, changes.behind);
+        params.clocks.track(link.0, latest.clone(), changes.behind);
+        let distance = params.players.get_mut(link.0).ok().map(|(position, ..)| {
+            Vec3::new(position.x, position.y, position.z).distance(Vec3::from(latest.position))
+        });
+        let constrained = passenger.is_none() && latest.transport.is_none() && changes.constrained;
+        if let Some(distance) = distance
+            && params
+                .clocks
+                .needs_correction(link.0, constrained, distance, time.delta_secs())
+            && let Ok(mut control) = params.controls.get_mut(link.0)
+        {
+            crate::teleport::teleported(params.dirty_queue.as_deref(), link.0, &mut control);
+            if let Ok((_, _, _, _, _, mut fall, _, _)) = params.players.get_mut(link.0) {
+                fall.epoch = control.epoch;
+            }
+            changes.replicated_state_changed = true;
+        }
         params.commands.entity(link.0).insert(Moving(moving));
         if changes.position_changed {
             mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
