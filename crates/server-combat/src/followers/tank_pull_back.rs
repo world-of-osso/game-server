@@ -130,7 +130,16 @@ pub(super) fn update(
     party: &[Entity],
     reach: f32,
 ) {
-    let enemies = ai::engaged_enemies(world, follower, tank, party);
+    // A sessile enemy never follows the tank (TC CREATURE_STATIC_FLAG_SESSILE), so no
+    // pull-back can bring it to a safe point; the party fights it where it stands.
+    let enemies: Vec<_> = ai::engaged_enemies(world, follower, tank, party)
+        .into_iter()
+        .filter(|(enemy, _)| {
+            !world
+                .get::<crate::creature_static::CreatureStaticFlags>(*enemy)
+                .is_some_and(|flags| flags.sessile())
+        })
+        .collect();
     let existing = world.get::<PullBack>(tank).map(|state| state.target);
     if existing.is_some_and(|target| !enemies.iter().any(|(enemy, _)| *enemy == target)) {
         clear(world, tank, follower.owner);
