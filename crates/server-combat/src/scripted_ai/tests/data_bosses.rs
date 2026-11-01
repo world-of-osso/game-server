@@ -737,6 +737,29 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
             .difficulty_id,
         8
     );
+    let book = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, npc, copy)| npc.template_id == 194602 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .expect("authored Azure translocation book");
+    assert_eq!(
+        crate::npc_interaction::azure_translocation::traverse(h.app.world_mut(), player, book)
+            .unwrap(),
+        5
+    );
+    assert_eq!(h.app.world().get::<InMap>(player), Some(&map));
+    assert!(
+        h.app
+            .world()
+            .get::<crate::maps::MapTransfer>(player)
+            .is_none()
+    );
+    for unit in &followers {
+        assert_eq!(h.app.world().get::<InMap>(*unit), Some(&map));
+    }
     let position = *h.app.world().get::<Position>(followers[0]).unwrap();
     let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
     let current = crate::maps::WorldLocation {
