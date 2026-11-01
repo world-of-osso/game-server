@@ -1762,6 +1762,9 @@ pub(super) fn on_enemy_damage_hit_with_context(
     if let Some(hook) = script_registry::before_enemy_context_hit(world, spell_id) {
         return Some(hook);
     }
+    if spell_id == windwalker::WINDLORD_OFF_HAND {
+        return Some(windwalker::grant_windlord_thunderfist);
+    }
     // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
     // Native TP also hits its caster with Energize; that is not another impact.
     if spell_id == 100780 {

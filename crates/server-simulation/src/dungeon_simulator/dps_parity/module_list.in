@@ -480,6 +480,7 @@ mod unholy_tests;
 mod unholy_lesser_haste_tests;
 mod venomcursed_tests;
 mod windwalker_karma_follower_tests;
+mod windwalker_thunderfist_follower_tests;
 mod windwalker_tigereye_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;
