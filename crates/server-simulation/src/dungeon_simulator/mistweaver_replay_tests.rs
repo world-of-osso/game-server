@@ -225,6 +225,55 @@ fn mistweaver_chiji_blackout_kick_heals_injured_party_members() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_celestial_harmony_cocoons_party_when_chiji_is_invoked() {
+    use shared::components::{Health, Npc, UnitSummonedBy};
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    assert!(crate::auras::has_aura(run.app.world(), healer, 343655));
+    let world = run.app.world();
+    let max = world.get::<Health>(healer).unwrap().max;
+    let versatility = world
+        .get::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .versatility_pct;
+    // DescriptionVariables 813: $newshield = caster max health * 406220 s2 (24%) * (1 + vers).
+    let expected = max * 0.24 * (1.0 + versatility / 100.0);
+    // An untriggered cast runs the after-cast hooks a follower's own cast does.
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 325197, Some(healer), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let world = run.app.world();
+    for unit in run.slots {
+        let cocoon = world
+            .get::<crate::auras::ActiveAuras>(unit)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 406220 && aura.caster == healer)
+            .unwrap_or_else(|| panic!("party member {unit:?} lacks a Chi Cocoon"));
+        let amount = cocoon.effects.iter().find(|e| e.index == 0).unwrap().amount;
+        assert!(
+            (amount - expected).abs() <= 1.0,
+            "cocoon {amount} versus {expected}"
+        );
+        assert_eq!(cocoon.duration_ms, 10_000);
+    }
+    let mut summons = run
+        .app
+        .world_mut()
+        .query::<(bevy::prelude::Entity, &Npc, &UnitSummonedBy)>();
+    let chiji = summons
+        .iter(run.app.world())
+        .find(|(_, npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits())
+        .unwrap()
+        .0;
+    assert!(!crate::auras::has_aura(run.app.world(), chiji, 406220));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_chiji_makes_enveloping_mist_instant_and_cheaper() {
     use shared::components::Mana;
 
