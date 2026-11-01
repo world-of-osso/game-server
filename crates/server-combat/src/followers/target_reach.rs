@@ -119,6 +119,19 @@ mod tests {
             .insert(super::super::FollowerActionSpells(vec![108853]));
         world.remove_resource::<super::super::FollowerCatalog>();
         assert_eq!(attack_range(world, unit, &follower), Some(expected));
+        let known = world
+            .get::<crate::class_progression::KnownSpells>(unit)
+            .unwrap()
+            .clone();
+        world
+            .entity_mut(unit)
+            .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+        assert_eq!(
+            attack_range(world, unit, &follower),
+            None,
+            "unlearned APL action cannot supply range"
+        );
+        world.entity_mut(unit).insert(known);
         world
             .entity_mut(unit)
             .insert(super::super::FollowerActionSpells(Vec::new()));
@@ -128,17 +141,9 @@ mod tests {
 
 fn attack_range(world: &World, unit: Entity, follower: &Follower) -> Option<f32> {
     let store = world.get_resource::<crate::spell_info::SpellStore>()?;
-    let actions = &world
-        .get::<super::FollowerActionSpells>(unit)
-        .expect("follower action metadata unavailable")
-        .0;
-    actions
-        .iter()
-        .copied()
-        .flat_map(|id| {
-            let resolved = crate::spell_cast::knowledge::resolve_actor_action(world, unit, id).ok();
-            std::iter::once(id).chain(resolved)
-        })
+    super::action_spells::available(world, unit)
+        .expect("follower available action resolution failed")
+        .into_iter()
         .filter_map(|id| {
             let spell = store.get(id)?;
             (crate::spell_info::positivity::negative_effects(store, spell) != 0)

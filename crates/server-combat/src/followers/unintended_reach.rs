@@ -1,7 +1,7 @@
 //! Reach of hostile secondary targets, for follower pull-position selection.
 use std::collections::HashSet;
 
-use super::{Follower, FollowerActionSpells};
+use super::Follower;
 use crate::class_progression::KnownSpells;
 use crate::spell_cast::guardian::GuardianActor;
 use crate::spell_cast::script_registry::{DeclaredReach, SpellScriptRegistry};
@@ -136,14 +136,8 @@ fn active_field_extent(world: &mut World, unit: Entity) -> f32 {
 
 fn unit_spells(world: &World, unit: Entity) -> Vec<u32> {
     if world.get::<Follower>(unit).is_some() {
-        let spells = &world
-            .get::<FollowerActionSpells>(unit)
-            .expect("follower action metadata unavailable")
-            .0;
-        let resolved = spells.iter().filter_map(|&spell| {
-            crate::spell_cast::knowledge::resolve_actor_action(world, unit, spell).ok()
-        });
-        return spells.iter().copied().chain(resolved).collect();
+        return super::action_spells::available(world, unit)
+            .expect("follower available action resolution failed");
     }
     let known = world
         .get::<KnownSpells>(unit)

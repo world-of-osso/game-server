@@ -408,6 +408,18 @@ fn pure_metadata_includes_equipped_hostile_area_item_only_when_program_uses_item
         reach.0 > 0.0 || reach.1 > 0.0,
         "item must have real hostile area reach: {reach:?}"
     );
+    world
+        .entity_mut(pull.follower)
+        .insert(server_combat::followers::FollowerActionSpells(vec![407512]));
+    let aggregate = server_combat::followers::party_unintended_reach(world, &[pull.follower]);
+    assert!(
+        aggregate
+            .iter()
+            .any(|&(actor, caster, target)| actor == pull.follower
+                && caster >= reach.0
+                && target >= reach.1),
+        "equipped item reach missing: {aggregate:?}"
+    );
     let no_items = server_combat::simc_apl::Program::parse(&[("default", "fireball")]).unwrap();
     let absent = server_follower_apl::action_metadata::equipped_action_spells(
         world,

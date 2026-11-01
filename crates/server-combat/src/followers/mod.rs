@@ -1,6 +1,7 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 #[cfg(test)]
 mod action_knowledge_tests;
+mod action_spells;
 mod ai;
 mod candlelight;
 mod catalog;
