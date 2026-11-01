@@ -74,6 +74,10 @@ pub(crate) fn program() -> Result<Program, String> {
             "rejuvenation,if=target.health.pct<95&target.rejuvenation_covered=0",
         ),
         ("default", "regrowth,if=target.health.pct<90"),
+        // WCL kD8MqXLV6CFYHN2p fight 3 actor 108 applies Rejuvenation 24.5/min
+        // (15.4 casts + 9.1 Germination) and casts no Wrath; idle GCDs keep
+        // Rejuvenation on the party before damage.
+        ("spread", "rejuvenation,if=target.rejuvenation_covered=0"),
         ("damage", "moonfire,if=target.moonfire_up=0"),
         ("damage", "wrath"),
     ])
@@ -158,8 +162,30 @@ pub fn has_owned_hot(world: &World, healer: Entity, target: Entity, spell: u32) 
 /// party member is at a median 93.9% health at the 72 Wild Growth casts.
 const INJURED_FRACTION: f32 = 0.94;
 
+/// Own Rejuvenation, plus Germination's second copy when 155675 is selected.
+fn rejuvenation_covered(world: &World, healer: Entity, target: Entity) -> bool {
+    has_owned_hot(world, healer, target, 774)
+        && (!crate::auras::has_aura(world, healer, 155675)
+            || has_owned_hot(world, healer, target, 155777))
+}
+
+/// The lowest-health living party member without full Rejuvenation coverage.
+fn lowest_uncovered(world: &World, healer: Entity, party: &[Entity]) -> Option<Entity> {
+    party
+        .iter()
+        .copied()
+        .filter(|&unit| !rejuvenation_covered(world, healer, unit))
+        .filter_map(|unit| {
+            let health = world.get::<Health>(unit)?;
+            (health.current > 0.0 && health.max > 0.0)
+                .then_some((unit, health.current / health.max))
+        })
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(unit, _)| unit)
+}
+
 impl Restoration {
-    /// Heal the party; damage `enemy` when no heal is due.
+    /// Heal the party, keep Rejuvenation on it, then damage `enemy`.
     pub fn drive(
         &mut self,
         world: &mut World,
@@ -206,9 +232,7 @@ impl Restoration {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
                 .with_targets(Some(target), &targets),
             lifebloom_up: has_owned_hot(world, healer, target, 33763),
-            rejuvenation_covered: has_owned_hot(world, healer, target, 774)
-                && (!crate::auras::has_aura(world, healer, 155675)
-                    || has_owned_hot(world, healer, target, 155777)),
+            rejuvenation_covered: rejuvenation_covered(world, healer, target),
             injured,
             efflorescence_up,
             moonfire_up: false,
@@ -219,6 +243,35 @@ impl Restoration {
         {
             self.driver.execute(world, healer, action, execution)?;
             return Ok(());
+        }
+        if let Some(uncovered) = lowest_uncovered(world, healer, party) {
+            let targets = [uncovered];
+            let actions = SPELLS
+                .iter()
+                .map(|&(name, spell, self_target)| NativeAction {
+                    name,
+                    spell,
+                    self_target,
+                    talent: None,
+                });
+            let prepared =
+                Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
+            let facts = PartyFacts {
+                native: NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+                    .with_targets(Some(uncovered), &targets),
+                lifebloom_up: has_owned_hot(world, healer, uncovered, 33763),
+                rejuvenation_covered: false,
+                injured,
+                efflorescence_up,
+                moonfire_up: false,
+            };
+            if let Some((action, execution)) =
+                self.driver
+                    .select("spread", &facts, &prepared, &self.equipment)?
+            {
+                self.driver.execute(world, healer, action, execution)?;
+                return Ok(());
+            }
         }
         let Some(enemy) = enemy else {
             return Ok(());
