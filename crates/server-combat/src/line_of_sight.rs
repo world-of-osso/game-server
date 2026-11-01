@@ -261,6 +261,23 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     }
 }
 
+/// [`sees_in_world`] with `target`'s feet projected to `feet`.
+pub(crate) fn sees_at(world: &World, watcher: Entity, target: Entity, feet: Position) -> bool {
+    let Some(map) = world.get::<InMap>(watcher).copied() else {
+        return true;
+    };
+    match (
+        parts_in_world(world, watcher),
+        parts_in_world(world, target),
+    ) {
+        (Some(watcher), Some(mut target)) => {
+            target.2 = &feet;
+            unit_sees(world.get_resource::<LineOfSight>(), map, watcher, target)
+        }
+        _ => true,
+    }
+}
+
 /// Project only a unit's feet; both bodies still use actual native eyes/pose/facing.
 pub(crate) fn mutually_visible_at(
     world: &World,
