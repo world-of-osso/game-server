@@ -63,10 +63,10 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
         ("ramp", "evangelism"),
-        (
-            "ultimate",
-            "uppies,if=party.darkness_up&cooldown.void_shield.remains<=0",
-        ),
+        // SimC76f8118 apl_priest.cpp:245 places uppies after Evangelism. VERIFIED_WCL
+        // KWw69CqBnf3Tpk8L f4 a4: no Void Shield inside any of 5 channels, so the
+        // nested_action=void_shield gate and cast-while-casting are omitted.
+        ("ultimate", "uppies"),
         ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
         ("radiance_fallback", "radiance"),
         (
