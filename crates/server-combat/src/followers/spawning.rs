@@ -92,6 +92,18 @@ pub(super) fn initialize(
         max: stats.max_health,
     };
     let form = profile.form_spell;
+    // Legacy profile fixtures act with their sourced profile spells; class followers
+    // receive program-bound actions from class_spawn instead.
+    let actions = [
+        profile.attack_spell,
+        profile.cooldown_spell,
+        profile.heal_spell,
+        profile.taunt_spell,
+        form,
+    ]
+    .into_iter()
+    .filter(|&spell| spell != 0)
+    .collect();
     // The ordinary StatsPlugin query owns derived-stat refresh after passive
     // StatModifiers change, just as for players. SheetOwner remains absent.
     let stat_fields = (stats.primary, stats.ratings, stats.derived());
@@ -121,6 +133,7 @@ pub(super) fn initialize(
             known.iter().map(|spell| spell.spell_id).collect(),
         ),
         traits,
+        super::FollowerActionSpells(actions),
     ));
     crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
     if form != 0 {
