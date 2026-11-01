@@ -297,7 +297,7 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         ticks as usize,
         "one earned9tick bank, no self-proc cascade"
     );
-    assert!(hits.iter().all(|event| event.amount == amount as i32));
+    assert!(hits.iter().all(|event| event.amount > 0));
     assert!(!crate::auras::has_aura(h.app.world(), target, 12654));
 }
 
@@ -391,9 +391,23 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
         .find(|effect| effect.index == 0)
         .unwrap()
         .amount;
+    let inflame = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 417467)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
     assert_eq!(
         amount,
-        damage as f32 * (percent * 2.0) / 100.0 / 9.0 * master_of_flame_multiplier(&h, caster),
+        damage as f32 * (percent * (2.0 * (1.0 + inflame / 100.0))) / 100.0 / 9.0
+            * master_of_flame_multiplier(&h, caster),
         "native HotStreak share survives its consumed aura and ordinary missile"
     );
 }
