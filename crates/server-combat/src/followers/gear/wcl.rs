@@ -46,6 +46,8 @@ struct Item {
     bonuses: Vec<String>,
     #[serde(rename = "permanentEnchant", default)]
     enchant: String,
+    #[serde(rename = "temporaryEnchant", default)]
+    temporary_enchant: String,
     #[serde(default)]
     gems: Vec<Gem>,
 }
@@ -233,6 +235,7 @@ pub(in crate::followers) fn equip(
     }
     let mut items = Vec::new();
     let mut modifiers = Vec::new();
+    let mut temporary_enchants = Vec::new();
     for (slot, item) in SLOTS.into_iter().zip(&profile.gear) {
         let Some(slot) = slot else { continue };
         if item.id == 0 {
@@ -253,6 +256,12 @@ pub(in crate::followers) fn equip(
         } else {
             number(&item.enchant, "enchantment ID")?
         };
+        if !item.temporary_enchant.is_empty() {
+            let enchant = number(&item.temporary_enchant, "temporary enchantment ID")?;
+            if enchant != 0 {
+                temporary_enchants.push((slot, enchant));
+            }
+        }
         items.push((
             slot,
             shared::item_data::ItemDefinitionSource::Retail,
@@ -274,6 +283,7 @@ pub(in crate::followers) fn equip(
         items,
         crate::stats::EquippedItemModifiers {
             items: modifiers,
+            temporary_enchants,
             ..Default::default()
         },
     );

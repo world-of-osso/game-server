@@ -42,6 +42,10 @@ fn keystone_wcl_profile_equips_qualified_items_and_talents() {
     assert_eq!(head.enchant, 7991);
     assert!(head.bonus_list.contains(&13848));
     assert_eq!(head.gems, vec![240910]);
+    assert_eq!(
+        modifiers.temporary_enchants,
+        vec![(EquipmentSlot::MainHand, 8052)]
+    );
     assert!(find_profile(250, 1).is_err());
     assert!(find_profile(u32::MAX, 11).is_err());
 }
