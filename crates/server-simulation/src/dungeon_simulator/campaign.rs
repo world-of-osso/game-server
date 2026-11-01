@@ -706,8 +706,23 @@ fn released_leader_rejoins_party_through_azure_book() {
     server::test_support::transport::activate(run.app.world_mut(), owner, Some(book), &transport)
         .unwrap();
     super::movement::forget_party_travel(run.app.world_mut(), owner);
-    let attacker = *run.actors.values().next().unwrap();
-    crate::combat::kill_unit(run.app.world_mut(), attacker, owner);
+    let cleared: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for actor in cleared {
+        run.app.world_mut().despawn(actor);
+    }
+    crate::combat::kill_unit(run.app.world_mut(), owner, owner);
     for _ in 0..10 {
         run.app.update();
     }
@@ -726,8 +741,7 @@ fn released_leader_rejoins_party_through_azure_book() {
             "leader died again while returning at {:?}",
             run.app.world().get::<Position>(owner)
         );
-        run.control().unwrap();
-        if !run.returning_to_party {
+        if !run.return_to_party().unwrap() {
             reunited = true;
             break;
         }
