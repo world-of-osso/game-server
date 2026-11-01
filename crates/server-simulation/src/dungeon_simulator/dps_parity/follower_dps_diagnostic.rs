@@ -3387,6 +3387,11 @@ fn follower_dps_production_dummy() {
             map,
         )
     };
+    if profile.spec_id == 269 {
+        app.world_mut()
+            .entity_mut(actor)
+            .insert(server_follower_apl::windwalker_rotation::karma::ModeledKarmaFixture);
+    }
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         app.init_resource::<crate::auras::DeathAuraAudit>();
     }
