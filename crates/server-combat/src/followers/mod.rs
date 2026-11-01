@@ -204,7 +204,27 @@ pub fn holding_pull_damage(world: &World, unit: Entity) -> bool {
         })
 }
 pub use catalog::{FollowerCatalog, load_catalog};
-pub use kit_ai::is_tank;
+/// A tank-role follower, or a unit whose active spec has the tank role.
+pub fn is_tank(world: &World, unit: Entity) -> bool {
+    if world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.profile.role == GroupRole::Tank)
+    {
+        return true;
+    }
+    let Some(spec) = world.get::<crate::class_progression::ActiveSpec>(unit) else {
+        return false;
+    };
+    world
+        .get_resource::<crate::spell_info::ClassSpells>()
+        .is_some_and(|classes| {
+            classes
+                .classes
+                .iter()
+                .flat_map(|class| &class.specs)
+                .any(|entry| entry.spec_id == spec.0 && entry.role == 0)
+        })
+}
 pub use live_facts::{ObservedEvents, observe_unit};
 pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
 pub(crate) use spell_safety::summon_targets_safe;

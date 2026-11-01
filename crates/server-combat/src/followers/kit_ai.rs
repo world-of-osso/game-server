@@ -435,27 +435,7 @@ pub(super) fn patient_is_eligible(
     same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
 }
 
-/// A tank-role follower, or a unit whose active spec has the tank role.
-pub fn is_tank(world: &World, unit: Entity) -> bool {
-    if world
-        .get::<Follower>(unit)
-        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)
-    {
-        return true;
-    }
-    let Some(spec) = world.get::<crate::class_progression::ActiveSpec>(unit) else {
-        return false;
-    };
-    world
-        .get_resource::<crate::spell_info::ClassSpells>()
-        .is_some_and(|classes| {
-            classes
-                .classes
-                .iter()
-                .flat_map(|class| &class.specs)
-                .any(|entry| entry.spec_id == spec.0 && entry.role == 0)
-        })
-}
+pub(super) use super::is_tank;
 
 pub(super) fn conditions_met(
     world: &mut World,
