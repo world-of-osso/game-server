@@ -1762,7 +1762,7 @@ fn follower_attacks_with_its_equipped_weapon_type() {
             .get::<crate::stats::CharacterStats>(actor)
             .unwrap();
         assert_eq!(
-            stats.main_hand.weapon_type == shared::components::WeaponType::Ranged,
+            stats.main_hand.kind == shared::components::WeaponType::Ranged,
             ranged,
             "spec {spec} must use the expected DB2 weapon type"
         );

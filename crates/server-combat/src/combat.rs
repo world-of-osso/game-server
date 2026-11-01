@@ -401,7 +401,7 @@ fn creature_attack_system(
                 // SimC76f8118 sc_hunter.cpp:7235-7245 selects either Auto Shot
                 // or melee from the equipped weapon, not both.
                 let ranged_follower = followers.get(creature).is_ok_and(|(_, stats)| {
-                    stats.main_hand.weapon_type == shared::components::WeaponType::Ranged
+                    stats.main_hand.kind == shared::components::WeaponType::Ranged
                 });
                 if ranged_follower {
                     if current.is_some() {
