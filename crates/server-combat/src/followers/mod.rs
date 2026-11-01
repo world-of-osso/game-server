@@ -24,8 +24,6 @@ mod holy_priest_tests;
 #[cfg(test)]
 mod holy_threat_tests;
 #[cfg(test)]
-mod kit;
-#[cfg(test)]
 mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
@@ -83,8 +81,6 @@ pub(crate) mod pull_history;
 #[cfg(test)]
 mod pull_history_tests;
 #[cfg(test)]
-mod pull_movement_tests;
-#[cfg(test)]
 mod pull_position_tests;
 mod pull_readiness;
 #[cfg(test)]
@@ -108,6 +104,8 @@ mod spawning;
 pub mod spec_selection;
 mod spell_safety;
 mod stockade_diagnostic;
+#[cfg(any(test, feature = "test-support"))]
+pub mod stockade_scenario;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]

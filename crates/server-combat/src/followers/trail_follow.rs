@@ -1,23 +1,21 @@
 //! Route a held follower along the owner's recorded safe turns.
-use super::{owner_trail, positioning, pull_route};
-use crate::creature_aggro::AggroDistance;
+use super::{owner_trail, positioning};
 use crate::maps::InMap;
 use crate::navigation::{Goal, MoveRequest, Navigation};
 use ::navigation::worker::{Output, Query};
-use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::Position;
 
-const HOLD_SECONDS: f64 = 5.0;
+const HOLD_LOG_INTERVAL_SECONDS: f64 = 10.0;
 const ARRIVAL_DISTANCE: f32 = 0.75;
 
 #[derive(Component)]
 struct TrailFollow {
     owner: Entity,
     blockers: Vec<Entity>,
-    since: f64,
+    last_hold_log: Option<f64>,
     candidates: Vec<Vec3>,
-    destination: Option<Vec3>,
+    destination: Option<(usize, Vec3)>,
 }
 
 pub(super) fn active(world: &World, unit: Entity, owner: Entity) -> bool {
@@ -45,7 +43,7 @@ pub(super) fn advance(
         world.entity_mut(unit).insert(TrailFollow {
             owner,
             blockers,
-            since: now,
+            last_hold_log: None,
             candidates,
             destination: None,
         });
@@ -60,24 +58,19 @@ pub(super) fn advance(
         clear(world, unit);
         return true;
     }
-    let (since, destination) = {
-        let state = world.get::<TrailFollow>(unit).expect("trail state");
-        (state.since, state.destination)
-    };
-    if now - since >= HOLD_SECONDS {
-        debug!(
-            ?unit,
-            ?owner,
-            "Follower trail hold timed out; resume ordinary follow"
-        );
-        return false;
-    }
-    if let Some(to) = destination {
+    let destination = world
+        .get::<TrailFollow>(unit)
+        .expect("trail state")
+        .destination;
+    if let Some((index, to)) = destination {
         if origin.distance(to) <= ARRIVAL_DISTANCE {
-            let candidates = owner_trail::points(world, owner, map);
             let mut state = world.get_mut::<TrailFollow>(unit).expect("trail state");
             state.destination = None;
-            state.candidates = candidates;
+            state.candidates.drain(..=index);
+            if state.candidates.is_empty() {
+                clear(world, unit);
+                return false;
+            }
             return true;
         }
         let goal = Goal::OwnerTrail(owner.to_bits());
@@ -95,12 +88,14 @@ pub(super) fn advance(
         );
         if world
             .get::<Position>(unit)
-            .is_some_and(|after| *after != from)
+            .is_some_and(|after| *after == from)
         {
             world
                 .get_mut::<TrailFollow>(unit)
                 .expect("trail state")
-                .since = now;
+                .destination = None;
+            world.resource_mut::<Navigation>().cancel_route(unit);
+            log_hold(world, unit, owner, now, "trail step refused");
         }
         return true;
     }
@@ -117,10 +112,11 @@ pub(super) fn advance(
             .candidates = candidates.clone();
     }
     if candidates.is_empty() {
+        log_hold(world, unit, owner, now, "owner trail unavailable");
         return true;
     }
     let Some(mut nav) = world.get_resource_mut::<Navigation>() else {
-        error!(?unit, "Follower owner trail requires navigation");
+        log_hold(world, unit, owner, now, "navigation unavailable");
         return true;
     };
     let goal = Goal::OwnerTrail(owner.to_bits());
@@ -137,17 +133,19 @@ pub(super) fn advance(
         None => return true,
         Some(Ok(Some(Output::Candidates(paths)))) => paths,
         Some(other) => {
-            error!(?unit, ?other, "Follower owner trail navigation failed");
+            let reason = format!("owner trail navigation failed: {other:?}");
+            log_hold(world, unit, owner, now, &reason);
             return true;
         }
     };
-    let Some((to, path)) = choose_route(world, unit, map, origin, candidates, paths) else {
+    let Some((index, to, path)) = choose_route(world, unit, origin, candidates, paths) else {
         world
             .get_mut::<TrailFollow>(unit)
             .expect("trail state")
             .candidates
             .clear();
         world.resource_mut::<Navigation>().cancel_query(unit, goal);
+        log_hold(world, unit, owner, now, "no safe owner trail route");
         return true;
     };
     debug!(?unit, ?owner, ?origin, destination = ?to, "Follower retracing owner trail");
@@ -168,58 +166,236 @@ pub(super) fn advance(
         path,
     );
     let mut state = world.get_mut::<TrailFollow>(unit).expect("trail state");
-    state.destination = Some(to);
-    state.since = now;
+    state.destination = Some((index, to));
     true
 }
 
 fn choose_route(
-    world: &mut World,
+    world: &World,
     unit: Entity,
-    map: InMap,
     origin: Vec3,
     candidates: Vec<Vec3>,
     paths: Vec<Result<Vec<Vec3>, String>>,
-) -> Option<(Vec3, Vec<Vec3>)> {
-    let watchers: Vec<_> = world
-        .resource::<crate::maps::units::MapUnits>()
-        .in_map(map)
-        .filter(|&watcher| positioning::is_unpulled_hostile(world, unit, watcher))
-        .collect();
-    let mut geometry = SystemState::<AggroDistance>::new(world);
-    let mut circles = Vec::new();
-    for watcher in watchers {
-        let radius = match pull_route::read_native_radius(world, &mut geometry, unit, watcher) {
-            Ok(radius) => radius,
-            Err(error) => {
-                warn!(?unit, ?watcher, %error, "Follower trail lacks watcher geometry");
-                return None;
-            }
-        };
-        let Some(center) = crate::spell_cast::targets::position(world, watcher) else {
-            warn!(?unit, ?watcher, "Follower trail watcher lacks position");
-            return None;
-        };
-        circles.push((center, radius));
-    }
+) -> Option<(usize, Vec3, Vec<Vec3>)> {
+    let exclusions = world.get::<positioning::CombatMovementExclusions>(unit)?;
+    let los = world.get_resource::<crate::line_of_sight::LineOfSight>();
     candidates
         .into_iter()
         .zip(paths)
+        .enumerate()
         .rev()
-        .find_map(|(to, path)| {
+        .find_map(|(index, (to, path))| {
             let path = path.ok()?;
             if origin.distance(to) <= ARRIVAL_DISTANCE {
                 return None;
             }
-            let mut points = vec![origin];
-            points.extend(path.iter().copied());
-            let safe = circles.iter().all(|(center, radius)| {
-                points.windows(2).all(|leg| {
-                    pull_route::segment_distance_squared(*center, leg[0], leg[1]) >= radius * radius
-                })
-            });
-            safe.then_some((to, path))
+            let projected_start = path
+                .first()
+                .is_some_and(|point| (point.x - origin.x).hypot(point.z - origin.z) < 0.001);
+            let mut previous = origin;
+            let safe = path
+                .iter()
+                .copied()
+                .skip(usize::from(projected_start))
+                .all(|point| {
+                    let permitted = exclusions.permits(los, previous, point);
+                    previous = point;
+                    permitted
+                });
+            safe.then_some((index, to, path))
         })
+}
+
+fn log_hold(world: &mut World, unit: Entity, owner: Entity, now: f64, reason: &str) {
+    let mut state = world.get_mut::<TrailFollow>(unit).expect("trail state");
+    if state
+        .last_hold_log
+        .is_none_or(|last| now - last >= HOLD_LOG_INTERVAL_SECONDS)
+    {
+        warn!(
+            ?unit,
+            ?owner,
+            reason,
+            "Follower holds while avoiding idle hostiles"
+        );
+        state.last_hold_log = Some(now);
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn trail_route_uses_all_movement_exclusions() {
+    let mut world = World::new();
+    let exclusion = |center| positioning::SightExclusion {
+        center,
+        radius: 1.5,
+        sight: crate::line_of_sight::ProjectedSight::Open,
+    };
+    let unit = world
+        .spawn(positioning::CombatMovementExclusions(Some(vec![
+            exclusion(Vec3::new(5.0, 0.0, 0.0)),
+            exclusion(Vec3::new(5.0, 0.0, 3.0)),
+        ])))
+        .id();
+    let origin = Vec3::ZERO;
+    let unsafe_target = Vec3::new(10.0, 0.0, 3.0);
+    let safe_target = Vec3::new(10.0, 0.0, -3.0);
+    let unsafe_path = vec![Vec3::new(5.0, 0.0, 3.0), unsafe_target];
+    let safe_path = vec![Vec3::new(0.0, 0.0, -3.0), safe_target];
+    let selected = choose_route(
+        &world,
+        unit,
+        origin,
+        vec![safe_target, unsafe_target],
+        vec![Ok(safe_path.clone()), Ok(unsafe_path.clone())],
+    );
+    assert_eq!(selected, Some((0, safe_target, safe_path)));
+    assert_eq!(
+        choose_route(
+            &world,
+            unit,
+            origin,
+            vec![unsafe_target],
+            vec![Ok(unsafe_path)]
+        ),
+        None
+    );
+}
+
+#[cfg(test)]
+#[test]
+#[ignore = "requires Ara-Kara navigation and ground assets"]
+fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
+    use crate::followers::profile_behavior_tests::spawn_profile_fixture_with_plugins;
+    use shared::components::{CombatStatus, UnitFactionTemplate, UnitLevel};
+    use std::collections::HashMap;
+
+    let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209072, |_| {});
+    h.app.world_mut().despawn(h.npc);
+    let owner = h.caster;
+    let map = InMap::continent(2660);
+    let center = Vec3::new(-63.42, 133.01, -628.66);
+    let start = Vec3::new(-78.70, 132.21, -621.23);
+    let trail = [
+        Vec3::new(-77.974045, 131.56999, -610.6789),
+        Vec3::new(-81.32759, 131.51245, -626.7759),
+        Vec3::new(-83.207375, 130.4844, -635.7988),
+        Vec3::new(-84.65946, 132.70932, -643.39514),
+        Vec3::new(-85.12416, 133.00012, -651.85925),
+    ];
+    let as_position = |p: Vec3| Position {
+        x: p.x,
+        y: p.y,
+        z: p.z,
+    };
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2660, maps.map(2660).unwrap().wdt_file_data_id)]),
+    ));
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    let mut native_map = ::navigation::NavigationMap::open(&nav.join("2660")).unwrap();
+    native_map
+        .complete_walk_path(start, trail[0])
+        .expect("first trail point must be reachable on the real navmesh");
+    crate::navigation::install_fixture(&mut h.app, Navigation::new(&nav));
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert((map, as_position(start)));
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((map, CombatStatus(false)));
+    let watcher = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(watcher).insert((
+        map,
+        as_position(center),
+        UnitFactionTemplate(16),
+        UnitLevel(80),
+        crate::creature_aggro::AggroRange,
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    for (index, point) in trail.into_iter().enumerate() {
+        if index == 2 {
+            h.app
+                .world_mut()
+                .entity_mut(owner)
+                .insert(CombatStatus(true));
+        }
+        h.app
+            .world_mut()
+            .entity_mut(owner)
+            .insert(as_position(point));
+        super::owner_trail::record(h.app.world_mut(), owner);
+    }
+    assert_eq!(
+        super::owner_trail::points(h.app.world(), owner, map).last(),
+        trail.last()
+    );
+    let exclusion = positioning::SightExclusion {
+        center,
+        radius: 17.0,
+        sight: crate::line_of_sight::ProjectedSight::Open,
+    };
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(positioning::CombatMovementExclusions(Some(vec![exclusion])));
+    assert!(
+        positioning::is_unpulled_hostile(h.app.world(), follower, watcher),
+        "fixture watcher must be idle and hostile"
+    );
+    let exclusions = positioning::CombatMovementExclusions(Some(vec![exclusion]));
+    assert!(
+        trail
+            .windows(2)
+            .all(|leg| exclusions.permits(None, leg[0], leg[1])),
+        "recorded owner trail must stay outside the watcher margin"
+    );
+    let mut previous = start;
+    for _ in 0..600 {
+        h.advance(1);
+        let _ = advance(h.app.world_mut(), follower, owner, vec![watcher]);
+        let at = h.app.world().get::<Position>(follower).copied().unwrap();
+        let at = Vec3::new(at.x, at.y, at.z);
+        assert!(
+            exclusions.permits(None, previous, at),
+            "unsafe step {previous:?} -> {at:?}"
+        );
+        previous = at;
+        if at.distance(*trail.last().unwrap()) < 5.0 {
+            break;
+        }
+    }
+    assert!(
+        previous.distance(*trail.last().unwrap()) < 5.0,
+        "follower stopped at {previous:?} instead of reaching owner {:?}",
+        trail.last().unwrap()
+    );
+
+    // A destination inside the idle watcher's sight has no safe route.
+    clear(h.app.world_mut(), follower);
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(as_position(center));
+    super::owner_trail::record(h.app.world_mut(), owner);
+    let held_at = *h.app.world().get::<Position>(follower).unwrap();
+    for _ in 0..140 {
+        h.advance(1);
+        assert!(advance(h.app.world_mut(), follower, owner, vec![watcher]));
+        assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), held_at);
+    }
 }
 
 pub(super) fn clear(world: &mut World, unit: Entity) {

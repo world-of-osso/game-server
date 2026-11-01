@@ -55,6 +55,9 @@ pub(super) struct Outcome {
     pub in_time: Option<bool>,
     pub upgrade_levels: Option<u32>,
     pub resulting_key_level: Option<u32>,
+    pub forces: Option<u64>,
+    pub forces_required: Option<u64>,
+    pub bosses: Option<Vec<shared::protocol::ChallengeBoss>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -403,6 +406,13 @@ mod tests {
                 in_time: Some(true),
                 upgrade_levels: Some(3),
                 resulting_key_level: Some(5),
+                forces: Some(410),
+                forces_required: Some(410),
+                bosses: Some(vec![shared::protocol::ChallengeBoss {
+                    encounter_id: 2582,
+                    name: "Leymor".into(),
+                    defeated: true,
+                }]),
             },
             deaths: vec![],
             pulls: vec![],
@@ -416,6 +426,9 @@ mod tests {
         assert_eq!(json["route"]["planned_forces"], 410);
         assert_eq!(json["scaling"]["scaled_creatures"], 225);
         assert_eq!(json["outcome"]["resulting_key_level"], 5);
+        assert_eq!(json["outcome"]["forces"], 410);
+        assert_eq!(json["outcome"]["bosses"][0]["encounter_id"], 2582);
+        assert_eq!(json["outcome"]["bosses"][0]["defeated"], true);
     }
 
     #[test]

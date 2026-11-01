@@ -1,10 +1,11 @@
 //! Earned Outlaw builder procs; native records retain values and payload damage.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, ActiveAuras};
+use combat::auras;
 use combat::random::Rng;
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
+use combat::spell_info::SpellStore;
 
 const SINISTER_STRIKE: u32 = 193315;
 const EXTRA_STRIKE: u32 = 197834;
@@ -40,24 +41,28 @@ fn after_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: bool, damage
 }
 
 fn read_proc_chance(world: &World, caster: Entity) -> Option<f32> {
-    let talent = world
-        .get::<ActiveAuras>(caster)?
-        .iter()
-        .find(|aura| aura.spell_id == TALENT && aura.caster == caster)?;
-    let base = talent
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("native Opportunity talent chance")
-        .amount;
-    // sc_rogue.cpp1286–1292: every active RtB state grants Jackpot's
-    // extra-attack chance, not only the fourth rolled state.
+    if !auras::has_aura(world, caster, TALENT) {
+        return None;
+    }
+    let spells = world.resource::<SpellStore>();
+    let chance = |spell| {
+        spells
+            .get(spell)
+            .expect("native Opportunity chance spell")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .expect("native Opportunity chance effect")
+            .base_points
+    };
+    // SimC76f8118 sc_rogue.cpp1286–1292 reads both spell-data values.
+    // Reading the active talent aura would count RtB's modifier twice.
     let bonus = if auras::has_aura(world, caster, ROLL_THE_BONES) {
-        script_effect_value(world, caster, JACKPOT, 0)
+        chance(JACKPOT)
     } else {
         0.0
     };
-    Some(base + bonus)
+    Some(chance(TALENT) + bonus)
 }
 
 fn grant_opportunity(world: &mut World, caster: Entity) {

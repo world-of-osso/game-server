@@ -14,12 +14,11 @@ pub(crate) fn spawn_profile_fixture_with_plugins(
     entry: u32,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity, Profile) {
-    let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(crate::test_data::world_db_path);
-    let db =
-        rusqlite::Connection::open_with_flags(kit_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .unwrap();
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
     let catalog = catalog::load_catalog(&db).unwrap();
     let profile = catalog
         .profiles

@@ -64,7 +64,9 @@ pub(super) struct State {
 }
 
 /// Plan from the actual challenge criteria and the selected dungeon's native level cap.
-pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), String> {
+pub(super) fn prepare_challenge(
+    graph: &Graph,
+) -> Result<(server::mythic_plus_runtime::ChallengeDefinition, u8), String> {
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|error| format!("open keystone catalog: {error}"))?;
@@ -92,13 +94,7 @@ pub(super) fn prepare_graph(graph: &mut Graph) -> Result<(PlannedRoute, u8), Str
             graph.map_id
         ));
     }
-    let plan = super::keystone_route::plan(
-        graph,
-        &definition.creature_weights,
-        definition.forces_required,
-    )?;
-    graph.route = plan.steps.clone();
-    Ok((plan, *level))
+    Ok((definition, *level))
 }
 
 pub(super) fn start(
@@ -212,6 +208,14 @@ impl State {
         Ok(())
     }
 
+    pub fn waiting_for_start(&self, world: &World) -> Result<bool, String> {
+        let run = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        Ok(run.phase == shared::protocol::ChallengePhase::Countdown)
+    }
+
     pub fn completed(&self, world: &World) -> bool {
         self.session
             .snapshot(world)
@@ -256,6 +260,9 @@ impl State {
                 in_time: completed.then_some(snapshot.elapsed_ms <= snapshot.time_limit_ms),
                 upgrade_levels: completed.then_some(snapshot.upgrade_levels),
                 resulting_key_level: Some(resulting_key.level),
+                forces: Some(snapshot.forces),
+                forces_required: Some(snapshot.forces_required),
+                bosses: Some(snapshot.bosses),
             },
             deaths,
             pulls,

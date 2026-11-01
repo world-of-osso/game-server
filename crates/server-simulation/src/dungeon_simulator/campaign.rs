@@ -687,6 +687,123 @@ fn keystone_death_time_starts_after_native_countdown() {
 }
 
 #[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn keystone_driver_waits_for_countdown_before_pulling() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let initial_deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    while run
+        .keystone
+        .as_ref()
+        .unwrap()
+        .waiting_for_start(run.app.world())
+        .unwrap()
+    {
+        run.control().unwrap();
+        assert!(
+            run.report.pulls.is_empty(),
+            "route admitted a pull during countdown"
+        );
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    let deaths = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.kind == shared::protocol::CombatLogKind::Death)
+        .count();
+    assert_eq!(deaths, initial_deaths, "creature died during countdown");
+    for _ in 0..800 {
+        run.control().unwrap();
+        if run
+            .report
+            .pulls
+            .iter()
+            .any(|pull| pull.decision.starts_with("Allow"))
+        {
+            return;
+        }
+        run.app.update();
+        run.keystone
+            .as_mut()
+            .unwrap()
+            .update(run.app.world_mut())
+            .unwrap();
+    }
+    panic!("driver never admitted a pull after countdown");
+}
+
+#[test]
+#[ignore = "requires Azure Vault keystone data and class follower gear"]
+fn azure_rune_does_not_attack_owner_while_hostile_does() {
+    let options = super::keystone::Options {
+        map_id: 2515,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    let rune = run.actors[&29001892];
+    // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
+    let hostile = run.actors[&29001878];
+    let location = *run.app.world().get::<Position>(rune).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(location);
+    run.app.world_mut().entity_mut(hostile).insert(Position {
+        x: location.x + 2.0,
+        ..location
+    });
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..200 {
+        run.app.update();
+        assert!(
+            run.app
+                .world()
+                .get::<shared::components::CombatStatus>(rune)
+                .is_none_or(|state| !state.0),
+            "rune entered combat"
+        );
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let melee = |source: Entity| {
+        events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(source.to_bits())
+                && event.target == Some(owner.to_bits())
+                && event.spell_id.is_none()
+        })
+    };
+    assert!(!melee(rune), "rune hit the owner");
+    assert!(melee(hostile), "nearby hostile did not melee the owner");
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -2415,6 +2532,9 @@ fn failed_keystone_record(
             in_time: None,
             upgrade_levels: None,
             resulting_key_level: None,
+            forces: None,
+            forces_required: None,
+            bosses: None,
         },
         deaths: Vec::new(),
         pulls: Vec::new(),
@@ -2555,7 +2675,7 @@ fn spawn_run_mode(
         ));
     }
     let planned = if options.is_some() {
-        Some(super::keystone::prepare_graph(&mut graph)?)
+        Some(super::keystone::prepare_challenge(&graph)?)
     } else {
         None
     };
@@ -2651,7 +2771,22 @@ fn spawn_run_mode(
         }
     }
     let keystone = match (options, planned) {
-        (Some(options), Some((plan, _))) => {
+        (Some(options), Some((definition, _))) => {
+            let hostile_sources = actors
+                .iter()
+                .filter_map(|(guid, actor)| {
+                    crate::spell_cast::targets::is_hostile(app.world(), party.owner, *actor)
+                        .then_some(*guid)
+                })
+                .collect();
+            let plan = super::keystone_route::plan(
+                &graph,
+                &definition.creature_weights,
+                definition.forces_required,
+                &hostile_sources,
+            )?;
+            graph.route = plan.steps.clone();
+            app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
@@ -3059,6 +3194,11 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        if let Some(keystone) = &self.keystone
+            && keystone.waiting_for_start(self.app.world())?
+        {
+            return Ok(());
+        }
         if self.advance_deck_replay()? {
             return Ok(());
         }
