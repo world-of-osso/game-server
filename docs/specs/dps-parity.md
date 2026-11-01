@@ -837,7 +837,8 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 ### Demonology literal execution and alternative Tyrant
 
-- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`.
+- Selected Mark of F'harg gives each actual Charhound its native Infernal Presence aura; its periodic damage belongs to that pet and ends with its lifetime. Source: SimC 76f8118 `sc_warlock_pets.cpp:1430–1485`.
+- The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. A Demonbolt that consumes Demonic Core reduces the running Doomguard cooldown by native1276672 effect2 seconds; an ordinary hardcast does not. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`, `sc_warlock_actions.cpp:2960–2961`.
 
 - Dreadbite271971 hits only its selected primary unless Dreadlash264078 is selected; a landed Dreadbite triggers the owner's Blighted Maw1276960 using the native1276956 percentage of the actual damage. The Felguard prioritizes its native Felstorm89751 and its89753 ticks when ready (`sc_warlock_pets.cpp536–601,1068–1110`).
 - Selected Flametouched453699 applies native Ferocity453704 to each actual Dreadstalker; its owner-sourced native modifiers supply the melee-haste and critical-chance amounts (`sc_warlock_pets.cpp146–162,1223–1226,1269–1286`).
