@@ -83,6 +83,31 @@ fn atonement_area_spells_preserve_explicit_pet_but_exclude_secondary_pets() {
 }
 
 #[test]
+fn radiance_heals_and_marks_full_health_allies() {
+    let mut h = harness(Vec::new(), &[194509, 194384], 5).unwrap();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert(ActiveSpec(256));
+    let allies: Vec<_> = (0..4)
+        .map(|index| spawn_player(&mut h.app, 5, 3.0 + index as f32))
+        .collect();
+    h.cast_and_deliver(194509, Some(allies[0]));
+    h.advance(65);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    for target in allies.into_iter().chain([caster]) {
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .any(|event| event.spell_id == Some(194509)
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Heal),
+            "Radiance did not heal full-health ally {target:?}"
+        );
+        assert!(crate::auras::has_aura(h.app.world(), target, 194384));
+    }
+}
+
+#[test]
 fn twinsight_friendly_penance_damages_one_engaged_enemy_and_transfers_atonement() {
     use shared::components::CombatStatus;
 
