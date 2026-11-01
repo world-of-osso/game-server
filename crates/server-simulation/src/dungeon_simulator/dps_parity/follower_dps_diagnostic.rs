@@ -2715,6 +2715,25 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
                 && event.amount > 0),
         "actual Starfire hits must produce selected Star Cascade damage"
     );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(394111)
+                && event.amount > 0),
+        "Sundered Firmament must damage the actual target"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(394108)
+                && event.amount > 0),
+        "Sundered Firmament must generate Astral Power"
+    );
     let lunar_bolts: Vec<_> = events
         .iter()
         .filter(|event| {
