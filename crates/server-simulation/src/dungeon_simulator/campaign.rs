@@ -983,19 +983,12 @@ fn released_leader_rejoins_party_through_azure_book() {
             break;
         }
         run.app.update();
-        if !run
-            .report
-            .pulls
-            .iter()
-            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
-        {
-            for (member, position) in &positions_before_return {
-                assert_eq!(
-                    *run.app.world().get::<Position>(*member).unwrap(),
-                    *position,
-                    "living followers must hold until the leader uses the book"
-                );
-            }
+        for (member, position) in &positions_before_return {
+            assert_eq!(
+                *run.app.world().get::<Position>(*member).unwrap(),
+                *position,
+                "living followers must hold throughout the leader's return"
+            );
         }
     }
     assert!(
