@@ -153,6 +153,39 @@ fn devourer_reap_consumes_active_lesser_fragments_and_hits() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn eradicate_consumes_fragments_buff_and_deals_damage() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.extend([1226033, 1225826]);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    let before = spawn_active_fragments(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1239524, Some(actor), 1);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1239524));
+    crate::spell_cast::cast_for_player_with_target(
+        run.app.world_mut(),
+        actor,
+        1225826,
+        Some(target),
+    )
+    .expect("native Eradicate");
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1239524));
+    assert_fragment_damage_boundary(&mut run, before, 1225826, 1225827);
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_cull_consumes_active_lesser_fragments_and_hits() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");

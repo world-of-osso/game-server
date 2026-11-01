@@ -125,7 +125,17 @@ fn shatter_on_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool) {
     let ray = matches!(ctx.spell.id, 1213649 | 1214595);
     if !matches!(
         ctx.spell.id,
-        1213649 | 1214595 | 1221162 | 473662 | 1217610 | 1245455 | 1225823 | 1239127 | 1297432
+        1213649
+            | 1214595
+            | 1221162
+            | 473662
+            | 1217610
+            | 1245455
+            | 1225823
+            | 1225827
+            | 1279200
+            | 1239127
+            | 1297432
     ) || !world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(1227619))

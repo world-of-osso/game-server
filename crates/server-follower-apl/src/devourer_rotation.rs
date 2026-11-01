@@ -108,14 +108,22 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<Prepared, String> {
-        Prepared::read(
+        let mut prepared = Prepared::read(
             world,
             actor,
             targets,
             &self.equipment,
             bindings::execution_actions(),
             self.driver.snapshot.is_none(),
-        )
+        )?;
+        // SimC76f8118 cpp6254–6296 selects Eradicate only while its buff is active.
+        if server::auras::has_aura(world, actor, 1239524) {
+            prepared.suppress_action("reap");
+            prepared.suppress_action("cull");
+        } else {
+            prepared.suppress_action("eradicate");
+        }
+        Ok(prepared)
     }
 
     pub fn drive(
