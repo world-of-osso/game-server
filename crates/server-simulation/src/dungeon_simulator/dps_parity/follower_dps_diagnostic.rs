@@ -220,6 +220,55 @@ fn follower_mm_take_aim_mark_is_earned_and_consumed_by_rapid_fire() {
     );
 }
 
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mm_take_aim_new_mark_survives_in_flight_rapid_tick() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 254, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 257044, Some(target), false).unwrap();
+    let mut channel_started = false;
+    for _ in 0..100 {
+        app.update();
+        let active = crate::auras::has_aura(app.world(), target, 257044);
+        channel_started |= active;
+        if channel_started && !active {
+            break;
+        }
+    }
+    assert!(
+        channel_started && !crate::auras::has_aura(app.world(), target, 257044),
+        "Rapid Fire channel must start and finish"
+    );
+    let count = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.spell_id == Some(257045) && event.kind == CombatLogKind::Damage)
+            .count()
+    };
+    let before = count(&app);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 1301098, Some(target), 1);
+    assert!(crate::auras::has_aura(app.world(), target, 1301098));
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(
+        count(&app) > before,
+        "a Rapid Fire missile actually landed after the channel"
+    );
+    assert!(
+        crate::auras::has_aura(app.world(), target, 1301098),
+        "a previously launched missile must not consume the new mark"
+    );
+}
+
 fn take_aim_damage_receipt(marked: bool, spell: u32) -> (f64, Vec<i32>) {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
@@ -2816,6 +2865,9 @@ fn follower_dps_production_dummy() {
     let trace_actions = std::env::var_os("FOLLOWER_TRACE_ACTIONS").is_some();
     let mut stat_sums = [0.0f64; 6];
     let mut aura_frames = std::collections::BTreeMap::new();
+    let mut target_aura_frames = std::collections::BTreeMap::new();
+    let mut mark_trace = Vec::new();
+    let mut previous_marks = (false, false);
     for frame in 0..FIXED_FIGHT_FRAMES {
         if let Some(scenario) = &mut tank_scenario {
             scenario
@@ -2838,6 +2890,21 @@ fn follower_dps_production_dummy() {
         super::super::healer_simc_replay::report_death_audit(&mut app, &[actor, owner]);
         let world = app.world();
         sample_actor_auras(world, actor, &mut aura_frames);
+        if let Some(auras) = world.get::<crate::auras::ActiveAuras>(target) {
+            for aura in auras.iter().filter(|aura| aura.caster == actor) {
+                *target_aura_frames.entry(aura.spell_id).or_insert(0u32) += 1;
+            }
+        }
+        if trace_actions {
+            let marks = (
+                crate::auras::has_aura(world, target, 1253601),
+                crate::auras::has_aura(world, target, 1301098),
+            );
+            if marks != previous_marks {
+                mark_trace.push(((frame + 1) as f64 / 20.0, marks));
+                previous_marks = marks;
+            }
+        }
         let now = crate::spell_cast::history_now(world);
         let stats = world.get::<crate::stats::CharacterStats>(actor).unwrap();
         for (sum, value) in stat_sums.iter_mut().zip([
@@ -3057,6 +3124,19 @@ fn follower_dps_production_dummy() {
     }
     let (self_absorbs, absorb_non_unit, absorb_unknown_scale) =
         self_absorb_receipts(app.world(), actor);
+    let target_uptime: std::collections::BTreeMap<_, _> = target_aura_frames
+        .into_iter()
+        .map(|(spell, frames)| {
+            (
+                spell,
+                f64::from(frames) * 100.0 / f64::from(FIXED_FIGHT_FRAMES),
+            )
+        })
+        .collect();
+    println!("FOLLOWER_TARGET_AURAS {}", serde_json::json!(target_uptime));
+    if trace_actions {
+        println!("FOLLOWER_MARK_TRACE {}", serde_json::json!(mark_trace));
+    }
     println!(
         "FOLLOWER_DPS {}",
         json!({"entry":entry,"spec":profile.spec_id,"level":level,"map":map,"difficulty":205,"seed":seed,"seconds":120,"sheet":sheet,
