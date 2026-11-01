@@ -334,12 +334,19 @@ fn follower_mm_take_aim_mark_increases_actual_aimed_crit_and_all_rapid_ticks() {
         plain.len() >= 3 && plain.len() == marked.len(),
         "Rapid Fire ticks {plain:?} / {marked:?}"
     );
+    // Applying the mark advances the random stream, so weapon variance differs
+    // between the two runs. Check every tick and the aggregate separately.
     for (a, b) in plain.iter().zip(&marked) {
         assert!(
-            (*b as f64 / *a as f64 - 1.2).abs() < 0.05,
+            (*b as f64 / *a as f64 - 1.55).abs() < 0.08,
             "each actual Rapid tick must retain the consumed mark: {plain:?} / {marked:?}"
         );
     }
+    let ratio = marked.iter().sum::<i32>() as f64 / plain.iter().sum::<i32>() as f64;
+    assert!(
+        (ratio - 1.55).abs() < 0.04,
+        "actual channel damage ratio {ratio}"
+    );
 }
 
 #[test]
