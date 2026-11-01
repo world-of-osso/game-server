@@ -866,6 +866,14 @@ mod tests {
         )
         .unwrap();
         queue.apply(h.app.world_mut());
+        h.app
+            .world_mut()
+            .entity_mut(npc)
+            .insert(crate::zones::CreatureDifficulty(23));
+        h.app
+            .world_mut()
+            .entity_mut(boss)
+            .insert(crate::zones::CreatureDifficulty(23));
         assert_eq!(
             h.app
                 .world()
@@ -902,6 +910,22 @@ mod tests {
             .get::<shared::level_scaling::LevelScaling>(npc)
             .unwrap();
         assert_eq!((scaling.content_tuning_id, scaling.max_level), (1279, 90));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::zones::CreatureDifficulty>(npc)
+                .unwrap()
+                .0,
+            8
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::zones::CreatureDifficulty>(boss)
+                .unwrap()
+                .0,
+            8
+        );
         assert_eq!(
             h.app
                 .world()
