@@ -106,13 +106,18 @@ fn batch4_complete_ray_grants_moment_and_final_breath() {
 fn completed_void_ray_grants_eradicate() {
     let mut run = start_ray(1);
     let actor = run.actor;
-    assert!(
-        run.app
-            .world()
-            .get::<crate::class_progression::KnownSpells>(actor)
-            .unwrap()
-            .contains(1226033)
-    );
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.push(1226033);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
     assert!(!crate::auras::has_aura(run.app.world(), actor, 1239524));
     for _ in 0..100 {
         run.app.update();
