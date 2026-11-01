@@ -16,7 +16,10 @@ pub(super) fn owns_proc(spell: u32) -> bool {
 }
 
 pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
-    if world.get::<ActiveSpec>(caster).is_none_or(|spec| spec.0 != 71) {
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_none_or(|spec| spec.0 != 71)
+    {
         return;
     }
     match spell.id {
@@ -32,7 +35,9 @@ pub(super) fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo, f
 
 fn roll_battlelord(world: &mut World, caster: Entity) {
     let Some(instance) = world.get::<ActiveAuras>(caster).and_then(|auras| {
-        auras.iter().find(|aura| aura.spell_id == BATTLELORD && aura.caster == caster)
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == BATTLELORD && aura.caster == caster)
             .map(|aura| aura.instance_id)
     }) else {
         return;
@@ -43,10 +48,19 @@ fn roll_battlelord(world: &mut World, caster: Entity) {
         return;
     }
     let now = history_now(world);
-    let spell = world.resource::<SpellStore>().get(MORTAL_STRIKE).expect("native Mortal Strike");
-    let remaining = world.get::<SpellHistory>(caster)
+    let spell = world
+        .resource::<SpellStore>()
+        .get(MORTAL_STRIKE)
+        .expect("native Mortal Strike");
+    let remaining = world
+        .get::<SpellHistory>(caster)
         .map_or(0, |history| history.remaining_cooldown_ms(spell, now));
-    reduce_cooldown(world, caster, MORTAL_STRIKE, (remaining as f64 + 1.0) / 1000.0);
+    reduce_cooldown(
+        world,
+        caster,
+        MORTAL_STRIKE,
+        (remaining as f64 + 1.0) / 1000.0,
+    );
     if !combat::spell_cast::try_cast_triggered(world, caster, BATTLELORD_BUFF, Some(caster), 1) {
         warn!(?caster, "Native Battlelord buff refused");
     }

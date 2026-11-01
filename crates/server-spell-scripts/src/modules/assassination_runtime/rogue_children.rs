@@ -6,8 +6,8 @@ use combat::auras::{
     scripts::{AuraScript, AuraScripts},
 };
 use combat::spell_cast::{self, effects::EffectCtx};
-use combat::spell_info::SpellStore;
-use shared::components::{ActiveSpec, PowerType};
+use combat::spell_info::{SpellInfo, SpellStore};
+use shared::components::{ActiveSpec, Health, PowerType};
 
 const RUPTURE: u32 = 1943;
 const INTERNAL_BLEEDING: u32 = 381627;
@@ -19,6 +19,49 @@ const REGICIDE_BUFF: u32 = 1250331;
 const IMPLACABLE: u32 = 1265387;
 const IMPLACABLE_DRIVER: u32 = 1265787;
 const IMPLACABLE_HITS: &[u32] = &[1265794, 1265795];
+const BLINDSIDE: u32 = 328085;
+const BLINDSIDE_BUFF: u32 = 121153;
+
+#[derive(Component)]
+struct BlindsideHit(Entity);
+
+// SimC76f8118 sc_rogue.cpp3593–3596/5171–5178/8484–8496: one roll
+// per successful Ambush or Mutilate, with the native execute threshold.
+// Grant after the foreground cast consumes any existing Blindside charge.
+pub(super) fn finish_blindside(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 1329 | 8676) {
+        return;
+    }
+    let Some(target) = world
+        .entity_mut(caster)
+        .take::<BlindsideHit>()
+        .map(|hit| hit.0)
+    else {
+        return;
+    };
+    let Some(talent) = world.get::<auras::ActiveAuras>(caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == BLINDSIDE && aura.caster == caster)
+    }) else {
+        return;
+    };
+    let value = |index| {
+        talent
+            .effects
+            .iter()
+            .find(|effect| effect.index == index)
+            .expect("Blindside retains its native effect")
+            .amount
+    };
+    let execute = world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current * 100.0 < health.max * value(2));
+    let chance = value(if execute { 1 } else { 0 });
+    if combat::random::random::<f32>() * 100.0 < chance {
+        spell_cast::cast_triggered(world, caster, BLINDSIDE_BUFF, Some(caster), 1);
+    }
+}
 
 #[derive(Component)]
 struct ImplacableTarget(Entity);
@@ -62,6 +105,7 @@ pub(super) fn needs_context(world: &World, caster: Entity, spell: u32) -> bool {
         && match spell {
             RUPTURE => auras::has_aura(world, caster, INTERNAL_BLEEDING),
             KINGSBANE => auras::has_aura(world, caster, IMPLACABLE),
+            1329 | 8676 => auras::has_aura(world, caster, BLINDSIDE),
             _ => false,
         }
 }
@@ -70,6 +114,10 @@ pub(super) fn needs_context(world: &World, caster: Entity, spell: u32) -> bool {
 /// effective CP for the native periodic child, without spending them again.
 pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     if !needs_context(world, ctx.caster, ctx.spell.id) {
+        return;
+    }
+    if matches!(ctx.spell.id, 1329 | 8676) {
+        world.entity_mut(ctx.caster).insert(BlindsideHit(target));
         return;
     }
     if ctx.spell.id == KINGSBANE {

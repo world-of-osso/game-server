@@ -1,5 +1,5 @@
-use super::*;
 use super::follower_dps_diagnostic::*;
+use super::*;
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with Arms follower profile"]
@@ -36,14 +36,26 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         .get_mut(shared::components::PowerType::Rage)
         .unwrap()
         .current = 1000.0;
-    app.world_mut().get_mut::<crate::spell_cast::SpellHistory>(actor).unwrap().clear_fixture_precombat_gcd();
+    app.world_mut()
+        .get_mut::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
+        .clear_fixture_precombat_gcd();
     crate::spell_cast::creature_cast(app.world_mut(), actor, 12294, Some(target), false).unwrap();
     let on_cooldown = |app: &App| {
         let world = app.world();
-        let spell = world.resource::<crate::spell_info::SpellStore>().get(12294).unwrap();
-        world.get::<crate::spell_cast::SpellHistory>(actor).unwrap().on_cooldown(spell, crate::spell_cast::history_now(world))
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(12294)
+            .unwrap();
+        world
+            .get::<crate::spell_cast::SpellHistory>(actor)
+            .unwrap()
+            .on_cooldown(spell, crate::spell_cast::history_now(world))
     };
-    assert!(on_cooldown(&app), "Mortal Strike starts its native cooldown");
+    assert!(
+        on_cooldown(&app),
+        "Mortal Strike starts its native cooldown"
+    );
     for _ in 0..16 {
         assert!(crate::spell_cast::try_cast_triggered(
             app.world_mut(),
@@ -61,7 +73,10 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         crate::auras::has_aura(app.world(), actor, 386631),
         "actual Overpower casts must earn Battlelord"
     );
-    assert!(!on_cooldown(&app), "Battlelord resets the running Mortal Strike cooldown");
+    assert!(
+        !on_cooldown(&app),
+        "Battlelord resets the running Mortal Strike cooldown"
+    );
     assert!(crate::spell_cast::try_cast_triggered(
         app.world_mut(),
         actor,
@@ -82,7 +97,10 @@ fn follower_arms_battlelord_only_overpower_earns_and_mortal_strike_consumes() {
         .get_mut(shared::components::PowerType::Rage)
         .unwrap()
         .current = 1000.0;
-    app.world_mut().get_mut::<crate::spell_cast::SpellHistory>(actor).unwrap().clear_fixture_precombat_gcd();
+    app.world_mut()
+        .get_mut::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
+        .clear_fixture_precombat_gcd();
     crate::spell_cast::creature_cast(app.world_mut(), actor, 12294, Some(target), false).unwrap();
     assert!(
         !crate::auras::has_aura(app.world(), actor, 386631),
