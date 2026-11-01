@@ -605,7 +605,9 @@ fn initialize_wild_summon(
         entity.insert(scaled_stats);
     }
     insert_summon_privacy(&mut entity, private_owner);
+    entity.remove::<crate::mythic_plus_scaling::KeystoneCreatureScale>();
     drop(entity);
+    crate::mythic_plus::scale_spawned_creature(world, actor);
     register_source_summon(world, actor, ctx.caster, properties);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
     super::howl::on_summoned(world, ctx, actor);

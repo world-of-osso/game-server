@@ -2471,7 +2471,7 @@ fn resolve_swing(
     let outcome_damage = if immune {
         0.0
     } else {
-        outcome_damage * critical_multiplier
+        outcome_damage * critical_multiplier * attacker_scaling.keystone_damage_multiplier()
     };
     let blocked = if kind == MeleeOutcome::CritBlock {
         blocked * critical_multiplier
@@ -2494,8 +2494,9 @@ fn resolve_swing(
         });
     }
     if !immune {
-        let source_damage =
-            melee::outcome_damage(swing.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        let source_damage = melee::outcome_damage(swing.raw, kind, level_difference, 0.0).0
+            * critical_multiplier
+            * attacker_scaling.keystone_damage_multiplier();
         commands.queue(move |world: &mut World| {
             crate::spell_cast::script_registry::incoming_damage_before_mitigation(
                 world,
@@ -2565,7 +2566,8 @@ fn resolve_swing(
             );
         });
     }
-    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, remaining);
+    let damage =
+        crate::level_scaling::damage_dealt_after_keystone(&attacker_scaling, &target, remaining);
     let attacker_entity = attacker.entity;
     commands.queue(move |world: &mut World| {
         crate::auras::finish_absorbs(world, target_entity, Some(attacker_entity), absorption)
@@ -3208,7 +3210,7 @@ pub fn replay_healer_hit(
     let amount = if immune {
         0.0
     } else {
-        amount * critical_multiplier
+        amount * critical_multiplier * attacker_scaling.keystone_damage_multiplier()
     };
     let blocked = if kind == MeleeOutcome::CritBlock {
         blocked * critical_multiplier
@@ -3216,8 +3218,9 @@ pub fn replay_healer_hit(
         blocked
     };
     if !immune {
-        let source_damage =
-            melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0 * critical_multiplier;
+        let source_damage = melee::outcome_damage(hit.raw, kind, level_difference, 0.0).0
+            * critical_multiplier
+            * attacker_scaling.keystone_damage_multiplier();
         crate::spell_cast::script_registry::incoming_damage_before_mitigation(
             world,
             victim,
@@ -3239,7 +3242,8 @@ pub fn replay_healer_hit(
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
     );
-    let damage = crate::level_scaling::damage_dealt(&attacker_scaling, &target, amount);
+    let damage =
+        crate::level_scaling::damage_dealt_after_keystone(&attacker_scaling, &target, amount);
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
     let versus = world
         .get::<AuraStatMods>(attacker)

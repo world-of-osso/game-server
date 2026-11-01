@@ -6,7 +6,8 @@ use crate::persistence::{self, GameDatabase};
 use ::server::mythic_plus_catalog::{
     ChallengeSummary, FontContext, load_azure, load_summaries, load_summary, validate_font,
 };
-use ::server::mythic_plus_runtime::{ChallengeDefinition, Run, UnsourcedChallengeConfig};
+use ::server::mythic_plus_runtime::{ChallengeDefinition, Run};
+use ::server::mythic_plus_weeks::AffixSchedule;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::{ReadableDatabase, ReadableTable, TableDefinition};
@@ -30,14 +31,27 @@ struct Active {
     run: Run,
     settled: bool,
 }
-#[derive(Resource, Default)]
+#[derive(Resource)]
 struct Challenges {
+    weeks_path: std::path::PathBuf,
     definition: Option<ChallengeDefinition>,
     summaries: HashMap<u32, ChallengeSummary>,
-    config: UnsourcedChallengeConfig,
     fonts: HashMap<Entity, Entity>,
     slots: HashMap<Entity, Active>,
     runs: HashMap<InMap, Active>,
+}
+impl Default for Challenges {
+    fn default() -> Self {
+        Self {
+            weeks_path: std::env::var_os("GAME_SERVER_MYTHIC_PLUS_WEEKS")
+                .map_or_else(|| "data/mythic_plus_weeks.json".into(), Into::into),
+            definition: None,
+            summaries: HashMap::new(),
+            fonts: HashMap::new(),
+            slots: HashMap::new(),
+            runs: HashMap::new(),
+        }
+    }
 }
 pub struct MythicPlusPlugin;
 impl Plugin for MythicPlusPlugin {
@@ -45,6 +59,7 @@ impl Plugin for MythicPlusPlugin {
         app.init_resource::<Challenges>()
             .init_resource::<mentor::PublishedKeys>()
             .add_systems(PostStartup, load_startup)
+            .add_systems(FixedPreUpdate, scale_new_run_creatures)
             .add_systems(Update, (update, mentor::send_changed_party_keys).chain());
     }
 }
@@ -63,31 +78,10 @@ fn load_startup(world: &mut World) {
             .expect("open challenge world data");
     let definition = load_azure(&conn).expect("qualify imported Azure challenge");
     let summaries = load_summaries(&conn).expect("load imported challenge summaries");
-    let config = read_config().expect("read unsourced challenge config");
     let mut challenges = world.resource_mut::<Challenges>();
     challenges.definition = definition;
     challenges.summaries = summaries;
-    challenges.config = config;
 }
-fn read_config() -> Result<UnsourcedChallengeConfig, String> {
-    let config: UnsourcedChallengeConfig =
-        match std::env::var_os("GAME_SERVER_UNSOURCED_CHALLENGE_CONFIG") {
-            Some(path) => {
-                let bytes = std::fs::read(&path).map_err(|error| {
-                    format!(
-                        "read challenge config {}: {error}",
-                        std::path::Path::new(&path).display()
-                    )
-                })?;
-                serde_json::from_slice(&bytes)
-                    .map_err(|error| format!("decode challenge config: {error}"))?
-            }
-            None => UnsourcedChallengeConfig::default(),
-        };
-    config.validate().map_err(str::to_owned)?;
-    Ok(config)
-}
-
 fn save_key(db: &redb::Database, key: &KeystoneInfo) {
     let txn = db.begin_write().expect("begin keystone write");
     txn.open_table(KEYS)
@@ -233,19 +227,20 @@ fn slot(world: &mut World, connection: Entity, font: u64, guid: u64) -> Result<(
     if world.resource::<Challenges>().runs.contains_key(&map) {
         return Err("This copy already has a keystone run".into());
     }
-    let config = world.resource::<Challenges>().config.clone();
     let mut key = key;
-    key.affixes = config.affixes_at(
-        world.resource::<crate::maps::ServerClock>().unix(),
-        key.level,
-    );
+    let schedule = AffixSchedule::read(&world.resource::<Challenges>().weeks_path)?;
+    key.affixes = schedule
+        .affixes_at(
+            world.resource::<crate::maps::ServerClock>().unix(),
+            key.level,
+        )
+        .ok_or("No sourced US Mythic+ affix week for this time or key level")?;
     save_key(&world.resource::<GameDatabase>().db, &key);
     let run = Run::new(
         persistence::next_id(&world.resource::<GameDatabase>().db, "mythic_run"),
         map.instance_id,
         key,
         definition,
-        config,
     );
     world.resource_mut::<Challenges>().slots.insert(
         connection,
@@ -338,6 +333,16 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
     let mut state = world.resource_mut::<Challenges>();
     state.slots.remove(&connection);
     state.runs.insert(map, active);
+    let key = state
+        .runs
+        .get(&map)
+        .expect("inserted run")
+        .run
+        .snapshot
+        .key
+        .clone();
+    drop(state);
+    crate::mythic_plus_scaling::scale_copy(world, map, key.level, &key.affixes);
     Ok(())
 }
 fn receive(world: &mut World) {
@@ -377,6 +382,38 @@ fn abandon(world: &mut World, connection: Entity) -> Result<(), String> {
     active.run.abandon();
     Ok(())
 }
+pub(crate) fn scale_spawned_creature(world: &mut World, creature: Entity) {
+    let Some(map) = world.get::<InMap>(creature).copied() else {
+        return;
+    };
+    let Some(key) = world
+        .get_resource::<Challenges>()
+        .and_then(|state| state.runs.get(&map))
+        .map(|active| active.run.snapshot.key.clone())
+    else {
+        return;
+    };
+    crate::mythic_plus_scaling::scale_creature(
+        world,
+        creature,
+        key.level,
+        &key.affixes,
+        crate::mythic_plus_scaling::ScalingPolicy::retail(),
+    );
+}
+
+fn scale_new_run_creatures(
+    mut commands: Commands,
+    creatures: Query<(Entity, &InMap), (Added<Npc>, With<Health>)>,
+    challenges: Res<Challenges>,
+) {
+    for (creature, map) in &creatures {
+        if challenges.runs.contains_key(map) {
+            commands.queue(move |world: &mut World| scale_spawned_creature(world, creature));
+        }
+    }
+}
+
 fn update(world: &mut World) {
     receive(world);
     let now = now_ms(world);
@@ -420,10 +457,20 @@ fn persist_summary(world: &mut World, summary: &ChallengeRun) {
     }
     let mut key = summary.key.clone();
     key.level = summary.resulting_level.expect("terminal level");
-    key.affixes = world.resource::<Challenges>().config.affixes_at(
-        world.resource::<crate::maps::ServerClock>().unix(),
-        key.level,
-    );
+    let schedule = AffixSchedule::read(&world.resource::<Challenges>().weeks_path);
+    match schedule {
+        Ok(schedule) => match schedule.affixes_at(
+            world.resource::<crate::maps::ServerClock>().unix(),
+            key.level,
+        ) {
+            Some(affixes) => key.affixes = affixes,
+            None => key.affixes.clear(),
+        },
+        Err(error) => {
+            warn!("{error}; clearing key display affixes during settlement");
+            key.affixes.clear();
+        }
+    }
     txn.open_table(KEYS)
         .expect("open keystones")
         .insert(key.item_guid, bitcode::encode(&key).as_slice())
@@ -576,7 +623,9 @@ pub(crate) mod fixture {
         character: u64,
         key: KeystoneInfo,
         definition: ChallengeDefinition,
-    ) {
+    ) -> tempfile::NamedTempFile {
+        let weeks = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
         let db = &world.resource::<GameDatabase>().db;
         let txn = db.begin_write().unwrap();
         txn.open_table(KEYS).unwrap();
@@ -596,12 +645,14 @@ pub(crate) mod fixture {
         persistence::save_inventory(db, character, &inventory);
         save_key(db, &key);
         world.insert_resource(Challenges {
+            weeks_path: weeks.path().to_owned(),
             definition: Some(definition),
             ..Default::default()
         });
         open_font(world, connection, font);
         slot(world, connection, font.to_bits(), key.item_guid).unwrap();
         super::start(world, connection).unwrap();
+        weeks
     }
 
     pub(crate) fn snapshot(world: &World, map: InMap) -> ChallengeRun {
@@ -689,15 +740,12 @@ mod tests {
             item_guid: 1,
             item_id: KEYSTONE_ITEM,
             challenge_id: 401,
-            level: 2,
+            level: 6,
             affixes: vec![],
         };
-        let config = UnsourcedChallengeConfig {
-            unsourced_death_penalty_ms: 5000,
-            ..Default::default()
-        };
-        let mut run = Run::new(1, map.instance_id, key, definition, config);
+        let mut run = Run::new(1, map.instance_id, key, definition);
         run.start(0).unwrap();
+        run.tick(10_000);
         let mut challenges = Challenges::default();
         challenges.runs.insert(
             map,
@@ -761,7 +809,12 @@ mod tests {
         h.app.insert_resource(maps).insert_resource(manager);
         h.app.world_mut().entity_mut(h.player).insert(map);
         h.app.world_mut().remove_resource::<GameDatabase>();
-        let session = headless::Session::prepare(h.app.world_mut(), &path, h.player, 8).unwrap();
+        let mut session =
+            headless::Session::prepare(h.app.world_mut(), &path, h.player, 8).unwrap();
+        let weeks = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
+        h.app.world_mut().resource_mut::<Challenges>().weeks_path = weeks.path().to_owned();
+        session.set_test_epoch(h.app.world_mut(), 1791705600);
         let position = session.font_position(h.app.world()).unwrap();
         h.app.world_mut().entity_mut(h.player).insert(position);
         assert!(session.in_font_range(h.app.world()).unwrap());
@@ -777,6 +830,11 @@ mod tests {
         );
         assert_eq!(session.resulting_key(h.app.world()).unwrap().level, 7);
         session.advance(h.app.world_mut(), 3).unwrap();
+        let countdown = session.snapshot(h.app.world()).unwrap();
+        assert_eq!(countdown.phase, ChallengePhase::Countdown);
+        assert_eq!(countdown.countdown_ms, 7000);
+        assert_eq!(countdown.elapsed_ms, 0);
+        session.advance(h.app.world_mut(), 13).unwrap();
         assert_eq!(session.snapshot(h.app.world()).unwrap().elapsed_ms, 3000);
     }
 
@@ -922,7 +980,18 @@ mod tests {
             fixed_unix: Some(1791705600),
         });
         h.app.world_mut().entity_mut(player).insert(map);
+        h.app
+            .insert_resource(crate::world_data::WorldData::default());
+        let weeks = tempfile::NamedTempFile::new().unwrap();
+        let complete_weeks = include_str!("mythic_plus_weeks.json");
+        let mut incomplete: serde_json::Value = serde_json::from_str(complete_weeks).unwrap();
+        incomplete["weeks"].as_array_mut().unwrap().retain(|week| {
+            !(week["start_unix"].as_i64().unwrap() <= 1791705600
+                && week["end_unix"].as_i64().unwrap() > 1791705600)
+        });
+        std::fs::write(weeks.path(), serde_json::to_vec(&incomplete).unwrap()).unwrap();
         h.app.world_mut().insert_resource(Challenges {
+            weeks_path: weeks.path().to_owned(),
             definition: Some(definition.clone()),
             ..Default::default()
         });
@@ -997,6 +1066,8 @@ mod tests {
             Some(&1)
         );
         assert!(slot(h.app.world_mut(), connection, font.to_bits(), 999).is_err());
+        assert!(slot(h.app.world_mut(), connection, font.to_bits(), 4242).is_err());
+        std::fs::write(weeks.path(), complete_weeks).unwrap();
         slot(h.app.world_mut(), connection, font.to_bits(), 4242).unwrap();
         let peer = h.create_alt("Keypeer");
         h.play_as(peer);
@@ -1009,7 +1080,46 @@ mod tests {
         assert!(start(h.app.world_mut(), connection).is_err());
         assert_eq!(owned_keys(h.db(), owner)[0].level, 10);
         h.app.world_mut().get_mut::<Position>(player).unwrap().x = 0.0;
+        let existing_npc = h
+            .app
+            .world_mut()
+            .spawn((
+                map,
+                Npc {
+                    template_id: 999999,
+                    name: "Before activation".into(),
+                },
+                Health {
+                    current: 40.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
         start(h.app.world_mut(), connection).unwrap();
+        let scaled = h.app.world().get::<Health>(existing_npc).unwrap();
+        let expected = 1.84_f32 / 1.07 * 1.2;
+        assert!((scaled.max - 100.0 * expected).abs() < 0.001);
+        assert!((scaled.current - 40.0 * expected).abs() < 0.001);
+        h.app.add_systems(FixedPreUpdate, scale_new_run_creatures);
+        let later_npc = h
+            .app
+            .world_mut()
+            .spawn((
+                map,
+                Npc {
+                    template_id: 999998,
+                    name: "After activation".into(),
+                },
+                Health {
+                    current: 25.0,
+                    max: 100.0,
+                },
+            ))
+            .id();
+        h.app.world_mut().run_schedule(FixedPreUpdate);
+        let later_health = h.app.world().get::<Health>(later_npc).unwrap();
+        assert!((later_health.max - 100.0 * expected).abs() < 0.001);
+        assert!((later_health.current - 25.0 * expected).abs() < 0.001);
         assert_eq!(owned_keys(h.db(), owner)[0].level, 9);
         assert_eq!(
             h.app
@@ -1042,7 +1152,10 @@ mod tests {
         assert_eq!(summary.phase, ChallengePhase::Completed);
         persist_summary(h.app.world_mut(), &summary);
         persist_summary(h.app.world_mut(), &summary);
-        assert_eq!(owned_keys(h.db(), owner)[0].level, 13);
+        let settled_key = &owned_keys(h.db(), owner)[0];
+        assert_eq!(settled_key.level, 13);
+        assert!(settled_key.affixes.contains(&147));
+        assert!(!settled_key.affixes.contains(&148));
         let state = h
             .app
             .world()

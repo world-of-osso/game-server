@@ -3,38 +3,6 @@ use crate::mythic_plus_policy::ChallengePolicy;
 use shared::protocol::{ChallengeBoss, ChallengePhase, ChallengeRun, KeystoneInfo};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, Debug, Default, serde::Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct UnsourcedChallengeConfig {
-    pub unsourced_minimum_keystone_level: u32,
-    pub unsourced_seasonal_affix_rotation: Vec<HashMap<u32, Vec<u32>>>,
-    pub unsourced_season_period_secs: u64,
-    pub unsourced_season_epoch_unix: i64,
-    pub unsourced_rating_by_level: HashMap<u32, u32>,
-}
-impl UnsourcedChallengeConfig {
-    pub fn validate(&self) -> Result<(), &'static str> {
-        if self.unsourced_season_period_secs > 0
-            && self.unsourced_seasonal_affix_rotation.is_empty()
-        {
-            return Err("Enabled unsourced season period requires explicit rotation rows");
-        }
-        Ok(())
-    }
-    pub fn affixes_at(&self, unix: i64, level: u32) -> Vec<u32> {
-        if self.unsourced_season_period_secs == 0 || unix < self.unsourced_season_epoch_unix {
-            return Vec::new();
-        }
-        let elapsed = unix.saturating_sub(self.unsourced_season_epoch_unix) as u64;
-        let period = elapsed / self.unsourced_season_period_secs;
-        let index = (period % self.unsourced_seasonal_affix_rotation.len() as u64) as usize;
-        self.unsourced_seasonal_affix_rotation[index]
-            .get(&level)
-            .cloned()
-            .unwrap_or_default()
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct ChallengeDefinition {
     pub challenge_id: u32,
@@ -50,20 +18,13 @@ pub struct ChallengeDefinition {
 pub struct Run {
     pub snapshot: ChallengeRun,
     pub definition: ChallengeDefinition,
-    pub config: UnsourcedChallengeConfig,
     pub policy: ChallengePolicy,
     start_ms: u64,
     killed: HashSet<u64>,
     scenario_events: HashSet<u64>,
 }
 impl Run {
-    pub fn new(
-        id: u64,
-        instance: u32,
-        key: KeystoneInfo,
-        definition: ChallengeDefinition,
-        config: UnsourcedChallengeConfig,
-    ) -> Self {
+    pub fn new(id: u64, instance: u32, key: KeystoneInfo, definition: ChallengeDefinition) -> Self {
         Self {
             snapshot: ChallengeRun {
                 run_id: id,
@@ -85,7 +46,6 @@ impl Run {
                 rating: None,
             },
             definition,
-            config,
             policy: ChallengePolicy::retail(),
             start_ms: 0,
             killed: HashSet::new(),
@@ -161,11 +121,7 @@ impl Run {
             .saturating_add(self.policy.death_penalty_ms(self.snapshot.key.level));
     }
     pub fn depleted_level(&self) -> u32 {
-        self.snapshot
-            .key
-            .level
-            .saturating_sub(1)
-            .max(self.config.unsourced_minimum_keystone_level)
+        self.snapshot.key.level.saturating_sub(1)
     }
 
     pub fn abandon(&mut self) {
@@ -189,7 +145,6 @@ impl Run {
         } else {
             level.saturating_add(self.snapshot.upgrade_levels)
         });
-        self.snapshot.rating = self.config.unsourced_rating_by_level.get(&level).copied();
     }
 }
 
@@ -224,7 +179,6 @@ mod tests {
                     })
                     .collect(),
             },
-            UnsourcedChallengeConfig::default(),
         );
         run.policy.countdown_ms.value = 0;
         run.policy.death_bands.value.clear();
@@ -328,28 +282,10 @@ mod tests {
     }
 
     #[test]
-    fn mythic_runtime_unsourced_rotation_is_disabled_until_a_period_is_supplied() {
-        let mut config = UnsourcedChallengeConfig::default();
-        config.unsourced_seasonal_affix_rotation = vec![
-            HashMap::from([(8, vec![147])]),
-            HashMap::from([(8, vec![165])]),
-        ];
-        config.unsourced_season_epoch_unix = 100;
-        assert!(config.affixes_at(100, 8).is_empty());
-        config.unsourced_season_period_secs = 2; // Fixture policy input, not a Retail season duration.
-        assert_eq!(config.affixes_at(100, 8), vec![147]);
-        assert_eq!(config.affixes_at(102, 8), vec![165]);
-        assert_eq!(config.affixes_at(104, 8), vec![147]);
-        assert!(config.affixes_at(99, 8).is_empty());
-    }
-
-    #[test]
-    fn mythic_runtime_minimum_key_level_requires_explicit_unsourced_policy() {
+    fn mythic_runtime_unsourced_minimum_floor_is_not_assumed() {
         let mut r = run();
         r.snapshot.key.level = 2;
         assert_eq!(r.depleted_level(), 1);
-        r.config.unsourced_minimum_keystone_level = 2; // Supplied fixture policy, not a sourced Retail minimum.
-        assert_eq!(r.depleted_level(), 2);
     }
 
     #[test]

@@ -1,0 +1,122 @@
+{
+  "season": "Midnight Season 2",
+  "region": "US",
+  "reset_citation": "https://www.wowhead.com/guide/lockouts-and-resets-in-world-of-warcraft-6072",
+  "bands": {
+    "value": {
+      "guidance_min": 2,
+      "guidance_max": 5,
+      "guidance_id": 165,
+      "bargain_min": 5,
+      "bargain_max": 11,
+      "defense_min": 7,
+      "both_min": 10,
+      "fortified_id": 10,
+      "tyrannical_id": 9,
+      "guile_min": 12,
+      "guile_id": 147
+    },
+    "citation": "https://www.wowhead.com/guide/midnight/mythic-plus-season-overview; https://www.warcraftlogs.com/reports/zT6hFXDPa1mBwGVC#fight=5"
+  },
+  "weeks": [
+    {
+      "start_unix": 1787065200,
+      "end_unix": 1787670000,
+      "bargain": 162,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/H7P3TAnW6ak8fJZQ#fight=9",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1787670000,
+      "end_unix": 1788274800,
+      "bargain": 158,
+      "defense": 9,
+      "citation": "https://www.warcraftlogs.com/reports/NC7dvQRaHTBfptGY#fight=2",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1788274800,
+      "end_unix": 1788879600,
+      "bargain": 160,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/LJXTgYrcv1waH2bt#fight=92",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1788879600,
+      "end_unix": 1789484400,
+      "bargain": 162,
+      "defense": 9,
+      "citation": "https://www.warcraftlogs.com/reports/1N39bzAXpkJKQ2qn#fight=28",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1789484400,
+      "end_unix": 1790089200,
+      "bargain": 148,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/v6AQYmV17Rbf324C#fight=4",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1790089200,
+      "end_unix": 1790694000,
+      "bargain": 158,
+      "defense": 9,
+      "citation": "https://www.warcraftlogs.com/reports/7K6QBHX1bvaVgRzj#fight=8",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1790694000,
+      "end_unix": 1791298800,
+      "bargain": 160,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/LhBQwRCXz8k1DaZ7#fight=5",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1791298800,
+      "end_unix": 1791903600,
+      "bargain": 148,
+      "defense": 9,
+      "citation": "https://www.warcraftlogs.com/reports/ZmQJBdHgYw6vPDWj#fight=6",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1791903600,
+      "end_unix": 1792508400,
+      "bargain": 162,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/dvw9Ckb4YxTzADP3#fight=7",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1792508400,
+      "end_unix": 1793113200,
+      "bargain": 158,
+      "defense": 9,
+      "citation": "https://www.warcraftlogs.com/reports/Dr4AyK1WnkvdCx7b#fight=3",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    },
+    {
+      "start_unix": 1793113200,
+      "end_unix": 1793721600,
+      "bargain": 160,
+      "defense": 10,
+      "citation": "https://www.warcraftlogs.com/reports/CmQ8gLcNpBFKrdyb#fight=1",
+      "defense_citation": "https://vaultalts.com/affixes; https://www.wowhead.com/guide/midnight/mythic-plus-season-overview",
+      "qualification": "Bargain observed; defense alternating backwards from US 2026-10-27 Fortified."
+    }
+  ]
+}

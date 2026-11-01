@@ -715,7 +715,7 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
         .unwrap()
         .unwrap();
     let weights = definition.creature_weights.clone();
-    crate::mythic_plus::fixture::start(
+    let _weeks = crate::mythic_plus::fixture::start(
         h.app.world_mut(),
         connection,
         font,
@@ -723,6 +723,11 @@ fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
         key,
         definition,
     );
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(1791705610);
+    crate::mythic_plus::fixture::tick(h.app.world_mut());
     assert_eq!(
         h.app
             .world()

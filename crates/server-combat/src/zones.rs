@@ -504,6 +504,12 @@ pub fn spawn_creature(
     entity.queue(move |actor: EntityWorldMut| {
         projection.apply(actor, true);
     });
+    if !context.temporary {
+        entity.queue(|mut actor: EntityWorldMut| {
+            let creature = actor.id();
+            actor.world_scope(|world| crate::mythic_plus::scale_spawned_creature(world, creature));
+        });
+    }
     let source_guid = spawn.guid;
     entity.queue(move |actor: EntityWorldMut| {
         crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
@@ -667,6 +673,7 @@ pub fn summon_creature(
     });
     queue.apply(world);
     if let Some(summon) = summon {
+        crate::mythic_plus::scale_spawned_creature(world, summon);
         crate::scripted_ai::dispatch(
             world,
             summon,
