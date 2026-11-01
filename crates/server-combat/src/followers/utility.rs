@@ -1,7 +1,7 @@
 //! FOLLOWER_UTILITY_POLICY. Native spellbooks and execution, project decisions.
 use bevy::prelude::*;
 use shared::casting::CastState;
-use shared::components::{Health, Npc, Position};
+use shared::components::{Health, Position};
 use shared::group::GroupRole;
 use std::collections::VecDeque;
 
@@ -12,8 +12,6 @@ use crate::spell_info::SpellStore;
 
 const DEATH_HORIZON: f64 = 3.0;
 const BOSS_PULL_SECONDS: f64 = 10.0;
-const DUNGEON_BOSS_FLAG: u32 = 0x1000_0000;
-const WORLD_BOSS_FLAG: u32 = 0x4;
 const RAID_BUFFS: &[u32] = &[1126, 1459, 21562, 6673, 462854, 364342];
 const LUST: &[u32] = &[2825, 32182, 80353, 390386];
 // Soulstone20707/6203 has no native trigger edge to a resurrection effect.
@@ -228,20 +226,6 @@ fn try_battle_res(world: &mut World, unit: Entity, follower: &Follower, party: &
     false
 }
 
-pub(crate) fn is_boss(world: &World, unit: Entity) -> bool {
-    let Some(npc) = world.get::<Npc>(unit) else {
-        return false;
-    };
-    world
-        .resource::<crate::world_data::WorldData>()
-        .templates
-        .get(&npc.template_id)
-        .is_some_and(|template| {
-            template.flags_extra & DUNGEON_BOSS_FLAG != 0
-                || template.type_flags & WORLD_BOSS_FLAG != 0
-        })
-}
-
 fn update_boss_pull(
     world: &mut World,
     owner: Entity,
@@ -250,7 +234,7 @@ fn update_boss_pull(
     let Some(boss) = enemies
         .iter()
         .map(|(enemy, _)| *enemy)
-        .find(|enemy| is_boss(world, *enemy))
+        .find(|enemy| super::is_boss(world, *enemy))
     else {
         world.entity_mut(owner).remove::<BossPull>();
         return false;

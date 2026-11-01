@@ -134,7 +134,21 @@ mod unintended_reach;
 #[cfg(test)]
 mod unintended_reach_tests;
 mod utility;
-pub(crate) use utility::is_boss;
+pub(crate) fn is_boss(world: &World, unit: Entity) -> bool {
+    const DUNGEON_BOSS_FLAG: u32 = 0x1000_0000;
+    const WORLD_BOSS_FLAG: u32 = 0x4;
+    let Some(npc) = world.get::<shared::components::Npc>(unit) else {
+        return false;
+    };
+    world
+        .resource::<crate::world_data::WorldData>()
+        .templates
+        .get(&npc.template_id)
+        .is_some_and(|template| {
+            template.flags_extra & DUNGEON_BOSS_FLAG != 0
+                || template.type_flags & WORLD_BOSS_FLAG != 0
+        })
+}
 #[cfg(test)]
 mod utility_buff_tests;
 mod utility_interrupt;
