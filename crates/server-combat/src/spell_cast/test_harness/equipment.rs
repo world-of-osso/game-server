@@ -49,9 +49,13 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
             templates,
         };
     };
-    let (known, _) =
+    let (mut known, _) =
         crate::class_progression::evaluate_npc_starter(&data.classes, class, spec.spec_id, 10)
             .expect("fixture class starter skills");
+    let race = if class == 12 { 4 } else { 1 };
+    known.extend(crate::class_progression::default_skill_spells(
+        class_info, race, 10,
+    ));
     let proficiency = known
         .iter()
         .filter_map(|spell| {
@@ -74,7 +78,7 @@ pub(super) fn select(data: &WorldData, class: u8, spells: &[SpellInfo]) -> Fixtu
             .filter(|(_, item)| {
                 item.scaling.class_id == 2
                     && item.required_level <= 10
-                    && item.allows(class, 1)
+                    && item.allows(class, race)
                     && proficiency & (1_u32 << item.scaling.subclass_id) != 0
                     && if offhand {
                         can_dual_wield && matches!(item.inventory_type, 13 | 22)

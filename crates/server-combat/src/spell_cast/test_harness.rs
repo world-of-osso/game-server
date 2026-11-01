@@ -482,7 +482,7 @@ pub fn spawn_player(app: &mut App, class: u8, x: f32) -> Entity {
         .spawn((
             Player {
                 name: "Caster".into(),
-                race: 1,
+                race: if class == 12 { 4 } else { 1 },
                 class,
                 appearance: default(),
             },
