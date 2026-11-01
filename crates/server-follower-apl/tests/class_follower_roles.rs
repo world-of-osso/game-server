@@ -965,6 +965,14 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
         !pull.casts().contains(&19236),
         "legacy defensive bridge ran"
     );
+    assert!(
+        server_combat::combat_refs::has_active_reference_to(
+            pull.harness.app.world(),
+            pull.harness.npc,
+            owner
+        ),
+        "waiting must retain the live combat reference"
+    );
     assert!(!pull.apl_failed());
 }
 

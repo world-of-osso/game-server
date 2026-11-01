@@ -150,47 +150,6 @@ mod tests {
             &world, owner
         ));
     }
-
-    #[test]
-    fn healer_keeps_healing_and_combat_reference_while_party_waits() {
-        let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
-        let owner = h.caster;
-        let enemy = h.npc;
-        let before = {
-            let mut health = h
-                .app
-                .world_mut()
-                .get_mut::<shared::components::Health>(owner)
-                .unwrap();
-            health.current = health.max * 0.1;
-            health.current
-        };
-        assert!(crate::combat_refs::has_active_reference_to(
-            h.app.world(),
-            enemy,
-            owner
-        ));
-        h.app
-            .world_mut()
-            .entity_mut(owner)
-            .insert(super::super::tank_pull_back::WaitingForPullBack(owner));
-        let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
-        for _ in 0..240 {
-            super::super::ai::update_follower(h.app.world_mut(), healer, &follower);
-            h.advance(1);
-            if h.health(owner) > before {
-                break;
-            }
-        }
-        assert!(
-            h.health(owner) > before,
-            "healer must use a native heal while waiting"
-        );
-        assert!(
-            crate::combat_refs::has_active_reference_to(h.app.world(), enemy, owner),
-            "waiting must retain the live combat reference"
-        );
-    }
 }
 
 pub(super) fn follow_tank(world: &mut World, unit: Entity, tank: Entity) {
