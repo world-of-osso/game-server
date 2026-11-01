@@ -58,7 +58,7 @@ fn equipped_follower(entry: u32, level: u8, map: u32, difficulty: u32) -> (f32, 
         .unwrap()
         .profile
         .clone();
-    equip(h.app.world_mut(), actor, &profile).unwrap();
+    equip(h.app.world_mut(), actor, &profile, &[]).unwrap();
     h.advance(1);
     let after = h
         .app
