@@ -742,7 +742,7 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
             .iter()
             .filter(|pull| pull.decision.starts_with("Allow"))
             .count();
-        if kills >= 2 && pulls >= 2 {
+        if kills >= 5 && pulls >= 5 {
             let casts = |actor: Entity, spell| {
                 events
                     .iter()
@@ -763,10 +763,15 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
                 1,
                 "Arcane Intellect must not repeat between pulls"
             );
+            assert_eq!(
+                casts(run.party.tank, 465),
+                1,
+                "Devotion Aura must not repeat when Consecration expires"
+            );
             return;
         }
     }
-    panic!("two native source deaths were not observed");
+    panic!("five native source deaths and pulls were not observed");
 }
 
 #[test]

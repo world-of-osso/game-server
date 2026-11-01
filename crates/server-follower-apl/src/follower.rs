@@ -105,6 +105,7 @@ impl FollowerApl {
                                 && !aura.passive
                                 && !aura.harmful
                                 && actions.contains(&aura.spell_id)
+                                && is_maintained_buff(world, aura.spell_id)
                         })
                         .filter_map(|aura| aura.expires_at.map(|at| (aura.spell_id, at)))
                         .collect();
@@ -165,6 +166,21 @@ impl FollowerApl {
             .ok_or("selected native composite plan is empty")?;
         self.rotation.execute(world, actor, action, step)
     }
+}
+
+/// Cooldown-limited precombat effects are combat actions, not maintained buffs.
+fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
+    world
+        .resource::<server::spell_info::SpellStore>()
+        .get(spell_id)
+        .is_some_and(|spell| {
+            spell.cooldowns.as_ref().is_none_or(|cooldown| {
+                cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
+            }) && spell
+                .categories
+                .as_ref()
+                .is_none_or(|category| category.max_charges == 0)
+        })
 }
 
 /// Drive every APL-controlled follower after the follower brain positioned it.
