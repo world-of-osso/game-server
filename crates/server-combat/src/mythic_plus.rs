@@ -14,6 +14,9 @@ use shared::components::{Health, Npc, Position};
 use shared::protocol::*;
 use std::collections::HashMap;
 
+#[cfg(any(test, feature = "test-support"))]
+#[path = "mythic_plus_headless.rs"]
+pub mod headless;
 #[path = "mythic_mentor.rs"]
 mod mentor;
 
@@ -60,21 +63,31 @@ fn load_startup(world: &mut World) {
             .expect("open challenge world data");
     let definition = load_azure(&conn).expect("qualify imported Azure challenge");
     let summaries = load_summaries(&conn).expect("load imported challenge summaries");
-    let config = match std::env::var_os("GAME_SERVER_UNSOURCED_CHALLENGE_CONFIG") {
-        Some(path) => {
-            serde_json::from_slice(&std::fs::read(path).expect("read unsourced challenge config"))
-                .expect("decode unsourced challenge config")
-        }
-        None => UnsourcedChallengeConfig::default(),
-    };
-    config
-        .validate()
-        .expect("validate unsourced challenge config");
+    let config = read_config().expect("read unsourced challenge config");
     let mut challenges = world.resource_mut::<Challenges>();
     challenges.definition = definition;
     challenges.summaries = summaries;
     challenges.config = config;
 }
+fn read_config() -> Result<UnsourcedChallengeConfig, String> {
+    let config: UnsourcedChallengeConfig =
+        match std::env::var_os("GAME_SERVER_UNSOURCED_CHALLENGE_CONFIG") {
+            Some(path) => {
+                let bytes = std::fs::read(&path).map_err(|error| {
+                    format!(
+                        "read challenge config {}: {error}",
+                        std::path::Path::new(&path).display()
+                    )
+                })?;
+                serde_json::from_slice(&bytes)
+                    .map_err(|error| format!("decode challenge config: {error}"))?
+            }
+            None => UnsourcedChallengeConfig::default(),
+        };
+    config.validate().map_err(str::to_owned)?;
+    Ok(config)
+}
+
 fn save_key(db: &redb::Database, key: &KeystoneInfo) {
     let txn = db.begin_write().expect("begin keystone write");
     txn.open_table(KEYS)
@@ -714,6 +727,57 @@ mod tests {
             .snapshot;
         assert_eq!(snapshot.deaths, 1);
         assert_eq!(snapshot.time_lost_ms, 5000);
+    }
+
+    #[test]
+    fn headless_keystone_uses_authored_font_and_real_clock() {
+        let path = crate::test_data::world_db_path();
+        let db = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let maps = crate::maps::store::load_map_store(&db).unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut h = crate::bank_test_harness::harness_at(file.path(), "Headless").unwrap();
+        let mut manager = InstanceManager::default();
+        let map = manager
+            .create_map(
+                &maps,
+                2515,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: h.character_id,
+                    leader: h.character_id,
+                    difficulty_id: 23,
+                    ..Default::default()
+                },
+                crate::maps::instances::Now {
+                    unix: 1791705600,
+                    elapsed: 0.0,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(maps).insert_resource(manager);
+        h.app.world_mut().entity_mut(h.player).insert(map);
+        h.app.world_mut().remove_resource::<GameDatabase>();
+        let session = headless::Session::prepare(h.app.world_mut(), &path, h.player, 8).unwrap();
+        let position = session.font_position(h.app.world()).unwrap();
+        h.app.world_mut().entity_mut(h.player).insert(position);
+        assert!(session.in_font_range(h.app.world()).unwrap());
+        session.activate(h.app.world_mut()).unwrap();
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<InstanceManager>()
+                .copy_difficulty(map)
+                .unwrap()
+                .difficulty_id,
+            8
+        );
+        assert_eq!(session.resulting_key(h.app.world()).unwrap().level, 7);
+        session.advance(h.app.world_mut(), 3).unwrap();
+        assert_eq!(session.snapshot(h.app.world()).unwrap().elapsed_ms, 3000);
     }
 
     #[test]

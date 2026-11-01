@@ -22,10 +22,12 @@ The runner executes a selected keystone dungeon and a five-spec class party in t
 ## Implementation inventory
 
 - `crates/server-combat/src/followers/simulator.rs` — explicit class-party selection and key-band production spawning.
+- `crates/server-combat/src/mythic_plus_headless.rs` — isolated bag, authored Font, real challenge lifecycle and simulated ServerClock bridge.
 - `crates/server-simulation/src/dungeon_simulator/keystone_route.rs` — deterministic weighted force-pack route planner.
 
 ## Tests asserting this spec
 
+- `mythic_plus::tests::headless_keystone_uses_authored_font_and_real_clock` checks actual Font activation, key depletion and clock advancement.
 - `dungeon_simulator::runtime::keystone_simulator_spawns_selected_class_party_with_real_apls` checks the selected specs, equipped items and actual APL registration.
 - `dungeon_simulator::keystone_route::tests` checks greedy route choice and the Azure source-force threshold.
 
