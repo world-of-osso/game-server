@@ -4,20 +4,44 @@ use shared::components::Position;
 
 use super::combat;
 use combat::spell_cast::{
-    self, area_trigger::SpellAreaTrigger, effects::EffectCtx, script_registry::SpellScriptHook,
+    self,
+    area_trigger::SpellAreaTrigger,
+    effects::EffectCtx,
+    script_registry::{ScriptReach, SpellScriptHook},
+    targets,
 };
-use combat::spell_info::SpellStore;
+use combat::spell_info::{SpellInfo, SpellStore};
 
 const FURY: u32 = 202770;
 const DAMAGE: u32 = 211545;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterNativeCastUpdate(update_fields),
     SpellScriptHook::TargetContextDamageMultiplier(reduce_secondary_targets),
 ];
 
 #[derive(Component)]
 struct FuryPulse(f64);
+
+/// Native 202770 effect1 places the field its radius from the target toward the
+/// caster (TARGET_DEST_DEST_TARGET_TOWARDS_CASTER); each 211545 pulse hits its
+/// area radius around the field.
+fn declared_reach(world: &World, _caster: Entity, spell: &SpellInfo) -> ScriptReach {
+    if spell.id != FURY {
+        return ScriptReach::None;
+    }
+    let field = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Fury of Elune field effect");
+    let pulse = world
+        .resource::<SpellStore>()
+        .get(DAMAGE)
+        .expect("native Fury of Elune damage child");
+    ScriptReach::target(targets::radius(field, 0) + targets::radius(&pulse.effects[0], 1))
+}
 
 fn pulse_period(world: &World, caster: Entity) -> f64 {
     let period = world
