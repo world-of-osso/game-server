@@ -697,7 +697,8 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
     let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
     let rune = run.actors[&29001892];
-    let hostile = run.actors[&29001895];
+    // The Crystal Fury's inferred faction comes from its Crystal Thrasher formation leader.
+    let hostile = run.actors[&29001878];
     let location = *run.app.world().get::<Position>(rune).unwrap();
     run.app.world_mut().entity_mut(owner).insert(location);
     run.app.world_mut().entity_mut(hostile).insert(Position {
@@ -2466,6 +2467,9 @@ fn failed_keystone_record(
             in_time: None,
             upgrade_levels: None,
             resulting_key_level: None,
+            forces: None,
+            forces_required: None,
+            bosses: None,
         },
         deaths: Vec::new(),
         pulls: Vec::new(),
@@ -2606,7 +2610,7 @@ fn spawn_run_mode(
         ));
     }
     let planned = if options.is_some() {
-        Some(super::keystone::prepare_graph(&mut graph)?)
+        Some(super::keystone::prepare_challenge(&graph)?)
     } else {
         None
     };
@@ -2702,7 +2706,22 @@ fn spawn_run_mode(
         }
     }
     let keystone = match (options, planned) {
-        (Some(options), Some((plan, _))) => {
+        (Some(options), Some((definition, _))) => {
+            let hostile_sources = actors
+                .iter()
+                .filter_map(|(guid, actor)| {
+                    crate::spell_cast::targets::is_hostile(app.world(), party.owner, *actor)
+                        .then_some(*guid)
+                })
+                .collect();
+            let plan = super::keystone_route::plan(
+                &graph,
+                &definition.creature_weights,
+                definition.forces_required,
+                &hostile_sources,
+            )?;
+            graph.route = plan.steps.clone();
+            app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
