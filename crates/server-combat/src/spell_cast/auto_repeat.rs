@@ -26,12 +26,6 @@ pub(crate) struct AutoRepeat {
     ready_in: Duration,
 }
 
-impl AutoRepeat {
-    pub(crate) fn targets(&self, target: Entity) -> bool {
-        self.target == target
-    }
-}
-
 pub(crate) fn active(world: &World, caster: Entity, spell: u32) -> bool {
     world
         .get::<AutoRepeat>(caster)
