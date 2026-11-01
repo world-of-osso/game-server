@@ -20,7 +20,6 @@ pub const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::TargetFilter(rogue_hero::filter_mass_casualty),
     SpellScriptHook::RogueAuraRegistration(rogue_children::register),
     SpellScriptHook::BeforeEnemyContextHit(poison_hit),
-    SpellScriptHook::PolicyTailHit(rogue_children::blindside_hit_hook),
     SpellScriptHook::AfterForegroundSpecial(rogue_children::finish_blindside),
 ];
 

@@ -5,7 +5,7 @@ use combat::auras::{
     self, AuraInstance, RemoveReason,
     scripts::{AuraScript, AuraScripts},
 };
-use combat::spell_cast::{self, effects::EffectCtx, script_registry::PolicyTailHitHook};
+use combat::spell_cast::{self, effects::EffectCtx};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{ActiveSpec, Health, PowerType};
 
@@ -24,18 +24,6 @@ const BLINDSIDE_BUFF: u32 = 121153;
 
 #[derive(Component)]
 struct BlindsideHit(Entity);
-
-pub(super) fn blindside_hit_hook(spell: u32) -> Option<PolicyTailHitHook> {
-    matches!(spell, 1329 | 8676).then_some(record_blindside_hit)
-}
-
-fn record_blindside_hit(world: &mut World, ctx: &EffectCtx<'_>) {
-    if let Some(target) = ctx.primary_target()
-        && auras::has_aura(world, ctx.caster, BLINDSIDE)
-    {
-        world.entity_mut(ctx.caster).insert(BlindsideHit(target));
-    }
-}
 
 // SimC76f8118 sc_rogue.cpp3593–3596/5171–5178/8484–8496: one roll
 // per successful Ambush or Mutilate, with the native execute threshold.
@@ -104,6 +92,7 @@ pub(super) fn needs_context(world: &World, caster: Entity, spell: u32) -> bool {
         && match spell {
             RUPTURE => auras::has_aura(world, caster, INTERNAL_BLEEDING),
             KINGSBANE => auras::has_aura(world, caster, IMPLACABLE),
+            1329 | 8676 => auras::has_aura(world, caster, BLINDSIDE),
             _ => false,
         }
 }
@@ -112,6 +101,10 @@ pub(super) fn needs_context(world: &World, caster: Entity, spell: u32) -> bool {
 /// effective CP for the native periodic child, without spending them again.
 pub(super) fn on_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     if !needs_context(world, ctx.caster, ctx.spell.id) {
+        return;
+    }
+    if matches!(ctx.spell.id, 1329 | 8676) {
+        world.entity_mut(ctx.caster).insert(BlindsideHit(target));
         return;
     }
     if ctx.spell.id == KINGSBANE {
