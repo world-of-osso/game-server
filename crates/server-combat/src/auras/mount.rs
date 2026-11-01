@@ -363,7 +363,7 @@ pub(crate) fn with_rider<R>(world: &World, unit: Entity, read: impl FnOnce(&Ride
 
 /// The display a mount aura shows (`HandleAuraMounted`, SpellAuraEffects.cpp:2763-2822).
 fn mount_display(world: &World, unit: Entity, aura: &AuraInstance, creature: i32) -> Option<u32> {
-    let mut rng = rand::thread_rng();
+    let mut rng = crate::random::thread_rng();
     if let Some(mount) = world
         .get_resource::<MountStore>()
         .and_then(|store| store.mount_for_spell(aura.spell_id))

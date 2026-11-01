@@ -58,6 +58,10 @@ pub use assisted_parity::{
 #[derive(Resource, Default)]
 pub struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 
+/// Stamp replay combat events from the simulation clock instead of wall time.
+#[derive(Resource, Default)]
+pub struct ReplayCombatClock;
+
 #[derive(Component)]
 pub(crate) struct ObservedLethalSpell(pub u32);
 

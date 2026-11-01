@@ -223,6 +223,49 @@ impl Fixture {
 }
 
 #[test]
+fn splashed_critter_stops_blocking_after_native_combat_ends() {
+    let mut fixture = fixture();
+    let owner = fixture.h.caster;
+    let map = *fixture.h.app.world().get::<InMap>(owner).unwrap();
+    let critter = crate::spell_cast::test_harness::spawn_npc(&mut fixture.h.app, 1.0);
+    fixture.h.app.world_mut().entity_mut(critter).insert((
+        map,
+        shared::components::Npc {
+            template_id: 254924,
+            name: "Timid Treehopper".into(),
+        },
+        shared::components::UnitFactionTemplate(190),
+    ));
+    crate::combat_refs::set_in_combat_with(fixture.h.app.world_mut(), owner, critter);
+    fixture.damage(critter, 100.0);
+    assert!(crate::spell_cast::targets::is_alive(
+        fixture.h.app.world(),
+        critter
+    ));
+    assert!(pull_history::has_uncleared_fight(
+        fixture.h.app.world(),
+        owner
+    ));
+    assert!(
+        pull_history::snapshot(fixture.h.app.world(), owner)
+            .unwrap()
+            .active_enemies
+            .contains(&critter)
+    );
+    crate::combat::combat_stop(fixture.h.app.world_mut(), critter);
+    assert!(!pull_history::has_uncleared_fight(
+        fixture.h.app.world(),
+        owner
+    ));
+    assert!(
+        !pull_history::snapshot(fixture.h.app.world(), owner)
+            .unwrap()
+            .active_enemies
+            .contains(&critter)
+    );
+}
+
+#[test]
 fn native_admission_ignores_dead_formation_leader_still_in_copy() {
     let mut fixture = fixture();
     let second = fixture.second;

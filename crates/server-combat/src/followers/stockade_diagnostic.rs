@@ -190,7 +190,7 @@ pub(super) fn spawn_party(
         .get::<shared::components::Level>(owner)
         .ok_or("diagnostic owner has no level")?
         .0;
-    let seed = rand::random::<u64>();
+    let seed = crate::random::random::<u64>();
     let profiles =
         super::class_profiles::select_party_profiles(world, role, player_spec, level, seed)?;
     info!(
