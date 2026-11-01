@@ -69,6 +69,15 @@ pub fn bindings() -> Bindings {
     }
 }
 
+pub fn bindings_for_infusion(infusion_selected: bool) -> Bindings {
+    let mut bindings = bindings();
+    // SimC sc_monk.cpp5349–5352 replaces Celestial Brew when Infusion is selected.
+    if infusion_selected {
+        bindings.actions.insert("celestial_brew".into(), 1241059);
+    }
+    bindings
+}
+
 pub fn program(profile: &server::followers::parity_profile::Profile) -> Result<Program, String> {
     let actions = profile
         .options
@@ -112,8 +121,6 @@ impl Rotation {
         if profile.spec_id != 268 {
             return Err("literal Brewmaster requires spec268".into());
         }
-        let mut bindings = bindings();
-        // SimC sc_monk.cpp5349–5352 replaces Celestial Brew when Infusion is selected.
         let infusion_selected = world
             .get::<crate::class_progression::TraitLoadout>(actor)
             .is_some_and(|traits| {
@@ -121,9 +128,7 @@ impl Rotation {
                     .active_talent_spells()
                     .any(|talent| talent.spell_id == 1241059)
             });
-        if infusion_selected {
-            bindings.actions.insert("celestial_brew".into(), 1241059);
-        }
+        let mut bindings = bindings_for_infusion(infusion_selected);
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         let driver = Driver::new(program(profile)?);
         Ok(Self {

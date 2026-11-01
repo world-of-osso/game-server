@@ -212,7 +212,12 @@ pub fn parse(
         }
         268 => Ok((
             brewmaster_rotation::program(&profile(spec)?)?,
-            brewmaster_rotation::bindings(),
+            brewmaster_rotation::bindings_for_infusion(
+                input
+                    .traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == 1241059),
+            ),
         )),
         269 => Ok((
             windwalker_rotation::source::load()?,
