@@ -35,6 +35,72 @@ fn mistweaver_selected_chiji_is_invoked_under_tank_pressure() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn mistweaver_chiji_blackout_kick_heals_nearest_allies() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::{Health, Npc, UnitSummonedBy};
+    use shared::protocol::CombatLogKind;
+
+    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 1);
+    let healer = run.healer;
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.1;
+    }
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 325197, Some(healer), false)
+        .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 325197));
+    let mut query = run.app.world_mut().query::<(&Npc, &UnitSummonedBy)>();
+    assert!(
+        query
+            .iter(run.app.world())
+            .any(|(npc, owner)| npc.template_id == 166949 && owner.0 == healer.to_bits()),
+        "Chi-Ji must be summoned"
+    );
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        healer,
+        100784,
+        Some(run.sources[0]),
+        false,
+    )
+    .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(343819))
+        .collect();
+    assert_eq!(
+        heals.len(),
+        6,
+        "three Gusts must heal two allies: {heals:?}"
+    );
+    let targets: std::collections::HashSet<_> = heals.iter().map(|event| event.target).collect();
+    assert_eq!(
+        targets.len(),
+        2,
+        "the two nearest allies must receive each Gust"
+    );
+    assert!(
+        heals
+            .iter()
+            .all(|event| event.amount > 0 && event.amount > event.overflow)
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn mistweaver_rushing_wind_heals_only_own_misted_allies() {
     use crate::auras::{AuraApplication, AuraSource};
     use crate::spell_cast::test_harness::ObservedCombatEvents;
