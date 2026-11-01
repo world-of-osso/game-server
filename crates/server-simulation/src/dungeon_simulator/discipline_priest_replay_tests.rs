@@ -369,6 +369,87 @@ fn discipline_apl_uses_evangelism_without_injury_gate() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_emergency_uses_void_shield_and_radiance() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+
+    for void_shield in [true, false] {
+        let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+        super::healer_simc_replay::engage(&mut run);
+        let (tank, healer) = (run.tank, run.healer);
+        super::healer_simc_replay::finish_precombat(&mut run.app, &[tank, healer]).unwrap();
+        let excluded = [33206, 62618, 472433, 47540, 32379, 8092];
+        let mut spells: Vec<_> = run
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(healer)
+            .unwrap()
+            .iter()
+            .filter(|spell| !excluded.contains(spell) && (void_shield || *spell != 17))
+            .collect();
+        if !void_shield && !spells.contains(&194509) {
+            spells.push(194509);
+        }
+        run.app
+            .world_mut()
+            .entity_mut(healer)
+            .insert(crate::class_progression::KnownSpells::fixture(spells));
+        if void_shield {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: healer,
+                    target: healer,
+                    spell_id: 1253591,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        } else {
+            for member in run
+                .slots
+                .into_iter()
+                .filter(|&member| member != tank)
+                .take(2)
+            {
+                let mut health = run.app.world_mut().get_mut::<Health>(member).unwrap();
+                health.current = health.max * 0.6;
+            }
+        }
+        let mut health = run.app.world_mut().get_mut::<Health>(tank).unwrap();
+        health.current = health.max * 0.18;
+        let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        let expected = if void_shield { 1253593 } else { 194509 };
+        for _ in 0..160 {
+            run.app.update();
+            if run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+                .iter()
+                .any(|event| {
+                    event.kind == CombatLogKind::CastSuccess
+                        && event.source == Some(healer.to_bits())
+                        && event.target == Some(tank.to_bits())
+                        && event.spell_id == Some(expected)
+                })
+            {
+                break;
+            }
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::CastSuccess
+                    && event.source == Some(healer.to_bits())
+                    && event.target == Some(tank.to_bits())
+                    && event.spell_id == Some(expected)),
+            "critical tank must receive emergency spell {expected}: {events:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_emergency_heals_critical_tank_before_damage() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::components::Health;
