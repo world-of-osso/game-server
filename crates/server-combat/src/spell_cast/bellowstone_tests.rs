@@ -15,7 +15,7 @@ fn emit(h: &mut Harness, hit_mask: u32) {
             actor: h.caster,
             target: Some(h.npc),
             action_target: None,
-            actor_mask: [procs::PROC_DEAL_MELEE_SWING, 0],
+            actor_mask: [procs::PROC_DEAL_MELEE_ABILITY, 0],
             target_mask: [0; 2],
             spell_id: None,
             can_proc: true,
