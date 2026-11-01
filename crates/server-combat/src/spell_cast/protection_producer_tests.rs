@@ -25,6 +25,10 @@ const WHIRLING_BLADE: u32 = 1_235_113;
 const DEVASTATE: u32 = 20_243;
 
 fn fixture(rend: bool) -> Harness {
+    fixture_with_stats(rend, false)
+}
+
+fn fixture_with_stats(rend: bool, computed_stats: bool) -> Harness {
     let ids = [
         THUNDER_CLAP,
         REND_BLEED,
@@ -33,7 +37,7 @@ fn fixture(rend: bool) -> Harness {
         SHIELD_CHARGE_MOVEMENT,
         SHIELD_CHARGE_DAMAGE,
     ];
-    let mut h = harness(Vec::new(), &ids, 1).unwrap();
+    let mut h = harness_with(Vec::new(), &ids, 1, computed_stats).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app.insert_resource(load_native_creature_world(&[6]));
     let conn = rusqlite::Connection::open_with_flags(
