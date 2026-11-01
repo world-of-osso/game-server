@@ -2088,6 +2088,33 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let lunar_bolts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1263137)
+        })
+        .collect();
+    assert!(
+        lunar_bolts.len() >= 3
+            && lunar_bolts
+                .iter()
+                .all(|event| event.crit && event.amount > 0),
+        "Lunar Eclipse must launch critical Lunar Bolt damage"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1261573)
+                && event.crit
+                && event.amount > 0),
+        "Solar Eclipse must launch critical Solar Bolt damage"
+    );
     let umbral_applications = events
         .iter()
         .filter(|event| {
