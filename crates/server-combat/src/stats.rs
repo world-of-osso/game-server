@@ -1197,9 +1197,10 @@ const INVTYPE_SHIELD: u8 = 14;
 /// Truncated to whole units as TrinityCore's integer health and power fields
 /// (`CalculatePct(GetMaxHealth(), percent)` into `uint32`, SpellAuraEffects.cpp:4204).
 fn rescaled_current(current: f32, old_max: f32, new_max: f32) -> f32 {
-    // Multiply first: whole-unit products are exact, so an exact share stays whole.
+    // Multiply first in f64: whole-unit products stay exact (an f32 product past 2^24
+    // rounds, truncating a full 28003 -> 29194 rescale to 29193), so an exact share stays whole.
     let scaled = if old_max > 0.0 {
-        current * new_max / old_max
+        (f64::from(current) * f64::from(new_max) / f64::from(old_max)) as f32
     } else {
         new_max
     };

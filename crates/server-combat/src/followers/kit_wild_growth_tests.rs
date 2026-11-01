@@ -69,6 +69,31 @@ fn tick_amounts(h: &Harness, caster: Entity, start: usize, crit_multiplier: f32)
         .collect()
 }
 
+/// Native TraitDefinitionEffectPoints19696 Sets effect0 from curve58935 (rank1 30,
+/// rank2 60), replacing the spell's base40; TC SpellInfo.cpp532-553 applies it.
+fn learned_unstoppable_growth_pct(h: &Harness, caster: Entity) -> f32 {
+    let world = h.app.world();
+    let native_trait = world
+        .get::<crate::class_progression::TraitLoadout>(caster)
+        .unwrap()
+        .spell_trait(UNSTOPPABLE_GROWTH)
+        .unwrap();
+    assert_eq!((native_trait.definition_id, native_trait.rank), (108143, 1));
+    let amount = world
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == UNSTOPPABLE_GROWTH)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(amount, 30.0);
+    amount
+}
+
 fn observe_native_growth(level: u8) -> GrowthObservation {
     let (mut h, caster) = at_level(CRENNA, level, |_| {});
     let talented = has_aura(h.app.world(), caster, UNSTOPPABLE_GROWTH);
@@ -82,15 +107,11 @@ fn observe_native_growth(level: u8) -> GrowthObservation {
         .unwrap()
         .bonus_coefficient;
     assert!((coefficient - 0.481).abs() <= f32::EPSILON);
-    let talent = store.get(UNSTOPPABLE_GROWTH).unwrap();
-    let native_pct = talent
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .unwrap()
-        .base_points;
-    assert_eq!(native_pct, 40.0);
-    let less_falloff = if talented { native_pct / 100.0 } else { 0.0 };
+    let less_falloff = if talented {
+        learned_unstoppable_growth_pct(&h, caster) / 100.0
+    } else {
+        0.0
+    };
     let flat_native_amount = ordinary_flat_tick(&h, caster, &spell);
     assert!(flat_native_amount > 0.0);
     let crit_multiplier = 1.0

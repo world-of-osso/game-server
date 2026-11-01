@@ -56,11 +56,19 @@ fn prepare_refresh(remaining_fraction: f64) -> (Harness, Entity, AuraInstance) {
     (h, caster, aura)
 }
 
-fn refresh_and_observe(h: &mut Harness, caster: Entity, old: &AuraInstance) {
+/// Lifebloom's native attr13 PERIODIC_REFRESH_EXTENDS_DURATION selects Pandemic:
+/// the fresh 15 s carries the remainder, capped at 30% (4.5 s).
+fn refresh_and_observe(
+    h: &mut Harness,
+    caster: Entity,
+    old: &AuraInstance,
+    expected_duration_ms: u32,
+) {
+    assert_eq!(old.duration_ms, 15_000);
     creature_cast(h.app.world_mut(), caster, LIFEBLOOM, Some(caster), false).unwrap();
     h.advance(1);
     let refreshed = own_lifebloom(h, caster);
-    assert_eq!(refreshed.duration_ms, old.duration_ms);
+    assert_eq!(refreshed.duration_ms, expected_duration_ms);
     assert!(refreshed.expires_at.unwrap() > old.expires_at.unwrap());
     let casts = h
         .inbox
@@ -74,14 +82,16 @@ fn refresh_and_observe(h: &mut Harness, caster: Entity, old: &AuraInstance) {
 #[test]
 fn follower_lifebloom_early_native_refresh_does_not_bloom() {
     let (mut h, caster, old) = prepare_refresh(0.6);
-    refresh_and_observe(&mut h, caster, &old);
+    // 9 s remaining exceeds the 4.5 s Pandemic cap.
+    refresh_and_observe(&mut h, caster, &old, 19_500);
     assert_eq!(bloom_count(&h, caster), 0);
 }
 
 #[test]
 fn follower_lifebloom_late_native_refresh_blooms_once_and_retains_hot() {
     let (mut h, caster, old) = prepare_refresh(0.2);
-    refresh_and_observe(&mut h, caster, &old);
+    // The 3 s remainder is under the cap and carries whole.
+    refresh_and_observe(&mut h, caster, &old, 18_000);
     assert_eq!(
         bloom_count(&h, caster),
         1,

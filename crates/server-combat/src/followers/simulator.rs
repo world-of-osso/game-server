@@ -465,6 +465,13 @@ pub fn update_leader(world: &mut World) {
     }
 }
 
+/// Let a headless owner stand idle, as a real player can, without removing gameplay plugins.
+pub fn stop_leader_driver(world: &mut World, owner: Entity) {
+    world
+        .entity_mut(owner)
+        .remove::<(LeaderProfile, AplControlled)>();
+}
+
 pub fn observed_cleared_sources(world: &World, owner: Entity) -> Option<Vec<u32>> {
     pull_history::snapshot(world, owner).map(|history| history.cleared_spawns.into_iter().collect())
 }

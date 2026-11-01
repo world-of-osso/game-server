@@ -909,6 +909,142 @@ fn random_valid_model<'a>(
     models.get(index)
 }
 
+/// Level-dependent state prepared before a copy changes difficulty.
+pub(crate) struct DifficultyRetune {
+    entity: Entity,
+    difficulty_id: u32,
+    level: u8,
+    health: f32,
+    armor: f32,
+    scaling: Option<(LevelScaling, Arc<LevelStats>)>,
+}
+
+/// Resolve ordinary spawned creatures against the new copy difficulty without respawning them.
+pub(crate) fn prepare_difficulty_retune(
+    world: &mut World,
+    map: crate::maps::InMap,
+    difficulty_id: u32,
+) -> Result<Vec<DifficultyRetune>, String> {
+    let actors: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::maps::InMap,
+            &CreatureOrigin,
+            &Npc,
+            Option<&LevelScaling>,
+        )>()
+        .iter(world)
+        .filter(|(_, copy, _, _, _)| **copy == map)
+        .map(|(entity, _, origin, npc, scaling)| {
+            (entity, *origin, npc.template_id, scaling.copied())
+        })
+        .collect();
+    if actors.is_empty() {
+        return Ok(Vec::new());
+    }
+    if !world.contains_resource::<WorldData>() {
+        return Err("creature catalog unavailable during difficulty change".into());
+    }
+    let map_id =
+        u16::try_from(map.map_id).map_err(|_| "copy map exceeds creature catalog range")?;
+    world.resource_scope(|world, data: Mut<WorldData>| {
+        let mut ground = world.get_resource_mut::<crate::ground::GroundMap>();
+        let spawns: HashMap<_, _> = data
+            .spawns_by_map
+            .get(&map_id)
+            .into_iter()
+            .flatten()
+            .map(|&index| (data.spawns[index].guid, &data.spawns[index]))
+            .collect();
+        actors
+            .into_iter()
+            .map(|(entity, origin, entry, old_scaling)| {
+                let spawn = spawns.get(&origin.guid).copied().ok_or_else(|| {
+                    format!(
+                        "creature spawn{} absent during difficulty change",
+                        origin.guid
+                    )
+                })?;
+                let template = data.template_for(entry, difficulty_id).ok_or_else(|| {
+                    format!("creature{entry} has no difficulty{difficulty_id} template")
+                })?;
+                let mut context = CreatureSpawnContext {
+                    map,
+                    difficulty_id,
+                    ground: ground.as_deref_mut(),
+                    temporary: false,
+                };
+                let tuning =
+                    read_spawn_tuning(&data, template, spawn, &mut context).map_err(|_| {
+                        format!(
+                            "creature{entry} spawn{} has no difficulty{difficulty_id} tuning",
+                            origin.guid
+                        )
+                    })?;
+                let scaling = tuning.map(|(range, stats)| {
+                    let scaling = match old_scaling {
+                        Some(old) => LevelScaling {
+                            content_tuning_id: range.content_tuning_id,
+                            min_level: range.range.0,
+                            max_level: range.range.1,
+                            delta: old.delta.clamp(
+                                range.delta.0.min(range.delta.1),
+                                range.delta.0.max(range.delta.1),
+                            ),
+                        },
+                        None => roll_spawn_scaling(range, &mut rand::thread_rng()),
+                    };
+                    (scaling, stats)
+                });
+                let (level, health, armor) = match &scaling {
+                    Some((scaling, stats)) => {
+                        let level = scaling.native_level();
+                        (level, stats.max_health(level), stats.armor(level))
+                    }
+                    None => (
+                        template.min_level,
+                        resolve_health(&data, template),
+                        template.armor,
+                    ),
+                };
+                Ok(DifficultyRetune {
+                    entity,
+                    difficulty_id,
+                    level,
+                    health,
+                    armor,
+                    scaling,
+                })
+            })
+            .collect()
+    })
+}
+
+pub(crate) fn apply_difficulty_retune(world: &mut World, projections: Vec<DifficultyRetune>) {
+    for projection in projections {
+        let mut actor = world.entity_mut(projection.entity);
+        if let Some(mut health) = actor.get_mut::<Health>() {
+            let fraction = if health.max > 0.0 {
+                health.current / health.max
+            } else {
+                0.0
+            };
+            health.max = projection.health;
+            health.current = projection.health * fraction;
+        }
+        actor.insert((
+            UnitLevel(projection.level),
+            CreatureArmor(projection.armor),
+            CreatureDifficulty(projection.difficulty_id),
+        ));
+        if let Some((scaling, stats)) = projection.scaling {
+            actor.insert((scaling, ScaledStats(stats)));
+        } else {
+            actor.remove::<(LevelScaling, ScaledStats)>();
+        }
+    }
+}
+
 struct MissingSpawnLevelContext;
 
 /// Creature::ApplyLevelScaling: template, map difficulty, then actual terrain ancestry.
@@ -1079,7 +1215,7 @@ mod npc_combat_tests;
 
 #[cfg(test)]
 #[path = "zones_context_tuning_tests.rs"]
-mod context_tuning_tests;
+pub(crate) mod context_tuning_tests;
 
 #[cfg(test)]
 #[path = "zones_entry_tests.rs"]

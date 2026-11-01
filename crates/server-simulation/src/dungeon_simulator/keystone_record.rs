@@ -28,6 +28,10 @@ pub(super) struct ActorMetrics {
     pub effective_damage: u64,
     pub raw_healing: u64,
     pub effective_healing: u64,
+    pub effective_damage_taken: u64,
+    pub combat_active_ms: u64,
+    pub cast_successes: u64,
+    pub casts_by_spell: std::collections::BTreeMap<u32, u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -170,6 +174,15 @@ pub(super) struct Tracker {
     cursor: usize,
     owners: HashMap<u64, u64>,
     npc_entries: HashMap<u64, u32>,
+    last_observed_ms: Option<u64>,
+    active_units: std::collections::HashSet<u64>,
+    timeline: Vec<TimedEvent>,
+}
+
+#[derive(serde::Serialize)]
+pub(super) struct TimedEvent {
+    elapsed_ms: u64,
+    event: CombatLogEvent,
 }
 
 impl Tracker {
@@ -196,6 +209,9 @@ impl Tracker {
             cursor: 0,
             owners: HashMap::new(),
             npc_entries: HashMap::new(),
+            last_observed_ms: None,
+            active_units: Default::default(),
+            timeline: Vec::new(),
         }
     }
 
@@ -206,12 +222,22 @@ impl Tracker {
     pub fn observe(
         &mut self,
         elapsed_ms: u64,
-        in_combat: bool,
+        active_units: &std::collections::HashSet<u64>,
         events: &[CombatLogEvent],
         owners: &HashMap<u64, u64>,
         npc_entries: &HashMap<u64, u32>,
     ) {
-        match (self.active_pull, in_combat) {
+        if let Some(previous) = self.last_observed_ms {
+            let delta = elapsed_ms.saturating_sub(previous);
+            for unit in &self.active_units {
+                if let Some(&index) = self.actor_indices.get(unit) {
+                    self.actors[index].combat_active_ms += delta;
+                }
+            }
+        }
+        self.last_observed_ms = Some(elapsed_ms);
+        self.active_units.clone_from(active_units);
+        match (self.active_pull, !active_units.is_empty()) {
             (None, true) => self.active_pull = Some(elapsed_ms),
             (Some(start), false) => {
                 self.pulls.push(Pull {
@@ -224,6 +250,19 @@ impl Tracker {
             _ => {}
         }
         for event in &events[self.cursor..] {
+            self.timeline.push(TimedEvent {
+                elapsed_ms,
+                event: event.clone(),
+            });
+            if event.kind == CombatLogKind::Damage
+                && let Some(&index) = event
+                    .target
+                    .and_then(|target| self.actor_indices.get(&target))
+            {
+                let raw = event.amount.max(0) as u64;
+                self.actors[index].effective_damage_taken +=
+                    raw.saturating_sub(event.overflow.max(0) as u64);
+            }
             if event.kind == CombatLogKind::Death {
                 self.record_death(elapsed_ms, event, npc_entries);
             }
@@ -250,6 +289,12 @@ impl Tracker {
                 CombatLogKind::Heal => {
                     actor.raw_healing += raw;
                     actor.effective_healing += effective;
+                }
+                CombatLogKind::CastSuccess if source == owner => {
+                    actor.cast_successes += 1;
+                    if let Some(spell) = event.spell_id {
+                        *actor.casts_by_spell.entry(spell).or_default() += 1;
+                    }
                 }
                 _ => {}
             }
@@ -287,21 +332,24 @@ impl Tracker {
                 .iter(world)
                 .map(|(unit, npc)| (unit.to_bits(), npc.template_id)),
         );
-        let in_combat = self
+        let active_units = self
             .actor_indices
             .keys()
-            .filter_map(|bits| bevy::prelude::Entity::try_from_bits(*bits))
-            .any(|unit| {
-                world
-                    .get::<CombatStatus>(unit)
-                    .is_some_and(|status| status.0)
-            });
+            .copied()
+            .filter(|bits| {
+                bevy::prelude::Entity::try_from_bits(*bits).is_some_and(|unit| {
+                    world
+                        .get::<CombatStatus>(unit)
+                        .is_some_and(|status| status.0)
+                })
+            })
+            .collect();
         let owners = std::mem::take(&mut self.owners);
         let npcs = std::mem::take(&mut self.npc_entries);
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
-        self.observe(elapsed_ms, in_combat, events, &owners, &npcs);
+        self.observe(elapsed_ms, &active_units, events, &owners, &npcs);
         self.owners = owners;
         self.npc_entries = npcs;
     }
@@ -327,7 +375,18 @@ impl Tracker {
         });
     }
 
-    pub fn finish(mut self, elapsed_ms: u64) -> (Vec<ActorMetrics>, Vec<Death>, Vec<Pull>) {
+    pub fn finish(
+        mut self,
+        elapsed_ms: u64,
+    ) -> (Vec<ActorMetrics>, Vec<Death>, Vec<Pull>, Vec<TimedEvent>) {
+        if let Some(previous) = self.last_observed_ms {
+            let delta = elapsed_ms.saturating_sub(previous);
+            for unit in &self.active_units {
+                if let Some(&index) = self.actor_indices.get(unit) {
+                    self.actors[index].combat_active_ms += delta;
+                }
+            }
+        }
         if let Some(start) = self.active_pull {
             self.pulls.push(Pull {
                 start_ms: start,
@@ -335,7 +394,7 @@ impl Tracker {
                 ended: false,
             });
         }
-        (self.actors, self.deaths, self.pulls)
+        (self.actors, self.deaths, self.pulls, self.timeline)
     }
 }
 
@@ -440,10 +499,31 @@ mod tests {
             event(CombatLogKind::Damage, 21, 99, 100, 20, Some(123)),
             event(CombatLogKind::Heal, 12, 11, 70, 30, Some(456)),
             event(CombatLogKind::Death, 99, 11, 0, 0, Some(789)),
+            event(CombatLogKind::Damage, 99, 12, 50, 7, None),
+            event(CombatLogKind::CastSuccess, 12, 99, 0, 0, Some(5176)),
         ];
-        tracker.observe(250, true, &events[..2], &owners, &npcs);
-        tracker.observe(750, false, &events, &owners, &npcs);
-        let (actors, deaths, pulls) = tracker.finish(1000);
+        tracker.observe(
+            250,
+            &std::collections::HashSet::from([11, 12]),
+            &events[..2],
+            &owners,
+            &npcs,
+        );
+        tracker.observe(
+            750,
+            &std::collections::HashSet::new(),
+            &events,
+            &owners,
+            &npcs,
+        );
+        let (actors, deaths, pulls, timeline) = tracker.finish(1000);
+        assert_eq!(actors[0].combat_active_ms, 500);
+        assert_eq!(actors[1].combat_active_ms, 500);
+        assert_eq!(timeline.len(), 5);
+        assert_eq!(timeline[2].elapsed_ms, 750);
+        assert_eq!(actors[1].effective_damage_taken, 43);
+        assert_eq!(actors[1].cast_successes, 1);
+        assert_eq!(actors[1].casts_by_spell[&5176], 1);
         assert_eq!(
             (actors[0].raw_damage, actors[0].effective_damage),
             (100, 80)

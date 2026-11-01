@@ -2,7 +2,23 @@
 use super::combat;
 use combat::spell_cast::script_registry::SpellScriptHook;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AuraRollAfterCast(hook)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AuraRollAfterCast(hook),
+    SpellScriptHook::OwnsPolicyProc(owns_loaded_dice),
+    SpellScriptHook::AfterNativeOnCast(grant_loaded_dice),
+];
+
+fn owns_loaded_dice(spell: u32) -> bool {
+    matches!(spell, 256170 | 256171)
+}
+
+fn grant_loaded_dice(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if spell == 13750 && depth == 0 && combat::auras::has_aura(world, caster, 256170) {
+        // SimC76f8118 sc_rogue.cpp3545–3568: Adrenaline Rush earns
+        // Loaded Dice; generic helpful actions neither grant nor consume it.
+        combat::spell_cast::cast_triggered(world, caster, 256171, Some(caster), 1);
+    }
+}
 
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};

@@ -1976,6 +1976,373 @@ fn follower_attacks_with_its_equipped_weapon_type() {
 }
 
 #[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 70);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    for _ in 0..5 {
+        app.update();
+    }
+    start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    for frame in 0..FIXED_FIGHT_FRAMES {
+        let mut health = app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .unwrap();
+        health.current =
+            health.max * (FIXED_FIGHT_FRAMES - frame) as f32 / FIXED_FIGHT_FRAMES as f32;
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<server_follower_apl::FollowerAplFailed>(actor)
+            .is_none()
+    );
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(1233272 | 1233346))),
+        "the actual Balance follower must cast its Eclipse action"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::AuraApplied
+                && matches!(event.spell_id, Some(48517 | 48518))),
+        "Eclipse must apply a real Solar or Lunar buff"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(202497)
+                && event.amount > 0),
+        "Shooting Stars must damage an affected target"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::Energize
+                && event.spell_id == Some(202497)
+                && event.amount > 0),
+        "Shooting Stars must generate Astral Power"
+    );
+    let fury = events
+        .iter()
+        .position(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id == Some(202770)
+        })
+        .expect("the actual follower must cast Fury of Elune");
+    assert!(
+        events[fury + 1..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && event.spell_id != Some(202770)),
+        "the rotation must continue after Fury of Elune"
+    );
+    assert!(
+        events[fury + 1..]
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(211545)
+                && event.amount > 0),
+        "the real Fury field must damage its target with native child 211545"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_follower_astral_smolder_deals_periodic_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    for _ in 0..5 {
+        app.update();
+    }
+    start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    for _ in 0..FIXED_FIGHT_FRAMES {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let umbral_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(393763)
+        })
+        .count();
+    let generators = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(event.spell_id, Some(194153 | 190984))
+        })
+        .count();
+    assert!(
+        umbral_applications > 0 && umbral_applications < generators,
+        "Umbral procs {umbral_applications} must be intermittent across {generators} generators"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.target == Some(actor.to_bits())
+                && event.kind == CombatLogKind::AuraRemoved
+                && event.spell_id == Some(393763)),
+        "a generator must consume Umbral Embrace"
+    );
+    let fires_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(1263363)
+        })
+        .count();
+    let eclipse_casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(
+                    event.spell_id,
+                    Some(1233272 | 1233346 | 102560 | 194223 | 390414)
+                )
+        })
+        .count();
+    assert!(
+        fires_applications > 0 && fires_applications <= eclipse_casts,
+        "Ascendant Fires applications {fires_applications} must come from {eclipse_casts} Eclipse entries"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastStart
+                && event.spell_id == Some(194153)),
+        "Starfire must return to a non-instant cast after Ascendant Fires is consumed"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1263250)
+                && event.amount > 0),
+        "Eclipse critical hits must produce Astral Smolder periodic damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_umbral_starfire_amplifies_only_during_eclipse() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = -100.0;
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 48518, Some(actor), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 393763, Some(actor), 1);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, 48517 | 48518),
+    );
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 194153, Some(target), 1);
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(194153)
+        })
+        .map(|event| event.amount)
+        .collect();
+    assert_eq!(hits.len(), 3, "one Starfire hit per cast: {hits:?}");
+    assert!(
+        hits[1] > hits[0] * 3 / 2,
+        "Umbral must amplify Starfire: {hits:?}"
+    );
+    assert!(
+        hits[2] < hits[1],
+        "the same buff must not amplify outside Eclipse: {hits:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 70);
+    app.world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::AplControlled>();
+    let second = spawn_level_dummy(&mut app, actor, 70, 1).unwrap();
+    let position = *app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    app.world_mut()
+        .entity_mut(second)
+        .insert(shared::components::Position {
+            x: position.x + 1.0,
+            ..position
+        });
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+    crate::combat_refs::set_in_combat_with(app.world_mut(), actor, second);
+    for _ in 0..5 {
+        app.update();
+    }
+    app.world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, 202770, Some(target), false).unwrap();
+    let hits = |app: &App| {
+        app.world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(211545)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    for _ in 0..4 {
+        app.update();
+    }
+    assert!(
+        hits(&app).is_empty(),
+        "no immediate pulse before the hasted 500ms period"
+    );
+    for _ in 0..36 {
+        app.update();
+    }
+    let first = hits(&app);
+    assert!(
+        first
+            .iter()
+            .any(|event| event.target == Some(target.to_bits()))
+    );
+    assert!(
+        first
+            .iter()
+            .any(|event| event.target == Some(second.to_bits()))
+    );
+    let primary = first
+        .iter()
+        .find(|event| event.target == Some(target.to_bits()) && !event.crit)
+        .unwrap();
+    let secondary = first
+        .iter()
+        .find(|event| event.target == Some(second.to_bits()) && !event.crit)
+        .unwrap();
+    let hit_targets: std::collections::HashSet<_> =
+        first.iter().filter_map(|event| event.target).collect();
+    let reduction = (1.0 / hit_targets.len() as f32).sqrt();
+    assert!(
+        (secondary.amount as f32 / primary.amount as f32 - reduction).abs() < 0.03,
+        "secondary hits receive the source one-target soft cap: primary={primary:?}, secondary={secondary:?}, targets={hit_targets:?}"
+    );
+    app.world_mut()
+        .entity_mut(second)
+        .insert(shared::components::Position {
+            x: position.x + 100.0,
+            ..position
+        });
+    let before = first
+        .iter()
+        .filter(|event| event.target == Some(second.to_bits()))
+        .count();
+    for _ in 0..150 {
+        app.update();
+    }
+    let after = hits(&app);
+    assert_eq!(
+        after
+            .iter()
+            .filter(|event| event.target == Some(second.to_bits()))
+            .count(),
+        before,
+        "units outside the fixed field take no further pulses"
+    );
+    let total = after.len();
+    for _ in 0..30 {
+        app.update();
+    }
+    assert_eq!(
+        hits(&app).len(),
+        total,
+        "the field stops pulsing after its native duration"
+    );
+}
+
+#[test]
 #[ignore = "production follower single-target throughput diagnostic"]
 fn follower_dps_production_dummy() {
     let entry: Option<u32> = std::env::var("FOLLOWER_DPS_ENTRY")

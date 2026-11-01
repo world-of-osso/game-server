@@ -411,6 +411,15 @@ fn max_health_change_keeps_whole_health_points() {
     assert_eq!(world.get::<Health>(half).unwrap().current, 555.0);
 }
 
+/// Level-90 health products exceed f32's exact-integer range; a full unit stays full.
+#[test]
+fn max_health_change_keeps_a_full_level90_unit_full() {
+    assert_eq!(rescaled_health(28003.0, 28003.0, 29194.0), 29194.0);
+    assert_eq!(rescaled_health(29194.0, 29194.0, 28003.0), 28003.0);
+    // A partial share still truncates to whole points: 14001 * 29194 / 28003 = 14596.48.
+    assert_eq!(rescaled_health(14001.0, 28003.0, 29194.0), 14596.0);
+}
+
 #[test]
 fn secondary_dr_follows_curve_21024() {
     assert_eq!(curve_value(&SECONDARY_DR_CURVE, 10.0), 10.0);

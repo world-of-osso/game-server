@@ -70,9 +70,8 @@ pub(super) fn prepare_challenge(
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|error| format!("open keystone catalog: {error}"))?;
-    let definition = server::mythic_plus_catalog::load_azure(&db)
+    let definition = server::mythic_plus_catalog::load_by_map(&db, graph.map_id)
         .map_err(|error| format!("load challenge criteria: {error}"))?
-        .filter(|definition| definition.map_id == graph.map_id)
         .ok_or("selected dungeon has no qualified keystone challenge")?;
     let mut statement = db.prepare("SELECT DISTINCT t.MaxLevelSquish FROM follower_lfg_dungeons d JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.map_id=? AND d.difficulty_id=205")
         .map_err(|error| format!("read follower level range: {error}"))?;
@@ -229,7 +228,7 @@ impl State {
         options: Options,
         status: String,
         reason: String,
-        diagnostics: serde_json::Value,
+        mut diagnostics: serde_json::Value,
     ) -> Result<RunRecord, String> {
         let elapsed = self.elapsed_ms(world);
         let snapshot = self
@@ -238,9 +237,15 @@ impl State {
             .ok_or("active keystone snapshot unavailable")?;
         let completed = snapshot.phase == shared::protocol::ChallengePhase::Completed;
         let resulting_key = self.session.resulting_key(world)?;
-        let (actors, deaths, pulls) = self
+        let (actors, deaths, pulls, timeline) = self
             .tracker
             .finish(elapsed.saturating_sub(self.countdown_ms));
+        if let Some(diagnostics) = diagnostics.as_object_mut() {
+            diagnostics.insert(
+                "native_combat_events".into(),
+                serde_json::to_value(timeline).map_err(|error| error.to_string())?,
+            );
+        }
         Ok(RunRecord {
             schema_version: 1,
             seed,

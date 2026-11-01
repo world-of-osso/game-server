@@ -357,6 +357,28 @@ pub(super) fn update(
     }
     // Keep the tank in place while route admission is pending.
     let point = state.goal.unwrap_or(here);
+    let reason = if state.goal.is_some() {
+        "pull-back leads the pack to a safe point"
+    } else {
+        "pull-back has no admitted safe point"
+    };
+    tank_planner::report_hold(world, tank, Some(target), reason, |world| {
+        let guarded: Vec<_> = std::iter::once(target)
+            .chain(party.iter().copied())
+            .filter_map(|unit| targets::position(world, unit))
+            .collect();
+        let watchers: Vec<_> = exclusions
+            .iter()
+            .filter(|(center, radius)| {
+                guarded
+                    .iter()
+                    .any(|point| point.distance_squared(*center) < radius * radius)
+            })
+            .collect();
+        Some(format!(
+            "watcher circles covering target or party: {watchers:?}"
+        ))
+    });
     state.owns_position = true;
     world
         .entity_mut(tank)

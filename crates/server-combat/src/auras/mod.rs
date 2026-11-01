@@ -304,6 +304,11 @@ impl AuraEffectState {
         self.periodic_ticks
     }
 
+    /// SPELL_ATTR5_EXTRA_INITIAL_PERIOD tick still owed by this application.
+    pub fn initial_tick_pending(&self) -> bool {
+        self.initial_period_pending
+    }
+
     fn pay_periodic_tick(&mut self) {
         self.next_tick_index += 1;
         if self.initial_period_pending {
@@ -381,7 +386,7 @@ pub struct AuraInstance {
     /// Source item inventory type for item-scaled rating effects.
     pub cast_item_inventory_type: Option<u8>,
     /// Selected action primary retained for periodic hit relationships; None stays unknown.
-    cast_primary_target: Option<Entity>,
+    pub(crate) cast_primary_target: Option<Entity>,
     /// Learned trait identity/rank at application, for passive relearning.
     trait_info: Option<SpellTrait>,
     pub from_player: bool,

@@ -169,8 +169,9 @@ fn extract(
     map: u32,
     db: &rusqlite::Connection,
     nav_dir: &Path,
+    difficulty: Option<u32>,
 ) -> Result<(Graph, Vec<u32>), String> {
-    let source = source::read_source(db, map)?;
+    let source = source::read_source(db, map, difficulty)?;
     navigation::hierarchy::PortalGraph::read_artifact(nav_dir)
         .map_err(|error| format!("map{map} invalid navmesh portal graph: {error}"))?;
     let map16 =
@@ -532,8 +533,16 @@ fn extract_follower_topology() {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let (graph, bosses) = extract(map, &db, &Path::new(&nav_root).join(map.to_string()))
-        .expect("follower topology inputs");
+    let difficulty = std::env::var("DUNGEON_SIMULATOR_DIFFICULTY")
+        .ok()
+        .map(|value| value.parse().expect("numeric difficulty id"));
+    let (graph, bosses) = extract(
+        map,
+        &db,
+        &Path::new(&nav_root).join(map.to_string()),
+        difficulty,
+    )
+    .expect("follower topology inputs");
     let graph_path = super::graph_path();
     std::fs::write(&graph_path, serde_json::to_vec_pretty(&graph).unwrap()).unwrap();
     let gates = server::test_support::objectives::boss_gate_entries(map);

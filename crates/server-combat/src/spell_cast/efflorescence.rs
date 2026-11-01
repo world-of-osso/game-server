@@ -7,6 +7,8 @@ use std::collections::BTreeSet;
 use super::summon::SummonedCreature;
 
 const EFFLORESCENCE: u32 = 145205;
+/// Lifetreading 1217941 overrides 145205 with this copy grown under the Lifebloom target.
+const LIFETREADING_EFFLORESCENCE: u32 = 1232285;
 pub(crate) const DUMMY: u32 = 81262;
 pub(super) const HEAL: u32 = 81269;
 const HEAL_TARGETS: usize = 3;
@@ -18,14 +20,18 @@ pub(super) fn read_previous_summons(
     caster: Entity,
     spell: u32,
 ) -> Option<BTreeSet<Entity>> {
-    (spell == EFFLORESCENCE).then(|| read_owned_summons(world, caster))
+    is_efflorescence(spell).then(|| read_owned_summons(world, caster))
+}
+
+pub fn is_efflorescence(spell: u32) -> bool {
+    matches!(spell, EFFLORESCENCE | LIFETREADING_EFFLORESCENCE)
 }
 
 fn read_owned_summons(world: &mut World, caster: Entity) -> BTreeSet<Entity> {
     world
         .query::<(Entity, &SummonedCreature)>()
         .iter(world)
-        .filter(|(_, summon)| summon.owner == caster && summon.spell_id == EFFLORESCENCE)
+        .filter(|(_, summon)| summon.owner == caster && is_efflorescence(summon.spell_id))
         .map(|(unit, _)| unit)
         .collect()
 }
@@ -37,7 +43,15 @@ pub(super) fn initialize_new_summons(
 ) {
     let Some(previous) = previous else { return };
     let current = read_owned_summons(world, caster);
-    for &unit in current.difference(&previous) {
+    let new: Vec<_> = current.difference(&previous).copied().collect();
+    if new.is_empty() {
+        return;
+    }
+    // 145205/1232285 "Limit 1": a new blossom replaces the caster's previous one.
+    for &unit in &previous {
+        super::summon::despawn_summon(world, unit);
+    }
+    for unit in new {
         if let Err(failure) = super::creature_cast(world, unit, DUMMY, Some(unit), false) {
             debug!(?unit, ?failure, "Efflorescence summon aura refused");
         }
@@ -46,13 +60,13 @@ pub(super) fn initialize_new_summons(
 
 /// TC145205 effect2 launch removes only that caster's previous area trigger.
 pub(super) fn remove_previous_area_trigger(world: &mut World, caster: Entity, spell: u32) {
-    if spell != EFFLORESCENCE {
+    if !is_efflorescence(spell) {
         return;
     }
     let previous = world
         .query::<(Entity, &super::area_trigger::SpellAreaTrigger)>()
         .iter(world)
-        .filter(|(_, field)| field.caster == caster && field.spell_id == spell)
+        .filter(|(_, field)| field.caster == caster && is_efflorescence(field.spell_id))
         .map(|(unit, _)| unit)
         .collect::<Vec<_>>();
     for unit in previous {

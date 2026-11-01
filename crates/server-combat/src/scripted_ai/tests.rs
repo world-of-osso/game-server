@@ -243,6 +243,9 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     app.insert_resource(SpellStore::fixture(data.spells.clone()));
     app.insert_resource(crate::spell_cast::test_harness::power_table(all));
     app.insert_resource(crate::faction::world_db_faction_templates().unwrap());
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(WorldData {
         templates: stockade_templates(),
         class_level_base_mana: data.base_mana.clone(),

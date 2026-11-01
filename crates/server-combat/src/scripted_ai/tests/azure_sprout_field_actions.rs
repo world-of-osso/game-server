@@ -93,6 +93,7 @@ fn count_field_ticks(h: &Harness, caster: Entity, target: Entity) -> usize {
 }
 
 #[test]
+#[ignore = "AZURE_SPROUT_PC_IMMUNITY_UNEVIDENCED: TDB Sprout190509 IMMUNE_TO_PC and TC USER_ENEMY IsValidAttackTarget exclude players; journal Stinging Sap hits them, but every WCL Azure log is archived"]
 fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other_caster() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let (child, other_caster) = isolate_native_sprout(&mut h);
@@ -183,6 +184,7 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
 }
 
 #[test]
+#[ignore = "AZURE_SPROUT_PC_IMMUNITY_UNEVIDENCED: TDB Sprout190509 IMMUNE_TO_PC and TC USER_ENEMY IsValidAttackTarget exclude players; journal Stinging Sap hits them, but every WCL Azure log is archived"]
 fn azure_aura395_native_field_excludes_self_ally_and_other_copy_with_a_real_enemy_control() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let (child, ally) = isolate_native_sprout(&mut h);

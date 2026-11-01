@@ -135,6 +135,27 @@ fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
         {
             205523
         }
+        // SimC76f8118 sc_druid.cpp7255–7262: the Eclipse passive exposes the
+        // Lunar Calling action, otherwise the Solar action (whose override may flip).
+        1239669
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 102) =>
+        {
+            if known.contains(429523) {
+                1233272
+            } else {
+                1233346
+            }
+        }
+        // Native Incarnation trait394013's dummy value names its cast action102560.
+        394013
+            if world
+                .get::<shared::components::ActiveSpec>(actor)
+                .is_some_and(|spec| spec.0 == 102) =>
+        {
+            102560
+        }
         // SIMC_DEVASTATION_MANEUVERABILITY_ACTION: sc_evoker.cpp6323–6327.
         // Native433871 effect0 names433874 but supplies no TraitDefinition override.
         357210 if known.contains(433871) => 433874,

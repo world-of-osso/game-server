@@ -102,9 +102,6 @@ pub enum Relationship {
         parents: &'static [u32],
         cooldowns: &'static [u32],
         tenths_effect: u8,
-        bonus_states: &'static [u32],
-        bonus_spell: u32,
-        bonus_effect: u8,
     },
     SpenderAuraExtension {
         resource: PowerType,

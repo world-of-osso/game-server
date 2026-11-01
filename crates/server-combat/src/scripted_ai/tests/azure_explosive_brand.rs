@@ -6,7 +6,9 @@ const BRAND: u32 = 374567;
 const EXPLOSION: u32 = 374570;
 
 fn apply_brand() -> (Harness, Entity) {
-    let (mut h, leymor, _) = bound_boss_at_difficulty(186644, 2515, 0, 205, None);
+    // Pre-intro stasis keeps Leymor IMMUNE_TO_PC; TC IsValidAttackTarget then
+    // excludes players from Brand's area, so release it through the sourced intro.
+    let (mut h, leymor) = super::azure_combat::wake_leymor();
     crate::spell_cast::creature_cast(h.app.world_mut(), leymor, BRAND, None, true)
         .expect("native Leymor Brand cast");
     h.advance(0.1);

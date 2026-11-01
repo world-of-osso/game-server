@@ -71,6 +71,7 @@ fn active_hostile_field_remains_bounded_from_its_owner_after_movement() {
         map,
         SpellAreaTrigger {
             caster: actor,
+            primary_target: None,
             spell_id: 43265,
             trigger_spell: 52212,
             radius: 8.0,

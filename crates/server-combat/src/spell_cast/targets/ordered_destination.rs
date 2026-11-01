@@ -16,7 +16,7 @@ pub(in crate::spell_cast) fn check_destination_support(
             effect
                 .implicit_targets
                 .iter()
-                .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74 | 148))
+                .any(|&id| matches!(id, 41 | 43 | 48 | 73 | 74))
         });
     if needs_force_height {
         // Spell.cpp9286–9292 selects Object.cpp2802–2826 MAX_HEIGHT/ten-step queries.
@@ -105,7 +105,11 @@ pub(super) fn select_slot(
                 .or_else(|| position(world, explicit.unwrap_or(caster)))
                 .ok_or(super::super::CastFailure::InvalidTarget)?;
             let destination = destination.ok_or(super::super::CastFailure::InvalidTarget)?;
-            move_destination(world, caster, start, destination, 148).map(Some)
+            if id == 148 && super::super::attributes(spell, 9) & FORCE_DEST_LOCATION != 0 {
+                move_forced_destination(world, caster, start, destination).map(Some)
+            } else {
+                move_destination(world, caster, start, destination, 148).map(Some)
+            }
         }
         85 => {
             // TC CheckDst uses the caster, not an unrelated explicit unit.
@@ -264,6 +268,65 @@ fn has_running_range_bonus(world: &World, caster: Entity) -> bool {
     world
         .get::<PlayerMotion>(caster)
         .is_some_and(|motion| motion.0 & running != 0 && !motion.contains(PlayerMotion::WALKING))
+}
+
+/// TC WorldObject::MovePosition: force-location skips collision and limits height changes.
+fn move_forced_destination(
+    world: &mut World,
+    caster: Entity,
+    start: Vec3,
+    mut destination: Dest,
+) -> Result<Dest, super::super::CastFailure> {
+    let map = world
+        .get::<crate::maps::InMap>(caster)
+        .copied()
+        .ok_or(super::super::CastFailure::InvalidTarget)?;
+    let mut ground = world
+        .get_resource_mut::<crate::ground::GroundMap>()
+        .ok_or_else(|| {
+            super::super::CastFailure::Unsupported("target148 requires ground data".into())
+        })?;
+    let delta = destination.position - start;
+    let mut selected = start;
+    for step in 0..10 {
+        let fraction = 1.0 - step as f32 / 10.0;
+        let point = Vec3::new(
+            start.x + delta.x * fraction,
+            start.y,
+            start.z + delta.z * fraction,
+        );
+        let high = ground.map_height_in(map, point.with_y(100_000.0));
+        let floor = ground.map_height_in(
+            map,
+            point.with_y(start.y + if step == 0 { 0.5 } else { 0.0 }),
+        );
+        let height = match (high, floor) {
+            (
+                crate::ground::GroundProbe::Supported(a),
+                crate::ground::GroundProbe::Supported(b),
+            ) => {
+                if (a - start.y).abs() <= (b - start.y).abs() {
+                    a
+                } else {
+                    b
+                }
+            }
+            (crate::ground::GroundProbe::Supported(height), _)
+            | (_, crate::ground::GroundProbe::Supported(height)) => height,
+            _ => return Err(super::super::CastFailure::InvalidTarget),
+        };
+        if (height - start.y).abs() <= 6.0 {
+            selected = point.with_y(height);
+            break;
+        }
+    }
+    if let crate::ground::GroundProbe::Supported(height) =
+        ground.map_height_in(map, selected + Vec3::Y * 0.5)
+    {
+        selected.y = height;
+    }
+    destination.position = selected;
+    Ok(destination)
 }
 
 /// Supported direct-ray branch of Object.cpp2833–2920, using the same collision
