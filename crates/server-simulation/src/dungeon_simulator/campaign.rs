@@ -127,18 +127,133 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
             )
         })
         .collect();
-    run.app.world_mut().entity_mut(owner).insert(source);
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for &unit in &members {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
     assert_eq!(
         crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
-        Ok(5)
+        Ok(1)
     );
-    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+    for (&unit, &(copy, health, mana)) in members.iter().zip(&before) {
         let world = run.app.world();
-        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
         assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
         assert_eq!(world.get::<Health>(unit).unwrap().current, health);
         assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
     }
+    for &unit in &run.party.members {
+        assert_eq!(
+            run.app.world().get::<Position>(unit),
+            Some(&source),
+            "owner interaction must not teleport followers"
+        );
+    }
+    let mut arrived = std::collections::HashSet::new();
+    for _ in 0..2000 {
+        run.app.update();
+        for (&unit, &(copy, _, _)) in members.iter().zip(&before) {
+            let world = run.app.world();
+            let position = world.get::<Position>(unit).unwrap();
+            if Vec3::new(position.x, position.y, position.z)
+                .distance(Vec3::new(endpoint.x, endpoint.y, endpoint.z))
+                < 3.0
+            {
+                arrived.insert(unit);
+            }
+            assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        }
+        if arrived.len() == members.len() {
+            break;
+        }
+    }
+    assert_eq!(
+        arrived.len(),
+        members.len(),
+        "each follower must independently use the book"
+    );
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    assert_eq!(run.graph.map_id, 2825);
+    let owner = run.party.owner;
+    let edge = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.from == 3276416805)
+        .unwrap()
+        .clone();
+    let pyre = run.objects[&edge.source_guid];
+    let source = *run.app.world().get::<Position>(pyre).unwrap();
+    let enemies: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| {
+            crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                owner,
+                *actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+        })
+        .collect();
+    for enemy in enemies {
+        run.app.world_mut().despawn(enemy);
+    }
+    for unit in run.members().collect::<Vec<_>>() {
+        run.app.world_mut().entity_mut(unit).insert(source);
+    }
+    server::test_support::transport::activate(run.app.world_mut(), owner, Some(pyre), &edge)
+        .unwrap();
+    let destination = *run.app.world().get::<Position>(owner).unwrap();
+    assert!(
+        run.wait_for_tank().unwrap(),
+        "leader must wait for the tank's pyre route"
+    );
+    for _ in 0..2000 {
+        run.app.update();
+        if !run.wait_for_tank().unwrap() {
+            let tank = run.app.world().get::<Position>(run.party.tank).unwrap();
+            assert!(
+                Vec3::new(tank.x, tank.y, tank.z).distance(Vec3::new(
+                    destination.x,
+                    destination.y,
+                    destination.z
+                )) < 20.0
+            );
+            return;
+        }
+        assert_eq!(run.app.world().get::<Position>(owner), Some(&destination));
+    }
+    panic!("tank did not independently use the Den pyre");
 }
 
 #[test]
@@ -983,19 +1098,12 @@ fn released_leader_rejoins_party_through_azure_book() {
             break;
         }
         run.app.update();
-        if !run
-            .report
-            .pulls
-            .iter()
-            .any(|event| event.decision.starts_with("REGISTERED_TRANSPORT"))
-        {
-            for (member, position) in &positions_before_return {
-                assert_eq!(
-                    *run.app.world().get::<Position>(*member).unwrap(),
-                    *position,
-                    "living followers must hold until the leader uses the book"
-                );
-            }
+        for (member, position) in &positions_before_return {
+            assert_eq!(
+                *run.app.world().get::<Position>(*member).unwrap(),
+                *position,
+                "living followers must hold throughout the leader's return"
+            );
         }
     }
     assert!(
@@ -3246,6 +3354,13 @@ impl Run {
 
     fn wait_for_tank(&mut self) -> Result<bool, String> {
         let world = self.app.world();
+        if server::test_support::transport::follower_routing(world, self.party.tank) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(true);
+        }
         if !crate::spell_cast::targets::is_alive(world, self.party.tank)
             || server::test_support::transport::in_progress(world, self.party.tank)
         {

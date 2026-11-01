@@ -55,6 +55,19 @@ impl Rotation {
         if profile.spec_id != 102 {
             return Err("literal Balance requires spec102".into());
         }
+        // SimC76f8118 player.cpp1017–1020: the profile uses default reaction settings.
+        crate::simc_apl_native::reaction::configure(
+            world,
+            actor,
+            crate::simc_apl_native::reaction::ReactionSettings {
+                mean: 0.25,
+                stddev: 0.0,
+                offset: 0.1,
+                nu: 0.15,
+                maximum: 1.4,
+            },
+            &[393942, 393944, 450360],
+        )?;
         let mut bindings = bindings::build(world, actor)?;
         let equipment = Equipment::load(world, actor, &mut bindings)?;
         Ok(Self {
