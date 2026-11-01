@@ -22,8 +22,17 @@ fn follower_demonology_core_doom_expires_from_hand_of_guldan() {
     );
     assert!(!crate::auras::has_aura(app.world(), actor, 264173));
     crate::spell_cast::creature_cast(app.world_mut(), actor, 264178, Some(target), false).unwrap();
-    for _ in 0..120 {
+    for frame in 0..120 {
         app.update();
+        if crate::auras::has_aura(app.world(), actor, 264173)
+            || crate::auras::has_aura(app.world(), target, 460553)
+        {
+            println!(
+                "frame={frame} core={} doom={}",
+                crate::auras::has_aura(app.world(), actor, 264173),
+                crate::auras::has_aura(app.world(), target, 460553)
+            );
+        }
     }
     assert!(
         !crate::auras::has_aura(app.world(), target, 460553),
