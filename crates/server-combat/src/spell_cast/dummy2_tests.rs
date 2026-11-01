@@ -709,6 +709,12 @@ fn dummy2_dh_feed_the_demon_paid_base_fury_shortens_demon_spikes_recharge() {
             ids.push(218612);
         }
         let mut h = harness_with(Vec::new(), &ids, 12, true).expect("real world.db required");
+        // Soul Cleave consumes fragments through the Vengeance specialization.
+        let caster = h.caster;
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(shared::components::ActiveSpec(581));
         h.cast_and_deliver(203720, Some(h.caster));
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         let ready = |h: &Harness| {
