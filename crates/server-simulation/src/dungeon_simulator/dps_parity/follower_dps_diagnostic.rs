@@ -2088,6 +2088,40 @@ fn balance_follower_astral_smolder_deals_periodic_damage() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let fires_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(1263363)
+        })
+        .count();
+    let eclipse_casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(
+                    event.spell_id,
+                    Some(1233272 | 1233346 | 102560 | 194223 | 390414)
+                )
+        })
+        .count();
+    assert!(
+        fires_applications > 0 && fires_applications <= eclipse_casts,
+        "Ascendant Fires applications {fires_applications} must come from {eclipse_casts} Eclipse entries"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastStart
+                && event.spell_id == Some(194153)),
+        "Starfire must return to a non-instant cast after Ascendant Fires is consumed"
+    );
     assert!(
         events
             .iter()
