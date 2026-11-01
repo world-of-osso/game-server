@@ -18,6 +18,8 @@ const LUNAR_CALLING: u32 = 429523;
 const SOLSTICE: u32 = 343647;
 const SOLSTICE_BUFF: u32 = 343648;
 const TOTAL_ECLIPSE: u32 = 1240206;
+const ASCENDANT_ECLIPSES: u32 = 1261564;
+const ASCENDANT_FIRES: u32 = 1263363;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::LateAuraRegistration(register),
@@ -35,11 +37,12 @@ fn selected(world: &World, caster: Entity, spell: u32) -> bool {
 }
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.entry(SOLSTICE).or_default().check_proc = Some(block_generated_solstice);
+    scripts.0.entry(SOLSTICE).or_default().check_proc = Some(block_generated_proc);
+    scripts.0.entry(ASCENDANT_ECLIPSES).or_default().check_proc = Some(block_generated_proc);
     scripts.0.entry(LUNAR_CALLING).or_default().on_apply = Some(start_lunar_calling);
 }
 
-fn block_generated_solstice(_: &World, _: &AuraInstance, _: &AuraEvent) -> bool {
+fn block_generated_proc(_: &World, _: &AuraInstance, _: &AuraEvent) -> bool {
     false
 }
 
@@ -63,12 +66,16 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
     match spell.id {
         194153 => {
+            consume_ascendant_fires(world, caster);
             spell_cast::cast_triggered(world, caster, OVERRIDE, Some(caster), 1);
         }
-        190984 if !selected(world, caster, LUNAR_CALLING) => {
-            auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
-                aura.spell_id == OVERRIDE && aura.caster == caster
-            });
+        190984 => {
+            consume_ascendant_fires(world, caster);
+            if !selected(world, caster, LUNAR_CALLING) {
+                auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+                    aura.spell_id == OVERRIDE && aura.caster == caster
+                });
+            }
         }
         SOLAR_ACTION | LUNAR_ACTION => enter_eclipse(world, caster),
         194223 | 102560 | 390414 => {
@@ -79,7 +86,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
             );
             apply_eclipse(world, caster, SOLAR, Some(duration as u32));
             apply_eclipse(world, caster, LUNAR, Some(duration as u32));
-            trigger_solstice(world, caster);
+            trigger_eclipse_benefits(world, caster);
         }
         _ => {}
     }
@@ -102,7 +109,13 @@ fn enter_eclipse(world: &mut World, caster: Entity) {
             apply_eclipse(world, caster, opposite, None);
         }
     }
-    trigger_solstice(world, caster);
+    trigger_eclipse_benefits(world, caster);
+}
+
+fn consume_ascendant_fires(world: &mut World, caster: Entity) {
+    auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == ASCENDANT_FIRES && aura.caster == caster
+    });
 }
 
 fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option<u32>) {
@@ -119,7 +132,10 @@ fn apply_eclipse(world: &mut World, caster: Entity, spell: u32, duration: Option
     );
 }
 
-fn trigger_solstice(world: &mut World, caster: Entity) {
+fn trigger_eclipse_benefits(world: &mut World, caster: Entity) {
+    if selected(world, caster, ASCENDANT_ECLIPSES) {
+        spell_cast::cast_triggered(world, caster, ASCENDANT_FIRES, Some(caster), 1);
+    }
     if selected(world, caster, SOLSTICE) {
         let amount = spell_cast::scripts::script_effect_value(world, caster, SOLSTICE, 0);
         spell_cast::cast_triggered_with_effect0_amount(

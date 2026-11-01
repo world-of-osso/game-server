@@ -2066,6 +2066,76 @@ fn balance_follower_casts_fury_of_elune_and_continues_rotation() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn balance_follower_astral_smolder_deals_periodic_damage() {
+    let _seed = crate::random::seed_scope(70448);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 102, 90);
+    let owner = app
+        .world()
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    for _ in 0..5 {
+        app.update();
+    }
+    start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    for _ in 0..FIXED_FIGHT_FRAMES {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let fires_applications = events
+        .iter()
+        .filter(|event| {
+            event.target == Some(actor.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                )
+                && event.spell_id == Some(1263363)
+        })
+        .count();
+    let eclipse_casts = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastSuccess
+                && matches!(
+                    event.spell_id,
+                    Some(1233272 | 1233346 | 102560 | 194223 | 390414)
+                )
+        })
+        .count();
+    assert!(
+        fires_applications > 0 && fires_applications <= eclipse_casts,
+        "Ascendant Fires applications {fires_applications} must come from {eclipse_casts} Eclipse entries"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.kind == CombatLogKind::CastStart
+                && event.spell_id == Some(194153)),
+        "Starfire must return to a non-instant cast after Ascendant Fires is consumed"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(1263250)
+                && event.amount > 0),
+        "Eclipse critical hits must produce Astral Smolder periodic damage"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn fury_of_elune_pulses_the_field_and_stops_after_expiry() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
