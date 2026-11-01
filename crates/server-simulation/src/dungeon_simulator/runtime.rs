@@ -129,7 +129,9 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
 /// The literal parity harness drives its actor's rotation itself, so its
 /// class actors run no follower APL.
 pub(super) fn build_literal_app() -> App {
-    build_runtime_app(&mut None, &crate::test_data::world_db_path(), false)
+    let mut app = build_runtime_app(&mut None, &crate::test_data::world_db_path(), false);
+    server_follower_apl::action_metadata::install_provider(&mut app);
+    app
 }
 
 #[cfg(test)]

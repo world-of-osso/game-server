@@ -1020,6 +1020,7 @@ fn cast_first_ready(world: &mut World, actor: Entity, target: Entity) {
         let repeatable = can_repeat(entry, spell);
         let targets = native_cast_targets(actor, target, spell);
         if !read_action_timing_ready(world, actor, id, repeatable)
+            || !crate::followers::action_safe(world, actor, target, Some(id))
             || !super::script_registry::guardian_action_eligible(world, actor, id, target)
         {
             continue;
