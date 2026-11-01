@@ -591,6 +591,201 @@ fn encounter_fixture(
     (h, boss, map)
 }
 
+#[test]
+fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
+    use shared::protocol::{ChallengePhase, GameObjectInfo, KeystoneInfo};
+
+    let (mut h, _, _) =
+        encounter_fixture(186644, 2515, 0, 23, None, EncounterState::NotStarted, true);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut bank = crate::bank_test_harness::harness_at(file.path(), "Keymaster").unwrap();
+    let character = bank.character_id;
+    let database = bank
+        .app
+        .world_mut()
+        .remove_resource::<crate::persistence::GameDatabase>()
+        .unwrap();
+    drop(bank);
+    h.app.insert_resource(database);
+    h.app.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(1791705600),
+    });
+    h.app.init_resource::<crate::group::GroupRegistry>();
+    let maps = h.app.world().resource::<MapStore>().clone();
+    let map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            2515,
+            crate::maps::instances::InstanceEntrant {
+                character_id: character,
+                leader: character,
+                difficulty_id: 23,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1791705600,
+            },
+        )
+        .unwrap()
+        .map;
+    let player = h.player();
+    let connection = h.players[0].1;
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        crate::persistence::ClientId(character),
+        shared::components::Level(70),
+        UnitLevel(70),
+        shared::components::ActiveSpec(62),
+        crate::maps::DungeonDifficulty(23),
+    ));
+    h.app.world_mut().get_mut::<Player>(player).unwrap().class = 8;
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(connection)
+        .unwrap()
+        .character_id = character;
+    h.app
+        .world_mut()
+        .entity_mut(h.players[1].0)
+        .insert(InMap::continent(0));
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::spawn_map_creatures(
+        &mut commands,
+        h.app.world().resource::<WorldData>(),
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 23,
+            dead_bosses: Vec::new(),
+        },
+        false,
+        Some(&mut crate::test_data::ground_map()),
+    );
+    let db =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let objects = crate::game_objects::load_game_object_spawns(&db).unwrap();
+    crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, 23, None);
+    queue.apply(h.app.world_mut());
+    h.advance(0.1);
+    let font = h
+        .app
+        .world_mut()
+        .query::<(Entity, &GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, info, copy)| info.entry == 246779 && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .expect("authored Azure Font");
+    let font_position = *h.app.world().get::<Position>(font).unwrap();
+    h.app.world_mut().entity_mut(player).insert(font_position);
+    h.app
+        .insert_resource(crate::followers::load_catalog(&db).unwrap());
+    crate::followers::native_fixture::install_class_sources(h.app.world_mut());
+    h.app
+        .insert_resource(crate::followers::FollowerActionProvider {
+            source_actions: |_, _, _| Ok(Vec::new()),
+            equipped_actions: |_, _, _| Ok(Vec::new()),
+        });
+    let key = KeystoneInfo {
+        item_guid: 4242,
+        item_id: 180653,
+        challenge_id: 401,
+        level: 8,
+        affixes: vec![],
+    };
+    let followers = crate::followers::party::spawn_keystone_test_party(
+        h.app.world_mut(),
+        player,
+        2498,
+        key.clone(),
+    )
+    .unwrap();
+    assert_eq!(followers.len(), 4);
+    assert!(followers.iter().all(|unit| {
+        h.app
+            .world()
+            .get::<crate::followers::AplControlled>(*unit)
+            .is_some()
+    }));
+    let definition = ::server::mythic_plus_catalog::load_azure(&db)
+        .unwrap()
+        .unwrap();
+    let weights = definition.creature_weights.clone();
+    crate::mythic_plus::fixture::start(
+        h.app.world_mut(),
+        connection,
+        font,
+        character,
+        key,
+        definition,
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .copy_difficulty(map)
+            .unwrap()
+            .difficulty_id,
+        8
+    );
+    h.app
+        .world_mut()
+        .get_mut::<Health>(followers[0])
+        .unwrap()
+        .current = 1.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, followers[0], 1000.0);
+    assert_eq!(
+        crate::mythic_plus::fixture::snapshot(h.app.world(), map).deaths,
+        1
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(followers[0])
+            .is_some()
+    );
+    let targets: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap, &Health)>()
+        .iter(h.app.world())
+        .filter(|(_, npc, copy, health)| {
+            **copy == map && health.current > 0.0 && weights.contains_key(&npc.template_id)
+        })
+        .map(|(entity, _, _, health)| (entity, health.max))
+        .collect();
+    for (target, health) in targets {
+        crate::combat::deal_direct_damage(h.app.world_mut(), player, target, health * 10.0);
+    }
+    for entry in [186644, 186739, 186737, 186738] {
+        let boss = h
+            .app
+            .world_mut()
+            .query::<(Entity, &shared::components::Npc, &InMap, &Health)>()
+            .iter(h.app.world())
+            .find(|(_, npc, copy, health)| {
+                **copy == map && npc.template_id == entry && health.current > 0.0
+            })
+            .map(|(entity, _, _, health)| (entity, health.max));
+        if let Some((unit, health)) = boss {
+            crate::combat::deal_direct_damage(h.app.world_mut(), player, unit, health * 10.0);
+        }
+    }
+    crate::mythic_plus::fixture::tick(h.app.world_mut());
+    let result = crate::mythic_plus::fixture::snapshot(h.app.world(), map);
+    assert_eq!(result.phase, ChallengePhase::Completed);
+    assert_eq!(result.deaths, 1);
+    assert!(result.elapsed_ms < result.time_limit_ms);
+    assert_eq!(
+        crate::mythic_plus::fixture::owner_keys(h.app.world(), character)[0].level,
+        11
+    );
+}
+
 fn load_authored_spawn(
     conn: &Connection,
     entry: u32,

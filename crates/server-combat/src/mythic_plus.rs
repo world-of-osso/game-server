@@ -553,6 +553,61 @@ pub(crate) fn open_font(world: &mut World, connection: Entity, font: Entity) {
 }
 
 #[cfg(test)]
+pub(crate) mod fixture {
+    use super::*;
+
+    pub(crate) fn start(
+        world: &mut World,
+        connection: Entity,
+        font: Entity,
+        character: u64,
+        key: KeystoneInfo,
+        definition: ChallengeDefinition,
+    ) {
+        let db = &world.resource::<GameDatabase>().db;
+        let txn = db.begin_write().unwrap();
+        txn.open_table(KEYS).unwrap();
+        txn.open_table(HISTORY).unwrap();
+        txn.commit().unwrap();
+        let mut inventory = persistence::load_inventory(db, character);
+        inventory.items.push(persistence::InventoryItemData {
+            item_guid: key.item_guid,
+            item_id: key.item_id,
+            name: "Mythic Keystone".into(),
+            quality: 4,
+            required_level: 0,
+            stack_count: 1,
+            vendor_sell_price: 0,
+            unique_auction: false,
+        });
+        persistence::save_inventory(db, character, &inventory);
+        save_key(db, &key);
+        world.insert_resource(Challenges {
+            definition: Some(definition),
+            ..Default::default()
+        });
+        open_font(world, connection, font);
+        slot(world, connection, font.to_bits(), key.item_guid).unwrap();
+        super::start(world, connection).unwrap();
+    }
+
+    pub(crate) fn snapshot(world: &World, map: InMap) -> ChallengeRun {
+        world.resource::<Challenges>().runs[&map]
+            .run
+            .snapshot
+            .clone()
+    }
+
+    pub(crate) fn tick(world: &mut World) {
+        super::update(world);
+    }
+
+    pub(crate) fn owner_keys(world: &World, character: u64) -> Vec<KeystoneInfo> {
+        owned_keys(&world.resource::<GameDatabase>().db, character)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
