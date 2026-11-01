@@ -32,6 +32,12 @@ fn fixture() -> Harness {
         copy,
         DungeonDifficulty(205),
         crate::persistence::ClientId(1),
+        shared::components::Player {
+            name: "Reader".into(),
+            race: 1,
+            class: 3,
+            appearance: Default::default(),
+        },
         MovementControl::default(),
     ));
     h

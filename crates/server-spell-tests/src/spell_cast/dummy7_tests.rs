@@ -153,8 +153,10 @@ fn dummy7_heart_strike_without_heartbreaker_has_no_bonus() {
 }
 
 #[test]
-fn dummy7_radiance_heals_primary_and_four_injured_allies_inside_catalog_radius() {
+fn dummy7_radiance_heals_primary_and_four_allies_inside_catalog_radius() {
     let mut h = harness(Vec::new(), &[194509, 194384], 5).unwrap();
+    let caster = h.caster;
+    apply(&mut h, caster, caster, 194384, 1);
     let primary = spawn_player(&mut h.app, 5, 3.0); // Healthy primary still selected.
     let healthy = spawn_player(&mut h.app, 5, 4.0);
     let injured: Vec<Entity> = (0..5)
@@ -170,18 +172,21 @@ fn dummy7_radiance_heals_primary_and_four_injured_allies_inside_catalog_radius()
     h.advance(65);
     landed(&h);
     assert!(logged(&h, 194509, primary, CombatLogKind::Heal) > 0);
-    for &u in &injured[..4] {
+    for &u in &injured[..3] {
         assert!(h.health(u) > 100.0);
     }
-    assert_eq!(h.health(injured[4]), 100.0);
-    assert_eq!(logged(&h, 194509, healthy, CombatLogKind::Heal), 0);
+    for &u in &injured[3..] {
+        assert_eq!(h.health(u), 100.0);
+    }
+    assert!(logged(&h, 194509, healthy, CombatLogKind::Heal) > 0);
     assert_eq!(h.health(far), 100.0);
     assert_eq!(logged(&h, 194509, h.npc, CombatLogKind::Heal), 0);
 }
 #[test]
-fn dummy7_radiance_prefers_injured_allies_without_owners_atonement() {
+fn dummy7_radiance_prefers_allies_without_owners_atonement() {
     let mut h = harness(Vec::new(), &[194509, 194384], 5).unwrap();
     let c = h.caster;
+    apply(&mut h, c, c, 194384, 1);
     let primary = spawn_player(&mut h.app, 5, 3.0);
     let marked = spawn_player(&mut h.app, 5, 4.0);
     h.app.world_mut().get_mut::<Health>(marked).unwrap().current = 100.0;

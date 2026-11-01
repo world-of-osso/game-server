@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
     SpellScriptHook::AfterAuraApplication(apply_mark),
     SpellScriptHook::AfterAuraApplication(spread_pain_from_penance),
+    SpellScriptHook::AfterAuraApplication(record_friendly_penance),
     SpellScriptHook::OnCast(start_penance),
     SpellScriptHook::LateAuraRegistration(register_shield_discipline),
     SpellScriptHook::NativeAfterCast(master_the_darkness_action),
@@ -25,6 +26,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ActualDamageMultiplier(twist_damage_multiplier),
     SpellScriptHook::HealingMultiplier(twist_healing_multiplier),
     SpellScriptHook::ResolvedHeal(divine_aegis),
+    SpellScriptHook::ResolvedHeal(friendly_penance_twinsight),
     SpellScriptHook::RawResolvedDamage(transfer_damage),
     SpellScriptHook::ResolvedDamage(bank_searing_light),
     SpellScriptHook::RawResolvedDamage(trigger_dark_indulgence),
@@ -184,6 +186,9 @@ fn twist_healing_multiplier(
 #[derive(Component)]
 struct PenanceBolts {
     completed: u32,
+    friendly_completed: u32,
+    friendly_channel: bool,
+    friendly_twinsight_target: Option<Entity>,
     dark_side_multiplier: f32,
 }
 
@@ -205,6 +210,9 @@ fn start_penance(world: &mut World, caster: Entity, spell: u32, _depth: u8) {
     });
     world.entity_mut(caster).insert(PenanceBolts {
         completed: 0,
+        friendly_completed: 0,
+        friendly_channel: false,
+        friendly_twinsight_target: None,
         dark_side_multiplier,
     });
 }
@@ -620,9 +628,11 @@ fn transfer_damage(
     raw: f32,
 ) {
     // SimC 76f8118 priest_spell_t sets triggers_atonement on these damage actions.
+    // WCL KWw69CqBnf3Tpk8L f4 a4: 1232571 hits at 4483726/4484091/4484439
+    // are followed by Atonement 81751 on all five marked players.
     const TRIGGERS: &[u32] = &[
         585, 589, 8092, 32379, 47666, 373130, 390832, 120696, 390964, 132157, 450215, 447448,
-        448405, 1280134, 1253828, 421543,
+        448405, 1280134, 1253828, 421543, 1232571,
     ];
     let source = damage.caster;
     let (caster, pet_spell) =
@@ -731,6 +741,103 @@ fn penance_healing_multiplier(
     world
         .get::<PenanceBolts>(caster)
         .map_or(1.0, |bolts| bolts.dark_side_multiplier)
+}
+
+fn record_friendly_penance(world: &mut World, target: Entity, aura: &AuraInstance) {
+    // Healing missiles can land after the channel aura has expired.
+    if aura.spell_id == 47757
+        && target == aura.caster
+        && let Some(mut bolts) = world.get_mut::<PenanceBolts>(aura.caster)
+    {
+        bolts.friendly_channel = true;
+    }
+}
+
+fn friendly_penance_twinsight(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    _target: Entity,
+    _raw: f32,
+    _effective: f32,
+    _critical: bool,
+    _periodic: bool,
+) {
+    let caster = ctx.caster;
+    if ctx.spell.id != 47750
+        || !world
+            .get::<PenanceBolts>(caster)
+            .is_some_and(|bolts| bolts.friendly_channel)
+        || !world
+            .get::<combat::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(440742))
+    {
+        return;
+    }
+    // INFERRED: emit the DB2-specified three bolts on the first three friendly
+    // channel hits, consistent with WCL KWw69CqBnf3Tpk8L fight 4 actor 4.
+    let limit = combat::spell_cast::scripts::script_effect_value(world, caster, 440742, 2) as u32;
+    let Some(bolts) = world.get::<PenanceBolts>(caster) else {
+        return;
+    };
+    if bolts.friendly_completed >= limit {
+        return;
+    }
+    let first = bolts.friendly_completed == 0;
+    let target = if first {
+        select_twinsight_enemy(world, caster)
+    } else {
+        bolts.friendly_twinsight_target
+    };
+    let mut bolts = world
+        .get_mut::<PenanceBolts>(caster)
+        .expect("Penance state");
+    bolts.friendly_completed += 1;
+    bolts.friendly_twinsight_target = target;
+    if let Some(enemy) = target
+        && !combat::spell_cast::try_cast_triggered(world, caster, 1232571, Some(enemy), 1)
+    {
+        warn!(
+            ?caster,
+            ?enemy,
+            "Twinsight Penance damage could not be cast"
+        );
+    }
+}
+
+fn select_twinsight_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
+    use combat::spell_cast::targets::{self, Relation};
+    use shared::components::CombatStatus;
+
+    let origin = targets::position(world, caster)?;
+    let talent = world
+        .resource::<SpellStore>()
+        .get(440742)
+        .expect("Twinsight talent");
+    let effect = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Twinsight range");
+    let radius = targets::radius(effect, 1);
+    let candidates: Vec<_> = world
+        .query::<(Entity, &CombatStatus)>()
+        .iter(world)
+        .filter_map(|(enemy, status)| {
+            (status.0
+                && targets::is_alive(world, enemy)
+                && targets::same_map(world, caster, enemy)
+                && targets::relation_matches(world, caster, enemy, Relation::Enemy)
+                && targets::position(world, enemy)
+                    .is_some_and(|position| position.distance(origin) <= radius))
+            .then_some(enemy)
+        })
+        .collect();
+    if candidates.is_empty() {
+        return None;
+    }
+    // INFERRED: WCL KWw69CqBnf3Tpk8L fight 4 actor 4 shows three damage
+    // bolts on one enemy during a friendly channel; choose one engaged enemy.
+    Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
 }
 
 fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {

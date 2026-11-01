@@ -574,7 +574,7 @@ impl Slagmaw {
             .into_iter()
             .filter(|&spell| spell != self.last_teleport)
             .collect();
-        let pick = rand::Rng::gen_range(&mut rand::thread_rng(), 0..choices.len());
+        let pick = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..choices.len());
         self.last_teleport = choices[pick];
         self.last_teleport
     }

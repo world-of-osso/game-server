@@ -924,19 +924,28 @@ pub(crate) fn prepare_difficulty_retune(
     world: &mut World,
     map: crate::maps::InMap,
     difficulty_id: u32,
+    season: u32,
+    only: Option<Entity>,
 ) -> Result<Vec<DifficultyRetune>, String> {
     let actors: Vec<_> = world
         .query::<(
             Entity,
             &crate::maps::InMap,
-            &CreatureOrigin,
+            Option<&CreatureOrigin>,
             &Npc,
             Option<&LevelScaling>,
+            Option<&TempSummon>,
+            Option<&crate::spell_cast::summon::SummonedCreature>,
         )>()
         .iter(world)
-        .filter(|(_, copy, _, _, _)| **copy == map)
-        .map(|(entity, _, origin, npc, scaling)| {
-            (entity, *origin, npc.template_id, scaling.copied())
+        .filter(|(entity, copy, origin, _, _, temp, summon)| {
+            **copy == map
+                && only.is_none_or(|selected| selected == *entity)
+                && (origin.is_some() || temp.is_some() || summon.is_some())
+                && crate::mythic_plus_scaling::is_eligible(world, *entity)
+        })
+        .map(|(entity, _, origin, npc, scaling, _, _)| {
+            (entity, origin.copied(), npc.template_id, scaling.copied())
         })
         .collect();
     if actors.is_empty() {
@@ -959,54 +968,83 @@ pub(crate) fn prepare_difficulty_retune(
         actors
             .into_iter()
             .map(|(entity, origin, entry, old_scaling)| {
-                let spawn = spawns.get(&origin.guid).copied().ok_or_else(|| {
-                    format!(
-                        "creature spawn{} absent during difficulty change",
-                        origin.guid
-                    )
-                })?;
                 let template = data.template_for(entry, difficulty_id).ok_or_else(|| {
                     format!("creature{entry} has no difficulty{difficulty_id} template")
                 })?;
-                let mut context = CreatureSpawnContext {
-                    map,
-                    difficulty_id,
-                    ground: ground.as_deref_mut(),
-                    temporary: false,
-                };
-                let tuning =
+                let tuning = if let Some(origin) = origin {
+                    let spawn = spawns.get(&origin.guid).copied().ok_or_else(|| {
+                        format!(
+                            "creature spawn{} absent during difficulty change",
+                            origin.guid
+                        )
+                    })?;
+                    let mut context = CreatureSpawnContext {
+                        map,
+                        difficulty_id,
+                        ground: ground.as_deref_mut(),
+                        temporary: false,
+                    };
                     read_spawn_tuning(&data, template, spawn, &mut context).map_err(|_| {
                         format!(
                             "creature{entry} spawn{} has no difficulty{difficulty_id} tuning",
                             origin.guid
                         )
-                    })?;
-                let scaling = tuning.map(|(range, stats)| {
-                    let scaling = match old_scaling {
-                        Some(old) => LevelScaling {
-                            content_tuning_id: range.content_tuning_id,
-                            min_level: range.range.0,
-                            max_level: range.range.1,
-                            delta: old.delta.clamp(
-                                range.delta.0.min(range.delta.1),
-                                range.delta.0.max(range.delta.1),
-                            ),
-                        },
-                        None => roll_spawn_scaling(range, &mut rand::thread_rng()),
-                    };
-                    (scaling, stats)
-                });
-                let (level, health, armor) = match &scaling {
-                    Some((scaling, stats)) => {
-                        let level = scaling.native_level();
-                        (level, stats.max_health(level), stats.armor(level))
-                    }
-                    None => (
-                        template.min_level,
-                        resolve_health(&data, template),
-                        template.armor,
-                    ),
+                    })?
+                } else {
+                    template.tuning.as_ref().map(|tuning| {
+                        (
+                            GuardianLevelRange {
+                                content_tuning_id: tuning.content_tuning_id,
+                                range: (template.min_level, template.max_level),
+                                delta: tuning.delta,
+                            },
+                            tuning.stats.clone(),
+                        )
+                    })
                 };
+                let native_tuning = tuning
+                    .as_ref()
+                    .map_or(0, |(range, _)| range.content_tuning_id);
+                let range = data
+                    .summon_levels
+                    .keystone_range(template, map.map_id, difficulty_id)
+                    .ok_or_else(|| {
+                        format!("creature{entry} lacks Keystone map tuning or level delta")
+                    })?;
+                let scaling = match old_scaling {
+                    Some(old) => LevelScaling {
+                        content_tuning_id: range.content_tuning_id,
+                        min_level: range.range.0,
+                        max_level: range.range.1,
+                        delta: old.delta.clamp(
+                            range.delta.0.min(range.delta.1),
+                            range.delta.0.max(range.delta.1),
+                        ),
+                    },
+                    None => roll_spawn_scaling(range, &mut rand::thread_rng()),
+                };
+                let inputs = TuningInputs {
+                    content_tuning_id: native_tuning,
+                    health_scaling_expansion: template.health_scaling_expansion,
+                    unit_class: template.unit_class,
+                    health_modifier: template.health_modifier,
+                    damage_modifier: template.damage_modifier,
+                    armor_modifier: template.armor_modifier,
+                };
+                let mut stats = tuning.map_or_else(
+                    || LevelStats::build(&data.expected_stats, &inputs),
+                    |(_, stats)| (*stats).clone(),
+                );
+                stats.apply_keystone_health(
+                    &data.expected_stats,
+                    &inputs,
+                    range.content_tuning_id,
+                    season,
+                )?;
+                let level = scaling.native_level();
+                let health = stats.max_health(level);
+                let armor = stats.armor(level);
+                let scaling = Some((scaling, Arc::new(stats)));
                 Ok(DifficultyRetune {
                     entity,
                     difficulty_id,

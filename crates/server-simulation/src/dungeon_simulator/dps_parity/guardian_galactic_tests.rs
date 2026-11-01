@@ -183,6 +183,72 @@ fn twin_moonfire_copies_foreground_and_galactic_casts_to_other_enemies() {
 
 #[test]
 #[ignore = "requires Guardian Galactic Guardian profile and native world data"]
+fn twin_moonfire_copies_only_within_fifteen_yards_of_the_primary() {
+    use shared::components::Position;
+
+    let mut run = prepare_registered_player(104, 3).unwrap();
+    let actor = run.actor;
+    let [primary, far, near] = [run.targets[0], run.targets[1], run.targets[2]];
+    engage(&mut run);
+    let world = run.app.world_mut();
+    let at = *world.get::<Position>(primary).unwrap();
+    let origin = *world.get::<Position>(actor).unwrap();
+    // SimC76f8118 sc_druid.cpp7906–7907,7928: 15 yd Twin Moons radius around the primary.
+    let place = |offset: f32| Position {
+        x: at.x + offset,
+        ..at
+    };
+    world.entity_mut(far).insert(place(25.0));
+    world.entity_mut(near).insert(place(10.0));
+    let caster_distance = |target: Position| {
+        Vec3::new(
+            target.x - origin.x,
+            target.y - origin.y,
+            target.z - origin.z,
+        )
+        .length()
+    };
+    assert!(
+        caster_distance(place(25.0)) < 40.0,
+        "the far enemy stays inside Moonfire's 40 yd range"
+    );
+    assert_eq!(
+        crate::followers::spell_unintended_reach(world, actor, 8921, actor),
+        Some((0.0, 15.0)),
+        "Twin Moonfire reaches 15 yd around the target, not 40 yd around the caster"
+    );
+    crate::spell_cast::creature_cast(world, actor, 5487, Some(actor), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let dotted = |run: &Run, target: Entity| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(target)
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == 164812 && aura.caster == actor)
+            })
+    };
+    // Two casts: the second copy prefers an undotted enemy, so an in-range far enemy
+    // would be dotted by now.
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(run.app.world_mut(), actor, 8921, Some(primary), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+    }
+    assert!(dotted(&run, primary) && dotted(&run, near));
+    assert!(
+        !dotted(&run, far),
+        "Twin Moonfire must not copy 25 yd from the primary"
+    );
+}
+
+#[test]
+#[ignore = "requires Guardian Galactic Guardian profile and native world data"]
 fn lunar_beam_does_not_consume_galactic_guardian_charge() {
     let mut run = prepare_registered_player(104, 1).unwrap();
     let (actor, target) = (run.actor, run.targets[0]);

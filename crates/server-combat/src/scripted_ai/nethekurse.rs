@@ -94,7 +94,7 @@ impl Nethekurse {
     }
 
     fn taunt_peons(&mut self, ctx: &mut Ctx) {
-        let group = rand::Rng::gen_range(&mut rand::thread_rng(), 0..3);
+        let group = rand::Rng::gen_range(&mut crate::random::thread_rng(), 0..3);
         let spell = [PEON_SHADOW_SEAR, PEON_DEATH_COIL, PEON_TARGET_FISSURES][group];
         ctx.talk(group as u8);
         ctx.do_cast_self(spell);
@@ -275,7 +275,7 @@ impl CreatureAi for FelOrcConvert {
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
-        if rand::Rng::gen_bool(&mut rand::thread_rng(), 0.15) {
+        if rand::Rng::gen_bool(&mut crate::random::thread_rng(), 0.15) {
             ctx.talk(0);
         }
         self.tasks.schedule_range(HEMORRHAGE, 5_000, 10_000);
@@ -293,7 +293,7 @@ impl CreatureAi for FelOrcConvert {
             PEON_TARGET_FISSURES => 3,
             _ => return,
         };
-        if rand::Rng::gen_bool(&mut rand::thread_rng(), 0.30) {
+        if rand::Rng::gen_bool(&mut crate::random::thread_rng(), 0.30) {
             ctx.talk(group);
             // NETHEKURSE_PEON_ROAR_9110_AUDIO_UNPORTED: explicit sound on Coil reaction.
         }
@@ -333,7 +333,7 @@ pub(crate) fn filter_shadow_sear(
     let includes_caster = targets.contains(&caster);
     targets.retain(|&target| target != caster);
     use rand::seq::SliceRandom;
-    targets.shuffle(&mut rand::thread_rng());
+    targets.shuffle(&mut crate::random::thread_rng());
     targets.truncate(2);
     if includes_caster {
         targets.push(caster);
@@ -368,7 +368,7 @@ pub(crate) fn filter_target_fissures(
     targets: &mut Vec<Entity>,
 ) {
     use rand::seq::SliceRandom;
-    targets.shuffle(&mut rand::thread_rng());
+    targets.shuffle(&mut crate::random::thread_rng());
     targets.truncate(1);
 }
 

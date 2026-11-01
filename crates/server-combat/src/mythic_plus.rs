@@ -28,6 +28,7 @@ pub(crate) const KEYSTONE_ITEM: u32 = 180653;
 struct Active {
     owner: u64,
     font: Entity,
+    season_id: u32,
     run: Run,
     settled: bool,
 }
@@ -275,6 +276,7 @@ fn slot(world: &mut World, connection: Entity, font: u64, guid: u64) -> Result<(
         Active {
             owner,
             font,
+            season_id: schedule.season_id,
             run,
             settled: false,
         },
@@ -401,7 +403,13 @@ fn start(world: &mut World, connection: Entity) -> Result<(), String> {
         .resource::<crate::maps::MapStore>()
         .map_difficulty(map.map_id, 8)
         .ok_or("Dungeon has no authored Keystone difficulty")?;
-    let retuned = crate::zones::prepare_difficulty_retune(world, map, difficulty.difficulty_id)?;
+    let retuned = crate::zones::prepare_difficulty_retune(
+        world,
+        map,
+        difficulty.difficulty_id,
+        active.season_id,
+        None,
+    )?;
     world
         .resource_mut::<InstanceManager>()
         .activate_challenge_difficulty(map, difficulty)?;
@@ -467,13 +475,23 @@ pub(crate) fn scale_spawned_creature(world: &mut World, creature: Entity) {
     let Some(map) = world.get::<InMap>(creature).copied() else {
         return;
     };
-    let Some(key) = world
+    let Some((key, season)) = world
         .get_resource::<Challenges>()
         .and_then(|state| state.runs.get(&map))
-        .map(|active| active.run.snapshot.key.clone())
+        .map(|active| (active.run.snapshot.key.clone(), active.season_id))
     else {
         return;
     };
+    if !crate::mythic_plus_scaling::is_eligible(world, creature) {
+        return;
+    }
+    match crate::zones::prepare_difficulty_retune(world, map, 8, season, Some(creature)) {
+        Ok(retuned) => crate::zones::apply_difficulty_retune(world, retuned),
+        Err(error) => {
+            error!(?creature, %error, "Keystone creature health tuning failed");
+            return;
+        }
+    }
     crate::mythic_plus_scaling::scale_creature(
         world,
         creature,
@@ -836,6 +854,7 @@ mod tests {
             Active {
                 owner: leader,
                 font: h.caster,
+                season_id: 120,
                 run,
                 settled: false,
             },
@@ -897,6 +916,8 @@ mod tests {
         let mut data = crate::zones::context_tuning_tests::sourced_nazan_fixture();
         data.spawns[0].map = 2515;
         let production = crate::test_data::world_data();
+        data.summon_levels
+            .extend_fixture_deltas(&production.summon_levels, 186644);
         let boss_spawn = production
             .spawns
             .iter()
@@ -1055,7 +1076,7 @@ mod tests {
                 .get::<shared::level_scaling::LevelScaling>(boss)
                 .unwrap()
                 .content_tuning_id,
-            2157
+            1279
         );
         let health = h.app.world().get::<Health>(npc).unwrap();
         assert!(health.max > before);
@@ -1077,6 +1098,123 @@ mod tests {
         assert_eq!(countdown.elapsed_ms, 0);
         session.advance(h.app.world_mut(), 13).unwrap();
         assert_eq!(session.snapshot(h.app.world()).unwrap().elapsed_ms, 3000);
+    }
+
+    #[test]
+    fn den_plus_two_boss_health_matches_retail_season_two() {
+        let path = crate::test_data::world_db_path();
+        let db = rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let maps = crate::maps::store::load_map_store(&db).unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut h = crate::bank_test_harness::harness_at(file.path(), "DenHealth").unwrap();
+        let mut manager = InstanceManager::default();
+        let map = manager
+            .create_map(
+                &maps,
+                2825,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: h.character_id,
+                    leader: h.character_id,
+                    difficulty_id: 23,
+                    ..Default::default()
+                },
+                crate::maps::instances::Now {
+                    unix: 1791705600,
+                    elapsed: 0.0,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(maps).insert_resource(manager);
+        h.app.world_mut().entity_mut(h.player).insert(map);
+        let data = crate::test_data::world_data().clone();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, h.app.world());
+        let mut bosses = Vec::new();
+        for entry in [241812, 244100] {
+            let spawn = data
+                .spawns
+                .iter()
+                .find(|spawn| spawn.map == 2825 && spawn.template_entry == entry)
+                .unwrap();
+            let entity = crate::zones::spawn_creature(
+                &mut commands,
+                &data,
+                data.template_for(entry, 23).unwrap(),
+                &mut crate::zones::CreatureSpawnContext {
+                    map,
+                    difficulty_id: 23,
+                    ground: None,
+                    temporary: false,
+                },
+                false,
+                spawn,
+                &mut crate::random::thread_rng(),
+            )
+            .unwrap();
+            bosses.push(entity);
+        }
+        queue.apply(h.app.world_mut());
+        h.app.insert_resource(data);
+        h.app.world_mut().remove_resource::<GameDatabase>();
+        let mut session =
+            headless::Session::prepare(h.app.world_mut(), &path, h.player, 2).unwrap();
+        let weeks = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
+        h.app.world_mut().resource_mut::<Challenges>().weeks_path = weeks.path().to_owned();
+        session.set_test_epoch(h.app.world_mut(), 1791705600);
+        let position = session.font_position(h.app.world()).unwrap();
+        h.app.world_mut().entity_mut(h.player).insert(position);
+        session.activate(h.app.world_mut()).unwrap();
+        // WCL Hx64j9RrfnytB8cA fight12 pulls2/9: maxHitPoints on boss damage events.
+        for (boss, retail) in bosses.into_iter().zip([24_291_978.0_f32, 21_862_781.0]) {
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<shared::components::UnitLevel>(boss)
+                    .unwrap()
+                    .0,
+                92
+            );
+            let actual = h.app.world().get::<Health>(boss).unwrap().max;
+            assert!(
+                (actual - retail).abs() <= 50.0,
+                "actual {actual}, WCL {retail}"
+            );
+        }
+        let data = h
+            .app
+            .world()
+            .resource::<crate::world_data::WorldData>()
+            .clone();
+        let spawn = data
+            .spawns
+            .iter()
+            .find(|spawn| spawn.map == 2825 && spawn.template_entry == 241812)
+            .unwrap();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, h.app.world());
+        let later = crate::zones::spawn_creature(
+            &mut commands,
+            &data,
+            data.template_for(241812, 8).unwrap(),
+            &mut crate::zones::CreatureSpawnContext {
+                map,
+                difficulty_id: 8,
+                ground: None,
+                temporary: false,
+            },
+            false,
+            spawn,
+            &mut crate::random::thread_rng(),
+        )
+        .unwrap();
+        queue.apply(h.app.world_mut());
+        assert!((h.app.world().get::<Health>(later).unwrap().max - 24_291_978.0).abs() <= 50.0);
     }
 
     #[test]
@@ -1364,7 +1502,7 @@ mod tests {
             .id();
         start(h.app.world_mut(), connection).unwrap();
         let scaled = h.app.world().get::<Health>(existing_npc).unwrap();
-        let expected = 1.84_f32 / 1.07 * 1.2;
+        let expected = 1.84_f32 * 1.2;
         assert!((scaled.max - 100.0 * expected).abs() < 0.001);
         assert!((scaled.current - 40.0 * expected).abs() < 0.001);
         h.app.add_systems(FixedPreUpdate, scale_new_run_creatures);

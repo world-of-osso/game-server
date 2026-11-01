@@ -226,6 +226,16 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.2),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_warlock_pets.cpp1613–1643: the real Doomguard
+    // repeatedly casts its native Doom Bolt Volley and inherits owner SP1.0.
+    GuardianPolicy {
+        summons: &[1276672],
+        entry: 250785,
+        spells: &[1251989],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     GuardianPolicy {
         summons: &[SUMMON_DEMONIC_TYRANT],
         entry: 135002,

@@ -1,12 +1,12 @@
 # Azure translocation books
 
-Azure Vault books expose their authored gossip and move the reader's same-copy party through the named project policy `AZURE_TRANSLOCATION_BOOK_ENDPOINTS`. [Derivation and implementation](../wiki/systems/azure-translocation.md).
+Azure Vault books expose their authored gossip and move each reader through the named project policy `AZURE_TRANSLOCATION_BOOK_ENDPOINTS`. [Derivation and implementation](../wiki/systems/azure-translocation.md).
 
 ## What it must do
 
 - [x] Preserve source menu IDs, destination body text and the `Proceed onward.` choice for entries194602/194712/194713/194714/194715.
 - [x] Revalidate ordinary interaction range and map identity before applying the option.
-- [ ] Move the reader and living same-copy party members, followers and all their living controlled pets, including both Hunter Animal Companion pets, to the qualified receiver-book spawn, without changing resources or admitting a different copy. Clear each moved pet's simulator travel so stale pre-book routes cannot cross disconnected components.
+- [ ] Move only the reader and its living controlled pets, including both Hunter Animal Companion pets, to the qualified receiver-book spawn, without changing resources or admitting a different copy. Followers independently route to and use the book when needed; other party members do not move because the reader used it.
 - [x] For194715, use authenticated AreaPOI7116 inside Umbrelskul's nav component, as explicitly approved when no receiving book exists.
 - [ ] Freeze the same directed teleport links in the simulator graph; actors cannot walk a teleport as an ordinary path or traverse it backwards.
 
@@ -17,7 +17,7 @@ Azure Vault books expose their authored gossip and move the reader's same-copy p
 
 ## Implementation inventory
 
-- `crates/server/src/npc_interaction/azure_translocation.rs`: shared endpoint policy and native party teleport.
+- `crates/server/src/npc_interaction/azure_translocation.rs`: endpoint policy and per-reader transport.
 - `crates/server/src/npc_interaction/gossip.rs`: source book menus/text/options.
 - `crates/server/src/npc_interaction.rs`: native validated option dispatch.
 - `crates/server/src/dungeon_simulator/azure_extraction.rs`: frozen directed links from that same policy.

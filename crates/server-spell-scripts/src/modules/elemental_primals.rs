@@ -135,15 +135,22 @@ fn stormfury_multiplier(world: &World, actor: Entity, _target: Entity, spell: &S
     {
         return 1.0;
     }
-    let target = world
-        .get::<combat::networking::CombatTarget>(actor)
-        .and_then(|target| target.0)
-        .expect("active Stormfury retains its primary target");
-    let ticks = combat::auras::paid_periodic_ticks(world, actor, target, STORMFURY);
+    let ticks = stormfury_channel_ticks(world, actor);
     let percent = spell_cast::scripts::script_effect_value(world, actor, STORMFURY, 1);
-    // SimC76f8118 sc_shaman.cpp4160–4184: the child uses the parent channel's
+    // SimC76f8118 sc_shaman.cpp4185–4207: the child uses the parent channel's
     // current scheduled tick, shared by all recipients of that tick.
     (1.0 + percent / 100.0).powf(ticks as f32)
+}
+
+/// Paid ticks of the actor's own Stormfury channel aura (SimC `d->current_tick`).
+/// The guardian's `CombatTarget` follows its owner's selection, not the channel.
+fn stormfury_channel_ticks(world: &World, actor: Entity) -> u64 {
+    world
+        .iter_entities()
+        .filter(|unit| unit.contains::<ActiveAuras>())
+        .map(|unit| combat::auras::paid_periodic_ticks(world, actor, unit.id(), STORMFURY))
+        .max()
+        .unwrap_or(0)
 }
 
 fn action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> bool {

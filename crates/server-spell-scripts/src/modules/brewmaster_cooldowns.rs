@@ -1,12 +1,13 @@
 //! SimC76f8118 sc_monk.cpp853–877/2581–2607: strikes reduce Brew cooldowns.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{self, RemoveReason};
+use combat::auras::procs::{AuraEvent, PROC_HIT_DODGE, PROC_HIT_MISS};
+use combat::auras::{self, AuraInstance, RemoveReason, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::{
     effects::EffectCtx,
     script_registry::SpellScriptHook,
-    scripts::{AfterCastHook, reduce_cooldown},
+    scripts::{AfterCastHook, reduce_cooldown, script_effect_value},
 };
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::ActiveSpec;
@@ -17,11 +18,37 @@ const MEDITATIVE_FOCUS: u32 = 1271105;
 const INFUSION: u32 = 1241059;
 const SALSALABIMS_STRENGTH: u32 = 383697;
 const BREATH_OF_FIRE: u32 = 115181;
+const ANVIL_AND_STAVE: u32 = 386937;
+const AVOIDED: u32 = PROC_HIT_DODGE | PROC_HIT_MISS;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterResourceValues(cast_hook),
     SpellScriptHook::AfterPolicyDirectDamage(tiger_palm_hit),
+    SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::AvoidanceProcHitMask(avoidance_mask),
 ];
+
+// DB2 386937 has only dummy effects: "Each time you dodge or an enemy misses you, the
+// remaining cooldown on your Brews is reduced by ${$s1/10}.1 sec." SimC76f8118
+// sc_monk.cpp7245–7252 applies the same rank-scaled value on dodge only.
+fn register(scripts: &mut AuraScripts) {
+    let script = scripts.0.entry(ANVIL_AND_STAVE).or_default();
+    script.check_proc = Some(attack_avoided);
+    script.on_proc = Some(anvil_and_stave);
+}
+
+fn avoidance_mask(spell: u32) -> Option<u32> {
+    (spell == ANVIL_AND_STAVE).then_some(AVOIDED)
+}
+
+fn attack_avoided(_: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    event.target == Some(aura.caster) && event.hit_mask & AVOIDED != 0
+}
+
+fn anvil_and_stave(world: &mut World, unit: Entity, _: &AuraInstance, _: Option<Entity>) {
+    let seconds = f64::from(script_effect_value(world, unit, ANVIL_AND_STAVE, 0)) / 10.0;
+    brew_reduction(world, unit, seconds);
+}
 
 fn selected(world: &World, caster: Entity, spell: u32) -> bool {
     world.get::<TraitLoadout>(caster).is_some_and(|traits| {

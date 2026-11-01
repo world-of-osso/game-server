@@ -70,7 +70,7 @@ pub(super) struct GroupRollRng(pub Box<dyn FnMut() -> u8 + Send + Sync>);
 
 impl Default for GroupRollRng {
     fn default() -> Self {
-        Self(Box::new(|| rand::thread_rng().gen_range(1..=100)))
+        Self(Box::new(|| crate::random::thread_rng().gen_range(1..=100)))
     }
 }
 
