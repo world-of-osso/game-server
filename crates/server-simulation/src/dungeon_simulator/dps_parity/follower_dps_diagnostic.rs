@@ -235,14 +235,14 @@ fn follower_mm_take_aim_new_mark_survives_in_flight_rapid_tick() {
     let mut channel_started = false;
     for _ in 0..100 {
         app.update();
-        let active = crate::auras::has_aura(app.world(), actor, 257044);
+        let active = crate::auras::has_aura(app.world(), target, 257044);
         channel_started |= active;
         if channel_started && !active {
             break;
         }
     }
     assert!(
-        channel_started && !crate::auras::has_aura(app.world(), actor, 257044),
+        channel_started && !crate::auras::has_aura(app.world(), target, 257044),
         "Rapid Fire channel must start and finish"
     );
     let count = |app: &App| {
