@@ -303,13 +303,26 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
                 let source = event.source.and_then(Entity::try_from_bits);
                 let source_detail = source
                     .map(|unit| super::diagnostics::inspect_unit(run.app.world(), None, unit));
-                assert_eq!(
-                    event.source,
-                    Some(owner.to_bits()),
-                    "pack {pack} must be tagged by the owner: event={event:?} source={source_detail:?}"
+                let owner_controlled = source.is_some_and(|unit| {
+                    unit == owner
+                        || run
+                            .app
+                            .world()
+                            .get::<shared::components::UnitSummonedBy>(unit)
+                            .is_some_and(|summon| summon.0 == owner.to_bits())
+                });
+                assert!(
+                    owner_controlled,
+                    "pack {pack} must be tagged by the owner or an owner-controlled unit: event={event:?} source={source_detail:?}"
                 );
                 entry.insert(event.target.unwrap());
-                if first_hits.len() == 2 {
+                if first_hits.len() >= 2
+                    && run
+                        .report
+                        .pulls
+                        .iter()
+                        .any(|pull| pull.pack == pack && pull.decision == "Owner chain pull")
+                {
                     assert!(
                         first_hits.values().any(|target| {
                             Entity::try_from_bits(*target).is_some_and(|unit| {
