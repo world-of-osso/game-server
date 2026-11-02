@@ -149,10 +149,19 @@ impl CreatureAi for Add {
         // WCL M4cdBNJkTjavYgQV/11 pull12: Defiling Taint begins at 15.270s;
         // it is removed four milliseconds after the defiler dies. DB2 1301202
         // supplies the healing immunity referenced by the channel's description.
-        let accepted = ctx.do_cast_at(Some(summoner), DEFILE_CHANNEL, true);
-        #[cfg(test)]
-        eprintln!("Defiler channel accepted={accepted} avatar={summoner:?}");
-        if accepted {
+        if ctx.do_cast_at(Some(summoner), DEFILE_CHANNEL, true) {
+            // DB2 target38 needs the encounter's Avatar selection; WCL identifies
+            // the channel's recipient, so apply its native aura to that summoner.
+            crate::auras::apply_aura(
+                ctx.world,
+                &crate::auras::AuraApplication {
+                    caster: ctx.me,
+                    target: summoner,
+                    spell_id: DEFILE_CHANNEL,
+                    effect_mask: 1,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
             crate::auras::apply_aura(
                 ctx.world,
                 &crate::auras::AuraApplication {

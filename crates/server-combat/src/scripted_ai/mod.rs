@@ -968,10 +968,6 @@ impl Ctx<'_> {
             crate::spell_cast::creature_cast(self.world, self.me, spell_id, target, triggered);
         #[cfg(test)]
         tests::cast_admission::record(self.world, self.me, spell_id, &result);
-        #[cfg(test)]
-        if spell_id == 1301199 {
-            eprintln!("Defiler cast result: {result:?}");
-        }
         match result {
             Ok(()) => {
                 info!("{name} ({}) casts {spell_id} at {target:?}", self.me);
