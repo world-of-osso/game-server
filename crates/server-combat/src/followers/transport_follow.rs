@@ -13,6 +13,7 @@ use ::navigation::worker::{Output, Query};
 pub(crate) enum TransportKind {
     AzureBook,
     NalorakkPyre,
+    AltarDrop,
 }
 
 #[derive(Clone, Copy)]
@@ -196,6 +197,9 @@ pub(super) fn update(world: &mut World, unit: Entity, follower: &super::Follower
                     }
                     TransportKind::NalorakkPyre => {
                         crate::npc_interaction::nalorakk_pyre::traverse(world, unit, request.source)
+                    }
+                    TransportKind::AltarDrop => {
+                        crate::scripted_ai::altar_drop::traverse(world, unit, request.source)
                     }
                 };
                 if let Err(error) = result {
