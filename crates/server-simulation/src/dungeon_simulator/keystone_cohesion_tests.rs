@@ -2,6 +2,50 @@
 use super::*;
 
 #[test]
+fn separated_leader_travels_toward_next_pack_before_waiting_for_tank() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for (&guid, &actor) in &run.actors {
+        if guid != 20375759 {
+            run.app.world_mut().despawn(actor);
+        }
+    }
+    let owner = run.party.owner;
+    let distant = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 20375706)
+        .unwrap()
+        .point();
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: distant.x,
+        y: distant.y,
+        z: distant.z,
+    });
+    run.next_cohesion_check = 0.0;
+    assert!(run.wait_for_tank().unwrap());
+    assert!(!crate::followers::simulator::has_uncleared_fight(
+        run.app.world(),
+        owner
+    ));
+    run.control().unwrap();
+    let destination = run.app.world().get::<MoveIntent>(owner).unwrap().0;
+    assert!(
+        destination.distance(distant) > 3.0,
+        "leader must travel instead of holding its own position"
+    );
+    for _ in 0..300 {
+        run.control().unwrap();
+        run.app.update();
+        let position = run.app.world().get::<Position>(owner).unwrap();
+        if Vec3::new(position.x, position.y, position.z).distance(distant) > 3.0 {
+            return;
+        }
+    }
+    panic!("separated leader failed to travel toward the next pull");
+}
+
+#[test]
 fn separated_leader_pursues_boss_while_tank_is_fighting() {
     let mut run = spawn_isolated_moloch(1);
     let boss = run.actors[&20375766];

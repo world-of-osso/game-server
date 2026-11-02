@@ -4021,8 +4021,6 @@ impl Run {
                     .insert(MoveIntent(Vec3::new(tank.x, tank.y, tank.z)));
                 return Ok(());
             }
-        } else if self.wait_for_tank()? {
-            return Ok(());
         }
         if self.chain_groups.is_none() && fighting {
             self.app
@@ -4172,6 +4170,9 @@ impl Run {
                 .world_mut()
                 .entity_mut(self.party.owner)
                 .insert(MoveIntent(destination));
+            return Ok(());
+        }
+        if !fighting && self.wait_for_tank()? {
             return Ok(());
         }
         self.app
