@@ -206,7 +206,8 @@ Spec103 captures the native actor before setup and executes all74 pinned76f8118 
 
 Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
 
-- L90 follower, snapshot v3, map2813, 120 seconds, ten matched seeds and temporary enchants disabled, on tested candidate `ee3ea8e199`: native 31,559.9 DPS versus SimC 32,825.3; mean paired difference −3.60% ±5.31 pp (95% t interval). The point estimate meets the ±5% mean gate; the interval extends outside ±5%.
+- L70 follower, snapshot v3, map2515, 120 seconds, ten matched seeds and temporary enchants disabled, after the Frantic Momentum fix: native 4,649.2 DPS versus SimC 4,669.5; paired difference −0.37% ±3.69 pp (95% t interval). Both point estimate and interval meet ±5%. The independently checked logged Druid of the Claw condition-only reference gives the same results without hero talents.
+- L90 follower, snapshot v3, map2813 and the same seeds and settings, after the Frantic Momentum fix: native 29,068.4 DPS versus SimC 32,825.3; paired difference −11.20% ±5.11 pp. Both point estimate and interval are outside the ±5% mean gate. The earlier −3.60% ±5.31 pp included incorrectly permanent Frantic Momentum.
 
 ### Feral Thriving Growth
 
@@ -215,6 +216,10 @@ Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 acc
 ### Feral Unseen attacks
 
 An actual landed primary Bite or Ravage with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Selected1263660 makes actual Tiger's Fury5217 grant native1263962 at its native maximum stacks. Each eligible ordinary Cat action consumes one stack through its native ICD and emits a guaranteed Unseen attack using maximum effective combo points and full extra-Energy fraction, without granting or spending either pool (`sc_druid.cpp3745–3749,4879,11313–11316`). Apply this once per cast, not once per AoE recipient or triggered child; Cat Form alone cannot grant the uses. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
+
+### Feral Frantic Momentum
+
+Selected391875 rolls its native effect1 chance per effective combo point on actual Feral finishers, with the native proc cooldown. Builders and unrelated damage cannot grant391876 (`sc_druid.cpp3818–3844,11272–11276`).
 
 ### Feral Rip and Tear
 
@@ -239,8 +244,8 @@ Selected391881 grants native391882 only from an actual owned Rip tick. Its chanc
 - L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
 - Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
 - Landed primary Ferocious Bite or its Ravage replacement applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
-- Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`).
-- Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`).
+- Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`). Selected Aggravate Wounds441829 extends every existing owned wound by its native effect2 before each eligible Feral combo action, capped at its effect3 remaining duration, even if the action misses (`sc_druid.cpp2119–2146,3705,3765`).
+- Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`). Selected Claw Rampage441835 independently rolls its native effect1 chance on landed Shred and Cat Swipe impacts while Berserk or Incarnation is active, respecting its native ICD (`sc_druid.cpp2215–2255,4780–4786,4833–4835`).
 - Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, apply excess Energy only to the primary hit, and exclude that target from splash (`sc_druid.cpp4358–4401,4418–4450`).
 - [ ] Dreadful Wound's Tiger's Fury refresh retention is unqualified.
 
@@ -250,7 +255,8 @@ Native merged buff outcomes apply or clear the caster-owned aura after the hit b
 
 ### Shared Spellslinger producers
 
-- Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Prismatic Bolt, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
+- Selected Splintering Sorcery443739 emits the native specialization payload (Arcane443763/Frost443722) after native Arcane Blast, Frostbolt, Flurry and Glacial Spike executions. Signature Spell supplies its authored extra conjures. All queued recipients retain the actual hostile primary; individual launches are staggered100ms as pinned `sc_mage.cpp7324–7361` specifies.
+- **INFERRED:** Prismatic Bolt does not directly conjure Signature Spell splinters. Blizzard's [Curse of Ula'tek notes](https://worldofwarcraft.blizzard.com/en-gb/news/24293281/) say Bolt is not affected by Arcane Blast talents or effects; SimC76f8118 `sc_mage.cpp2910–2952` does not conjure them. WCL report `pB9nYzhma6QDkK1t`, fight29, source29, cast at40.516s selected Signature without Shifting Shards and had no Splinter impacts for3s; one cast does not prove the general retail rule. Reassess with further retail Signature-without-Shifting-Shards logs.
 - Successful native Ray of Frost execution opens selected native1247908 Splinterstorm once, before its periodic updates. Each damage tick conjures the native Splinterstorm effect3 amount without refreshing the window. Conjures during the actual earned Splinterstorm/Arcane Surge lifetime use the selected native doubling chance. Native spell records retain duration and damage coefficients (`sc_mage.cpp4992–4996/5021`).
 
 - Each actual native Splinter impact with selected Spellfrost Teachings444986 reduces the specialization's running Orb cooldown/recharge by its native effect (Arcane index0/Frost index1, milliseconds). The shared reducer updates active native spell, category and charge timers without starting inactive timers; cooldown packets retain the native category and full duration. Unrelated payloads do not reduce recharge.
@@ -694,9 +700,19 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+Follower 120-second single-target measurements on snapshot v3, native DB2 70448, with temporary enchants disabled and SimC76f8118:
+
+| Level | Map | Matched seeds | Native DPS | SimC DPS | Mean paired delta, 95% t interval | Mean ±5% gate |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 70 | 2515 | 70448, 1–9 | 3,673.54 | 3,536.66 | +3.95% ±4.20 pp | Pass; condition-only reference |
+| 90 | 2813 | 70448, 1–19 | 34,464.50 | 36,294.65 | −4.52% ±5.62 pp | Pass; wide interval |
+
+The level-70 reference changes the `slayers_dominance` APL condition to `hero_tree.slayer`; it is not an unmodified reference. The intervals do not establish equivalence within ±5%. These measurements used native test binary SHA-256 `35f94c089e1d20d3ad87d046fe97146c5387f59207f108c33cdfad56c0eea710` from revision `80fae2c282935b246eafc1175b63994ffecde2ef`.
+
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
 - INFERRED_SIMC: Bladestorm uses its charge recovery without a separate spell cooldown (`sc_warrior.cpp:3241`; contrast `action.cpp:710–719`). A Sudden Death Execute with Unrelenting Onslaught reduces that recovery (`sc_warrior.cpp:4361–4365`, `4561–4565`).
 - Culling Cyclone increases Bladestorm tick damage by its native effect1 divided by the number of engaged living hostiles, including the current target (`sc_warrior.cpp:3202–3207`).
+- Overwhelming Blades grants one Overwhelmed stack per Reap the Storm or main-hand Bladestorm impact (`sc_warrior.cpp:1857–1859`, `3214–3216`).
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
@@ -1490,7 +1506,7 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
-- Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
+- Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics. Fixed-fight follower recheck at `6a25581e0f` (binary SHA-256 `53053c5bd13869c350f2d39dd118546b8f3db31d032000678508d9b42e5c77b6`), ten paired seeds: L70 5,750.97 vs 5,996.04 DPS, −4.01% ±3.06 pp; L90 42,307.79 vs 43,141.84 DPS, −1.83% ±3.17 pp. The L70 reference uses the tree-only and qualified literal APL. Neither fixture selects WDP and Thunderfist together, so these rows do not prove that interaction.
 - In the 269 player-literal and fixed-fight follower fixtures only, Touch of Karma uses SimC's default 100-second interval and modeled absorbed-health fraction; the actor's health and native spell values supply the redirected periodic damage. Ordinary followers use actual incoming damage (`sc_monk.cpp2735–2753,2757–2850`).
 - Selected Thunderfist gains its native stacks on landed Strike of the Windlord off-hand impacts, or once on the first Whirling Dragon Punch area pulse: native effect1's base stacks plus one per additional target hit. It spends one per landed white swing to deal its native child damage (`sc_monk.cpp1853–1868,1971–1983,2171–2210`).
 - Rushing Wind Kick and Rising Sun Kick use separate action recharge clocks in gameplay and literal simulation; both retain native charge recovery and haste rules (`action.cpp474`, `sc_monk.cpp1143–1204`).
