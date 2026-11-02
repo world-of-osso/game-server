@@ -91,6 +91,30 @@ fn dummy10_consecration_stays_at_cast_position_pulses_and_expires() {
     assert_eq!(hits(&h, 81297).len(), count);
 }
 #[test]
+fn dummy10_consecration_removes_its_slow_in_entity_order() {
+    let mut h = harness(Vec::new(), &[26573, 81297, 204242], 2).unwrap();
+    let mut enemies = vec![h.npc];
+    enemies.extend((1..=6).map(|step| spawn_npc(&mut h.app, step as f32)));
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
+    h.cast_and_deliver(26573, None);
+    h.advance(5);
+    landed(&h);
+    for &enemy in &enemies {
+        assert!(crate::auras::has_aura(h.app.world(), enemy, 204242));
+        h.app.world_mut().get_mut::<Position>(enemy).unwrap().x += 100.0;
+    }
+    h.advance(22);
+    let removed: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|e| e.spell_id == Some(204242) && e.kind == CombatLogKind::AuraRemoved)
+        .filter_map(|e| e.target.and_then(Entity::try_from_bits))
+        .collect();
+    enemies.sort_unstable();
+    assert_eq!(removed, enemies);
+}
+#[test]
 fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() {
     let mut h =
         harness_with_native_enemy_dodge_reduction(Vec::new(), &[196884, 215802], 7).unwrap();

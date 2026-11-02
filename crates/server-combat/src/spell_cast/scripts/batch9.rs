@@ -6,7 +6,7 @@ use crate::spell_cast::{self, PlannedEffect, targets};
 use crate::spell_info::SpellStore;
 use bevy::prelude::*;
 use shared::components::Health;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
 pub(super) const HEALING_RAIN: u32 = 73920;
 const RAVAGER: u32 = 228920;
@@ -216,7 +216,7 @@ pub fn spawn_delayed_ground_pulses(
 struct EarthquakeStunnedTargets(HashSet<Entity>);
 
 #[derive(Component, Default)]
-struct ConsecrationTargets(HashSet<Entity>);
+struct ConsecrationTargets(BTreeSet<Entity>);
 
 fn spawn_ground_pulses(
     world: &mut World,
@@ -616,8 +616,8 @@ fn update_consecration_targets(world: &mut World, entity: Entity, pulses: &Groun
     )
     .into_iter()
     .collect();
-    for target in previous.difference(&inside) {
-        remove_consecration_debuff(world, pulses.caster, *target);
+    for &target in previous.iter().filter(|target| !inside.contains(target)) {
+        remove_consecration_debuff(world, pulses.caster, target);
     }
     world
         .get_mut::<ConsecrationTargets>(entity)
