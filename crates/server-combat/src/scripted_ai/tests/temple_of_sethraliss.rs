@@ -21,6 +21,13 @@ fn temple_keystone_bosses_cast_observed_openers() {
         let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
         health.max = 1_000_000_000.0;
         health.current = health.max;
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(crate::scripted_ai::tests::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
         h.engage(boss);
         h.advance(elapsed);
         assert!(
@@ -28,7 +35,11 @@ fn temple_keystone_bosses_cast_observed_openers() {
                 .spell_gos
                 .iter()
                 .any(|go| go.caster == boss.to_bits() && go.spell_id == spell),
-            "creature {entry} did not cast {spell}"
+            "creature {entry} did not cast {spell}: {:?}",
+            h.app
+                .world()
+                .resource::<crate::scripted_ai::tests::cast_admission::CastAdmissions>()
+                .entries
         );
     }
 }
