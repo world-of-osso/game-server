@@ -16,22 +16,101 @@ fn at(point: Vec3) -> Position {
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
-    run_native_pull_back(false, false);
+    run_native_pull_back(false, false, false);
 }
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_production_ai_pulls_back_without_pulling_hatchling() {
-    run_native_pull_back(true, false);
+    run_native_pull_back(true, false, false);
 }
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_production_party_follows_and_heals_during_pull_back() {
-    run_native_pull_back(true, true);
+    run_native_pull_back(true, true, false);
 }
 
-fn run_native_pull_back(production: bool, full_party: bool) {
+#[test]
+#[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
+fn windrunner_follower_shield_does_not_damage_idle_hatchling() {
+    run_native_pull_back(true, false, true);
+}
+
+fn verify_shield_avoids_hatchling(
+    h: &mut crate::spell_cast::test_harness::Harness,
+    owner: Entity,
+    tank: Entity,
+    target: Entity,
+    hatchling: Entity,
+) {
+    use shared::protocol::CombatLogKind;
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(31935)
+        .unwrap()
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == crate::spell_cast::effects::EFFECT_SCHOOL_DAMAGE)
+        .unwrap();
+    let unfiltered = crate::spell_cast::targets::chain_targets(
+        h.app.world_mut(),
+        owner,
+        &spell,
+        effect,
+        target,
+        crate::spell_cast::targets::Relation::Enemy,
+    );
+    assert!(
+        unfiltered.contains(&hatchling),
+        "the player control must be able to chain to the sourced idle hatchling: {unfiltered:?}"
+    );
+    let before = h.app.world().get::<Health>(hatchling).unwrap().current;
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 31935, Some(target), false)
+        .expect("the follower must cast Avenger's Shield on the target");
+    for _ in 0..100 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.source == Some(tank.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(31935)
+                && event.kind == CombatLogKind::Damage
+        }) {
+            h.advance(30);
+            break;
+        }
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(tank.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(31935)
+                && event.kind == CombatLogKind::Damage),
+        "the shield must damage the primary target"
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(hatchling).unwrap().current,
+        before,
+        "the follower's shield must not damage the idle hatchling"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.target == Some(hatchling.to_bits())
+                && event.spell_id == Some(31935)
+                && event.kind == CombatLogKind::Damage),
+        "the hatchling must not receive a shield damage event"
+    );
+}
+
+fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) {
     use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
     let (mut h, tank, profile) = spawn_profile_fixture_with_plugins(209057, |app| {
         app.insert_resource(crate::test_data::world_data().clone());
@@ -163,11 +242,11 @@ fn run_native_pull_back(production: bool, full_party: bool) {
                 player_role: shared::group::GroupRole::Dps,
             });
     }
+    if shield_probe {
+        verify_shield_avoids_hatchling(&mut h, owner, tank, target, hatchling);
+        return;
+    }
     if production {
-        assert!(
-            !super::spell_safety::safe(h.app.world(), tank, target, 31935),
-            "Avenger's Shield must not bounce into the idle hatchling"
-        );
         assert!(
             super::spell_safety::safe(h.app.world(), tank, target, 62124),
             "the single-target native taunt remains available"
