@@ -10,7 +10,7 @@ use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
 use facts::HavocFacts;
 use serde_json::{Value, json};
-use server::simc_apl::{Action, Program};
+use server::simc_apl::Program;
 
 pub struct Rotation {
     pub driver: Driver,

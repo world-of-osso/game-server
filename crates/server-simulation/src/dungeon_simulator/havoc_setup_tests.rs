@@ -71,6 +71,12 @@ fn cast_after(run: &Run, actor: Entity, cursor: usize) -> bool {
 fn havoc_infeasible_retreat_setup_does_not_stop_other_casts() {
     let _rng = crate::random::seed_scope(7809098381633315392);
     let (mut run, havoc, target) = setup();
+    // Keep setup unready rather than relying on a moving target to remain awkward.
+    run.app
+        .world_mut()
+        .get_mut::<crate::creature_ai::SpawnPoint>(havoc)
+        .unwrap()
+        .speed_run = 0.0;
     let cursor = run
         .app
         .world()
@@ -120,9 +126,22 @@ fn havoc_resumes_when_retreat_setup_target_dies() {
                 .get::<server_follower_apl::FollowerAplFailed>(havoc)
                 .is_none()
         );
-        if cast_after(&run, havoc, cursor) {
+        let damaged_another = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..]
+            .iter()
+            .any(|event| {
+                event.source == Some(havoc.to_bits())
+                    && event.target != Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.spell_id.is_some()
+                    && event.amount > 0
+            });
+        if damaged_another {
             return;
         }
     }
-    panic!("Havoc did not resume after the retreat setup target died");
+    panic!("Havoc did not damage another enemy after the retreat setup target died");
 }
