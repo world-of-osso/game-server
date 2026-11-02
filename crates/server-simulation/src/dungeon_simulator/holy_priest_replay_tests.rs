@@ -277,7 +277,7 @@ fn piety_redistributes_flash_heal_overhealing() {
                     && e.target == Some(ally.to_bits())
             })
             .expect("Piety must heal injured ally");
-        assert!((heal.amount as f32 - overheal as f32 * 0.1).abs() <= 1.0);
+        assert!((heal.amount as f32 - overheal as f32 * 0.075).abs() <= 1.0);
     }
 }
 
