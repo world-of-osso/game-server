@@ -68,6 +68,7 @@ register_modules! {
     arcane_enlightened: (620, "modules/arcane_enlightened.rs"),
     arcane_familiar: (620, "modules/arcane_familiar.rs"),
     arcane_feedback: (620, "modules/arcane_feedback.rs"),
+    arcane_surge_mana: (620, "modules/arcane_surge_mana.rs"),
     arms_concussive_slam: (718, "modules/arms_concussive_slam.rs"),
     arms_fatality: (717, "modules/arms_fatality.rs"),
     arms_followups: (719, "modules/arms_followups.rs"),
