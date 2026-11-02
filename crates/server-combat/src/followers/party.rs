@@ -114,6 +114,61 @@ pub(crate) fn update_test_releases(world: &mut World) {
 }
 
 #[cfg(test)]
+pub(crate) fn spawn_normal_test_party(
+    world: &mut World,
+    owner: Entity,
+    dungeon_id: u32,
+) -> Result<Vec<Entity>, String> {
+    let dungeon = world
+        .resource::<FollowerCatalog>()
+        .dungeons
+        .get(&dungeon_id)
+        .cloned()
+        .ok_or("test dungeon unavailable")?;
+    let level = world
+        .get::<shared::components::Level>(owner)
+        .ok_or("test owner level unavailable")?
+        .0;
+    let spec = world
+        .get::<shared::components::ActiveSpec>(owner)
+        .ok_or("test owner spec unavailable")?
+        .0;
+    let role = GroupRole::Dps;
+    let seed = 1;
+    let class_profiles =
+        super::class_profiles::select_party_profiles(world, role, spec, level, seed)?;
+    let profiles = class_profiles
+        .iter()
+        .enumerate()
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot))
+        .collect::<Result<Vec<_>, _>>()?;
+    let run = FollowerRun {
+        dungeon,
+        profiles,
+        class_profiles,
+        seed,
+        gear: super::class_spawn::GearSource::Journal,
+        keystone: None,
+        members: Vec::new(),
+        copy: None,
+        previous_difficulty: 1,
+        origin: WorldLocation {
+            map_id: 0,
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        },
+        player_role: role,
+    };
+    world.entity_mut(owner).insert(run.clone());
+    spawn_party(world, owner, &run)?;
+    Ok(world
+        .get::<FollowerRun>(owner)
+        .expect("spawned party")
+        .members
+        .clone())
+}
+
+#[cfg(test)]
 pub(crate) fn spawn_keystone_test_party(
     world: &mut World,
     owner: Entity,
@@ -462,22 +517,8 @@ pub(super) fn join_members_with_player(
         .iter()
         .map(|&unit| {
             let follower = world.get::<Follower>(unit).expect("spawned follower");
-            let level = world.get::<UnitLevel>(unit).expect("follower level").0;
             let member =
-                if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
-                    follower.online_character(
-                        unit,
-                        level,
-                        difficulty,
-                        visual,
-                        world.get::<shared::components::EquipmentAppearance>(unit),
-                    )
-                } else {
-                    let display = world
-                        .get::<shared::components::ModelDisplay>(unit)
-                        .expect("spawned follower display");
-                    follower.online(unit, level, difficulty, display.display_id)
-                };
+                online_follower(world, unit, difficulty).expect("spawned follower profile");
             online.insert(Follower::member_id(unit), member);
             (Follower::member_id(unit), follower.profile.role)
         })
@@ -509,6 +550,23 @@ pub(super) fn join_members_with_player(
         }
     }
     Ok(())
+}
+
+fn online_follower(world: &World, unit: Entity, difficulty: u32) -> Option<OnlineMember> {
+    let follower = world.get::<Follower>(unit)?;
+    let level = world.get::<UnitLevel>(unit)?.0;
+    if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
+        Some(follower.online_character(
+            unit,
+            level,
+            difficulty,
+            visual,
+            world.get::<shared::components::EquipmentAppearance>(unit),
+        ))
+    } else {
+        let display = world.get::<shared::components::ModelDisplay>(unit)?;
+        Some(follower.online(unit, level, difficulty, display.display_id))
+    }
 }
 
 fn online_player(world: &World, entity: Entity, difficulty: u32) -> Result<OnlineMember, String> {
@@ -565,6 +623,38 @@ pub(super) fn retire_owner(world: &mut World, player: Entity) {
     }
 }
 
+pub(crate) fn notify_reconnected(world: &mut World, player: Entity) {
+    let Some(run) = world.get::<FollowerRun>(player).cloned() else {
+        return;
+    };
+    let Some(character) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let Some(group) = world.resource::<GroupRegistry>().group_id_of(character) else {
+        return;
+    };
+    let Ok(owner) = online_player(world, player, run.entry_difficulty()) else {
+        return;
+    };
+    let mut online = OnlineView::from([(character, owner)]);
+    for &member in &run.members {
+        if let Some(entry) = online_follower(world, member, run.entry_difficulty()) {
+            online.insert(Follower::member_id(member), entry);
+        }
+    }
+    let roster = world
+        .resource_mut::<GroupRegistry>()
+        .build_roster(group, &online);
+    if let (Some(roster), Some(connection)) =
+        (roster, crate::spell_cast::owner_connection(world, player))
+        && let Some(mut sender) =
+            world.get_mut::<MessageSender<shared::protocol::GroupRosterSnapshot>>(connection)
+    {
+        sender.send::<GroupChannel>(roster);
+    }
+    send_update(world, player, None, None);
+}
+
 pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
     let Some(DisconnectedRun { run, lfg }) = world
         .get_resource_mut::<DisconnectedRuns>()
@@ -599,7 +689,7 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
     world
         .entity_mut(player)
         .insert((DungeonDifficulty(difficulty), run, lfg));
-    send_update(world, player, None, None);
+    notify_reconnected(world, player);
 }
 
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
@@ -697,6 +787,18 @@ mod frontal_tests;
 mod copy_tests {
     use super::*;
 
+    #[derive(Resource, Default)]
+    struct RosterReplies(Vec<shared::protocol::GroupRosterSnapshot>);
+
+    fn collect_rosters(
+        mut receivers: Query<&mut MessageReceiver<shared::protocol::GroupRosterSnapshot>>,
+        mut replies: ResMut<RosterReplies>,
+    ) {
+        for mut receiver in &mut receivers {
+            replies.0.extend(receiver.receive());
+        }
+    }
+
     pub(super) fn fixture() -> (App, Entity, FollowerRun) {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),
@@ -744,6 +846,10 @@ mod copy_tests {
                 ClientId(30),
                 shared::components::Level(12),
                 UnitLevel(12),
+                shared::components::Health {
+                    current: 1000.0,
+                    max: 1000.0,
+                },
                 dungeon.entrance.bevy_position(),
                 shared::components::Rotation {
                     x: 0.0,
@@ -809,6 +915,187 @@ mod copy_tests {
             player_role: GroupRole::Dps,
         };
         (app, owner, run)
+    }
+
+    #[test]
+    fn follower_dungeon_real_selection_resumes_same_combat_copy() {
+        exercise_real_reconnect(false);
+    }
+
+    #[test]
+    fn follower_dungeon_real_selection_resumes_after_logout_grace() {
+        exercise_real_reconnect(true);
+    }
+
+    fn exercise_real_reconnect(after_grace: bool) {
+        let (mut source, _, mut run) = fixture();
+        let store = source
+            .world_mut()
+            .remove_resource::<crate::maps::MapStore>()
+            .unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = redb::Database::create(file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        let (character, _) = crate::persistence::create_character(&db, 11, "Resume", 1, 1).unwrap();
+        let (mut app, connection) = crate::auth_character::tests::queue_character_selection(
+            crate::persistence::GameDatabase::new(db),
+            11,
+            character,
+            crate::maps::MapStore::continents(),
+        );
+        let owner = crate::auth_character::tests::finish_character_selection(&mut app, connection);
+        let mut instances = crate::maps::InstanceManager::default();
+        let map = instances
+            .create_map(
+                &store,
+                2521,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: character,
+                    group: None,
+                    leader: character,
+                    difficulty_id: 205,
+                    raid_difficulty: Default::default(),
+                    raid_group: false,
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_790_510_400,
+                },
+            )
+            .unwrap()
+            .map;
+        app.insert_resource(store)
+            .insert_resource(instances)
+            .init_resource::<GroupRegistry>()
+            .init_resource::<RosterReplies>()
+            .add_systems(Last, collect_rosters);
+        let position = shared::components::Position {
+            x: 1403.56,
+            y: 128.0,
+            z: 173.39,
+        };
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((map, position, DungeonDifficulty(205)));
+        run.copy = Some(map);
+        run.members = run
+            .profiles
+            .iter()
+            .map(|profile| {
+                app.world_mut()
+                    .spawn((
+                        Follower {
+                            owner,
+                            profile: profile.clone(),
+                        },
+                        crate::zones::TempSummon { summoner: owner },
+                        shared::components::Health {
+                            current: 900.0,
+                            max: 1000.0,
+                        },
+                        shared::components::UnitLevel(12),
+                        shared::components::ModelDisplay { display_id: 1 },
+                        shared::components::Npc {
+                            template_id: profile.entry,
+                            name: profile.name.clone(),
+                        },
+                        position,
+                        map,
+                    ))
+                    .id()
+            })
+            .collect();
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((run.clone(), crate::lfg::PlayerLfgState::default()));
+        let enemy = app
+            .world_mut()
+            .spawn((
+                shared::components::Health {
+                    current: 250.0,
+                    max: 500.0,
+                },
+                map,
+            ))
+            .id();
+        crate::combat_refs::set_in_combat_with(app.world_mut(), owner, enemy);
+        app.world_mut()
+            .entity_mut(run.members[0])
+            .insert(crate::combat::AutoAttack::new(enemy));
+        crate::networking::install_disconnect_fixture(&mut app);
+        app.world_mut()
+            .entity_mut(connection)
+            .insert(lightyear::prelude::server::ClientOf)
+            .remove::<Connected>();
+        app.world_mut().flush();
+        app.update();
+        super::super::update_ai(app.world_mut());
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        assert!(
+            app.world()
+                .get::<crate::combat::AutoAttack>(run.members[0])
+                .is_none()
+        );
+        assert!(crate::combat_refs::has_active_reference_to(
+            app.world(),
+            owner,
+            enemy
+        ));
+        if after_grace {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs(60));
+            app.world_mut().run_schedule(PreUpdate);
+            advance_runs(app.world_mut());
+            assert!(app.world().get_entity(owner).is_err());
+        }
+        let restored = crate::auth_character::tests::reconnect_character(&mut app, 11, character);
+        app.update();
+        assert!(
+            app.world()
+                .resource::<RosterReplies>()
+                .0
+                .iter()
+                .any(|roster| roster.members.len() == 5),
+            "reconnected owner receives the follower party roster"
+        );
+        assert_eq!(restored == owner, !after_grace);
+        assert_eq!(*app.world().get::<InMap>(restored).unwrap(), map);
+        assert_eq!(
+            *app.world()
+                .get::<shared::components::Position>(restored)
+                .unwrap(),
+            position
+        );
+        assert_eq!(
+            app.world()
+                .get::<shared::components::Health>(enemy)
+                .unwrap()
+                .current,
+            250.0
+        );
+        if !after_grace {
+            assert!(crate::combat_refs::has_active_reference_to(
+                app.world(),
+                restored,
+                enemy
+            ));
+        }
+        assert!(run.members.iter().all(|member| {
+            app.world()
+                .get::<Follower>(*member)
+                .is_some_and(|f| f.owner == restored)
+                && app
+                    .world()
+                    .get::<shared::components::Health>(*member)
+                    .is_some_and(|health| health.current == 900.0)
+                && super::super::acting_follower(app.world(), *member).is_some()
+        }));
     }
 
     #[test]
@@ -920,6 +1207,15 @@ mod copy_tests {
         app.world_mut().entity_mut(connection).remove::<Connected>();
         app.world_mut().flush();
         app.update();
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        app.world_mut().run_schedule(PreUpdate);
         assert!(app.world().get_entity(owner).is_err());
         advance_runs(app.world_mut());
         super::super::update_ai(app.world_mut());
@@ -1066,6 +1362,17 @@ mod copy_tests {
             .remove::<Connected>();
         h.app.world_mut().flush();
         h.app.update();
+        assert!(
+            h.app
+                .world()
+                .get::<crate::networking::DisconnectedPlayer>(old_owner)
+                .is_some()
+        );
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        h.app.world_mut().run_schedule(PreUpdate);
         assert!(h.app.world().get_entity(old_owner).is_err());
 
         let owner = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
@@ -1115,6 +1422,15 @@ mod copy_tests {
         app.world_mut().entity_mut(connection).remove::<Connected>();
         app.world_mut().flush();
         app.update();
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        app.world_mut().run_schedule(PreUpdate);
         assert!(app.world().get_entity(owner).is_err());
         app.world_mut()
             .resource_mut::<Time>()

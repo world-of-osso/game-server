@@ -1,5 +1,16 @@
 # Follower dungeons
 
+## Disconnect and reconnect contract
+
+- [ ] A disconnected player remains in the world during the logout grace period, including during combat. Damage and death remain authoritative. Reconnection during that period resumes the existing character rather than creating a duplicate.
+- [ ] Preserve the bound instance and its enemy and encounter state until its normal unload/reset. A reconnect within that window returns to the same copy at the character's current or last saved position.
+- [ ] During owner disconnect, server-owned followers hold without initiating pulls and remain alive in the instance. They regroup safely and resume following when the owner returns. If the owner never returns, normal instance expiry cleans them up.
+- [ ] An active keystone continues its timer through disconnect and reconnect; disconnect alone does not abandon it. The same copy and followers resume.
+
+Source boundary: TrinityCore `15e0ed76`, `WorldSession.cpp:142,524–549`, retains a lost-socket session for 60 seconds; `MiscHandler.cpp:227–278` refuses a normal logout request in combat and `WorldSession.h:1052–1055` uses a separate 20-second requested-logout timer. `MapManager.cpp:197` selects a bound instance ID. These are reference-server behavior, not proof of Retail's exact disconnect timing. [Blizzard's follower dungeon overview](https://worldofwarcraft.blizzard.com/en-us/news/24054790/take-the-lead-in-follower-dungeons) says companions go at the player's pace, whether leading or following. It does not establish disconnect or combat behavior. [Wowhead's keystone guide](https://www.wowhead.com/guide/mythic-keystones-and-dungeons) says a disconnect does not make a run immediately refillable: the group must complete or reset it. It does not establish the disconnect timer. The follower hold and keystone requirements above are project requirements; Retail's precise companion behavior and disconnect timer are not independently established.
+
+Proof: `follower_dungeon_real_selection_resumes` exercises session loss and character selection both inside and after grace, restoring the same copy, companion health, roster and damaged enemy state. `normal_follower_reconnect_restores_live_enemies_and_following` uses spawned class followers and Ruby population, preserving a damaged enemy and observing a follower move toward the reconnected owner. `mythic_follower_reconnect` starts an authentic Azure key, checks its timer across both reconnect windows and observes follower movement. The combat fixture verifies the owner stays engaged while the followers stop attacking. These fixtures do not establish Retail's exact disconnect duration.
+
 ## Queue level eligibility
 
 Follower queues use each entry's base ContentTuning level range. Conditional ContentTuning redirects are not modeled: the server has no player CtrOptions conditional flags, Chromie Time, or Timerunning state. The meanings of the redirect flags in the current data are not established. TrinityCore 15e0ed76 `LFGMgr.cpp:1762–1767` uses the player's conditional flags before checking the inclusive range; `DB2Stores.cpp:2187–2203` selects a matching redirect. Revisit these limits when the corresponding player states and flag semantics are modeled.

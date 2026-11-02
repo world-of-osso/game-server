@@ -520,7 +520,7 @@ fn select_character_in_world(
     )
 }
 
-fn queue_character_selection(
+pub(crate) fn queue_character_selection(
     db: GameDatabase,
     account_id: u64,
     character_id: u64,
@@ -536,6 +536,8 @@ fn queue_character_selection(
     app.register_message::<EnterWorldResponse>();
     app.register_message::<LoadTerrain>();
     app.register_message::<DeathStateUpdate>();
+    app.register_message::<shared::protocol::GroupRosterSnapshot>();
+    app.register_message::<shared::protocol::LfgStateUpdate>();
     app.insert_resource(db);
     app.insert_resource(helm_durability());
     app.init_resource::<DeathReplies>();
@@ -582,6 +584,123 @@ fn queue_character_selection(
     (app, connection)
 }
 
+#[test]
+fn disconnected_character_reconnects_to_live_entity_during_grace() {
+    let db = test_db();
+    let (character_id, _) = persistence::create_character(&db.db, 11, "Grace", 1, 1).unwrap();
+    let (mut app, connection) =
+        queue_character_selection(db, 11, character_id, crate::maps::MapStore::continents());
+    let player = finish_character_selection(&mut app, connection);
+    let enemy = app
+        .world_mut()
+        .spawn(Health {
+            current: 250.0,
+            max: 500.0,
+        })
+        .id();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), player, enemy);
+    let follower = app
+        .world_mut()
+        .spawn((
+            crate::followers::Follower {
+                owner: player,
+                profile: crate::followers::Profile {
+                    entry: 1,
+                    name: "Guardian".into(),
+                    class_id: 1,
+                    spec_id: 73,
+                    role: shared::group::GroupRole::Tank,
+                    attack_spell: 0,
+                    cooldown_spell: 0,
+                    heal_spell: 0,
+                    taunt_spell: 0,
+                    form_spell: 0,
+                    melee: true,
+                },
+            },
+            Health {
+                current: 900.0,
+                max: 1000.0,
+            },
+            crate::combat::AutoAttack::new(enemy),
+        ))
+        .id();
+    crate::networking::install_disconnect_fixture(&mut app);
+    app.world_mut()
+        .entity_mut(connection)
+        .insert(lightyear::prelude::server::ClientOf);
+    app.world_mut().entity_mut(connection).remove::<Connected>();
+    app.world_mut().flush();
+    app.update();
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_some()
+    );
+    assert!(crate::combat_refs::has_active_reference_to(
+        app.world(),
+        player,
+        enemy
+    ));
+    crate::followers::update_ai(app.world_mut());
+    assert!(
+        app.world()
+            .get::<crate::combat::AutoAttack>(follower)
+            .is_none()
+    );
+    assert!(crate::followers::acting_follower(app.world(), follower).is_none());
+    assert_eq!(app.world().get::<Health>(enemy).unwrap().current, 250.0);
+    let position = *app
+        .world()
+        .get::<shared::components::Position>(player)
+        .unwrap();
+    let replacement = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(12)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 11 },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(replacement)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    let restored = finish_character_selection(&mut app, replacement);
+    assert_eq!(restored, player);
+    assert_eq!(
+        crate::followers::acting_follower(app.world(), follower)
+            .unwrap()
+            .owner,
+        player
+    );
+    assert_eq!(app.world().get::<Health>(follower).unwrap().current, 900.0);
+    assert!(crate::combat_refs::has_active_reference_to(
+        app.world(),
+        restored,
+        enemy
+    ));
+    assert_eq!(app.world().get::<Health>(enemy).unwrap().current, 250.0);
+    assert_eq!(
+        *app.world()
+            .get::<shared::components::Position>(restored)
+            .unwrap(),
+        position
+    );
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(restored)
+            .is_none()
+    );
+}
+
 fn select_character_with_maps(
     db: GameDatabase,
     account_id: u64,
@@ -593,7 +712,34 @@ fn select_character_with_maps(
     (app, player)
 }
 
-fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
+pub(crate) fn reconnect_character(app: &mut App, account_id: u64, character_id: u64) -> Entity {
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id + 1000)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+            MessageSender::<shared::protocol::GroupRosterSnapshot>::default(),
+            MessageReceiver::<shared::protocol::GroupRosterSnapshot>::default(),
+            MessageSender::<shared::protocol::LfgStateUpdate>::default(),
+            MessageReceiver::<shared::protocol::LfgStateUpdate>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    finish_character_selection(app, connection)
+}
+
+pub(crate) fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
     let player = crate::test_data::wait_for_selected_player(app, connection);
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
