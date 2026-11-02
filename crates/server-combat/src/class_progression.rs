@@ -2,7 +2,7 @@
 //! spells and action bars. Rules and persistence:
 //! `docs/wiki/systems/class-progression.md`, `docs/wiki/systems/talents.md`.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -47,12 +47,13 @@ const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 
 /// Spells the player knows, in learn order. Cast validation reads this.
 #[derive(Component, Debug, Clone, Default, PartialEq, Eq)]
-pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>);
+pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>, HashSet<u32>);
 
 impl KnownSpells {
     /// Native baseline book without player-only PvP or guild grants.
     pub fn from_baseline(spells: Vec<u32>) -> Self {
-        Self(spells, Vec::new(), Vec::new())
+        let index = spells.iter().copied().collect();
+        Self(spells, Vec::new(), Vec::new(), index)
     }
 
     /// Membership-derived grants are separate from baseline/profession knowledge.
@@ -61,6 +62,7 @@ impl KnownSpells {
     }
     pub fn set_guild_grants(&mut self, spells: &[u32]) {
         self.2 = spells.to_vec();
+        self.rebuild_index();
     }
     pub fn pvp_grants(&self) -> &[(u32, u32)] {
         &self.1
@@ -69,11 +71,12 @@ impl KnownSpells {
         grants.sort_unstable();
         grants.dedup();
         self.1 = grants;
+        self.rebuild_index();
     }
 
     #[cfg(any(test, feature = "test-support"))]
     pub fn fixture(spells: Vec<u32>) -> Self {
-        Self(spells, Vec::new(), Vec::new())
+        Self::from_baseline(spells)
     }
 
     /// Grant a fixture spell without replacing native class or membership grants.
@@ -81,11 +84,16 @@ impl KnownSpells {
     pub fn grant_fixture_spell(&mut self, spell: u32) {
         if !self.0.contains(&spell) {
             self.0.push(spell);
+            self.rebuild_index();
         }
     }
 
+    fn rebuild_index(&mut self) {
+        self.3 = self.iter().collect();
+    }
+
     pub fn contains(&self, spell_id: u32) -> bool {
-        self.iter().any(|id| id == spell_id)
+        self.3.contains(&spell_id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = u32> + '_ {
@@ -105,6 +113,26 @@ impl KnownSpells {
             });
         baseline.chain(grants).chain(guild)
     }
+}
+
+#[test]
+fn known_spell_index_tracks_grants_and_overrides() {
+    let mut known = KnownSpells::fixture(vec![10, 20]);
+    known.set_guild_grants(&[30, 20]);
+    known.set_pvp_grants(vec![(40, 10)]);
+    assert_eq!(known.iter().collect::<Vec<_>>(), vec![20, 40, 30]);
+    assert!(!known.contains(10));
+    assert!(known.contains(20));
+    assert!(known.contains(30));
+    assert!(known.contains(40));
+    known.set_pvp_grants(Vec::new());
+    known.set_guild_grants(&[]);
+    known.grant_fixture_spell(50);
+    assert_eq!(known.iter().collect::<Vec<_>>(), vec![10, 20, 50]);
+    assert!(known.contains(10));
+    assert!(!known.contains(30));
+    assert!(!known.contains(40));
+    assert!(known.contains(50));
 }
 
 /// Active `ChrSpecialization` ID, replicated to every client.
@@ -236,6 +264,9 @@ fn merge_learned_spells(
         .filter(|spell| seen.insert(*spell))
         .collect();
     known.0.extend(&learned);
+    if !learned.is_empty() {
+        known.rebuild_index();
+    }
     learned
 }
 
@@ -844,10 +875,8 @@ fn init_player_progression(
         if evaluated.traits_reset {
             save_trait_config(&db.db, client_id.0, spec.0, Vec::new());
         }
-        let mut known = KnownSpells(
+        let mut known = KnownSpells::from_baseline(
             evaluated.known.iter().map(|spell| spell.spell_id).collect(),
-            Vec::new(),
-            Vec::new(),
         );
         merge_learned_spells(&mut known, professions);
         let mut bar = ActionBar(match &stored {
@@ -936,14 +965,12 @@ fn refresh_player(
     senders: &mut ProgressionSenders,
 ) {
     let new_spec = evaluated.spec;
-    let mut new_known = KnownSpells(
-        evaluated.known.iter().map(|spell| spell.spell_id).collect(),
-        Vec::new(),
-        known.2.clone(),
-    );
+    let mut new_known =
+        KnownSpells::from_baseline(evaluated.known.iter().map(|spell| spell.spell_id).collect());
+    new_known.set_guild_grants(&known.2);
     merge_learned_spells(&mut new_known, professions);
     if *spec == new_spec {
-        new_known.1 = known.1.clone();
+        new_known.set_pvp_grants(known.1.clone());
     }
     let spec_changed = *spec != new_spec;
     if spec_changed {
