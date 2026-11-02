@@ -57,7 +57,7 @@ impl Options {
 struct TankProgress<'a> {
     position: Option<[f32; 3]>,
     state: Option<&'a crate::creature_ai::CreatureState>,
-    follow_moving: Option<bool>,
+    follow: Option<&'a crate::creature_ai::FollowOwner>,
 }
 
 /// Emits progress at the start and each simulated minute after the countdown.
@@ -85,7 +85,7 @@ impl Progress {
             .map(|index| index + 1);
         writeln!(
             writer,
-            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} tank_position={:?} tank_state={:?} tank_follow_moving={:?}",
+            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} tank_position={:?} tank_state={:?} tank_follow={:?}",
             snapshot.forces,
             snapshot.forces_required,
             bosses,
@@ -94,7 +94,7 @@ impl Progress {
             route.len(),
             tank.position,
             tank.state,
-            tank.follow_moving
+            tank.follow
         )?;
         writer.flush()?;
         self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
@@ -283,9 +283,7 @@ impl State {
                         .get::<shared::components::Position>(tank)
                         .map(|p| [p.x, p.y, p.z]),
                     state: world.get::<crate::creature_ai::CreatureState>(tank),
-                    follow_moving: world
-                        .get::<crate::creature_ai::FollowOwner>(tank)
-                        .map(|follow| follow.moving),
+                    follow: world.get::<crate::creature_ai::FollowOwner>(tank),
                 },
             )
             .map_err(|error| format!("write keystone progress: {error}"))

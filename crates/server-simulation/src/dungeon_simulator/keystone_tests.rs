@@ -53,10 +53,12 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
     let mut reporter = Progress::default();
     let mut output = Vec::new();
     let idle = crate::creature_ai::CreatureState::Idle;
+    let mut world = World::new();
+    let follow = crate::creature_ai::FollowOwner::new(world.spawn_empty().id());
     let tank = TankProgress {
         position: Some([1.0, 2.0, 3.0]),
         state: Some(&idle),
-        follow_moving: Some(false),
+        follow: Some(&follow),
     };
     reporter
         .write(&mut output, 0, &snapshot, None, &route, tank)
@@ -78,13 +80,18 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
     reporter
         .write(&mut output, 60_050, &snapshot, Some(42), &route, tank)
         .unwrap();
+    let output = String::from_utf8(output).unwrap();
     assert_eq!(
-        String::from_utf8(output).unwrap(),
-        concat!(
-            "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow_moving=Some(false)\n",
-            "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(42) route_step=Some(2)/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow_moving=Some(false)\n",
+        output,
+        format!(
+            concat!(
+                "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow=Some({follow:?})\n",
+                "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(42) route_step=Some(2)/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow=Some({follow:?})\n",
+            ),
+            follow = follow,
         )
     );
+    assert!(output.contains("moving: false"));
 }
 
 #[test]
