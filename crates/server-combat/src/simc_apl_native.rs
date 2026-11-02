@@ -410,6 +410,10 @@ impl<'a> NativeFacts<'a> {
         let Some(cast) = self.world.get::<shared::casting::CastState>(target) else {
             return Ok(0.0);
         };
+        self.spell(cast.spell_id)?;
+        if !crate::spell_cast::can_interrupt_cast(self.world, self.actor, target) {
+            return Ok(0.0);
+        }
         let reaction = self
             .world
             .get::<reaction::CastingReactionDelay>(target)
