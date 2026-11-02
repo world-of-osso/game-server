@@ -565,6 +565,12 @@ pub(super) fn retire_owner(world: &mut World, player: Entity) {
     }
 }
 
+pub(crate) fn notify_reconnected(world: &mut World, player: Entity) {
+    if world.get::<FollowerRun>(player).is_some() {
+        send_update(world, player, None, None);
+    }
+}
+
 pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
     let Some(DisconnectedRun { run, lfg }) = world
         .get_resource_mut::<DisconnectedRuns>()
@@ -817,6 +823,15 @@ mod copy_tests {
 
     #[test]
     fn follower_dungeon_real_selection_resumes_same_combat_copy() {
+        exercise_real_reconnect(false);
+    }
+
+    #[test]
+    fn follower_dungeon_real_selection_resumes_after_logout_grace() {
+        exercise_real_reconnect(true);
+    }
+
+    fn exercise_real_reconnect(after_grace: bool) {
         let (mut source, _, mut run) = fixture();
         let store = source
             .world_mut()
@@ -933,8 +948,16 @@ mod copy_tests {
             owner,
             enemy
         ));
+        if after_grace {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs(60));
+            app.world_mut().run_schedule(PreUpdate);
+            advance_runs(app.world_mut());
+            assert!(app.world().get_entity(owner).is_err());
+        }
         let restored = crate::auth_character::tests::reconnect_character(&mut app, 11, character);
-        assert_eq!(restored, owner);
+        assert_eq!(restored == owner, !after_grace);
         assert_eq!(*app.world().get::<InMap>(restored).unwrap(), map);
         assert_eq!(
             *app.world()
@@ -949,11 +972,13 @@ mod copy_tests {
                 .current,
             250.0
         );
-        assert!(crate::combat_refs::has_active_reference_to(
-            app.world(),
-            restored,
-            enemy
-        ));
+        if !after_grace {
+            assert!(crate::combat_refs::has_active_reference_to(
+                app.world(),
+                restored,
+                enemy
+            ));
+        }
         assert!(run.members.iter().all(|member| {
             app.world()
                 .get::<Follower>(*member)

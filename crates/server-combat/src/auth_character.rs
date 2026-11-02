@@ -301,6 +301,9 @@ pub(crate) fn process_select_character(
                 .entity(player)
                 .remove::<crate::networking::DisconnectedPlayer>();
             insert_world_components(&mut commands, entity, player, req.character_id);
+            commands.queue(move |world: &mut World| {
+                crate::followers::notify_reconnected(world, player)
+            });
             send_enter_success(entity, &mut enter_senders, player);
             send_load_terrain(
                 entity,
