@@ -794,3 +794,15 @@ D	unholy_mograine.rs	initialize	try_cast_triggered	spell	1	188290,444505
 D	unholy_permanent_claws.rs	update_pet	try_cast_triggered	spell	1	91776,91778
 D	unholy_putrefy.rs	impact_and_dismiss	try_cast_triggered	spell	1	390220,1277016
 D	unholy_rider_proc.rs	on_cast	try_cast_triggered	chosen	1	444248,444251,444252,444254
+D	fire_phoenix.rs	schedule_meteorite_impact	DestinationTrigger	impact	1	449569,456139
+D	hunter_bounces.rs	read_impacts	ScaledTrigger	policy.payload	1	1266081
+D	hunter_bounces.rs	schedule_bounces	schedule_full_trigger	policy.finisher	1	1266096
+D	vengeance_voidfall.rs	apply	AuraApplication	spell	1	1256301,1256302,1256322
+D	vengeance_voidfall.rs	launch_meteor	cast_triggered_at_destination	meteor.spell	1	1256303,1256616
+D	warlock_ritual.rs	advance_ritual	try_cast_triggered	ritual	1	431944,432815,432816
+D	warlock_ritual.rs	art_removed	try_cast_triggered	demon.summon	1	428565,428571,434400
+D	warlock_ritual.rs	art_removed	try_cast_triggered	granted.1	1	433885,433891
+D	warlock_ritual.rs	gaze	cast_triggered	spell	1	1269885,1269886,1269892
+D	warlock_ritual.rs	grant	try_cast_triggered	buff	1	1269643,1269879
+D	warlock_ritual.rs	grant_art	try_cast_triggered	art	1	428524,432794,432795
+D	warlock_seed.rs	apply_background_dot	try_cast_triggered	dot	1	146739,445474
