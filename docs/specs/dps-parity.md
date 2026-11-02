@@ -28,6 +28,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Unholy Magus
 
+- Without the MID2 two-piece1296654, Magi cast Frostbolt317792 and Shadow Bolt317791, and Lords cast Frostbolt1292107. Magus Frostbolt's cooldown uses its native slow duration. With the two-piece, they use the native Necrotic Bolt and Withering Grasp actions (SimC76f8118 `sc_death_knight.cpp4424–4434,4598–4607,4664–4670,15494–15502`).
+- Unholy252 follower, snapshot v3, 120 seconds, seeds70448 and 1–9, temporary enchants disabled: L70 map2515 against the qualified tree-only reference: native 3,925 DPS, SimC 3,906; mean paired difference +0.50% ±1.57 pp (95% t interval). L90 map2813: native 31,516 DPS, SimC 32,030; −1.39% ±4.35 pp. Both point estimates are within ±5%; the L90 interval extends outside it.
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
 ### Unholy Commander of the Dead
 
@@ -215,6 +217,15 @@ Selected Cat Convoke391528 dispatches one native child per actual periodic-drive
 ### Feral Lunar Inspiration
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.
+
+### Feral Apex Predator's Craving
+
+Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
+
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
+- Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
+- Landed primary Ferocious Bite applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
+- [ ] Missing finisher behavior: Ravage441585/441591 and Dreadful Wound441812 with its target damage effect.
 
 ### Shared merged critical feedback
 
@@ -1059,6 +1070,7 @@ Final30s sustained-damage qualification compares cumulative damage to every meas
 - `scripts/simc_selected_traits.cpp` — diagnostic CLI wrapper around unchanged76f8118 engine objects; not the reference DPS executable. It replaces only the CLI entry object to inspect actual `player_traits` after one0.1s metadata iteration. Retire when the official CLI emits lossless allocated-trait metadata.
 - `crates/server/src/hunter_pet_stats.rs` — native Hunter HP/armor inheritance and the shared integer22% total-owner-RAP source used by melee and abilities.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/` — opt-in ignored300s native follower fixture; reuses dungeon runtime and single-follower initialization, real31146 dummy, existing diagnostic-run ownership (so normal orphan cleanup retains the follower), exact instance gear, strict native trait validation and actual combat/buff receipts. Set `DPS_PARITY_OUTPUT`, `DPS_PARITY_WORLD_DB`, `DPS_PARITY_SPEC`, `DPS_PARITY_TARGETS=1|3`. Unmodeled race0/consumables/item options and existing kit-vs-APL remain named measurement gaps; invalid traits fail instead of resetting the loadout. Initial execution exposed the noncombat owner's first-tick attack cancellation: six specs never engaged, and73 dealt only two first-tick hits. These are fixture diagnostics, not qualified class DPS. Qualification requires actual damage in the final30s as well as a300s clock, preventing a first-tick-only hit from passing. Pet specs253/266 must execute learned casts and actual damage from their sourced pet. The parity App installs the ordinary HunterPet/PetControl systems and explicitly loads pet catalog/level-up metadata from its read-only prepared world snapshot. Missing native Duck174884 content is supplied by the existing class-summon producer, with stable-key `scripts/dps_parity_duck_174884.sql` and its receipt; no world spawn or fabricated creature statistics are added. Canonical application remains lead-owned; three-target qualification requires10 timed waves with20 distinct add identities and one persistent main dummy. The fixture reuses the existing native Player-owner initializer, places that quiet owner outside melee range and requires zero owner damage; the measured follower remains an NPC. No owner health/flags/timers are fabricated and no gameplay AI decisions change. Native8163 armor loading is separately RED→GREEN qualified;1467/103 strict trait rejections remain named gaps.
+- Brewmaster ignored parity fixtures require `DPS_PARITY_OUTPUT` containing `268.profile.json` and `268.selected-traits-active.json`, plus `DPS_PARITY_WORLD_DB` pointing to the prepared native world database. Use `DPS_PARITY_ACTOR=player` for the player-mode suite. The three tank replay tests additionally require `HEALER_TANK_SIMC_TRACE`; the follower avoidance diagnostic instead requires `FOLLOWER_DPS_WORLD_DB`.
 - `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution, consumed by production equipment Stats.
 - `crates/server/src/item_instance/{bonuses,effects,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state. Type23 preserves ItemEffect IDs; base/bonus resolution retains native spell IDs, trigger types and cooldown sentinels. Equip-proc execution is not yet integrated.
 - `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties.
