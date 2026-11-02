@@ -47,7 +47,7 @@ fn aggro_app() -> App {
         50,
     )));
     app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
-        &[30],
+        &[30, 299],
     ));
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -751,6 +751,8 @@ fn neutral_boar_ignores_player_until_hit_then_fights_back() {
 /// A hunter's pet: a creature of its owner's faction that a player controls
 /// (`UNIT_FLAG_PLAYER_CONTROLLED`), going after `target`.
 fn spawn_pet_attacking(app: &mut App, position: Position, target: Entity) -> Entity {
+    // creature_template_model entry 299 supplies the wolf's native display.
+    let display_id = app.world().resource::<WorldData>().templates[&299].models[0].display_id;
     app.world_mut()
         .spawn((
             position,
@@ -759,6 +761,7 @@ fn spawn_pet_attacking(app: &mut App, position: Position, target: Entity) -> Ent
                 template_id: 299,
                 name: "Diseased Young Wolf".into(),
             },
+            shared::components::ModelDisplay { display_id },
             Health {
                 current: 100.0,
                 max: 100.0,
