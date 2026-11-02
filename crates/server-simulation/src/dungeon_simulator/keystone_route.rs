@@ -50,17 +50,90 @@ pub(super) fn wcl_chain_groups(
             return segment_chain_groups(graph, definition, hostile_sources, samples).map(Some);
         }
     }
-    let mapped_sources = [include_str!(
-        "../../../../content/dungeons/ruby-wcl-pulls.json"
-    )];
+    match mapped_pulls(graph.map_id)? {
+        Some(samples) => mapped_chain_groups(graph, definition, hostile_sources, samples).map(Some),
+        None => Ok(None),
+    }
+}
+
+/// WCL pull membership registered for a map, keyed by source GUID.
+fn mapped_pulls(map_id: u32) -> Result<Option<MappedPulls>, String> {
+    let mapped_sources = [
+        include_str!("../../../../content/dungeons/ruby-wcl-pulls.json"),
+        include_str!("../../../../content/dungeons/altar-wcl-pulls.json"),
+    ];
     for source in mapped_sources {
         let samples: MappedPulls = serde_json::from_str(source)
             .map_err(|error| format!("parse WCL pull membership: {error}"))?;
-        if samples.map_id == graph.map_id {
-            return mapped_chain_groups(graph, definition, hostile_sources, samples).map(Some);
+        if samples.map_id == map_id {
+            return Ok(Some(samples));
         }
     }
     Ok(None)
+}
+
+fn observed_pulls(samples: MappedPulls) -> Result<HashMap<u64, u32>, String> {
+    let mut observed = HashMap::new();
+    for pull in samples.pulls {
+        for guid in pull.source_guids {
+            if observed.insert(guid, pull.pull).is_some() {
+                return Err(format!("WCL source {guid} belongs to multiple pulls"));
+            }
+        }
+    }
+    Ok(observed)
+}
+
+/// The single WCL pull containing a pack's hostile sources, if any was observed.
+fn pack_pull(
+    pack: &super::graph::Pack,
+    observed: &HashMap<u64, u32>,
+    hostile_sources: &HashSet<u64>,
+) -> Result<Option<u32>, String> {
+    let memberships: BTreeSet<_> = pack
+        .spawns
+        .iter()
+        .filter(|spawn| hostile_sources.contains(&spawn.guid))
+        .filter_map(|spawn| observed.get(&spawn.guid).copied())
+        .collect();
+    if memberships.len() > 1 {
+        return Err(format!("route pack {} matches multiple WCL pulls", pack.id));
+    }
+    Ok(memberships.first().copied())
+}
+
+/// Visit packs in observed WCL pull order. Unobserved packs keep the pull of the
+/// pack the planner placed before them; trash precedes a boss of the same pull.
+fn order_by_wcl_pull(
+    graph: &Graph,
+    steps: Vec<RouteStep>,
+    observed: &HashMap<u64, u32>,
+    hostile_sources: &HashSet<u64>,
+) -> Result<Vec<RouteStep>, String> {
+    let bosses: Vec<_> = boss_route(graph)?.iter().map(|step| step.pack).collect();
+    let mut keyed = Vec::with_capacity(steps.len());
+    let mut previous = 0;
+    for step in steps {
+        let pack = graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == step.pack)
+            .ok_or_else(|| format!("route references absent pack {}", step.pack))?;
+        let pull = pack_pull(pack, observed, hostile_sources)?.unwrap_or(previous);
+        previous = pull;
+        keyed.push(((pull, bosses.contains(&step.pack)), step));
+    }
+    keyed.sort_by_key(|(key, _)| *key);
+    let ordered: Vec<_> = keyed.into_iter().map(|(_, step)| step).collect();
+    let visited: Vec<_> = ordered
+        .iter()
+        .map(|step| step.pack)
+        .filter(|pack| bosses.contains(pack))
+        .collect();
+    if visited != bosses {
+        return Err("WCL pull order disagrees with the boss route".into());
+    }
+    Ok(ordered)
 }
 
 /// Partition consecutive route packs by the sourced median for each boss-relative segment.
@@ -135,14 +208,7 @@ fn mapped_chain_groups(
     if samples.map_id != graph.map_id || definition.map_id != graph.map_id {
         return Err("WCL pull membership does not match challenge map".into());
     }
-    let mut observed = HashMap::new();
-    for pull in samples.pulls {
-        for guid in pull.source_guids {
-            if observed.insert(guid, pull.pull).is_some() {
-                return Err(format!("WCL source {guid} belongs to multiple pulls"));
-            }
-        }
-    }
+    let observed = observed_pulls(samples)?;
     let mut groups = Vec::new();
     let mut pending = Vec::new();
     let mut previous = None;
@@ -160,19 +226,10 @@ fn mapped_chain_groups(
                 .unwrap_or(*entry);
             pack.spawns.iter().any(|spawn| spawn.entry == source)
         });
-        let memberships: BTreeSet<_> = pack
-            .spawns
-            .iter()
-            .filter(|spawn| hostile_sources.contains(&spawn.guid))
-            .filter_map(|spawn| observed.get(&spawn.guid).copied())
-            .collect();
-        if memberships.len() > 1 {
-            return Err(format!("route pack {} matches multiple WCL pulls", pack.id));
-        }
         let pull = if boss {
             None
         } else {
-            memberships.first().copied()
+            pack_pull(pack, &observed, hostile_sources)?
         };
         if pull.is_none() || pull != previous {
             if !pending.is_empty() {
@@ -475,6 +532,9 @@ pub(super) fn plan(
         added_packs.push(id);
         total = total.saturating_add(force);
     }
+    if let Some(samples) = mapped_pulls(graph.map_id)? {
+        steps = order_by_wcl_pull(graph, steps, &observed_pulls(samples)?, hostile_sources)?;
+    }
     Ok(PlannedRoute {
         steps,
         added_packs,
@@ -486,10 +546,8 @@ pub(super) fn plan(
 mod tests {
     use super::*;
 
-    #[test]
-    fn ruby_wcl_membership_groups_adjacent_packs_and_keeps_unmatched_separate() {
+    fn single_spawn_route(map_id: u32, sources: &[u64]) -> Graph {
         use super::super::graph::{Pack, Spawn};
-        let sources = [29001484, 29001531, 29001514, 90000001, 29001773, 29001776];
         let packs: Vec<_> = sources
             .iter()
             .map(|&guid| Pack {
@@ -503,8 +561,8 @@ mod tests {
                 }],
             })
             .collect();
-        let graph = Graph {
-            map_id: 2521,
+        Graph {
+            map_id,
             entrance: [0.0, 0.0],
             entrance_height: 0.0,
             entrance_pack: sources[0],
@@ -526,18 +584,27 @@ mod tests {
             follower_boss_sources: BTreeMap::new(),
             follower_boss_bits: BTreeMap::new(),
             follower_encounter_actor_bits: BTreeMap::new(),
-        };
-        let definition = server::mythic_plus_runtime::ChallengeDefinition {
-            map_id: 2521,
-            challenge_id: 399,
-            name: "Ruby Life Pools".into(),
+        }
+    }
+
+    fn challenge(map_id: u32) -> server::mythic_plus_runtime::ChallengeDefinition {
+        server::mythic_plus_runtime::ChallengeDefinition {
+            map_id,
+            challenge_id: 0,
+            name: String::new(),
             timers_ms: [0; 3],
             forces_required: 0,
             creature_weights: HashMap::new(),
             scenario_event_weights: HashMap::new(),
             bosses: vec![],
-        };
-        let groups = wcl_chain_groups(&graph, &definition, &sources.into_iter().collect())
+        }
+    }
+
+    #[test]
+    fn ruby_wcl_membership_groups_adjacent_packs_and_keeps_unmatched_separate() {
+        let sources = [29001484, 29001531, 29001514, 90000001, 29001773, 29001776];
+        let graph = single_spawn_route(2521, &sources);
+        let groups = wcl_chain_groups(&graph, &challenge(2521), &sources.into_iter().collect())
             .unwrap()
             .unwrap();
         assert_eq!(
@@ -546,6 +613,72 @@ mod tests {
                 vec![29001484, 29001531, 29001514],
                 vec![90000001],
                 vec![29001773, 29001776]
+            ]
+        );
+    }
+
+    #[test]
+    fn altar_wcl_membership_chains_the_observed_opening_pulls() {
+        // WCL pPFDbkfQK7MACtmY fight 41 pulls 1 and 2; Venom Leech 63994060 was
+        // not damaged in that run.
+        let sources = [
+            63993135, 63994034, 3276417193, 63994027, 63994053, 63994060, 63993131,
+        ];
+        let graph = single_spawn_route(2993, &sources);
+        let groups = wcl_chain_groups(&graph, &challenge(2993), &sources.into_iter().collect())
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            groups,
+            vec![
+                vec![63993135, 63994034, 3276417193],
+                vec![63994027, 63994053],
+                vec![63994060],
+                vec![63993131]
+            ]
+        );
+    }
+
+    #[test]
+    fn altar_route_follows_wcl_pull_order_and_keeps_bosses_in_route_order() {
+        // Real Altar GUIDs; run1 visited WCL pulls 12 and 11 before the Writhing Coil.
+        let spawns = [
+            (3276417175, 259445),
+            (3276417209, 270306),
+            (63993117, 261557),
+            (63994080, 271453),
+            (63994060, 261550),
+            (63993001, 259446),
+            (63994067, 271453),
+            (63993002, 259447),
+        ];
+        let packs: Vec<_> = spawns
+            .iter()
+            .map(|&(guid, entry)| {
+                serde_json::json!({"id": guid, "position": [0, 0], "height": 0,
+                    "spawns": [{"guid": guid, "entry": entry, "position": [0, 0]}]})
+            })
+            .collect();
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2993, "entrance": [0, 0], "entrance_height": 0, "entrance_pack": 3276417175u64,
+            "packs": packs, "edges": [], "teleports": [], "unreachable": [], "route": [],
+            "follower_boss_entries": [259445, 259446, 259447]
+        }))
+        .unwrap();
+        let steps = spawns
+            .iter()
+            .map(|&(pack, _)| RouteStep {
+                pack,
+                anchor: [0.0; 3],
+            })
+            .collect();
+        let observed = observed_pulls(mapped_pulls(2993).unwrap().unwrap()).unwrap();
+        let hostile = spawns.iter().map(|&(guid, _)| guid).collect();
+        let ordered = order_by_wcl_pull(&graph, steps, &observed, &hostile).unwrap();
+        assert_eq!(
+            ordered.iter().map(|step| step.pack).collect::<Vec<_>>(),
+            [
+                3276417175, 63993117, 63993001, 63994067, 63994080, 63994060, 3276417209, 63993002
             ]
         );
     }
