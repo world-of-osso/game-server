@@ -149,7 +149,10 @@ impl CreatureAi for Add {
         // WCL M4cdBNJkTjavYgQV/11 pull12: Defiling Taint begins at 15.270s;
         // it is removed four milliseconds after the defiler dies. DB2 1301202
         // supplies the healing immunity referenced by the channel's description.
-        if ctx.do_cast_at(Some(summoner), DEFILE_CHANNEL, true) {
+        let accepted = ctx.do_cast_at(Some(summoner), DEFILE_CHANNEL, true);
+        #[cfg(test)]
+        eprintln!("Defiler channel accepted={accepted} avatar={summoner:?}");
+        if accepted {
             crate::auras::apply_aura(
                 ctx.world,
                 &crate::auras::AuraApplication {
