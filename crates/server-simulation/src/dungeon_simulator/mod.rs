@@ -37,6 +37,7 @@ mod mistweaver_talent_tests;
 mod movement;
 mod preservation_empower_tests;
 mod preservation_evoker_replay_tests;
+mod priest_piety_summon_tests;
 mod priest_piety_tests;
 mod replay_cli_tests;
 mod restoration_druid_replay_tests;

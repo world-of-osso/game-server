@@ -1864,7 +1864,7 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
 
 /// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
 /// Callers retain their own spell's downstream resolution and native attributes.
-fn damage_source_amount(
+pub fn damage_source_amount(
     world: &World,
     ctx: &EffectCtx,
     target: Entity,
@@ -1878,6 +1878,11 @@ fn damage_source_amount(
         bonus_caster,
         ..
     } = damage;
+    // SimC76f8118 sc_druid.cpp2888–2948: Tear already stores Rip's
+    // source-side periodic damage; do not apply caster modifiers a second time.
+    if periodic && ctx.spell.id == 391356 {
+        return amount;
+    }
     let school = ctx.spell.school_mask();
     let amount = if resolved_source {
         amount
