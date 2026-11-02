@@ -64,6 +64,22 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
+        match self.poll_precombat(world, actor, targets)? {
+            crate::literal_rotation::PrecombatPoll::Waiting => Ok(true),
+            crate::literal_rotation::PrecombatPoll::Finished => Ok(false),
+            crate::literal_rotation::PrecombatPoll::Selected { action, execution } => {
+                self.driver.execute(world, actor, action, execution)?;
+                Ok(true)
+            }
+        }
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
         let prepared = Prepared::read(
             world,
             actor,
@@ -80,14 +96,8 @@ impl Rotation {
             &self.equipment,
             self.encounter,
         );
-        let Some((action, execution)) =
-            self.driver
-                .select("precombat", &facts, &prepared, &self.equipment)?
-        else {
-            return Ok(false);
-        };
-        self.driver.execute(world, actor, action, execution)?;
-        Ok(true)
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn start_combat_at(&mut self, started_at: f64) {
@@ -176,11 +186,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.precombat_step(world, actor, targets)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(
