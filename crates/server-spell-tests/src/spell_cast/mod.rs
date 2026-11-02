@@ -9,6 +9,7 @@ mod census_e77_priest_tests;
 mod creature_trigger_aura_tests;
 mod creature_trigger_dead_caster_tests;
 mod discipline_atonement_tests;
+mod discipline_contrition_aegis_tests;
 mod discipline_darkness_stack_tests;
 mod discipline_ultimate_penitence_tests;
 mod dummy5_tests;
