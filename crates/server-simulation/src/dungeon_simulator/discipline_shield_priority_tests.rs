@@ -12,6 +12,32 @@ fn discipline_does_not_refresh_an_active_ordinary_shield() {
     let healer = run.healer;
     super::healer_simc_replay::engage(&mut run);
     super::healer_simc_replay::finish_precombat(&mut run.app, &[run.tank, healer]).unwrap();
+    // Isolate the Shield and damage choices so the live follower repeatedly
+    // reaches this priority instead of spending the fixture on unrelated cooldowns.
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            17, 585, 390691,
+        ]));
+    for member in run.slots {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            member,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.spell_id == 17 && aura.caster == healer,
+        );
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: healer,
+                target: member,
+                spell_id: 194384,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
     let mut shielded: HashSet<_> = run
         .slots
         .iter()
@@ -56,7 +82,15 @@ fn discipline_does_not_refresh_an_active_ordinary_shield() {
             _ => {}
         }
     }
-    assert!(casts > 0, "the follower must still cast ordinary Shield");
+    assert!(
+        casts > 0,
+        "the follower must still cast ordinary Shield; healer casts: {:?}",
+        events
+            .iter()
+            .filter(|event| event.source == Some(healer.to_bits())
+                && event.kind == CombatLogKind::CastSuccess)
+            .collect::<Vec<_>>()
+    );
     assert!(
         events
             .iter()
