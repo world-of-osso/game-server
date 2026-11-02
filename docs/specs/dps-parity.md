@@ -346,6 +346,9 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Outlaw literal fixture
 
+- L70 tree-only follower, snapshot v3, map2515, 120 seconds and temporary enchants disabled: 20 matched seeds averaged 5,496 native DPS versus 5,727 SimC76f8118 DPS; mean paired difference −3.54% ±4.82 percentage points (95% t interval). The point estimate meets ±5%; the interval does not. The reference applies the Dragon-Bone Dice effect overrides described below.
+- Selected Find an Opening1259457 adds its native effect to Opportunity's base extra-strike chance, independently of the Roll the Bones contribution (`sc_rogue.cpp1286–1292`).
+
 - L90 follower measurement on native DB2 70448, snapshot v3, map2813 and 120-second single-target fights: 30 seeds averaged 42,753 DPS versus 44,226 DPS for 999 measured SimC76f8118 iterations. The mean delta is −3.33% ±2.57 percentage points (95% t confidence interval on the native mean only); its lower bound is −5.90%. The reference uses the same race, talents and 16 gear slots, disables temporary enchants, and overrides effect1197527 to25 and effect1197530 to40 for selected Dragon-Bone Dice. Native and SimC RtB state uptimes were respectively 3.17/24.43/42.37/29.50% and 2.01/22.66/47.38/27.41% for states1–4. Native Pistol Shot casts per Opportunity application were 0.969 versus SimC's 0.963.
 - Retail logs with Dragon-Bone Dice selected support the native 55% Opportunity chance while RtB is active: report `6GP7NtzJ8b19Mram` fight11 had 183 extra strikes per 337 casts, `cRm2W9hdrM4D368N` fight14 had 136/260, and `8ndAF49tm6RVPWcJ` fight4 had 162/286. Match each extra strike to a same-target Sinister Strike cast within one second; the pooled 481/883 rate is 54.47% (approximate 95% binomial interval ±3.28 percentage points).
 
