@@ -161,6 +161,9 @@ fn hits_without_initial_aggro_engage_only_an_already_engaged_enemy() {
     // Polymorph 118 is harmful with SPELL_ATTR1_NO_THREAT: it engages only an engaged target.
     assert!(!threatens(&h, h.npc));
     let npc = h.npc;
+    // Polymorph's creature-type requirement reads the native template.
+    h.app
+        .insert_resource(super::test_harness::load_native_creature_world(&[6]));
     super::creature_cast(h.app.world_mut(), caster, POLYMORPH, Some(npc), true).unwrap();
     assert!(
         threatens(&h, npc),
