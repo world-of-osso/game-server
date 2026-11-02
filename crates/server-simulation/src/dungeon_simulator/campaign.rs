@@ -414,6 +414,53 @@ fn den_each_node_first_party_damage_is_owner_controlled() {
 
 #[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn den_boss_objective_waits_for_live_party_combat() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    for _ in 0..400 {
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let enemy = run.actors[&31000519];
+    let source = run.actors[&31000492];
+    let position = *run.app.world().get::<Position>(source).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(position);
+    run.app.world_mut().entity_mut(tank).insert(position);
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, enemy);
+    run.app.update();
+    assert!(crate::followers::simulator::has_uncleared_fight(
+        run.app.world(),
+        owner
+    ));
+    run.chain_groups = Some(vec![vec![31000640]]);
+    run.chain_group = 0;
+    run.control()
+        .expect("active combat must defer the boss objective, not fail its spellclick");
+    assert_eq!(run.current_pack, Some(31000640));
+    assert!(run.app.world().get::<MoveIntent>(owner).is_none());
+    assert!(
+        run.app
+            .world()
+            .get::<shared::casting::CastState>(owner)
+            .is_none()
+    );
+    assert!(crate::spell_cast::targets::is_alive(run.app.world(), enemy));
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
     let mut run = spawn_run_mode(
         1,
@@ -3785,6 +3832,13 @@ impl Run {
             });
         };
         self.current_pack = Some(pack_id);
+        if self.chain_groups.is_some() && fighting && self.is_required_boss(target) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(());
+        }
         let target_position = *self.app.world().get::<Position>(target).unwrap();
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
         let attackable = crate::spell_cast::targets::relation_matches(
@@ -3971,6 +4025,22 @@ impl Run {
         let result = apl.tick(world, owner, &[target]);
         world.entity_mut(owner).insert(apl);
         result.map_err(|error| format!("keystone owner opening failed: {error}"))
+    }
+
+    fn is_required_boss(&self, target: Entity) -> bool {
+        self.app
+            .world()
+            .get::<shared::components::Npc>(target)
+            .is_some_and(|npc| {
+                self.graph.boss_entries().iter().any(|entry| {
+                    self.graph
+                        .follower_boss_sources
+                        .get(entry)
+                        .copied()
+                        .unwrap_or(*entry)
+                        == npc.template_id
+                })
+            })
     }
 
     fn is_gated_boss(&self, target: Entity) -> bool {
