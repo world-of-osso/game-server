@@ -241,6 +241,7 @@ mod feral_ravage_follower_tests;
 mod feral_ravage_sabertooth_follower_tests;
 mod feral_ravage_splash_follower_tests;
 mod feral_ravage_unseen_follower_tests;
+mod feral_rip_and_tear_follower_tests;
 mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
