@@ -54,23 +54,21 @@ fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
                 party.app.world().get::<CastState>(healer).unwrap().spell_id,
                 115175
             );
-            let start = party.app.world().resource::<ObservedCombatEvents>().0.len();
-            for _ in 0..100 {
+            for _ in 0..35 {
                 party.app.update();
-                let mut health = party.app.world_mut().get_mut::<Health>(target).unwrap();
-                health.current = health.max * fraction;
-                rotation
-                    .drive(party.app.world_mut(), healer, &party.slots, Some(enemy))
-                    .unwrap();
-                if party.app.world().resource::<ObservedCombatEvents>().0[start..]
-                    .iter()
-                    .any(|event| {
-                        event.kind == CombatLogKind::CastSuccess && event.spell_id == Some(124682)
-                    })
-                {
-                    break;
-                }
             }
+            // SpellHistory uses the real clock, not the fixture's fixed virtual time.
+            party
+                .app
+                .world_mut()
+                .resource_mut::<bevy::prelude::Time<bevy::time::Real>>()
+                .advance_by(std::time::Duration::from_secs(2));
+            let mut health = party.app.world_mut().get_mut::<Health>(target).unwrap();
+            health.current = health.max * fraction;
+            let start = party.app.world().resource::<ObservedCombatEvents>().0.len();
+            rotation
+                .drive(party.app.world_mut(), healer, &party.slots, Some(enemy))
+                .unwrap();
             let spell = party
                 .app
                 .world()
