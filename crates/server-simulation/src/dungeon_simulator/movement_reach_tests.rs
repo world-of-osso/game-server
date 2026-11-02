@@ -121,11 +121,28 @@ fn in_reach_pet_and_follower_remain_stationary() {
 #[test]
 fn unreachable_pet_path_returns_named_error_without_graph_fallback() {
     let walker = altar_walker();
-    let (from, _) = short_walk(&walker);
+    let (from, to) = short_walk(&walker);
     let (mut world, pet) = pet_world(from, Vec3::splat(1_000_000.0));
-    let error = move_one(&mut world, pet, 0.05).unwrap_err();
-    assert!(error.contains("native walk unreachable"), "{error}");
+    move_one(&mut world, pet, 0.05).unwrap();
+    assert!(
+        inspect_travel(&world, pet)["blocked"]
+            .as_str()
+            .unwrap()
+            .contains("native walk unreachable")
+    );
     assert_eq!(point(world.get::<Position>(pet).unwrap()), from);
+    let target = match world.get::<PetMotion>(pet).unwrap() {
+        PetMotion::Chase(target) => *target,
+        _ => unreachable!(),
+    };
+    world.entity_mut(target).insert(Position {
+        x: to.x,
+        y: to.y,
+        z: to.z,
+    });
+    move_one(&mut world, pet, 0.05).unwrap();
+    assert!(world.get::<BlockedWalk>(pet).is_none());
+    assert_ne!(point(world.get::<Position>(pet).unwrap()), from);
 }
 
 #[test]

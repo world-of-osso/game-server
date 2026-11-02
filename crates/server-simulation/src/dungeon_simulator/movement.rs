@@ -9,6 +9,11 @@ mod edge_tests;
 mod reach_tests;
 
 #[derive(Component)]
+struct BlockedWalk {
+    reason: String,
+}
+
+#[derive(Component)]
 struct Travel {
     destination: Vec3,
     legs: std::collections::VecDeque<(Vec3, f32)>,
@@ -124,7 +129,10 @@ pub(super) fn apl_destination(world: &World, unit: Entity) -> Option<Vec3> {
 
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
     let Some(travel) = world.get::<Travel>(unit) else {
-        return serde_json::Value::Null;
+        return world.get::<BlockedWalk>(unit).map_or(
+            serde_json::Value::Null,
+            |blocked| serde_json::json!({"blocked": blocked.reason}),
+        );
     };
     serde_json::json!({
         "destination": travel.destination.to_array(),
@@ -259,6 +267,22 @@ fn handle_unreachable_movement(
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
+    if (world.get::<MoveIntent>(unit).is_none()
+        && world.get::<crate::creature_ai::FollowOwner>(unit).is_some())
+        || matches!(
+            world.get::<crate::creature_ai::PetMotion>(unit),
+            Some(crate::creature_ai::PetMotion::Chase(_))
+        )
+    {
+        let reason = format!("{error}; from={from:?} to={to:?}");
+        if world.get::<BlockedWalk>(unit).is_none() {
+            eprintln!("NATIVE_WALK_BLOCKED actor={unit:?} {reason}");
+        }
+        world.entity_mut(unit).insert(BlockedWalk { reason });
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
     Err(format!(
         "{error}; source={:?} from={from:?} to={to:?} state={:?}",
         world
@@ -317,7 +341,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     world
         .entity_mut(unit)
-        .remove::<crate::creature_ai::CannotReachTarget>();
+        .remove::<(crate::creature_ai::CannotReachTarget, BlockedWalk)>();
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
     let next = advance(from, &mut travel, speed * dt, reach);
