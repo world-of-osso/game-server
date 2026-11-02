@@ -121,6 +121,7 @@ impl Plugin for CombatPlugin {
                 // the kill's `CombatStop` runs.
                 (creature_attack_system, process_attack_messages).before(auto_attack_system),
                 auto_attack_system,
+                advance_stopped_swing_timers.after(auto_attack_system),
                 crate::combat_refs::expire_combat_refs_system,
                 corpse_decay_system.before(respawn_system),
                 respawn_system,
@@ -147,6 +148,24 @@ impl AutoAttack {
             off_hand_timer: Duration::ZERO,
             victim,
         }
+    }
+}
+
+/// TC Unit.cpp:468–473,5982–6012: attack timers belong to the unit and
+/// continue while AttackStop has removed its victim.
+#[derive(Component)]
+struct StoppedSwingTimers {
+    main: Duration,
+    off: Duration,
+}
+
+fn advance_stopped_swing_timers(
+    time: Res<Time>,
+    mut timers: Query<&mut StoppedSwingTimers, Without<AutoAttack>>,
+) {
+    for mut timer in &mut timers {
+        timer.main = timer.main.saturating_sub(time.delta());
+        timer.off = timer.off.saturating_sub(time.delta());
     }
 }
 
@@ -490,18 +509,28 @@ pub fn start_attack(
     if current.is_some_and(|current| current.victim == victim) {
         return;
     }
-    let auto_attack = current.map_or(AutoAttack::new(victim), |current| AutoAttack {
-        victim,
-        ..*current
+    let current = current.cloned();
+    commands.queue(move |world: &mut World| {
+        let saved = world.entity_mut(attacker).take::<StoppedSwingTimers>();
+        let auto_attack = match (current, saved) {
+            (Some(current), _) => AutoAttack { victim, ..current },
+            (None, Some(saved)) => AutoAttack {
+                victim,
+                timer: saved.main,
+                off_hand_timer: saved.off,
+            },
+            (None, None) => AutoAttack::new(victim),
+        };
+        world.entity_mut(attacker).insert(auto_attack);
+        announce_attack_start(world, attacker, victim);
     });
-    commands.entity(attacker).insert(auto_attack);
-    commands.queue(move |world: &mut World| announce_attack_start(world, attacker, victim));
 }
 
 /// Restore an authorized attack and its native timers immediately, then publish
 /// the same AttackStart as the queued entry point. Validation remains with callers.
 pub fn start_attack_now(world: &mut World, attacker: Entity, auto_attack: AutoAttack) {
     let victim = auto_attack.victim;
+    world.entity_mut(attacker).remove::<StoppedSwingTimers>();
     world.entity_mut(attacker).insert(auto_attack);
     announce_attack_start(world, attacker, victim);
 }
@@ -523,6 +552,10 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
     let Some(auto_attack) = entity.take::<AutoAttack>() else {
         return;
     };
+    entity.insert(StoppedSwingTimers {
+        main: auto_attack.timer,
+        off: auto_attack.off_hand_timer,
+    });
     send_attack_stopped(world, unit, Some(auto_attack.victim));
 }
 
@@ -584,11 +617,15 @@ pub(crate) fn rescale_creature_swing_timers(
     if previous == current {
         return;
     }
+    let multiplier = current / previous;
     if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
-        let multiplier = current / previous;
         attack.timer = melee::attack_timer_duration(attack.timer.as_secs_f32() * multiplier);
         attack.off_hand_timer =
             melee::attack_timer_duration(attack.off_hand_timer.as_secs_f32() * multiplier);
+    }
+    if let Some(mut timers) = world.get_mut::<StoppedSwingTimers>(unit) {
+        timers.main = melee::attack_timer_duration(timers.main.as_secs_f32() * multiplier);
+        timers.off = melee::attack_timer_duration(timers.off.as_secs_f32() * multiplier);
     }
 }
 
