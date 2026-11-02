@@ -14,6 +14,7 @@ const HIGH_TIDE: u32 = 288675;
 const COMBUSTION: u32 = 190319;
 const PYROMANIAC: u32 = 1254512;
 const BEACON: u32 = 53563;
+const BEACON_OF_VIRTUE: u32 = 200025;
 const BEACON_PERCENT: u32 = 53651;
 const BEACON_HEAL: u32 = 53652;
 
@@ -137,9 +138,9 @@ pub(in crate::spell_cast) fn heal_beacon(
         .iter(world)
         .filter(|(unit, auras)| {
             *unit != healed
-                && auras
-                    .iter()
-                    .any(|aura| aura.spell_id == BEACON && aura.caster == ctx.caster)
+                && auras.iter().any(|aura| {
+                    matches!(aura.spell_id, BEACON | BEACON_OF_VIRTUE) && aura.caster == ctx.caster
+                })
         })
         .map(|(unit, _)| unit)
         .collect();
