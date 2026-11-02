@@ -269,6 +269,7 @@ mod havoc_channels_tests;
 mod havoc_embers_refresh_tests;
 mod havoc_fact_tests;
 mod havoc_hunt_demon_hide_tests;
+mod havoc_hunt_follower_tests;
 mod havoc_immolation_fury_tests;
 mod havoc_tests;
 mod health_aura_state_tests;
@@ -347,6 +348,8 @@ mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
 mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
+#[cfg(test)]
+mod outlaw_flickering_steel_follower_tests;
 mod outlaw_gravedigger_tests;
 mod outlaw_main_gauche_tests;
 mod outlaw_opportunity_tests;
