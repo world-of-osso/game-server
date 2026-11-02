@@ -40,6 +40,7 @@ pub fn global_wmo(data: &[u8]) -> Result<Option<Placement>> {
                 position: entry.position,
                 rotation: entry.rotation,
                 scale: entry.scale,
+                flags: entry.flags,
                 doodad_set: entry.doodad_set,
             })
         })
@@ -83,6 +84,8 @@ pub struct Placement {
     pub position: [f32; 3],
     pub rotation: [f32; 3],
     pub scale: f32,
+    /// The source MDDF or MODF placement flags.
+    pub flags: u16,
     /// WMO doodad set (MODF only).
     pub doodad_set: u16,
 }
@@ -116,6 +119,7 @@ pub fn placements(data: &[u8]) -> Result<(Vec<Placement>, Vec<Placement>)> {
                 position: entry.position,
                 rotation: entry.rotation,
                 scale: entry.scale,
+                flags: entry.flags,
                 doodad_set: 0,
             })
         })
@@ -130,6 +134,7 @@ pub fn placements(data: &[u8]) -> Result<(Vec<Placement>, Vec<Placement>)> {
                 position: entry.position,
                 rotation: entry.rotation,
                 scale: entry.scale,
+                flags: entry.flags,
                 doodad_set: entry.doodad_set,
             })
         })
@@ -185,4 +190,27 @@ fn widen_low_res_holes(low: u16) -> u64 {
     (0..64)
         .filter(|bit| low >> ((bit / 8 / 2) * 4 + (bit % 8) / 2) & 1 != 0)
         .fold(0, |mask, bit| mask | 1 << bit)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn placements_preserve_modf_flags() {
+        let mut entry = [0u8; 64];
+        entry[0..4].copy_from_slice(&6_871_907u32.to_le_bytes());
+        entry[4..8].copy_from_slice(&63_094_801u32.to_le_bytes());
+        entry[56..58].copy_from_slice(&0x000cu16.to_le_bytes());
+        entry[62..64].copy_from_slice(&1024u16.to_le_bytes());
+        let mut adt = Vec::new();
+        adt.extend_from_slice(b"FDOM");
+        adt.extend_from_slice(&(entry.len() as u32).to_le_bytes());
+        adt.extend_from_slice(&entry);
+        let (_, wmos) = placements(&adt).unwrap();
+        assert_eq!(wmos.len(), 1);
+        assert_eq!(wmos[0].unique_id, 63_094_801);
+        assert_eq!(wmos[0].flags, 0x000c);
+        assert_eq!(wmos[0].model, ModelRef::Fdid(6_871_907));
+    }
 }
