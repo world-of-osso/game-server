@@ -143,9 +143,27 @@ fn petalwing_requires_both_bosses_and_follower_starts_its_own_flight() {
     assert_eq!(flight.points, expected);
     assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), from);
     h.app.add_systems(FixedUpdate, crate::taxi::fly_taxis);
-    h.advance(120);
+    for _ in 0..400 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::taxi::TaxiFlight>(follower)
+            .is_none()
+        {
+            break;
+        }
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<crate::taxi::TaxiFlight>(follower)
+            .is_none()
+    );
     let after = h.app.world().get::<Position>(follower).unwrap();
-    assert!(Vec3::new(after.x, after.y, after.z).distance(Vec3::new(from.x, from.y, from.z)) > 5.0);
+    assert!(
+        Vec3::new(after.x, after.y, after.z).distance(destination) < 0.1,
+        "follower must reach the path's final node: {after:?}"
+    );
 }
 
 #[test]
