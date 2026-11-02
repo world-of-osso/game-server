@@ -110,8 +110,7 @@ fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> boo
     {
         return false;
     }
-    let store = world.resource::<crate::spell_info::SpellStore>();
-    let candidates: Vec<_> = members
+    let casters: Vec<_> = members
         .iter()
         .copied()
         .filter(|&unit| {
@@ -120,6 +119,13 @@ fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> boo
                 && world.get::<InMap>(unit) == Some(&map)
                 && crate::spell_cast::targets::is_alive(world, unit)
         })
+        .collect();
+    if casters.is_empty() {
+        return false;
+    }
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let candidates: Vec<_> = casters
+        .into_iter()
         .flat_map(|unit| {
             world
                 .get::<crate::class_progression::KnownSpells>(unit)
