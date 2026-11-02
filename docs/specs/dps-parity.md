@@ -995,7 +995,9 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 - Ordinary Shadow Void Torrent263165 starts native459314 Rift at the actual hostile primary. Its hasted native driver clock skips its first travelling tick; subsequent ticks emit native447448 to enemies inside half the native447445 radius. Channel end restores full native remaining driver duration without resetting tick phase. The APL tracking fact reads459314 (SimC76f8118 `sc_priest_shadow.cpp1491–1514`, `sc_priest.cpp1606–1683/3543–3562`).
 - With selected448403, ordinary Madness during Rift adds up to five growth stacks. Each stack increases Rift and final burst damage by the native talent effect and increases Rift radius by half a yard under pinned SimC bug behavior. Actual Rift removal emits native448405 once at its stored source primary before removing Voidheart; its native-radius selection splits damage among actual recipients and retains Shadow Weaving (SimC76f8118 `sc_priest.cpp1557–1595/1640–1650/3564–3571`, `sc_priest_shadow.cpp1329–1331`).
 - With selected449880, actual Rift applies native449887 as an aura, not a helpful cast. Channel end restores its full native duration without resetting phase; actual Rift expiry removes it, then selected1266856 earns the native Touch tail. Native school/ability bonus values remain unchanged (SimC76f8118 `sc_priest.cpp1683–1685/3540–3541/3571–3576`, `sc_priest_shadow.cpp1491–1501`).
+- Selected Voidwraith451234 summons native451235 when Rift ends. Its owner-level guardian inherits half the owner's spell power, attacks the selected target with native451435 at the hasted cadence, scales damage with target health and the owner's Shadow Weaving, and grants native262485 Insanity on each hit (native70448 descriptions; SimC76f8118 `sc_priest.cpp3579–3581`, `sc_priest_pets.cpp466–471/500–558`).
 - With selected450405, actual Rift earns native450404, whose native3328092→450983 override and1602 charge-category modifier enable ordinary Void Blast without learned-spell grants. Literal Mind Blast is unavailable during actual Rift/Torrent; Rift expiry removes its override and restores Mind Blast (SimC76f8118 `sc_priest.cpp344–413`).
+- Overwhelming Shadows1266883 applies its Void Torrent effect to Shadow and its Mind Blast effect to Discipline, not both effects to either specialization (native70448 conditional description; SimC76f8118 `sc_priest.cpp3477–3478`).
 
 - Each real Void Blast execute with selected449912 extends the current owned Rift by native effect2 seconds, at most effect1 times per actual Rift instance. Extend an already-earned Voidheart alongside it without resetting pending tick phase; do not carry extension counts into a later Rift (SimC76f8118 `sc_priest.cpp387–394/4358–4391`).
 - Selected Screams of the Void375767 makes every successful Madness execute, including Slam's background Madness, apply393919. Reapplication extends by the native fresh duration; native flat-label talent modifiers supply its period amount (SimC76f8118 `sc_priest_shadow.cpp1324–1327/2203–2204`).
@@ -1007,6 +1009,39 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 - Each real apparition-producing cohort with own VT advances selected373273's native373276 counter once, not once per missile. At the native cap, summon actual373277/189988 Thing From Beyond; selected1264096 also emits the pinned parentless extra cohort, which cannot Shadeburst. Keep the counter capped through that nested cohort before clearing it. Thing retains native creature type15 and casts native373279 using full owner SP, actual owner target DoTs for mastery, native secondary fraction and reduced-AoE cap (SimC76f8118 `sc_priest_shadow.cpp2206–2214/2628–2632/2850–2858`, `sc_priest_pets.cpp75–86/1061–1134`).
 - Selected Auspicious Spirits155271 advances its own threshold on each actual apparition impact, using the number of projectiles in that source cohort; each crossing grants native405746 Insanity. Native projectile E1 must not grant it unconditionally (SimC76f8118 `sc_priest_shadow.cpp415–424/2373–2386`).
 - Selected Idol of C'Thun377349 rolls its native RPPM on Mind Flay and Void Torrent ticks. An earned summon uses native377355 Tendril for one or two enemies or377357 Lasher for three or more, channels its native damage spell and grants native377358 Insanity on each actual tick (SimC76f8118 `sc_priest_shadow.cpp63–68/1463–1468`, `sc_priest.cpp4220–4230/4263–4282`, `sc_priest_pets.cpp903–1056`).
+- Selected Void Apparitions III1264107 makes Tentacle Slam activate one random Idol effect, including C'Thun without377349. INFERRED: use SimC76f8118's shuffled 17-card distribution of 3 Shadowfiend, 4 Horrific Vision, 1 Vision of N'Zoth, 2 Thing From Beyond and 7 C'Thun; native70448 describes the effects and chance but not their weights (`sc_priest_shadow.cpp1874–1876/2315–2320/2878–2920`).
+
+#### Shadow follower measurement
+
+On implementation `9c5b92f1e6ac04a73c6c4159b20c9386ab65761d`, binary SHA-256 `a4662aac51cb3fccc34936203d7a54e0147530023f48e378241b9efe6d2cabb5`, using the derived v3 world snapshot with C'Thun and Voidwraith guardian templates (SHA-256 `92634456aeca465aa746e33104b963ff1f319406f404dddd90a483113ef379f4`), pinned SimC76f8118, disabled temporary enchants, and ten matched seeds (70448, 1–9) at 120 s:
+
+| Level | Native DPS | SimC DPS | Paired mean delta | 95% t interval |
+| --- | ---: | ---: | ---: | ---: |
+| 70 | 6,083.15 | 6,128.52 | −0.60% | [−4.10%, +2.91%] |
+| 90 | 34,238.02 | 35,558.88 | −3.68% | [−5.34%, −2.02%] |
+
+Both point estimates are within ±5%; the L90 interval crosses −5%, so equivalence within that margin is not established. These results supersede the pre-correction L90 +4.82% estimate.
+
+#### L90 Void Apparitions investigation
+
+On the ten matched 120 s seeds, before the Overwhelming Shadows correction, native versus SimC total procs and direct DPS were: Shadowfiend 11/17 and 5.8/73.1; Horrific Vision 61/93 and 254.0/393.8; Vision of N'Zoth 46/64 and 790.9/1115.1; Thing From Beyond 32/38 and 798.4/1037.8; C'Thun Tendril 33/38 and 254.5/376.2. Vision and Thing totals include ordinary idol activations as well as random-idol activations. The counts are aggregate, not matched outcomes. Ten traced replays reproduced the original native damage and cast receipts exactly.
+
+The five largest positive and negative mean per-spell native-minus-SimC DPS deltas, before and after Void Apparitions but before correcting Overwhelming Shadows, were:
+
+| Spell | Before VA | After VA |
+| --- | ---: | ---: |
+| Void Blast450983 | +3884.7 | +4041.7 |
+| Mind Blast8092 | +1369.3 | +1169.8 |
+| Entropic Rift447448/447445 | +361.0 | +331.6 |
+| Shadow Word: Death32379 | +109.5 | +80.6 |
+| Vampiric Touch34914 | −6.7 | +77.0 |
+| Shadow Word: Madness335467 | −1069.9 | −638.1 |
+| Void Apparition1264176 | −713.8 | −600.3 |
+| Mind Flay15407 | −393.5 | −408.2 |
+| Shadeburst1231479 | −741.8 | −406.4 |
+| Vision of N'Zoth1243106 | −471.3 | −324.2 |
+
+The Rift row groups native447448 with SimC447445. The largest native increases after VA were Thing From Beyond +518.5, Madness +431.8, Shadeburst +335.4, Shadowy Apparition +312.9 and C'Thun +254.5 DPS; all remained below their SimC counterparts. The pre-existing Void Blast excess included the non-Shadow Overwhelming Shadows modifier, as confirmed by the native conditional description and a native damage-factor trace.
 
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
 
@@ -1512,10 +1547,10 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 ### Shadow Idol of N'Zoth
 
-Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foreground Pain and Vampiric Touch executions, and Mind Flay and Void Torrent ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
+Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foreground Pain and Vampiric Touch executions, and Mind Flay and Void Torrent ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. With selected Void Apparitions I1264096, either threshold also produces an apparition cohort at its target (native70448 description; SimC76f8118 `sc_priest_shadow.cpp2769–2799`). The target counter rolls over at the native upper threshold.
 ### Shadow Insidious Ire
 
-Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.
+Selected Insidious Ire earns its temporary damage bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The bonus applies to Mind Blast and its Void Blast replacement as well as Mind Flay, Void Torrent and Void Volley. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect (native70448 description; SimC76f8118 `sc_priest.cpp218–242`).
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
 ### Unholy Putrefy summons

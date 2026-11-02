@@ -556,6 +556,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "counts existing owned Shadow Word Pain",
     ),
     (
+        "shadow_void_apparitions.rs",
+        "remove_fiend_buff",
+        "query",
+        1,
+        "checks other owned fiends before removing the owner's haste buff",
+    ),
+    (
         "soulcoiler_ritual.rs",
         "select_recipient",
         "query",

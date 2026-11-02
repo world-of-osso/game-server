@@ -20,6 +20,8 @@ const DECK_GRANT_SECONDS: f64 =
 mod azure_positioning_tests;
 #[path = "azure_throughput_tests.rs"]
 mod azure_throughput_tests;
+#[path = "keystone_cohesion_tests.rs"]
+mod keystone_cohesion_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 
@@ -3995,6 +3997,20 @@ impl Run {
                     .world_mut()
                     .entity_mut(self.party.owner)
                     .insert(server_follower_apl::DirectedOwnerTarget(target));
+            }
+        } else if fighting {
+            if self.wait_for_tank()? {
+                // The engaged tank cannot come back; bring the leader to it.
+                let tank = *self
+                    .app
+                    .world()
+                    .get::<Position>(self.party.tank)
+                    .ok_or("cohesion tank absent")?;
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(MoveIntent(Vec3::new(tank.x, tank.y, tank.z)));
+                return Ok(());
             }
         } else if self.wait_for_tank()? {
             return Ok(());

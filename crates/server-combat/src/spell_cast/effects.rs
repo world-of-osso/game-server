@@ -367,7 +367,7 @@ pub fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f32) {
         if summon.spell_id == 451235
             && world
                 .get::<shared::components::ActiveSpec>(summon.owner)
-                .is_some_and(|spec| spec.0 == 256)
+                .is_some_and(|spec| matches!(spec.0, 256 | 258))
         {
             let stats = world
                 .get::<CharacterStats>(summon.owner)

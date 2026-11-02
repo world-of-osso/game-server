@@ -466,6 +466,7 @@ register_modules! {
     shadow_rift: (2585, "modules/shadow_rift.rs"),
     shadow_screams: (2583, "modules/shadow_screams.rs"),
     shadow_torment: (2584, "modules/shadow_torment.rs"),
+    shadow_void_apparitions: (2901, "modules/shadow_void_apparitions.rs"),
     shadow_void_blast: (2586, "modules/shadow_void_blast.rs"),
     shadow_voidheart: (2589, "modules/shadow_voidheart.rs"),
     shadow_volley: (2580, "modules/shadow_volley.rs"),

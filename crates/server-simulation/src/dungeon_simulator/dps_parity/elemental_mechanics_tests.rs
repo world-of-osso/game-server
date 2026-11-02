@@ -55,6 +55,73 @@ pub(super) fn own_aura(run: &Run, spell: u32) -> Option<&crate::auras::AuraInsta
         .find(|aura| aura.spell_id == spell && aura.caster == run.actor)
 }
 
+#[test]
+#[ignore = "requires private262 native DB/profile"]
+fn distant_flame_shock_tick_still_grants_lava_surge() {
+    let _seed = crate::random::seed_scope(818181);
+    let mut run = fixture();
+    assert!(own_aura(&run, 77756).is_some(), "native Lava Surge passive");
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        188389,
+        Some(run.targets[0]),
+        1,
+    ));
+    let target = run.targets[0];
+    let at = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(run.actor)
+        .unwrap()
+        .x = at.x + 300.0;
+    run.app
+        .world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    for _ in 0..100 {
+        run.app.update();
+        let ticked = run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.spell_id == Some(188389)
+                    && event.kind == CombatLogKind::Damage
+                    && event.periodic
+            });
+        if ticked {
+            let actor_pos = run
+                .app
+                .world()
+                .get::<shared::components::Position>(run.actor)
+                .unwrap();
+            let target_pos = run
+                .app
+                .world()
+                .get::<shared::components::Position>(target)
+                .unwrap();
+            assert!((actor_pos.x - target_pos.x).abs() > 100.0);
+            assert!(
+                own_aura(&run, 77762).is_some(),
+                "TC's infinite normalized count guarantees a proc at nonzero chance: actor={actor_pos:?} target={target_pos:?} passive={:?}",
+                own_aura(&run, 77756)
+            );
+            return;
+        }
+    }
+    panic!("the distant Flame Shock did not produce a real periodic tick");
+}
+
 fn flame_shock_hits(imbued: bool) -> [i32; 2] {
     let _seed = crate::random::seed_scope(818181);
     let mut run = fixture();

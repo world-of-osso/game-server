@@ -1149,11 +1149,9 @@ fn auto_attack_unit(
         // SimC76f8118 pet.cpp217–220: read live owner crit, not template base5%.
         priest_fiend_owner_damage: params.guardians.get(attacker_entity).ok().and_then(
             |(summon, _, _)| {
-                if !params
-                    .active_specs
-                    .get(summon.owner)
-                    .is_ok_and(|spec| spec.0 == 256)
-                {
+                if !params.active_specs.get(summon.owner).is_ok_and(|spec| {
+                    spec.0 == 256 || (spec.0 == 258 && summon.spell_id == 1280172)
+                }) {
                     return None;
                 }
                 let share = match summon.spell_id {
