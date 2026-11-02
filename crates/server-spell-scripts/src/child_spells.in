@@ -644,3 +644,9 @@ D	devourer_void_ray.rs	finish_ray	launch_triggered_spell	&spell	1	1213649,121459
 D	devourer_void_ray.rs	finish_ray	load_triggered_spell	child	1	1213649,1214595
 D	devourer_voidfall.rs	update	launch_triggered_spell	&damage	1	1256305,1256619
 D	devourer_voidfall.rs	update	load_triggered_spell	impact.spell	1	1256305,1256619
+D	discipline_atonement.rs	fiend_mana_on_landed_melee	cast_triggered_with_effect0_amount	spell	1	123051,343727
+D	druid_balance_of_all_things.rs	on_eclipse	cast_triggered_with_overrides	buff	1	394049,394050
+D	druid_eclipse.rs	apply_eclipse	cast_triggered_with_overrides	spell	1	48517,48518
+D	druid_fluid_form.rs	shift	cast_triggered	form	1	768,5487
+D	druid_fury_of_elune.rs	update_fields	launch_triggered_spell_with_primary	&spell	1	211545,394111
+D	druid_fury_of_elune.rs	update_fields	load_triggered_spell	damage	1	211545,394111
