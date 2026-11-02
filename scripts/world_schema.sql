@@ -1,3 +1,15 @@
+DROP TABLE IF EXISTS content_inferred_summon_spell;
+CREATE TABLE content_inferred_summon_spell (
+  map INTEGER NOT NULL,
+  difficulty INTEGER NOT NULL,
+  entry INTEGER NOT NULL,
+  spell INTEGER NOT NULL,
+  provenance TEXT NOT NULL CHECK (provenance = 'INFERRED_WCL'),
+  reports TEXT NOT NULL,
+  retirement_condition TEXT NOT NULL,
+  PRIMARY KEY (map, difficulty, entry, spell)
+);
+
 DROP TABLE IF EXISTS content_inferred_creature_ability_sample;
 DROP TABLE IF EXISTS content_inferred_creature_ability;
 CREATE TABLE content_inferred_creature_ability (

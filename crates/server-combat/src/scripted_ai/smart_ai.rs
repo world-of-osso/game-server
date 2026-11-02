@@ -225,6 +225,10 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
         scripts.len(),
         lists.len()
     );
+    let mut inferred_events = inferred::load(&conn)?;
+    for (key, events) in inferred::load_summon_events(&conn)? {
+        inferred_events.entry(key).or_default().extend(events);
+    }
     Ok(SmartScripts(
         scripts
             .into_iter()
@@ -236,7 +240,7 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
             .collect(),
         paths::load_waypoint_paths(&conn)?,
         summons::load_summon_groups(&conn)?,
-        inferred::load(&conn)?
+        inferred_events
             .into_iter()
             .map(|(key, events)| (key, Arc::new(events)))
             .collect(),

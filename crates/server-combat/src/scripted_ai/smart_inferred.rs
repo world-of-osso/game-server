@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use rusqlite::{Connection, OptionalExtension};
 
-use super::{ACTION_CAST, EVENT_UPDATE_IC, SmartEvent};
+use super::{ACTION_CAST, EVENT_JUST_SUMMONED, EVENT_UPDATE_IC, SmartEvent, TARGET_SELF};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TimingSamples {
@@ -90,6 +90,46 @@ pub(crate) fn load(
                 target_position: [0.0; 4],
                 inferred_timing: Some(samples),
             });
+    }
+    Ok(result)
+}
+
+/// TC SmartAI::IsSummonedBy dispatches SMART_EVENT_JUST_SUMMONED. These
+/// WCL-observed self casts occur once on that hook, without a combat timer.
+pub(crate) fn load_summon_events(
+    conn: &Connection,
+) -> rusqlite::Result<HashMap<(u32, u32, u32), Vec<SmartEvent>>> {
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='content_inferred_summon_spell')",
+        [],
+        |row| row.get(0),
+    )?;
+    if !exists {
+        return Ok(HashMap::new());
+    }
+    let mut statement = conn.prepare(
+        "SELECT s.map,s.difficulty,s.entry,s.spell FROM content_inferred_summon_spell s JOIN content_creature_template t ON t.entry=s.entry WHERE t.AIName='' AND t.ScriptName='' ORDER BY s.map,s.difficulty,s.entry,s.spell",
+    )?;
+    let mut rows = statement.query([])?;
+    let mut result: HashMap<(u32, u32, u32), Vec<SmartEvent>> = HashMap::new();
+    while let Some(row) = rows.next()? {
+        let key = (row.get(0)?, row.get(1)?, row.get(2)?);
+        let spell: u32 = row.get(3)?;
+        result.entry(key).or_default().push(SmartEvent {
+            id: spell,
+            link: 0,
+            event_type: EVENT_JUST_SUMMONED,
+            phase_mask: 0,
+            chance: 100,
+            flags: 0,
+            event_params: [0; 5],
+            action_type: ACTION_CAST,
+            action_params: [spell, 0, 0, 0, 0, 0, 0],
+            target_type: TARGET_SELF,
+            target_params: [0; 4],
+            target_position: [0.0; 4],
+            inferred_timing: None,
+        });
     }
     Ok(result)
 }
