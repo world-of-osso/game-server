@@ -342,6 +342,77 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
 }
 
 #[test]
+#[ignore = "full Den keystone; requires Mythic graph and native navigation"]
+fn den_each_node_first_party_damage_is_owner_controlled() {
+    use shared::protocol::CombatLogKind;
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let members: std::collections::HashSet<_> = run.members().collect();
+    let targets: std::collections::HashSet<_> =
+        run.actors.values().map(|unit| unit.to_bits()).collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    run.last_progress = run.now();
+    for _ in 0..MAX_TICKS {
+        if run.finished() {
+            assert!(!seen.is_empty(), "the run must observe party damage");
+            return;
+        }
+        run.control().unwrap();
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+        let world = run.app.world();
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[cursor..] {
+            if event.kind != CombatLogKind::Damage || event.amount <= 0 {
+                continue;
+            }
+            let Some(target) = event.target.filter(|target| targets.contains(target)) else {
+                continue;
+            };
+            let Some(source) = event.source.and_then(Entity::try_from_bits) else {
+                continue;
+            };
+            let controller = world
+                .get::<shared::components::UnitSummonedBy>(source)
+                .and_then(|summon| Entity::try_from_bits(summon.0))
+                .unwrap_or(source);
+            if members.contains(&controller) && seen.insert(target) {
+                assert_eq!(
+                    controller, owner,
+                    "a follower initiated damage on graph node {target}: {event:?}"
+                );
+            }
+        }
+        cursor = events.len();
+        assert!(
+            !run.stalled(),
+            "Den stalled before every-node proof: {}",
+            run.report.detail
+        );
+    }
+    panic!("Den exceeded the simulator bound before every-node proof");
+}
+
+#[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
     let mut run = spawn_run_mode(
