@@ -241,6 +241,18 @@ fn keystone_owner_opens_first_hostile_pack() {
 }
 
 #[test]
+fn chain_approach_stops_where_the_walk_route_leaves_tank_range() {
+    let clipped = clip_route_to_tank_range(
+        Vec3::ZERO,
+        Vec3::ZERO,
+        10.0,
+        [Vec3::new(3.0, 0.0, 4.0), Vec3::new(20.0, 0.0, 4.0)],
+    );
+    assert!((clipped.length() - 10.0).abs() < 0.001);
+    assert!((clipped.z - 4.0).abs() < 0.001);
+}
+
+#[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
     use shared::protocol::CombatLogKind;
@@ -257,6 +269,11 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
     let owner = run.party.owner;
     let group = run.chain_groups.as_ref().unwrap()[0].clone();
     assert!(group.len() >= 2);
+    // Keep the first native target alive long enough to exercise a chained tag.
+    let first_target = run.actors[&group[0]];
+    let mut health = run.app.world_mut().get_mut::<Health>(first_target).unwrap();
+    health.max = 20_000_000.0;
+    health.current = health.max;
     let actor_packs: std::collections::HashMap<_, _> = run
         .graph
         .packs
@@ -271,6 +288,7 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
         })
         .collect();
     let mut first_hits = std::collections::HashMap::new();
+    let mut proved_chain = false;
     let mut cursor = run
         .app
         .world()
@@ -278,7 +296,29 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
         .0
         .len();
     for _ in 0..10000 {
+        let previous_pulls = run.report.pulls.len();
         run.control().unwrap();
+        if run.report.pulls[previous_pulls..]
+            .iter()
+            .any(|pull| pull.decision == "Owner chain pull")
+        {
+            assert!(
+                run.tank_holds_most_enemies(),
+                "tank must hold most live enemies before a chain tag"
+            );
+        }
+        if run
+            .app
+            .world()
+            .get::<server_follower_apl::DirectedOwnerTarget>(owner)
+            .is_some()
+            && crate::followers::simulator::has_uncleared_fight(run.app.world(), owner)
+        {
+            assert!(
+                run.tank_holds_most_enemies(),
+                "the pending tag must only execute while the tank holds most of the current pull"
+            );
+        }
         run.app.update();
         let mut key = run.keystone.take().unwrap();
         key.update(run.app.world_mut()).unwrap();
@@ -289,6 +329,41 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[cursor..] {
+            if event.target == Some(run.actors[&group[1]].to_bits()) {
+                let owner_action =
+                    event
+                        .source
+                        .and_then(Entity::try_from_bits)
+                        .is_some_and(|source| {
+                            source == owner
+                                || run
+                                    .app
+                                    .world()
+                                    .get::<shared::components::UnitSummonedBy>(source)
+                                    .is_some_and(|summon| summon.0 == owner.to_bits())
+                        });
+                let hostile_action = event.kind == CombatLogKind::CastSuccess
+                    || (event.kind == CombatLogKind::Damage && event.amount > 0);
+                let attempted_chain = run
+                    .report
+                    .pulls
+                    .iter()
+                    .any(|pull| pull.pack == group[1] && pull.decision == "Owner chain pull");
+                if owner_action && hostile_action && attempted_chain && !proved_chain {
+                    let other_live =
+                        crate::followers::simulator::active_enemies(run.app.world(), owner)
+                            .into_iter()
+                            .filter(|unit| Some(unit.to_bits()) != event.target)
+                            .collect::<Vec<_>>();
+                    assert!(
+                        !other_live.is_empty(),
+                        "an earlier enemy must still be alive at the chain tag: time={}, first_health={:?}",
+                        run.now(),
+                        run.app.world().get::<Health>(first_target)
+                    );
+                    proved_chain = true;
+                }
+            }
             if event.kind != CombatLogKind::Damage || event.amount <= 0 {
                 continue;
             }
@@ -316,29 +391,37 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
                     "pack {pack} must be tagged by the owner or an owner-controlled unit: event={event:?} source={source_detail:?}"
                 );
                 entry.insert(event.target.unwrap());
-                if first_hits.len() >= 2
-                    && run
-                        .report
-                        .pulls
-                        .iter()
-                        .any(|pull| pull.pack == pack && pull.decision == "Owner chain pull")
-                {
-                    assert!(
-                        first_hits.values().any(|target| {
-                            Entity::try_from_bits(*target).is_some_and(|unit| {
-                                unit.to_bits() != event.target.unwrap()
-                                    && crate::spell_cast::targets::is_alive(run.app.world(), unit)
-                            })
-                        }),
-                        "the first pack must still be alive when the owner tags the next"
-                    );
-                    return;
-                }
             }
         }
         cursor = events.len();
+        if crate::followers::simulator::has_uncleared_fight(run.app.world(), owner) {
+            let owner_position = run.app.world().get::<Position>(owner).unwrap();
+            let tank_position = run.app.world().get::<Position>(run.party.tank).unwrap();
+            let distance = Vec3::new(owner_position.x, owner_position.y, owner_position.z)
+                .distance(Vec3::new(tank_position.x, tank_position.y, tank_position.z));
+            let (_, range) =
+                crate::followers::simulator::opening_spell(run.app.world(), run.party.tank);
+            assert!(
+                distance <= range + 0.001,
+                "chain owner separated {distance:.2} yd from the tank's {range:.2} yd range"
+            );
+        }
+        if proved_chain && !run.chain_returning && run.chain_tag_target.is_none() {
+            let world = run.app.world();
+            let owner_position = world.get::<Position>(owner).unwrap();
+            let tank_position = world.get::<Position>(run.party.tank).unwrap();
+            let distance = Vec3::new(owner_position.x, owner_position.y, owner_position.z)
+                .distance(Vec3::new(tank_position.x, tank_position.y, tank_position.z));
+            let reach =
+                crate::scripted_ai::model_reach::melee_range(world, owner, run.party.tank).unwrap();
+            assert!(
+                distance <= reach,
+                "owner must return to the tank after tagging the next pack"
+            );
+            return;
+        }
     }
-    panic!("owner did not tag two live chain packs");
+    panic!("owner did not tag and return from a second live chain pack");
 }
 
 #[test]
@@ -2909,6 +2992,9 @@ struct Run {
     keystone: Option<super::keystone::State>,
     chain_groups: Option<Vec<Vec<u32>>>,
     chain_group: usize,
+    chain_tag_target: Option<Entity>,
+    chain_tag_cursor: usize,
+    chain_returning: bool,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -3385,6 +3471,9 @@ fn spawn_run_mode_record(
         keystone,
         chain_groups,
         chain_group: 0,
+        chain_tag_target: None,
+        chain_tag_cursor: 0,
+        chain_returning: false,
         report: Report {
             seed,
             status: "running".into(),
@@ -3403,6 +3492,32 @@ fn spawn_run_mode_record(
             terminal_units: serde_json::Value::Null,
         },
     })
+}
+
+fn clip_route_to_tank_range(
+    origin: Vec3,
+    tank: Vec3,
+    range: f32,
+    points: impl IntoIterator<Item = Vec3>,
+) -> Vec3 {
+    let mut previous = origin;
+    for point in points {
+        if point.distance_squared(tank) > range * range {
+            let offset = previous - tank;
+            let leg = point - previous;
+            let a = leg.length_squared();
+            if a == 0.0 {
+                return previous;
+            }
+            let b = 2.0 * offset.dot(leg);
+            let c = offset.length_squared() - range * range;
+            let distance =
+                ((-b + (b * b - 4.0 * a * c).max(0.0).sqrt()) / (2.0 * a)).clamp(0.0, 1.0);
+            return previous.lerp(point, distance);
+        }
+        previous = point;
+    }
+    previous
 }
 
 impl Run {
@@ -3781,6 +3896,11 @@ impl Run {
             return Ok(());
         }
         if !crate::spell_cast::targets::is_alive(self.app.world(), self.party.owner) {
+            self.chain_tag_target = None;
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<server_follower_apl::DirectedOwnerTarget>();
             if server::test_support::player_death_recorded(self.app.world(), self.party.owner) {
                 server::test_support::release_dungeon_player(
                     self.app.world_mut(),
@@ -3803,7 +3923,29 @@ impl Run {
         }
         let fighting =
             crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner);
-        if !(self.chain_groups.is_some() && fighting) && self.wait_for_tank()? {
+        if self.chain_groups.is_some() && self.return_after_chain_tag()? {
+            return Ok(());
+        }
+        if self.chain_groups.is_some() && fighting {
+            self.next_cohesion_check = 0.0;
+            if self.wait_for_tank()? {
+                self.move_owner_to_tank()?;
+                return Ok(());
+            }
+            if !self.tank_holds_most_enemies() {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<(MoveIntent, server_follower_apl::DirectedOwnerTarget)>();
+                return Ok(());
+            }
+            if let Some(target) = self.chain_tag_target {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .insert(server_follower_apl::DirectedOwnerTarget(target));
+            }
+        } else if self.wait_for_tank()? {
             return Ok(());
         }
         if self.chain_groups.is_none() && fighting {
@@ -3813,7 +3955,9 @@ impl Run {
                 .remove::<MoveIntent>();
             return Ok(());
         }
-        let next = if self.chain_groups.is_some() {
+        let next = if let Some(target) = self.chain_tag_target {
+            self.current_pack.map(|pack| (pack, target))
+        } else if self.chain_groups.is_some() {
             self.next_chain_pack(fighting)
         } else {
             self.next_pack()
@@ -3943,10 +4087,15 @@ impl Run {
         }
         self.waiting_objective = None;
         if from.distance(to) > range {
+            let destination = if self.chain_groups.is_some() && fighting {
+                self.limit_chain_approach(approach)?
+            } else {
+                approach
+            };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(approach));
+                .insert(MoveIntent(destination));
             return Ok(());
         }
         self.app
@@ -3968,9 +4117,22 @@ impl Run {
             })
             .map(|spawn| spawn.guid)
             .collect();
-        if self.chain_groups.is_some() && fighting {
+        if self.chain_groups.is_some() && (fighting || self.chain_tag_target.is_some()) {
             self.record_pull(pack_id, "Owner chain pull".into());
-            return self.drive_owner_opening(target);
+            if self.chain_tag_target != Some(target) {
+                self.chain_tag_cursor = self
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0
+                    .len();
+                self.chain_tag_target = Some(target);
+            }
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(server_follower_apl::DirectedOwnerTarget(target));
+            return Ok(());
         }
         let (allowed, decision) = match crate::followers::simulator::pull(
             self.app.world_mut(),
@@ -4010,6 +4172,122 @@ impl Run {
                 "native tank opening failed on pack{pack_id}: {error:?}"
             )),
         }
+    }
+
+    fn tank_holds_most_enemies(&self) -> bool {
+        let world = self.app.world();
+        let enemies: Vec<_> = crate::followers::simulator::active_enemies(world, self.party.owner)
+            .into_iter()
+            .filter(|enemy| Some(*enemy) != self.chain_tag_target)
+            .collect();
+        let held = enemies
+            .iter()
+            .filter(|&&enemy| {
+                world
+                    .get::<crate::networking::CombatTarget>(enemy)
+                    .and_then(|target| target.0)
+                    == Some(self.party.tank)
+            })
+            .count();
+        !enemies.is_empty() && held * 2 > enemies.len()
+    }
+
+    fn move_owner_to_tank(&mut self) -> Result<(), String> {
+        let position = *self
+            .app
+            .world()
+            .get::<Position>(self.party.tank)
+            .ok_or("chain tank has no position")?;
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .insert(MoveIntent(Vec3::new(position.x, position.y, position.z)));
+        Ok(())
+    }
+
+    fn return_after_chain_tag(&mut self) -> Result<bool, String> {
+        let world = self.app.world();
+        if self.chain_tag_target.is_some_and(|target| {
+            !crate::spell_cast::targets::is_alive(world, target)
+                || world
+                    .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                    .0[self.chain_tag_cursor..]
+                    .iter()
+                    .any(|event| {
+                        let owner_action = event
+                            .source
+                            .and_then(Entity::try_from_bits)
+                            .is_some_and(|source| {
+                                source == self.party.owner
+                                    || world
+                                        .get::<shared::components::UnitSummonedBy>(source)
+                                        .is_some_and(|owner| owner.0 == self.party.owner.to_bits())
+                            });
+                        let hostile_action = event.kind
+                            == shared::protocol::CombatLogKind::CastSuccess
+                            || (event.kind == shared::protocol::CombatLogKind::Damage
+                                && event.amount > 0);
+                        event.target == Some(target.to_bits()) && owner_action && hostile_action
+                    })
+        }) {
+            self.chain_tag_target = None;
+            self.chain_returning = true;
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<server_follower_apl::DirectedOwnerTarget>();
+        }
+        if !self.chain_returning {
+            return Ok(false);
+        }
+        let world = self.app.world();
+        if !crate::spell_cast::targets::is_alive(world, self.party.tank) {
+            self.chain_returning = false;
+            return Ok(false);
+        }
+        let owner = world
+            .get::<Position>(self.party.owner)
+            .ok_or("chain owner has no position")?;
+        let tank = world
+            .get::<Position>(self.party.tank)
+            .ok_or("chain tank has no position")?;
+        let distance =
+            Vec3::new(owner.x, owner.y, owner.z).distance(Vec3::new(tank.x, tank.y, tank.z));
+        let reach =
+            crate::scripted_ai::model_reach::melee_range(world, self.party.owner, self.party.tank)
+                .ok_or("chain reunion lacks native melee reach")?;
+        if distance <= reach {
+            self.chain_returning = false;
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(false);
+        }
+        self.move_owner_to_tank()?;
+        Ok(true)
+    }
+
+    fn limit_chain_approach(&self, destination: Vec3) -> Result<Vec3, String> {
+        let world = self.app.world();
+        let owner = world
+            .get::<Position>(self.party.owner)
+            .ok_or("chain owner has no position")?;
+        let tank = world
+            .get::<Position>(self.party.tank)
+            .ok_or("chain tank has no position")?;
+        let origin = Vec3::new(owner.x, owner.y, owner.z);
+        let center = Vec3::new(tank.x, tank.y, tank.z);
+        let (_, range) = crate::followers::simulator::opening_spell(world, self.party.tank);
+        let route = world
+            .resource::<super::Space>()
+            .walk_legs(origin, destination)?;
+        Ok(clip_route_to_tank_range(
+            origin,
+            center,
+            range,
+            route.into_iter().map(|(point, _)| point),
+        ))
     }
 
     fn drive_owner_opening(&mut self, target: Entity) -> Result<(), String> {
