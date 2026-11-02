@@ -585,6 +585,88 @@ pub(crate) fn queue_character_selection(
 }
 
 #[test]
+fn selecting_another_accounts_character_does_not_retire_its_live_player() {
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 11, "Owner", 1, 1).unwrap();
+    let (mut app, connection) =
+        queue_character_selection(db, 11, character, crate::maps::MapStore::continents());
+    let player = finish_character_selection(&mut app, connection);
+    let attacker = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(999)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 12 },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(attacker)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter {
+            character_id: character,
+        });
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(app.world().get_entity(player).is_ok());
+    assert_eq!(
+        app.world()
+            .get::<crate::networking::PlayerLink>(connection)
+            .unwrap()
+            .0,
+        player
+    );
+    assert!(
+        app.world()
+            .get::<crate::networking::PlayerLink>(attacker)
+            .is_none()
+    );
+}
+
+#[test]
+fn reauthenticated_character_reuses_live_entity_before_old_transport_disconnects() {
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 11, "Racing", 1, 1).unwrap();
+    let (mut app, old_connection) =
+        queue_character_selection(db, 11, character, crate::maps::MapStore::continents());
+    let player = finish_character_selection(&mut app, old_connection);
+    crate::networking::install_disconnect_fixture(&mut app);
+    app.world_mut()
+        .entity_mut(old_connection)
+        .insert(lightyear::prelude::server::ClientOf);
+    crate::auth::queue_forced_disconnect(
+        &mut app.world_mut().commands(),
+        old_connection,
+        "replaced",
+        false,
+    );
+    app.world_mut().flush();
+    let replacement = reconnect_character(&mut app, 11, character);
+    assert_eq!(replacement, player);
+    assert!(
+        app.world()
+            .get::<crate::networking::PlayerLink>(old_connection)
+            .is_none()
+    );
+    app.world_mut()
+        .entity_mut(old_connection)
+        .remove::<Connected>();
+    app.world_mut().flush();
+    app.update();
+    assert!(app.world().get_entity(player).is_ok());
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_none()
+    );
+}
+
+#[test]
 fn disconnected_character_reconnects_to_live_entity_during_grace() {
     let db = test_db();
     let (character_id, _) = persistence::create_character(&db.db, 11, "Grace", 1, 1).unwrap();
