@@ -29,7 +29,8 @@ pub fn resolve_actor_action(
     let known = world
         .get::<KnownSpells>(actor)
         .ok_or_else(|| CastFailure::Unsupported("native action actor lacks KnownSpells".into()))?;
-    let resolved = resolve_aliases(world, actor, requested)?;
+    let aliases = Aliases::of(world, actor);
+    let resolved = aliases.resolve(requested)?;
     let spell = world
         .resource::<SpellStore>()
         .get(resolved)
@@ -44,7 +45,7 @@ pub fn resolve_actor_action(
         return Ok(resolved);
     }
     for parent in known.iter() {
-        if resolve_aliases(world, actor, parent)? == resolved {
+        if aliases.resolve(parent)? == resolved {
             return Ok(resolved);
         }
     }
@@ -83,28 +84,49 @@ pub fn resolve_optional_actor_action(
     }
 }
 
-fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, CastFailure> {
-    let mut current = requested;
-    let mut visited = Vec::new();
-    loop {
-        if visited.contains(&current) {
-            return Err(CastFailure::Unsupported(format!(
-                "native action alias cycle for spell{requested}"
-            )));
+/// The actor's alias inputs, read once to resolve many actions.
+struct Aliases<'w> {
+    world: &'w World,
+    actor: Entity,
+    traits: Option<&'w TraitLoadout>,
+    known: Option<&'w KnownSpells>,
+    overrides: crate::auras::overrides::ActionOverrides<'w>,
+}
+
+impl<'w> Aliases<'w> {
+    fn of(world: &'w World, actor: Entity) -> Self {
+        Self {
+            world,
+            actor,
+            traits: world.get::<TraitLoadout>(actor),
+            known: world.get::<KnownSpells>(actor),
+            overrides: crate::auras::overrides::ActionOverrides::of(world, actor),
         }
-        visited.push(current);
-        let selected = selected_trait_action(world, actor, current);
-        let projected = project_known_parent(world, actor, selected);
-        let resolved = crate::auras::overrides::resolve_spell(world, actor, projected);
-        if resolved == current {
-            return Ok(resolved);
+    }
+
+    fn resolve(&self, requested: u32) -> Result<u32, CastFailure> {
+        let mut current = requested;
+        let mut visited = Vec::new();
+        loop {
+            if visited.contains(&current) {
+                return Err(CastFailure::Unsupported(format!(
+                    "native action alias cycle for spell{requested}"
+                )));
+            }
+            visited.push(current);
+            let selected = selected_trait_action(self.traits, current);
+            let projected = project_known_parent(self.world, self.actor, self.known, selected);
+            let resolved = self.overrides.resolve(projected);
+            if resolved == current {
+                return Ok(resolved);
+            }
+            current = resolved;
         }
-        current = resolved;
     }
 }
 
-fn selected_trait_action(world: &World, actor: Entity, requested: u32) -> u32 {
-    let Some(traits) = world.get::<TraitLoadout>(actor) else {
+fn selected_trait_action(traits: Option<&TraitLoadout>, requested: u32) -> u32 {
+    let Some(traits) = traits else {
         return requested;
     };
     traits
@@ -119,8 +141,13 @@ fn selected_trait_action(world: &World, actor: Entity, requested: u32) -> u32 {
 /// Elemental114050's native description names1219480 (sc_shaman.cpp11419).
 /// Demoniac426115 enables264178 (sc_warlock_init.cpp249–250). Neither pair
 /// has an operative TraitDefinition visible/override link in native70448.
-fn project_known_parent(world: &World, actor: Entity, requested: u32) -> u32 {
-    let Some(known) = world.get::<KnownSpells>(actor) else {
+fn project_known_parent(
+    world: &World,
+    actor: Entity,
+    known: Option<&KnownSpells>,
+    requested: u32,
+) -> u32 {
+    let Some(known) = known else {
         return requested;
     };
     if !known.contains(requested) {

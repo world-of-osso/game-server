@@ -79,48 +79,54 @@ pub(crate) fn grants_spell(world: &World, caster: Entity, spell_id: u32) -> bool
         .is_some_and(|spells| spell_id != 0 && spells.contains(&spell_id))
 }
 
-type ActionOverride<'a> = (&'a AuraInstance, &'a AuraEffectState);
-
-/// The caster's action-bar override effects in aura order, the order
-/// `resolve_with` tries them.
-fn action_overrides(world: &World, caster: Entity) -> Vec<ActionOverride<'_>> {
-    world
-        .get::<ActiveAuras>(caster)
-        .map_or_else(Vec::new, |auras| {
-            auras
-                .iter()
-                .flat_map(|aura| aura.effects.iter().map(move |effect| (aura, effect)))
-                .filter(|(_, effect)| effect.aura_type == OVERRIDE_ACTIONBAR_SPELLS)
-                .collect()
-        })
+/// The caster's action-bar override effects in aura order, the order `resolve`
+/// tries them. Collect once to resolve many spells against the same auras.
+pub(crate) struct ActionOverrides<'w> {
+    world: &'w World,
+    effects: Vec<(&'w AuraInstance, &'w AuraEffectState)>,
 }
 
-fn resolve_with(store: &SpellStore, overrides: &[ActionOverride], spell_id: u32) -> u32 {
-    let mut visited = vec![spell_id];
-    let mut id = spell_id;
-    while let Some(spell) = store.get(id) {
-        let replacement = overrides.iter().find_map(|&(aura, effect)| {
-            let candidate = effect.amount as u32;
-            (affects(aura, effect, spell)
-                && !visited.contains(&candidate)
-                && store.get(candidate).is_some())
-            .then_some(candidate)
-        });
-        let Some(replacement) = replacement else {
-            break;
-        };
-        visited.push(replacement);
-        id = replacement;
+impl<'w> ActionOverrides<'w> {
+    pub(crate) fn of(world: &'w World, caster: Entity) -> Self {
+        let effects = world
+            .get::<ActiveAuras>(caster)
+            .map_or_else(Vec::new, |auras| {
+                auras
+                    .iter()
+                    .flat_map(|aura| aura.effects.iter().map(move |effect| (aura, effect)))
+                    .filter(|(_, effect)| effect.aura_type == OVERRIDE_ACTIONBAR_SPELLS)
+                    .collect()
+            });
+        Self { world, effects }
     }
-    id
+
+    pub(crate) fn resolve(&self, spell_id: u32) -> u32 {
+        if self.effects.is_empty() {
+            return spell_id;
+        }
+        let store = self.world.resource::<SpellStore>();
+        let mut visited = vec![spell_id];
+        let mut id = spell_id;
+        while let Some(spell) = store.get(id) {
+            let replacement = self.effects.iter().find_map(|&(aura, effect)| {
+                let candidate = effect.amount as u32;
+                (affects(aura, effect, spell)
+                    && !visited.contains(&candidate)
+                    && store.get(candidate).is_some())
+                .then_some(candidate)
+            });
+            let Some(replacement) = replacement else {
+                break;
+            };
+            visited.push(replacement);
+            id = replacement;
+        }
+        id
+    }
 }
 
 pub fn resolve_spell(world: &World, caster: Entity, spell_id: u32) -> u32 {
-    let overrides = action_overrides(world, caster);
-    if overrides.is_empty() {
-        return spell_id;
-    }
-    resolve_with(world.resource::<SpellStore>(), &overrides, spell_id)
+    ActionOverrides::of(world, caster).resolve(spell_id)
 }
 
 /// Some spell in `known` resolves to `spell_id` through the caster's overrides.
@@ -130,12 +136,9 @@ pub(crate) fn resolves_known(
     known: &crate::class_progression::KnownSpells,
     spell_id: u32,
 ) -> bool {
-    let overrides = action_overrides(world, caster);
-    if overrides.is_empty() {
+    let overrides = ActionOverrides::of(world, caster);
+    if overrides.effects.is_empty() {
         return known.contains(spell_id);
     }
-    let store = world.resource::<SpellStore>();
-    known
-        .iter()
-        .any(|base| resolve_with(store, &overrides, base) == spell_id)
+    known.iter().any(|base| overrides.resolve(base) == spell_id)
 }
