@@ -4,6 +4,7 @@
 //! trash from kings_rest.cpp.
 //! Intro fly anim tier/hover state, GO state visuals, near-point collision-angle
 //! search and native visuals remain gaps.
+mod council;
 mod gold_follow;
 mod golden_serpent;
 mod gust_slash;
@@ -50,7 +51,7 @@ const ANIMATED_GOLD: u32 = 135406;
 pub(crate) fn is_creature_script(name: &str) -> bool {
     matches!(
         name,
-        ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT | shadow_of_zul::SCRIPT
+        ANIMATED_GOLD_SCRIPT | GOLDEN_SERPENT_SCRIPT | shadow_of_zul::SCRIPT | council::SCRIPT
     ) || temple_trash::is_script(name)
 }
 
@@ -62,6 +63,9 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
     let maps = world.get_resource::<crate::maps::MapStore>()?;
     if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(INSTANCE) {
         return None;
+    }
+    if name == council::SCRIPT {
+        return council::creature_ai(world, actor);
     }
     if name == GOLDEN_SERPENT_SCRIPT {
         return golden_serpent::creature_ai(world, actor);

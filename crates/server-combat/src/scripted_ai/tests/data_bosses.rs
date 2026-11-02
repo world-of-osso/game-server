@@ -59,6 +59,10 @@ mod bromach;
 mod candle_king;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "council_of_tribes.rs"]
+mod council_of_tribes;
+#[path = "council_wipe.rs"]
+mod council_wipe;
 #[path = "crawth.rs"]
 mod crawth;
 #[path = "dailcry.rs"]
