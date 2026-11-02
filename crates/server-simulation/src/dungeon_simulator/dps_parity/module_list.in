@@ -461,6 +461,7 @@ mod shadow_hallucinations_follower_tests;
 mod shadow_horizon_tests;
 mod shadow_haunting_tests;
 mod shadow_insight_tests;
+mod shadow_ire_blast_follower_tests;
 mod shadow_ire_tests;
 mod shadow_link_tests;
 mod shadow_maddening_touch_follower_tests;
