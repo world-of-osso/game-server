@@ -224,13 +224,7 @@ fn temple_avatar_defiler_death_starts_the_next_wave_clock() {
 
 #[test]
 fn temple_avatar_wipe_resets_health_and_rearms_the_encounter() {
-    let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, 8, None);
-    h.app
-        .world_mut()
-        .resource_mut::<MapStore>()
-        .encounter_heal_objectives
-        .insert((1877, 133392), 25.0);
-    crate::scripted_ai::heal_objective::initialize(h.app.world_mut(), avatar);
+    let (mut h, avatar, map) = avatar_with_adds();
     let max = h.health(avatar).max;
     crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
     let spell = h
@@ -250,6 +244,8 @@ fn temple_avatar_wipe_resets_health_and_rearms_the_encounter() {
     };
     crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max * 0.25);
     assert!((h.health(avatar).current - max * 0.5).abs() < 1.0);
+    h.advance(16.0);
+    assert!(h.has_aura(avatar, 1301202));
     h.app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
     h.advance(0.1);
     assert_eq!(
@@ -257,6 +253,10 @@ fn temple_avatar_wipe_resets_health_and_rearms_the_encounter() {
         Some(EncounterState::NotStarted)
     );
     assert!((h.health(avatar).current - max * 0.25).abs() < 1.0);
+    assert!(
+        !h.has_aura(avatar, 1301202),
+        "wipe removes the Defiler's immunity"
+    );
     h.app.world_mut().get_mut::<Health>(player).unwrap().current = 100.0;
     crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
     assert_eq!(

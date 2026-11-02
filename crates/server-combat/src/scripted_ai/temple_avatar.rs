@@ -71,6 +71,15 @@ fn living_party_present(world: &mut World, map: crate::maps::InMap) -> bool {
         })
 }
 
+fn remove_taint(world: &mut World, avatar: Entity) {
+    crate::auras::remove_auras(
+        world,
+        avatar,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| matches!(aura.spell_id, DEFILE_CHANNEL | DEFILE_IMMUNITY),
+    );
+}
+
 struct Avatar {
     boss: BossAi,
     summons: SummonList,
@@ -102,6 +111,7 @@ impl CreatureAi for Avatar {
             != Some(EncounterState::InProgress)
         {
             if self.started {
+                remove_taint(ctx.world, ctx.me);
                 self.summons.despawn_all(ctx.world);
                 self.started = false;
                 self.boss.events.reset();
@@ -117,6 +127,7 @@ impl CreatureAi for Avatar {
                 self.boss.boss_id,
                 EncounterState::Fail,
             );
+            remove_taint(ctx.world, ctx.me);
             self.summons.despawn_all(ctx.world);
             self.boss.events.reset();
             self.started = false;
