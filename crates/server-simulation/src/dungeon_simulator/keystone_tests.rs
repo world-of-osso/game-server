@@ -153,6 +153,12 @@ fn same_seed_headless_keystones_produce_identical_records() {
         .expect("serialize keystone record")
     };
     let first = run();
+    assert_eq!(first["schedule_epoch"], schedule_epoch().unwrap());
+    let second = run();
+    assert_eq!(
+        first["affixes"], second["affixes"],
+        "same inputs changed affixes"
+    );
     assert!(
         first["outcome"]["forces"]
             .as_u64()
@@ -161,9 +167,27 @@ fn same_seed_headless_keystones_produce_identical_records() {
         first["outcome"]
     );
     assert!(
-        first == run(),
+        first == second,
         "same seed and inputs produced different records"
     );
+}
+
+#[test]
+#[ignore = "explicit native headless keystone inputs; two 200 s runs of one seed"]
+fn same_seed_and_epoch_select_identical_affixes() {
+    const TICKS: usize = 4_000;
+    let options = Options::from_environment().expect("explicit keystone runner inputs");
+    let seed: u64 = std::env::var("KEYSTONE_SIMULATOR_SEED")
+        .expect("keystone seed")
+        .parse()
+        .expect("numeric keystone seed");
+    let run = || super::super::campaign::run_keystone_ticks(seed, options, TICKS);
+    let first = run();
+    let second = run();
+    assert_eq!(first.schedule_epoch, Some(schedule_epoch().unwrap()));
+    assert_eq!(first.schedule_epoch, second.schedule_epoch);
+    assert!(first.affixes.is_some(), "run must activate the keystone");
+    assert_eq!(first.affixes, second.affixes);
 }
 
 #[test]
