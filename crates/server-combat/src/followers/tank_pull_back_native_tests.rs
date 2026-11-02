@@ -15,7 +15,7 @@ fn at(point: Vec3) -> Position {
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
-fn windrunner_tank_pulls_back_without_pulling_hatchling() {
+fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
     run_native_pull_back(false, false);
 }
 
@@ -27,7 +27,7 @@ fn windrunner_production_ai_pulls_back_without_pulling_hatchling() {
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
-fn windrunner_production_party_fights_and_heals_during_pull_back() {
+fn windrunner_production_party_follows_and_heals_during_pull_back() {
     run_native_pull_back(true, true);
 }
 
@@ -215,8 +215,11 @@ fn run_native_pull_back(production: bool, full_party: bool) {
     let party = vec![owner, tank];
     let minimum_retreat = if production { 1.0 } else { 20.0 };
     let mut farthest = 0.0_f32;
+    let mut waited = false;
     let mut acquired = false;
-    let mut healed_while_fighting = false;
+    let mut healed_while_waiting = false;
+    let mut followed = vec![false; companions.len()];
+    let mut moved = vec![false; companions.len()];
     for _ in 0..1200 {
         if production {
             super::update_ai(h.app.world_mut());
@@ -225,20 +228,39 @@ fn run_native_pull_back(production: bool, full_party: bool) {
             pull_history::sample_all(h.app.world_mut());
             tank_pull_back::update(h.app.world_mut(), tank, &follower, &party, 40.0);
         }
+        waited |= tank_pull_back::party_should_wait(h.app.world(), owner);
         acquired |= h
             .app
             .world()
             .get::<crate::networking::CombatTarget>(target)
             .is_some_and(|victim| victim.0 == Some(tank));
+        let waiting_now = tank_pull_back::party_should_wait(h.app.world(), owner);
+        let before_events = h.inbox.log.len();
         h.advance(1);
-        if acquired {
+        if full_party && waiting_now {
+            healed_while_waiting |= h.health(owner) > initial_health;
+            for (index, &unit) in companions.iter().enumerate() {
+                followed[index] |= h
+                    .app
+                    .world()
+                    .get::<crate::creature_ai::FollowOwner>(unit)
+                    .is_some_and(|follow| follow.owner == tank);
+                moved[index] |= crate::spell_cast::targets::position(h.app.world(), unit)
+                    .is_some_and(|position| position.distance(start) > 1.0);
+            }
             assert!(
-                !tank_pull_back::party_should_wait(h.app.world(), owner),
-                "the party must not wait after the tank acquires the enemy"
+                h.inbox.log[before_events..].iter().all(|event| {
+                    !matches!(event.kind, shared::protocol::CombatLogKind::Damage)
+                        || !companions
+                            .iter()
+                            .any(|unit| event.source == Some(unit.to_bits()))
+                }),
+                "non-tank follower damaged an enemy while waiting"
             );
-        }
-        if full_party {
-            healed_while_fighting |= h.health(owner) > initial_health;
+            assert!(
+                crate::combat_refs::has_active_reference_to(h.app.world(), owner, target),
+                "waiting must preserve owner combat reference"
+            );
         }
         let point = crate::spell_cast::targets::position(h.app.world(), tank).unwrap();
         farthest = farthest.max(start.distance(point));
@@ -251,7 +273,7 @@ fn run_native_pull_back(production: bool, full_party: bool) {
                     hatchling,
                     member
                 )),
-            "unrelated hatchling acquired a party member: tank={:?} target={:?} hatchling={:?} acquired={acquired} target_victim={:?} hatchling_victim={:?} recent_events={:?}",
+            "unrelated hatchling acquired a party member: tank={:?} target={:?} hatchling={:?} waited={waited} acquired={acquired} target_victim={:?} hatchling_victim={:?} recent_events={:?}",
             crate::spell_cast::targets::position(h.app.world(), tank),
             crate::spell_cast::targets::position(h.app.world(), target),
             crate::spell_cast::targets::position(h.app.world(), hatchling),
@@ -265,7 +287,11 @@ fn run_native_pull_back(production: bool, full_party: bool) {
                 .and_then(|victim| victim.0),
             h.inbox.log.iter().rev().take(12).collect::<Vec<_>>()
         );
-        if acquired && farthest > minimum_retreat && !tank_pull_back::active(h.app.world(), tank) {
+        if waited
+            && acquired
+            && farthest > minimum_retreat
+            && !tank_pull_back::party_should_wait(h.app.world(), owner)
+        {
             break;
         }
     }
@@ -274,8 +300,17 @@ fn run_native_pull_back(production: bool, full_party: bool) {
         farthest > minimum_retreat,
         "tank must retreat on real ground: start={start:?}, end={end:?}"
     );
+    assert!(waited, "party must wait for the pull-back");
     if full_party {
-        assert!(healed_while_fighting, "healer must heal during the fight");
+        assert!(healed_while_waiting, "healer must heal while waiting");
+        assert!(
+            followed.iter().all(|seen| *seen),
+            "both companions must follow the tank: {followed:?}"
+        );
+        assert!(
+            moved.iter().all(|seen| *seen),
+            "both companions must move during pull-back: {moved:?}"
+        );
     }
     assert!(acquired, "tank must acquire the intended Groundskeeper");
     if production {
@@ -286,7 +321,7 @@ fn run_native_pull_back(production: bool, full_party: bool) {
     }
     assert!(
         !tank_pull_back::party_should_wait(h.app.world(), owner),
-        "the engaged party must not wait for pull-back positioning"
+        "tank must wait for the acquired pack to arrive before releasing the party"
     );
     assert!(h.app.world().get::<Health>(hatchling).unwrap().current > 0.0);
 }
