@@ -114,6 +114,61 @@ pub(crate) fn update_test_releases(world: &mut World) {
 }
 
 #[cfg(test)]
+pub(crate) fn spawn_normal_test_party(
+    world: &mut World,
+    owner: Entity,
+    dungeon_id: u32,
+) -> Result<Vec<Entity>, String> {
+    let dungeon = world
+        .resource::<FollowerCatalog>()
+        .dungeons
+        .get(&dungeon_id)
+        .cloned()
+        .ok_or("test dungeon unavailable")?;
+    let level = world
+        .get::<shared::components::Level>(owner)
+        .ok_or("test owner level unavailable")?
+        .0;
+    let spec = world
+        .get::<shared::components::ActiveSpec>(owner)
+        .ok_or("test owner spec unavailable")?
+        .0;
+    let role = GroupRole::Dps;
+    let seed = 1;
+    let class_profiles =
+        super::class_profiles::select_party_profiles(world, role, spec, level, seed)?;
+    let profiles = class_profiles
+        .iter()
+        .enumerate()
+        .map(|(slot, profile)| super::class_spawn::profile_for(profile, slot))
+        .collect::<Result<Vec<_>, _>>()?;
+    let run = FollowerRun {
+        dungeon,
+        profiles,
+        class_profiles,
+        seed,
+        gear: super::class_spawn::GearSource::Journal,
+        keystone: None,
+        members: Vec::new(),
+        copy: None,
+        previous_difficulty: 1,
+        origin: WorldLocation {
+            map_id: 0,
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        },
+        player_role: role,
+    };
+    world.entity_mut(owner).insert(run.clone());
+    spawn_party(world, owner, &run)?;
+    Ok(world
+        .get::<FollowerRun>(owner)
+        .expect("spawned party")
+        .members
+        .clone())
+}
+
+#[cfg(test)]
 pub(crate) fn spawn_keystone_test_party(
     world: &mut World,
     owner: Entity,
