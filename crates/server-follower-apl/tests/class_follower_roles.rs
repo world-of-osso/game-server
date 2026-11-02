@@ -261,6 +261,23 @@ fn follower_healer_casts_on_nearby_heal_objective() {
         ))
         .id();
     assert!(server_follower_apl::healing_party(world, actor).contains(&avatar));
+    world.get_mut::<Position>(avatar).unwrap().x += 100.0;
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "objectives outside the native spell range are not selected"
+    );
+    world.entity_mut(avatar).insert((
+        position,
+        server_combat::maps::InMap {
+            instance_id: map.instance_id + 1,
+            ..map
+        },
+    ));
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "another instance copy is not selected"
+    );
+    world.entity_mut(avatar).insert(map);
     server_combat::auras::apply_aura(
         world,
         &server_combat::auras::AuraApplication {
