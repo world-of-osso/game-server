@@ -543,6 +543,12 @@ pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
 }
 
+/// Maximum native hostile action range of the headless class leader.
+pub fn leader_attack_range(world: &World, owner: Entity) -> Option<f32> {
+    let leader = ai::acting_follower(world, owner)?;
+    super::target_reach::attack_range(world, owner, &leader)
+}
+
 /// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id =

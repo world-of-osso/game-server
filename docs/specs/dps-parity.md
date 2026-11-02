@@ -231,7 +231,8 @@ Selected391881 grants native391882 only from an actual owned Rip tick. Its chanc
 - Landed primary Ferocious Bite applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
 - Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`).
 - Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`).
-- [ ] Ravage441585/441591 consumption and damage are unqualified; Dreadful Wound's Tiger's Fury refresh retention is unqualified.
+- Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, and apply excess Energy only to the primary hit (`sc_druid.cpp4358–4401,4418–4450`).
+- [ ] Dreadful Wound's Tiger's Fury refresh retention is unqualified.
 
 ### Shared merged critical feedback
 

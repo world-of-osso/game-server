@@ -11,6 +11,7 @@ use crate::{
 };
 
 const FEROCIOUS_BITE: u32 = 22_568;
+const RAVAGE: u32 = 441_591;
 const INCARNATION: u32 = 102_543;
 const SABER_JAWS: u32 = 421_432;
 const BURN_EFFECT: u8 = 1;
@@ -61,7 +62,7 @@ pub(super) fn snapshot<'s>(
     caster: Entity,
     source: &'s SpellInfo,
 ) -> Cow<'s, SpellInfo> {
-    if source.id != FEROCIOUS_BITE {
+    if !matches!(source.id, FEROCIOUS_BITE | RAVAGE) {
         return Cow::Borrowed(source);
     }
     let mut spell = source.clone();
@@ -73,7 +74,19 @@ pub(super) fn snapshot<'s>(
     } else {
         read_aura_multiplier(world, caster, SABER_JAWS, 0)
     };
-    spell.cast_damage_multiplier = Some(1.0 + excess * saber);
+    let multiplier = 1.0 + excess * saber;
+    // SimC76f8118 sc_druid.cpp4418–4421: excess Energy affects only Ravage's primary hit.
+    if source.id == RAVAGE {
+        let splash = spell
+            .effects
+            .iter_mut()
+            .find(|effect| effect.index == 2)
+            .expect("native Ravage requires its splash effect");
+        splash.base_points /= multiplier;
+        splash.bonus_coefficient /= multiplier;
+        splash.bonus_coefficient_from_ap /= multiplier;
+    }
+    spell.cast_damage_multiplier = Some(multiplier);
     Cow::Owned(spell)
 }
 
@@ -100,7 +113,7 @@ fn read_extra_fraction(world: &World, caster: Entity, source: &SpellInfo) -> f32
 /// SimC76f8118 sc_druid.cpp4374–4398 passes this fraction (not1+Saber
 /// damage effectiveness) to Unseen attacks. Reading cannot spend or grant Energy.
 pub fn read_extra_energy_modifier(world: &World, caster: Entity, spell: &SpellInfo) -> Option<f32> {
-    if spell.id != FEROCIOUS_BITE {
+    if !matches!(spell.id, FEROCIOUS_BITE | RAVAGE) {
         return None;
     }
     let effectiveness = spell.cast_damage_multiplier?;
@@ -124,7 +137,7 @@ pub(super) fn burn_limit(
     effect_index: u8,
     amount: f32,
 ) -> f32 {
-    if spell.id == FEROCIOUS_BITE && effect_index == BURN_EFFECT {
+    if matches!(spell.id, FEROCIOUS_BITE | RAVAGE) && effect_index == BURN_EFFECT {
         if is_free_spender(spell) {
             return 0.0;
         }
