@@ -4,16 +4,11 @@ use crate::auras::ActiveAuras;
 use crate::spell_cast::powers::PowerPools;
 use shared::components::{Health, PowerType};
 
-fn cooldown_ms(app: &App, actor: Entity, action: u32) -> u64 {
-    let world = app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(action)
-        .unwrap();
-    world
-        .get::<crate::spell_cast::SpellHistory>(actor)
-        .unwrap()
-        .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+fn recharge_deadline(app: &App, actor: Entity) -> f64 {
+    let history = app.world().get::<crate::spell_cast::SpellHistory>(actor).unwrap();
+    let (used, deadline) = crate::spell_cast::test_harness::charge_recovery(history, 2270);
+    assert_eq!(used, 1, "Bladestorm consumes its charge");
+    deadline.unwrap()
 }
 
 #[test]
@@ -69,16 +64,26 @@ fn follower_arms_sudden_death_execute_reduces_bladestorm() {
         .get_mut::<crate::spell_cast::SpellHistory>(actor)
         .unwrap()
         .clear_fixture_precombat_gcd();
-    let before = cooldown_ms(&app, actor, spin);
-    assert!(before > 0, "the follower's actual Bladestorm started its cooldown");
+    let before = recharge_deadline(&app, actor);
     let execute =
         crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 163201).unwrap();
     crate::spell_cast::creature_cast(app.world_mut(), actor, execute, Some(target), false)
         .unwrap();
     let seconds = crate::spell_cast::scripts::script_effect_value(app.world(), actor, 444780, 0);
-    assert_eq!(
-        before - cooldown_ms(&app, actor, spin),
-        (seconds * f32::from(executioner) * 1000.0) as u64,
-        "the follower's SD Execute reduces its live Bladestorm per Executioner stack"
-    );
+    let reduced = before - recharge_deadline(&app, actor);
+    assert!((reduced - f64::from(seconds) * f64::from(executioner)).abs() < 0.001);
+    // Wait until the reduced charge is ready, but not the original 90s deadline.
+    for _ in 0..1300 {
+        if crate::spell_cast::history_now(app.world()) >= before - reduced {
+            break;
+        }
+        app.update();
+    }
+    assert!(crate::spell_cast::history_now(app.world()) < before);
+    app.world_mut()
+        .get_mut::<crate::spell_cast::SpellHistory>(actor)
+        .unwrap()
+        .clear_fixture_precombat_gcd();
+    crate::spell_cast::creature_cast(app.world_mut(), actor, spin, Some(actor), false)
+        .expect("reduced Bladestorm can be recast before its original deadline");
 }
