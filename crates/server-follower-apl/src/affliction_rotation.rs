@@ -2,13 +2,16 @@
 pub mod bindings;
 pub mod facts;
 use crate::literal_rotation::{
-    Driver, default_pet::ConfiguredPet, equipment::Equipment, execution::Prepared,
+    Driver, PrecombatPoll,
+    default_pet::ConfiguredPet,
+    equipment::Equipment,
+    execution::{Execution, Prepared},
 };
 use crate::simc_apl_native::{Bindings, Encounter};
 use bevy::prelude::*;
 use serde_json::Value;
 use server::followers::parity_profile::Profile;
-use server::simc_apl::Program;
+use server::simc_apl::{Action, Program};
 
 pub struct Rotation {
     pub driver: Driver,
@@ -65,23 +68,18 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
-        if !precombat {
-            self.advance_channel(world, actor, targets)?;
+        if precombat {
+            return match self.poll_precombat(world, actor, targets)? {
+                PrecombatPoll::Waiting => Ok(true),
+                PrecombatPoll::Finished => Ok(false),
+                PrecombatPoll::Selected { action, execution } => {
+                    self.execute_action(world, actor, action, execution)?;
+                    Ok(true)
+                }
+            };
         }
-        let pet_action = self
-            .pet
-            .as_ref()
-            .map(|pet| pet.read_action(world, actor))
-            .transpose()?
-            .flatten();
-        let prepared = Prepared::read(
-            world,
-            actor,
-            targets,
-            &self.equipment,
-            bindings::execution_actions().chain(pet_action),
-            self.driver.snapshot.is_none(),
-        )?;
+        self.advance_channel(world, actor, targets)?;
+        let prepared = self.read_prepared(world, actor, targets)?;
         let facts = facts::AfflictionFacts::read(
             world,
             actor,
@@ -91,17 +89,70 @@ impl Rotation {
             self.encounter,
             self.previous_action.as_deref(),
         );
-        let list = if precombat { "precombat" } else { "default" };
         let Some((action, execution)) =
             self.driver
-                .select(list, &facts, &prepared, &self.equipment)?
+                .select("default", &facts, &prepared, &self.equipment)?
         else {
             return Ok(false);
         };
+        self.execute_action(world, actor, action, execution)?;
+        Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = facts::AfflictionFacts::read(
+            world,
+            actor,
+            targets,
+            &self.bindings,
+            &self.equipment,
+            self.encounter,
+            self.previous_action.as_deref(),
+        );
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
+    }
+
+    /// Every dispatch records the executed row for `prev` expressions.
+    fn execute_action(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        action: Action,
+        execution: Execution,
+    ) -> Result<(), String> {
         let name = action.name.clone();
         self.driver.execute(world, actor, action, execution)?;
         self.previous_action = Some(name);
-        Ok(true)
+        Ok(())
+    }
+
+    fn read_prepared(
+        &self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<Prepared, String> {
+        let pet_action = self
+            .pet
+            .as_ref()
+            .map(|pet| pet.read_action(world, actor))
+            .transpose()?
+            .flatten();
+        Prepared::read(
+            world,
+            actor,
+            targets,
+            &self.equipment,
+            bindings::execution_actions().chain(pet_action),
+            self.driver.snapshot.is_none(),
+        )
     }
 
     pub fn advance_channel(
@@ -176,22 +227,18 @@ impl crate::follower::SpecRotation for Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+    ) -> Result<PrecombatPoll, String> {
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(
         &mut self,
         world: &mut World,
         actor: Entity,
-        action: server::simc_apl::Action,
-        execution: crate::literal_rotation::execution::Execution,
+        action: Action,
+        execution: Execution,
     ) -> Result<(), String> {
-        self.driver.execute(world, actor, action, execution)
+        self.execute_action(world, actor, action, execution)
     }
 
     fn start_combat_at(&mut self, started_at: f64) {
