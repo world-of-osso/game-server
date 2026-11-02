@@ -1795,6 +1795,40 @@ mod copy_tests {
             Some(false)
         );
         assert!(!crate::death::soulstone::available(h.app.world(), target));
+
+        let soulstone = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(20707)
+            .unwrap()
+            .clone();
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 20707,
+                effect_mask: crate::auras::aura_effect_mask(&soulstone),
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            target,
+            max * 2.0,
+            false,
+            false,
+        );
+        crate::auras::remove_on_death(h.app.world_mut(), target);
+        assert!(crate::death::soulstone::available(h.app.world(), target));
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            0.0,
+            "no combat-res charge remains"
+        );
     }
 
     #[test]
