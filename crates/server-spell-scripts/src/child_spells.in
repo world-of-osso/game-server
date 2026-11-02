@@ -663,3 +663,9 @@ D	shadow_apparitions.rs	launch_apparition	launch_planned_spell	&missile	1	148859
 D	shadow_apparitions.rs	launch_apparition	load_triggered_spell	parent	1	148859,1264175
 D	cast_relationships.rs	grant	try_cast_triggered	spell	1	194594,260242,269651,1253750,1301778
 D	cast_relationships.rs	grant_with_overrides	cast_triggered_with_overrides	spell	1	257622,389020
+D	enhancement/enhancement_spending.rs	grant_for_spending	cast_triggered	proc.cast_spell	1	384352,454015,1262830
+D	enhancement/enhancement_stormblast.rs	execute_flurry	launch_triggered_spell	payload	1	17364,115356
+D	enhancement/enhancement_strikes.rs	after_crash	cast_triggered	buff	1	187878,1252415
+D	enhancement/enhancement_strikes.rs	invoke_thorim	launch_triggered_spell	&payload	1	188196,188443,452201
+D	enhancement/enhancement_tempest_buffs.rs	cast_discharge	launch_triggered_spell	&payload	1	188443,211094
+D	enhancement/enhancement_tempest_buffs.rs	grant	cast_triggered	buff	1	455089,470532
