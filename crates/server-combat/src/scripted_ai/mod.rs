@@ -43,7 +43,7 @@ mod gorek;
 mod granyth;
 mod gulping_goliath;
 mod gutshot;
-pub(crate) mod heal_objective;
+pub mod heal_objective;
 pub(crate) mod health_threshold;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;

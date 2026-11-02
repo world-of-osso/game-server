@@ -260,6 +260,28 @@ fn follower_healer_casts_on_nearby_heal_objective() {
             },
         ))
         .id();
+    assert!(server_follower_apl::healing_party(world, actor).contains(&avatar));
+    server_combat::auras::apply_aura(
+        world,
+        &server_combat::auras::AuraApplication {
+            caster: avatar,
+            target: avatar,
+            spell_id: 1301202,
+            effect_mask: 0b1110,
+            source: server_combat::auras::AuraSource::Cast,
+        },
+    );
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "a healer must not select the Taint-protected Avatar"
+    );
+    server_combat::auras::remove_auras(
+        world,
+        avatar,
+        server_combat::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1301202,
+    );
+    assert!(server_follower_apl::healing_party(world, actor).contains(&avatar));
     pull.fight();
     assert!(
         pull.harness

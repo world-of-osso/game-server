@@ -351,16 +351,22 @@ pub fn healing_party(world: &mut World, actor: Entity) -> Vec<Entity> {
         })
         .map(|(entity, _, _, _)| entity)
         .collect();
-    party.extend(candidates.into_iter().filter(|&target| {
-        server::spell_cast::targets::position(world, target)
-            .is_some_and(|position| position.distance(origin) <= range)
-            && server::spell_cast::targets::relation_matches(
-                world,
-                actor,
-                target,
-                server::spell_cast::targets::Relation::Ally,
-            )
-    }));
+    for target in candidates {
+        let in_range = server::spell_cast::targets::position(world, target)
+            .is_some_and(|position| position.distance(origin) <= range);
+        let friendly = server::spell_cast::targets::relation_matches(
+            world,
+            actor,
+            target,
+            server::spell_cast::targets::Relation::Ally,
+        );
+        if in_range
+            && friendly
+            && server::scripted_ai::heal_objective::accepts_healing(world, target, actor)
+        {
+            party.push(target);
+        }
+    }
     party
 }
 
