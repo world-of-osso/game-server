@@ -1,6 +1,6 @@
 //! Culling Cyclone's Bladestorm damage bonus.
-use bevy::prelude::*;
 use super::combat;
+use bevy::prelude::*;
 use combat::spell_cast::{effects::EffectCtx, script_registry::SpellScriptHook, targets};
 
 pub(super) const HOOKS: &[SpellScriptHook] =

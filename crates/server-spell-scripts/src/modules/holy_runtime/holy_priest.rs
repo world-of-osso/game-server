@@ -177,7 +177,7 @@ struct PietyPool(f32);
 pub(super) fn piety(
     world: &mut World,
     ctx: &combat::spell_cast::effects::EffectCtx,
-    _target: Entity,
+    target: Entity,
     raw: f32,
     effective: f32,
     _critical: bool,
@@ -185,11 +185,20 @@ pub(super) fn piety(
 ) {
     const TALENT: u32 = 1_246_802;
     const HEAL: u32 = 443_126;
-    if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
+    if ctx.spell.id == HEAL
+        || raw <= effective
+        || !has_aura(world, ctx.caster, TALENT)
+        // INFERRED_WCL KWw69CqBnf3Tpk8L f4 a4: Piety pools exclude
+        // overhealing on the Warlock's Demonic Tyrant.
+        || combat::spell_cast::targets::is_non_follower_summon(world, target)
+    {
         return;
     }
-    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
-    let amount = (raw - effective) * percent;
+    // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: four isolated pools yield 15%
+    // (14513->2177, 20233->3035, 103057->15458, 227668->34150).
+    // DB2 70448 says 20%; this is probably a hotfix. Remove the override
+    // when a newer DB2 or hotfix value matches retail.
+    let amount = (raw - effective) * 0.15;
     if let Some(mut pool) = world.get_mut::<PietyPool>(ctx.caster) {
         pool.0 += amount;
     } else {

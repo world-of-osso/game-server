@@ -152,7 +152,8 @@ pub(crate) fn advance_falls(world: &mut World) {
         if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
             queue.mark(unit);
         }
-        if let Some(id) = arrival {
+        if let Some((id, distance)) = arrival {
+            apply_landing_damage(world, unit, distance);
             super::dispatch(world, unit, Hook::MovementInform(MotionType::Effect, id));
         }
     }
@@ -162,7 +163,7 @@ fn update_fall_positions(
     world: &mut World,
     now: std::time::Duration,
     delta_ms: u32,
-) -> Vec<(Entity, Option<u32>)> {
+) -> Vec<(Entity, Option<(u32, f32)>)> {
     let mut updates = Vec::new();
     let mut query =
         world.query_filtered::<(Entity, &mut FallMovement, &mut Position), Without<DeathState>>();
@@ -189,10 +190,56 @@ fn update_fall_positions(
             y: (fall.from.y - fall_elevation(seconds)).max(fall.floor),
             z: fall.from.z + (target.z - fall.from.z) * fraction,
         };
-        updates.push((unit, arrived.then_some(fall.id)));
+        updates.push((unit, arrived.then_some((fall.id, fall.from.y - fall.floor))));
     }
     updates
 }
+
+fn apply_landing_damage(world: &mut World, unit: Entity, distance: f32) {
+    let player = world.get::<shared::components::Player>(unit).is_some();
+    if !player && world.get::<crate::followers::Follower>(unit).is_none() {
+        return;
+    }
+    let feather = world
+        .get::<shared::components::FeatherFall>(unit)
+        .is_some_and(|state| state.0);
+    let auras = crate::networking::FallAuras::from_auras(
+        world.get::<crate::auras::ActiveAuras>(unit),
+        feather,
+    );
+    let Some(previous) = world.get::<shared::components::Health>(unit).copied() else {
+        return;
+    };
+    let damage = previous.max * auras.damage_fraction(distance);
+    let log = crate::death::deal_environmental_damage(
+        unit,
+        shared::protocol::EnvironmentalKind::Falling,
+        &mut world
+            .get_mut::<shared::components::Health>(unit)
+            .expect("health checked"),
+        damage,
+    );
+    if let Some(log) = log {
+        crate::spell_cast::log_event(world, log);
+    }
+    if previous.current > 0.0
+        && world
+            .get::<shared::components::Health>(unit)
+            .expect("health checked")
+            .current
+            <= 0.0
+    {
+        if player {
+            world.write_message(crate::death::PlayerDeathTransition { player: unit });
+        } else {
+            crate::combat::mark_npc_dead_world(world, unit);
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "follower_fall_damage_tests.rs"]
+mod follower_fall_damage_tests;
 
 #[cfg(test)]
 mod tests {

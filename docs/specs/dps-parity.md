@@ -206,6 +206,8 @@ Spec103 captures the native actor before setup and executes all74 pinned76f8118 
 
 Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
 
+- L90 follower, snapshot v3, map2813, 120 seconds, ten matched seeds and temporary enchants disabled, on tested candidate `ee3ea8e199`: native 31,559.9 DPS versus SimC 32,825.3; mean paired difference −3.60% ±5.31 pp (95% t interval). The point estimate meets the ±5% mean gate; the interval extends outside ±5%.
+
 ### Feral Thriving Growth
 
 Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Vines applications retain independent native-duration stack deadlines through the existing asynchronous-stack scheduler, following the explicit source override (`sc_druid.cpp13755–13764`); refreshing a later stack cannot extend an earlier one. Native490-flagged auras retain their existing path. Selected Bursting Growth440120 casts native440122 for every actual expired Vines application and after a landed primary Bite on this caster's ticking Vines (`sc_druid.cpp4295–4307,13755–13821`). Preserve native area recipients and coefficients. Actual Vines periodic damage independently rolls selected Rampancy1270586's native effect0 chance and dispatches440122 at native effect2 effectiveness (`sc_druid.cpp4015–4020,11982–11988`). Other ticks cannot roll it; Bite/expiry relationships remain independent. Twin Sprouts and the greater-than-five-target reduction remain separately unqualified.
@@ -213,6 +215,10 @@ Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 acc
 ### Feral Unseen attacks
 
 An actual landed primary Bite or Ravage with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Selected1263660 makes actual Tiger's Fury5217 grant native1263962 at its native maximum stacks. Each eligible ordinary Cat action consumes one stack through its native ICD and emits a guaranteed Unseen attack using maximum effective combo points and full extra-Energy fraction, without granting or spending either pool (`sc_druid.cpp3745–3749,4879,11313–11316`). Apply this once per cast, not once per AoE recipient or triggered child; Cat Form alone cannot grant the uses. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
+
+### Feral Rip and Tear
+
+Selected391347 makes landed Rip apply native391356. Deposit its native percent of the applied Rip's source-side noncritical tick multiplied by its fractional remaining ticks; distribute it over Tear's native tick count. Do not apply Rip's target debuffs to the deposit or apply caster multipliers a second time (`sc_druid.cpp2888–2948,4640–4647,4707–4720`).
 
 ### Feral Twin Claw
 
@@ -346,6 +352,9 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Outlaw literal fixture
 
+- L70 tree-only follower, snapshot v3, map2515, 120 seconds and temporary enchants disabled: 20 matched seeds averaged 5,496 native DPS versus 5,727 SimC76f8118 DPS; mean paired difference −3.54% ±4.82 percentage points (95% t interval). The point estimate meets ±5%; the interval does not. The reference applies the Dragon-Bone Dice effect overrides described below.
+- Selected Find an Opening1259457 adds its native effect to Opportunity's base extra-strike chance, independently of the Roll the Bones contribution (`sc_rogue.cpp1286–1292`).
+
 - L90 follower measurement on native DB2 70448, snapshot v3, map2813 and 120-second single-target fights: 30 seeds averaged 42,753 DPS versus 44,226 DPS for 999 measured SimC76f8118 iterations. The mean delta is −3.33% ±2.57 percentage points (95% t confidence interval on the native mean only); its lower bound is −5.90%. The reference uses the same race, talents and 16 gear slots, disables temporary enchants, and overrides effect1197527 to25 and effect1197530 to40 for selected Dragon-Bone Dice. Native and SimC RtB state uptimes were respectively 3.17/24.43/42.37/29.50% and 2.01/22.66/47.38/27.41% for states1–4. Native Pistol Shot casts per Opportunity application were 0.969 versus SimC's 0.963.
 - Retail logs with Dragon-Bone Dice selected support the native 55% Opportunity chance while RtB is active: report `6GP7NtzJ8b19Mram` fight11 had 183 extra strikes per 337 casts, `cRm2W9hdrM4D368N` fight14 had 136/260, and `8ndAF49tm6RVPWcJ` fight4 had 162/286. Match each extra strike to a same-target Sinister Strike cast within one second; the pooled 481/883 rate is 54.47% (approximate 95% binomial interval ±3.28 percentage points).
 
@@ -456,6 +465,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars, missile snapshots and periodic aura application/refresh/tick snapshots; an absent or unknown context must not select a substitute. Resolve caster-only targeting from the actual native endpoint after action replacement, not only the requested base action; ground destinations retain their declared targeting. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
 ### Frost literal rotation
+
+- Follower fixed-fight recheck, ten paired seeds at server `602720a971` (binary SHA-256 `be2e8b363e1400f9ff8b972cbe5040219978f1035d895c4f5657b0ccc50c0fd4`): L70 native 3,757.62 vs SimC 3,912.53 DPS, −3.39% ±7.47 pp; L90 native 35,955.30 vs pinned SimC 38,297.01 DPS, −5.98% ±4.24 pp. Neutralizing only Icy Talons effect1160266 in SimC gives L90 37,401.96 DPS, −3.74% ±4.27 pp; L70 is unchanged. Retail log `WoWCombatLog-102526_094013.txt` 11:28:56.175 and 11:28:57.583 shows no stack-based white-damage increase, so native retains the Retail behavior. The unmodified SimC result remains the raw reference; the override is a documented Retail-qualified comparison.
 
 - Hyperpyrexia rolls on actual Frost Strike impacts for either weapon configuration, including the native two-handed damage child325464, and banks the native fraction of damage (`sc_death_knight.cpp`10759–10795).
 
@@ -764,6 +775,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Arms Unhinged Mortal Strike does not cleave or consume Sweeping Strikes; foreground strikes retain Sweeping. Preserve ordinary parent pulses (`sc_warrior.cpp3057–3072,3257–3275,3313–3335`).
 - Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
 
+### Destruction L70 follower parity
+
+- Map2515, 120 seconds, seeds70448 and1–9, temporary enchants disabled: native 4,591.43 DPS versus condition-only SimC 4,661.05; mean paired difference −1.42% ±2.88 percentage points (95% t interval). This measurement used snapshot v3 plus four source-backed class-summon templates: Unstable Tear196280, Shadowy Tear198547, Chaos Tear198555 and Voidwraith224466. The original snapshot v3 was unchanged.
+
 ### Destruction Echo of Sargeras
 
 - Selected Embers1265770 advances source PRD only on real Incinerate29722 (including FnB) and Infernal Bolt434506 hits, using native label-modified chance. Selected1265774 actual Chaos Bolt/Shadowburn hits and ordinary in-combat Rain of Fire execution share its native internal cooldown. Pinned `bugs=true` uses full native Echo payload for spenders (SimC76f8118 actions450–455,4337,4605,4813,5614–5649,6039–6042; init1428–1434).
@@ -827,7 +842,8 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 ### Native Overfiend guardian
 
 - Actual434587 summons217429 with live owner SP1.0 and native repeated434589. Its spell coefficient borrows native116858 effect0 times native Avatar1245089 effect0; guarantee its critical outcome separately from live owner spell-crit scaling and the sourced owner-mastery range (SimC76f8118 pets2358–2407).
-- Actual ordinary Soul Fire execution summons one Overfiend; the native Avatar proc hint is too broad and must not summon on unrelated casts. The separate Dimensional Rift deck producer is not yet qualified. Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
+- Actual ordinary Soul Fire execution summons one Overfiend; the native Avatar proc hint is too broad and must not summon on unrelated casts. Actual creation grants native457578 to the existing owner through `SummonInitialized`, not an unreachable per-unit summon wrapper. Preserve native aura duration/period/raw energize, actor expiry and catalog values (actions4190–4205/init851–855). No synthetic bolts, resource grants or new timer state.
+- Selected Dimensional Rift1280868 rolls accumulated PRD on landed Chaos Bolt and Shadowburn. A shuffled deck selects two each of Shadowy, Unstable and Chaos Tear, with one Overfiend card when Avatar is selected. The actual guardians use their native single attacks and owner SP1.0 (SimC76f8118 actions442–445,4293–4295,4781–4782; init1345–1376; pets2162–2345).
 
 ### Shared Hellcaller Wither counters
 
