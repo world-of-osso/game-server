@@ -1726,6 +1726,109 @@ mod copy_tests {
     }
 
     #[test]
+    fn soulstoned_follower_self_resurrects_after_lethal_damage() {
+        use shared::components::{Health, Position};
+        let position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let map = *h.app.world().get::<InMap>(target).unwrap();
+        let max = h.app.world().get::<Health>(target).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20707, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(crate::auras::has_aura(h.app.world(), target, 20707));
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(5)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            target,
+            max * 2.0,
+            false,
+            false,
+        );
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
+        assert!(
+            crate::death::soulstone::available(h.app.world(), target),
+            "death must retain the Soulstone offer"
+        );
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            (max * 0.2).floor()
+        );
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(
+            crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+            Some(false)
+        );
+        assert!(!crate::death::soulstone::available(h.app.world(), target));
+        assert!(!crate::auras::has_aura(h.app.world(), target, 20707));
+
+        let soulstone = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(20707)
+            .unwrap()
+            .clone();
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 20707,
+                effect_mask: crate::auras::aura_effect_mask(&soulstone),
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<crate::auth::InWorld>();
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::auras::remove_on_death(h.app.world_mut(), target);
+        assert!(crate::death::soulstone::available(h.app.world(), target));
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            0.0,
+            "no combat-res charge remains"
+        );
+    }
+
+    #[test]
     fn class_follower_casts_resurrection_before_release() {
         use shared::components::{Health, Position};
         let owner_position = Position {
