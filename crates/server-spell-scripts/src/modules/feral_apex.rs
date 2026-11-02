@@ -3,12 +3,41 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_info::SpellInfo;
+use shared::components::PowerType;
 
 const TALENT: u32 = 391881;
 const BUFF: u32 = 391882;
 const RIP: u32 = 1079;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistration(register)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::LateAuraRegistration(register),
+    SpellScriptHook::EffectiveResourceValue(apex_combo_points),
+];
+
+// SimC76f8118 sc_druid.cpp4358–4372: Apex finishers use maximum effective
+// combo points without paying them, for their damage and impact effects.
+fn apex_combo_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    power: PowerType,
+    paid: f32,
+) -> f32 {
+    if power == PowerType::ComboPoints
+        && matches!(spell.id, 22568 | 441591)
+        && world.get::<ActiveAuras>(caster).is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|a| a.spell_id == BUFF && a.caster == caster)
+        })
+    {
+        return spell_cast::powers::power_value(world, caster, power)
+            .expect("Apex finisher requires a combo-point pool")
+            .1;
+    }
+    paid
+}
 
 fn register(scripts: &mut AuraScripts) {
     let talent = scripts.0.entry(TALENT).or_default();
