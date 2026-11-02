@@ -13,6 +13,7 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 import json
 
 from content_common import clone_table
+from follower_summon_roots import gear_spell_roots
 from spell_child_audit import MANIFEST, read_manifest
 
 RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998, 727)
@@ -435,6 +436,13 @@ WHERE e.DifficultyID=0 AND e.Effect IN (28,56) AND e.EffectMiscValue_0>0
 UNION SELECT entry FROM tdb_creature_template WHERE entry={FOLLOWER_HUNTER_PET_SIMC_DEFAULT}"""
 
 
+def follower_class_summon_entries(conn):
+    roots = sorted(set(CLASS_SCRIPT_ROOTS) | gear_spell_roots(conn))
+    values = ','.join(f'({spell})' for spell in roots)
+    return CLASS_SUMMON_ENTRIES.replace(
+        f'VALUES {CLASS_SCRIPT_ROOT_VALUES}', f'VALUES {values}', 1)
+
+
 def insert_tdb_templates(conn, entries, *, replace_legacy=False):
     """TrinityCore's templates (difficulty 0 values, ContentTuning levels) of the `entries` query AzerothCore lacks
     and content_creature_template does not hold yet. Needs temp.tdb_difficulty, content_tuning_level and
@@ -491,7 +499,7 @@ def build_templates(conn, report):
     insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
     insert_tdb_templates(conn, TRANSFORM_ENTRIES)
     insert_tdb_templates(conn, TOY_SUMMON_ENTRIES)
-    insert_tdb_templates(conn, CLASS_SUMMON_ENTRIES)
+    insert_tdb_templates(conn, follower_class_summon_entries(conn))
     # Retail quest objectives count Retail kill credits (Player::KilledMonster credits the entry
     # and its KillCredit1/2): an AzerothCore template TrinityCore also has takes them.
     conn.execute("""UPDATE content_creature_template SET KillCredit1 = t.KillCredit1, KillCredit2 = t.KillCredit2

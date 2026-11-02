@@ -3,6 +3,7 @@ import sqlite3
 import sys
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -37,6 +38,9 @@ class ScriptSummonClosureTests(unittest.TestCase):
             ''')
             reached = {row[0] for row in db.execute(retail_content.CLASS_SUMMON_ENTRIES)}
             self.assertEqual(reached, {9001, 9002, 9003})
+            with patch.object(retail_content, 'gear_spell_roots', return_value={9000002}):
+                gear_query = retail_content.follower_class_summon_entries(db)
+            self.assertEqual({row[0] for row in db.execute(gear_query)}, {9001, 9002, 9003, 9004})
 
 
 if __name__ == '__main__':
