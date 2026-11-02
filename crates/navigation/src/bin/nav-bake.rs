@@ -51,7 +51,7 @@ fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
             |row| row.get(0),
         )
         .map_err(|err| err.to_string())?;
-    let mut baker = Baker::for_navigation(&args.data);
+    let mut baker = Baker::for_navigation_map(&args.data, args.map);
     let dir = args.out.join("navmesh").join(args.map.to_string());
     std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
     let mut report = String::from("tile\ttriangles\tbytes\tmilliseconds\n");
