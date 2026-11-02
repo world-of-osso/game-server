@@ -72,18 +72,40 @@ fn follower_arms_sudden_death_execute_reduces_bladestorm() {
     let seconds = crate::spell_cast::scripts::script_effect_value(app.world(), actor, 444780, 0);
     let reduced = before - recharge_deadline(&app, actor);
     assert!((reduced - f64::from(seconds) * f64::from(executioner)).abs() < 0.001);
-    // Wait until the reduced charge is ready, but not the original 90s deadline.
+    // The follower controller may cast as soon as its charge returns.
+    let casts_before = app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(spin)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        })
+        .count();
+    let mut recast = false;
     for _ in 0..1300 {
-        if crate::spell_cast::history_now(app.world()) >= before - reduced {
+        app.update();
+        let casts = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(spin)
+                    && event.kind == shared::protocol::CombatLogKind::CastSuccess
+            })
+            .count();
+        if casts > casts_before {
+            recast = true;
             break;
         }
-        app.update();
     }
-    assert!(crate::spell_cast::history_now(app.world()) < before);
-    app.world_mut()
-        .get_mut::<crate::spell_cast::SpellHistory>(actor)
-        .unwrap()
-        .clear_fixture_precombat_gcd();
-    crate::spell_cast::creature_cast(app.world_mut(), actor, spin, Some(actor), false)
-        .expect("reduced Bladestorm can be recast before its original deadline");
+    assert!(recast, "the follower must recast Bladestorm after its reduced recharge");
+    assert!(
+        crate::spell_cast::history_now(app.world()) < before,
+        "the follower must recast before its original recharge deadline"
+    );
 }
