@@ -23,7 +23,11 @@ fn shadow_follower_recasts_mind_flay_after_two_ticks() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    let text = String::from_utf8(output.stdout).unwrap();
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8(output.stdout).unwrap(),
+        String::from_utf8(output.stderr).unwrap()
+    );
     assert!(text.contains("running 1 test") && text.contains("test result: ok."));
     let receipt: Value = serde_json::from_str(
         text.split("FOLLOWER_DPS ")
