@@ -198,17 +198,47 @@ fn finish_unseen(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 }
 
 fn apply_craving(world: &mut World, ctx: &EffectCtx<'_>) {
+    let now = combat::auras::aura_now(world);
+    let remaining_ms = world
+        .get::<ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == CRAVING && aura.caster == ctx.caster)
+                .and_then(|aura| aura.expires_at)
+                .map(|expiry| ((expiry - now).max(0.0) * 1000.0).round() as u32)
+        })
+        .unwrap_or(0);
     // SimC76f8118 sc_druid.cpp4910–4918: one primary impact grants the
     // native buff with duration multiplied by the retained effective points.
     let points = combo_points(ctx).expect("Unseen impact retains its Bite resource snapshot");
     let Some(mut buff) = spell_cast::load_triggered_spell(world, CRAVING, ctx.depth + 1) else {
         return;
     };
+    // SimC76f8118 sc_druid.cpp14251: the rank-scaled talent effect supplies
+    // each of the native Craving aura's direct, periodic and auto-attack modifiers.
+    let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, CRAVING_TALENT, 0);
+    for effect in &mut buff.effects {
+        if matches!(effect.index, 0..=2) {
+            effect.base_points = percent;
+        }
+    }
     let duration = buff
         .misc
         .as_mut()
         .and_then(|misc| misc.duration.as_mut())
         .expect("native Craving duration");
     duration.duration_ms = (duration.duration_ms as f32 * points).round() as i32;
-    spell_cast::launch_triggered_spell(world, ctx.caster, &buff, Some(ctx.caster), ctx.depth + 1);
+    if spell_cast::launch_triggered_spell(world, ctx.caster, &buff, Some(ctx.caster), ctx.depth + 1)
+        && remaining_ms > 0
+    {
+        // SimC76f8118 sc_druid.cpp11338–11341 extends the old remainder.
+        combat::auras::extend_owned_duration(
+            world,
+            ctx.caster,
+            ctx.caster,
+            &[CRAVING],
+            remaining_ms,
+        );
+    }
 }

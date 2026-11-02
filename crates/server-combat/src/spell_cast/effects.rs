@@ -1881,6 +1881,20 @@ pub fn damage_source_amount(
     // SimC76f8118 sc_druid.cpp2888–2948: Tear already stores Rip's
     // source-side periodic damage; do not apply caster modifiers a second time.
     if periodic && ctx.spell.id == 391356 {
+        #[cfg(any(test, feature = "test-support"))]
+        factor_capture::record_source(
+            world,
+            ctx,
+            target,
+            factor_capture::Source {
+                input: amount,
+                scripted: amount,
+                modded: amount,
+                done: 1.0,
+                after: amount,
+                skipped_caster_modifiers: true,
+            },
+        );
         return amount;
     }
     let school = ctx.spell.school_mask();
