@@ -17,7 +17,8 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - Outside combat, living party members with a resurrection spell use it on a dead member. Otherwise the dead follower releases at the instance graveyard and follows a native navigable route back. A new pull waits for every member to be alive and returned.
 - During a boss fight, use an available combat resurrection; if none is available, the dead member waits for the encounter to end. [Wowhead's Mythic Keystone guide](https://www.wowhead.com/guide/mythic-keystones-and-dungeons) describes one shared initial charge, one charge regenerated every ten minutes, a maximum of five, and consumption on acceptance.
 - Keystone death penalties follow `crates/server-combat/src/mythic_plus_policy.json`: +2–5 zero, +6–11 five seconds, +12 and above fifteen seconds per death.
-- Observed example, not run-back timing: Warcraft Logs Ruby Life Pools +3, report `MyKrABYWmxG9HhtR`, fight 1: actor 2 died at 473680 ms and was targeted by Rebirth at 476293 ms; its first subsequent cast was at 479446 ms. This does not establish release or graveyard travel time.
+- Observed example, not run-back timing: Warcraft Logs Ruby Life Pools +3, report `MyKrABYWmxG9HhtR`, fight 1: actor 2 died at 473680 ms and was targeted by Rebirth at 476293 ms; its first subsequent cast was at 479446 ms. Actor 1 died at 616351 ms and cast Reincarnation at 617449 ms. Neither establishes release or graveyard travel time.
+- Qualification gap: native Soulstone 20707 has no direct resurrection effect in the pinned `spell_effect` data. The current effect-based follower selection does not handle its corpse-target lane; do not claim all combat-res classes are supported. Release/run-back timings still need evidence that distinguishes release from resurrection.
 
 ## Player-class follower design (2026-10-30)
 
