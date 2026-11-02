@@ -274,6 +274,12 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         )
         .unwrap();
         let world = h.app.world();
+        if spec == 581 {
+            assert!(
+                crate::auras::has_aura(world, unit, 226359),
+                "equipped Vengeance follower must have Leather Specialization at spawn"
+            );
+        }
         assert!(world.get::<shared::components::Player>(unit).is_none());
         assert!(
             world
@@ -436,7 +442,40 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
         let world = h.app.world();
         let follower_stats = world.get::<crate::stats::CharacterStats>(unit).unwrap();
         let player_stats = world.get::<crate::stats::CharacterStats>(player).unwrap();
-        assert_eq!(follower_stats.primary, player_stats.primary);
+        // Aura application order can change the last few floating-point bits.
+        for (name, actual, expected) in [
+            (
+                "stamina",
+                follower_stats.primary.stamina,
+                player_stats.primary.stamina,
+            ),
+            (
+                "strength",
+                follower_stats.primary.strength,
+                player_stats.primary.strength,
+            ),
+            (
+                "agility",
+                follower_stats.primary.agility,
+                player_stats.primary.agility,
+            ),
+            (
+                "intellect",
+                follower_stats.primary.intellect,
+                player_stats.primary.intellect,
+            ),
+            (
+                "spirit",
+                follower_stats.primary.spirit,
+                player_stats.primary.spirit,
+            ),
+        ] {
+            let tolerance = 8.0 * f32::EPSILON * expected.abs().max(1.0);
+            assert!(
+                (actual - expected).abs() <= tolerance,
+                "spec{spec} {name}: {actual} vs {expected}"
+            );
+        }
         assert_eq!(
             world.get::<shared::components::Health>(unit),
             world.get::<shared::components::Health>(player)
