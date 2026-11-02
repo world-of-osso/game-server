@@ -22,7 +22,7 @@
 //!
 //! Not modelled: the other suppressions (vanish, feign death).
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use shared::components::{CombatStatus, Health, Player, ThreatTable};
@@ -32,9 +32,10 @@ use crate::creature_ai::CreatureState;
 /// `PvPCombatReference::PVP_COMBAT_TIMEOUT` (CombatManager.h:84).
 pub(crate) const PVP_COMBAT_TIMEOUT_SECS: f64 = 5.0;
 
-/// A unit's combat references by the other unit.
+/// A unit's combat references by the other unit. Ordered: ending references runs
+/// combat-exit hooks per opponent, and their structural changes set later query order.
 #[derive(Component, Debug, Default)]
-pub struct CombatRefs(HashMap<Entity, CombatRef>);
+pub struct CombatRefs(BTreeMap<Entity, CombatRef>);
 
 /// The actual, non-suppressed opponents putting this unit in combat.
 pub fn active_opponents(world: &World, unit: Entity) -> impl Iterator<Item = Entity> + '_ {
@@ -195,7 +196,7 @@ pub(crate) fn end_pve_reference(world: &mut World, unit: Entity, other: Entity) 
 pub fn end_all_combat(world: &mut World, unit: Entity) {
     let others: Vec<Entity> = world
         .get_mut::<CombatRefs>(unit)
-        .map(|mut refs| refs.0.drain().map(|(other, _)| other).collect())
+        .map(|mut refs| std::mem::take(&mut refs.0).into_keys().collect())
         .unwrap_or_default();
     for other in others {
         for (endpoint, opponent) in [(unit, other), (other, unit)] {

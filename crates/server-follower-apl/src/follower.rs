@@ -137,11 +137,6 @@ impl FollowerApl {
         }
     }
 
-    fn heal_out_of_combat(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
-        let rotation = &mut self.rotation;
-        literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, &[]))
-    }
-
     fn precombat_buff_expired(&mut self, world: &World, actor: Entity) -> bool {
         let now = crate::spell_cast::now(world);
         self.precombat_buffs.iter_mut().any(|(spell, deadline)| {
@@ -226,15 +221,22 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     } else {
         ordered_targets(world, unit)
     };
-    let recovering = targets.is_empty() && healer_has_injured_party(world, unit);
     if targets.is_empty() {
         if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
             apl.idle();
         }
-        if !recovering {
+        if let Some(target) = injured_recovery_target(world, unit) {
+            if world.get::<FollowerAplFailed>(unit).is_some() {
+                return;
+            }
+            if let Err(error) = heal_recovery_target(world, unit, spec, target) {
+                error!(?unit, "follower recovery healing failed: {error}");
+                world.entity_mut(unit).insert(FollowerAplFailed);
+            }
+        } else {
             world.entity_mut(unit).remove::<FollowerAplFailed>();
-            return;
         }
+        return;
     }
     if let Some(mut apl) = world.entity_mut(unit).take::<FollowerApl>() {
         if !apl.precombat_buff_expired(world, unit) {
@@ -248,25 +250,16 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         Some(apl) => Ok(apl),
         None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
     };
-    let result = apl.and_then(|mut apl| {
-        let tick = if recovering {
-            apl.heal_out_of_combat(world, unit)
-        } else {
-            apl.tick(world, unit, &targets)
-        };
-        match tick {
-            Ok(()) => Ok(apl),
-            Err(error)
-                if error == server::simc_apl_native::DUNGEON_MOVEMENT_DESTINATION_PENDING =>
-            {
-                debug!(
-                    ?unit,
-                    "follower APL waits for its pending navigation destination"
-                );
-                Ok(apl)
-            }
-            Err(error) => Err(error),
+    let result = apl.and_then(|mut apl| match apl.tick(world, unit, &targets) {
+        Ok(()) => Ok(apl),
+        Err(error) if error == server::simc_apl_native::DUNGEON_MOVEMENT_DESTINATION_PENDING => {
+            debug!(
+                ?unit,
+                "follower APL waits for its pending navigation destination"
+            );
+            Ok(apl)
         }
+        Err(error) => Err(error),
     });
     match result {
         Ok(apl) => {
@@ -279,15 +272,53 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     }
 }
 
-fn healer_has_injured_party(world: &mut World, unit: Entity) -> bool {
-    let is_healer = server::followers::acting_follower(world, unit)
-        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
-    is_healer
-        && healing_party(world, unit).into_iter().any(|member| {
-            world
-                .get::<shared::components::Health>(member)
-                .is_some_and(|health| health.current > 0.0 && health.current < health.max)
+fn injured_recovery_target(world: &mut World, unit: Entity) -> Option<Entity> {
+    let follower = server::followers::acting_follower(world, unit)?;
+    if follower.profile.role != shared::group::GroupRole::Healer {
+        return None;
+    }
+    healing_party(world, unit)
+        .into_iter()
+        .filter_map(|member| {
+            let health = world.get::<shared::components::Health>(member)?;
+            (health.current > 0.0 && health.current < health.max)
+                .then_some((member, health.current / health.max))
         })
+        .min_by(|left, right| left.1.total_cmp(&right.1))
+        .map(|(member, _)| member)
+}
+
+fn heal_recovery_target(
+    world: &mut World,
+    healer: Entity,
+    spec: u32,
+    target: Entity,
+) -> Result<(), String> {
+    use server::spell_cast::CastFailure;
+    let spell = match spec {
+        65 => 82326,    // Holy Light
+        105 => 8936,    // Regrowth
+        256 => 2061,    // Flash Heal
+        257 => 2060,    // Heal
+        264 => 77472,   // Healing Wave
+        270 => 116670,  // Vivify
+        1468 => 361469, // Living Flame
+        _ => return Err(format!("no recovery heal for healer spec {spec}")),
+    };
+    match server::spell_cast::creature_cast(world, healer, spell, Some(target), false) {
+        Ok(())
+        | Err(
+            CastFailure::InProgress
+            | CastFailure::OnGlobalCooldown
+            | CastFailure::OnCooldown
+            | CastFailure::Moving
+            | CastFailure::OutOfRange
+            | CastFailure::LineOfSight
+            | CastFailure::CrowdControlled(_)
+            | CastFailure::NotEnoughPower(_),
+        ) => Ok(()),
+        Err(error) => Err(format!("spell {spell}: {error:?}")),
+    }
 }
 
 /// The follower's party, owner included; empty for an actor that is not a follower.

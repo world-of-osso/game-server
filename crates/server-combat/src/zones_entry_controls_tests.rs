@@ -204,6 +204,7 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
     world.insert_resource(Time::<bevy::time::Virtual>::default());
     world.insert_resource(Time::<()>::default());
     world.init_resource::<crate::auras::UnhandledAuras>();
+    world.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     world.insert_resource(
         crate::spell_cast::test_harness::world_db()
             .unwrap()

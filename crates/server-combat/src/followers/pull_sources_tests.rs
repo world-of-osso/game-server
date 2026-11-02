@@ -202,7 +202,7 @@ fn pack_assistance_native_azure_formation_joins_follower_pull() {
     let data = crate::test_data::world_data();
     let mut ground =
         crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), HashMap::new());
-    let mut entities = HashMap::new();
+    let mut entities = std::collections::BTreeMap::new();
     for guid in [29001817, 29001831, 29001835] {
         let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
         let template = data.template_for(spawn.template_entry, 1).unwrap();

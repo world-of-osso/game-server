@@ -22,6 +22,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 ## Healer parity reference population
 
+The [seven-healer hostile-hit recheck](healer-tank-replay/seven-healer-recheck-2026-11-02.md) records the same-binary ratios and the remaining Mistweaver gap.
+
 The replay's talents are the modal exact builds among deduplicated +17 top-300 WCL rankings for Altar of Fangs and Den of Nalorakk. The WCL comparison is the mean of the two dungeons' spec-median-to-Holy-Priest-median HPS ratios. This compares populations rather than matching one named actor; named logs in specialization pages provide spell-mechanic evidence, not the ratio population. Rankings used for the medians may be capped and are not complete-population medians.
 
 Level-90 healers wear their own tracked top-character profile gear, not identical Journal gear. Other party members wear Journal gear. Thus gear differences and the synthetic intake can affect the ratio; they do not necessarily cancel against Holy Priest.
