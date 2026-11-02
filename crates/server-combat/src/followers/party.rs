@@ -602,7 +602,7 @@ pub(crate) fn notify_reconnected(world: &mut World, player: Entity) {
         online.insert(Follower::member_id(member), entry);
     }
     let roster = world
-        .resource::<GroupRegistry>()
+        .resource_mut::<GroupRegistry>()
         .build_roster(group, &online);
     if let (Some(roster), Some(connection)) =
         (roster, crate::spell_cast::owner_connection(world, player))
