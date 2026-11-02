@@ -3,7 +3,11 @@ use super::combat;
 use bevy::prelude::*;
 use combat::auras::{ActiveAuras, RemoveReason};
 use combat::melee::Hand;
-use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::AfterCastHook};
+use combat::spell_cast::{
+    self,
+    script_registry::{AreaTargetFilter, SpellScriptHook},
+    scripts::AfterCastHook,
+};
 use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
@@ -17,6 +21,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterWhiteHandHit(after_white_hit),
     SpellScriptHook::ResourceContext(&[RAVAGE]),
     SpellScriptHook::NativeAfterCast(after_cast),
+    SpellScriptHook::AreaFilter(splash_filter),
 ];
 
 #[derive(Component, Default)]
@@ -24,6 +29,17 @@ struct RavageAttempts(u32);
 
 fn owns_proc(spell: u32) -> bool {
     spell == RAVAGE_TALENT
+}
+
+fn splash_filter(spell: u32, effect: u8) -> Option<AreaTargetFilter> {
+    (spell == RAVAGE && effect == 2).then_some(exclude_primary)
+}
+
+// SimC76f8118 sc_druid.cpp2399–2408 gives the primary the direct coefficient only.
+fn exclude_primary(_: &World, _: &SpellInfo, primary: Option<Entity>, targets: &mut Vec<Entity>) {
+    if let Some(primary) = primary {
+        targets.retain(|target| *target != primary);
+    }
 }
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
