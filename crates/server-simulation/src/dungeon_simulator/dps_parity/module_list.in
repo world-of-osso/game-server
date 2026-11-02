@@ -482,6 +482,7 @@ mod shadow_void_blast_tests;
 mod shadow_void_bolt_tests;
 mod shadow_voidform_follower_tests;
 mod shadow_voidheart_tests;
+mod shadow_voidwraith_follower_tests;
 mod shadow_volley_tests;
 mod shadow_yogg_tests;
 mod shaman263_proc_tests;

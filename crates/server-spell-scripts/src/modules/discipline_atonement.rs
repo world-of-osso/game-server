@@ -287,7 +287,13 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
     let (owner, spell) = (summon.owner, summon.spell_id);
     #[cfg(any(test, feature = "test-support"))]
     let expires = summon.expires_at;
-    if !is_discipline(world, owner) || !matches!(spell, 1280172 | 123040 | 200174 | 451235) {
+    let shadow_voidwraith = spell == 451235
+        && world
+            .get::<ActiveSpec>(owner)
+            .is_some_and(|spec| spec.0 == 258);
+    if !shadow_voidwraith
+        && (!is_discipline(world, owner) || !matches!(spell, 1280172 | 123040 | 200174 | 451235))
+    {
         return;
     }
     #[cfg(any(test, feature = "test-support"))]
@@ -317,7 +323,7 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
         .get::<combat::networking::CombatTarget>(owner)
         .and_then(|target| target.0)
     else {
-        warn!(?owner, spell, "Discipline summon has no selected enemy");
+        warn!(?owner, spell, "Priest summon has no selected enemy");
         return;
     };
     if spell == 451235 {

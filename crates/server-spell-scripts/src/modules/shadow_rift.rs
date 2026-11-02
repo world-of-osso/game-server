@@ -1,13 +1,15 @@
 //! SimC76f8118 sc_priest_shadow.cpp1491–1514/sc_priest.cpp1606–1683/3543–3562.
 //! Native Torrent starts a hasted Rift driver at its actual hostile primary.
-use super::{combat, shadow_collapse, shadow_void_blast, shadow_voidheart};
+use super::{combat, shadow_collapse, shadow_priest, shadow_void_blast, shadow_voidheart};
 use bevy::prelude::*;
 use combat::auras::scripts::{AuraScript, AuraScripts};
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason};
 use combat::spell_cast::script_registry::{SpellScriptHook, TargetPlanHook};
-use combat::spell_cast::{self, PlannedEffect, TargetPlan, targets};
+use combat::spell_cast::{
+    self, PlannedEffect, TargetPlan, effects::EffectCtx, summon::SummonedCreature, targets,
+};
 use combat::spell_info::{SpellInfo, SpellStore};
-use shared::components::ActiveSpec;
+use shared::components::{ActiveSpec, Health};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
@@ -15,11 +17,19 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterElementalLaunch(grow_rift),
     SpellScriptHook::EarlyAuraRegistration(register),
     SpellScriptHook::TargetPlan(target_plan),
+    SpellScriptHook::DotMasteryMultiplier(voidwraith_mastery),
+    SpellScriptHook::TargetContextDamageMultiplier(voidwraith_health_bonus),
+    SpellScriptHook::ResolvedDamage(voidwraith_insanity),
+    SpellScriptHook::ConsumedEffectValues(&[(VOID_FLAY, 1)]),
 ];
 const TORRENT: u32 = 263165;
 const DRIVER: u32 = 459314;
 const OBJECT: u32 = 447445;
 const DAMAGE: u32 = 447448;
+const VOIDWRAITH_TALENT: u32 = 451234;
+const VOIDWRAITH: u32 = 451235;
+const VOID_FLAY: u32 = 451435;
+const SHADOWFIEND_INSANITY: u32 = 262485;
 const MAX_GROWTH: u8 = 5;
 const GROWTH_RADIUS_INCREMENT: f32 = 0.5;
 
@@ -120,7 +130,67 @@ fn clear_rift(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason
     }
     shadow_void_blast::expire_override(world, unit);
     shadow_voidheart::replace_with_touch_tail(world, unit);
+    if let Some((primary, _)) = rift
+        && auras::has_aura(world, unit, VOIDWRAITH_TALENT)
+    {
+        summon_voidwraith(world, unit, primary);
+    }
     world.entity_mut(unit).remove::<Rift>();
+}
+
+fn summon_voidwraith(world: &mut World, caster: Entity, primary: Entity) {
+    let Some(position) = targets::position(world, primary) else {
+        warn!(?primary, "Voidwraith Rift position unavailable");
+        return;
+    };
+    let Some(mut summon) = spell_cast::load_triggered_spell(world, VOIDWRAITH, 1) else {
+        return;
+    };
+    summon.cast_destination = Some(position.to_array());
+    if !spell_cast::launch_triggered_spell(world, caster, &summon, None, 1) {
+        warn!(?caster, "Voidwraith summon rejected");
+    }
+}
+
+fn voidwraith_owner(world: &World, caster: Entity, spell: u32) -> Option<Entity> {
+    let summon = world.get::<SummonedCreature>(caster)?;
+    let shadow = world
+        .get::<ActiveSpec>(summon.owner)
+        .is_some_and(|spec| spec.0 == 258);
+    (spell == VOID_FLAY && summon.spell_id == VOIDWRAITH && shadow).then_some(summon.owner)
+}
+
+fn voidwraith_mastery(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
+    let Some(owner) = voidwraith_owner(world, caster, spell) else {
+        return 1.0;
+    };
+    shadow_priest::weaving_multiplier(world, owner, target, spell)
+}
+
+fn voidwraith_health_bonus(world: &World, ctx: &EffectCtx<'_>, target: Entity, _: bool) -> f32 {
+    if voidwraith_owner(world, ctx.caster, ctx.spell.id).is_none() {
+        return 1.0;
+    }
+    let Some(health) = world.get::<Health>(target) else {
+        return 1.0;
+    };
+    let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, VOID_FLAY, 1) / 100.0;
+    1.0 + percent * (health.current / health.max).clamp(0.0, 1.0)
+}
+
+fn voidwraith_insanity(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool, damage: f32) {
+    if damage <= 0.0 {
+        return;
+    }
+    if let Some(owner) = voidwraith_owner(world, ctx.caster, ctx.spell.id) {
+        spell_cast::cast_triggered(
+            world,
+            owner,
+            SHADOWFIEND_INSANITY,
+            Some(owner),
+            ctx.depth + 1,
+        );
+    }
 }
 
 fn finish_channel(world: &mut World, unit: Entity, aura: &AuraInstance, _: RemoveReason) {

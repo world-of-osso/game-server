@@ -477,7 +477,9 @@ C	shadow_priest.rs	34914
 C	shadow_priest.rs	335467
 C	shadow_priest.rs	391232
 C	shadow_priest.rs	1227621
+C	shadow_rift.rs	262485
 C	shadow_rift.rs	447448
+C	shadow_rift.rs	451235
 C	shadow_rift.rs	459314
 C	shadow_screams.rs	393919
 C	shadow_void_apparitions.rs	262485
@@ -627,6 +629,7 @@ D	shadow_void_apparitions.rs	cast_vision	AuraApplication	buff	1	1243113,1243114
 D	shadow_void_apparitions.rs	cast_vision	cast_triggered	damage	1	1243105,1243106
 D	shadow_priest.rs	cast_maddening_tentacles	launch_triggered_spell	&child	1	335467
 D	shadow_rift.rs	pulse	launch_triggered_spell	&damage	1	447448
+D	shadow_rift.rs	summon_voidwraith	launch_triggered_spell	&summon	1	451235
 D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
 D	subtlety_techniques.rs	earn_storage	launch_triggered_spell	&spell	1	196911
 D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
