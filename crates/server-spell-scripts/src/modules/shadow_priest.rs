@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
-use super::combat;
-use combat::auras::ActiveAuras;
+use super::{combat, shadow_link};
+use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
-use combat::spell_cast;
 use combat::spell_cast::script_registry::{DeclaredReach, HitHook, ScriptReach, SpellScriptHook};
+use combat::spell_cast::{self, effects::EffectCtx};
 use combat::spell_info::SpellStore;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -19,15 +19,26 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ConsumedEffectValues(&[(SLAM, 2)]),
     SpellScriptHook::LaunchDelay(launch_delay),
     SpellScriptHook::DotMasteryMultiplier(weaving_multiplier),
+    SpellScriptHook::LateAuraRegistration(register_hallucinations),
+    SpellScriptHook::ResolvedDamage(maddening_touch_tick),
 ];
 
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
-    (spell == SLAM && index == 0).then_some(slam_impact)
+    match (spell, index) {
+        (SLAM, 0) => Some(slam_impact),
+        (VT, 3) => Some(apply_misery),
+        _ => None,
+    }
 }
 
 pub(super) const SLAM: u32 = 1227280;
 const DAMAGE: u32 = 1227621;
 const VT: u32 = 34914;
+const MISERY: u32 = 238558;
+const PAIN: u32 = 589;
+const HALLUCINATIONS: u32 = 280752;
+const MADDENING_TOUCH: u32 = 391228;
+const MADDENING_TOUCH_GAIN: u32 = 391232;
 const MADDENING_TENTACLES: u32 = 1279353;
 const MADNESS: u32 = 335467;
 const SHADOW_WEAVING: u32 = 343690;
@@ -130,6 +141,76 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
     }
     for target in units {
         spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
+    }
+}
+
+#[derive(Component)]
+struct MaddeningTouchProgress {
+    passive: u32,
+    accumulated: f64,
+}
+
+fn maddening_touch_tick(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool, amount: f32) {
+    if ctx.spell.id != VT || ctx.spell.cast_periodic_ordinal.is_none() || amount <= 0.0 {
+        return;
+    }
+    let passive = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.caster == ctx.caster && aura.spell_id == MADDENING_TOUCH)
+            .map(|aura| aura.instance_id)
+    });
+    let Some(passive) = passive else { return };
+    let dots = shadow_link::read_vampiric_touch_targets(world, ctx.caster).len();
+    if dots == 0 {
+        return;
+    }
+    if world
+        .get::<MaddeningTouchProgress>(ctx.caster)
+        .is_none_or(|state| state.passive != passive)
+    {
+        world.entity_mut(ctx.caster).insert(MaddeningTouchProgress {
+            passive,
+            accumulated: combat::random::random::<f64>(),
+        });
+    }
+    // SimC76f8118 sc_priest_shadow.cpp797–813/2339–2352 and proc_rng.cpp221–273.
+    let increment = 0.25 * (0.25 + combat::random::random::<f64>() * 1.5) / (dots as f64).powf(0.6);
+    let mut progress = world.get_mut::<MaddeningTouchProgress>(ctx.caster).unwrap();
+    progress.accumulated += increment;
+    if progress.accumulated < 1.0 {
+        return;
+    }
+    progress.accumulated -= 1.0;
+    // Native391228 effect1 supplies the flat label2585 modifier to 391232.
+    spell_cast::cast_triggered(
+        world,
+        ctx.caster,
+        MADDENING_TOUCH_GAIN,
+        Some(ctx.caster),
+        ctx.depth + 1,
+    );
+}
+
+fn register_hallucinations(scripts: &mut AuraScripts) {
+    scripts.0.entry(HALLUCINATIONS).or_default().check_proc = Some(hallucinations_cast);
+}
+
+fn hallucinations_cast(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
+    // Native70448 spell280752 description lists these four combat casts;
+    // SimC76f8118 sc_priest.cpp1985–1990 implements the Shield producer.
+    let eligible = matches!(event.spell_id, Some(17 | 528 | 32375 | 213634));
+    event.actor == aura.caster
+        && eligible
+        && combat::combat_refs::active_opponents(world, aura.caster)
+            .next()
+            .is_some()
+}
+
+fn apply_misery(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    // SimC76f8118 sc_priest_shadow.cpp754–796,1723–1732: cast VT, including Slam's VT.
+    if selected(world, caster, MISERY) {
+        spell_cast::cast_triggered(world, caster, PAIN, Some(target), depth + 1);
     }
 }
 

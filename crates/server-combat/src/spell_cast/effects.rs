@@ -1124,8 +1124,9 @@ fn crit_chance_from_owner(
     }
     let chance =
         super::scripts::crit_chance(world, caster, target, spell.id).unwrap_or_else(|| {
-            let base =
-                crate::combat::read_pet_owner_critical_chance(world, caster).unwrap_or_else(|| {
+            let base = crate::combat::read_pet_owner_critical_chance(world, caster)
+                .map(|owner_crit| owner_crit + pet_own_generic_crit(world, caster))
+                .unwrap_or_else(|| {
                     world
                         .get::<CharacterStats>(spell_owner)
                         .map_or(0.0, |stats| stats.crit_pct)
@@ -1180,6 +1181,15 @@ fn crit_chance_from_owner(
         modifier + caster_ability,
     );
     (chance + modifier + caster_ability).max(0.0)
+}
+
+/// SimC76f8118 pets.cpp1270–1288: owner-inherited pet spell crit keeps the pet's
+/// own aura290, as the swing path does for stat-less creatures (combat.rs).
+fn pet_own_generic_crit(world: &World, caster: Entity) -> f32 {
+    if world.get::<CharacterStats>(caster).is_some() {
+        return 0.0;
+    }
+    stat_mods(world, caster).map_or(0.0, |mods| mods.npc_crit_pct)
 }
 
 fn with_crit(

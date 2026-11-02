@@ -14,6 +14,8 @@ struct TrailFollow {
     owner: Entity,
     blockers: Vec<Entity>,
     last_hold_log: Option<f64>,
+    /// Start of the current stretch without trail progress.
+    since: f64,
     candidates: Vec<Vec3>,
     destination: Option<(usize, Vec3)>,
 }
@@ -44,6 +46,7 @@ pub(super) fn advance(
             owner,
             blockers,
             last_hold_log: None,
+            since: now,
             candidates,
             destination: None,
         });
@@ -57,6 +60,16 @@ pub(super) fn advance(
     if !blocked {
         clear(world, unit);
         return true;
+    }
+    if now - world.get::<TrailFollow>(unit).expect("trail state").since
+        >= positioning::REGROUP_HOLD_SECONDS
+    {
+        debug!(
+            ?unit,
+            ?owner,
+            "Follower trail hold timed out; resume ordinary follow"
+        );
+        return false;
     }
     let destination = world
         .get::<TrailFollow>(unit)
@@ -88,8 +101,13 @@ pub(super) fn advance(
         );
         if world
             .get::<Position>(unit)
-            .is_some_and(|after| *after == from)
+            .is_some_and(|after| *after != from)
         {
+            world
+                .get_mut::<TrailFollow>(unit)
+                .expect("trail state")
+                .since = now;
+        } else {
             world
                 .get_mut::<TrailFollow>(unit)
                 .expect("trail state")
@@ -383,7 +401,8 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         trail.last().unwrap()
     );
 
-    // A destination inside the idle watcher's sight has no safe route.
+    // A destination inside the idle watcher's sight has no safe route: hold, then resume
+    // ordinary following after five seconds (spec follower-dungeons.md:41).
     clear(h.app.world_mut(), follower);
     h.app
         .world_mut()
@@ -391,11 +410,21 @@ fn ara_kara_follower_retraces_safe_owner_trail_around_watcher() {
         .insert(as_position(center));
     super::owner_trail::record(h.app.world_mut(), owner);
     let held_at = *h.app.world().get::<Position>(follower).unwrap();
-    for _ in 0..140 {
+    let started = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let mut released = false;
+    for _ in 0..10_000 {
         h.advance(1);
-        assert!(advance(h.app.world_mut(), follower, owner, vec![watcher]));
-        assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), held_at);
+        let held = advance(h.app.world_mut(), follower, owner, vec![watcher]);
+        let elapsed = h.app.world().resource::<Time>().elapsed_secs_f64() - started;
+        if elapsed < positioning::REGROUP_HOLD_SECONDS {
+            assert!(held, "released after only {elapsed} s");
+            assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), held_at);
+        } else if !held {
+            released = true;
+            break;
+        }
     }
+    assert!(released, "an unsafe regroup must not hold indefinitely");
 }
 
 pub(super) fn clear(world: &mut World, unit: Entity) {

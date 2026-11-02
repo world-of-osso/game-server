@@ -14,6 +14,9 @@ use ::navigation::worker::{Output, Query as NavQuery};
 const HOLD_LOG_INTERVAL_SECONDS: f64 = 10.0;
 /// Extra clearance for movement and sight updates between ticks, in yards.
 const AGGRO_STEP_MARGIN: f32 = 0.5;
+/// Spec follower-dungeons.md:41 (user-directed): an owner regroup without a safe route
+/// resumes ordinary following after five seconds instead of holding indefinitely.
+pub(super) const REGROUP_HOLD_SECONDS: f64 = 5.0;
 /// Spacing of the sight samples along a path leg inside a watcher's radius, in yards.
 const SIGHT_SAMPLE_SPACING: f32 = 0.5;
 
@@ -94,16 +97,29 @@ pub(super) fn update_combat_exclusions(
 struct HoldLog {
     target: Entity,
     last: f64,
+    since: f64,
 }
 
 fn hold_unresolved_approach(world: &mut World, unit: Entity, target: Entity, reason: &str) -> bool {
     let now = world.resource::<Time>().elapsed_secs_f64();
-    if world
+    let previous = world
         .get::<HoldLog>(unit)
-        .is_none_or(|hold| hold.target != target || now - hold.last >= HOLD_LOG_INTERVAL_SECONDS)
-    {
+        .filter(|hold| hold.target == target)
+        .map(|hold| (hold.last, hold.since));
+    let since = previous.map_or(now, |(_, since)| since);
+    if previous.is_none_or(|(last, _)| now - last >= HOLD_LOG_INTERVAL_SECONDS) {
         warn!(?unit, ?target, reason, "Follower approach held");
-        world.entity_mut(unit).insert(HoldLog { target, last: now });
+        world.entity_mut(unit).insert(HoldLog {
+            target,
+            last: now,
+            since,
+        });
+    }
+    let is_owner = world
+        .get::<super::Follower>(unit)
+        .is_some_and(|follower| follower.owner == target);
+    if is_owner && now - since >= REGROUP_HOLD_SECONDS {
+        return false;
     }
     hold_position(world, unit);
     true
