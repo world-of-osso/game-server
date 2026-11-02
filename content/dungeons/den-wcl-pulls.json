@@ -1,0 +1,44 @@
+{
+  "provenance": "INFERRED_WCL_PULL_REGIONS",
+  "map_id": 2825,
+  "retire_when": "Exact retail spawn-group membership and pull routes are available.",
+  "matching_uncertainty": "WCL first-damage positions can differ from source-spawn positions; one-to-one nearest-spawn matching had 90th-percentile distances of 37 to 133 yards across these reports. Use boss-relative route segments rather than inferred individual spawn assignments.",
+  "segments": [
+    {
+      "before_encounter": 3207,
+      "samples": [
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 1, "targets": 32},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 1, "targets": 18},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 2, "targets": 16},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 1, "targets": 19},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 2, "targets": 15}
+      ]
+    },
+    {
+      "before_encounter": 3208,
+      "samples": [
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 4, "targets": 11},
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 5, "targets": 16},
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 6, "targets": 6},
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 7, "targets": 7},
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 8, "targets": 7},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 4, "targets": 42},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 5, "targets": 7},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 4, "targets": 20},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 5, "targets": 21},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 6, "targets": 7},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 7, "targets": 5}
+      ]
+    },
+    {
+      "before_encounter": 3209,
+      "samples": [
+        {"report": "Hx64j9RrfnytB8cA", "fight": 12, "pull": 10, "targets": 21},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 8, "targets": 21},
+        {"report": "YaZ7RKjBnp6dyHTG", "fight": 53, "pull": 9, "targets": 16},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 9, "targets": 8},
+        {"report": "BDjZ2QF6pNr8xV4W", "fight": 1, "pull": 10, "targets": 10}
+      ]
+    }
+  ]
+}
