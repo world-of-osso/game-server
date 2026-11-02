@@ -265,6 +265,67 @@ fn wmo_surface_halls_follower_walks_tsunami_ramp_over_the_pool() {
 }
 
 #[test]
+#[ignore = "requires Halls of Infusion collision and navigation assets"]
+fn halls_recorded_safe_regroup_does_not_drop_to_pool() {
+    use crate::creature_ai::FollowOwner;
+    use shared::components::Rotation;
+
+    let (mut h, unit, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209072, |_| {});
+    h.app.world_mut().despawn(h.npc);
+    let map = InMap::continent(2527);
+    let start = Position {
+        x: 16.2,
+        y: -23.1,
+        z: -81.3,
+    };
+    let owner = Position {
+        x: -0.370431,
+        y: 20.81611,
+        z: -228.269,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        owner,
+        map,
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::PartyFollowSlot>()
+        .insert((start, map, FollowOwner::new(h.caster)));
+    h.app.insert_resource(GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2527, 4290690)]),
+    ));
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
+    install_movement_only_actions(&mut h.app);
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut lowest = start.y;
+    let mut travelled = 0.0_f32;
+    let mut previous = start;
+    for _ in 0..1200 {
+        h.advance(1);
+        let current = *h.app.world().get::<Position>(unit).unwrap();
+        lowest = lowest.min(current.y);
+        travelled += point(current).distance(point(previous));
+        previous = current;
+    }
+    assert!(lowest > -60.0, "follower dropped into lower pool: {lowest}");
+    assert!(travelled > 5.0, "follower did not follow: {previous:?}");
+}
+
+#[test]
 fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
     use crate::navigation::{Goal, MoveRequest, Navigation};
     for (floor, should_move) in [(-23.1, true), (-130.65, false)] {
