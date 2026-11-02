@@ -22,16 +22,54 @@ struct PullSample {
     targets: usize,
 }
 
-/// Partition consecutive route packs by the sourced median for each boss-relative segment.
-pub(super) fn den_chain_groups(
+#[derive(Deserialize)]
+struct MappedPulls {
+    map_id: u32,
+    pulls: Vec<MappedPull>,
+}
+
+#[derive(Deserialize)]
+struct MappedPull {
+    pull: u32,
+    source_guids: Vec<u64>,
+}
+
+/// Apply the WCL evidence registered for a map; unlisted maps do not chain.
+pub(super) fn wcl_chain_groups(
     graph: &Graph,
     definition: &server::mythic_plus_runtime::ChallengeDefinition,
     hostile_sources: &HashSet<u64>,
-) -> Result<Vec<Vec<u64>>, String> {
-    let samples: PullSamples = serde_json::from_str(include_str!(
+) -> Result<Option<Vec<Vec<u64>>>, String> {
+    let segment_sources = [include_str!(
         "../../../../content/dungeons/den-wcl-pulls.json"
-    ))
-    .map_err(|error| format!("parse Den WCL pull evidence: {error}"))?;
+    )];
+    for source in segment_sources {
+        let samples: PullSamples = serde_json::from_str(source)
+            .map_err(|error| format!("parse WCL pull samples: {error}"))?;
+        if samples.map_id == graph.map_id {
+            return segment_chain_groups(graph, definition, hostile_sources, samples).map(Some);
+        }
+    }
+    let mapped_sources = [include_str!(
+        "../../../../content/dungeons/ruby-wcl-pulls.json"
+    )];
+    for source in mapped_sources {
+        let samples: MappedPulls = serde_json::from_str(source)
+            .map_err(|error| format!("parse WCL pull membership: {error}"))?;
+        if samples.map_id == graph.map_id {
+            return mapped_chain_groups(graph, definition, hostile_sources, samples).map(Some);
+        }
+    }
+    Ok(None)
+}
+
+/// Partition consecutive route packs by the sourced median for each boss-relative segment.
+fn segment_chain_groups(
+    graph: &Graph,
+    definition: &server::mythic_plus_runtime::ChallengeDefinition,
+    hostile_sources: &HashSet<u64>,
+    samples: PullSamples,
+) -> Result<Vec<Vec<u64>>, String> {
     if graph.map_id != samples.map_id || definition.map_id != samples.map_id {
         return Err("Den pull evidence does not match challenge map".into());
     }
@@ -86,6 +124,72 @@ pub(super) fn den_chain_groups(
         steps.push((step.pack, count, boss.is_some()));
     }
     group_chain_steps(&steps, &targets)
+}
+
+fn mapped_chain_groups(
+    graph: &Graph,
+    definition: &server::mythic_plus_runtime::ChallengeDefinition,
+    hostile_sources: &HashSet<u64>,
+    samples: MappedPulls,
+) -> Result<Vec<Vec<u64>>, String> {
+    if samples.map_id != graph.map_id || definition.map_id != graph.map_id {
+        return Err("WCL pull membership does not match challenge map".into());
+    }
+    let mut observed = HashMap::new();
+    for pull in samples.pulls {
+        for guid in pull.source_guids {
+            if observed.insert(guid, pull.pull).is_some() {
+                return Err(format!("WCL source {guid} belongs to multiple pulls"));
+            }
+        }
+    }
+    let mut groups = Vec::new();
+    let mut pending = Vec::new();
+    let mut previous = None;
+    for step in &graph.route {
+        let pack = graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == step.pack)
+            .ok_or_else(|| format!("route references absent pack {}", step.pack))?;
+        let boss = graph.boss_entries().iter().any(|entry| {
+            let source = graph
+                .follower_boss_sources
+                .get(entry)
+                .copied()
+                .unwrap_or(*entry);
+            pack.spawns.iter().any(|spawn| spawn.entry == source)
+        });
+        let memberships: BTreeSet<_> = pack
+            .spawns
+            .iter()
+            .filter(|spawn| hostile_sources.contains(&spawn.guid))
+            .filter_map(|spawn| observed.get(&spawn.guid).copied())
+            .collect();
+        if memberships.len() > 1 {
+            return Err(format!("route pack {} matches multiple WCL pulls", pack.id));
+        }
+        let pull = if boss {
+            None
+        } else {
+            memberships.first().copied()
+        };
+        if pull.is_none() || pull != previous {
+            if !pending.is_empty() {
+                groups.push(std::mem::take(&mut pending));
+            }
+        }
+        if pull.is_none() {
+            groups.push(vec![pack.id]);
+        } else {
+            pending.push(pack.id);
+        }
+        previous = pull;
+    }
+    if !pending.is_empty() {
+        groups.push(pending);
+    }
+    Ok(groups)
 }
 
 fn group_chain_steps(
@@ -381,6 +485,70 @@ pub(super) fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ruby_wcl_membership_groups_adjacent_packs_and_keeps_unmatched_separate() {
+        use super::super::graph::{Pack, Spawn};
+        let sources = [29001484, 29001531, 29001514, 90000001, 29001773, 29001776];
+        let packs: Vec<_> = sources
+            .iter()
+            .map(|&guid| Pack {
+                id: guid,
+                position: [0.0, 0.0],
+                height: 0.0,
+                spawns: vec![Spawn {
+                    guid,
+                    entry: 1,
+                    position: [0.0, 0.0],
+                }],
+            })
+            .collect();
+        let graph = Graph {
+            map_id: 2521,
+            entrance: [0.0, 0.0],
+            entrance_height: 0.0,
+            entrance_pack: sources[0],
+            route: sources
+                .iter()
+                .map(|&pack| RouteStep {
+                    pack,
+                    anchor: [0.0; 3],
+                })
+                .collect(),
+            packs,
+            edges: vec![],
+            teleports: vec![],
+            transports: vec![],
+            flights: vec![],
+            unreachable: vec![],
+            follower_difficulty: 23,
+            follower_boss_entries: vec![],
+            follower_boss_sources: BTreeMap::new(),
+            follower_boss_bits: BTreeMap::new(),
+            follower_encounter_actor_bits: BTreeMap::new(),
+        };
+        let definition = server::mythic_plus_runtime::ChallengeDefinition {
+            map_id: 2521,
+            challenge_id: 399,
+            name: "Ruby Life Pools".into(),
+            timers_ms: [0; 3],
+            forces_required: 0,
+            creature_weights: HashMap::new(),
+            scenario_event_weights: HashMap::new(),
+            bosses: vec![],
+        };
+        let groups = wcl_chain_groups(&graph, &definition, &sources.into_iter().collect())
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            groups,
+            vec![
+                vec![29001484, 29001531, 29001514],
+                vec![90000001],
+                vec![29001773, 29001776]
+            ]
+        );
+    }
 
     #[test]
     fn chain_groups_keep_consecutive_packs_and_isolate_bosses() {

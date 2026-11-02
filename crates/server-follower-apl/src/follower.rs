@@ -277,7 +277,7 @@ fn injured_recovery_target(world: &mut World, unit: Entity) -> Option<Entity> {
     if follower.profile.role != shared::group::GroupRole::Healer {
         return None;
     }
-    party_of(world, unit)
+    healing_party(world, unit)
         .into_iter()
         .filter_map(|member| {
             let health = world.get::<shared::components::Health>(member)?;
@@ -327,6 +327,78 @@ pub fn party_of(world: &mut World, actor: Entity) -> Vec<Entity> {
         Some(owner) => server::followers::party_units(world, owner),
         None => Vec::new(),
     }
+}
+
+/// Party members and nearby, data-backed healing encounter objectives.
+pub fn healing_party(world: &mut World, actor: Entity) -> Vec<Entity> {
+    let mut party = party_of(world, actor);
+    let Some(follower) = server::followers::acting_follower(world, actor) else {
+        return party;
+    };
+    if follower.profile.role != shared::group::GroupRole::Healer {
+        return party;
+    }
+    // Each range comes from the native direct-heal spell used by this spec's APL.
+    let spell_id = match follower.profile.spec_id {
+        65 => 82326,
+        105 => 8936,
+        256 => 17,
+        257 => 2060,
+        264 => 77472,
+        270 => 116670,
+        1468 => 361469,
+        _ => return party,
+    };
+    let Some(range) = world
+        .get_resource::<server::spell_info::SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .map(|spell| server::spell_cast::targets::spell_range(spell, false).1)
+    else {
+        return party;
+    };
+    let Some(map) = world.get::<server::maps::InMap>(actor).copied() else {
+        return party;
+    };
+    let Some(origin) = server::spell_cast::targets::position(world, actor) else {
+        return party;
+    };
+    let objectives = world
+        .get_resource::<server::maps::MapStore>()
+        .map(|store| store.encounter_heal_objectives.clone())
+        .unwrap_or_default();
+    let candidates: Vec<Entity> = world
+        .query::<(
+            Entity,
+            &server::maps::InMap,
+            &shared::components::Npc,
+            &shared::components::Health,
+        )>()
+        .iter(world)
+        .filter(|(_, candidate_map, npc, health)| {
+            **candidate_map == map
+                && health.current > 0.0
+                && health.current < health.max
+                && objectives.contains_key(&(map.map_id, npc.template_id))
+        })
+        .map(|(entity, _, _, _)| entity)
+        .collect();
+    for target in candidates {
+        let in_range = server::spell_cast::targets::position(world, target)
+            .is_some_and(|position| position.distance(origin) <= range);
+        let friendly = server::spell_cast::targets::relation_matches(
+            world,
+            actor,
+            target,
+            server::spell_cast::targets::Relation::Ally,
+        );
+        if in_range
+            && friendly
+            && server::scripted_ai::heal_objective::accepts_healing(world, target, actor)
+        {
+            party.push(target);
+        }
+    }
+    party
 }
 
 /// The first tank in `party`.

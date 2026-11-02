@@ -822,6 +822,15 @@ fn process_gossip_selections(
             };
             let opening = match action {
                 GossipAction::NalorakkPyre => unreachable!("handled above"),
+                GossipAction::TempleAvatarStart => {
+                    current = None;
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::scripted_ai::heal_objective::start(world, npc);
+                        close_gossip_menu(world, player, npc);
+                    });
+                    continue;
+                }
                 GossipAction::AzureTranslocation => {
                     current = None;
                     let player = link.0;

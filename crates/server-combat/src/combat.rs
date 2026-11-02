@@ -2237,7 +2237,7 @@ fn melee_damage_splits(
         else {
             continue;
         };
-        if health.current <= 0.0 || crate::auras::immune_to_school(avoidance.1.as_deref(), 1) {
+        if health.current <= 0.0 || crate::auras::immune_to_damage(avoidance.1.as_deref(), 1) {
             continue;
         }
         let scaling = |entity| {
@@ -2456,7 +2456,7 @@ fn resolve_swing(
         &health,
         cannot_miss,
     );
-    let immune = crate::auras::immune_to_school(avoidance.1.as_deref(), 1);
+    let immune = crate::auras::immune_to_damage(avoidance.1.as_deref(), 1);
     if let Some(spell) = crate::spell_cast::scripts::replace_white_impact(
         context.impact_replacement,
         &mut impact_gate.allowed,
@@ -2899,7 +2899,9 @@ pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
 /// multiplier for the attacker, both enter combat, the victim's threat and
 /// `DamageTaken` follow, and a lethal hit kills it.
 pub fn deal_direct_damage(world: &mut World, attacker: Entity, victim: Entity, damage: f32) {
-    if !crate::spell_cast::targets::is_alive(world, victim) {
+    if !crate::spell_cast::targets::is_alive(world, victim)
+        || crate::auras::is_damage_immune(world, victim, 1)
+    {
         return;
     }
     let damage = crate::auras::damage_transfer::route(world, attacker, victim, 1, damage);
@@ -3266,7 +3268,7 @@ fn replay_healer_hit_inner(
             ),
         )
     };
-    let immune = crate::auras::immune_to_school(auras, 1);
+    let immune = crate::auras::immune_to_damage(auras, 1);
     let (amount, blocked) = if expected_landed.is_none()
         && matches!(kind, MeleeOutcome::Block | MeleeOutcome::CritBlock)
         && !immune

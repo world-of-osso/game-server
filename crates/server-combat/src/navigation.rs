@@ -121,11 +121,15 @@ pub struct Navigation {
 
 impl Navigation {
     pub fn new(dir: &Path) -> Self {
+        Self::with_worker(dir, navigation::worker::Worker::new(dir.to_path_buf()))
+    }
+
+    fn with_worker(dir: &Path, worker: navigation::worker::Worker) -> Self {
         Self {
             dir: dir.to_path_buf(),
             routes: EntityHashMap::default(),
             drop_requests: EntityHashMap::default(),
-            worker: navigation::worker::Worker::new(dir.to_path_buf()),
+            worker,
             pending: EntityHashMap::default(),
             queries: EntityHashMap::default(),
             unbaked: HashSet::new(),
@@ -331,9 +335,10 @@ pub(crate) fn install_publication(app: &mut App) {
 /// which waits for them. A seed then replays exactly, independent of thread timing.
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) fn install_headless(app: &mut App, root: &Path) {
-    let mut navigation = Navigation::new(root);
-    navigation.worker.defer_dispatch();
-    app.insert_resource(navigation);
+    app.insert_resource(Navigation::with_worker(
+        root,
+        navigation::worker::Worker::headless(root.to_path_buf()),
+    ));
     install_publication_with(app, publish_all_navigation_results);
 }
 

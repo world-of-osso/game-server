@@ -509,6 +509,8 @@ register_modules! {
     restoration_lifetreading: (1000, "modules/restoration_lifetreading.rs"),
     restoration_verdancy: (1000, "modules/restoration_verdancy.rs"),
     unholy_apocalypse_rune: (2530, "modules/unholy_apocalypse_rune.rs"),
+    temple_strikes: (9809, "modules/temple_strikes.rs"),
+    temple_thunder_spit: (9810, "modules/temple_thunder_spit.rs"),
     touch_of_death: (240, "modules/touch_of_death.rs"),
     unholy_reaping: (2524, "modules/unholy_reaping.rs"),
     unholy_mograine: (2540, "modules/unholy_mograine.rs"),

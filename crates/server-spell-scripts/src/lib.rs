@@ -19,7 +19,7 @@ impl Plugin for SpellScriptsPlugin {
     }
 }
 
-pub const fn registry() -> SpellScriptRegistry {
+pub fn registry() -> SpellScriptRegistry {
     SpellScriptRegistry::new(modules::MODULES)
 }
 
@@ -38,5 +38,7 @@ mod reach_declaration_audit_tests;
 mod registry_target_tests;
 #[cfg(test)]
 mod runtime_stage_tests;
+#[cfg(test)]
+mod temple_strikes_tests;
 #[cfg(test)]
 mod tests;
