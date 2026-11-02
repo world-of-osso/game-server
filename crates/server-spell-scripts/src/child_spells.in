@@ -618,3 +618,5 @@ D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
 D	subtlety_techniques.rs	earn_storage	launch_triggered_spell	&spell	1	196911
 D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
 D	survival_takedown.rs	cast_pet_damage	launch_triggered_spell	&spell	1	1253862
+D	destruction_rift.rs	roll_rift	try_cast_triggered	summon	1	387979,394235,394243,434587
+D	destruction_rift.rs	barrage_tick	try_cast_triggered	child	1	387985,394238
