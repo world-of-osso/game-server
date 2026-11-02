@@ -159,6 +159,57 @@ pub(super) fn grant_windlord_thunderfist(
     );
 }
 
+/// SimC76f8118 sc_monk.cpp1853–1868: the first WDP area action grants
+/// the talent's base stacks plus one for each additional target hit.
+pub(super) fn grant_wdp_thunderfist(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx<'_>,
+) {
+    if ctx.spell.id != WDP_AREA_DAMAGE {
+        return;
+    }
+    let Some(auras) = world.get::<ActiveAuras>(ctx.caster) else {
+        return;
+    };
+    let first_pulse = auras.iter().any(|aura| {
+        aura.caster == ctx.caster
+            && aura.spell_id == WHIRLING_DRAGON_PUNCH
+            && aura.effects.iter().any(|effect| {
+                effect.index == 0 && !effect.initial_tick_pending() && effect.periodic_ticks() == 0
+            })
+    });
+    if !first_pulse {
+        return;
+    }
+    let Some(talent) = auras
+        .iter()
+        .find(|aura| aura.caster == ctx.caster && aura.spell_id == THUNDERFIST_TALENT)
+    else {
+        return;
+    };
+    let base = talent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Thunderfist native stacks")
+        .amount as u8;
+    let hits = crate::spell_cast::resolving_damage(world, ctx)
+        .expect("WDP area resolution")
+        .len();
+    let additional = u8::try_from(hits.saturating_sub(1)).unwrap_or(u8::MAX);
+    crate::spell_cast::cast_triggered_with_overrides(
+        world,
+        ctx.caster,
+        THUNDERFIST_BUFF,
+        Some(ctx.caster),
+        ctx.depth + 1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(base.saturating_add(additional)),
+            ..Default::default()
+        },
+    );
+}
+
 fn cast_wdp_area_tick(world: &mut World, unit: Entity, aura: &auras::AuraInstance, index: u8) {
     let Some(effect) = aura.effects.iter().find(|effect| effect.index == index) else {
         return;
