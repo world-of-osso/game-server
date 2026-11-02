@@ -259,7 +259,7 @@ fn spawn_ground_pulses(
     }
 }
 
-pub(super) fn spawn_surging_rain(world: &mut World, ctx: &EffectCtx, totem: Entity) {
+pub(in crate::spell_cast) fn spawn_surging_rain(world: &mut World, ctx: &EffectCtx, totem: Entity) {
     let center = ctx.dest.expect("Surging Totem requires a destination");
     let rain = world
         .resource::<SpellStore>()
