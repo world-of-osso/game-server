@@ -12,6 +12,13 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - [x] Actual Austin ST never casts1264359;2+ engaged enemies retain ordinary command and real pet-child damage. Genuine native4da3b88d0 RED: ST29commands/21pet hits versus0, two-target25/9 and three-target29/24 controlsPASS (2PASS/1FAIL23.01s); earlier NPC-KnownSpells assertion failure is not gameplay RED. Serialized producer9ebfc4d5f separately fails missing minimum. Implementation uses the existing current `ai::engaged_enemies` set and vendored pinned76f8118 BM source, not historical pull observations or a new APL runtime. Source revision/SHA/derived minima accompany normal preparation receipts. At a451878e4 native3GREEN24.63s: ST0commands/0hits, two25/9 and three17/4; source/serialized12GREEN1.270s. [Exact proof, private source preparation and matched single-seed limits](../handoffs/bm-active-enemy-proof-ledger.md). Parent broad integration/publication pending. No spell, priority, resource, cooldown or damage tuning. Dispersion is outside this BM scope.
 
 
+## Follower death recovery
+
+- Outside combat, living party members with a resurrection spell use it on a dead member. Otherwise the dead follower releases at the instance graveyard and follows a native navigable route back. A new pull waits for every member to be alive and returned.
+- During a boss fight, use an available combat resurrection; if none is available, the dead member waits for the encounter to end. [Wowhead's Mythic Keystone guide](https://www.wowhead.com/guide/mythic-keystones-and-dungeons) describes one shared initial charge, one charge regenerated every ten minutes, a maximum of five, and consumption on acceptance.
+- Keystone death penalties follow `crates/server-combat/src/mythic_plus_policy.json`: +2–5 zero, +6–11 five seconds, +12 and above fifteen seconds per death.
+- Observed example, not run-back timing: Warcraft Logs Ruby Life Pools +3, report `MyKrABYWmxG9HhtR`, fight 1: actor 2 died at 473680 ms and was targeted by Rebirth at 476293 ms; its first subsequent cast was at 479446 ms. This does not establish release or graveyard travel time.
+
 ## Player-class follower design (2026-10-30)
 
 Difficulty 205 auto-fill selects source-backed player-class followers. Class followers use a runtime-only neutral humanoid template with no story identity, script, equipment or kit; `AplControlled` delegates casts to the spec APL while the follower brain retains movement. Story records remain historical data, not an alternate combat bridge.
