@@ -177,7 +177,7 @@ struct PietyPool(f32);
 pub(super) fn piety(
     world: &mut World,
     ctx: &combat::spell_cast::effects::EffectCtx,
-    _target: Entity,
+    target: Entity,
     raw: f32,
     effective: f32,
     _critical: bool,
@@ -185,7 +185,13 @@ pub(super) fn piety(
 ) {
     const TALENT: u32 = 1_246_802;
     const HEAL: u32 = 443_126;
-    if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
+    if ctx.spell.id == HEAL
+        || raw <= effective
+        || !has_aura(world, ctx.caster, TALENT)
+        // INFERRED_WCL KWw69CqBnf3Tpk8L f4 a4: Piety pools exclude
+        // overhealing on the Warlock's Demonic Tyrant.
+        || combat::spell_cast::targets::is_non_follower_summon(world, target)
+    {
         return;
     }
     // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: four isolated pools yield 15%

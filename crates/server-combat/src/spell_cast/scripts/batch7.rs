@@ -84,15 +84,7 @@ fn select_secondary_atonement_allies(
         false,
     )
     .expect("Atonement spell catalog area selectors");
-    units.retain(|&unit| {
-        unit != primary
-            && (world.get::<crate::followers::Follower>(unit).is_some()
-                || (world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
-                    && world
-                        .get::<spell_cast::summon::SummonedCreature>(unit)
-                        .is_none()
-                    && world.get::<crate::zones::TempSummon>(unit).is_none()))
-    });
+    units.retain(|&unit| unit != primary && !targets::is_non_follower_summon(world, unit));
     units
 }
 
