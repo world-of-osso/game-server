@@ -76,6 +76,10 @@ pub fn next(
                     npc.template_id == 241805 && fed.is_none()
                 } else {
                     crate::npc_interaction::nalorakk_offerings::is_offering_source(npc.template_id)
+                        && crate::npc_interaction::spellclick::has_usable_offering_spell(
+                            world,
+                            npc.template_id,
+                        )
                 }
         })
         .map(|(entity, _, at, _, _)| (entity, point.distance(Vec3::new(at.x, at.y, at.z))))
