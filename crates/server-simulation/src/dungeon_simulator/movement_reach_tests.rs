@@ -43,6 +43,50 @@ fn tick(world: &mut World) {
 }
 
 #[test]
+#[ignore = "requires extracted Ruby Mythic graph"]
+fn ruby_owner_can_return_to_tank_from_observed_stall_positions() {
+    let space = Space(super::super::graph::read_graph().unwrap());
+    let from = Vec3::new(1480.93005, 126.46381, 176.06);
+    let to = Vec3::new(1462.78003, 126.27969, 174.649);
+    let (mut world, owner) = pet_world(Some(space), from, to);
+    world
+        .entity_mut(owner)
+        .remove::<PetMotion>()
+        .insert(MoveIntent(to));
+    for frame in 0..600 {
+        let y = if frame % 2 == 0 { 126.27969 } else { 126.5823 };
+        world
+            .entity_mut(owner)
+            .insert(MoveIntent(Vec3::new(to.x, y, to.z)));
+        tick(&mut world);
+        let current = point(world.get::<Position>(owner).unwrap());
+        if current.distance(to) < 4.0 {
+            return;
+        }
+    }
+    panic!(
+        "owner remained at {:?} while returning to the tank; travel={}",
+        world.get::<Position>(owner),
+        inspect_travel(&world, owner)
+    );
+}
+
+#[test]
+fn changed_destination_is_replanned_after_cached_route_ends() {
+    let (mut world, owner) = pet_world(None, Vec3::ZERO, Vec3::X * 2.0);
+    world
+        .entity_mut(owner)
+        .remove::<PetMotion>()
+        .insert(MoveIntent(Vec3::X * 2.0));
+    tick(&mut world);
+    world.entity_mut(owner).insert(MoveIntent(Vec3::X * 2.5));
+    for _ in 0..20 {
+        tick(&mut world);
+    }
+    assert!(point(world.get::<Position>(owner).unwrap()).distance(Vec3::X * 2.5) < 0.001);
+}
+
+#[test]
 fn in_reach_pet_stays_in_reach_for_eighty_native_movement_ticks() {
     for from in [Vec3::ZERO, Vec3::new(1.83, 0.0, 0.0)] {
         let (mut world, pet) = pet_world(Some(stockade_space()), from, Vec3::ZERO);
