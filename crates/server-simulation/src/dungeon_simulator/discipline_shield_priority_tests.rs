@@ -2,6 +2,94 @@
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_does_not_cast_ordinary_shield_over_void_shield() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(1);
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    let healer = run.healer;
+    run.app
+        .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 120.0 });
+    super::healer_simc_replay::engage(&mut run);
+    super::healer_simc_replay::finish_precombat(&mut run.app, &[run.tank, healer]).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            17, 585, 390691,
+        ]));
+    for member in run.slots {
+        for spell_id in [194384, 1253593] {
+            crate::auras::apply_aura(
+                run.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: healer,
+                    target: member,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+    }
+    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..140 {
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && event.spell_id == Some(585)
+                && event.kind == CombatLogKind::CastSuccess),
+        "the follower must reach its damage filler"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && event.spell_id == Some(17)
+                && event.kind == CombatLogKind::CastSuccess),
+        "ordinary Shield must not overwrite a live Void Shield"
+    );
+    for member in run.slots {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            member,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.caster == healer && matches!(aura.spell_id, 17 | 1253593),
+        );
+    }
+    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..400 {
+        run.app.update();
+        if run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .any(|event| {
+                event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(17)
+                    && event.kind == CombatLogKind::CastSuccess
+            })
+        {
+            break;
+        }
+    }
+    assert!(
+        run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .any(|event| {
+                event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(17)
+                    && event.kind == CombatLogKind::CastSuccess
+            }),
+        "ordinary Shield remains available after Void Shield is removed"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_does_not_refresh_an_active_ordinary_shield() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
