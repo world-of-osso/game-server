@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Temple of Sethraliss keystone (partial)
+
+- `INFERRED_WCL_TEMPLE_CAST_CLOCK`: map 1877 difficulty 8 requests the observed opening casts of Adderis 262530, Aspix 262822, Merektha 133384 and Galvazzt 263658. First times and the Gust/Induction repeats use M4cdBNJkTjavYgQV/11 pulls 2, 4, 7; ax1vNFnfPdXrzRQ2/16 pulls 2, 4, 6; ZgBCXQvcnhaAYT1r/5 pulls 2, 5, 7. Fixed schedules are inferred from these observations, not authored clocks. Native DB2 supplies effects and targeting.
+- `TEMPLE_BOSS_MECHANICS_UNPORTED`: Adderis/Aspix shield transfer and Thunder and Lightning ground selector, Merektha's burrow and adds, Galvazzt's conductors, the Avatar's hostile waves and the boss dummy selectors remain unported. Requests for dummy parents do not certify their effects. Do not treat this as a keystone-clear qualification.
+- Rogue Krolusk 134617 retains TDB faction 35. Player AoE damage in those three reports does not establish direct targetability or a faction-change trigger.
+
 ## Native creature explicit-unit normalization
 
 - TC a352b1fa `Spell.cpp:621–678` removes redundant unit objects before target exclusion checks. This runtime ports that correction only at redundant-self EXCLUDE_CASTER admission: native raw target flags, implicit target reference/object types and effect missing-target masks determine whether the supplied caster object is required, never SpellID exceptions. Required unit/corpse objects and gameobjects remain unchanged; implicit candidates still enforce EXCLUDE_CASTER. This is not a complete InitExplicitTargets representation port.
