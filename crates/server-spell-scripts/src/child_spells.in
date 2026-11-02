@@ -745,3 +745,15 @@ D	monk_harmony.rs	apply	AuraApplication	spell	1	450521,450711
 D	outlaw_coup.rs	execute_coup	ScaledTrigger	spell_id	1	462140,462239,462240
 D	outlaw_spree_power.rs	launch_hand	launch_triggered_spell	&spell	1	57841,57842
 D	outlaw_spree_power.rs	launch_hand	load_triggered_spell	hand	1	57841,57842
+D	paladin_armaments.rs	advance_shining_light	AuraApplication	id	1	182104,327510
+D	paladin_armaments.rs	after_cast	AuraApplication	override_id	1	432478
+D	paladin_armaments.rs	cast_guidance_effect	cast_triggered_with_overrides	id	1	433807,433808
+D	paladin_armaments.rs	echo_forge	cast_triggered	echo	1	447246,447258
+D	paladin_armaments.rs	roll_divine_inspiration	AuraApplication	next	1	432496,432502
+D	paladin_armaments.rs	summon_forge	AuraApplication	spell_id	1	432502,434255
+D	paladin_masterwork.rs	add_stacks	AuraApplication	spell	1	1239091,1271436
+D	paladin_masterwork.rs	strike_with_lesser_weapon	cast_triggered	spell	1	1239276,1239282
+D	periodic_counters.rs	apply_owned	AuraApplication	spell_id	1	205473,1222865
+D	pet_sets.rs	cast_stomps	cast_triggered	rule.payload	1	201754
+D	pet_sets.rs	cast_stomps	launch_triggered_spell	echo	1	201754
+D	pet_sets.rs	on_hit	cast_triggered	rule.aura	1	1299389
