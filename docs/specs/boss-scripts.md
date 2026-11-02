@@ -1,5 +1,7 @@
 # Boss scripts
 
+- Starting a bound multi-creature encounter engages all living bound peers in the same instance copy. For Lightblossom Trinity, WCL `hbyB6K8cfCDwJvAR` fight 3 and `p3QW9RkBvK86bCga` fight 10 show all three damaged within five seconds.
+
 ## Temple of Sethraliss keystone (partial)
 
 - `INFERRED_WCL_TEMPLE_CAST_CLOCK`: map 1877 difficulty 8 requests the observed opening casts of Adderis 262530, Aspix 262822, Merektha 133384 and Galvazzt 263658. First times and the Gust/Induction repeats use M4cdBNJkTjavYgQV/11 pulls 2, 4, 7; ax1vNFnfPdXrzRQ2/16 pulls 2, 4, 6; ZgBCXQvcnhaAYT1r/5 pulls 2, 5, 7. Fixed schedules are inferred from these observations, not authored clocks. Engaging either Adderis or Aspix also engages the living partner in the same copy; the encounter completes after both die. Native DB2 supplies effects and targeting.

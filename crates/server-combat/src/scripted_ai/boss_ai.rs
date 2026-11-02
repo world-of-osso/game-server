@@ -104,8 +104,19 @@ impl BossAi {
         if instance_script::get_boss_state(ctx.world, map, self.boss_id).is_none() {
             return;
         }
-        instance_script::set_boss_state(ctx.world, map, self.boss_id, EncounterState::InProgress);
+        let started = instance_script::set_boss_state(
+            ctx.world,
+            map,
+            self.boss_id,
+            EncounterState::InProgress,
+        );
         instance_script::send_engage_unit(ctx.world, map, ctx.me);
+        if started {
+            for peer in instance_script::bound_encounter_peers(ctx.world, map, self.boss_id, ctx.me)
+            {
+                ctx.do_zone_in_combat(peer);
+            }
+        }
     }
 
     /// `BossAI::_JustDied`.
