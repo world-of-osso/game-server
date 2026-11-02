@@ -150,6 +150,10 @@ const DISPEL_ALL: u32 = 7;
 pub mod override_spell_data;
 pub mod overrides;
 
+/// Fixed-update boundary after due periodic aura ticks have been paid.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AuraTickSet;
+
 pub struct AuraPlugin;
 
 impl Plugin for AuraPlugin {
@@ -192,7 +196,7 @@ impl Plugin for AuraPlugin {
                     sync_passive_auras,
                     crate::equipment_effects::sync_equipment_effects,
                     crate::equipment_effects::item_sets::sync_item_sets,
-                    update_auras,
+                    update_auras.in_set(AuraTickSet),
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
                     sync_unit_auras,

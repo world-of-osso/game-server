@@ -7,6 +7,9 @@ use shared::components::PowerType;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+/// The active navigation request has not published its destination yet.
+pub const DUNGEON_MOVEMENT_DESTINATION_PENDING: &str = "DUNGEON_MOVEMENT_DESTINATION_PENDING";
+
 /// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
 /// map-data fallback. Production worlds do not call this fixture setup.
 #[cfg(any(test, feature = "test-support"))]
@@ -583,11 +586,17 @@ impl<'a> NativeFacts<'a> {
             }
             let position = crate::spell_cast::targets::position(self.world, self.actor)
                 .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
-            let destination = self
+            let navigation = self
                 .world
                 .get_resource::<crate::navigation::Navigation>()
-                .and_then(|navigation| navigation.current_destination(self.actor))
                 .ok_or("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")?;
+            let destination = match navigation.current_destination(self.actor) {
+                Some(destination) => destination,
+                None if navigation.route_pending(self.actor) => {
+                    return Err(DUNGEON_MOVEMENT_DESTINATION_PENDING.into());
+                }
+                None => return Err("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE".into()),
+            };
             return Ok(f64::from(position.distance(destination)));
         }
         self.world

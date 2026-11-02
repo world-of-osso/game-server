@@ -249,12 +249,24 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
     };
     let result = apl.and_then(|mut apl| {
-        if recovering {
-            apl.heal_out_of_combat(world, unit)?;
+        let tick = if recovering {
+            apl.heal_out_of_combat(world, unit)
         } else {
-            apl.tick(world, unit, &targets)?;
+            apl.tick(world, unit, &targets)
+        };
+        match tick {
+            Ok(()) => Ok(apl),
+            Err(error)
+                if error == server::simc_apl_native::DUNGEON_MOVEMENT_DESTINATION_PENDING =>
+            {
+                debug!(
+                    ?unit,
+                    "follower APL waits for its pending navigation destination"
+                );
+                Ok(apl)
+            }
+            Err(error) => Err(error),
         }
-        Ok(apl)
     });
     match result {
         Ok(apl) => {
@@ -314,7 +326,9 @@ impl Plugin for FollowerAplPlugin {
         crate::action_metadata::install_provider(app);
         app.add_systems(
             FixedUpdate,
-            drive_followers.after(server::followers::update_ai),
+            drive_followers
+                .after(server::followers::update_ai)
+                .after(server::auras::AuraTickSet),
         );
     }
 }

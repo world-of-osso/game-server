@@ -1095,6 +1095,106 @@ fn arms_casts_damage_beside_engaged_boss_with_pull_back_hold() {
 }
 
 #[test]
+fn follower_apl_retries_after_a_pending_navigation_destination() {
+    use server_combat::navigation::{Goal, MoveRequest, Navigation, Step};
+    use server_combat::simc_apl::{Action, Facts};
+    use server_combat::simc_apl_native::{Bindings, Encounter, NativeFacts};
+    use server_follower_apl::SpecRotation;
+    use server_follower_apl::literal_rotation::{PrecombatPoll, execution::Execution};
+    use shared::components::{CreatureMotion, Position};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    struct Probe(Arc<AtomicUsize>);
+    impl SpecRotation for Probe {
+        fn action_spells(&self) -> Vec<u32> {
+            Vec::new()
+        }
+        fn poll_precombat(
+            &mut self,
+            _: &mut World,
+            _: Entity,
+            _: &[Entity],
+        ) -> Result<PrecombatPoll, String> {
+            Ok(PrecombatPoll::Finished)
+        }
+        fn execute(
+            &mut self,
+            _: &mut World,
+            _: Entity,
+            _: Action,
+            _: Execution,
+        ) -> Result<(), String> {
+            unreachable!()
+        }
+        fn start_combat_at(&mut self, _: f64) {}
+        fn drive(&mut self, world: &mut World, actor: Entity, _: &[Entity]) -> Result<(), String> {
+            NativeFacts::new(
+                world,
+                actor,
+                &Bindings::default(),
+                Encounter::dungeon(0.0),
+                1,
+            )
+            .value("movement.distance")?;
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+    let mut pull = spawn(71);
+    let actor = pull.follower;
+    let target = pull.harness.npc;
+    let runs = Arc::new(AtomicUsize::new(0));
+    let world = pull.harness.app.world_mut();
+    let from = *world.get::<Position>(actor).unwrap();
+    let to = *world.get::<Position>(target).unwrap();
+    let map_id = world
+        .get::<server_combat::maps::InMap>(actor)
+        .unwrap()
+        .map_id;
+    let mut navigation = Navigation::new(std::path::Path::new("/nonexistent-navigation-fixture"));
+    assert!(matches!(
+        navigation.advance(
+            actor,
+            MoveRequest {
+                map_id,
+                goal: Goal::Chase(target.to_bits()),
+                from,
+                to,
+                distance: 1.0,
+                reach: 2.0,
+            }
+        ),
+        Step::Pending
+    ));
+    world.insert_resource(navigation);
+    world.entity_mut(actor).insert((
+        CreatureMotion::Run,
+        FollowerApl::new(Box::new(Probe(runs.clone()))),
+    ));
+    server_combat::combat_refs::set_in_combat_with(world, target, actor);
+    server_follower_apl::drive_followers(world);
+    assert!(
+        world.get::<FollowerApl>(actor).is_some(),
+        "pending movement must preserve the APL"
+    );
+    assert!(
+        world.get::<FollowerAplFailed>(actor).is_none(),
+        "pending movement must not fail the pull"
+    );
+    assert_eq!(runs.load(Ordering::SeqCst), 0);
+    world.entity_mut(actor).insert(CreatureMotion::Still);
+    server_follower_apl::drive_followers(world);
+    assert_eq!(
+        runs.load(Ordering::SeqCst),
+        1,
+        "the same APL must resume on the next ready tick"
+    );
+}
+
+#[test]
 fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     let pull = pull(62);
     let table = server_follower_apl::arcane_rotation::ACTIONS;
