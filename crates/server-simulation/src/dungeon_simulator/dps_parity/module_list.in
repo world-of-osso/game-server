@@ -44,6 +44,7 @@ mod arms_imminent_follower_tests;
 mod arms_precision_follower_tests;
 mod arms_followup_relationship_tests;
 mod arms_massacre_sudden_death_tests;
+mod arms_onslaught_follower_tests;
 mod arms_missing_relationship_tests;
 mod arms_reap_cleave_tests;
 mod arms_reap_tests;
@@ -352,6 +353,8 @@ mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
 #[cfg(test)]
 mod outlaw_flickering_steel_follower_tests;
+#[cfg(test)]
+mod outlaw_improved_adrenaline_follower_tests;
 mod outlaw_gravedigger_tests;
 mod outlaw_main_gauche_tests;
 mod outlaw_opportunity_tests;
