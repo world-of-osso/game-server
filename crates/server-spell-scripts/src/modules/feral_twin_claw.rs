@@ -9,7 +9,7 @@ use shared::components::ActiveSpec;
 const TALENT: u32 = 1271635;
 const CLAW: u32 = 1271636;
 const DRUID_CLASS_SET: u32 = 7;
-const MELEE_DEFENSE: u8 = 2;
+const MELEE_DEFENSE: u32 = 2;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
@@ -35,7 +35,7 @@ fn after_melee(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) 
             .spell
             .categories
             .as_ref()
-            .is_none_or(|category| category.defense_type != MELEE_DEFENSE as _)
+            .is_none_or(|category| category.defense_type != MELEE_DEFENSE)
     {
         return;
     }
