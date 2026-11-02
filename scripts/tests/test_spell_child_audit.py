@@ -60,6 +60,10 @@ fn run(world: &mut World, target: Entity, child: u32) {
             manifest.write_text('C\texample.rs\t12345\nD\texample.rs\trun\ttry_cast_triggered\tchild\t1\t67890,67891\n')
             self.assertEqual(audit.check_manifest(manifest, constants, sites), [])
             self.assertTrue(any('stale' in error for error in audit.check_manifest(manifest, constants, {})))
+            manifest.write_text('C\texample.rs\t12345\nD\texample.rs\trun\ttry_cast_triggered\tchild\t1\ttrigger:22222,enchant:33333,67890\n')
+            children, declared = audit.read_manifest(manifest)
+            self.assertEqual(children['example.rs'], {12345, 22222, 33333, 67890})
+            self.assertEqual(declared[site][2], {33333})
             manifest.write_text('D\texample.rs\trun\ttry_cast_triggered\tchild\t1\t?\n')
             with self.assertRaisesRegex(ValueError, 'explicit child ids'):
                 audit.read_manifest(manifest)

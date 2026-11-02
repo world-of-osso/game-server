@@ -220,10 +220,19 @@ def read_manifest(path):
                 raise ValueError(f'{path}:{number}: duplicate dynamic site {key}')
             if not count.isdigit() or int(count) <= 0:
                 raise ValueError(f'{path}:{number}: invalid site count')
-            ids = [literal(value) for value in values.split(',')]
-            if not ids or any(child is None or child <= 0 for child in ids):
-                raise ValueError(f'{path}:{number}: dynamic site needs explicit child ids')
-            dynamic[key] = (int(count), set(ids))
+            ids = set()
+            enchant_sources = set()
+            for value in values.split(','):
+                prefix, separator, number_text = value.partition(':')
+                if separator and prefix not in ('trigger', 'enchant'):
+                    raise ValueError(f'{path}:{number}: invalid native child source')
+                child = literal(number_text if separator else value)
+                if child is None or child <= 0:
+                    raise ValueError(f'{path}:{number}: dynamic site needs explicit child ids')
+                ids.add(child)
+                if separator and prefix == 'enchant':
+                    enchant_sources.add(child)
+            dynamic[key] = (int(count), ids, enchant_sources)
             children[path_name].update(ids)
         else:
             raise ValueError(f'{path}:{number}: invalid declaration')

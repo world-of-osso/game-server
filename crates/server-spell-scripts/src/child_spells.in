@@ -806,3 +806,11 @@ D	warlock_ritual.rs	gaze	cast_triggered	spell	1	1269885,1269886,1269892
 D	warlock_ritual.rs	grant	try_cast_triggered	buff	1	1269643,1269879
 D	warlock_ritual.rs	grant_art	try_cast_triggered	art	1	428524,432794,432795
 D	warlock_seed.rs	apply_background_dot	try_cast_triggered	dot	1	146739,445474
+D	after_cast_auras.rs	apply	try_cast_triggered	child	1	trigger:1243659
+D	elemental.rs	grant_mote	try_cast_triggered	child	1	trigger:16166
+D	enhancement/enhancement_imbues.rs	apply_enchant_aura	cast_triggered	child	1	enchant:334294,enchant:334302
+D	frost_death_knight.rs	trigger_native_buff	try_cast_triggered	buff	1	trigger:51128,trigger:59057
+D	guardian_rampant_thorn.rs	roll_gorestained_claws	cast_triggered	child	1	trigger:1296607
+D	midnight_stat_items.rs	apply_stat_buff	AuraApplication	id	1	1252524,1252818,1295057,1295898,1295899,1295900,1295901,trigger:1297654
+D	resource_values.rs	apply_producers	cast_triggered	payload	1	trigger:1296589
+D	survival_boomstick.rs	emit_tick	cast_triggered	child	1	trigger:1261193
