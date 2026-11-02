@@ -19,6 +19,16 @@ fn follower_void_apparitions_slam_activates_idols_without_cthun_talent() {
             .remove::<crate::followers::Follower>();
         crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
         if !selected {
+            let known = app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(actor)
+                .unwrap()
+                .iter()
+                .filter(|spell| *spell != 1264107)
+                .collect();
+            app.world_mut()
+                .entity_mut(actor)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
             crate::auras::remove_auras(
                 app.world_mut(),
                 actor,
