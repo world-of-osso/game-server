@@ -33,6 +33,21 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
     Ok(catalog)
 }
 
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) fn has_usable_offering_spell(world: &World, entry: u32) -> bool {
+    let catalog = world.resource::<SpellClickCatalog>();
+    let spells = world.resource::<crate::spell_info::SpellStore>();
+    catalog.0.get(&entry).is_some_and(|clicks| {
+        clicks.iter().any(|click| {
+            click.cast_flags == 1
+                && click.user_type == 0
+                && spells
+                    .get(click.spell_id)
+                    .is_some_and(|spell| !crate::gathering::is_gathering(spell))
+        })
+    })
+}
+
 pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
     if entry == super::petalwing::ENTRY {
         if let Err(error) = super::petalwing::traverse(world, player, npc) {

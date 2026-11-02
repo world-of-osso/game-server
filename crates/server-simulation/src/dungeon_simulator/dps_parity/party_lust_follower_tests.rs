@@ -18,7 +18,7 @@ fn two_lust_followers_cast_once_and_apply_a_party_lockout() {
             z: 0.0,
         },
         90,
-        [66, 105, 263, 63, 253],
+        [66, 105, 263, 63, 103],
     )
     .unwrap();
     let shaman = party.members[2];

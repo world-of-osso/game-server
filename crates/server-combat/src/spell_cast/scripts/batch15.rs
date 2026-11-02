@@ -120,15 +120,16 @@ fn same_group(world: &World, a: Entity, b: Entity) -> bool {
     groups.is_in_same_group(a, b)
 }
 
-///53563: only effective direct healing on another party/raid member transfers.
+/// WCL JpHdnbhYD8ZFWvma f1 a2: a fully overhealed 25914 at 6168ms
+/// triggers 53652 on both Beacons at 6189ms. Transfer raw direct healing.
 ///53651s1 supplies10%;53652 carries the heal identity, not another power/crit roll.
 pub(in crate::spell_cast) fn heal_beacon(
     world: &mut World,
     ctx: &EffectCtx,
     healed: Entity,
-    effective: f32,
+    amount: f32,
 ) {
-    if ctx.spell.id == BEACON_HEAL || effective <= 0.0 || !same_group(world, ctx.caster, healed) {
+    if ctx.spell.id == BEACON_HEAL || amount <= 0.0 || !same_group(world, ctx.caster, healed) {
         return;
     }
     let recipients: Vec<_> = world
@@ -150,7 +151,7 @@ pub(in crate::spell_cast) fn heal_beacon(
         .get(BEACON_HEAL)
         .expect("Beacon requires53652")
         .clone();
-    let amount = effective * script_effect_value(world, ctx.caster, BEACON_PERCENT, 0) / 100.0;
+    let amount = amount * script_effect_value(world, ctx.caster, BEACON_PERCENT, 0) / 100.0;
     let transfer = effects::EffectCtx {
         caster: ctx.caster,
         spell: &child,

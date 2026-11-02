@@ -21,7 +21,18 @@ pub(crate) fn try_lust(
             .into_iter()
             .find(|&spell| known.contains(spell))
     });
-    let Some(spell) = spell else { return Ok(false) };
+    let (caster, spell) = if let Some(spell) = spell {
+        (actor, spell)
+    } else {
+        let Some(pet) = server::hunter_pet::summoned_pet(world, actor) else {
+            return Ok(false);
+        };
+        const PRIMAL_RAGE: u32 = 264667;
+        if !server::hunter_pet::pet_has_specialization_spell(world, pet, PRIMAL_RAGE) {
+            return Ok(false);
+        }
+        (pet, PRIMAL_RAGE)
+    };
     let party = crate::follower::party_of(world, actor);
     if party
         .iter()
@@ -43,15 +54,15 @@ pub(crate) fn try_lust(
         .get(spell)
         .cloned()
         .ok_or_else(|| format!("native lust spell {spell} is missing"))?;
-    if !followers::action_safe(world, actor, actor, Some(spell))
-        || server::spell_cast::read_native_cast_start(world, actor, &native, actor).is_err()
+    if !followers::action_safe(world, caster, caster, Some(spell))
+        || server::spell_cast::read_native_cast_start(world, caster, &native, caster).is_err()
     {
         return Ok(false);
     }
     execution::execute(
         world,
-        actor,
-        Execution::Spell(spell, actor, targets.first().copied()),
+        caster,
+        Execution::Spell(spell, caster, targets.first().copied()),
     )?;
     Ok(true)
 }

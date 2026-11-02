@@ -10,10 +10,8 @@ const TIGERS_FURY: u32 = 5217;
 const TALENT: u32 = 1263660;
 const STALKING: u32 = 1263962;
 const CAT: u32 = 768;
-// Pinned Cat attacks used by the literal Feral action set, including resolved Moonfire.
-const CAT_ATTACKS: &[u32] = &[
-    1079, 1822, 5221, 22568, 106785, 106830, 155625, 202028, 274837, 285381, 1243807,
-];
+// SimC76f8118 sc_druid.cpp3705–3749: only cp_generator_t actions consume Stalking.
+const CAT_GENERATORS: &[u32] = &[1822, 5221, 106785, 155625, 202028];
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AuraRollAfterCast(after_cast),
@@ -27,7 +25,7 @@ fn owns_proc(spell: u32) -> bool {
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
     if spell == TIGERS_FURY {
         Some(grant_stalking)
-    } else if CAT_ATTACKS.contains(&spell) {
+    } else if CAT_GENERATORS.contains(&spell) {
         Some(consume_stalking)
     } else {
         None

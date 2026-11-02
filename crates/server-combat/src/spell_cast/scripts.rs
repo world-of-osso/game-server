@@ -97,7 +97,10 @@ pub(crate) use periodic_attacks::{after_periodic_trigger, rolls_reapplication};
 pub(super) use script_registry::after_cast_update as update_unleashed;
 pub(super) use script_registry::after_foreground_special;
 pub(super) use script_registry::after_modifier_consumption as apply_echo_policies;
-pub(super) use script_registry::after_resolved_hits;
+pub(super) fn after_resolved_hits(world: &mut World, ctx: &super::effects::EffectCtx<'_>) {
+    script_registry::after_resolved_hits(world, ctx);
+    windwalker::grant_wdp_thunderfist(world, ctx);
+}
 pub(super) use script_registry::check_native_spell as check_enhancement_cast;
 pub(crate) use script_registry::consume_cast_modifiers as consume_maelstrom_weapon;
 pub(crate) use script_registry::melee_residual as after_melee_residual;

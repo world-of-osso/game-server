@@ -115,6 +115,8 @@ pub struct PetCatalog {
     pub default_specializations: HashMap<u32, u32>,
     pub families: HashMap<u32, (String, u32)>,
     pub specializations: Vec<shared::protocol::PetSpecializationInfo>,
+    /// Native specialization spell and its minimum level.
+    pub specialization_spells: HashMap<u32, Vec<(u32, u8)>>,
 }
 
 fn load_pet_catalog(mut commands: Commands) {
@@ -146,10 +148,25 @@ pub fn read_pet_catalog(conn: &Connection) -> rusqlite::Result<PetCatalog> {
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut statement = conn.prepare(
+        "SELECT s.SpecID, s.SpellID, COALESCE(l.SpellLevel, 0) \
+         FROM specialization_spells s \
+         JOIN chr_specialization c ON c.ID=s.SpecID AND c.ClassID=0 AND c.Flags & 32=0 \
+         LEFT JOIN spell_levels l ON l.SpellID=s.SpellID AND l.DifficultyID=0",
+    )?;
+    let mut specialization_spells: HashMap<u32, Vec<(u32, u8)>> = HashMap::new();
+    for row in statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))? {
+        let (spec, spell, level) = row?;
+        specialization_spells
+            .entry(spec)
+            .or_default()
+            .push((spell, level));
+    }
     Ok(PetCatalog {
         default_specializations,
         families,
         specializations,
+        specialization_spells,
     })
 }
 
@@ -159,6 +176,31 @@ fn default_pet_specialization(world: &World, family: u32) -> Option<u32> {
         .default_specializations
         .get(&family)
         .copied()
+}
+
+/// Check a summoned pet's native specialization spell and required level.
+pub fn pet_has_specialization_spell(world: &World, pet: Entity, spell: u32) -> bool {
+    let Some(controlled) = world.get::<HunterPet>(pet) else {
+        return false;
+    };
+    let Some(stable) = world.get::<PetStable>(controlled.owner) else {
+        return false;
+    };
+    let Some(record) = stable.stored.active[usize::from(controlled.slot)].as_ref() else {
+        return false;
+    };
+    let Some(spec) = record.specialization else {
+        return false;
+    };
+    world
+        .resource::<PetCatalog>()
+        .specialization_spells
+        .get(&spec)
+        .is_some_and(|spells| {
+            spells
+                .iter()
+                .any(|&(id, level)| id == spell && record.level >= level)
+        })
 }
 
 /// A hunter's `PetStable`, inserted with the first tamed pet or the stored stable at
@@ -454,28 +496,40 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
 /// FOLLOWER_HUNTER_PET_SIMC_DEFAULT: SimC76f8118 sc_hunter.cpp1052 selects duck.
 /// Provision a normal runtime stable record; AI still casts learned Call Pet883.
 pub fn provision_follower_duck(world: &mut World, owner: Entity) -> Result<(), &'static str> {
+    provision_follower_pet(world, owner, 174884)
+}
+
+/// Provision an ordinary native pet record; its family controls specialization.
+pub fn provision_follower_pet(
+    world: &mut World,
+    owner: Entity,
+    entry: u32,
+) -> Result<(), &'static str> {
     init_pet_stable(world, owner).ok_or("follower stable could not be initialized")?;
     if world.get::<PetStable>(owner).unwrap().stored.active[0].is_some() {
         return Ok(());
     }
-    let stored = roll_follower_duck_record(world, owner)?;
+    let stored = roll_follower_pet_record(world, owner, entry)?;
     world.get_mut::<PetStable>(owner).unwrap().stored.active[0] = Some(stored);
     Ok(())
 }
 
-fn roll_follower_duck_record(world: &World, owner: Entity) -> Result<StoredPet, &'static str> {
-    const FOLLOWER_HUNTER_PET_SIMC_DEFAULT: u32 = 174884;
+fn roll_follower_pet_record(
+    world: &World,
+    owner: Entity,
+    entry: u32,
+) -> Result<StoredPet, &'static str> {
     let data = world
         .get_resource::<WorldData>()
         .ok_or("follower pet world data missing")?;
     let template = data
-        .template_for(FOLLOWER_HUNTER_PET_SIMC_DEFAULT, 0)
-        .ok_or("native follower duck174884 template missing; import the policy template")?;
+        .template_for(entry, 0)
+        .ok_or("native follower pet template missing; import the policy template")?;
     if template.creature_type != 1 || template.type_flags & 1 == 0 || template.models.is_empty() {
-        return Err("native follower duck must retain tameable Beast identity and its model");
+        return Err("native follower pet must retain tameable Beast identity and its model");
     }
     let specialization = default_pet_specialization(world, template.family)
-        .ok_or("native follower duck family has no default pet specialization")?;
+        .ok_or("native follower pet family has no default pet specialization")?;
     Ok(StoredPet {
         creature_entry: template.entry,
         display_id: crate::zones::template_display_id(template, &mut rand::thread_rng()),
