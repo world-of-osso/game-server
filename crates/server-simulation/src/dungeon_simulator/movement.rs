@@ -289,6 +289,11 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     {
         return Ok(());
     }
+    if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(unit)
+        && follow.owner != unit
+    {
+        follow.moving = false;
+    }
     if !can_move(world, unit) {
         return Ok(());
     }
@@ -333,6 +338,14 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         },
         speed,
     );
+    let moved = world
+        .get::<Position>(unit)
+        .is_some_and(|position| point(position) != from);
+    if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(unit)
+        && follow.owner != unit
+    {
+        follow.moving = moved;
+    }
     if let Some(facing) = crate::creature_ai::facing_along(to.x - next.x, to.z - next.z) {
         world.entity_mut(unit).insert(Rotation {
             x: 0.0,
@@ -477,6 +490,44 @@ fn apl_reads_simulator_travel_destination_while_actor_moves() {
     assert_eq!(read(&world).unwrap(), 5.0);
     world.entity_mut(actor).remove::<Travel>();
     assert!(read(&world).is_err());
+}
+
+#[test]
+fn travel_updates_follower_motion_flag_on_movement_and_stop() {
+    use crate::creature_ai::FollowOwner;
+    let mut world = World::new();
+    let owner = world
+        .spawn(Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            FollowOwner {
+                owner,
+                moving: false,
+            },
+        ))
+        .id();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<Position>(follower).unwrap().x > 0.0);
+    assert!(world.get::<FollowOwner>(follower).unwrap().moving);
+    let position = *world.get::<Position>(follower).unwrap();
+    world.entity_mut(owner).insert(position);
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert_eq!(*world.get::<Position>(follower).unwrap(), position);
+    assert!(!world.get::<FollowOwner>(follower).unwrap().moving);
 }
 
 #[test]
