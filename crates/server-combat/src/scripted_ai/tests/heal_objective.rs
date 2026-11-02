@@ -91,6 +91,22 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
             "add {entry} must engage the party"
         );
     }
+    let hexxer = actors.iter().find(|(_, entry)| *entry == 268491).unwrap().0;
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(hexxer).insert(visibility);
+    let position = *h.app.world().get::<Position>(hexxer).unwrap();
+    *h.app.world_mut().get_mut::<Position>(player).unwrap() = position;
+    h.advance(12.0);
+    for ability in [1302153, 1302158] {
+        assert!(
+            h.inbox(0)
+                .spell_gos
+                .iter()
+                .any(|go| go.caster == hexxer.to_bits() && go.spell_id == ability),
+            "Hexxer must cast {ability}"
+        );
+    }
     let spell = h
         .app
         .world()
