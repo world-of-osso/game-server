@@ -1,0 +1,23 @@
+# map,encounter,difficulty (0 means all),mode,actor entries
+# Sequential: WCL 2L8BJvP1XcbtQ4jd/1/13; Journal2170 displays link TC entries.
+1762,2140,8,sequential,135475,135470,135472
+# Simultaneous encounter, shield transfer: WCL 4PZxpvB9dMcD8Jgw/1/2; docs/specs/boss-scripts.md.
+1877,2124,0,simultaneous,262530,262822
+# UNSOURCED_LEGACY: archived WCL reports; retire after first-hit evidence is available.
+2451,2555,0,UNSOURCED_LEGACY,184580,184581,184582
+2520,2570,0,UNSOURCED_LEGACY,186122,186124,186125
+# M+ first-hit observations, applied as inferred encounter-level policies across difficulties.
+# WCL WPB7b2ZJarQ1DmvN/6/8: 0.002s and 1.400s.
+2521,2623,0,simultaneous,190484,190485
+# WCL 8maLdvGchJ1MK97g/1/11: 1.070s and 1.103s.
+2652,2888,0,simultaneous,213216,213217
+# WCL APqCW2VFyNnLah6c/8/12: 0.027s and 1.292s.
+2669,2908,0,simultaneous,216648,216649
+# WCL CPzKQd3xLrWJgRNw/1/4: both 0.667s.
+2773,3019,0,simultaneous,226402,226403
+# WCL jpfFa36xhQkZqr4d/6/8: 0.001s and 1.183s.
+2805,3057,0,simultaneous,231626,231629
+# WCL 1b9v7Z4FqkCwxpdX/13/2: 0.003s, 1.139s and 2.257s.
+2859,3199,0,simultaneous,243028,243029,243030
+# WCL 3nTxa7fYVZ2yFDgJ/20/4: 0.003s and 2.771s.
+2874,3212,0,simultaneous,247570,247572
