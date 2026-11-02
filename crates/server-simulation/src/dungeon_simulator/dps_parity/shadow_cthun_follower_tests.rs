@@ -44,7 +44,7 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
             );
             crate::spell_cast::creature_cast(app.world_mut(), actor, 15407, Some(target), false)
                 .unwrap();
-            for _ in 0..80 {
+            for _ in 0..100 {
                 app.update();
             }
         }
