@@ -5,8 +5,20 @@ use bevy::prelude::*;
 use shared::components::CombatStatus;
 
 fn fixture() -> (Harness, Entity) {
-    let mut h = harness(Vec::new(), &[375576, 50286, 61882, 53385, 188443], 2)
-        .expect("native combat-area spell data");
+    let mut h = harness(
+        Vec::new(),
+        &[
+            375576,
+            50286,
+            61882,
+            53385,
+            188443,
+            DIVINE_RESONANCE,
+            POLYMORPH,
+        ],
+        2,
+    )
+    .expect("native combat-area spell data");
     // Put the untouched unit nearer than the engaged one: filter before target caps.
     let untouched = spawn_npc(&mut h.app, 1.0);
     let mode = crate::test_data::world_data().templates[&6].aggro_mode;
@@ -20,6 +32,11 @@ fn fixture() -> (Harness, Entity) {
     crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
     (h, untouched)
 }
+
+/// Divine Resonance 386731: Dummy effects on TARGET_UNIT_DEST_AREA_ENEMY (31) with
+/// SPELL_ATTR1_NO_THREAT (Attributes_1 0x400), so `HasInitialAggro()` is false.
+const DIVINE_RESONANCE: u32 = 386731;
+const POLYMORPH: u32 = 118;
 
 fn selected(h: &mut Harness, id: u32, index: u8, explicit: Option<Entity>) -> Vec<Entity> {
     let spell = h
@@ -88,6 +105,69 @@ fn divine_toll_native_cast_does_not_start_a_fresh_pack_without_a_kit_guard() {
             .world()
             .get::<CombatStatus>(h.npc)
             .is_some_and(|status| status.0)
+    );
+}
+
+/// TC a352b1fa Spell.cpp:2992-2996 calls `AtTargetAttacked(unit, HasInitialAggro())`
+/// for a landed harmful hit; Unit.cpp:9281-9287 engages an unengaged target only with
+/// initial aggro. Divine Resonance's Dummy effects are positive (SpellInfo.cpp:4612-5067
+/// has no enemy-target rule for Dummy), so its area hit engages nobody.
+#[test]
+fn hits_without_initial_aggro_engage_only_an_already_engaged_enemy() {
+    let (mut h, untouched) = fixture();
+    let caster = h.caster;
+    h.app
+        .init_resource::<super::test_harness::ObservedSelectedTargets>();
+    let threatens = |h: &Harness, unit: Entity| {
+        h.app
+            .world()
+            .get::<shared::components::ThreatTable>(unit)
+            .is_some_and(|table| {
+                table
+                    .entries()
+                    .iter()
+                    .any(|entry| entry.entity == caster.to_bits())
+            })
+    };
+    super::creature_cast(
+        h.app.world_mut(),
+        caster,
+        DIVINE_RESONANCE,
+        Some(caster),
+        true,
+    )
+    .unwrap();
+    let hit_untouched = h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedSelectedTargets>()
+        .0
+        .iter()
+        .any(|(source, spell, units)| {
+            *source == caster && *spell == DIVINE_RESONANCE && units.contains(&untouched)
+        });
+    assert!(
+        hit_untouched,
+        "the native enemy area reaches the untouched unit"
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<CombatStatus>(untouched)
+            .is_some_and(|status| status.0),
+        "a hit without initial aggro must not engage an unengaged unit"
+    );
+    assert!(!threatens(&h, untouched));
+    // Polymorph 118 is harmful with SPELL_ATTR1_NO_THREAT: it engages only an engaged target.
+    assert!(!threatens(&h, h.npc));
+    let npc = h.npc;
+    // Polymorph's creature-type requirement reads the native template.
+    h.app
+        .insert_resource(super::test_harness::load_native_creature_world(&[6]));
+    super::creature_cast(h.app.world_mut(), caster, POLYMORPH, Some(npc), true).unwrap();
+    assert!(
+        threatens(&h, npc),
+        "a harmful hit without initial aggro still engages an already engaged unit"
     );
 }
 
