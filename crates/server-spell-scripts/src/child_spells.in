@@ -464,6 +464,7 @@ C	shadow_apparitions.rs	1231479
 C	shadow_apparitions.rs	1264177
 C	shadow_bolts.rs	1242173
 C	shadow_collapse.rs	448405
+C	shadow_cthun.rs	377358
 C	shadow_insight.rs	375981
 C	shadow_nzoth.rs	1243105
 C	shadow_nzoth.rs	1243106
@@ -612,6 +613,8 @@ D	ret_damage.rs	sentence_init	launch_triggered_spell_with_primary	&child	1	12602
 D	ret_empyrean.rs	cast_background_storm	launch_triggered_spell	&storm	1	53385
 D	ret_toll.rs	cast_protection_child	launch_triggered_spell	&child	1	31935
 D	shadow_apparitions.rs	burst_at_parent	launch_triggered_spell_with_primary	&spell	1	1231479
+D	shadow_cthun.rs	try_summon	launch_triggered_spell	&summon	1	377355,377357
+D	shadow_cthun.rs	try_summon	load_triggered_spell	id	1	377355,377357
 D	shadow_priest.rs	cast_maddening_tentacles	launch_triggered_spell	&child	1	335467
 D	shadow_rift.rs	pulse	launch_triggered_spell	&damage	1	447448
 D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
