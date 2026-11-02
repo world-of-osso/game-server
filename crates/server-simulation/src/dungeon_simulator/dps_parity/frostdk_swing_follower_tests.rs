@@ -28,6 +28,31 @@ fn frost_follower_white_damage_attribution() {
         health.current =
             health.max * (FIXED_FIGHT_FRAMES - frame) as f32 / FIXED_FIGHT_FRAMES as f32;
         app.update();
+        if frame == 100 || frame == 1000 {
+            let mods = app
+                .world()
+                .get::<crate::auras::stat_mods::AuraStatMods>(actor)
+                .unwrap();
+            let auras = app.world().get::<crate::auras::ActiveAuras>(actor).unwrap();
+            for aura in auras
+                .iter()
+                .filter(|a| matches!(a.spell_id, 137006 | 435005 | 194879))
+            {
+                println!(
+                    "FROST_AURA frame={frame} id={} stacks={} effects={:?}",
+                    aura.spell_id,
+                    aura.stacks,
+                    aura.effects
+                        .iter()
+                        .map(|e| (e.index, e.aura_type, e.amount))
+                        .collect::<Vec<_>>()
+                );
+            }
+            println!(
+                "FROST_SWING_MOD frame={frame} auto={}",
+                mods.autoattack_damage_mult
+            );
+        }
     }
     let events = &app
         .world()
