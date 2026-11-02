@@ -90,7 +90,7 @@ pub(super) fn advance(
         super::hazards::advance_escape(
             world,
             unit,
-            map.map_id,
+            map,
             from,
             Position {
                 x: to.x,

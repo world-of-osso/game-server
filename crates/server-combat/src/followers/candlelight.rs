@@ -50,7 +50,7 @@ pub(super) fn seek(world: &mut World, unit: Entity) -> bool {
         error!(?unit, "Candlelight seeking requires navigation");
         return true;
     }
-    super::hazards::advance_escape(world, unit, map.map_id, from, center, Goal::Point);
+    super::hazards::advance_escape(world, unit, map, from, center, Goal::Point);
     true
 }
 
