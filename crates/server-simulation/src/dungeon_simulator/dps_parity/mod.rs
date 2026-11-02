@@ -55,6 +55,14 @@ pub(crate) trait SpecDriver: std::any::Any {
 
     fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity])
     -> Result<(), String>;
+    fn drive_frame(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        literal_rotation::drive_tick(world, actor, |world| self.drive(world, actor, targets))
+    }
     fn label(&self) -> &'static str;
     /// Tank adapters must explicitly identify their native active-mitigation auras.
     fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
@@ -75,6 +83,48 @@ pub(crate) trait SpecDriver: std::any::Any {
     fn report(&self) -> Value {
         Value::Null
     }
+}
+
+impl SpecDriver for server_follower_apl::FollowerApl {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.tick(world, actor, targets)
+    }
+
+    fn drive_frame(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.tick(world, actor, targets)
+    }
+
+    fn label(&self) -> &'static str {
+        "PRODUCTION_FOLLOWER_APL"
+    }
+}
+
+/// Build and prepare the production follower lifecycle against fixed Patchwerk data.
+pub(super) fn prepare_production_driver(run: &mut Run) -> Result<Box<dyn SpecDriver>, String> {
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, run.profile.spec_id)?;
+    let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        apl.tick(run.app.world_mut(), run.actor, &[])?;
+        if !apl.in_precombat() {
+            return Ok(Box::new(apl));
+        }
+        run.app.update();
+    }
+    Err("production follower precombat exceeded 30 seconds".into())
 }
 
 type PrepareDriver = fn(&mut Run) -> Result<Box<dyn SpecDriver>, String>;
@@ -913,9 +963,7 @@ use literal_rotation::LiteralTickProgress;
 pub(crate) fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
     let driver = run.spec_driver.as_mut().expect("literal driver is present");
     let (actor, targets) = (run.actor, &run.targets);
-    literal_rotation::drive_tick(run.app.world_mut(), actor, |world| {
-        driver.drive(world, actor, targets)
-    })
+    driver.drive_frame(run.app.world_mut(), actor, targets)
 }
 
 pub(crate) fn drive_literal_off_gcd(run: &mut Run) -> Result<bool, String> {
