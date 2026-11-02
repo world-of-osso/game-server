@@ -1621,12 +1621,61 @@ impl Plugin for GroundPlugin {
 }
 
 /// Where the ground loads from: `GAME_SERVER_GROUND_DIR`, else the client's asset cache
-/// beside this checkout (not the working directory).
+/// beside the checkout owning the shared server data (not the working directory).
 pub(crate) fn ground_data_dir() -> PathBuf {
-    std::env::var_os(GROUND_DIR_ENV).map_or_else(
-        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data"),
-        PathBuf::from,
+    resolve_ground_data_dir(
+        Path::new(env!("CARGO_MANIFEST_DIR")),
+        std::env::var_os(GROUND_DIR_ENV),
     )
+    .unwrap_or_else(|error| panic!("Cannot resolve shared server data for ground: {error}"))
+}
+
+fn resolve_ground_data_dir(
+    manifest_dir: &Path,
+    override_dir: Option<std::ffi::OsString>,
+) -> std::io::Result<PathBuf> {
+    if let Some(path) = override_dir {
+        return Ok(PathBuf::from(path));
+    }
+    let server_data = manifest_dir.join("../../data");
+    let data = server_data.canonicalize().map_err(|error| {
+        std::io::Error::new(error.kind(), format!("{}: {error}", server_data.display()))
+    })?;
+    let projects = data.parent().and_then(Path::parent).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "server data has no project parent",
+        )
+    })?;
+    Ok(projects.join("game-engine/data"))
+}
+
+#[cfg(all(test, unix))]
+#[test]
+fn ground_directory_uses_linked_server_data_and_respects_override() {
+    use std::os::unix::fs::symlink;
+
+    let root = tempfile::tempdir().unwrap();
+    let canonical = root.path().join("projects/game-server");
+    let worktree = root.path().join("worktrees/server");
+    std::fs::create_dir_all(canonical.join("data")).unwrap();
+    std::fs::create_dir_all(canonical.join("crates/server-combat")).unwrap();
+    std::fs::create_dir_all(worktree.join("crates/server-combat")).unwrap();
+    symlink(canonical.join("data"), worktree.join("data")).unwrap();
+    let manifest = worktree.join("crates/server-combat");
+    assert_eq!(
+        resolve_ground_data_dir(&manifest, None).unwrap(),
+        root.path().join("projects/game-engine/data")
+    );
+    assert_eq!(
+        resolve_ground_data_dir(&canonical.join("crates/server-combat"), None).unwrap(),
+        root.path().join("projects/game-engine/data")
+    );
+    assert_eq!(
+        resolve_ground_data_dir(&root.path().join("missing"), Some("/custom/ground".into()))
+            .unwrap(),
+        PathBuf::from("/custom/ground")
+    );
 }
 
 /// After `WorldDataPlugin` has loaded the `MapStore` and the spawns (Startup). Without

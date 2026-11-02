@@ -36,7 +36,7 @@ Desktop source/target directories persist under `/home/osso-test/.cache/native-b
 
 Desktop default runtime working directory is `/home/osso-test/.local/share/game-server/assets`, containing read-only world/game-table/economy inputs. Ground defaults to `/home/osso-test/game-engine-trial/ground`.
 
-Mutable player storage and admin socket default to `/home/osso-test/.local/share/game-server/<server-key>/game.redb` and `admin.sock`, isolated per checkout. Explicit `GAME_SERVER_DB_PATH`, `GAME_SERVER_ADMIN_SOCKET`, and `GAME_SERVER_GROUND_DIR` override those defaults; bind/port/reset environment settings are also forwarded. Local runs retain the checkout working directory and local data. No automatic player database migration occurs.
+Mutable player storage and admin socket default to `/home/osso-test/.local/share/game-server/<server-key>/game.redb` and `admin.sock`, isolated per checkout. Explicit `GAME_SERVER_DB_PATH`, `GAME_SERVER_ADMIN_SOCKET`, and `GAME_SERVER_GROUND_DIR` override those defaults; bind/port/reset environment settings are also forwarded. Local runs retain the checkout working directory and local data. Without `GAME_SERVER_GROUND_DIR`, the server resolves its checkout's `data` directory, including a worktree symlink, and uses the owning project directory's `game-engine/data`; the server data directory must exist. No automatic player database migration occurs.
 
 ## Evidence and pending runtime proof
 

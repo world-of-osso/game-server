@@ -250,7 +250,7 @@ fn purified_spirit_hits_survivor_after_combat_target_dies() {
     use shared::components::Health;
 
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(268, 3).unwrap();
+    let mut run = prepare_player(3);
     engage(&mut run);
     let actor = run.actor;
     let primary = run.targets[0];
@@ -302,7 +302,7 @@ fn purified_spirit_hits_survivor_after_combat_target_dies() {
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn expired_harmony_spender_deposits_remaining_pool_as_purified_spirit() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(268, 1).unwrap();
+    let mut run = prepare_player(1);
     engage(&mut run);
     let actor = run.actor;
     let target = run.targets[0];
@@ -331,7 +331,17 @@ fn expired_harmony_spender_deposits_remaining_pool_as_purified_spirit() {
         .world_mut()
         .entity_mut(actor)
         .remove::<crate::combat::AutoAttack>();
+    // Damage while the spender is up still pays from it; its last value is unpaid.
+    let mut unpaid = spender;
     for _ in 0..400 {
+        if crate::auras::has_aura(run.app.world(), actor, 450711) {
+            unpaid = run
+                .app
+                .world()
+                .get::<crate::auras::harmony::HarmonyPools>(actor)
+                .unwrap()
+                .spender;
+        }
         run.app.update();
     }
     let events = &run
@@ -348,10 +358,11 @@ fn expired_harmony_spender_deposits_remaining_pool_as_purified_spirit() {
         })
         .map(|e| e.amount)
         .sum();
-    println!("Purified Spirit spender={spender} damage={damage}");
+    println!("Purified Spirit spender={spender} unpaid={unpaid} damage={damage}");
+    assert!(unpaid > 0.0, "the spender must expire with an unpaid pool");
     assert!(
-        (damage as f32 - spender).abs() < 5.0,
-        "expired spender must deliver exactly its unpaid pool: {damage} versus {spender}"
+        (damage as f32 - unpaid).abs() < 5.0,
+        "expired spender must deliver exactly its unpaid pool: {damage} versus {unpaid}"
     );
     assert_eq!(
         run.app
@@ -361,4 +372,18 @@ fn expired_harmony_spender_deposits_remaining_pool_as_purified_spirit() {
             .spender,
         0.0
     );
+}
+
+/// A player stops swinging when its attack is removed; a follower re-acquires its
+/// target every update and its melee pays the whole spender before it can expire.
+fn prepare_player(count: usize) -> Run {
+    let (profile, traits) = read_reference(268).unwrap();
+    let race = inputs::read_reference_race(&profile.race).unwrap();
+    prepare_literal_reference(
+        profile,
+        &traits,
+        count,
+        crate::followers::simulator::ParityActor::Player { race },
+    )
+    .unwrap()
 }
