@@ -229,7 +229,8 @@ fn follower_healer_casts_on_nearby_heal_objective() {
     world.entity_mut(actor).insert(map);
     world.entity_mut(owner).insert(map);
     let position = *world.get::<Position>(actor).unwrap();
-    let faction = *world.get::<UnitFactionTemplate>(actor).unwrap();
+    // TDB 69497 Avatar faction and unit flags from the population candidate.
+    let faction = UnitFactionTemplate(1665);
     let max = world.get::<Health>(actor).unwrap().max;
     world.get_mut::<Health>(owner).unwrap().current = max;
     world.init_resource::<server_combat::maps::MapStore>();
@@ -242,6 +243,7 @@ fn follower_healer_casts_on_nearby_heal_objective() {
             map,
             position,
             faction,
+            shared::components::UnitFlags(832),
             Npc {
                 template_id: 133392,
                 name: "Avatar of Sethraliss".into(),
