@@ -6,7 +6,7 @@ use shared::components::{
     Rotation, SheathState, UnitFactionTemplate, UnitFlags, UnitLevel, UnitPose, UnitPowers, Zone,
 };
 use shared::protocol::NpcFlags;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::combat::{CorpseDelay, RespawnDelay};
@@ -319,7 +319,7 @@ pub fn spawn_map_creatures(
     let (pool_spawns, picked) = world_data
         .pools
         .init_map(map.map_id as u16, &mut rand::thread_rng());
-    let picked: HashSet<u64> = picked.into_iter().collect();
+    let picked: BTreeSet<u64> = picked.into_iter().collect();
     let withheld: HashSet<u64> = world_data
         .script_spawn_groups
         .values()
@@ -377,7 +377,7 @@ pub(crate) fn spawn_pooled_creatures(
     map_pools: &MapPools,
     guids: &[u64],
     ground: Option<&mut crate::ground::GroundMap>,
-) -> HashMap<u64, Entity> {
+) -> BTreeMap<u64, Entity> {
     let indices = &world_data.spawns_by_map[&(map.map_id as u16)];
     let spawns = indices
         .iter()
@@ -429,7 +429,8 @@ pub(crate) fn spawn_grouped_creatures(
 }
 
 /// Spawn `spawns` with their AI, addon and formation components; returns
-/// the entity of each spawn guid.
+/// the entity of each spawn guid. Ordered: callers insert components per entry,
+/// and insertion order fixes archetype rows and so later query order.
 fn spawn_creatures<'a>(
     commands: &mut Commands,
     world_data: &WorldData,
@@ -438,14 +439,14 @@ fn spawn_creatures<'a>(
     replicate: bool,
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
     ground: Option<&mut crate::ground::GroundMap>,
-) -> HashMap<u64, Entity> {
+) -> BTreeMap<u64, Entity> {
     let mut context = CreatureSpawnContext {
         map,
         difficulty_id,
         ground,
         temporary: false,
     };
-    let mut entities = HashMap::new();
+    let mut entities = BTreeMap::new();
     let mut rng = rand::thread_rng();
     for spawn in spawns {
         let template = world_data
@@ -739,7 +740,7 @@ pub(crate) struct SpawnPose(pub UnitPose);
 pub(crate) fn insert_formation_members(
     commands: &mut Commands,
     world_data: &WorldData,
-    entities: &HashMap<u64, Entity>,
+    entities: &BTreeMap<u64, Entity>,
 ) {
     for (guid, &member) in entities {
         let Some(info) = world_data.formations.get(guid) else {
