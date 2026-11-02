@@ -41,7 +41,7 @@ fn holy_recovery_unblocks_next_pull_with_stalker_combat_reference() {
         .world_mut()
         .get_mut::<Health>(owner)
         .unwrap()
-        .current = max * 0.985;
+        .current = max * 0.49;
     let first = run.graph.route[0].pack;
     let sources = run
         .graph
@@ -57,7 +57,7 @@ fn holy_recovery_unblocks_next_pull_with_stalker_combat_reference() {
     assert_eq!(before, (false, "Wait(Recovery)".to_owned()));
     for _ in 0..6000 {
         run.app.update();
-        if run.app.world().get::<Health>(owner).unwrap().current == max {
+        if run.app.world().get::<Health>(owner).unwrap().current >= max * 0.5 {
             let decision =
                 crate::followers::simulator::pull(run.app.world_mut(), tank, &sources).unwrap();
             if decision.0 {
