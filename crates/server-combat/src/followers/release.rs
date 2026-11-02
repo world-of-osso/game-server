@@ -33,6 +33,30 @@ pub(super) fn update(world: &mut World) {
     for unit in returned {
         world.entity_mut(unit).remove::<ReturningFromGraveyard>();
     }
+    let returned_owners: Vec<_> = world
+        .query_filtered::<(Entity, &Position), (
+            With<ReturningFromGraveyard>,
+            With<shared::components::Player>,
+        )>()
+        .iter(world)
+        .filter_map(|(owner, position)| {
+            let (_, members, _) = party::read_admission(world, owner)?;
+            members
+                .iter()
+                .any(|member| {
+                    crate::spell_cast::targets::is_alive(world, *member)
+                        && world
+                            .get::<Position>(*member)
+                            .is_some_and(|member_position| {
+                                crate::creature_ai::within_follow_range(*position, *member_position)
+                            })
+                })
+                .then_some(owner)
+        })
+        .collect();
+    for owner in returned_owners {
+        world.entity_mut(owner).remove::<ReturningFromGraveyard>();
+    }
     let owners: std::collections::HashSet<_> = world
         .query::<&Follower>()
         .iter(world)

@@ -358,6 +358,7 @@ pub(crate) fn release_spirit_in_dungeon(
             grave,
             crate::maps::TeleportOptions { revive: true },
         );
+        crate::followers::mark_owner_returning(world, player);
     });
     Ok("released spirit".into())
 }

@@ -1598,6 +1598,48 @@ mod copy_tests {
     }
 
     #[test]
+    fn released_owner_waits_until_returning_to_party() {
+        use shared::components::Position;
+        let far = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, _, _) = brackenhide_release_fixture(far);
+        h.app.world_mut().entity_mut(caster).insert(far);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::death::PlayerDeathState {
+                state: shared::death::DeathState::Dead,
+                corpse: None,
+                graveyard: None,
+            });
+        crate::test_support::release_dungeon_player(h.app.world_mut(), h.caster).unwrap();
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_some()
+        );
+        super::super::release::update(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_some()
+        );
+        h.app.world_mut().entity_mut(h.caster).insert(far);
+        super::super::release::update(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_none()
+        );
+    }
+
+    #[test]
     fn native_class_druid_resurrects_follower_out_of_combat() {
         use shared::components::{Health, Level, Position};
         let owner_position = Position {
