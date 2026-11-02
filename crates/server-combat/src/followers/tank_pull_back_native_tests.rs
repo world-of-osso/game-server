@@ -265,10 +265,7 @@ fn run_native_pull_back(production: bool, full_party: bool) {
                 .and_then(|victim| victim.0),
             h.inbox.log.iter().rev().take(12).collect::<Vec<_>>()
         );
-        if acquired
-            && farthest > minimum_retreat
-            && !tank_pull_back::party_should_wait(h.app.world(), owner)
-        {
+        if acquired && farthest > minimum_retreat && !tank_pull_back::active(h.app.world(), tank) {
             break;
         }
     }

@@ -1,5 +1,6 @@
 //! Murder Row: an engaged boss must not leave Arms waiting for pull-back.
 use super::*;
+use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
 
 #[test]
@@ -39,34 +40,48 @@ fn arms_attacks_engaged_kystia_during_pull_back() {
                 .is_some_and(|npc| npc.template_id == 234648)
         })
         .unwrap();
-    let mut close_at = None;
-    let mut cursor = 0;
+    let mut prepared = None;
     for _ in 0..MAX_TICKS {
         assert!(!run.finished(), "keystone ended before Arms engaged Kystia");
+        assert!(
+            run.now() < 300.0,
+            "party did not engage Kystia within 300 simulated seconds"
+        );
         run.control().unwrap();
         run.app.update();
         run.healer_metrics.observe_frame(run.app.world());
         let mut key = run.keystone.take().unwrap();
         key.update(run.app.world_mut()).unwrap();
         run.keystone = Some(key);
-        let world = run.app.world();
-        let engaged = world
+        let engaged = run
+            .app
+            .world()
             .get::<crate::networking::CombatTarget>(boss)
             .is_some_and(|target| target.0 == Some(run.party.tank));
-        let close = world
-            .get::<Position>(arms)
-            .zip(world.get::<Position>(boss))
-            .is_some_and(|(a, b)| {
-                Vec3::new(a.x, a.y, a.z).distance(Vec3::new(b.x, b.y, b.z)) <= 6.0
+        if prepared.is_none() && engaged {
+            let world = run.app.world_mut();
+            let position = *world.get::<Position>(boss).unwrap();
+            world.entity_mut(arms).insert(Position {
+                x: position.x + 4.0,
+                ..position
             });
-        if close_at.is_none() && engaged && close {
-            close_at = Some(run.now());
-            cursor = world
+            let mut pools = world
+                .get_mut::<crate::spell_cast::powers::PowerPools>(arms)
+                .unwrap();
+            let rage = pools.get_mut(PowerType::Rage).unwrap();
+            rage.current = rage.max;
+            crate::combat_refs::set_in_combat_with(world, boss, arms);
+            crate::followers::set_test_pull_back(world, run.party.owner, run.party.tank);
+            assert!(crate::followers::holding_pull_damage(world, arms));
+            let cursor = world
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
                 .0
                 .len();
+            prepared = Some((run.now(), cursor));
+            continue;
         }
-        if let Some(start) = close_at {
+        if let Some((start, cursor)) = prepared {
+            let world = run.app.world();
             assert!(
                 !crate::followers::holding_pull_damage(world, arms),
                 "Arms remains held after Kystia engaged the tank"
@@ -78,6 +93,7 @@ fn arms_attacks_engaged_kystia_during_pull_back() {
                 event.kind == CombatLogKind::Damage
                     && event.source == Some(arms.to_bits())
                     && event.target == Some(boss.to_bits())
+                    && event.spell_id.is_some()
                     && event.amount > 0
             }) {
                 return;
@@ -88,5 +104,5 @@ fn arms_attacks_engaged_kystia_during_pull_back() {
             );
         }
     }
-    panic!("Arms never reached the engaged boss");
+    panic!("party never engaged Kystia");
 }

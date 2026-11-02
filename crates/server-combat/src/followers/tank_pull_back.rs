@@ -127,14 +127,21 @@ fn party_has_engaged_enemy(
     enemies: &[(Entity, Option<Entity>)],
     party: &[Entity],
 ) -> bool {
-    enemies.iter().any(|(enemy, _)| {
-        party.iter().copied().any(|member| {
-            crate::combat_refs::has_active_reference_to(world, *enemy, member)
-                || crate::hunter_pet::summoned_pet(world, member).is_some_and(|pet| {
-                    crate::combat_refs::has_active_reference_to(world, *enemy, pet)
-                })
+    party
+        .iter()
+        .copied()
+        .flat_map(|member| [Some(member), crate::hunter_pet::summoned_pet(world, member)])
+        .flatten()
+        .any(|unit| {
+            enemies.iter().any(|(enemy, _)| {
+                crate::combat_refs::has_active_reference_to(world, *enemy, unit)
+                    || crate::combat_refs::has_active_reference_to(world, unit, *enemy)
+            }) || crate::combat_refs::active_opponents(world, unit).any(|opponent| {
+                targets::is_alive(world, opponent)
+                    && targets::same_map(world, unit, opponent)
+                    && targets::is_hostile(world, unit, opponent)
+            })
         })
-    })
 }
 
 #[cfg(test)]
@@ -142,15 +149,14 @@ mod engagement_tests {
     use super::*;
 
     #[test]
-    fn enemy_engages_party_only_after_suppressed_reference_is_released() {
+    fn party_combat_reference_releases_hold_even_when_enemy_side_is_suppressed() {
         let mut world = World::new();
         world.insert_resource(Time::<()>::default());
         let member = world.spawn_empty().id();
         let enemy = world.spawn_empty().id();
         let enemies = [(enemy, None)];
-        crate::combat_refs::set_in_combat_with_suppressed(&mut world, member, enemy);
         assert!(!party_has_engaged_enemy(&world, &enemies, &[member]));
-        crate::combat_refs::set_in_combat_with(&mut world, member, enemy);
+        crate::combat_refs::set_in_combat_with_suppressed(&mut world, member, enemy);
         assert!(party_has_engaged_enemy(&world, &enemies, &[member]));
     }
 }
