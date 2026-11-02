@@ -107,6 +107,19 @@ fn hunter_shares_one_lust_with_other_providers() {
                 && matches!(event.spell_id, Some(264667 | 2825 | 32182 | 80353 | 390386))
         })
         .collect();
+    for member in std::iter::once(party.owner).chain(party.members.iter().copied()) {
+        let known = app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(member);
+        eprintln!(
+            "member={member:?} known_lust={:?} target={:?} locked={} health={:?}",
+            [2825, 32182, 80353, 390386]
+                .map(|spell| known.is_some_and(|known| known.contains(spell))),
+            app.world().get::<crate::networking::CombatTarget>(member),
+            crate::auras::bloodlust::has_lockout(app.world(), member),
+            app.world().get::<shared::components::Health>(member)
+        );
+    }
     assert_eq!(
         casts.len(),
         1,
