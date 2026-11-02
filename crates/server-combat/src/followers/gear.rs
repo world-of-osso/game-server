@@ -154,6 +154,40 @@ fn read_tier_levels(db: &Connection) -> Result<Vec<TierLevels>, String> {
 }
 
 impl FollowerGearSource {
+    /// The dungeon loot level for `map` at `difficulty`: MapDifficulty ItemContext
+    /// (or its picker) applied to an unconditional item of the map's Journal pool.
+    pub(super) fn read_item_level(
+        &self,
+        map: u32,
+        difficulty: u32,
+        level: u8,
+        templates: &crate::item_templates::ItemTemplates,
+        bonuses: &crate::item_instance::bonuses::ItemBonusTables,
+        scaling: &shared::item_scaling::ItemScalingTables,
+    ) -> Result<u16, String> {
+        let pool_map = self.pool_map(map, level)?;
+        let (item_id, template) = self
+            .pools
+            .get(&pool_map)
+            .ok_or_else(|| format!("FOLLOWER_GEAR_DUNGEON_UNAVAILABLE map{map}"))?
+            .iter()
+            .filter(|item| {
+                item.source_map == pool_map && item.difficulty_mask == -1 && item.faction_mask == -1
+            })
+            .find_map(|item| {
+                templates
+                    .get(ItemDefinitionSource::Retail, item.item_id)
+                    .filter(|template| template.inventory_type != 0)
+                    .map(|template| (item.item_id, template))
+            })
+            .ok_or("FOLLOWER_GEAR_DUNGEON_LOOT_UNAVAILABLE")?;
+        let db = Connection::open_with_flags(&self.database, OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|error| format!("open follower gear database: {error}"))?;
+        self.levels.resolve(
+            &db, map, difficulty, level, item_id, template, bonuses, scaling,
+        )
+    }
+
     /// A follower dungeon uses its own tier pool. Stockade uses the newest tier whose
     /// follower dungeons cover `level`; production dungeons of that level draw it too.
     fn pool_map(&self, map: u32, level: u8) -> Result<u32, String> {
@@ -285,27 +319,11 @@ pub fn equip(
             profile.spec_id, selection.missing
         ));
     }
-    let representative = pool
-        .iter()
-        .filter(|item| {
-            item.source_map == pool_map && item.difficulty_mask == -1 && item.faction_mask == -1
-        })
-        .find_map(|item| {
-            templates
-                .get(ItemDefinitionSource::Retail, item.item_id)
-                .filter(|template| template.inventory_type != 0)
-                .map(|template| (item.item_id, template))
-        })
-        .ok_or("FOLLOWER_GEAR_DUNGEON_LOOT_UNAVAILABLE")?;
-    let db = Connection::open_with_flags(&source.database, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(|error| format!("open follower gear database: {error}"))?;
-    let item_level = source.levels.resolve(
-        &db,
+    let item_level = source.read_item_level(
         copy.map_id,
         difficulty,
         level,
-        representative.0,
-        representative.1,
+        templates,
         &native.bonuses,
         scaling,
     )?;
