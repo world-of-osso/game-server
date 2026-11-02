@@ -121,7 +121,7 @@ mod trail_follow;
 mod unintended_reach;
 #[cfg(test)]
 mod unintended_reach_tests;
-pub(crate) fn is_boss(world: &World, unit: Entity) -> bool {
+pub fn is_boss(world: &World, unit: Entity) -> bool {
     const DUNGEON_BOSS_FLAG: u32 = 0x1000_0000;
     const WORLD_BOSS_FLAG: u32 = 0x4;
     let Some(npc) = world.get::<shared::components::Npc>(unit) else {
