@@ -633,3 +633,14 @@ D	demon_hunter_burning.rs	apply	cast_triggered_with_effect0_amount	residual	1	45
 D	demon_hunter_catastrophe.rs	apply_deposit	AuraApplication	deposit.spell	1	1256667,1256676
 D	demon_hunter_meteor_shower.rs	update	cast_triggered_at_destination	spell	1	1264129,1264130
 D	demonology_tyrant_buffs.rs	grant	try_cast_triggered	buff	1	456323,1276767
+D	destruction_roaring_blaze.rs	spread_dot	try_cast_triggered	dot	1	157736,445474
+D	devastation.rs	scintillation_tick	launch_triggered_spell	&child	1	359077
+D	devourer_fragment_heal.rs	on_fragment_heal	try_cast_triggered	stack	1	1225789,1227702
+D	devourer_metamorphosis.rs	exit_meta	try_cast_triggered	buff	1	452550,453314
+D	devourer_reap.rs	execute_damage	launch_triggered_spell	&damage	1	1225823,1225827,1245455,1279200
+D	devourer_reap.rs	execute_damage	load_triggered_spell	pending.damage	1	1225823,1225827,1245455,1279200
+D	devourer_void_ray.rs	cast_tick	cast_triggered	child	1	1213649,1214595
+D	devourer_void_ray.rs	finish_ray	launch_triggered_spell	&spell	1	1213649,1214595
+D	devourer_void_ray.rs	finish_ray	load_triggered_spell	child	1	1213649,1214595
+D	devourer_voidfall.rs	update	launch_triggered_spell	&damage	1	1256305,1256619
+D	devourer_voidfall.rs	update	load_triggered_spell	impact.spell	1	1256305,1256619
