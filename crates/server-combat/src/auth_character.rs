@@ -186,6 +186,10 @@ pub(crate) fn process_select_character(
     mut enter_senders: Query<&mut MessageSender<EnterWorldResponse>>,
     mut terrain_senders: Query<&mut MessageSender<LoadTerrain>>,
     existing_players: Query<LivePlayer>,
+    disconnected_players: Query<
+        (Entity, &ClientId, &Position, &crate::maps::InMap),
+        With<crate::networking::DisconnectedPlayer>,
+    >,
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
@@ -285,6 +289,25 @@ pub(crate) fn process_select_character(
             || pending_ground.contains_key(&entity)
             || active.get(entity).is_err()
         {
+            continue;
+        }
+        if validate_ownership(&db.db, account_id, req.character_id)
+            && let Some((player, _, position, map)) = disconnected_players
+                .iter()
+                .find(|(_, id, _, _)| id.0 == req.character_id)
+            && let Some(place) = maps.place(*map, *position)
+        {
+            commands
+                .entity(player)
+                .remove::<crate::networking::DisconnectedPlayer>();
+            insert_world_components(&mut commands, entity, player, req.character_id);
+            send_enter_success(entity, &mut enter_senders, player);
+            send_load_terrain(
+                entity,
+                &place.directory,
+                &place.position,
+                &mut terrain_senders,
+            );
             continue;
         }
         save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);

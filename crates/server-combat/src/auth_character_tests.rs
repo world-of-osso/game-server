@@ -582,6 +582,63 @@ fn queue_character_selection(
     (app, connection)
 }
 
+#[test]
+fn disconnected_character_reconnects_to_live_entity_during_grace() {
+    let db = test_db();
+    let (character_id, _) = persistence::create_character(&db.db, 11, "Grace", 1, 1).unwrap();
+    let (mut app, connection) =
+        queue_character_selection(db, 11, character_id, crate::maps::MapStore::continents());
+    let player = finish_character_selection(&mut app, connection);
+    crate::networking::install_disconnect_fixture(&mut app);
+    app.world_mut()
+        .entity_mut(connection)
+        .insert(lightyear::prelude::server::ClientOf);
+    app.world_mut().entity_mut(connection).remove::<Connected>();
+    app.world_mut().flush();
+    app.update();
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_some()
+    );
+    let position = *app
+        .world()
+        .get::<shared::components::Position>(player)
+        .unwrap();
+    let replacement = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(12)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 11 },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(replacement)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    let restored = finish_character_selection(&mut app, replacement);
+    assert_eq!(restored, player);
+    assert_eq!(
+        *app.world()
+            .get::<shared::components::Position>(restored)
+            .unwrap(),
+        position
+    );
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(restored)
+            .is_none()
+    );
+}
+
 fn select_character_with_maps(
     db: GameDatabase,
     account_id: u64,
