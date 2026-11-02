@@ -7,7 +7,15 @@ use shared::components::CombatStatus;
 fn fixture() -> (Harness, Entity) {
     let mut h = harness(
         Vec::new(),
-        &[375576, 50286, 61882, 53385, 188443, DIVINE_RESONANCE],
+        &[
+            375576,
+            50286,
+            61882,
+            53385,
+            188443,
+            DIVINE_RESONANCE,
+            POLYMORPH,
+        ],
         2,
     )
     .expect("native combat-area spell data");
@@ -28,6 +36,7 @@ fn fixture() -> (Harness, Entity) {
 /// Divine Resonance 386731: Dummy effects on TARGET_UNIT_DEST_AREA_ENEMY (31) with
 /// SPELL_ATTR1_NO_THREAT (Attributes_1 0x400), so `HasInitialAggro()` is false.
 const DIVINE_RESONANCE: u32 = 386731;
+const POLYMORPH: u32 = 118;
 
 fn selected(h: &mut Harness, id: u32, index: u8, explicit: Option<Entity>) -> Vec<Entity> {
     let spell = h
@@ -99,10 +108,12 @@ fn divine_toll_native_cast_does_not_start_a_fresh_pack_without_a_kit_guard() {
     );
 }
 
-/// TC a352b1fa Spell.cpp:2992-2996 calls `AtTargetAttacked(unit, HasInitialAggro())`;
-/// Unit.cpp:9281-9287 engages an unengaged target only with initial aggro.
+/// TC a352b1fa Spell.cpp:2992-2996 calls `AtTargetAttacked(unit, HasInitialAggro())`
+/// for a landed harmful hit; Unit.cpp:9281-9287 engages an unengaged target only with
+/// initial aggro. Divine Resonance's Dummy effects are positive (SpellInfo.cpp:4612-5067
+/// has no enemy-target rule for Dummy), so its area hit engages nobody.
 #[test]
-fn no_threat_area_hit_engages_only_an_already_engaged_enemy() {
+fn hits_without_initial_aggro_engage_only_an_already_engaged_enemy() {
     let (mut h, untouched) = fixture();
     let caster = h.caster;
     h.app
@@ -118,7 +129,6 @@ fn no_threat_area_hit_engages_only_an_already_engaged_enemy() {
                     .any(|entry| entry.entity == caster.to_bits())
             })
     };
-    assert!(!threatens(&h, h.npc));
     super::creature_cast(
         h.app.world_mut(),
         caster,
@@ -148,9 +158,13 @@ fn no_threat_area_hit_engages_only_an_already_engaged_enemy() {
         "a hit without initial aggro must not engage an unengaged unit"
     );
     assert!(!threatens(&h, untouched));
+    // Polymorph 118 is harmful with SPELL_ATTR1_NO_THREAT: it engages only an engaged target.
+    assert!(!threatens(&h, h.npc));
+    let npc = h.npc;
+    super::creature_cast(h.app.world_mut(), caster, POLYMORPH, Some(npc), true).unwrap();
     assert!(
-        threatens(&h, h.npc),
-        "the same hit engages an already engaged unit with the caster"
+        threatens(&h, npc),
+        "a harmful hit without initial aggro still engages an already engaged unit"
     );
 }
 
