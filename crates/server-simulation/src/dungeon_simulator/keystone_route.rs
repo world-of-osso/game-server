@@ -34,6 +34,76 @@ struct MappedPull {
     source_guids: Vec<u64>,
 }
 
+#[derive(Deserialize)]
+struct FirstDamageEvidence {
+    maps: Vec<MapFirstDamage>,
+}
+
+#[derive(Deserialize)]
+struct MapFirstDamage {
+    map_id: u32,
+    reports: Vec<ReportFirstDamage>,
+}
+
+#[derive(Deserialize)]
+struct ReportFirstDamage {
+    report: String,
+    first_damage_ms: BTreeMap<u32, u64>,
+}
+
+/// Boss entries in WCL first-damage order; every registered report must agree.
+fn wcl_first_damage_order(map_id: u32) -> Result<Option<Vec<u32>>, String> {
+    let evidence: FirstDamageEvidence = serde_json::from_str(include_str!(
+        "../../../../content/dungeons/wcl-boss-first-damage.json"
+    ))
+    .map_err(|error| format!("parse WCL boss first damage: {error}"))?;
+    let Some(map) = evidence.maps.into_iter().find(|map| map.map_id == map_id) else {
+        return Ok(None);
+    };
+    let mut order: Option<Vec<u32>> = None;
+    for report in map.reports {
+        let mut hits: Vec<_> = report.first_damage_ms.into_iter().collect();
+        hits.sort_by_key(|&(entry, ms)| (ms, entry));
+        if hits.windows(2).any(|pair| pair[0].1 == pair[1].1) {
+            return Err(format!(
+                "WCL report {} has simultaneous boss first damage",
+                report.report
+            ));
+        }
+        let entries: Vec<_> = hits.into_iter().map(|(entry, _)| entry).collect();
+        if order.as_ref().is_some_and(|order| *order != entries) {
+            return Err(format!(
+                "WCL report {} disagrees on map{map_id} boss first damage",
+                report.report
+            ));
+        }
+        order = Some(entries);
+    }
+    order
+        .map(Some)
+        .ok_or_else(|| format!("map{map_id} WCL boss first damage has no reports"))
+}
+
+/// Listed bosses fill their own extracted slots in WCL order; other bosses keep theirs.
+fn order_bosses(entries: &[u32], first_damage: &[u32]) -> Result<Vec<u32>, String> {
+    if let Some(missing) = first_damage.iter().find(|entry| !entries.contains(entry)) {
+        return Err(format!(
+            "WCL first-damage boss{missing} is not a graph boss"
+        ));
+    }
+    let mut listed = first_damage.iter().copied();
+    Ok(entries
+        .iter()
+        .map(|entry| {
+            if first_damage.contains(entry) {
+                listed.next().expect("one listed entry per slot")
+            } else {
+                *entry
+            }
+        })
+        .collect())
+}
+
 /// Apply the WCL evidence registered for a map; unlisted maps do not chain.
 pub(super) fn wcl_chain_groups(
     graph: &Graph,
@@ -110,7 +180,7 @@ fn order_by_wcl_pull(
     observed: &HashMap<u64, u32>,
     hostile_sources: &HashSet<u64>,
 ) -> Result<Vec<RouteStep>, String> {
-    let bosses: Vec<_> = boss_route(graph)?.iter().map(|step| step.pack).collect();
+    let bosses: Vec<_> = boss_route(graph)?.0.iter().map(|step| step.pack).collect();
     let mut keyed = Vec::with_capacity(steps.len());
     let mut previous = 0;
     for step in steps {
@@ -382,9 +452,14 @@ fn distances(paths: &BTreeMap<u64, Vec<(u64, f32)>>, start: u64) -> BTreeMap<u64
     best
 }
 
-fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
+/// The boss route and the first boss pack of its final encounter.
+fn boss_route(graph: &Graph) -> Result<(Vec<RouteStep>, Option<u64>), String> {
+    let entries = match wcl_first_damage_order(graph.map_id)? {
+        Some(order) => order_bosses(graph.boss_entries(), &order)?,
+        None => graph.boss_entries().to_vec(),
+    };
     let mut bosses = Vec::new();
-    for entry in graph.boss_entries() {
+    for entry in &entries {
         let source = graph
             .follower_boss_sources
             .get(entry)
@@ -403,11 +478,23 @@ fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
             anchor: pack.point().to_array(),
         });
     }
+    // Bosses sharing the last boss's encounter bit belong to the final encounter.
+    let final_bit = entries
+        .last()
+        .and_then(|entry| graph.follower_boss_bits.get(entry));
+    let final_boss = entries
+        .iter()
+        .zip(&bosses)
+        .find(|(entry, _)| {
+            Some(*entry) == entries.last()
+                || final_bit.is_some() && graph.follower_boss_bits.get(entry) == final_bit
+        })
+        .map(|(_, boss)| boss.pack);
     if graph.route.is_empty() {
         if bosses.is_empty() {
             return Err("graph has no authored boss route or encounter bindings".into());
         }
-        return Ok(bosses);
+        return Ok((bosses, final_boss));
     }
     let mut remaining = graph.route.iter();
     for boss in bosses {
@@ -418,11 +505,12 @@ fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
             ));
         }
     }
-    Ok(graph.route.clone())
+    Ok((graph.route.clone(), final_boss))
 }
 
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
-/// A candidate may be inserted between boss-route steps or appended at the end.
+/// A candidate may be inserted between route steps, never inside or after the final
+/// encounter: retail parties finish forces before the end boss.
 pub(super) fn plan(
     graph: &Graph,
     weights: &HashMap<u32, u64>,
@@ -443,7 +531,7 @@ pub(super) fn plan(
             .map(|spawn| weights.get(&spawn.entry).copied().unwrap_or(0))
             .sum::<u64>()
     };
-    let mut steps = boss_route(graph)?;
+    let (mut steps, final_boss) = boss_route(graph)?;
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
@@ -470,6 +558,9 @@ pub(super) fn plan(
     let mut added_packs = Vec::new();
     while total < required {
         let mut best: Option<(f64, u64, usize, u64)> = None;
+        let last = final_boss
+            .and_then(|boss| steps.iter().position(|step| step.pack == boss))
+            .unwrap_or(steps.len());
         for pack in graph
             .packs
             .iter()
@@ -479,7 +570,7 @@ pub(super) fn plan(
             if force == 0 {
                 continue;
             }
-            for index in 0..=steps.len() {
+            for index in 0..=last {
                 let from = if index == 0 {
                     graph.entrance_pack
                 } else {
@@ -859,6 +950,61 @@ mod tests {
             plan(&graph, &HashMap::new(), 0, &HashSet::new())
                 .unwrap_err()
                 .contains("boss200 has 0 source packs")
+        );
+    }
+
+    #[test]
+    fn ruby_final_encounter_opens_on_the_wcl_first_damaged_boss() {
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2521, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[1,0],"height":0,"spawns":[{"guid":2,"entry":188252,"position":[1,0]}]},
+                {"id":3,"position":[2,0],"height":0,"spawns":[{"guid":3,"entry":190484,"position":[2,0]}]},
+                {"id":4,"position":[2,1],"height":0,"spawns":[{"guid":4,"entry":190485,"position":[2,1]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":1},{"from":2,"to":3,"yards":1},{"from":3,"to":4,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],
+            "follower_boss_entries":[188252,190484,190485]
+        }))
+        .unwrap();
+        let result = plan(&graph, &HashMap::new(), 0, &HashSet::new()).unwrap();
+        assert_eq!(
+            result
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [2, 4, 3],
+            "Erkhart must open the final encounter before Kyrakka"
+        );
+    }
+
+    #[test]
+    fn no_force_pack_enters_or_follows_the_final_encounter() {
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 1, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[10,0],"height":0,"spawns":[{"guid":2,"entry":100,"position":[10,0]}]},
+                {"id":3,"position":[11,0],"height":0,"spawns":[{"guid":3,"entry":30,"position":[11,0]}]},
+                {"id":4,"position":[10,1],"height":0,"spawns":[{"guid":4,"entry":101,"position":[10,1]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":10},{"from":2,"to":3,"yards":1},{"from":3,"to":4,"yards":1},{"from":2,"to":4,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],"follower_boss_entries":[100,101],
+            "follower_boss_bits":{"100":2,"101":2}
+        }))
+        .unwrap();
+        // Between or after the paired bosses costs 1 yd; before the encounter costs 2 yd.
+        let selected = plan(&graph, &HashMap::from([(30, 5)]), 5, &HashSet::from([3])).unwrap();
+        assert_eq!(
+            selected
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [3, 2, 4],
+            "the final encounter must end the route"
         );
     }
 

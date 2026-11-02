@@ -1,0 +1,15 @@
+{
+  "provenance": "INFERRED_WCL_FIRST_DAMAGE_ORDER",
+  "method": "First friendly damage on each boss actor of one encounter, fight-relative milliseconds. The keystone planner opens the encounter on the first listed boss. Bosses not listed keep their extracted order. Retire when authored pull order is available.",
+  "maps": [
+    {
+      "map_id": 2521,
+      "order": [190485, 190484],
+      "reports": [
+        {"report": "wKpcfaj4MzDH9v8X", "first_damage_ms": {"190485": 526038, "190484": 526504}},
+        {"report": "kg249LYJ7rBfKCWH", "first_damage_ms": {"190485": 514312, "190484": 518106}},
+        {"report": "QnzJ1bP6y9CXLFDW", "first_damage_ms": {"190485": 738269, "190484": 744448}}
+      ]
+    }
+  ]
+}
