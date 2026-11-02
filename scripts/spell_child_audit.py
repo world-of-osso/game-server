@@ -194,10 +194,59 @@ def inventory():
     return constants, dynamic
 
 
+def read_manifest(path):
+    """Read union-merge-safe static and dynamic child declarations."""
+    children = defaultdict(set)
+    dynamic = {}
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        if not line or line.startswith('#'):
+            continue
+        fields = line.split('\t')
+        if len(fields) == 3 and fields[0] == 'C':
+            path_name, value = fields[1:]
+            child = literal(value)
+            if child is None or child <= 0:
+                raise ValueError(f'{path}:{number}: invalid child id {value!r}')
+            children[path_name].add(child)
+        elif len(fields) == 7 and fields[0] == 'D':
+            path_name, function, api, expr, count, values = fields[1:]
+            key = (path_name, function, api, expr)
+            if key in dynamic:
+                raise ValueError(f'{path}:{number}: duplicate dynamic site {key}')
+            if not count.isdigit() or int(count) <= 0:
+                raise ValueError(f'{path}:{number}: invalid site count')
+            ids = [literal(value) for value in values.split(',')]
+            if not ids or any(child is None or child <= 0 for child in ids):
+                raise ValueError(f'{path}:{number}: dynamic site needs explicit child ids')
+            dynamic[key] = (int(count), set(ids))
+            children[path_name].update(ids)
+        else:
+            raise ValueError(f'{path}:{number}: invalid declaration')
+    return children, dynamic
+
+
+def check_manifest(manifest, constants, sites):
+    children, declared_sites = read_manifest(manifest)
+    errors = []
+    for path, ids in sorted(constants.items()):
+        for child in sorted(ids - children[path]):
+            errors.append(f'{path}: child {child} is undeclared')
+    for site, count in sorted(sites.items()):
+        declared = declared_sites.get(site)
+        if declared is None:
+            errors.append(f'{site}: dynamic child needs an explicit declaration ({count} site(s))')
+        elif declared[0] != count:
+            errors.append(f'{site}: expected {declared[0]} site(s), found {count}')
+    for site in sorted(set(declared_sites) - set(sites)):
+        errors.append(f'{site}: stale dynamic declaration')
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inventory', action='store_true')
     parser.add_argument('--generate', action='store_true')
+    parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     constants, dynamic = inventory()
     if args.inventory or args.generate:
@@ -208,7 +257,13 @@ def main():
             print(f'D\t{path}\t{function}\t{api}\t{expr}\t{count}\t?')
         print(f'{sum(map(len, constants.values()))} literal children; {len(dynamic)} unresolved sites', file=sys.stderr)
         return 0
-    parser.error('use --inventory or --generate until the declaration audit is installed')
+    if args.check:
+        errors = check_manifest(MANIFEST, constants, dynamic)
+        for error in errors:
+            print(error, file=sys.stderr)
+        print(f'{sum(map(len, constants.values()))} literal children, {len(dynamic)} dynamic sites, {len(errors)} audit errors')
+        return int(bool(errors))
+    parser.error('choose --inventory, --generate or --check')
 
 
 if __name__ == '__main__':

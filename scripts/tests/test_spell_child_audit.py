@@ -42,6 +42,21 @@ fn run(world: &mut World, target: Entity, child: u32) {
         self.assertNotIn('cast_triggered', masked)
         self.assertNotIn('(', masked)
 
+    def test_manifest_requires_explicit_dynamic_children_and_detects_stale_sites(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / 'children.in'
+            site = ('example.rs', 'run', 'try_cast_triggered', 'child')
+            constants = {'example.rs': {12345}}
+            sites = {site: 1}
+            manifest.write_text('C\texample.rs\t12345\n')
+            self.assertTrue(any('dynamic child' in error for error in audit.check_manifest(manifest, constants, sites)))
+            manifest.write_text('C\texample.rs\t12345\nD\texample.rs\trun\ttry_cast_triggered\tchild\t1\t67890,67891\n')
+            self.assertEqual(audit.check_manifest(manifest, constants, sites), [])
+            self.assertTrue(any('stale' in error for error in audit.check_manifest(manifest, constants, {})))
+            manifest.write_text('D\texample.rs\trun\ttry_cast_triggered\tchild\t1\t?\n')
+            with self.assertRaisesRegex(ValueError, 'explicit child ids'):
+                audit.read_manifest(manifest)
+
     def test_unbalanced_call_is_an_error(self):
         with self.assertRaisesRegex(ValueError, 'unterminated'):
             audit.split_arguments('world, actor, something(', 0)
