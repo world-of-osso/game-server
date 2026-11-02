@@ -259,7 +259,9 @@ pub fn is_tank(world: &World, unit: Entity) -> bool {
         })
 }
 pub use live_facts::{ObservedEvents, observe_unit};
-pub(crate) use party::{DisconnectedRuns, queue_player, reconnect, stage_follower_party};
+pub(crate) use party::{
+    DisconnectedRuns, notify_reconnected, queue_player, reconnect, stage_follower_party,
+};
 pub(crate) use spell_safety::summon_targets_safe;
 pub use spell_safety::{action_safe, chain_candidate_allowed};
 pub use unintended_reach::{party_unintended_reach, spell_unintended_reach};

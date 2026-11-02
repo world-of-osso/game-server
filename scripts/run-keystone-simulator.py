@@ -30,6 +30,8 @@ def main():
     parser.add_argument("--key-level", type=positive_u32, required=True)
     parser.add_argument("--party", type=party_specs, required=True, help="tank,healer,damage,damage,leader-damage spec IDs")
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--schedule-epoch", type=int, default=1792454400,
+                        help="Unix seconds for the affix schedule (default: fixed simulator epoch)")
     parser.add_argument("--output", type=Path, required=True, help="JSON run-record file")
     args = parser.parse_args()
     if not 0 <= args.seed <= 2**64 - 1:
@@ -41,6 +43,7 @@ def main():
         "KEYSTONE_SIMULATOR_LEVEL": str(args.key_level),
         "KEYSTONE_SIMULATOR_PARTY": ",".join(map(str, args.party)),
         "KEYSTONE_SIMULATOR_SEED": str(args.seed),
+        "KEYSTONE_SIMULATOR_SCHEDULE_EPOCH": str(args.schedule_epoch),
         "KEYSTONE_SIMULATOR_OUTPUT": str(output),
     }
     command = [str(executable), "dungeon_simulator::keystone::tests::run_headless_keystone", "--exact", "--ignored", "--nocapture"]

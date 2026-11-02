@@ -118,6 +118,10 @@ pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal,
     Some((goal, travel.legs.iter().map(|(_, yards)| yards).sum()))
 }
 
+pub(super) fn apl_destination(world: &World, unit: Entity) -> Option<Vec3> {
+    world.get::<Travel>(unit).map(|travel| travel.destination)
+}
+
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
     let Some(travel) = world.get::<Travel>(unit) else {
         return serde_json::Value::Null;
@@ -285,6 +289,11 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     {
         return Ok(());
     }
+    if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(unit)
+        && follow.owner != unit
+    {
+        follow.set_moving(false);
+    }
     if !can_move(world, unit) {
         return Ok(());
     }
@@ -329,6 +338,14 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         },
         speed,
     );
+    let moved = world
+        .get::<Position>(unit)
+        .is_some_and(|position| point(position) != from);
+    if let Some(mut follow) = world.get_mut::<crate::creature_ai::FollowOwner>(unit)
+        && follow.owner != unit
+    {
+        follow.set_moving(moved);
+    }
     if let Some(facing) = crate::creature_ai::facing_along(to.x - next.x, to.z - next.z) {
         world.entity_mut(unit).insert(Rotation {
             x: 0.0,
@@ -434,6 +451,80 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
     }
     world.entity_mut(owner).insert(flight);
     Ok(())
+}
+
+#[test]
+fn apl_reads_simulator_travel_destination_while_actor_moves() {
+    use server::simc_apl::Facts;
+    use server::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
+    use shared::components::CreatureMotion;
+
+    let mut world = World::new();
+    world.insert_resource(MovementDestination(apl_destination));
+    let destination = Vec3::new(12.0, 0.0, 0.0);
+    let actor = world
+        .spawn((
+            Position {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            CreatureMotion::Run,
+            Travel {
+                destination,
+                legs: [(destination, 10.0)].into(),
+            },
+        ))
+        .id();
+    let bindings = Bindings::default();
+    let read = |world: &World| {
+        NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
+            .value("movement.distance")
+    };
+    assert_eq!(read(&world).unwrap(), 10.0);
+    world.entity_mut(actor).insert(Position {
+        x: 7.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    assert_eq!(read(&world).unwrap(), 5.0);
+    world.entity_mut(actor).remove::<Travel>();
+    assert!(read(&world).is_err());
+}
+
+#[test]
+fn travel_updates_follower_motion_flag_on_movement_and_stop() {
+    use crate::creature_ai::FollowOwner;
+    let mut world = World::new();
+    let owner = world
+        .spawn(Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            FollowOwner::new(owner),
+        ))
+        .id();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<Position>(follower).unwrap().x > 0.0);
+    assert!(world.get::<FollowOwner>(follower).unwrap().is_moving());
+    let position = *world.get::<Position>(follower).unwrap();
+    world.entity_mut(owner).insert(position);
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert_eq!(*world.get::<Position>(follower).unwrap(), position);
+    assert!(!world.get::<FollowOwner>(follower).unwrap().is_moving());
 }
 
 #[test]

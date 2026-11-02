@@ -384,3 +384,48 @@ fn simc_apl_balance_on_use_trinket_variable_adds_both_trinket_terms() {
         .unwrap();
     assert_eq!(state.value("on_use_trinket"), Some(3.0));
 }
+
+/// Facts answering one operand as unavailable on this tick.
+struct UnavailableThisTick(&'static str);
+
+impl crate::simc_apl::Facts for UnavailableThisTick {
+    fn value(&self, name: &str) -> Result<f64, String> {
+        if name == self.0 {
+            return Err(crate::simc_apl::not_ready(
+                "NATIVE_CASTING_REACTION_UNAVAILABLE",
+            ));
+        }
+        Err(format!("unknown APL operand {name}"))
+    }
+}
+
+impl crate::simc_apl::ActionFacts for UnavailableThisTick {
+    fn value_for(&self, _action: &crate::simc_apl::Action, name: &str) -> Result<f64, String> {
+        crate::simc_apl::Facts::value(self, name)
+    }
+}
+
+#[test]
+fn simc_apl_not_ready_condition_skips_only_its_row() {
+    let program = Program::parse(&[
+        ("default", "mind_freeze,if=target.debuff.casting.react"),
+        ("default", "obliterate"),
+    ])
+    .unwrap();
+    let facts = UnavailableThisTick("target.debuff.casting.react");
+    let mut state = program.state();
+    let selected = program
+        .select("default", &facts, &mut state, |_| Ok(true))
+        .unwrap()
+        .unwrap();
+    assert_eq!(selected.name, "obliterate");
+    let invalid = Program::parse(&[
+        ("default", "mind_freeze,if=target.debuff.unknown.react"),
+        ("default", "obliterate"),
+    ])
+    .unwrap();
+    let error = invalid
+        .select("default", &facts, &mut invalid.state(), |_| Ok(true))
+        .unwrap_err();
+    assert_eq!(error, "unknown APL operand target.debuff.unknown.react");
+}

@@ -629,6 +629,429 @@ fn encounter_fixture(
 }
 
 #[test]
+fn normal_follower_reconnect_restores_live_enemies_and_following() {
+    let (mut h, _, _) =
+        encounter_fixture(189162, 2521, 0, 205, None, EncounterState::NotStarted, true);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut bank = crate::bank_test_harness::harness_at(file.path(), "Normalresume").unwrap();
+    let character = bank.character_id;
+    let database = bank
+        .app
+        .world_mut()
+        .remove_resource::<crate::persistence::GameDatabase>()
+        .unwrap();
+    drop(bank);
+    h.app
+        .insert_resource(database)
+        .init_resource::<crate::group::GroupRegistry>();
+    let maps = h.app.world().resource::<MapStore>().clone();
+    let map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            2521,
+            crate::maps::instances::InstanceEntrant {
+                character_id: character,
+                leader: character,
+                difficulty_id: 205,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1791705600,
+            },
+        )
+        .unwrap()
+        .map;
+    let player = h.player();
+    let connection = h.players[0].1;
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        crate::persistence::ClientId(character),
+        shared::components::Level(70),
+        UnitLevel(70),
+        shared::components::ActiveSpec(62),
+        crate::maps::DungeonDifficulty(205),
+        crate::lfg::PlayerLfgState::default(),
+    ));
+    h.app.world_mut().get_mut::<Player>(player).unwrap().class = 8;
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(connection)
+        .unwrap()
+        .character_id = character;
+    h.app
+        .world_mut()
+        .entity_mut(h.players[1].0)
+        .insert(InMap::continent(0));
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::spawn_map_creatures(
+        &mut commands,
+        h.app.world().resource::<WorldData>(),
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 1,
+            dead_bosses: Vec::new(),
+        },
+        false,
+        Some(&mut crate::test_data::ground_map()),
+    );
+    queue.apply(h.app.world_mut());
+    let db =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_expected_stats(&db).armor_constants());
+    let catalog = crate::followers::load_catalog(&db).unwrap();
+    let entrance = catalog
+        .dungeons
+        .get(&2436)
+        .unwrap()
+        .entrance
+        .bevy_position();
+    h.app.world_mut().entity_mut(player).insert(entrance);
+    h.app.insert_resource(catalog);
+    h.app
+        .insert_resource(crate::item_proc_data::load(&db).unwrap());
+    crate::followers::native_fixture::install_class_sources(h.app.world_mut());
+    h.app
+        .insert_resource(crate::followers::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
+            source_actions: |_, _, _| Ok(Vec::new()),
+            equipped_actions: |_, _, _| Ok(Vec::new()),
+        });
+    let followers =
+        crate::followers::party::spawn_normal_test_party(h.app.world_mut(), player, 2436).unwrap();
+    let player_position = *h.app.world().get::<Position>(player).unwrap();
+    let enemy = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap, &Position, &Health)>()
+        .iter(h.app.world())
+        .find(|(_, _, copy, position, health)| {
+            **copy == map
+                && health.current > 10.0
+                && Vec3::new(
+                    position.x - player_position.x,
+                    position.y - player_position.y,
+                    position.z - player_position.z,
+                )
+                .length()
+                    > 50.0
+        })
+        .map(|(entity, _, _, _, _)| entity)
+        .expect("authored living Ruby enemy");
+    let remaining = {
+        let mut health = h.app.world_mut().get_mut::<Health>(enemy).unwrap();
+        health.current *= 0.5;
+        health.current
+    };
+    crate::networking::install_disconnect_fixture(&mut h.app);
+    h.app
+        .add_systems(Update, crate::auth_character::process_select_character);
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(lightyear::prelude::server::ClientOf)
+        .remove::<Connected>();
+    h.app.world_mut().flush();
+    h.app.update();
+    crate::followers::update_ai(h.app.world_mut());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_some()
+    );
+    let restored = crate::auth_character::tests::reconnect_character(&mut h.app, 1, character);
+    assert_eq!(restored, player);
+    assert_eq!(h.app.world().get::<InMap>(restored), Some(&map));
+    assert_eq!(
+        *h.app.world().get::<Position>(restored).unwrap(),
+        player_position
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(enemy).unwrap().current,
+        remaining
+    );
+    assert!(followers.iter().all(|unit| {
+        h.app
+            .world()
+            .get::<Health>(*unit)
+            .is_some_and(|health| health.current > 0.0)
+    }));
+    h.app.insert_resource(crate::navigation::Navigation::new(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+    ));
+    let mut destination = player_position;
+    destination.x += 5.0;
+    h.app.world_mut().entity_mut(restored).insert(destination);
+    let before = *h.app.world().get::<Position>(followers[0]).unwrap();
+    for _ in 0..60 {
+        crate::followers::update_ai(h.app.world_mut());
+        h.advance(0.05);
+    }
+    let after = *h.app.world().get::<Position>(followers[0]).unwrap();
+    let distance = |point: Position| {
+        Vec3::new(
+            point.x - destination.x,
+            point.y - destination.y,
+            point.z - destination.z,
+        )
+        .length()
+    };
+    assert!(
+        distance(after) < distance(before),
+        "follower did not move toward reconnected owner: {before:?} -> {after:?}, owner {destination:?}, follow {:?}, target {:?}, state {:?}, health {:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(followers[0])
+            .is_some(),
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(followers[0])
+            .and_then(|target| target.0),
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(followers[0]),
+        h.app
+            .world()
+            .get::<Health>(followers[0])
+            .map(|health| health.current),
+    );
+}
+
+#[test]
+fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
+    exercise_mythic_follower_reconnect(false);
+}
+
+#[test]
+fn mythic_follower_reconnect_after_logout_keeps_running_timer() {
+    exercise_mythic_follower_reconnect(true);
+}
+
+fn exercise_mythic_follower_reconnect(after_grace: bool) {
+    use shared::protocol::{GameObjectInfo, KeystoneInfo};
+
+    let (mut h, _, _) =
+        encounter_fixture(186644, 2515, 0, 23, None, EncounterState::NotStarted, true);
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut bank = crate::bank_test_harness::harness_at(file.path(), "Keyresume").unwrap();
+    let character = bank.character_id;
+    let database = bank
+        .app
+        .world_mut()
+        .remove_resource::<crate::persistence::GameDatabase>()
+        .unwrap();
+    drop(bank);
+    h.app
+        .insert_resource(database)
+        .insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1791705600),
+        });
+    h.app.init_resource::<crate::group::GroupRegistry>();
+    let maps = h.app.world().resource::<MapStore>().clone();
+    let map = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .create_map(
+            &maps,
+            2515,
+            crate::maps::instances::InstanceEntrant {
+                character_id: character,
+                leader: character,
+                difficulty_id: 23,
+                ..Default::default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1791705600,
+            },
+        )
+        .unwrap()
+        .map;
+    let player = h.player();
+    let connection = h.players[0].1;
+    h.app.world_mut().entity_mut(player).insert((
+        map,
+        crate::persistence::ClientId(character),
+        shared::components::Level(70),
+        UnitLevel(70),
+        shared::components::ActiveSpec(62),
+        crate::maps::DungeonDifficulty(23),
+    ));
+    h.app.world_mut().get_mut::<Player>(player).unwrap().class = 8;
+    h.app
+        .world_mut()
+        .get_mut::<InWorld>(connection)
+        .unwrap()
+        .character_id = character;
+    h.app
+        .world_mut()
+        .entity_mut(h.players[1].0)
+        .insert(InMap::continent(0));
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::spawn_map_creatures(
+        &mut commands,
+        h.app.world().resource::<WorldData>(),
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 23,
+            dead_bosses: Vec::new(),
+        },
+        false,
+        Some(&mut crate::test_data::ground_map()),
+    );
+    let db =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let objects = crate::game_objects::load_game_object_spawns(&db).unwrap();
+    crate::game_objects::spawn_map_game_objects(&mut commands, &objects, map, 23, None);
+    queue.apply(h.app.world_mut());
+    h.advance(0.1);
+    let font = h
+        .app
+        .world_mut()
+        .query::<(Entity, &GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, info, copy)| info.entry == 246779 && **copy == map)
+        .unwrap()
+        .0;
+    let position = *h.app.world().get::<Position>(font).unwrap();
+    h.app.world_mut().entity_mut(player).insert(position);
+    h.app
+        .insert_resource(crate::followers::load_catalog(&db).unwrap());
+    crate::followers::native_fixture::install_class_sources(h.app.world_mut());
+    h.app
+        .insert_resource(crate::followers::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
+            source_actions: |_, _, _| Ok(Vec::new()),
+            equipped_actions: |_, _, _| Ok(Vec::new()),
+        });
+    let key = KeystoneInfo {
+        item_guid: 4242,
+        item_id: 180653,
+        challenge_id: 401,
+        level: 8,
+        affixes: vec![],
+    };
+    let followers = crate::followers::party::spawn_keystone_test_party(
+        h.app.world_mut(),
+        player,
+        2498,
+        key.clone(),
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::lfg::PlayerLfgState::default());
+    let definition = ::server::mythic_plus_catalog::load_azure(&db)
+        .unwrap()
+        .unwrap();
+    h.app
+        .insert_resource(crate::item_proc_data::load(&db).unwrap());
+    let _weeks = crate::mythic_plus::fixture::start(
+        h.app.world_mut(),
+        connection,
+        font,
+        character,
+        key,
+        definition,
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(1791705610);
+    crate::mythic_plus::fixture::tick(h.app.world_mut());
+    let before = crate::mythic_plus::fixture::snapshot(h.app.world(), map);
+    crate::networking::install_disconnect_fixture(&mut h.app);
+    h.app
+        .add_systems(Update, crate::auth_character::process_select_character);
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(lightyear::prelude::server::ClientOf)
+        .remove::<Connected>();
+    h.app.world_mut().flush();
+    h.app.update();
+    crate::followers::update_ai(h.app.world_mut());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_some()
+    );
+    assert!(
+        followers
+            .iter()
+            .all(|unit| crate::followers::acting_follower(h.app.world(), *unit).is_none())
+    );
+    if after_grace {
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        h.app.world_mut().run_schedule(PreUpdate);
+        assert!(h.app.world().get_entity(player).is_err());
+    }
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::ServerClock>()
+        .fixed_unix = Some(if after_grace { 1791705680 } else { 1791705640 });
+    crate::mythic_plus::fixture::tick(h.app.world_mut());
+    let during = crate::mythic_plus::fixture::snapshot(h.app.world(), map);
+    assert!(during.elapsed_ms >= before.elapsed_ms + 30_000);
+    let restored = crate::auth_character::tests::reconnect_character(&mut h.app, 1, character);
+    assert_eq!(restored == player, !after_grace);
+    assert_eq!(h.app.world().get::<InMap>(restored), Some(&map));
+    assert_eq!(
+        crate::mythic_plus::fixture::snapshot(h.app.world(), map).run_id,
+        before.run_id
+    );
+    assert!(followers.iter().all(|unit| {
+        h.app
+            .world()
+            .get::<crate::followers::Follower>(*unit)
+            .is_some_and(|f| f.owner == restored)
+            && h.app
+                .world()
+                .get::<Health>(*unit)
+                .is_some_and(|health| health.current > 0.0)
+            && crate::followers::acting_follower(h.app.world(), *unit).is_some()
+    }));
+    h.app.insert_resource(crate::navigation::Navigation::new(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+    ));
+    let mut destination = *h.app.world().get::<Position>(restored).unwrap();
+    destination.x += 5.0;
+    h.app.world_mut().entity_mut(restored).insert(destination);
+    let before = *h.app.world().get::<Position>(followers[0]).unwrap();
+    for _ in 0..60 {
+        crate::followers::update_ai(h.app.world_mut());
+        h.advance(0.05);
+    }
+    let after = *h.app.world().get::<Position>(followers[0]).unwrap();
+    let distance = |point: Position| {
+        Vec3::new(
+            point.x - destination.x,
+            point.y - destination.y,
+            point.z - destination.z,
+        )
+        .length()
+    };
+    assert!(
+        distance(after) < distance(before),
+        "follower did not move toward reconnected owner: {before:?} -> {after:?}, owner {destination:?}"
+    );
+}
+
+#[test]
 fn mythic_follower_party_completes_azure_with_owner_key_and_follower_death() {
     use shared::protocol::{ChallengePhase, GameObjectInfo, KeystoneInfo};
 

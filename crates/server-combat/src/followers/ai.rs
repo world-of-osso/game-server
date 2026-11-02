@@ -26,7 +26,11 @@ pub(super) struct LeaderProfile(pub(super) super::Profile);
 /// following itself.
 pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
     if let Some(follower) = world.get::<Follower>(unit) {
-        return Some(follower.clone());
+        return (world.get_entity(follower.owner).is_ok()
+            && world
+                .get::<crate::networking::DisconnectedPlayer>(follower.owner)
+                .is_none())
+        .then(|| follower.clone());
     }
     world.get::<LeaderProfile>(unit).map(|leader| Follower {
         owner: unit,
@@ -38,10 +42,30 @@ pub(super) const MELEE_REACH: f32 = 2.0;
 
 pub(super) fn update(world: &mut World) {
     super::pull_history::sample_all(world);
+    let holding: Vec<_> = world
+        .query::<(Entity, &Follower)>()
+        .iter(world)
+        .filter(|(_, follower)| {
+            world
+                .get::<crate::networking::DisconnectedPlayer>(follower.owner)
+                .is_some()
+        })
+        .map(|(unit, _)| unit)
+        .collect();
+    for unit in holding {
+        crate::spell_cast::stop_all_casts(world, unit);
+        crate::combat::attack_stop(world, unit);
+        hold_combat(world, unit);
+    }
     let followers: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)
-        .filter(|(_, follower)| world.get_entity(follower.owner).is_ok())
+        .filter(|(_, follower)| {
+            world.get_entity(follower.owner).is_ok()
+                && world
+                    .get::<crate::networking::DisconnectedPlayer>(follower.owner)
+                    .is_none()
+        })
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
     let owners: std::collections::HashSet<_> = followers

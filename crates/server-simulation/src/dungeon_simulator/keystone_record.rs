@@ -74,6 +74,7 @@ pub(super) struct Scaling {
 pub(super) struct RunRecord {
     pub schema_version: u32,
     pub seed: u64,
+    pub schedule_epoch: Option<i64>,
     pub requested_specs: [u32; 5],
     pub map_id: u32,
     pub challenge_id: Option<u32>,
@@ -440,6 +441,7 @@ mod tests {
         let record = RunRecord {
             schema_version: 1,
             seed: 1,
+            schedule_epoch: Some(1_792_454_400),
             requested_specs: [66, 105, 262, 63, 253],
             map_id: 2515,
             challenge_id: Some(401),

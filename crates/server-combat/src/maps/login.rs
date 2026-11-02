@@ -261,7 +261,7 @@ impl LoginMaps<'_> {
         }
     }
 
-    fn place(&self, map: InMap, position: Position) -> Option<LoginPlace> {
+    pub(crate) fn place(&self, map: InMap, position: Position) -> Option<LoginPlace> {
         let Some(entry) = self.store.map(map.map_id) else {
             error!("Map {} has no Map.db2 entry", map.map_id);
             return None;

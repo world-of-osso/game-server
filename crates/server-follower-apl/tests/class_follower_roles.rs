@@ -1292,6 +1292,48 @@ fn follower_apl_retries_after_a_pending_navigation_destination() {
 }
 
 #[test]
+fn follower_apl_keeps_casting_while_its_target_casts() {
+    use shared::casting::{CastState, CastType};
+    // Murder Row Kystia casts Chaos Barrage 1230298 almost continuously; the Vengeance
+    // `disrupt,if=target.debuff.casting.react` row must not stop the APL for the pull.
+    let mut pull = spawn(581);
+    let target = pull.harness.npc;
+    for frame in 0..FRAMES {
+        pull.harness
+            .app
+            .world_mut()
+            .entity_mut(target)
+            .insert(CastState {
+                spell_name: "Chaos Barrage".into(),
+                spell_id: 1230298,
+                target: pull.follower.to_bits(),
+                duration: 3.0,
+                elapsed: (frame % 60) as f32 * 0.05,
+                cast_type: CastType::Normal,
+                interruptible: true,
+                pushback_count: 0,
+                channel_tick_interval: 0.0,
+                channel_tick_timer: 0.0,
+                cast_while_moving: false,
+            });
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        assert!(
+            !pull.apl_failed(),
+            "target cast stopped the APL at frame {frame}"
+        );
+        pull.harness.app.update();
+    }
+    let table = server_follower_apl::vengeance_tank_rotation::ACTIONS;
+    let apl = pull.resolved(table.iter().map(|&(_, spell)| spell));
+    let casts = pull.casts();
+    assert!(
+        pull.landed(CombatLogKind::Damage, target, &apl),
+        "Vengeance follower casts {casts:?}; no APL damage {apl:?} on the casting target"
+    );
+}
+
+#[test]
 fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     let pull = pull(62);
     let table = server_follower_apl::arcane_rotation::ACTIONS;

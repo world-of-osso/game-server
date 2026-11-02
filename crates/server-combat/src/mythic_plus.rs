@@ -1055,7 +1055,7 @@ mod tests {
         h.app.insert_resource(data);
         h.app.world_mut().remove_resource::<GameDatabase>();
         let mut session =
-            headless::Session::prepare(h.app.world_mut(), &path, h.player, 8).unwrap();
+            headless::Session::prepare(h.app.world_mut(), &path, h.player, 8, 1791705600).unwrap();
         let weeks = tempfile::NamedTempFile::new().unwrap();
         std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
         h.app.world_mut().resource_mut::<Challenges>().weeks_path = weeks.path().to_owned();
@@ -1219,7 +1219,7 @@ mod tests {
         h.app.insert_resource(data);
         h.app.world_mut().remove_resource::<GameDatabase>();
         let mut session =
-            headless::Session::prepare(h.app.world_mut(), &path, h.player, 2).unwrap();
+            headless::Session::prepare(h.app.world_mut(), &path, h.player, 2, 1791705600).unwrap();
         let weeks = tempfile::NamedTempFile::new().unwrap();
         std::fs::write(weeks.path(), include_str!("mythic_plus_weeks.json")).unwrap();
         h.app.world_mut().resource_mut::<Challenges>().weeks_path = weeks.path().to_owned();

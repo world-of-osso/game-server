@@ -135,9 +135,16 @@ fn disconnect(app: &mut App, connection: Entity, player: Entity) -> (u64, u64) {
         .entity_mut(connection)
         .insert(lightyear::prelude::server::ClientOf)
         .remove::<Connected>();
-    for _ in 0..3 {
-        app.update();
-    }
+    app.world_mut().flush();
+    assert!(
+        app.world()
+            .get::<crate::networking::DisconnectedPlayer>(player)
+            .is_some()
+    );
+    app.world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_secs(60));
+    app.world_mut().run_schedule(PreUpdate);
     assert!(
         app.world().get_entity(player).is_err(),
         "real disconnect despawn completed"

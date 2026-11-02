@@ -18,6 +18,7 @@ impl Session {
         path: &std::path::Path,
         player: Entity,
         level: u32,
+        epoch: i64,
     ) -> Result<Self, String> {
         if level == 0 {
             return Err("keystone level must be positive".into());
@@ -109,7 +110,6 @@ impl Session {
             start_positions,
             ..Default::default()
         });
-        let epoch = crate::maps::ServerClock::default().unix();
         world.insert_resource(crate::maps::ServerClock {
             fixed_unix: Some(epoch),
             offset_secs: 0,
@@ -138,6 +138,10 @@ impl Session {
     pub(super) fn set_test_epoch(&mut self, world: &mut World, epoch: i64) {
         self.epoch = epoch;
         world.resource_mut::<crate::maps::ServerClock>().fixed_unix = Some(epoch);
+    }
+
+    pub fn schedule_epoch(&self) -> i64 {
+        self.epoch
     }
 
     pub fn font_position(&self, world: &World) -> Result<Position, String> {

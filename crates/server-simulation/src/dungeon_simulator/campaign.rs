@@ -3207,6 +3207,7 @@ fn failed_keystone_record(
     super::keystone_record::RunRecord {
         schema_version: 1,
         seed,
+        schedule_epoch: super::keystone::schedule_epoch().ok(),
         requested_specs: options.specs,
         map_id: options.map_id,
         challenge_id: None,

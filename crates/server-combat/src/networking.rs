@@ -192,6 +192,15 @@ pub struct ChatHistoryEntry {
 
 pub use server_core::session_state::PendingDespawn;
 
+/// TrinityCore 15e0ed76 WorldSession.cpp:142 retains a lost-socket session for one minute.
+const DISCONNECT_GRACE_SECS: f64 = 60.0;
+
+/// The player remains in the world while a lost connection may return.
+#[derive(Component)]
+pub(crate) struct DisconnectedPlayer {
+    deadline: f64,
+}
+
 pub struct ServerNetworkPlugin;
 
 impl Plugin for ServerNetworkPlugin {
@@ -202,7 +211,10 @@ impl Plugin for ServerNetworkPlugin {
         app.init_resource::<ChatHistoryBuffer>();
         app.insert_resource(ServerBindAddress(server_address()));
         configure_listener(app);
-        app.add_systems(PostUpdate, despawn_pending);
+        app.add_systems(
+            PostUpdate,
+            (expire_disconnected_players, despawn_pending).chain(),
+        );
         app.add_systems(Update, crate::character_visual::sync_player_visuals);
         app.add_systems(FixedUpdate, process_player_inputs);
         app.add_systems(
@@ -386,13 +398,29 @@ fn on_client_disconnected(
     player_query: Query<DisconnectPlayer>,
     db: Option<Res<GameDatabase>>,
     mut connected: ResMut<ConnectedAccounts>,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
     let Ok((player_link, auth, in_world)) = conn_query.query.get(trigger.entity) else {
         return;
     };
     if let Some(link) = player_link {
-        save_and_despawn(&db, &player_query, link.0, in_world, &mut commands);
+        if in_world.is_some() && player_query.get(link.0).is_ok() {
+            commands.entity(link.0).insert(DisconnectedPlayer {
+                deadline: time.elapsed_secs_f64() + DISCONNECT_GRACE_SECS,
+            });
+            commands
+                .entity(trigger.entity)
+                .remove::<(PlayerLink, InWorld)>();
+        } else {
+            save_and_despawn(
+                &db,
+                &player_query,
+                link.0,
+                in_world.is_some(),
+                &mut commands,
+            );
+        }
     }
     if let Some(auth) = auth {
         if clear_connected_account(&mut connected, auth.account_id, trigger.entity) {
@@ -411,10 +439,10 @@ fn save_and_despawn(
     db: &Option<Res<GameDatabase>>,
     player_query: &Query<DisconnectPlayer>,
     entity: Entity,
-    in_world: Option<&InWorld>,
+    in_world: bool,
     commands: &mut Commands,
 ) {
-    if let (Some(db), Some(_)) = (db.as_ref(), in_world)
+    if let (Some(db), true) = (db.as_ref(), in_world)
         && let Ok((pos, health, player, cid, death, map, transfer, rest)) = player_query.get(entity)
     {
         let observed_logout = crate::rest::unix_secs();
@@ -462,11 +490,29 @@ pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     );
 }
 
+fn expire_disconnected_players(
+    time: Res<Time>,
+    disconnected: Query<(Entity, &DisconnectedPlayer)>,
+    player_query: Query<DisconnectPlayer>,
+    db: Option<Res<GameDatabase>>,
+    mut commands: Commands,
+) {
+    for (entity, disconnected) in &disconnected {
+        if time.elapsed_secs_f64() >= disconnected.deadline {
+            save_and_despawn(&db, &player_query, entity, true, &mut commands);
+            commands.entity(entity).remove::<DisconnectedPlayer>();
+        }
+    }
+}
+
 #[cfg(test)]
 pub(crate) fn install_disconnect_fixture(app: &mut App) {
     app.init_resource::<ConnectedAccounts>();
     app.add_observer(on_client_disconnected);
-    app.add_systems(PreUpdate, despawn_pending);
+    app.add_systems(
+        PreUpdate,
+        (expire_disconnected_players, despawn_pending).chain(),
+    );
 }
 
 fn despawn_pending(mut commands: Commands, query: Query<Entity, With<PendingDespawn>>) {

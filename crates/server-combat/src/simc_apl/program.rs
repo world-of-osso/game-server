@@ -439,7 +439,12 @@ fn condition_passes(
     let Some(condition) = &rule.condition else {
         return Ok(true);
     };
-    evaluate_for(condition, action, selection).map(|value| value != 0.0)
+    match evaluate_for(condition, action, selection) {
+        Ok(value) => Ok(value != 0.0),
+        // A fact unavailable on this tick leaves only this row unready.
+        Err(error) if super::is_not_ready(&error) => Ok(false),
+        Err(error) => Err(error),
+    }
 }
 
 fn evaluate_for(

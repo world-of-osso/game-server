@@ -186,6 +186,17 @@ pub(crate) fn process_select_character(
     mut enter_senders: Query<&mut MessageSender<EnterWorldResponse>>,
     mut terrain_senders: Query<&mut MessageSender<LoadTerrain>>,
     existing_players: Query<LivePlayer>,
+    live_reconnect_players: Query<(
+        Entity,
+        &ClientId,
+        &Position,
+        &crate::maps::InMap,
+        Has<crate::networking::DisconnectedPlayer>,
+    )>,
+    replaced_sessions: Query<
+        (Entity, &Authenticated, &PlayerLink),
+        With<crate::auth::PendingForcedDisconnect>,
+    >,
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
@@ -285,6 +296,45 @@ pub(crate) fn process_select_character(
             || pending_ground.contains_key(&entity)
             || active.get(entity).is_err()
         {
+            continue;
+        }
+        if !validate_ownership(&db.db, account_id, req.character_id) {
+            send_enter_error(entity, &mut enter_senders, "Character not found");
+            continue;
+        }
+        let reconnect =
+            live_reconnect_players
+                .iter()
+                .find_map(|(player, id, position, map, disconnected)| {
+                    if id.0 != req.character_id {
+                        return None;
+                    }
+                    let replaced = replaced_sessions.iter().find_map(|(session, auth, link)| {
+                        (auth.account_id == account_id && link.0 == player).then_some(session)
+                    });
+                    (disconnected || replaced.is_some())
+                        .then_some((player, *position, *map, replaced))
+                });
+        if let Some((player, position, map, replaced)) = reconnect
+            && let Some(place) = maps.place(map, position)
+        {
+            if let Some(session) = replaced {
+                commands.entity(session).remove::<(PlayerLink, InWorld)>();
+            }
+            commands
+                .entity(player)
+                .remove::<crate::networking::DisconnectedPlayer>();
+            insert_world_components(&mut commands, entity, player, req.character_id);
+            commands.queue(move |world: &mut World| {
+                crate::followers::notify_reconnected(world, player)
+            });
+            send_enter_success(entity, &mut enter_senders, player);
+            send_load_terrain(
+                entity,
+                &place.directory,
+                &place.position,
+                &mut terrain_senders,
+            );
             continue;
         }
         save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
@@ -865,4 +915,4 @@ pub fn spawn_player_entity(
 
 #[cfg(test)]
 #[path = "auth_character_tests.rs"]
-mod tests;
+pub(crate) mod tests;
