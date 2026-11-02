@@ -37,8 +37,36 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
         .spell_store()
         .clone();
     h.app.insert_resource(spells);
+    let player = h.player();
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
+        health.max = 1_000_000_000.0;
+        health.current = health.max;
+    }
     crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
-    h.advance(20.0);
+    h.advance(4.3);
+    let guardian = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap)>()
+        .iter(h.app.world())
+        .find_map(|(entity, npc, copy)| {
+            (*copy == map && npc.template_id == 268344).then_some(entity)
+        })
+        .expect("Guardian appears in the first wave");
+    let position = *h.app.world().get::<Position>(guardian).unwrap();
+    *h.app.world_mut().get_mut::<Position>(player).unwrap() = position;
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(guardian).insert(visibility);
+    h.advance(15.7);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == guardian.to_bits() && go.spell_id == 1300803),
+        "Guardian must cast Tainted Strike"
+    );
     let mut actors: Vec<_> = h
         .app
         .world_mut()
