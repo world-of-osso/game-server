@@ -10,14 +10,13 @@ use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
 use facts::HavocFacts;
 use serde_json::{Value, json};
-use server::simc_apl::{Action, Program};
+use server::simc_apl::Program;
 
 pub struct Rotation {
     pub driver: Driver,
     pub bindings: Bindings,
     pub equipment: Equipment,
     pub encounter: Encounter,
-    pub pending_retreat: Option<(Action, Execution, Entity)>,
 }
 
 pub fn load_program() -> Result<Program, String> {
@@ -58,7 +57,6 @@ impl Rotation {
             bindings,
             equipment,
             encounter,
-            pending_retreat: None,
         })
     }
 
@@ -117,14 +115,11 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        if let Some((action, execution, target)) = self.pending_retreat.take() {
-            if crate::followers::retreat::prepare_havoc_retreat(world, actor, target)? {
-                self.driver.execute(world, actor, action, execution)?;
-            } else {
-                self.pending_retreat = Some((action, execution, target));
-            }
-            return Ok(());
-        }
+        // Setup is an attempt for this decision, not a retained target or a lock
+        // on the rest of the priority list. It must be revalidated each tick.
+        world
+            .entity_mut(actor)
+            .remove::<crate::followers::retreat::RetreatSetup>();
         let pickup = {
             let facts = HavocFacts {
                 native: NativeFacts::new(
@@ -145,28 +140,36 @@ impl Rotation {
         if let Some(permitted) = pickup {
             server::soul_fragments::finish_pickup(world, actor, permitted)?;
         }
-        let prepared = self.prepare(world, actor, targets)?;
-        let facts = HavocFacts {
-            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+        let mut prepared = self.prepare(world, actor, targets)?;
+        loop {
+            let facts = HavocFacts {
+                native: NativeFacts::new(
+                    world,
+                    actor,
+                    &self.bindings,
+                    self.encounter,
+                    targets.len(),
+                )
                 .with_targets(targets.first().copied(), targets),
-            equipment: &self.equipment,
-            world,
-            actor,
-        };
-        if let Some((action, execution)) =
-            self.driver
-                .select("default", &facts, &prepared, &self.equipment)?
-        {
+                equipment: &self.equipment,
+                world,
+                actor,
+            };
+            let Some((action, execution)) =
+                self.driver
+                    .select("default", &facts, &prepared, &self.equipment)?
+            else {
+                return Ok(());
+            };
             if matches!(execution, Execution::Spell(198793, _, _)) {
                 let target = *targets.first().ok_or("Retreat requires an enemy target")?;
                 if !crate::followers::retreat::prepare_havoc_retreat(world, actor, target)? {
-                    self.pending_retreat = Some((action, execution, target));
-                    return Ok(());
+                    prepared.suppress_action("vengeful_retreat");
+                    continue;
                 }
             }
-            self.driver.execute(world, actor, action, execution)?;
+            return self.driver.execute(world, actor, action, execution);
         }
-        Ok(())
     }
 
     pub fn report(&self) -> Value {

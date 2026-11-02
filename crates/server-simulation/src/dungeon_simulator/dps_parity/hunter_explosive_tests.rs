@@ -46,7 +46,7 @@ fn queued_explosive_shot_skips_dead_target_before_selecting_survivor() {
             run.app.world_mut(),
             run.actor,
             action,
-            Execution::Queue(Box::new(Execution::Spell(212431, dead, Some(dead))), 0.0),
+            Execution::Queue(Box::new(Execution::Spell(212431, dead, Some(dead))), 10.0),
         )
         .unwrap();
     run.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;

@@ -20,6 +20,8 @@ const DECK_GRANT_SECONDS: f64 =
 mod azure_positioning_tests;
 #[path = "azure_throughput_tests.rs"]
 mod azure_throughput_tests;
+#[path = "havoc_setup_tests.rs"]
+mod havoc_setup_tests;
 #[path = "keystone_cohesion_tests.rs"]
 mod keystone_cohesion_tests;
 #[path = "positioning_tests.rs"]
@@ -2249,6 +2251,24 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
         }
     }
     panic!("native scripted damage boundary did not execute Moloch Vanish");
+}
+
+#[test]
+fn forces_complete_skips_unengaged_trash_and_selects_remaining_boss() {
+    let run = spawn_run(2, &mut None).unwrap();
+    let normal = run.next_pack_with_forces(None, false, false).unwrap();
+    let boss = run.next_pack_with_forces(None, false, true).unwrap();
+    assert_ne!(normal.0, boss.0);
+    let npc = run
+        .app
+        .world()
+        .get::<shared::components::Npc>(boss.1)
+        .unwrap();
+    assert!(run.graph.boss_entries().contains(&npc.template_id));
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        normal.1
+    ));
 }
 
 #[test]
@@ -4690,6 +4710,19 @@ impl Run {
     }
 
     fn next_pack_in(&self, group: Option<&[u64]>, skip_engaged: bool) -> Option<(u64, Entity)> {
+        let boss_only = self
+            .keystone
+            .as_ref()
+            .is_some_and(|key| key.forces_complete(self.app.world()));
+        self.next_pack_with_forces(group, skip_engaged, boss_only)
+    }
+
+    fn next_pack_with_forces(
+        &self,
+        group: Option<&[u64]>,
+        skip_engaged: bool,
+        boss_only: bool,
+    ) -> Option<(u64, Entity)> {
         let world = self.app.world();
         let engaged = if skip_engaged {
             crate::followers::simulator::active_enemies(world, self.party.owner)
@@ -4719,6 +4752,15 @@ impl Run {
                         .map(|actor| (spawn, actor))
                 })
                 .find(|(spawn, actor)| {
+                    let boss_source = self.graph.boss_entries().contains(&spawn.entry)
+                        || self
+                            .graph
+                            .follower_boss_sources
+                            .values()
+                            .any(|entry| *entry == spawn.entry);
+                    if boss_only && !boss_source {
+                        return false;
+                    }
                     let bits: Vec<_> = self
                         .graph
                         .follower_boss_sources
@@ -4739,12 +4781,7 @@ impl Run {
                     pending
                         && !engaged.contains(actor)
                         && crate::spell_cast::targets::is_alive(world, *actor)
-                        && (self.graph.boss_entries().contains(&spawn.entry)
-                            || self
-                                .graph
-                                .follower_boss_sources
-                                .values()
-                                .any(|entry| *entry == spawn.entry)
+                        && (boss_source
                             || crate::spell_cast::targets::is_hostile(
                                 world,
                                 self.party.owner,

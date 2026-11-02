@@ -1135,6 +1135,14 @@ mod tests {
                 .content_tuning_id,
             1279
         );
+        // 12.1.5 ExpectedStat level 92, map tuning 1279 and season 120:
+        // 6855.70312 DPS × 1.93929994 × 1.62100005 × 2 seconds.
+        let boss_scaling = crate::level_scaling::UnitScaling::of(h.app.world(), boss);
+        let (min, max) = boss_scaling.swing_damage_range(2.0).unwrap();
+        assert!((min - 43103.25).abs() < 0.1, "seasonal minimum {min}");
+        assert!((max - 64654.88).abs() < 0.1, "seasonal maximum {max}");
+        let rolled = crate::combat::creature_weapon_damage(&boss_scaling);
+        assert!((min..=max).contains(&rolled), "actual swing roll {rolled}");
         let health = h.app.world().get::<Health>(npc).unwrap();
         assert!(health.max > before);
         assert!((health.current / health.max - 0.5).abs() < 0.0001);

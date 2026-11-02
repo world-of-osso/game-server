@@ -219,6 +219,9 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         ordered_targets(world, unit)
     };
     if targets.is_empty() {
+        world
+            .entity_mut(unit)
+            .remove::<server::followers::retreat::RetreatSetup>();
         if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
             apl.idle();
         }

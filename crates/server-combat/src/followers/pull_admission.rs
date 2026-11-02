@@ -146,7 +146,7 @@ fn read_cleared_single_pull(
         ?packs,
         "Ready single-pack pull without numerical forecast"
     );
-    // Full positive tank HP preserves the 30% reserve without a fake forecast.
+    // Single-pack admission uses the recovery floor, not a synthetic forecast.
     Ok(Some(Decision::Allow {
         bootstrap: run.history.completed_fights == 0,
         forecast_health: None,
@@ -176,6 +176,12 @@ fn unavailable_party_member(world: &World, run: &RunBudget) -> Option<Reason> {
 }
 
 fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>, String> {
+    // INFERRED_WCL: Hx64j9RrfnytB8cA/12 pull 11 starts with a hunter at 50.2% HP;
+    // YaZ7RKjBnp6dyHTG/53 and BDjZ2QF6pNr8xV4W/1 supply comparison samples.
+    const MIN_READY_HEALTH_FRACTION: f32 = 0.5;
+    // INFERRED_WCL: BDjZ2QF6pNr8xV4W/1 pull 5 healer mana is 93.97%.
+    const MIN_READY_HEALER_MANA_FRACTION: f32 = 0.93;
+
     if let Some(reason) = unavailable_party_member(world, run) {
         return Ok(Some(reason));
     }
@@ -197,22 +203,29 @@ fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>,
                 "Ready pull member {unit:?} has invalid native HP/mana"
             ));
         }
-        if health.current < health.max || mana.current < mana.max {
+        let healer_needs_mana = is_party_healer(world, run, unit)
+            && mana.current < mana.max * MIN_READY_HEALER_MANA_FRACTION;
+        if health.current < health.max * MIN_READY_HEALTH_FRACTION || healer_needs_mana {
             return Ok(Some(Reason::Recovery));
         }
     }
     Ok(None)
 }
 
+fn is_party_healer(world: &World, run: &RunBudget, unit: Entity) -> bool {
+    if unit == run.follower.owner {
+        party::read_admission(world, unit).is_some_and(|(_, _, role)| role == GroupRole::Healer)
+    } else {
+        world
+            .get::<Follower>(unit)
+            .is_some_and(|follower| follower.profile.role == GroupRole::Healer)
+    }
+}
+
 fn has_admitted_healer(world: &World, run: &RunBudget) -> bool {
-    let owner_heals = party::read_admission(world, run.follower.owner)
-        .is_some_and(|(_, _, role)| role == GroupRole::Healer);
-    owner_heals
-        || run.party.iter().any(|unit| {
-            world
-                .get::<Follower>(*unit)
-                .is_some_and(|follower| follower.profile.role == GroupRole::Healer)
-        })
+    run.party
+        .iter()
+        .any(|&unit| is_party_healer(world, run, unit))
 }
 
 /// Native numeric report uses exactly the input and arithmetic used for overlap admission.
