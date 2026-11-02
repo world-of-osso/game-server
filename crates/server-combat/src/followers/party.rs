@@ -1735,17 +1735,6 @@ mod copy_tests {
         };
         let (mut h, caster, target, _) = brackenhide_release_fixture(position);
         let map = *h.app.world().get::<InMap>(target).unwrap();
-        h.app.insert_resource(crate::maps::ServerClock {
-            offset_secs: 0,
-            fixed_unix: Some(1_791_705_600),
-        });
-        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
-        assert!(crate::scripted_ai::instance_script::set_boss_state(
-            h.app.world_mut(),
-            map,
-            0,
-            crate::scripted_ai::instance_script::EncounterState::InProgress
-        ));
         let max = h.app.world().get::<Health>(target).unwrap().max;
         h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
         h.app
@@ -1780,6 +1769,17 @@ mod copy_tests {
         );
         assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
         h.advance(2);
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
         assert!(
             crate::death::soulstone::available(h.app.world(), target),
             "death must retain the Soulstone offer"
