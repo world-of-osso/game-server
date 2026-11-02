@@ -1102,7 +1102,9 @@ mod tests {
             .current = 1000.0;
         // Shield Wall's cooldown is its charge-category recharge; its own 8 s
         // RecoveryTime is a separate clock (SimC76f8118 action.cpp:711–719).
-        // `cooldown.remains` reads whichever clock gates the action.
+        // Defender's Aegis 397103 adds a charge, so after one cast `remains`
+        // reads only that 8 s clock; the recharge is `full_recharge_time`,
+        // which equals `remains` for Avatar's ordinary cooldown.
         let bindings = super::bindings();
         let encounter = crate::simc_apl_native::Encounter::Fixture {
             started_at: 0.0,
@@ -1116,7 +1118,7 @@ mod tests {
                 .get(id)
                 .unwrap();
             crate::simc_apl_native::NativeFacts::new(world, actor, &bindings, encounter, 1)
-                .cooldown_for_spell(spell, "remains")
+                .cooldown_for_spell(spell, "full_recharge_time")
                 .unwrap()
                 * 1000.0
         };
