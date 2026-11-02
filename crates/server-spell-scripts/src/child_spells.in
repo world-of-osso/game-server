@@ -676,3 +676,9 @@ D	execution_counters.rs	cast_valued_execution	cast_triggered_with_overrides	payl
 D	execution_counters.rs	grant_selected_counter	try_cast_triggered	consumer.counter	1	445606
 D	feral_convoke.rs	launch_child	launch_triggered_spell	&spell	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
 D	feral_convoke.rs	launch_child	load_triggered_spell	id	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
+D	feral_lycaras.rs	apply_teachings_child	cast_triggered_with_overrides	child	1	378990,378991
+D	feral_unseen.rs	launch_effective_unseen	launch_triggered_spell	&spell	1	1263890,1263908
+D	fire_phoenix.rs	cast_next	cast_triggered	spell	1	449559,450421,450461,450462,450499,453326
+D	foreground_procs.rs	grant_buff_and_reset_actions	try_cast_triggered	buff	1	52437
+D	frost_followups.rs	apply_self_aura	AuraApplication	spell_id	1	205473,1222865
+D	frost_death_knight.rs	cast_buff_stacks	cast_triggered_with_overrides	spell	1	193486,194879,207062,211805,377101,377192,1230916,1233152
