@@ -200,7 +200,7 @@ fn bg_backfill_offline_members_hold_capacity_until_existing_reservation_expiry_e
             .insert(lightyear::prelude::server::ClientOf)
             .remove::<Connected>();
     }
-    entered.h.advance(3);
+    entered.h.advance(61);
     assert!(
         departures
             .iter()
