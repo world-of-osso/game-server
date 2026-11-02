@@ -73,6 +73,8 @@ mod mastery_base_tests;
 #[cfg(test)]
 mod trait_effect_points_tests;
 pub use charge::ChargeMovement;
+#[cfg(test)]
+mod beacon_overheal_tests;
 mod charge_consumption;
 #[cfg(test)]
 mod charge_rate_tests;

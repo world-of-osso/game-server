@@ -533,7 +533,7 @@ Dungeon release prefers a linked graveyard on the instance map, then the importe
 
 `HOARDMONGER_UNLOCK_LOG_CORRELATED` is an inferred bridge: successful TDB offering spellclicks grant the native Carrying Supplies aura 1239428 and retain the offering type; delivering within an inferred 5 yards of a distinct Avatar of Starvation removes that aura and its Feast of Misery aura 1249737. Six distinct fed avatars clear Hoardmonger's PC and NPC immunity in that map copy. Logs correlate aura removals with the pull; the pickup bridge, delivery radius, initial avatar aura, and immunity transition are not directly sourced. Failed or interrupted casts do not grant supplies.
 
-`APPLE_BARREL_OPEN_LOCK_TARGET_GAP`: TDB identifies NPC 245716 as the apple spellclick source, but native spell 1239300 has gameobject-targeted OPEN_LOCK and the current NPC-targeted cast fails validation. Four nearby Barrel of Apples gameobjects are each within 0.7 yards of an apple NPC; their association is not established. This remains a named source gap, not a claim that the native apple cast is functional.
+`APPLE_BARREL_OPEN_LOCK_TARGET_GAP`: TDB identifies NPC 245716 as the apple spellclick source, but native spell 1239300 has gameobject-targeted OPEN_LOCK and the current NPC-targeted cast fails validation. Four nearby Barrel of Apples gameobjects are each within 0.7 yards of an apple NPC; their association is not established. The headless objective planner selects only offering NPCs whose imported spellclick can target an NPC; it does not choose the apple source until this association is established. This remains a named source gap, not a claim that the native apple cast is functional.
 
 ## Known gaps (current cycle)
 
