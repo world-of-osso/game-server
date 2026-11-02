@@ -77,6 +77,7 @@ mod skarmorak;
 pub mod smart_ai;
 pub(crate) mod tagged_trash_intro;
 mod talondras;
+mod temple_avatar;
 mod temple_of_sethraliss;
 pub mod the_stockade;
 mod treemouth;
@@ -422,6 +423,9 @@ pub struct CreatureAiState {
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if let Some(ai) = temple_avatar::creature_ai(world, creature) {
+        return Some(ai);
+    }
     if let Some(ai) = temple_of_sethraliss::creature_ai(world, creature) {
         return Some(ai);
     }
@@ -598,6 +602,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
             .queue(move |world: &mut World| {
                 let name = script_name.or_else(|| {
                     (smart_ai::has_script(world, entry)
+                        || temple_avatar::is_encounter_add(world, creature)
                         || instance_script::bound_boss(world, creature).is_some())
                     .then(|| SMART_AI.to_owned())
                 });
