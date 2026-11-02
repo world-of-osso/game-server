@@ -48,6 +48,14 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
                 app.update();
             }
         }
+        let timers = app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 377349)
+            .map(crate::auras::procs::snapshot_proc_timers);
+        println!("CTHUN_TIMERS selected={selected} targets={count} {timers:?}");
         let events = &app
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
