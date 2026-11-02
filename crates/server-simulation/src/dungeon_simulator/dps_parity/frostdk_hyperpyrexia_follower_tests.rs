@@ -19,6 +19,13 @@ fn frost_two_hand_strikes_produce_hyperpyrexia() {
             .is_none()
     );
     assert!(crate::auras::has_aura(app.world(), actor, 456238));
+    // Freeze the follower brain while queued native Frost Strike children resolve.
+    assert!(
+        app.world_mut()
+            .entity_mut(actor)
+            .take::<crate::followers::Follower>()
+            .is_some()
+    );
     for _ in 0..30 {
         crate::spell_cast::cast_triggered(app.world_mut(), actor, 49143, Some(target), 1);
     }
