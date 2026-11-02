@@ -5,6 +5,67 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn healers_top_up_small_wounds_with_a_persistent_unattackable_combat_reference() {
+    use shared::components::{CombatStatus, UnitFlags};
+    for spec in [65, 105, 256, 257, 264, 270, 1468] {
+        let mut run = super::healer_simc_replay::snapshot_party(spec, 70, 1);
+        let owner = run.slots[4];
+        let healer = run.healer;
+        let source = run.sources[0];
+        run.app
+            .world_mut()
+            .entity_mut(source)
+            .insert(UnitFlags(0x0200_0000));
+        for _ in 0..200 {
+            run.app.update();
+        }
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, source);
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), healer, source);
+        assert!(run.app.world().get::<CombatStatus>(owner).unwrap().0);
+        assert!(crate::followers::engaged_targets(run.app.world_mut(), healer).is_empty());
+        let max = run.app.world().get::<Health>(owner).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(owner)
+            .unwrap()
+            .current = max * 0.985;
+        for _ in 0..600 {
+            run.app.update();
+            if run.app.world().get::<Health>(owner).unwrap().current == max {
+                assert!(crate::combat_refs::has_active_reference_to(
+                    run.app.world(),
+                    owner,
+                    source
+                ));
+                let healed = run
+                    .app
+                    .world()
+                    .resource::<ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|event| {
+                        event.kind == CombatLogKind::Heal
+                            && event.source == Some(healer.to_bits())
+                            && event.target == Some(owner.to_bits())
+                            && event.amount > 0
+                    });
+                assert!(
+                    healed,
+                    "spec {spec} must heal the owner, not rely on regeneration"
+                );
+                break;
+            }
+        }
+        assert_eq!(
+            run.app.world().get::<Health>(owner).unwrap().current,
+            max,
+            "spec {spec} failed to top up the small wound"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_shaman_heals_injured_owner_out_of_combat() {
     let mut run = super::healer_simc_replay::snapshot_party(264, 70, 1);
     let owner = run.slots[4];
