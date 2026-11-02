@@ -29,7 +29,7 @@ fn sinister_strike_interval(adrenaline: bool) -> f64 {
             Err(error) => last_failure = Some(error),
         }
     }
-    panic!("second Sinister Strike did not become ready: {last_failure:?}");
+    panic!("second Sinister Strike did not become ready: {last_failure:?}; elapsed={:?}; cast={:?}", app.world().resource::<bevy::prelude::Time>().elapsed_secs_f64() - start, app.world().get::<shared::casting::CastState>(actor));
 }
 
 #[test]
