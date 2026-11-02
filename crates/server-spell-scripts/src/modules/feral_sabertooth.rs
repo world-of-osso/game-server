@@ -2,11 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::ActiveAuras;
-use combat::spell_cast::{
-    self,
-    effects::EffectCtx,
-    script_registry::{EnemyContextHitHook, SpellScriptHook},
-};
+use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 use shared::components::PowerType;
 
 const BITE: u32 = 22568;
@@ -15,17 +11,13 @@ const DEBUFF: u32 = 391722;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceContext(&[BITE]),
-    SpellScriptHook::EnemyContextHit(hit),
+    SpellScriptHook::AfterPolicyDirectDamage(apply_sabertooth),
 ];
-
-fn hit(spell: u32) -> Option<EnemyContextHitHook> {
-    (spell == BITE).then_some(apply_sabertooth)
-}
 
 // SimC76f8118 sc_druid.cpp4295–4304/13852–13854: a landed primary Bite
 // adds its spent combo points, capped at five, and refreshes the owned debuff.
-fn apply_sabertooth(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    if ctx.spell.cast_primary_target != Some(target) {
+fn apply_sabertooth(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
+    if ctx.spell.id != BITE || ctx.spell.cast_primary_target != Some(target) {
         return;
     }
     let value = world.get::<ActiveAuras>(ctx.caster).and_then(|auras| {
