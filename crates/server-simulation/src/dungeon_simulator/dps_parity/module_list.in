@@ -38,6 +38,7 @@ mod assisted_wdp_tests;
 mod arms_battlelord_follower_tests;
 mod arms_chain_boundary_tests;
 mod arms_cooldown_tests;
+mod arms_culling_cyclone_follower_tests;
 mod arms_execute_bleed_follower_tests;
 mod arms_fatality_follower_tests;
 mod arms_imminent_follower_tests;
