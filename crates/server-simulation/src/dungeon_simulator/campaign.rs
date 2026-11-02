@@ -2463,6 +2463,71 @@ fn follower_making_native_route_progress_prevents_a_false_stall() {
 }
 
 #[test]
+fn follower_progress_after_owner_moves_far_prevents_false_stall() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let tank = run.party.tank;
+    let owner = run.party.owner;
+    let start = *run.app.world().get::<Position>(tank).unwrap();
+    let owner_near = Position {
+        x: start.x + 5.0,
+        ..start
+    };
+    run.app.world_mut().entity_mut(owner).insert((
+        owner_near,
+        MoveIntent(Vec3::new(owner_near.x, owner_near.y, owner_near.z)),
+    ));
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert((
+            crate::creature_ai::FollowOwner::new(owner),
+            crate::creature_ai::CreatureState::Idle,
+            crate::creature_ai::SpawnPoint {
+                x: start.x,
+                y: start.y,
+                z: start.z,
+                wander_distance: 0.0,
+                speed_walk: 1.0,
+                speed_run: 0.005,
+            },
+        ))
+        .remove::<MoveIntent>();
+    for _ in 0..20 {
+        run.app.update();
+        run.stalled();
+    }
+    let near_best = run.best_routes.get(&tank).expect("near follow route").1;
+    let far = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 20375720)
+        .unwrap()
+        .point();
+    run.app.world_mut().entity_mut(owner).insert((
+        Position {
+            x: far.x,
+            y: far.y,
+            z: far.z,
+        },
+        MoveIntent(far),
+    ));
+    run.last_progress = run.now();
+    let before = *run.app.world().get::<Position>(tank).unwrap();
+    for _ in 0..1300 {
+        run.app.update();
+        assert!(
+            !run.stalled(),
+            "follower advancing after its owner moved must not stall; near best={near_best}"
+        );
+    }
+    assert_ne!(*run.app.world().get::<Position>(tank).unwrap(), before);
+}
+
+#[test]
 fn follower_changing_goals_without_route_progress_still_stalls() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let others: Vec<_> = run

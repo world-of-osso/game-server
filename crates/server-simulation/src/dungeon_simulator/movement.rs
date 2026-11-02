@@ -87,7 +87,7 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum RouteGoal {
     Point(Vec3),
-    Unit(Entity),
+    Unit(Entity, Vec3),
 }
 
 pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal, f32)> {
@@ -106,12 +106,12 @@ pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal,
     } else if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
         world.get::<crate::creature_ai::CreatureState>(unit)
     {
-        RouteGoal::Unit(Entity::try_from_bits(*target)?)
+        RouteGoal::Unit(Entity::try_from_bits(*target)?, travel.destination)
     } else if let Some(follow) = world
         .get::<crate::creature_ai::FollowOwner>(unit)
         .filter(|follow| follow.owner != unit)
     {
-        RouteGoal::Unit(follow.owner)
+        RouteGoal::Unit(follow.owner, travel.destination)
     } else {
         RouteGoal::Point(travel.destination)
     };
