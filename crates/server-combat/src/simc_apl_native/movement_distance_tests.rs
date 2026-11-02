@@ -138,6 +138,40 @@ fn class_follower_movement_predicates_keep_missing_configuration_explicit() {
 }
 
 #[test]
+fn dungeon_movement_distance_distinguishes_pending_route_from_missing_destination() {
+    use crate::navigation::{Goal, MoveRequest, Navigation, Step};
+    let (mut world, actor, target) = fixture();
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CreatureMotion::Run);
+    let from = *world.get::<Position>(actor).unwrap();
+    let to = *world.get::<Position>(target).unwrap();
+    let mut navigation = Navigation::new(std::path::Path::new("/nonexistent-navigation-fixture"));
+    let step = navigation.advance(
+        actor,
+        MoveRequest {
+            map_id: 34,
+            goal: Goal::Chase(target.to_bits()),
+            from,
+            to,
+            distance: 1.0,
+            reach: 2.0,
+        },
+    );
+    assert!(matches!(step, Step::Pending));
+    world.insert_resource(navigation);
+    assert_eq!(
+        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err(),
+        DUNGEON_MOVEMENT_DESTINATION_PENDING
+    );
+    world.resource_mut::<Navigation>().cancel_route(actor);
+    assert_eq!(
+        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err(),
+        "DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE"
+    );
+}
+
+#[test]
 fn class_follower_movement_distance_does_not_borrow_fixture_configuration() {
     let (mut world, actor, _) = fixture();
     world.entity_mut(actor).insert(FixtureMovement {
