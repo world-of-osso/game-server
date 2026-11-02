@@ -45,12 +45,24 @@ fn period(world: &World, caster: Entity) -> f64 {
 fn tick_familiars(world: &mut World) {
     let now = spell_cast::now(world);
     resolve_pending_assaults(world, now);
-    let actors = combat::system_states::with_query::<(Entity, Option<&ActiveAuras>, Option<&FamiliarTick>),
-        Or<(With<ActiveAuras>, With<FamiliarTick>)>, _>(world, |world, query| query.iter(world)
-        .filter_map(|(caster, auras, timer)| {
-            let aura = auras.and_then(|auras| auras.iter().find(|aura| aura.spell_id == FAMILIAR && aura.caster == caster));
-            (aura.is_some() || timer.is_some()).then_some((caster, aura.map(|aura| aura.instance_id)))
-        }).collect::<Vec<_>>());
+    let actors = combat::system_states::with_query::<
+        (Entity, Option<&ActiveAuras>, Option<&FamiliarTick>),
+        Or<(With<ActiveAuras>, With<FamiliarTick>)>,
+        _,
+    >(world, |world, query| {
+        query
+            .iter(world)
+            .filter_map(|(caster, auras, timer)| {
+                let aura = auras.and_then(|auras| {
+                    auras
+                        .iter()
+                        .find(|aura| aura.spell_id == FAMILIAR && aura.caster == caster)
+                });
+                (aura.is_some() || timer.is_some())
+                    .then_some((caster, aura.map(|aura| aura.instance_id)))
+            })
+            .collect::<Vec<_>>()
+    });
     for (caster, instance) in actors {
         update_familiar(world, caster, instance, now);
     }
