@@ -5,6 +5,8 @@ use shared::components::{CombatStatus, Player, UnitLevel};
 
 #[path = "combat_tests/attack_requests.rs"]
 mod attack_requests;
+#[path = "combat_tests/attack_stop_timer_tests.rs"]
+mod attack_stop_timer_tests;
 #[path = "combat_tests/death.rs"]
 mod death;
 #[path = "combat_tests/line_of_sight.rs"]

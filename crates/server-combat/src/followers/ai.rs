@@ -447,7 +447,7 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 }
 
 pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
-    crate::combat::combat_stop(world, unit);
+    crate::combat::attack_stop(world, unit);
     if super::tank_planner::apply_admitted_position(world, unit, None)
         || super::tank_planner::apply_admitted_caster_target(world, unit)
     {
