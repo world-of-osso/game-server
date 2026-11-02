@@ -13,6 +13,7 @@ use combat::spell_info::CastPolicyContext;
 use shared::components::PowerType;
 
 const BITE: u32 = 22568;
+const RAVAGE: u32 = 441591;
 const UNSEEN: u32 = 1263657;
 const CRAVING_TALENT: u32 = 1263658;
 const SLASH: u32 = 1263890;
@@ -23,7 +24,7 @@ const SWIPE_THRESHOLD: usize = 3;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(declared_reach),
-    SpellScriptHook::ResourceContext(&[BITE]),
+    SpellScriptHook::ResourceContext(&[BITE, RAVAGE]),
     SpellScriptHook::ContextHit(hit),
     SpellScriptHook::LaunchDelay(travel_delay),
     SpellScriptHook::ConsumedEffectValues(&[(UNSEEN, 0), (UNSEEN, 1)]),
@@ -34,7 +35,7 @@ fn declared_reach(
     caster: Entity,
     spell: &combat::spell_info::SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
-    if spell.id != BITE
+    if !matches!(spell.id, BITE | RAVAGE)
         || !combat::spell_cast::script_registry::reach_source_selected(world, caster, UNSEEN)
     {
         return Default::default();
@@ -51,7 +52,7 @@ fn declared_reach(
 
 fn hit(spell: u32) -> Option<ContextHitHook> {
     match spell {
-        BITE => Some(roll_unseen),
+        BITE | RAVAGE => Some(roll_unseen),
         SLASH | SWIPE => Some(finish_unseen),
         _ => None,
     }

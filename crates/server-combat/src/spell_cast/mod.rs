@@ -2973,7 +2973,8 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
         let gcd_ms = gcd_haste::ordinary_spell_ms(world, caster, spell, gcd_ms);
-        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
+        let gcd_ms = haste_regen_gcd_ms(world, caster, spell, gcd_ms);
+        gcd_haste::adrenaline_rush_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms
     }

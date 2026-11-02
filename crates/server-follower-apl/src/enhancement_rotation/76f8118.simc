@@ -13,7 +13,6 @@ actions=variable,name=target_nature_mod,value=(1+debuff.chaos_brand.up*debuff.ch
 actions+=/variable,name=expected_lb_funnel,value=action.lightning_bolt.damage*(1+debuff.lightning_rod.up*variable.target_nature_mod*(1+active_dot.flame_shock)*debuff.lightning_rod.value)
 actions+=/variable,name=expected_cl_funnel,value=action.chain_lightning.damage*(1+debuff.lightning_rod.up*variable.target_nature_mod*active_enemies*debuff.lightning_rod.value)
 actions+=/variable,name=flame_shock_saturated,value=((active_dot.flame_shock=active_enemies)|(active_dot.flame_shock=6))
-actions+=/bloodlust,line_cd=600
 actions+=/auto_attack
 actions+=/call_action_list,name=single_sb,if=active_enemies=1&!talent.surging_totem.enabled
 actions+=/call_action_list,name=single_totemic,if=active_enemies=1&talent.surging_totem.enabled

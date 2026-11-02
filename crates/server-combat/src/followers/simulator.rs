@@ -219,6 +219,25 @@ fn spawn_configured_party(
     )
 }
 
+/// Spawn the simulator's ordinary selected party at an explicit level.
+#[cfg(any(test, feature = "test-support"))]
+pub fn spawn_test_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    specs: [u32; 5],
+) -> Result<Party, String> {
+    spawn_profiled_party(
+        world,
+        copy,
+        at,
+        level,
+        read_party_profiles(specs)?,
+        GearSource::Journal,
+    )
+}
+
 /// Spawn an explicitly selected class party using the qualified key-band builds.
 pub fn spawn_keystone_party(
     world: &mut World,
@@ -522,6 +541,12 @@ pub fn inspect_tank_movement(world: &mut World, tank: Entity) -> Result<Option<b
 
 pub fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     ai::regroup(world, unit, owner);
+}
+
+/// Maximum native hostile action range of the headless class leader.
+pub fn leader_attack_range(world: &World, owner: Entity) -> Option<f32> {
+    let leader = ai::acting_follower(world, owner)?;
+    super::target_reach::attack_range(world, owner, &leader)
 }
 
 /// The tank opens a pull with its known native taunt.

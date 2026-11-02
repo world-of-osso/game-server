@@ -190,6 +190,58 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
 
 #[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn keystone_owner_opens_first_hostile_pack() {
+    use shared::protocol::CombatLogKind;
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let targets: std::collections::HashSet<_> =
+        run.actors.values().map(|unit| unit.to_bits()).collect();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..6000 {
+        run.control().unwrap();
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+        if let Some(event) = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..]
+            .iter()
+            .find(|event| {
+                event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+                    && event.target.is_some_and(|target| targets.contains(&target))
+            })
+        {
+            assert_eq!(
+                event.source,
+                Some(owner.to_bits()),
+                "the owner must land the first hostile action, not a follower"
+            );
+            return;
+        }
+    }
+    panic!("owner did not open a hostile pack");
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
     let mut run = spawn_run_mode(
         1,
@@ -3563,12 +3615,24 @@ impl Run {
         if self.approach_translocation(approach)? {
             return Ok(());
         }
-        let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
-            "admitted tank is absent; route anchor remains known, but no native opener can cast",
-        )?;
-        let (_, range) =
-            crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
-        let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
+        let (opener, range) = if self.keystone.is_some() {
+            let range = crate::followers::simulator::leader_attack_range(
+                self.app.world(),
+                self.party.owner,
+            )
+            .ok_or("keystone owner has no native hostile action range")?;
+            (self.party.owner, range)
+        } else {
+            let (_, range) =
+                crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
+            (self.party.tank, range)
+        };
+        let position = *self
+            .app
+            .world()
+            .get::<Position>(opener)
+            .ok_or("native pull opener is absent")?;
+        let from = Vec3::new(position.x, position.y, position.z);
         if !attackable {
             if let Some(step) = server::test_support::objectives::next(
                 self.app.world_mut(),
@@ -3669,6 +3733,9 @@ impl Run {
         if !allowed {
             return Ok(());
         }
+        if self.keystone.is_some() {
+            return self.drive_owner_opening(target);
+        }
         self.app
             .world_mut()
             .entity_mut(self.party.owner)
@@ -3689,6 +3756,29 @@ impl Run {
                 "native tank opening failed on pack{pack_id}: {error:?}"
             )),
         }
+    }
+
+    fn drive_owner_opening(&mut self, target: Entity) -> Result<(), String> {
+        let world = self.app.world_mut();
+        let owner = self.party.owner;
+        let mut apl = match world
+            .entity_mut(owner)
+            .take::<server_follower_apl::FollowerApl>()
+        {
+            Some(apl) => apl,
+            None => {
+                let spec = world
+                    .get::<shared::components::ActiveSpec>(owner)
+                    .ok_or("keystone owner lacks an active specialization")?
+                    .0;
+                server_follower_apl::FollowerApl::new(server_follower_apl::registry::load(
+                    world, owner, spec,
+                )?)
+            }
+        };
+        let result = apl.tick(world, owner, &[target]);
+        world.entity_mut(owner).insert(apl);
+        result.map_err(|error| format!("keystone owner opening failed: {error}"))
     }
 
     fn is_gated_boss(&self, target: Entity) -> bool {
