@@ -50,6 +50,7 @@ pub struct FollowerApl {
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
     combat_started_at: f64,
+    precombat_buffs: std::collections::BTreeSet<u32>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -67,6 +68,7 @@ impl FollowerApl {
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
+            precombat_buffs: Default::default(),
         }
     }
 
@@ -80,6 +82,9 @@ impl FollowerApl {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        if targets.is_empty() {
+            self.idle();
+        }
         if !targets.is_empty() && !matches!(self.phase, Phase::Combat) {
             self.plan.clear();
             self.combat_started_at = crate::spell_cast::now(world);
@@ -104,13 +109,27 @@ impl FollowerApl {
                     return self.execute_plan(world, actor, action, execution);
                 }
                 PrecombatPoll::Finished => {
+                    let actions = self.rotation.action_spells();
+                    self.precombat_buffs = world
+                        .get::<server::auras::ActiveAuras>(actor)
+                        .into_iter()
+                        .flat_map(|auras| auras.iter())
+                        .filter(|aura| {
+                            aura.caster == actor
+                                && !aura.passive
+                                && !aura.harmful
+                                && aura.expires_at.is_some()
+                                && actions.contains(&aura.spell_id)
+                                && is_maintained_buff(world, aura.spell_id)
+                        })
+                        .map(|aura| aura.spell_id)
+                        .collect();
                     self.phase = Phase::Idle;
                 }
             }
         }
         if targets.is_empty() {
-            self.idle();
-            return Ok(());
+            return self.maintain_buffs(world, actor);
         }
         let (gcd, cast) = literal_rotation::read_busy(world, actor);
         let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
@@ -125,6 +144,43 @@ impl FollowerApl {
         if matches!(self.phase, Phase::Combat) {
             self.phase = Phase::Idle;
         }
+    }
+
+    fn maintain_buffs(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        if gcd || cast {
+            return Ok(());
+        }
+        if let Some((action, execution)) = self.plan.pop_front() {
+            return self.rotation.execute(world, actor, action, execution);
+        }
+        let now = crate::spell_cast::now(world);
+        let spells = self
+            .precombat_buffs
+            .iter()
+            .copied()
+            .filter(|spell| {
+                !world
+                    .get::<server::auras::ActiveAuras>(actor)
+                    .into_iter()
+                    .flat_map(|auras| auras.iter())
+                    .any(|aura| {
+                        aura.caster == actor
+                            && aura.spell_id == *spell
+                            && aura.expires_at.is_none_or(|expiry| expiry > now + 1.0)
+                    })
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        if spells.is_empty() {
+            return Ok(());
+        }
+        world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+        let decision = self.rotation.poll_precombat(world, actor, &[]);
+        world.remove_resource::<literal_rotation::BuffUpkeep>();
+        if let PrecombatPoll::Selected { action, execution } = decision? {
+            self.execute_plan(world, actor, action, execution)?;
+        }
+        Ok(())
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
@@ -151,6 +207,21 @@ impl FollowerApl {
     }
 }
 
+/// Cooldown-limited precombat effects are combat actions, not maintained buffs.
+fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
+    world
+        .resource::<server::spell_info::SpellStore>()
+        .get(spell_id)
+        .is_some_and(|spell| {
+            spell.cooldowns.as_ref().is_none_or(|cooldown| {
+                cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
+            }) && spell
+                .categories
+                .as_ref()
+                .is_none_or(|category| category.max_charges == 0)
+        })
+}
+
 /// Drive every APL-controlled follower after the follower brain positioned it.
 pub fn drive_followers(world: &mut World) {
     let units = server::system_states::entities_with::<With<AplControlled>>(world);
@@ -163,6 +234,9 @@ pub fn drive_followers(world: &mut World) {
 
 fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     if !crate::spell_cast::targets::is_alive(world, unit) {
+        if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
+            apl.idle();
+        }
         return;
     }
     let targets = if let Some(target) = world.get::<DirectedOwnerTarget>(unit) {
