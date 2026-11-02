@@ -192,6 +192,9 @@ pub struct ChatHistoryEntry {
 
 pub use server_core::session_state::PendingDespawn;
 
+/// TrinityCore 15e0ed76 WorldSession.cpp:142 retains a lost-socket session for one minute.
+const DISCONNECT_GRACE_SECS: f64 = 60.0;
+
 /// The player remains in the world while a lost connection may return.
 #[derive(Component)]
 pub(crate) struct DisconnectedPlayer {
@@ -404,7 +407,7 @@ fn on_client_disconnected(
     if let Some(link) = player_link {
         if in_world.is_some() && player_query.get(link.0).is_ok() {
             commands.entity(link.0).insert(DisconnectedPlayer {
-                deadline: time.elapsed_secs_f64() + 60.0,
+                deadline: time.elapsed_secs_f64() + DISCONNECT_GRACE_SECS,
             });
             commands
                 .entity(trigger.entity)

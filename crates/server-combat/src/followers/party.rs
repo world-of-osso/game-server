@@ -517,22 +517,8 @@ pub(super) fn join_members_with_player(
         .iter()
         .map(|&unit| {
             let follower = world.get::<Follower>(unit).expect("spawned follower");
-            let level = world.get::<UnitLevel>(unit).expect("follower level").0;
             let member =
-                if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
-                    follower.online_character(
-                        unit,
-                        level,
-                        difficulty,
-                        visual,
-                        world.get::<shared::components::EquipmentAppearance>(unit),
-                    )
-                } else {
-                    let display = world
-                        .get::<shared::components::ModelDisplay>(unit)
-                        .expect("spawned follower display");
-                    follower.online(unit, level, difficulty, display.display_id)
-                };
+                online_follower(world, unit, difficulty).expect("spawned follower profile");
             online.insert(Follower::member_id(unit), member);
             (Follower::member_id(unit), follower.profile.role)
         })
@@ -564,6 +550,23 @@ pub(super) fn join_members_with_player(
         }
     }
     Ok(())
+}
+
+fn online_follower(world: &World, unit: Entity, difficulty: u32) -> Option<OnlineMember> {
+    let follower = world.get::<Follower>(unit)?;
+    let level = world.get::<UnitLevel>(unit)?.0;
+    if let Some(visual) = world.get::<shared::components::CharacterVisual>(unit) {
+        Some(follower.online_character(
+            unit,
+            level,
+            difficulty,
+            visual,
+            world.get::<shared::components::EquipmentAppearance>(unit),
+        ))
+    } else {
+        let display = world.get::<shared::components::ModelDisplay>(unit)?;
+        Some(follower.online(unit, level, difficulty, display.display_id))
+    }
 }
 
 fn online_player(world: &World, entity: Entity, difficulty: u32) -> Result<OnlineMember, String> {
@@ -635,26 +638,9 @@ pub(crate) fn notify_reconnected(world: &mut World, player: Entity) {
     };
     let mut online = OnlineView::from([(character, owner)]);
     for &member in &run.members {
-        let Some(follower) = world.get::<Follower>(member) else {
-            continue;
-        };
-        let Some(level) = world.get::<UnitLevel>(member) else {
-            continue;
-        };
-        let entry = if let Some(visual) = world.get::<shared::components::CharacterVisual>(member) {
-            follower.online_character(
-                member,
-                level.0,
-                run.entry_difficulty(),
-                visual,
-                world.get::<shared::components::EquipmentAppearance>(member),
-            )
-        } else if let Some(display) = world.get::<shared::components::ModelDisplay>(member) {
-            follower.online(member, level.0, run.entry_difficulty(), display.display_id)
-        } else {
-            continue;
-        };
-        online.insert(Follower::member_id(member), entry);
+        if let Some(entry) = online_follower(world, member, run.entry_difficulty()) {
+            online.insert(Follower::member_id(member), entry);
+        }
     }
     let roster = world
         .resource_mut::<GroupRegistry>()
