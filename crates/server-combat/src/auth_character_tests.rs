@@ -589,6 +589,14 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
     let (mut app, connection) =
         queue_character_selection(db, 11, character_id, crate::maps::MapStore::continents());
     let player = finish_character_selection(&mut app, connection);
+    let enemy = app
+        .world_mut()
+        .spawn(Health {
+            current: 250.0,
+            max: 500.0,
+        })
+        .id();
+    crate::combat_refs::set_in_combat_with(app.world_mut(), player, enemy);
     crate::networking::install_disconnect_fixture(&mut app);
     app.world_mut()
         .entity_mut(connection)
@@ -601,6 +609,12 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
             .get::<crate::networking::DisconnectedPlayer>(player)
             .is_some()
     );
+    assert!(crate::combat_refs::has_active_reference_to(
+        app.world(),
+        player,
+        enemy
+    ));
+    assert_eq!(app.world().get::<Health>(enemy).unwrap().current, 250.0);
     let position = *app
         .world()
         .get::<shared::components::Position>(player)
@@ -626,6 +640,12 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
         .send::<AuthChannel>(SelectCharacter { character_id });
     let restored = finish_character_selection(&mut app, replacement);
     assert_eq!(restored, player);
+    assert!(crate::combat_refs::has_active_reference_to(
+        app.world(),
+        restored,
+        enemy
+    ));
+    assert_eq!(app.world().get::<Health>(enemy).unwrap().current, 250.0);
     assert_eq!(
         *app.world()
             .get::<shared::components::Position>(restored)
