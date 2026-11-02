@@ -122,6 +122,7 @@ mod devastation_gaze_tests;
 mod devastation_imminent_tests;
 mod devastation_infinity_tests;
 mod devastation_onslaught_tests;
+mod devastation_scarlet_immunity_tests;
 mod devastation_scarlet_tests;
 mod devastation_tests;
 mod devastation_verdant_tests;
