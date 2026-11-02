@@ -1734,30 +1734,27 @@ mod copy_tests {
             z: -4078.9055,
         };
         let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let map = *h.app.world().get::<InMap>(target).unwrap();
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
         let max = h.app.world().get::<Health>(target).unwrap().max;
         h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
         h.app
             .world_mut()
             .entity_mut(target)
             .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
-        let soulstone = h
-            .app
-            .world()
-            .resource::<crate::spell_info::SpellStore>()
-            .get(20707)
-            .unwrap()
-            .clone();
-        let mask = crate::auras::aura_effect_mask(&soulstone);
-        crate::auras::apply_aura(
-            h.app.world_mut(),
-            &crate::auras::AuraApplication {
-                caster,
-                target,
-                spell_id: 20707,
-                effect_mask: mask,
-                source: crate::auras::AuraSource::Cast,
-            },
-        );
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20707, Some(target), false)
+            .unwrap();
+        h.advance(80);
         assert!(crate::auras::has_aura(h.app.world(), target, 20707));
         let spell = h
             .app
@@ -1793,6 +1790,11 @@ mod copy_tests {
             (max * 0.2).floor()
         );
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(
+            crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+            Some(false)
+        );
+        assert!(!crate::death::soulstone::available(h.app.world(), target));
     }
 
     #[test]
