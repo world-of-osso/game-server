@@ -57,6 +57,16 @@ impl Drop for AttackScope {
     }
 }
 
+/// Seed for independent keyed draws; reading it does not advance the run stream.
+pub(crate) fn derived_seed() -> u64 {
+    #[cfg(any(test, feature = "test-support"))]
+    if let Some(seed) = SEEDED.with(|state| state.borrow().as_ref().map(|(seed, _)| *seed)) {
+        return seed;
+    }
+    static PROCESS_SEED: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    *PROCESS_SEED.get_or_init(::rand::random)
+}
+
 /// Recipient outcome rolls: the active attack stream, else the caller's stream.
 #[cfg(any(test, feature = "test-support"))]
 pub struct RecipientRng;

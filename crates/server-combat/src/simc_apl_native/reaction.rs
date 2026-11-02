@@ -39,18 +39,37 @@ pub(super) struct CastingReactionDelay(pub(super) f32);
 
 pub(crate) fn record_cast_reaction(
     trigger: On<Insert, shared::casting::CastState>,
+    casts: Query<(
+        &shared::casting::CastState,
+        Option<&crate::zones::CreatureOrigin>,
+    )>,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
-    let settings = ReactionSettings {
-        mean: 0.250,
-        stddev: 0.0,
-        offset: 0.100,
-        nu: 0.150,
-        maximum: 1.4,
-    };
+    let (cast, origin) = casts.get(trigger.entity).expect("inserted cast exists");
+    let identity = origin
+        .filter(|origin| origin.guid != 0)
+        .map_or_else(|| trigger.entity.to_bits(), |origin| origin.guid);
+    let start_ms = (time.elapsed_secs_f64() * 1000.0).round() as u64;
+    let bits = [identity, u64::from(cast.spell_id), start_ms]
+        .into_iter()
+        .fold(crate::random::derived_seed(), |seed, value| {
+            mix64(seed ^ mix64(value))
+        });
+
+    let uniform = (bits >> 11) as f64 / (1_u64 << 53) as f64;
+    // SimC player.cpp:1017–1020/7763–7766: 0.1 + exgauss(0.25, 0, 0.15), capped at 1.4s.
+    let delay = (0.350 - 0.150 * (1.0 - uniform).ln()).min(1.4) as f32;
     commands
         .entity(trigger.entity)
-        .insert(CastingReactionDelay(settings.sample() as f32));
+        .insert(CastingReactionDelay(delay));
+}
+
+fn mix64(value: u64) -> u64 {
+    let value = value.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    let value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    let value = (value ^ (value >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    value ^ (value >> 31)
 }
 
 fn sample_nonnegative_normal(mean: f64, stddev: f64) -> f64 {

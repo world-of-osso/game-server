@@ -237,11 +237,18 @@ fn native_target_context_no_actual_cast_is_not_a_casting_debuff() {
 #[test]
 fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
     use shared::casting::CastState;
-    fn run(seed: u64) -> Vec<f32> {
+    fn run(seed: u64, extra_cast: bool) -> (Vec<f32>, u64) {
         let _seed = crate::random::seed_scope(seed);
         let (mut h, targets, bindings) = enemies();
         let target = h.npc;
         let caster = h.caster;
+        if extra_cast {
+            h.app
+                .world_mut()
+                .entity_mut(targets[0])
+                .insert(CastState::normal(1230298, caster.to_bits(), 3.0, true));
+            h.app.world_mut().flush();
+        }
         let mut delays = Vec::new();
         for spell in [1230298, 1253811] {
             h.app
@@ -273,9 +280,11 @@ fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
             assert_eq!(read(h.app.world()), 0.0);
             delays.push(delay);
         }
-        delays
+        (delays, crate::random::random::<u64>())
     }
-    assert_eq!(run(7809098381633315392), run(7809098381633315392));
+    let seed = 7809098381633315392;
+    assert_eq!(run(seed, false), run(seed, true));
+    assert_ne!(run(seed, false).0, run(seed + 1, false).0);
 }
 
 #[test]
