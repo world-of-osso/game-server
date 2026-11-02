@@ -2,7 +2,7 @@ use super::{FollowerActionSpells, kit_tests, party_unintended_reach};
 use crate::spell_cast::area_trigger::SpellAreaTrigger;
 use crate::spell_cast::targets::Relation;
 use shared::components::Position;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 #[test]
 fn holy_paladin_modifier_does_not_inherit_divine_toll_reach() {
@@ -80,7 +80,7 @@ fn walking_away_from_a_fixed_hostile_field_does_not_grow_reach() {
             depth: 1,
             cast_item_level: None,
             cast_item_inventory_type: None,
-            inside: HashSet::new(),
+            inside: BTreeSet::new(),
         },
     ));
     let mut reaches = Vec::new();

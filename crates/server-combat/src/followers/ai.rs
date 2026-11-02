@@ -68,7 +68,7 @@ pub(super) fn update(world: &mut World) {
         })
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
-    let owners: std::collections::HashSet<_> = followers
+    let owners: std::collections::BTreeSet<_> = followers
         .iter()
         .map(|(_, follower)| follower.owner)
         .collect();

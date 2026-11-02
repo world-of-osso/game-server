@@ -19,7 +19,7 @@ use crate::maps::InMap;
 use crate::spell_info::{SpellEffect, SpellStore};
 use bevy::prelude::*;
 use shared::components::Position;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 /// Install the production area-field data in a transport-free native simulation.
 #[cfg(any(test, feature = "test-support"))]
@@ -80,7 +80,7 @@ pub struct SpellAreaTrigger {
     pub depth: u8,
     pub cast_item_level: Option<u16>,
     pub cast_item_inventory_type: Option<u8>,
-    pub inside: HashSet<Entity>,
+    pub inside: BTreeSet<Entity>,
 }
 
 pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
@@ -166,7 +166,7 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
                 depth: ctx.depth + 1,
                 cast_item_level: ctx.spell.cast_item_level,
                 cast_item_inventory_type: ctx.spell.cast_item_inventory_type,
-                inside: HashSet::new(),
+                inside: BTreeSet::new(),
             },
             Position {
                 x: dest.position.x,

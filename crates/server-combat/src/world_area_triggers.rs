@@ -2,7 +2,7 @@
 //! TC a352b1fa AreaTrigger.cpp363–376: authored spawns have duration -1 and no caster.
 pub(crate) use server_map_rules::world_area_triggers::WorldAreaTrigger;
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use bevy::prelude::*;
 use shared::components::{Player, Position, Rotation};
@@ -14,7 +14,7 @@ const CANDLELIGHT: u32 = 426125;
 const DARKLIGHT: u32 = 426127;
 
 #[derive(Component, Default)]
-struct CandlelightOccupants(HashSet<Entity>);
+struct CandlelightOccupants(BTreeSet<Entity>);
 
 /// TC area trigger boxes use the authored extents, not DB2 teleport box lengths.
 pub(crate) fn candlelight_contains(
@@ -61,7 +61,7 @@ pub(crate) fn update_candlelight(world: &mut World) {
         })
         .collect();
     for (entity, area, center, rotation, map, previous) in areas {
-        let inside: HashSet<_> = world
+        let inside: BTreeSet<_> = world
             .query::<(
                 Entity,
                 &Position,

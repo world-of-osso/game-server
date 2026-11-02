@@ -130,7 +130,7 @@ pub(crate) fn owned_companions(world: &mut World, owner: Entity) -> Vec<Entity> 
     let Some(map) = world.get::<InMap>(owner).copied() else {
         return Vec::new();
     };
-    let mut companions: std::collections::HashSet<_> =
+    let mut companions: std::collections::BTreeSet<_> =
         crate::hunter_pet::active_owned_pets(world, owner)
             .into_iter()
             .collect();
