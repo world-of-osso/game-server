@@ -100,6 +100,27 @@ fn hunter_shares_one_lust_with_other_providers() {
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    eprintln!(
+        "lust_events={:?}",
+        events
+            .iter()
+            .filter(|event| matches!(
+                event.spell_id,
+                Some(
+                    264667
+                        | 264689
+                        | 2825
+                        | 32182
+                        | 80353
+                        | 390386
+                        | 57724
+                        | 57723
+                        | 80354
+                        | 390435
+                )
+            ))
+            .collect::<Vec<_>>()
+    );
     let casts: Vec<_> = events
         .iter()
         .filter(|event| {
