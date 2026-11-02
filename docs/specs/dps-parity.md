@@ -223,7 +223,9 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
 
 - L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
-- [ ] Missing Druid of the Claw finisher chain: Ravage441585/441591, Dreadful Wound441812 with its target damage effect, Sabertooth391722, and Rip's Tiger's Fury periodic snapshot.
+- Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
+- Landed primary Ferocious Bite applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
+- [ ] Missing finisher behavior: Ravage441585/441591 and Dreadful Wound441812 with its target damage effect.
 
 ### Shared merged critical feedback
 
