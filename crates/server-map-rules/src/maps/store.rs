@@ -676,16 +676,24 @@ fn load_encounter_heal_objectives(conn: &Connection) -> rusqlite::Result<HashMap
         return Ok(HashMap::new());
     }
     let mut statement = conn.prepare(
-        "SELECT o.map_id, o.creature_entry, o.start_health_pct FROM encounter_heal_objective o \
-         JOIN raid_encounter_creature r ON r.map_id=o.map_id AND r.creature_entry=o.creature_entry \
-         JOIN dungeon_encounter d ON d.ID=r.encounter_id AND d.MapID=r.map_id AND d.Bit=r.bit",
+        "SELECT o.map_id, o.creature_entry, o.start_health_pct, d.ID FROM encounter_heal_objective o \
+         LEFT JOIN raid_encounter_creature r ON r.map_id=o.map_id AND r.creature_entry=o.creature_entry \
+         LEFT JOIN dungeon_encounter d ON d.ID=r.encounter_id AND d.MapID=r.map_id AND d.Bit=r.bit",
     )?;
     let mut objectives = HashMap::new();
     for row in statement.query_map([], |row| {
-        Ok(((row.get(0)?, row.get(1)?), row.get::<_, f32>(2)?))
+        Ok((
+            (row.get(0)?, row.get(1)?),
+            row.get::<_, f32>(2)?,
+            row.get::<_, Option<u32>>(3)?,
+        ))
     })? {
-        let (key, percent) = row?;
-        if !percent.is_finite() || !(0.0..100.0).contains(&percent) || percent == 0.0 {
+        let (key, percent, encounter) = row?;
+        if encounter.is_none()
+            || !percent.is_finite()
+            || !(0.0..100.0).contains(&percent)
+            || percent == 0.0
+        {
             return Err(rusqlite::Error::InvalidQuery);
         }
         objectives.insert(key, percent);
@@ -1044,6 +1052,10 @@ fn load_instance_scripts(conn: &Connection) -> rusqlite::Result<HashMap<u32, Str
     })?;
     rows.collect()
 }
+
+#[cfg(test)]
+#[path = "store_heal_objective_tests.rs"]
+mod heal_objective_tests;
 
 fn load_instance_parents(conn: &Connection) -> rusqlite::Result<HashMap<u32, u32>> {
     let mut statement = conn.prepare("SELECT map, parent FROM tdb_instance_template")?;
