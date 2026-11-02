@@ -2573,6 +2573,9 @@ pub fn damage_taken_multiplier(
         auras
             .iter()
             .filter(|aura| aura.caster == attacker)
+            // SimC76f8118 sc_druid.cpp4709–4720 excludes target debuffs from
+            // Tear's source snapshot; its residual action does not parse Sabertooth.
+            .filter(|aura| spell.id != 391356 || aura.spell_id != 391722)
             .flat_map(|aura| {
                 let stacks = if crate::spell_cast::script_registry::incoming_aura_ignores_stacks(
                     world,
