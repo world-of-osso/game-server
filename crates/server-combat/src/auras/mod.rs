@@ -3290,6 +3290,7 @@ pub struct DeathAuraAudit(pub Vec<(Entity, Vec<u32>)>);
 
 /// Unit::RemoveAllAurasOnDeath, also used before post-lethal melee reactions.
 pub(crate) fn remove_on_death(world: &mut World, unit: Entity) {
+    crate::death::soulstone::remember_on_death(world, unit);
     let store = world.get_resource::<SpellStore>();
     let persistent: Vec<u32> = world
         .get::<ActiveAuras>(unit)

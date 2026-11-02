@@ -165,6 +165,18 @@ mod group_buff_tests;
 
 pub use ai::{AplControlled, FollowerReach, acting_follower, engaged_targets, party_units};
 
+pub(crate) fn party_in_combat(world: &World, owner: Entity) -> bool {
+    party::read_admission(world, owner).is_some_and(|(_, members, _)| {
+        std::iter::once(owner)
+            .chain(members.iter().copied())
+            .any(|unit| {
+                world
+                    .get::<shared::components::CombatStatus>(unit)
+                    .is_some_and(|status| status.0)
+            })
+    })
+}
+
 pub(crate) fn mark_owner_returning(world: &mut World, owner: Entity) {
     if party::read_admission(world, owner).is_some() {
         world

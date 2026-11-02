@@ -155,6 +155,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
         EFFECT_HEAL_MAX_HEALTH => heal_max_health,
+        crate::death::soulstone::EFFECT_SELF_RESURRECT => crate::death::soulstone::self_resurrect,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
             crate::death::resurrection::send_offer
