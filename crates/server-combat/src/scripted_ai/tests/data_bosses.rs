@@ -785,11 +785,17 @@ fn exercise_mythic_follower_reconnect(after_grace: bool) {
         .remove::<Connected>();
     h.app.world_mut().flush();
     h.app.update();
+    crate::followers::update_ai(h.app.world_mut());
     assert!(
         h.app
             .world()
             .get::<crate::networking::DisconnectedPlayer>(player)
             .is_some()
+    );
+    assert!(
+        followers
+            .iter()
+            .all(|unit| crate::followers::acting_follower(h.app.world(), *unit).is_none())
     );
     if after_grace {
         h.app
@@ -824,6 +830,30 @@ fn exercise_mythic_follower_reconnect(after_grace: bool) {
                 .is_some_and(|health| health.current > 0.0)
             && crate::followers::acting_follower(h.app.world(), *unit).is_some()
     }));
+    h.app.insert_resource(crate::navigation::Navigation::new(
+        &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
+    ));
+    let mut destination = *h.app.world().get::<Position>(restored).unwrap();
+    destination.x += 5.0;
+    h.app.world_mut().entity_mut(restored).insert(destination);
+    let before = *h.app.world().get::<Position>(followers[0]).unwrap();
+    for _ in 0..60 {
+        crate::followers::update_ai(h.app.world_mut());
+        h.advance(0.05);
+    }
+    let after = *h.app.world().get::<Position>(followers[0]).unwrap();
+    let distance = |point: Position| {
+        Vec3::new(
+            point.x - destination.x,
+            point.y - destination.y,
+            point.z - destination.z,
+        )
+        .length()
+    };
+    assert!(
+        distance(after) < distance(before),
+        "follower did not move toward reconnected owner: {before:?} -> {after:?}, owner {destination:?}"
+    );
 }
 
 #[test]
