@@ -24,6 +24,8 @@ mod azure_throughput_tests;
 mod keystone_cohesion_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
+#[path = "recovery_admission_tests.rs"]
+mod recovery_admission_tests;
 
 #[derive(Component)]
 pub(super) struct MoveIntent(pub Vec3);
