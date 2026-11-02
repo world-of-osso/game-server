@@ -165,6 +165,37 @@ mod group_buff_tests;
 
 pub use ai::{AplControlled, FollowerReach, acting_follower, engaged_targets, party_units};
 
+pub(crate) fn party_in_combat(world: &World, owner: Entity) -> bool {
+    party::read_admission(world, owner).is_some_and(|(_, members, _)| {
+        std::iter::once(owner)
+            .chain(members.iter().copied())
+            .any(|unit| {
+                world
+                    .get::<shared::components::CombatStatus>(unit)
+                    .is_some_and(|status| status.0)
+            })
+    })
+}
+
+pub(crate) fn mark_owner_returning(world: &mut World, owner: Entity) {
+    if party::read_admission(world, owner).is_some() {
+        world
+            .entity_mut(owner)
+            .insert(release::ReturningFromGraveyard);
+    }
+}
+
+/// Whether a follower is approaching or casting a resurrection, or the owner has an offer.
+pub fn resurrection_pending(world: &mut World, owner: Entity) -> bool {
+    world
+        .get::<crate::death::resurrection::PendingResurrection>(owner)
+        .is_some()
+        || world
+            .query::<(&Follower, &release::ResurrectionApproach)>()
+            .iter(world)
+            .any(|(follower, _)| follower.owner == owner)
+}
+
 #[cfg(feature = "test-support")]
 pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
     world

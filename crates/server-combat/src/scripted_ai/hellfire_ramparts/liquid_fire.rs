@@ -74,10 +74,7 @@ pub(crate) fn arm(world: &mut World, object: Entity, spell: u32) {
 /// TaskContext::Repeat advances the previous scheduled deadline, not dispatch time.
 pub(crate) fn update(world: &mut World) {
     let diff = world.resource::<Time<Fixed>>().delta().as_millis() as u32;
-    let objects: Vec<_> = world
-        .query_filtered::<Entity, With<LiquidFire>>()
-        .iter(world)
-        .collect();
+    let objects = crate::system_states::entities_with::<With<LiquidFire>>(world);
     for object in objects {
         let spell = {
             let mut fire = world.get_mut::<LiquidFire>(object).expect("live source GO");

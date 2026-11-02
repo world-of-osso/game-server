@@ -149,10 +149,7 @@ fn launch_velocity(
 
 pub(crate) fn update_knockbacks(world: &mut World) {
     let delta = world.resource::<Time>().delta_secs();
-    let targets: Vec<_> = world
-        .query_filtered::<Entity, With<KnockbackFlight>>()
-        .iter(world)
-        .collect();
+    let targets = crate::system_states::entities_with::<With<KnockbackFlight>>(world);
     for target in targets {
         advance_owned_flight(world, target, delta);
     }

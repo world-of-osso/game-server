@@ -134,6 +134,43 @@ fn offer_for(h: &mut Harness, target: Entity, conn: Entity, spell_id: u32) -> Re
 }
 
 #[test]
+fn rezrtap_keystone_charge_is_spent_only_on_acceptance() {
+    let (mut h, target, conn) = fixture();
+    let spell = world_db().unwrap().store.get(20484).unwrap().clone();
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![spell]));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        crate::class_progression::KnownSpells::fixture(vec![20484]),
+        shared::components::CombatStatus(true),
+    ));
+    let map = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
+    h.app.insert_resource(crate::maps::ServerClock {
+        offset_secs: 0,
+        fixed_unix: Some(1_791_705_600),
+    });
+    crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+    let offer = offer_for(&mut h, target, conn, 20484);
+    assert_eq!(
+        crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+        Some(true)
+    );
+    respond(
+        &mut h,
+        conn,
+        ResurrectionResponse {
+            caster: offer.caster,
+            spell_id: 20484,
+            accept: true,
+        },
+    );
+    assert!(h.health(target) > 0.0);
+    assert_eq!(
+        crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+        Some(false)
+    );
+}
+
+#[test]
 fn rezrtap_cast_offer_accept_percent_and_caster_position() {
     let (mut h, target, conn) = fixture();
     let offer = offer(&mut h, target, conn);

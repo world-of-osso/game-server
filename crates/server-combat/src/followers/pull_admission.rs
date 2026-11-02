@@ -31,6 +31,9 @@ pub(super) fn read_pull_budget(
     difficulty: u32,
 ) -> Result<Decision, String> {
     let run = read_run_budget(world, tank)?;
+    if let Some(reason) = unavailable_party_member(world, &run) {
+        return Ok(Decision::Wait(reason));
+    }
     let sources = pull_sources::read_present_sources(
         world,
         run.map,
@@ -150,17 +153,36 @@ fn read_cleared_single_pull(
     }))
 }
 
-fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>, String> {
+fn unavailable_party_member(world: &World, run: &RunBudget) -> Option<Reason> {
     for &unit in &run.party {
-        if world.get::<InMap>(unit) != Some(&run.map) {
-            return Ok(Some(Reason::Recovery));
+        if world
+            .get::<super::release::ReturningFromGraveyard>(unit)
+            .is_some()
+            || world.get::<InMap>(unit) != Some(&run.map)
+        {
+            return Some(Reason::Recovery);
         }
-        let Some(health) = world.get::<Health>(unit) else {
-            return Ok(Some(Reason::DeadMember));
-        };
-        if health.current <= 0.0 {
-            return Ok(Some(Reason::DeadMember));
+        if world
+            .get::<Health>(unit)
+            .is_none_or(|health| health.current <= 0.0)
+            || world
+                .get::<crate::death::PlayerDeathState>(unit)
+                .is_some_and(|state| state.state != shared::death::DeathState::Alive)
+        {
+            return Some(Reason::DeadMember);
         }
+    }
+    None
+}
+
+fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>, String> {
+    if let Some(reason) = unavailable_party_member(world, run) {
+        return Ok(Some(reason));
+    }
+    for &unit in &run.party {
+        let health = world
+            .get::<Health>(unit)
+            .expect("party health checked above");
         let mana = world
             .get::<shared::components::Mana>(unit)
             .ok_or_else(|| format!("Ready pull member {unit:?} lacks native mana state"))?;

@@ -53,10 +53,7 @@ fn launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingBombs>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingBombs>>(world);
     for caster in casters {
         let due = {
             let mut pending = world

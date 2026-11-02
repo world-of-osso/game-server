@@ -33,10 +33,10 @@ impl CasterChase {
 }
 
 pub(crate) fn advance(world: &mut World) {
-    let units: Vec<_> = world
-        .query_filtered::<Entity, (With<CasterChase>, crate::creature_ai::ActiveUncontrolled)>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<(
+        With<CasterChase>,
+        crate::creature_ai::ActiveUncontrolled,
+    )>(world);
     for unit in units {
         if let Err(error) = advance_caster(world, unit) {
             error!("Caster chase {unit:?}: {error}");

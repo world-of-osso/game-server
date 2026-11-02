@@ -66,10 +66,7 @@ fn impact(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, damag
 
 fn update(world: &mut World) {
     let now = combat::spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query_filtered::<Entity, With<PendingDeposits>>()
-        .iter(world)
-        .collect();
+    let actors = combat::system_states::entities_with::<With<PendingDeposits>>(world);
     for caster in actors {
         let due = {
             let mut pending = world.get_mut::<PendingDeposits>(caster).unwrap();

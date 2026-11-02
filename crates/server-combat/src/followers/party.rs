@@ -1914,14 +1914,365 @@ mod copy_tests {
     }
 
     #[test]
-    fn follower_release_long_brackenhide_route_waits_for_resurrection() {
+    fn released_owner_waits_until_returning_to_party() {
+        use shared::components::Position;
+        let far = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, _, _) = brackenhide_release_fixture(far);
+        let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+        let mut instances = crate::maps::InstanceManager::default();
+        let copy = instances
+            .create_map(
+                &maps,
+                2520,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: 205,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(instances);
+        h.app.world_mut().entity_mut(h.caster).insert((
+            copy,
+            crate::persistence::ClientId(1),
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<FollowerRun>(h.caster)
+            .unwrap()
+            .copy = Some(copy);
+        h.app.world_mut().entity_mut(caster).insert((far, copy));
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::death::PlayerDeathState {
+                state: shared::death::DeathState::Dead,
+                corpse: None,
+                graveyard: None,
+            });
+        crate::test_support::release_dungeon_player(h.app.world_mut(), h.caster).unwrap();
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_some()
+        );
+        super::super::release::update(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_some()
+        );
+        h.app.world_mut().entity_mut(h.caster).insert((far, copy));
+        super::super::release::update(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<super::super::release::ReturningFromGraveyard>(h.caster)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn native_class_druid_resurrects_follower_out_of_combat() {
+        use shared::components::{Health, Level, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, _, target, _) = brackenhide_release_fixture(owner_position);
+        let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+        let mut instances = crate::maps::InstanceManager::default();
+        let map = instances
+            .create_map(
+                &maps,
+                2520,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: 205,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(instances);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((map, Level(70)));
+        h.app.insert_resource(super::super::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
+            source_actions: |_, _, _| Ok(Vec::new()),
+            equipped_actions: |_, _, _| Ok(Vec::new()),
+        });
+        let caster =
+            super::super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 105).unwrap();
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        h.app.world_mut().entity_mut(caster).insert((map, corpse));
+        h.app.world_mut().entity_mut(target).insert(map);
+        let mut run = h.app.world_mut().get_mut::<FollowerRun>(h.caster).unwrap();
+        run.copy = Some(map);
+        run.members = vec![caster, target];
+        super::super::release::update(h.app.world_mut());
+        h.advance(200);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
+    fn soulstoned_follower_self_resurrects_after_lethal_damage() {
+        use shared::components::{Health, Position};
+        let position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let map = *h.app.world().get::<InMap>(target).unwrap();
+        let max = h.app.world().get::<Health>(target).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20707, Some(target), false)
+            .unwrap();
+        h.advance(80);
+        assert!(crate::auras::has_aura(h.app.world(), target, 20707));
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(5)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            target,
+            max * 2.0,
+            false,
+            false,
+        );
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
+        assert!(
+            crate::death::soulstone::available(h.app.world(), target),
+            "death must retain the Soulstone offer"
+        );
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            (max * 0.2).floor()
+        );
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+        assert_eq!(
+            crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+            Some(false)
+        );
+        assert!(!crate::death::soulstone::available(h.app.world(), target));
+        assert!(!crate::auras::has_aura(h.app.world(), target, 20707));
+
+        let soulstone = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(20707)
+            .unwrap()
+            .clone();
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 20707,
+                effect_mask: crate::auras::aura_effect_mask(&soulstone),
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<crate::auth::InWorld>();
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
+        crate::auras::remove_on_death(h.app.world_mut(), target);
+        assert!(crate::death::soulstone::available(h.app.world(), target));
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            0.0,
+            "no combat-res charge remains"
+        );
+    }
+
+    #[test]
+    fn class_follower_casts_resurrection_before_release() {
+        use shared::components::{Health, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(owner_position);
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            corpse,
+        ));
+        super::super::release::update(h.app.world_mut());
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
+    fn class_follower_boss_resurrection_consumes_keystone_charge() {
+        use shared::components::{CombatStatus, Health, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(owner_position);
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        let map = *h.app.world().get::<InMap>(caster).unwrap();
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            corpse,
+            CombatStatus(true),
+        ));
+        super::super::release::update(h.app.world_mut());
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(
+            crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn class_follower_offers_owner_resurrection() {
+        use lightyear::prelude::{MessageReceiver, MessageSender};
+        use shared::components::{Health, Position};
+        use shared::protocol::ResurrectionOffer;
+        let position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let max = h.app.world().get::<Health>(target).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            position,
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<Health>(h.caster)
+            .unwrap()
+            .current = 0.0;
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::death::PlayerDeathState {
+                state: shared::death::DeathState::Dead,
+                corpse: None,
+                graveyard: None,
+            });
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ResurrectionOffer>::default(),
+            MessageReceiver::<ResurrectionOffer>::default(),
+        ));
+        super::super::release::update(h.app.world_mut());
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_some(),
+            "resurrection cast must start"
+        );
+        let mut offers = Vec::new();
+        for _ in 0..80 {
+            h.advance(1);
+            offers.extend(crate::spell_cast::test_harness::drain::<ResurrectionOffer>(
+                &mut h.app,
+                h.connection,
+            ));
+            if !offers.is_empty() {
+                break;
+            }
+        }
+        assert_eq!(offers.len(), 1);
+        assert_eq!(h.health(h.caster), 0.0);
+    }
+
+    #[test]
+    fn follower_release_long_brackenhide_route_walks_back() {
         use shared::components::{Health, Position};
         let owner_position = Position {
             x: -3344.54,
             y: 111.17662,
             z: -3663.96,
         };
-        let (mut h, caster, target, entrance) = brackenhide_release_fixture(owner_position);
+        let (mut h, _, target, entrance) = brackenhide_release_fixture(owner_position);
         let copy = *h.app.world().get::<InMap>(h.caster).unwrap();
         let point = |position: Position| Vec3::new(position.x, position.y, position.z);
         let query = ::navigation::worker::Query::CompleteRoute {
@@ -1958,12 +2309,8 @@ mod copy_tests {
                 .map_or(1.0, |mods| mods.movement_speed);
         assert!(distance > speed * 120.0, "{distance} yards at {speed} yd/s");
         let log = capture_release_update(&mut h.app);
-        assert!(log.contains("route_too_long"), "{log}");
-        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
-        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
-            .unwrap();
-        h.advance(80);
+        assert!(log.contains("route_reachable"), "{log}");
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
         assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
         assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
     }
@@ -2000,7 +2347,7 @@ mod copy_tests {
     }
 
     #[test]
-    fn follower_release_distant_walkable_corpse_waits_for_real_resurrection() {
+    fn follower_release_distant_walkable_corpse_runs_back() {
         use shared::components::{CombatStatus, Health, Position};
         let (fixture_app, _, mut run) = fixture();
         let entrance = run.dungeon.entrance.bevy_position();
@@ -2083,14 +2430,10 @@ mod copy_tests {
             assert!(route.distance > 7.0 * 0.01 * 120.0);
         }
         let log = capture_release_update(&mut h.app);
-        assert!(log.contains("route_too_long"), "{log}");
-        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
-            .unwrap();
-        h.advance(80);
+        assert!(log.contains("route_reachable"), "{log}");
         assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
-        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
     }
 
     #[test]

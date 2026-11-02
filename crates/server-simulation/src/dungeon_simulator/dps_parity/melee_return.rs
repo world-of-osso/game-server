@@ -17,10 +17,7 @@ struct WalkStep {
 
 pub(super) fn advance(world: &mut World) {
     let delta = world.resource::<Time>().delta_secs();
-    let actors: Vec<_> = world
-        .query_filtered::<Entity, With<FixtureMovement>>()
-        .iter(world)
-        .collect();
+    let actors = server::system_states::entities_with::<With<FixtureMovement>>(world);
     for actor in actors {
         advance_actor(world, actor, delta);
     }
@@ -56,10 +53,8 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     crate::creature_ai::move_follower(world, actor, step.position, step.speed);
     super::face_actor_toward_primary(world, actor, step.target);
     // The encounter's position=back contract survives moving across the pack.
-    let opponents: Vec<_> = world
-        .query_filtered::<Entity, With<crate::creature_scripts::TrainingDummy>>()
-        .iter(world)
-        .collect();
+    let opponents =
+        server::system_states::entities_with::<With<crate::creature_scripts::TrainingDummy>>(world);
     for target in opponents {
         super::face_dummy_away_from_actor(world, actor, target);
     }

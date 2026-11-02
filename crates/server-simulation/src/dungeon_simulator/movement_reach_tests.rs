@@ -1,7 +1,6 @@
 //! Chase movement uses the native reach boundary without borrowing unrelated dungeon geometry.
 use super::*;
 use crate::creature_ai::PetMotion;
-use bevy::ecs::system::RunSystemOnce;
 use std::time::Duration;
 
 fn stockade_space() -> Space {
@@ -39,7 +38,83 @@ fn tick(world: &mut World) {
     world
         .resource_mut::<Time>()
         .advance_by(Duration::from_millis(50));
-    world.run_system_once(update).unwrap();
+    update(world);
+}
+
+#[test]
+#[ignore = "requires extracted Ruby Mythic graph"]
+fn ruby_owner_can_return_to_tank_from_observed_stall_positions() {
+    let space = Space(super::super::graph::read_graph().unwrap());
+    let from = Vec3::new(1480.93005, 126.46381, 176.06);
+    let to = Vec3::new(1462.78003, 126.27969, 174.649);
+    let (mut world, owner) = pet_world(Some(space), from, to);
+    world
+        .entity_mut(owner)
+        .remove::<PetMotion>()
+        .insert(MoveIntent(to));
+    for frame in 0..600 {
+        let y = if frame % 2 == 0 { 126.27969 } else { 126.5823 };
+        world
+            .entity_mut(owner)
+            .insert(MoveIntent(Vec3::new(to.x, y, to.z)));
+        tick(&mut world);
+        let current = point(world.get::<Position>(owner).unwrap());
+        if current.distance(to) < 4.0 {
+            return;
+        }
+    }
+    panic!(
+        "owner remained at {:?} while returning to the tank; travel={}",
+        world.get::<Position>(owner),
+        inspect_travel(&world, owner)
+    );
+}
+
+#[test]
+fn changed_destination_is_replanned_after_cached_route_ends() {
+    let (mut world, owner) = pet_world(None, Vec3::ZERO, Vec3::X * 2.0);
+    world
+        .entity_mut(owner)
+        .remove::<PetMotion>()
+        .insert(MoveIntent(Vec3::X * 2.0));
+    tick(&mut world);
+    world.entity_mut(owner).insert(MoveIntent(Vec3::X * 2.5));
+    for _ in 0..20 {
+        tick(&mut world);
+    }
+    assert!(point(world.get::<Position>(owner).unwrap()).distance(Vec3::X * 2.5) < 0.001);
+}
+
+#[test]
+fn chase_replans_if_target_moves_at_cached_reach_boundary() {
+    let (mut world, pet) = pet_world(None, Vec3::ZERO, Vec3::X * 10.0);
+    let target = match world.get::<PetMotion>(pet).unwrap() {
+        PetMotion::Chase(target) => *target,
+        _ => unreachable!(),
+    };
+    for _ in 0..100 {
+        tick(&mut world);
+        if server::test_support::within_reach(
+            point(world.get::<Position>(pet).unwrap()),
+            Vec3::X * 10.0,
+            crate::creature_ai::CHASE_REACH,
+        ) {
+            break;
+        }
+    }
+    world.entity_mut(target).insert(Position {
+        x: 10.5,
+        y: 0.0,
+        z: 0.0,
+    });
+    for _ in 0..20 {
+        tick(&mut world);
+    }
+    let actual = point(world.get::<Position>(pet).unwrap());
+    assert!(
+        server::test_support::within_reach(actual, Vec3::X * 10.5, crate::creature_ai::CHASE_REACH),
+        "pet stopped at {actual:?}"
+    );
 }
 
 #[test]

@@ -109,6 +109,12 @@ pub(super) fn update(world: &mut World) {
 }
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    if world
+        .get::<super::release::ResurrectionApproach>(unit)
+        .is_some()
+    {
+        return;
+    }
     if super::transport_follow::update(world, unit, follower) {
         return;
     }

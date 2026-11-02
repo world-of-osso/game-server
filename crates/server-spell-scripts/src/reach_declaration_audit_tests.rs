@@ -720,14 +720,19 @@ fn scan_source(path: &str, source: &str, sites: &mut Sites) {
                 .entry((path.into(), function.into(), "area".into()))
                 .or_default() += areas;
         }
-        let query = ["query::<", "query_filtered::<", "try_query::<"]
-            .iter()
-            .any(|name| line.contains(name));
+        let query = [
+            "query::<",
+            "query_filtered::<",
+            "try_query::<",
+            "entities_with::<",
+        ]
+        .iter()
+        .any(|name| line.contains(name));
         if !query {
             continue;
         }
         let signature = lines[index..lines.len().min(index + 5)].join(" ");
-        let signature = signature.split(">()").next().unwrap_or(&signature);
+        let signature = signature.split(">(").next().unwrap_or(&signature);
         let components = [
             "Health",
             "ActiveAuras",
@@ -838,7 +843,7 @@ fn scanner_detects_new_sites_in_existing_functions() {
     let mut sites = Sites::new();
     scan_source(
         "sample.rs",
-        "fn cast() {\n targets::area_units(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n world.query::<(Entity, &SummonedCreature)>();\n}",
+        "fn cast() {\n targets::area_units(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n world.query::<(Entity, &SummonedCreature)>();\n system_states::entities_with::<With<ActiveAuras>>(world);\n}",
         &mut sites,
     );
     assert_eq!(
@@ -847,7 +852,7 @@ fn scanner_detects_new_sites_in_existing_functions() {
     );
     assert_eq!(
         sites.get(&("sample.rs".into(), "cast".into(), "query".into())),
-        Some(&2)
+        Some(&3)
     );
     assert!(
         !inventory_matches(&sites, &Sites::new()),

@@ -886,10 +886,7 @@ pub(crate) fn read_pet_owner_hit_expertise(world: &World, unit: Entity) -> Optio
 
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(world: &mut World) {
-    let attackers: Vec<Entity> = world
-        .query_filtered::<Entity, With<AutoAttack>>()
-        .iter(world)
-        .collect();
+    let attackers = crate::system_states::entities_with::<With<AutoAttack>>(world);
     for attacker in attackers {
         // TC Creature.h:240: both authored no-melee modes suppress swings.
         if world
@@ -2797,6 +2794,7 @@ fn mark_replication_changed(queue: Option<&ReplicationDirtyQueue>, entity: Entit
 
 /// Commit NPC death with exclusive World access.
 pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
+    crate::death::soulstone::remember_on_death(world, entity);
     insert_npc_death(world.entity_mut(entity));
 }
 

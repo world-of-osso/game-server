@@ -351,10 +351,10 @@ fn landing_floor(db: &rusqlite::Connection, map: u32, endpoint: Vec3) -> Result<
 struct TaxiLandingPending;
 
 fn start_player_landing(world: &mut World) {
-    let owners: Vec<_> = world
-        .query_filtered::<Entity, (With<TaxiLandingPending>, Without<crate::taxi::TaxiFlight>)>()
-        .iter(world)
-        .collect();
+    let owners = crate::system_states::entities_with::<(
+        With<TaxiLandingPending>,
+        Without<crate::taxi::TaxiFlight>,
+    )>(world);
     for owner in owners {
         world.entity_mut(owner).remove::<TaxiLandingPending>();
         crate::scripted_ai::fall_movement::move_fall(world, owner, 0);

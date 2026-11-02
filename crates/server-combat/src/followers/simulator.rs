@@ -472,10 +472,7 @@ fn spawn_class_owner(
 }
 
 pub fn update_leader(world: &mut World) {
-    let leaders: Vec<_> = world
-        .query_filtered::<Entity, With<LeaderProfile>>()
-        .iter(world)
-        .collect();
+    let leaders = crate::system_states::entities_with::<With<LeaderProfile>>(world);
     for owner in leaders {
         if crate::spell_cast::targets::is_alive(world, owner) {
             let leader = ai::acting_follower(world, owner).expect("simulator leader profile");

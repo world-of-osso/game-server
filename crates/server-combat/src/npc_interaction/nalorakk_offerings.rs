@@ -139,10 +139,10 @@ pub(crate) fn update_offerings(world: &mut World) {
 }
 
 fn clear_interrupted_pickups(world: &mut World) {
-    let stopped: Vec<_> = world
-        .query_filtered::<Entity, (With<PendingOffering>, Without<shared::casting::CastState>)>()
-        .iter(world)
-        .collect();
+    let stopped = crate::system_states::entities_with::<(
+        With<PendingOffering>,
+        Without<shared::casting::CastState>,
+    )>(world);
     for player in stopped {
         cancel_pickup(world, player);
     }

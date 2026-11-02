@@ -193,10 +193,7 @@ fn trigger_relation(world: &World, effect: &SpellEffect) -> Relation {
 }
 
 pub(super) fn update_area_triggers(world: &mut World) {
-    let entities: Vec<_> = world
-        .query_filtered::<Entity, With<SpellAreaTrigger>>()
-        .iter(world)
-        .collect();
+    let entities = crate::system_states::entities_with::<With<SpellAreaTrigger>>(world);
     for entity in entities {
         update_trigger(world, entity);
     }

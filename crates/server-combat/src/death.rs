@@ -27,6 +27,7 @@ pub(crate) const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 mod instrument_of_retribution;
 #[path = "death/resurrection.rs"]
 pub(crate) mod resurrection;
+pub(crate) mod soulstone;
 #[path = "death_support.rs"]
 mod support;
 #[path = "death/transitions.rs"]
@@ -352,6 +353,7 @@ pub(crate) fn release_spirit_in_dungeon(
     commands.queue(move |world: &mut World| {
         // BuildPlayerRepop sets DEAD before the graveyard teleport/revival.
         crate::spell_cast::cancel_cast(world, player);
+        crate::followers::mark_owner_returning(world, player);
         crate::maps::teleport_to(
             world,
             player,

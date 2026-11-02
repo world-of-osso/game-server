@@ -66,6 +66,63 @@ impl Plugin for MythicPlusPlugin {
             .add_systems(Update, (update, mentor::send_changed_party_keys).chain());
     }
 }
+#[cfg(test)]
+pub(crate) fn fixture_combat_res(world: &mut World, map: InMap) {
+    let definition = ChallengeDefinition {
+        challenge_id: 1,
+        map_id: map.map_id,
+        name: "fixture".into(),
+        timers_ms: [1_800_000; 3],
+        forces_required: 1,
+        creature_weights: HashMap::new(),
+        scenario_event_weights: HashMap::new(),
+        bosses: Vec::new(),
+    };
+    let key = KeystoneInfo {
+        item_guid: 1,
+        item_id: KEYSTONE_ITEM,
+        challenge_id: 1,
+        level: 2,
+        affixes: Vec::new(),
+    };
+    let mut run = Run::new(1, map.instance_id, key, definition);
+    run.policy.countdown_ms.value = 0;
+    run.start(now_ms(world)).unwrap();
+    let active = Active {
+        owner: 1,
+        font: Entity::PLACEHOLDER,
+        season_id: 1,
+        run,
+        settled: false,
+    };
+    world
+        .get_resource_or_init::<Challenges>()
+        .runs
+        .insert(map, active);
+}
+
+/// `None` means the copy has no active Mythic+ run, so no shared pool applies.
+pub(crate) fn combat_res_available(world: &mut World, map: InMap) -> Option<bool> {
+    world.get_resource::<Challenges>()?;
+    let now = now_ms(world);
+    let mut challenges = world.resource_mut::<Challenges>();
+    challenges.runs.get_mut(&map).and_then(|active| {
+        (active.run.snapshot.phase == ChallengePhase::Running)
+            .then(|| active.run.combat_res_charges(now) > 0)
+    })
+}
+
+pub(crate) fn consume_combat_res(world: &mut World, map: InMap) -> bool {
+    if world.get_resource::<Challenges>().is_none() {
+        return true;
+    }
+    let now = now_ms(world);
+    let mut challenges = world.resource_mut::<Challenges>();
+    challenges.runs.get_mut(&map).is_none_or(|active| {
+        active.run.snapshot.phase != ChallengePhase::Running || active.run.consume_combat_res(now)
+    })
+}
+
 fn now_ms(world: &World) -> u64 {
     world.resource::<crate::maps::ServerClock>().unix().max(0) as u64 * 1000
 }

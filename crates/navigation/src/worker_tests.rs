@@ -256,7 +256,8 @@ fn worker_reports_missing_corrupt_and_mismatched_preloaded_graphs() {
             std::fs::copy(source.join("portal-graph.json"), &graph).unwrap();
             let extra_tile = map.join("0_0.nav");
             assert!(!extra_tile.exists());
-            std::fs::write(extra_tile, b"changed").unwrap();
+            // An empty tile opens as no geometry but still changes the tile digest.
+            std::fs::write(extra_tile, b"").unwrap();
         }
         let mut worker = Worker::new(temp.path().to_owned());
         worker.submit(Request {

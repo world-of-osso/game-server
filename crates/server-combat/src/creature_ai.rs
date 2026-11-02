@@ -1307,6 +1307,15 @@ const FOLLOW_COMBAT_REACH: f32 = 1.5;
 /// `FOLLOW_RANGE_TOLERANCE` (FollowMovementGenerator.cpp).
 const FOLLOW_RANGE_TOLERANCE: f32 = 1.0;
 
+pub(crate) fn within_follow_range(position: Position, owner: Position) -> bool {
+    let gap = Vec3::new(
+        position.x - owner.x,
+        position.y - owner.y,
+        position.z - owner.z,
+    );
+    gap.length() <= 2.0 * FOLLOW_COMBAT_REACH + PET_FOLLOW_DIST + FOLLOW_RANGE_TOLERANCE
+}
+
 type Follower = (
     Entity,
     &'static mut Position,
@@ -1562,7 +1571,7 @@ fn advance_companion_route(
     }
 }
 
-type FollowerMoveParams = (
+type FollowerMoveParams<F> = (
     MoveQueues<'static, 'static>,
     Query<
         'static,
@@ -1573,88 +1582,59 @@ type FollowerMoveParams = (
             Option<&'static mut CreatureMotion>,
             Option<&'static mut MovementSpeed>,
         ),
-        ActiveUncontrolled,
+        F,
     >,
 );
 
-/// `move_follower` parameters an exclusive system keeps across calls, so each move
-/// does not rebuild its queries over every archetype.
-pub struct FollowerMoves(bevy::ecs::system::SystemState<FollowerMoveParams>);
-
-impl FromWorld for FollowerMoves {
-    fn from_world(world: &mut World) -> Self {
-        Self(bevy::ecs::system::SystemState::new(world))
-    }
-}
-
 /// Planned follower movement and hazard escape share the native movement/interest/replication writer.
 pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
-    move_follower_with(
-        &mut FollowerMoves::from_world(world),
+    crate::system_states::with_state::<FollowerMoveParams<ActiveUncontrolled>, _>(
         world,
-        entity,
-        to,
-        speed,
+        |world, state| {
+            let (queues, mut units) = state
+                .get_mut(world)
+                .expect("follower native movement system parameters");
+            let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) else {
+                debug!("Follower {entity} escape movement held while externally controlled");
+                return;
+            };
+            let stride = if *position == to || !queues.combat_step_safe(entity, *position, to) {
+                Stride::still(*position)
+            } else {
+                Stride::moving(*position, to, CreatureMotion::Run, speed)
+            };
+            queues.apply(
+                entity,
+                &mut position,
+                (rotation, motion, movement_speed),
+                stride,
+            );
+            state.apply(world);
+        },
     );
-}
-
-pub fn move_follower_with(
-    moves: &mut FollowerMoves,
-    world: &mut World,
-    entity: Entity,
-    to: Position,
-    speed: f32,
-) {
-    let state = &mut moves.0;
-    let (queues, mut units) = state
-        .get_mut(world)
-        .expect("follower native movement system parameters");
-    let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) else {
-        debug!("Follower {entity} escape movement held while externally controlled");
-        return;
-    };
-    let stride = if *position == to || !queues.combat_step_safe(entity, *position, to) {
-        Stride::still(*position)
-    } else {
-        Stride::moving(*position, to, CreatureMotion::Run, speed)
-    };
-    queues.apply(
-        entity,
-        &mut position,
-        (rotation, motion, movement_speed),
-        stride,
-    );
-    state.apply(world);
 }
 
 fn move_flying_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
-    let mut state = bevy::ecs::system::SystemState::<(
-        MoveQueues,
-        Query<
-            (
-                &mut Position,
-                Option<&mut Rotation>,
-                Option<&mut CreatureMotion>,
-                Option<&mut MovementSpeed>,
-            ),
-            With<flight_follow::FlightFollow>,
-        >,
-    )>::new(world);
-    let (queues, mut units) = state.get_mut(world).expect("flight movement parameters");
-    if let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) {
-        let stride = if *position == to {
-            Stride::still(*position)
-        } else {
-            Stride::moving(*position, to, CreatureMotion::Run, speed)
-        };
-        queues.apply(
-            entity,
-            &mut position,
-            (rotation, motion, movement_speed),
-            stride,
-        );
-    }
-    state.apply(world);
+    crate::system_states::with_state::<FollowerMoveParams<With<flight_follow::FlightFollow>>, _>(
+        world,
+        |world, state| {
+            let (queues, mut units) = state.get_mut(world).expect("flight movement parameters");
+            if let Ok((mut position, rotation, motion, movement_speed)) = units.get_mut(entity) {
+                let stride = if *position == to {
+                    Stride::still(*position)
+                } else {
+                    Stride::moving(*position, to, CreatureMotion::Run, speed)
+                };
+                queues.apply(
+                    entity,
+                    &mut position,
+                    (rotation, motion, movement_speed),
+                    stride,
+                );
+            }
+            state.apply(world);
+        },
+    );
 }
 
 /// Bevy (x, z) `reach` yards from the owner at the follower's angle around it, clamped to
