@@ -1,5 +1,8 @@
 //! Set up the native keystone lifecycle and collect one headless run.
 #[cfg(test)]
+#[path = "keystone_navigation_tests.rs"]
+mod navigation_tests;
+#[cfg(test)]
 #[path = "keystone_tests.rs"]
 mod tests;
 use bevy::prelude::*;
