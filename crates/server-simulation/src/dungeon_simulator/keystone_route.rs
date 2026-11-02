@@ -34,6 +34,76 @@ struct MappedPull {
     source_guids: Vec<u64>,
 }
 
+#[derive(Deserialize)]
+struct FirstDamageEvidence {
+    maps: Vec<MapFirstDamage>,
+}
+
+#[derive(Deserialize)]
+struct MapFirstDamage {
+    map_id: u32,
+    reports: Vec<ReportFirstDamage>,
+}
+
+#[derive(Deserialize)]
+struct ReportFirstDamage {
+    report: String,
+    first_damage_ms: BTreeMap<u32, u64>,
+}
+
+/// Boss entries in WCL first-damage order; every registered report must agree.
+fn wcl_first_damage_order(map_id: u32) -> Result<Option<Vec<u32>>, String> {
+    let evidence: FirstDamageEvidence = serde_json::from_str(include_str!(
+        "../../../../content/dungeons/wcl-boss-first-damage.json"
+    ))
+    .map_err(|error| format!("parse WCL boss first damage: {error}"))?;
+    let Some(map) = evidence.maps.into_iter().find(|map| map.map_id == map_id) else {
+        return Ok(None);
+    };
+    let mut order: Option<Vec<u32>> = None;
+    for report in map.reports {
+        let mut hits: Vec<_> = report.first_damage_ms.into_iter().collect();
+        hits.sort_by_key(|&(entry, ms)| (ms, entry));
+        if hits.windows(2).any(|pair| pair[0].1 == pair[1].1) {
+            return Err(format!(
+                "WCL report {} has simultaneous boss first damage",
+                report.report
+            ));
+        }
+        let entries: Vec<_> = hits.into_iter().map(|(entry, _)| entry).collect();
+        if order.as_ref().is_some_and(|order| *order != entries) {
+            return Err(format!(
+                "WCL report {} disagrees on map{map_id} boss first damage",
+                report.report
+            ));
+        }
+        order = Some(entries);
+    }
+    order
+        .map(Some)
+        .ok_or_else(|| format!("map{map_id} WCL boss first damage has no reports"))
+}
+
+/// Listed bosses fill their own extracted slots in WCL order; other bosses keep theirs.
+fn order_bosses(entries: &[u32], first_damage: &[u32]) -> Result<Vec<u32>, String> {
+    if let Some(missing) = first_damage.iter().find(|entry| !entries.contains(entry)) {
+        return Err(format!(
+            "WCL first-damage boss{missing} is not a graph boss"
+        ));
+    }
+    let mut listed = first_damage.iter().copied();
+    Ok(entries
+        .iter()
+        .map(|entry| {
+            if first_damage.contains(entry) {
+                listed.next().expect("one listed entry per slot")
+            } else {
+                *entry
+            }
+        })
+        .collect())
+}
+
 /// Apply the WCL evidence registered for a map; unlisted maps do not chain.
 pub(super) fn wcl_chain_groups(
     graph: &Graph,
@@ -326,8 +396,12 @@ fn distances(paths: &BTreeMap<u64, Vec<(u64, f32)>>, start: u64) -> BTreeMap<u64
 }
 
 fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
+    let entries = match wcl_first_damage_order(graph.map_id)? {
+        Some(order) => order_bosses(graph.boss_entries(), &order)?,
+        None => graph.boss_entries().to_vec(),
+    };
     let mut bosses = Vec::new();
-    for entry in graph.boss_entries() {
+    for entry in &entries {
         let source = graph
             .follower_boss_sources
             .get(entry)
@@ -726,6 +800,33 @@ mod tests {
             plan(&graph, &HashMap::new(), 0, &HashSet::new())
                 .unwrap_err()
                 .contains("boss200 has 0 source packs")
+        );
+    }
+
+    #[test]
+    fn ruby_final_encounter_opens_on_the_wcl_first_damaged_boss() {
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2521, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[1,0],"height":0,"spawns":[{"guid":2,"entry":188252,"position":[1,0]}]},
+                {"id":3,"position":[2,0],"height":0,"spawns":[{"guid":3,"entry":190484,"position":[2,0]}]},
+                {"id":4,"position":[2,1],"height":0,"spawns":[{"guid":4,"entry":190485,"position":[2,1]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":1},{"from":2,"to":3,"yards":1},{"from":3,"to":4,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],
+            "follower_boss_entries":[188252,190484,190485]
+        }))
+        .unwrap();
+        let result = plan(&graph, &HashMap::new(), 0, &HashSet::new()).unwrap();
+        assert_eq!(
+            result
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [2, 4, 3],
+            "Erkhart must open the final encounter before Kyrakka"
         );
     }
 
