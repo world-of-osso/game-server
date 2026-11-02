@@ -720,3 +720,12 @@ D	frost_runtime/frost_mage_supply.rs	apply_buff	AuraApplication	spell_id	1	44544
 D	guardian_impacts.rs	launch_child	try_cast_triggered	child	1	1292391
 D	guardian_rampant_thorn.rs	tick	launch_triggered_spell	&child	1	1301157
 D	guardian_wild_guardian.rs	wild_guardian_action	cast_triggered	override_aura	1	1269616,1270277
+D	havoc.rs	transform_or_extend	try_cast_triggered	DEMONIC.payload	1	162264
+D	havoc/beam.rs	cast_tick	cast_triggered	child	1	198030,1287949
+D	havoc/beam.rs	finish_final_breath	cast_triggered_with_overrides	child	1	198030,1287949
+D	havoc/children.rs	apply_hunt_secondary_dots	cast_triggered	dot_id	1	370969,1246168
+D	havoc/demonsurge.rs	before_cast	try_cast_triggered	trigger	1	453323,1238696
+D	havoc/demonsurge.rs	trigger_meta_entry	try_cast_triggered	trigger	1	453323,1238696
+D	havoc/demonsurge.rs	expire_meta	try_cast_triggered	buff	1	452550,453314
+D	havoc/demonsurge.rs	initialize_non_meta_buff	try_cast_triggered	buff	1	452550,453314
+D	havoc/onslaught.rs	execute_copy	try_cast_triggered	spell	1	162794,201427
