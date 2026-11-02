@@ -15,6 +15,7 @@ mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_familiar_tests;
 #[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
+#[cfg(test)] mod arcane_surge_mana_follower_tests;
 mod affliction_darkglare_dots_tests;
 mod affliction_darkglare_tests;
 mod affliction_embrace_tests;
