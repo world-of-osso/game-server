@@ -814,3 +814,5 @@ D	guardian_rampant_thorn.rs	roll_gorestained_claws	cast_triggered	child	1	trigge
 D	midnight_stat_items.rs	apply_stat_buff	AuraApplication	id	1	1252524,1252818,1295057,1295898,1295899,1295900,1295901,trigger:1297654
 D	resource_values.rs	apply_producers	cast_triggered	payload	1	trigger:1296589
 D	survival_boomstick.rs	emit_tick	cast_triggered	child	1	trigger:1261193
+C	feral_rip_and_tear.rs	391356
+C	feral_twin_claw.rs	1271636
