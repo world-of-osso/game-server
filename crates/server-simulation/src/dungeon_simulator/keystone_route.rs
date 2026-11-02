@@ -376,6 +376,100 @@ pub(super) fn attackable_sources(
         .collect()
 }
 
+#[derive(Deserialize)]
+struct TransportRouteGates {
+    gates: Vec<TransportRouteGate>,
+}
+
+#[derive(Deserialize)]
+struct TransportRouteGate {
+    map_id: u32,
+    transport_source_guid: u64,
+    required_boss_entries: Vec<u32>,
+}
+
+/// Respect sourced transport gates after every route ordering pass.
+fn enforce_transport_prerequisites(
+    graph: &Graph,
+    steps: Vec<RouteStep>,
+    gates: &[TransportRouteGate],
+) -> Result<Vec<RouteStep>, String> {
+    let mut dependencies = Vec::new();
+    for gate in gates.iter().filter(|gate| gate.map_id == graph.map_id) {
+        let Some(transport) = graph
+            .transports
+            .iter()
+            .find(|edge| edge.source_guid == gate.transport_source_guid)
+        else {
+            continue;
+        };
+        let mut without_gate = graph.clone();
+        without_gate
+            .teleports
+            .retain(|edge| !(edge.from == transport.from && edge.to == transport.to));
+        let reachable = distances(&adjacency(&without_gate)?, graph.entrance_pack);
+        let bosses: Vec<_> = gate
+            .required_boss_entries
+            .iter()
+            .map(|entry| {
+                let source = graph
+                    .follower_boss_sources
+                    .get(entry)
+                    .copied()
+                    .unwrap_or(*entry);
+                let packs: Vec<_> = graph
+                    .packs
+                    .iter()
+                    .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == source))
+                    .collect();
+                match packs.as_slice() {
+                    [pack] => Ok(pack.id),
+                    _ => Err(format!(
+                        "transport gate boss{entry} has {} source packs",
+                        packs.len()
+                    )),
+                }
+            })
+            .collect::<Result<_, _>>()?;
+        dependencies.push((reachable, bosses));
+    }
+    if dependencies.is_empty() {
+        return Ok(steps);
+    }
+    let boss_order: Vec<_> = boss_route(graph)?
+        .0
+        .into_iter()
+        .map(|step| step.pack)
+        .collect();
+    let mut pending = steps;
+    let mut ordered = Vec::with_capacity(pending.len());
+    let mut completed = HashSet::new();
+    while !pending.is_empty() {
+        let index = pending
+            .iter()
+            .position(|step| {
+                let gates_satisfied = dependencies.iter().all(|(reachable, bosses)| {
+                    reachable.contains_key(&step.pack)
+                        || bosses.iter().all(|boss| completed.contains(boss))
+                });
+                let earlier_bosses_complete = boss_order
+                    .iter()
+                    .position(|&boss| boss == step.pack)
+                    .is_none_or(|index| {
+                        boss_order[..index]
+                            .iter()
+                            .all(|boss| completed.contains(boss))
+                    });
+                gates_satisfied && earlier_bosses_complete
+            })
+            .ok_or("route transport prerequisites cannot be satisfied")?;
+        let step = pending.remove(index);
+        completed.insert(step.pack);
+        ordered.push(step);
+    }
+    Ok(ordered)
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub(super) struct PlannedRoute {
     pub steps: Vec<RouteStep>,
@@ -626,6 +720,11 @@ pub(super) fn plan(
     if let Some(samples) = mapped_pulls(graph.map_id)? {
         steps = order_by_wcl_pull(graph, steps, &observed_pulls(samples)?, hostile_sources)?;
     }
+    let gates: TransportRouteGates = serde_json::from_str(include_str!(
+        "../../../../content/dungeons/transport-route-gates.json"
+    ))
+    .map_err(|error| format!("parse transport route gates: {error}"))?;
+    steps = enforce_transport_prerequisites(graph, steps, &gates.gates)?;
     Ok(PlannedRoute {
         steps,
         added_packs,
@@ -689,6 +788,45 @@ mod tests {
             scenario_event_weights: HashMap::new(),
             bosses: vec![],
         }
+    }
+
+    #[test]
+    fn ruby_planner_keeps_taxi_destination_after_melidrussa() {
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 2521, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":29001489u64,"position":[1,0],"height":0,"spawns":[{"guid":29001489u64,"entry":188252,"position":[1,0]}]},
+                {"id":3276417217u64,"position":[2,0],"height":0,"spawns":[]},
+                {"id":3276417218u64,"position":[3,0],"height":0,"spawns":[]},
+                {"id":29001715u64,"position":[4,0],"height":0,"spawns":[{"guid":29001715u64,"entry":195119,"position":[4,0]}]},
+                {"id":63521000u64,"position":[5,0],"height":0,"spawns":[{"guid":63521000u64,"entry":190485,"position":[5,0]}]},
+                {"id":63521001u64,"position":[6,0],"height":0,"spawns":[{"guid":63521001u64,"entry":190484,"position":[6,0]}]}
+            ],
+            "edges":[
+                {"from":1,"to":29001489u64,"yards":1}, {"from":1,"to":3276417217u64,"yards":2},
+                {"from":3276417218u64,"to":29001715u64,"yards":1},
+                {"from":29001715u64,"to":63521000u64,"yards":1}, {"from":63521000u64,"to":63521001u64,"yards":1}
+            ],
+            "teleports":[{"from":3276417217u64,"to":3276417218u64,"yards":1}],
+            "transports":[{"from":3276417217u64,"to":3276417218u64,"source_guid":3276417217u64,"radius":8.5,"departure":null,"landing":[3,0,0],"action":"SpellClick"}],
+            "unreachable":[],"route":[],"follower_boss_entries":[188252,190484,190485],
+            "follower_boss_bits":{"188252":1,"190484":2,"190485":2}
+        })).unwrap();
+        let selected = plan(
+            &graph,
+            &HashMap::from([(195119, 1)]),
+            1,
+            &HashSet::from([29001715]),
+        )
+        .unwrap();
+        let ids: Vec<_> = selected.steps.iter().map(|step| step.pack).collect();
+        let boss = ids.iter().position(|id| *id == 29001489).unwrap();
+        let upstairs = ids.iter().position(|id| *id == 29001715).unwrap();
+        assert!(
+            boss < upstairs,
+            "taxi destination precedes its boss gate: {ids:?}"
+        );
     }
 
     #[test]
