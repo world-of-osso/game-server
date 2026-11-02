@@ -93,6 +93,8 @@ mod group_criteria;
 mod gulping_goliath;
 #[path = "gutshot.rs"]
 mod gutshot;
+#[path = "heal_objective.rs"]
+mod heal_objective;
 #[path = "health_threshold.rs"]
 mod health_threshold;
 #[path = "herald_call.rs"]

@@ -510,6 +510,10 @@ pub fn spawn_creature(
             actor.world_scope(|world| crate::mythic_plus::scale_spawned_creature(world, creature));
         });
     }
+    entity.queue(|mut actor: EntityWorldMut| {
+        let unit = actor.id();
+        actor.world_scope(|world| crate::scripted_ai::heal_objective::initialize(world, unit));
+    });
     let source_guid = spawn.guid;
     entity.queue(move |actor: EntityWorldMut| {
         crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
