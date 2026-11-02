@@ -20,7 +20,12 @@ enum Note {
         targets: usize,
         outcome: &'static str,
     },
-    Execute(String),
+    Execute {
+        name: String,
+        poll_targets: usize,
+        hostile_targets: usize,
+        maintained_buff: bool,
+    },
     Pull,
     Drive {
         targets: usize,
@@ -75,6 +80,7 @@ struct Recorded<R> {
     rotation: R,
     notes: Arc<Mutex<Vec<Note>>>,
     legacy: bool,
+    poll_targets: usize,
 }
 
 impl<R> Recorded<R> {
@@ -94,6 +100,7 @@ impl<R: LegacyPrecombat> SpecRotation for Recorded<R> {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<PrecombatPoll, String> {
+        self.poll_targets = targets.len();
         let poll = if !self.legacy {
             self.rotation.poll_precombat(world, actor, targets)?
         } else if self.rotation.legacy_step(world, actor, targets)? {
@@ -120,7 +127,30 @@ impl<R: LegacyPrecombat> SpecRotation for Recorded<R> {
         action: Action,
         execution: Execution,
     ) -> Result<(), String> {
-        self.note(Note::Execute(action.name.clone()));
+        let maintained_buff = match &execution {
+            Execution::Spell(id, target, _) => world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(*id)
+                .is_some_and(|spell| {
+                    let store = world.resource::<crate::spell_info::SpellStore>();
+                    let positive = crate::auras::aura_effect_mask(spell)
+                        & !crate::spell_info::positivity::negative_effects(store, spell);
+                    positive != 0
+                        && (*target == actor
+                            || crate::spell_cast::targets::is_friendly(world, actor, *target))
+                        && spell.cooldowns.as_ref().is_none_or(|cooldown| {
+                            cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
+                        })
+                }),
+            _ => false,
+        };
+        let hostile_targets = crate::followers::engaged_targets(world, actor).len();
+        self.note(Note::Execute {
+            name: action.name.clone(),
+            poll_targets: self.poll_targets,
+            hostile_targets,
+            maintained_buff,
+        });
         self.rotation.execute(world, actor, action, execution)
     }
 
@@ -281,6 +311,7 @@ fn run_follower<R: LegacyPrecombat + 'static>(
             rotation,
             notes: notes.clone(),
             legacy,
+            poll_targets: 0,
         })));
     let mut scenario = Scenario {
         app,
@@ -349,7 +380,7 @@ fn assert_follower_contract<R: LegacyPrecombat + 'static>(
     assert!(
         precombat
             .iter()
-            .any(|note| matches!(note, Note::Execute(_))),
+            .any(|note| matches!(note, Note::Execute { .. })),
         "spec{spec}: precombat must execute a selected row: {precombat:?}"
     );
     assert!(
@@ -360,14 +391,17 @@ fn assert_follower_contract<R: LegacyPrecombat + 'static>(
         "spec{spec}: precombat polls must be out of combat"
     );
     assert!(
-        combat
-            .iter()
-            .all(|note| matches!(note, Note::Pull | Note::Drive { .. })),
-        "spec{spec}: no precombat poll or row may run after the first pull: {:?}",
-        combat
-            .iter()
-            .filter(|note| !matches!(note, Note::Pull | Note::Drive { .. }))
-            .collect::<Vec<_>>()
+        combat.iter().all(|note| match note {
+            Note::Poll { targets, .. } => *targets == 0,
+            Note::Execute {
+                poll_targets,
+                hostile_targets,
+                maintained_buff,
+                ..
+            } => *poll_targets == 0 && *hostile_targets == 0 && *maintained_buff,
+            _ => true,
+        }),
+        "spec{spec}: only maintained buffs may execute during out-of-combat upkeep: {combat:?}"
     );
     let second = pulls[1] - pulls[0];
     for drives in [&combat[..second], &combat[second..]] {
@@ -382,7 +416,7 @@ fn assert_follower_contract<R: LegacyPrecombat + 'static>(
         !legacy
             .notes
             .iter()
-            .any(|note| matches!(note, Note::Execute(_))),
+            .any(|note| matches!(note, Note::Execute { .. })),
         "spec{spec}: the legacy control executes inside its precombat step"
     );
     let precombat_casts = |outcome: &Outcome| -> Vec<Cast> {
