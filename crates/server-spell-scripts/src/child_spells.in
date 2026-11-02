@@ -620,3 +620,7 @@ D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
 D	survival_takedown.rs	cast_pet_damage	launch_triggered_spell	&spell	1	1253862
 D	destruction_rift.rs	roll_rift	try_cast_triggered	summon	1	387979,394235,394243,434587
 D	destruction_rift.rs	barrage_tick	try_cast_triggered	child	1	387985,394238
+D	affliction_grasp.rs	copy_owned_ticks	cast_triggered_with_effect0_amount	child	1	1261158,1261166,1261176,1279686
+D	assassination_runtime/rogue_children.rs	tick_implacable	cast_triggered	child	1	1265794,1265795
+D	aura_rolls.rs	apply_roll	AuraApplication	payload	1	1214933,1214934,1214935,1214937
+D	blood_ground.rs	apply	AuraApplication	spell	1	188290,391459,434034
