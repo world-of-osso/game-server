@@ -461,7 +461,29 @@ impl Discipline {
                 injured,
                 active_atonements,
                 "shield",
-                &["void_shield", "shield"],
+                &["void_shield"],
+            )?
+        {
+            return Ok(());
+        }
+        // INFERRED_WCL KWw69CqBnf3Tpk8L f4 a4: all 28 repeat Shield
+        // casts on a recipient follow removal of the previous Shield.
+        if let Some(target) = shield_target
+            && !world
+                .get::<crate::auras::ActiveAuras>(target)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 17 && aura.caster == healer)
+                })
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "shield",
+                &["shield"],
             )?
         {
             return Ok(());
