@@ -24,7 +24,7 @@ fn geomancer_with_inferred(inferred: Option<Vec<smart_ai::SmartEvent>>) -> (Harn
     });
     let all = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(SpellStore::fixture(
-        [FIREBALL, 12544]
+        [FIREBALL, 12544, 1246821, 1246825]
             .iter()
             .map(|id| all.store.get(*id).unwrap().clone())
             .collect(),
@@ -119,6 +119,51 @@ fn inferred_ability_casts_using_observed_timers() {
     assert!(h.app.world().get::<CastState>(creature).is_none());
     let second = wait_for_fireball(&mut h, creature);
     assert_eq!(second.target, h.player().to_bits());
+}
+
+#[test]
+fn inferred_summon_casts_once_when_created() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_creature_template(entry INTEGER, AIName TEXT, ScriptName TEXT);
+        INSERT INTO content_creature_template VALUES (476, '', '');
+        CREATE TABLE content_inferred_summon_spell(map INTEGER, difficulty INTEGER, entry INTEGER, spell INTEGER);
+        INSERT INTO content_inferred_summon_spell VALUES (0, 0, 476, 1246821);").unwrap();
+    let mut events = smart_ai::inferred::load_summon_events(&conn).unwrap();
+    let (mut h, original) = geomancer_with_inferred(events.remove(&(0, 0, GEOMANCER)));
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), original, 1246821),
+        0
+    );
+    let owner = h.player();
+    let pos = *h.app.world().get::<Position>(owner).unwrap();
+    let summoned = crate::zones::summon_creature(
+        h.app.world_mut(),
+        owner,
+        GEOMANCER,
+        [pos.x + 5.0, pos.y, pos.z, 0.0],
+    )
+    .expect("summon geomancer fixture");
+    h.advance(0.2);
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), summoned, 1246821),
+        1
+    );
+    h.advance(2.0);
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), summoned, 1246821),
+        1
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        summoned,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1246821,
+    );
+    h.advance(2.0);
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), summoned, 1246821),
+        0
+    );
 }
 
 fn wait_for_fireball(h: &mut Harness, creature: Entity) -> CastState {
