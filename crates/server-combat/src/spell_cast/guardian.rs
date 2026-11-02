@@ -22,6 +22,10 @@ const ANTORAN_ARMAMENTS: u32 = 1250921;
 // initial native Energy without regeneration, then fades when exhausted.
 const NO_POWER_REGEN: &[(u32, u32)] = &[(104317, 55659), (279910, 143622)];
 
+// WCL 3FGjdPn4TN8VzQ9m fight54: these three native guardians cast their
+// attacks but have no melee events. Use the native no-melee AI flag.
+const NON_MELEE_GUARDIANS: &[(u32, u32)] = &[(394235, 198547), (387979, 196280), (394243, 198555)];
+
 struct GuardianPolicy {
     summons: &'static [u32],
     entry: u32,
@@ -794,6 +798,22 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let root = summon.spell_id;
     let policy = policy(root, entry);
+    if NON_MELEE_GUARDIANS.contains(&(root, entry)) {
+        let mut flags = world
+            .get::<crate::creature_static::CreatureStaticFlags>(actor)
+            .copied()
+            .unwrap_or_else(|| {
+                crate::creature_static::CreatureStaticFlags(
+                    world
+                        .resource::<crate::world_data::WorldData>()
+                        .template_for(entry, 0)
+                        .expect("guardian template")
+                        .static_flags,
+                )
+            });
+        flags.0[3] |= crate::creature_static::NO_MELEE_APPROACH;
+        world.entity_mut(actor).insert(flags);
+    }
     let spells = match (policy, pre_mid2_magus_spells(world, owner, entry)) {
         (Some(_), Some(spells)) => spells.to_vec(),
         (Some(row), None) => row.spells.to_vec(),
