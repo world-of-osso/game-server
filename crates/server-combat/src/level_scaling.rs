@@ -102,9 +102,10 @@ impl ExpectedStats {
             .fold(row.get(stat), |value, mods| value * mods.get(stat))
     }
 
-    /// Evaluate creature health with the active Mythic+ season's DB2 tuning rows.
-    fn keystone_health(
+    /// Evaluate a creature stat with the active Mythic+ season's DB2 tuning rows.
+    fn keystone_stat(
         &self,
+        stat: Stat,
         level: u8,
         expansion: i32,
         tuning: u32,
@@ -126,7 +127,7 @@ impl ExpectedStats {
             .armor_tuning_mods
             .get(&tuning)
             .ok_or_else(|| format!("missing ContentTuningXExpected {tuning}"))?;
-        let mut health = row.health;
+        let mut value = row.get(stat);
         for &(id, min, max) in rows {
             let bound = |id| {
                 self.season_milestones
@@ -137,20 +138,20 @@ impl ExpectedStats {
             if (min != 0 && milestone < bound(min)?) || (max != 0 && milestone >= bound(max)?) {
                 continue;
             }
-            health *= self
+            value *= self
                 .mods
                 .get(&id)
                 .ok_or_else(|| format!("missing ExpectedStatMod {id}"))?
-                .health;
+                .get(stat);
         }
         if let Some(id) = class_mod_id(unit_class) {
-            health *= self
+            value *= self
                 .mods
                 .get(&id)
                 .ok_or_else(|| format!("missing class ExpectedStatMod {id}"))?
-                .health;
+                .get(stat);
         }
-        Ok(health)
+        Ok(value)
     }
 
     /// Source base health and armor before template modifiers, including tuning/class mods.
@@ -354,8 +355,8 @@ pub struct LevelStats {
 }
 
 impl LevelStats {
-    /// Keep native damage/armor inputs but use the active Keystone map's seasonal health tuning.
-    pub fn apply_keystone_health(
+    /// Use the active Keystone map's seasonal health and damage tuning.
+    pub fn apply_keystone_stats(
         &mut self,
         stats: &ExpectedStats,
         inputs: &TuningInputs,
@@ -364,10 +365,23 @@ impl LevelStats {
     ) -> Result<(), String> {
         let expansion = resolve_health_expansion(inputs.health_scaling_expansion);
         for level in 1..=TOP_LEVEL {
-            self.max_health[level as usize] =
-                (stats.keystone_health(level, expansion, map_tuning, inputs.unit_class, season)?
-                    * inputs.health_modifier)
-                    .ceil();
+            self.max_health[level as usize] = (stats.keystone_stat(
+                Stat::Health,
+                level,
+                expansion,
+                map_tuning,
+                inputs.unit_class,
+                season,
+            )? * inputs.health_modifier)
+                .ceil();
+            self.base_damage[level as usize] = stats.keystone_stat(
+                Stat::AutoAttackDps,
+                level,
+                expansion,
+                map_tuning,
+                inputs.unit_class,
+                season,
+            )?;
         }
         Ok(())
     }

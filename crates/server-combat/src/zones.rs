@@ -1040,7 +1040,7 @@ pub(crate) fn prepare_difficulty_retune(
                     || LevelStats::build(&data.expected_stats, &inputs),
                     |(_, stats)| (*stats).clone(),
                 );
-                stats.apply_keystone_health(
+                stats.apply_keystone_stats(
                     &data.expected_stats,
                     &inputs,
                     range.content_tuning_id,
