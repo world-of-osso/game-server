@@ -84,13 +84,12 @@ fn queued_explosive_shot_skips_dead_target_before_selecting_survivor() {
     driver
         .execute(run.app.world_mut(), run.actor, action, execution)
         .unwrap();
+    for _ in 0..160 {
+        run.app.update();
+    }
     assert!(
-        run.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(survivor)
-            .unwrap()
-            .iter()
-            .any(|aura| aura.spell_id == 212431 && aura.caster == run.actor)
+        hits(&run, 212431, survivor) > 0,
+        "survivor receives native Explosive Shot damage"
     );
 }
 
