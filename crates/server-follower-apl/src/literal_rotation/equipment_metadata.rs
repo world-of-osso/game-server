@@ -2,7 +2,7 @@
 use crate::auras::handlers;
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use server::item_instance::effects::ItemEffect;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 const ON_USE: u8 = 0;
 const ON_EQUIP: u8 = 1;
@@ -81,14 +81,12 @@ pub struct Metadata {
 impl Metadata {
     pub fn load(store: &SpellStore, effects: &[ItemEffect]) -> Result<Self, String> {
         let mut metadata = Self::default();
-        let mut active = BTreeSet::new();
-        let mut completed = BTreeMap::new();
         for effect in effects
             .iter()
             .filter(|effect| matches!(effect.trigger, ON_USE | ON_EQUIP))
         {
             metadata.drivers.insert(effect.spell_id);
-            let buffs = read_buffs(store, effect.spell_id, &mut active, &mut completed)?;
+            let buffs = read_buffs(store, effect.spell_id)?;
             metadata.buff_spells.extend(&buffs.spells);
             metadata.stats.extend(&buffs.stats);
             metadata.duration = metadata.duration.max(buffs.duration);
@@ -152,31 +150,26 @@ fn read_use_cast_time(store: &SpellStore, effects: &[ItemEffect]) -> Result<f64,
     Ok(f64::from(milliseconds) / 1000.0)
 }
 
-fn read_buffs(
-    store: &SpellStore,
-    id: u32,
-    active: &mut BTreeSet<u32>,
-    completed: &mut BTreeMap<u32, Buffs>,
-) -> Result<Buffs, String> {
-    if let Some(buffs) = completed.get(&id) {
-        return Ok(buffs.clone());
-    }
-    if !active.insert(id) {
-        return Err(format!("native item trigger cycle at spell{id}"));
-    }
-    let spell = read_spell(store, id)?;
-    let mut buffs = direct_buffs(spell);
-    // DUMMY's TriggerSpell is script input, not a generic cast edge (e.g.
-    // Ara-Kara452146 effect1 refers back to its443541 proc driver).
-    for effect in &spell.effects {
-        let trigger_edge =
-            effect.effect != 0 && effect.effect != DUMMY_EFFECT && effect.trigger_spell != 0;
-        if trigger_edge {
-            buffs.merge(&read_buffs(store, effect.trigger_spell, active, completed)?);
+fn read_buffs(store: &SpellStore, id: u32) -> Result<Buffs, String> {
+    let mut visited = BTreeSet::new();
+    let mut pending = vec![id];
+    let mut buffs = Buffs::default();
+    while let Some(id) = pending.pop() {
+        if !visited.insert(id) {
+            continue;
+        }
+        let spell = read_spell(store, id)?;
+        buffs.merge(&direct_buffs(spell));
+        // DUMMY's TriggerSpell is script input, not a generic cast edge (e.g.
+        // Ara-Kara452146 effect1 refers back to its443541 proc driver).
+        for effect in &spell.effects {
+            let trigger_edge =
+                effect.effect != 0 && effect.effect != DUMMY_EFFECT && effect.trigger_spell != 0;
+            if trigger_edge {
+                pending.push(effect.trigger_spell);
+            }
         }
     }
-    active.remove(&id);
-    completed.insert(id, buffs.clone());
     Ok(buffs)
 }
 

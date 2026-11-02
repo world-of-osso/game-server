@@ -60,16 +60,12 @@ struct CastSource {
     count: Count,
 }
 // sc_mage.cpp2861/4017/4087/4284–4285/5185: successful source executions.
+// INFERRED: Bolt is not a direct source; see dps-parity.md for retail evidence.
 const CAST_SOURCES: &[CastSource] = &[
     CastSource {
         spec: 62,
         spell: 30451,
         count: Count::One,
-    },
-    CastSource {
-        spec: 62,
-        spell: 1295924,
-        count: Count::Talent(SIGNATURE, 0),
     },
     CastSource {
         spec: 64,

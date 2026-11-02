@@ -414,6 +414,47 @@ fn den_each_node_first_party_damage_is_owner_controlled() {
 
 #[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn den_objective_chooses_a_castable_npc_offering() {
+    use server::test_support::objectives::InteractionStep;
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let boss = run.actors[&31000640];
+    let apple = run.actors[&31000492];
+    let at = *run.app.world().get::<Position>(apple).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(at);
+    let step = server::test_support::objectives::next(run.app.world_mut(), owner, boss).unwrap();
+    let Some(InteractionStep::Approach { target }) = step else {
+        panic!("the nearest apple NPC cannot receive its gameobject-targeted spell: {step:?}");
+    };
+    assert_ne!(target, apple);
+    let source = run
+        .app
+        .world()
+        .get::<shared::components::Npc>(target)
+        .unwrap()
+        .template_id;
+    assert!(matches!(source, 244941 | 245750 | 245638 | 245698));
+    let position = *run.app.world().get::<Position>(target).unwrap();
+    run.app.world_mut().entity_mut(owner).insert(position);
+    assert!(
+        matches!(server::test_support::objectives::next(run.app.world_mut(), owner, boss).unwrap(),
+        Some(InteractionStep::Interact { target: chosen }) if chosen == target)
+    );
+    server::test_support::objectives::interact(run.app.world_mut(), owner, target)
+        .expect("the chosen native NPC-targeted offering spell must start");
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_boss_objective_waits_for_live_party_combat() {
     let mut run = spawn_run_mode(
         1,
@@ -2949,6 +2990,7 @@ pub(super) fn run_keystone(
         }
     };
     run.last_progress = run.now();
+    let mut progress = super::keystone::Progress::default();
     let outcome =
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
             for _ in 0..MAX_TICKS {
@@ -2963,7 +3005,14 @@ pub(super) fn run_keystone(
                 run.app.update();
                 run.healer_metrics.observe_frame(run.app.world());
                 let mut key = run.keystone.take().ok_or("keystone state disappeared")?;
-                let result = key.update(run.app.world_mut());
+                let result = key.update(run.app.world_mut()).and_then(|()| {
+                    key.report_progress(
+                        &mut progress,
+                        run.app.world(),
+                        run.current_pack,
+                        run.party.tank,
+                    )
+                });
                 run.keystone = Some(key);
                 result?;
                 if run.stalled() {

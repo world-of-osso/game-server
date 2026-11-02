@@ -2227,7 +2227,7 @@ pub fn extend_owned_async_duration(
 
 /// Extend owned auras without resetting tick clocks, respecting a maximum
 /// remaining duration (327541 Aetherial Kindling). Never shorten longer auras.
-pub(crate) fn extend_owned_duration_capped(
+pub fn extend_owned_duration_capped(
     world: &mut World,
     caster: Entity,
     target: Entity,

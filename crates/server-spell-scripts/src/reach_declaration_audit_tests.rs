@@ -80,6 +80,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
     (
+        "feral_aggravate_wounds.rs",
+        "collect_owned_wounds",
+        "query",
+        1,
+        "extends existing caster-owned wounds without selecting new targets",
+    ),
+    (
         "feral_apex.rs",
         "count_owned_rips",
         "query",
