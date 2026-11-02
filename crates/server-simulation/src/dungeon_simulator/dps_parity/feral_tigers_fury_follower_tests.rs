@@ -18,19 +18,47 @@ fn feral_follower_rip_snapshots_tigers_fury() {
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
     crate::spell_cast::creature_cast(app.world_mut(), actor, 1079, Some(target), false).unwrap();
     let read = |app: &bevy::prelude::App| {
-        let aura = app.world().get::<crate::auras::ActiveAuras>(target).unwrap().iter()
-            .find(|a| a.spell_id == 1079 && a.caster == actor).expect("owned Rip");
+        let aura = app
+            .world()
+            .get::<crate::auras::ActiveAuras>(target)
+            .unwrap()
+            .iter()
+            .find(|a| a.spell_id == 1079 && a.caster == actor)
+            .expect("owned Rip");
         let effect = aura.effects.iter().find(|e| e.index == 0).unwrap();
         (effect.amount, effect.persistent_multiplier.unwrap())
     };
     let empowered = read(&app);
-    crate::auras::remove_auras(app.world_mut(), actor, crate::auras::RemoveReason::Expired, |a| a.spell_id == 5217);
-    assert_eq!(read(&app), empowered, "existing Rip retains its application snapshot");
-    crate::auras::remove_auras(app.world_mut(), target, crate::auras::RemoveReason::Expired, |a| a.spell_id == 1079 && a.caster == actor);
+    crate::auras::remove_auras(
+        app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Expired,
+        |a| a.spell_id == 5217,
+    );
+    assert_eq!(
+        read(&app),
+        empowered,
+        "existing Rip retains its application snapshot"
+    );
+    crate::auras::remove_auras(
+        app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Expired,
+        |a| a.spell_id == 1079 && a.caster == actor,
+    );
+    for _ in 0..40 {
+        app.update();
+    }
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::ComboPoints, 5.0);
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
     crate::spell_cast::creature_cast(app.world_mut(), actor, 1079, Some(target), false).unwrap();
     let ordinary = read(&app);
-    assert!((empowered.1 / ordinary.1 - 1.25).abs() < 0.001, "Tiger's Fury snapshot factor: {empowered:?} vs {ordinary:?}");
-    assert!((empowered.0 / ordinary.0 - 1.25).abs() < 0.001, "Tiger's Fury must increase actual Rip tick amount: {empowered:?} vs {ordinary:?}");
+    assert!(
+        (empowered.1 / ordinary.1 - 1.25).abs() < 0.001,
+        "Tiger's Fury snapshot factor: {empowered:?} vs {ordinary:?}"
+    );
+    assert!(
+        (empowered.0 / ordinary.0 - 1.25).abs() < 0.001,
+        "Tiger's Fury must increase actual Rip tick amount: {empowered:?} vs {ordinary:?}"
+    );
 }
