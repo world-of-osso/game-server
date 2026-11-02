@@ -16,9 +16,9 @@ pub trait SpecRotation: Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
     fn action_spells(&self) -> Vec<u32>;
 
-    /// Maintained buffs selected by the default list while out of combat.
-    fn upkeep_spells(&self) -> &'static [u32] {
-        &[]
+    /// Evaluate maintained default-list buffs while out of combat.
+    fn drive_upkeep(&mut self, _world: &mut World, _actor: Entity) -> Result<(), String> {
+        Ok(())
     }
 
     /// Next precombat decision. `Waiting` covers a row the adapter executed itself.
@@ -55,7 +55,7 @@ pub struct FollowerApl {
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
     combat_started_at: f64,
-    precombat_buffs: std::collections::BTreeSet<u32>,
+    maintained_buffs: Option<std::collections::BTreeSet<u32>>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -73,8 +73,24 @@ impl FollowerApl {
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
-            precombat_buffs: Default::default(),
+            maintained_buffs: None,
         }
+    }
+
+    pub fn new_for_world(world: &World, rotation: Box<dyn SpecRotation>) -> Self {
+        let mut apl = Self::new(rotation);
+        apl.initialize_maintained_buffs(world);
+        apl
+    }
+
+    fn initialize_maintained_buffs(&mut self, world: &World) {
+        self.maintained_buffs = Some(
+            self.rotation
+                .action_spells()
+                .into_iter()
+                .filter(|&spell| is_maintained_buff(world, spell))
+                .collect(),
+        );
     }
 
     pub fn in_combat(&self) -> bool {
@@ -87,6 +103,9 @@ impl FollowerApl {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
+        if self.maintained_buffs.is_none() {
+            self.initialize_maintained_buffs(world);
+        }
         if targets.is_empty() {
             self.idle();
         }
@@ -114,21 +133,6 @@ impl FollowerApl {
                     return self.execute_plan(world, actor, action, execution);
                 }
                 PrecombatPoll::Finished => {
-                    let actions = self.rotation.action_spells();
-                    self.precombat_buffs = world
-                        .get::<server::auras::ActiveAuras>(actor)
-                        .into_iter()
-                        .flat_map(|auras| auras.iter())
-                        .filter(|aura| {
-                            aura.caster == actor
-                                && !aura.passive
-                                && !aura.harmful
-                                && aura.expires_at.is_some()
-                                && actions.contains(&aura.spell_id)
-                                && is_maintained_buff(world, aura.spell_id)
-                        })
-                        .map(|aura| aura.spell_id)
-                        .collect();
                     self.phase = Phase::Idle;
                 }
             }
@@ -161,7 +165,9 @@ impl FollowerApl {
         }
         let now = crate::spell_cast::now(world);
         let spells = self
-            .precombat_buffs
+            .maintained_buffs
+            .as_ref()
+            .expect("maintained buffs initialized before upkeep")
             .iter()
             .copied()
             .filter(|spell| {
@@ -184,14 +190,11 @@ impl FollowerApl {
                 return self.execute_plan(world, actor, action, execution);
             }
         }
-        let spells = self.rotation.upkeep_spells().iter().copied().collect();
-        if !self.rotation.upkeep_spells().is_empty() {
-            world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
-            let result = self.rotation.drive(world, actor, &[]);
-            world.remove_resource::<literal_rotation::BuffUpkeep>();
-            result?;
-        }
-        Ok(())
+        let spells = self.maintained_buffs.as_ref().unwrap().clone();
+        world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+        let result = self.rotation.drive_upkeep(world, actor);
+        world.remove_resource::<literal_rotation::BuffUpkeep>();
+        result
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
@@ -218,18 +221,51 @@ impl FollowerApl {
     }
 }
 
-/// Cooldown-limited precombat effects are combat actions, not maintained buffs.
+/// Only positive self/ally aura actions without a cooldown are maintained.
 fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
-    world
-        .resource::<server::spell_info::SpellStore>()
-        .get(spell_id)
-        .is_some_and(|spell| {
-            spell.cooldowns.as_ref().is_none_or(|cooldown| {
-                cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
-            }) && spell
-                .categories
-                .as_ref()
-                .is_none_or(|category| category.max_charges == 0)
+    let store = world.resource::<server::spell_info::SpellStore>();
+    let Some(spell) = store.get(spell_id) else {
+        return false;
+    };
+    if spell
+        .cooldowns
+        .as_ref()
+        .is_some_and(|cooldown| cooldown.recovery_ms != 0 || cooldown.category_recovery_ms != 0)
+        || spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.max_charges != 0)
+        || matches!(
+            server::spell_cast::targets::explicit_requirement(spell.effects.iter()),
+            Some(server::spell_cast::targets::Relation::Enemy)
+        )
+    {
+        return false;
+    }
+    has_positive_aura(store, spell_id, &mut std::collections::BTreeSet::new())
+}
+
+fn has_positive_aura(
+    store: &server::spell_info::SpellStore,
+    spell_id: u32,
+    visited: &mut std::collections::BTreeSet<u32>,
+) -> bool {
+    if !visited.insert(spell_id) {
+        return false;
+    }
+    let Some(spell) = store.get(spell_id) else {
+        return false;
+    };
+    let aura_mask = server::auras::aura_effect_mask(spell);
+    let positive = aura_mask & !server::spell_info::positivity::negative_effects(store, spell);
+    let duration = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.duration)
+        .is_some_and(|duration| duration.duration_ms != 0);
+    (positive != 0 && duration)
+        || spell.effects.iter().any(|effect| {
+            effect.trigger_spell != 0 && has_positive_aura(store, effect.trigger_spell, visited)
         })
 }
 
@@ -285,7 +321,8 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     }
     let apl = match world.entity_mut(unit).take::<FollowerApl>() {
         Some(apl) => Ok(apl),
-        None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
+        None => crate::registry::load(world, unit, spec)
+            .map(|rotation| FollowerApl::new_for_world(world, rotation)),
     };
     match apl {
         Ok(mut apl) => {

@@ -220,8 +220,9 @@ impl crate::follower::SpecRotation for HolyPaladin {
         self.driver.action_spells(&self.bindings)
     }
 
-    fn upkeep_spells(&self) -> &'static [u32] {
-        &[53563]
+    fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let party = crate::follower::healing_party(world, actor);
+        HolyPaladin::drive(self, world, actor, &party, None)
     }
 
     fn poll_precombat(

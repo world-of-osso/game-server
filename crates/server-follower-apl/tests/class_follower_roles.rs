@@ -1203,6 +1203,14 @@ fn restoration_shaman_maintains_shields_without_enemies() {
         .insert(server_combat::networking::CombatTarget(None));
     let max = world.get::<Health>(owner).unwrap().max;
     world.entity_mut(owner).insert(Health { current: max, max });
+    world
+        .entity_mut(actor)
+        .insert(server_follower_apl::DirectedOwnerTarget(dummy));
+    server_follower_apl::drive_followers(world);
+    assert!(world.get::<FollowerApl>(actor).unwrap().in_combat());
+    world
+        .entity_mut(actor)
+        .remove::<server_follower_apl::DirectedOwnerTarget>();
     for _ in 0..200 {
         server_follower_apl::drive_followers(pull.harness.app.world_mut());
         pull.harness.app.update();
