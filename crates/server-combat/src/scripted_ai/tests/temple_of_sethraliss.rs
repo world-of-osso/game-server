@@ -17,6 +17,9 @@ fn temple_keystone_bosses_cast_observed_openers() {
         let mut visibility = crate::interest::NetworkVisibility::default();
         visibility.gain_visibility(h.players[0].1);
         h.app.world_mut().entity_mut(boss).insert(visibility);
+        let floor = h.app.world().get::<Position>(boss).unwrap().y;
+        h.app
+            .insert_resource(crate::ground::GroundMap::flat_arena(floor));
         let player = h.player();
         let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
         health.max = 1_000_000_000.0;
@@ -29,25 +32,7 @@ fn temple_keystone_bosses_cast_observed_openers() {
                 entries: Vec::new(),
             });
         h.engage(boss);
-        if entry == 263658 {
-            h.advance(21.0);
-            eprintln!(
-                "induction at 21s: cast={:?} moving={:?} pos={:?}",
-                h.app.world().get::<shared::casting::CastState>(boss),
-                h.app.world().get::<crate::networking::Moving>(boss),
-                h.app.world().get::<Position>(boss)
-            );
-            h.advance(0.1);
-            eprintln!(
-                "induction at 21.1s: cast={:?} moving={:?} pos={:?}",
-                h.app.world().get::<shared::casting::CastState>(boss),
-                h.app.world().get::<crate::networking::Moving>(boss),
-                h.app.world().get::<Position>(boss)
-            );
-            h.advance(elapsed - 21.1);
-        } else {
-            h.advance(elapsed);
-        }
+        h.advance(elapsed);
         assert!(
             h.inbox(0)
                 .spell_gos
