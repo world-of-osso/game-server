@@ -110,6 +110,7 @@ register_modules! {
     monk_harmony: (1000, "modules/monk_harmony.rs"),
     blood_death_strike: (2500, "modules/blood_death_strike.rs"),
     blood_draw: (9808, "modules/blood_draw.rs"),
+    bloodlust_lockout: (9808, "modules/bloodlust_lockout.rs"),
     blood_ground: (2501, "modules/blood_ground.rs"),
     blood_mid2: (2502, "modules/blood_mid2.rs"),
     blood_sanlayn: (2503, "modules/blood_sanlayn.rs"),
