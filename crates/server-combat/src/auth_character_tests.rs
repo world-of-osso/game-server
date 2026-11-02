@@ -536,6 +536,8 @@ pub(crate) fn queue_character_selection(
     app.register_message::<EnterWorldResponse>();
     app.register_message::<LoadTerrain>();
     app.register_message::<DeathStateUpdate>();
+    app.register_message::<shared::protocol::GroupRosterSnapshot>();
+    app.register_message::<shared::protocol::LfgStateUpdate>();
     app.insert_resource(db);
     app.insert_resource(helm_durability());
     app.init_resource::<DeathReplies>();
@@ -724,6 +726,10 @@ pub(crate) fn reconnect_character(app: &mut App, account_id: u64, character_id: 
             MessageReceiver::<EnterWorldResponse>::default(),
             MessageSender::<LoadTerrain>::default(),
             MessageReceiver::<LoadTerrain>::default(),
+            MessageSender::<shared::protocol::GroupRosterSnapshot>::default(),
+            MessageReceiver::<shared::protocol::GroupRosterSnapshot>::default(),
+            MessageSender::<shared::protocol::LfgStateUpdate>::default(),
+            MessageReceiver::<shared::protocol::LfgStateUpdate>::default(),
         ))
         .id();
     app.world_mut()

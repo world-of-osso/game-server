@@ -566,9 +566,52 @@ pub(super) fn retire_owner(world: &mut World, player: Entity) {
 }
 
 pub(crate) fn notify_reconnected(world: &mut World, player: Entity) {
-    if world.get::<FollowerRun>(player).is_some() {
-        send_update(world, player, None, None);
+    let Some(run) = world.get::<FollowerRun>(player).cloned() else {
+        return;
+    };
+    let Some(character) = world.get::<ClientId>(player).map(|id| id.0) else {
+        return;
+    };
+    let Some(group) = world.resource::<GroupRegistry>().group_id_of(character) else {
+        return;
+    };
+    let Ok(owner) = online_player(world, player, run.entry_difficulty()) else {
+        return;
+    };
+    let mut online = OnlineView::from([(character, owner)]);
+    for &member in &run.members {
+        let Some(follower) = world.get::<Follower>(member) else {
+            continue;
+        };
+        let Some(level) = world.get::<UnitLevel>(member) else {
+            continue;
+        };
+        let entry = if let Some(visual) = world.get::<shared::components::CharacterVisual>(member) {
+            follower.online_character(
+                member,
+                level.0,
+                run.entry_difficulty(),
+                visual,
+                world.get::<shared::components::EquipmentAppearance>(member),
+            )
+        } else if let Some(display) = world.get::<shared::components::ModelDisplay>(member) {
+            follower.online(member, level.0, run.entry_difficulty(), display.display_id)
+        } else {
+            continue;
+        };
+        online.insert(Follower::member_id(member), entry);
     }
+    let roster = world
+        .resource::<GroupRegistry>()
+        .build_roster(group, &online);
+    if let (Some(roster), Some(connection)) =
+        (roster, crate::spell_cast::owner_connection(world, player))
+        && let Some(mut sender) =
+            world.get_mut::<MessageSender<shared::protocol::GroupRosterSnapshot>>(connection)
+    {
+        sender.send::<GroupChannel>(roster);
+    }
+    send_update(world, player, None, None);
 }
 
 pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
@@ -605,7 +648,7 @@ pub(crate) fn reconnect(world: &mut World, player: Entity, character: u64) {
     world
         .entity_mut(player)
         .insert((DungeonDifficulty(difficulty), run, lfg));
-    send_update(world, player, None, None);
+    notify_reconnected(world, player);
 }
 
 fn end_run(world: &mut World, player: Entity, run: &FollowerRun) {
@@ -957,6 +1000,24 @@ mod copy_tests {
             assert!(app.world().get_entity(owner).is_err());
         }
         let restored = crate::auth_character::tests::reconnect_character(&mut app, 11, character);
+        let new_connection = app
+            .world_mut()
+            .query::<(Entity, &crate::networking::PlayerLink)>()
+            .iter(app.world())
+            .find(|(_, link)| link.0 == restored)
+            .unwrap()
+            .0;
+        app.update();
+        let rosters: Vec<_> = app
+            .world_mut()
+            .get_mut::<MessageReceiver<shared::protocol::GroupRosterSnapshot>>(new_connection)
+            .unwrap()
+            .receive()
+            .collect();
+        assert!(
+            rosters.iter().any(|roster| roster.members.len() == 5),
+            "reconnected owner receives the follower party roster"
+        );
         assert_eq!(restored == owner, !after_grace);
         assert_eq!(*app.world().get::<InMap>(restored).unwrap(), map);
         assert_eq!(
