@@ -26,6 +26,9 @@ fn feral_follower_bite_applies_sabertooth_to_owned_rip() {
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::ComboPoints, 5.0);
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
     crate::spell_cast::creature_cast(app.world_mut(), actor, 22568, Some(target), false).unwrap();
+    for _ in 0..10 {
+        app.update();
+    }
     let aura = app
         .world()
         .get::<crate::auras::ActiveAuras>(target)
