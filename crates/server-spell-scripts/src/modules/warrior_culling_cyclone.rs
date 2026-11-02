@@ -16,7 +16,7 @@ fn culling_cyclone(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity) -> f
     // SimC76f8118 sc_warrior.cpp:3202–3207: divide effect1 by the
     // number of active enemies. Single-target parity has one recipient.
     let targets = spell_cast::resolving_targets(world, ctx).expect("Bladestorm tick target list");
-    if targets.len() != 1 {
+    if targets.iter().filter(|&&unit| unit != ctx.caster).count() != 1 {
         return 1.0;
     }
     1.0 + spell_cast::scripts::script_effect_value(world, ctx.caster, CULLING_CYCLONE, 0) / 100.0
