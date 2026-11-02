@@ -663,6 +663,7 @@ pub fn on_effect_hit(
         (RAMPAGE, 0) => Some(rampage),
         (HOLY_SHOCK, 0) => Some(holy_shock),
         (PENANCE, 0) => Some(penance),
+        (421453, 0) => Some(ultimate_penitence),
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
         (crate::auras::augmentation::PRESCIENCE, 1) => {
@@ -1493,6 +1494,21 @@ fn penance(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     }
     super::start_channel(world, caster, &spell, Some(target));
     super::cast_triggered(world, caster, child, Some(target), depth + 1);
+}
+
+/// SimC76f8118 sc_priest_discipline.cpp:662–744 starts 421434 on impact.
+fn ultimate_penitence(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(421434)
+        .expect("Ultimate Penitence requires its channel")
+        .clone();
+    if depth >= super::effects::MAX_TRIGGER_DEPTH {
+        warn!("Ultimate Penitence channel skipped: trigger depth {depth} exhausted");
+        return;
+    }
+    super::start_channel(world, caster, &spell, Some(target));
+    super::cast_triggered(world, caster, 421434, Some(target), depth + 1);
 }
 
 /// TC a352b1fa spell_paladin.cpp:1261-1311, spell_pal_holy_shock:
