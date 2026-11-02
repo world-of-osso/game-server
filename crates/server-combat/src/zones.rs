@@ -1432,7 +1432,9 @@ mod tests {
         let path = dir.path().join("world.db");
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
+            "CREATE TABLE faction_template (ID INTEGER PRIMARY KEY);
+             INSERT INTO faction_template VALUES (1), (35);
+             CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
              CREATE TABLE tdb_jump_charge_params (
                 id INTEGER PRIMARY KEY, speed REAL NOT NULL,
                 treatSpeedAsMoveTimeSeconds INTEGER NOT NULL, unlimitedSpeed INTEGER NOT NULL,

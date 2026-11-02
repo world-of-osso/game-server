@@ -85,6 +85,11 @@ pub(crate) fn write_held_tile(
     release: mpsc::Receiver<()>,
 ) -> Result<bool, String> {
     let mut writer = open_tile_writer(&path)?;
+    // The reader already holds the FIFO open. Later capacity discovery reopens
+    // the artifact, so give it the same bytes as a regular file.
+    let replacement = path.with_extension("replacement");
+    std::fs::write(&replacement, &bytes).map_err(|error| error.to_string())?;
+    std::fs::rename(&replacement, &path).map_err(|error| error.to_string())?;
     reached.send(()).map_err(|error| error.to_string())?;
     let rescued = release.recv_timeout(IO_RESCUE).is_err();
     write_tile_bytes(&mut writer, &bytes)?;
