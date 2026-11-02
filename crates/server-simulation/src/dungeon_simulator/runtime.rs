@@ -255,6 +255,7 @@ fn build_runtime_app(
     app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    app.init_resource::<crate::spell_cast::test_harness::ReplayCombatClock>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
     app.add_systems(
         FixedUpdate,
