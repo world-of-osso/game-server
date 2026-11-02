@@ -150,6 +150,7 @@ pub mod spell_cast;
 pub mod spell_info;
 mod stand_state;
 pub mod stats;
+pub mod system_states;
 mod tame;
 mod taxi;
 mod teleport;

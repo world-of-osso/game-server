@@ -9,6 +9,7 @@ use crate::faction::{FactionTemplates, Reaction};
 use crate::maps::InMap;
 use crate::navigation::{Goal, Navigation};
 use crate::spell_cast::targets;
+use crate::system_states::with_state;
 use ::navigation::worker::{Output, Query as NavQuery};
 
 const HOLD_LOG_INTERVAL_SECONDS: f64 = 10.0;
@@ -72,19 +73,22 @@ pub(super) fn update_combat_exclusions(
         .in_map(map)
         .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
         .collect();
-    let mut geometry = SystemState::<AggroDistance>::new(world);
-    let exclusions: Result<Vec<_>, String> = watchers
-        .into_iter()
-        .map(|watcher| {
-            let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
-            let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
-            Ok(SightExclusion {
-                center,
-                radius: radius + AGGRO_STEP_MARGIN,
-                sight: crate::line_of_sight::ProjectedSight::capture(world, watcher, unit),
-            })
-        })
-        .collect();
+    let exclusions: Result<Vec<_>, String> =
+        with_state::<AggroDistance, _>(world, |world, geometry| {
+            watchers
+                .into_iter()
+                .map(|watcher| {
+                    let center =
+                        targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
+                    let radius = pull_route::read_native_radius(world, geometry, unit, watcher)?;
+                    Ok(SightExclusion {
+                        center,
+                        radius: radius + AGGRO_STEP_MARGIN,
+                        sight: crate::line_of_sight::ProjectedSight::capture(world, watcher, unit),
+                    })
+                })
+                .collect()
+        });
     if let Err(error) = &exclusions {
         warn!(?unit, %error, "Follower combat movement lacks native sight geometry");
     }
@@ -222,10 +226,21 @@ fn blockers_on_path(
     path: &[Vec3],
     watchers: Vec<Entity>,
 ) -> Result<Vec<Entity>, String> {
-    let mut geometry = SystemState::<AggroDistance>::new(world);
+    with_state::<AggroDistance, _>(world, |world, geometry| {
+        blockers_with(world, geometry, unit, path, watchers)
+    })
+}
+
+fn blockers_with(
+    world: &World,
+    geometry: &mut SystemState<AggroDistance>,
+    unit: Entity,
+    path: &[Vec3],
+    watchers: Vec<Entity>,
+) -> Result<Vec<Entity>, String> {
     let mut blockers = Vec::new();
     for watcher in watchers {
-        let radius = pull_route::read_native_radius(world, &mut geometry, unit, watcher)?;
+        let radius = pull_route::read_native_radius(world, geometry, unit, watcher)?;
         let center = targets::position(world, watcher).ok_or("Unpulled watcher lacks position")?;
         let sight = crate::line_of_sight::ProjectedSight::capture(world, watcher, unit);
         let los = world.get_resource::<crate::line_of_sight::LineOfSight>();

@@ -10,6 +10,7 @@ use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
 #[cfg(any(test, feature = "test-support"))]
 use crate::navigation::Navigation;
+use crate::system_states::with_state;
 #[path = "pull_route_paths.rs"]
 mod paths;
 
@@ -137,13 +138,14 @@ fn read_exposed_packs(
     target_pack: u64,
 ) -> Result<BTreeSet<u64>, String> {
     let mut packs = BTreeSet::from([target_pack]);
-    let mut geometry = SystemState::<AggroDistance>::new(world);
-    for source in sources.values() {
-        if route_enters_source(world, &mut geometry, tank, source, points)? {
-            packs.insert(source.pack_guid);
+    with_state::<AggroDistance, _>(world, |world, geometry| {
+        for source in sources.values() {
+            if route_enters_source(world, geometry, tank, source, points)? {
+                packs.insert(source.pack_guid);
+            }
         }
-    }
-    Ok(packs)
+        Ok(packs)
+    })
 }
 
 fn read_complete_route(
