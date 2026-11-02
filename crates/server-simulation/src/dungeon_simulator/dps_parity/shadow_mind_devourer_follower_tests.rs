@@ -46,6 +46,7 @@ fn follower_mind_blast_can_earn_mind_devourer_only_with_the_talent() {
 fn cast_madness(buffed: bool) -> (i32, f32, bool) {
     let _seed = crate::random::seed_scope(70448);
     let (mut app, actor, target) = fixture();
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 232698, Some(actor), 0);
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Insanity, 10_000.0);
     if buffed {
         crate::spell_cast::cast_triggered(app.world_mut(), actor, 373204, Some(actor), 0);
