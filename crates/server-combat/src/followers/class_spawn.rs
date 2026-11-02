@@ -420,6 +420,13 @@ pub fn install_class(
         }
     }
     .and_then(|()| super::gear::publish_appearance(world, entity))?;
+    // Armor-dependent passives were not eligible before the gear was equipped.
+    crate::auras::sync_passives(
+        world,
+        entity,
+        crate::auras::AuraSource::KnownSpell,
+        &passives,
+    );
     spells.extend((provider.equipped_actions)(world, entity, source.spec_id)?);
     for id in &spells {
         let spell = world

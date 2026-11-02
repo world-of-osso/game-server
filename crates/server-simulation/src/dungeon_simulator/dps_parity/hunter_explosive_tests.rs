@@ -19,6 +19,80 @@ fn hits(run: &Run, spell: u32, target: Entity) -> usize {
         .count()
 }
 
+#[test]
+#[ignore = "requires private exact254 profile/traits and native world data"]
+fn queued_explosive_shot_skips_dead_target_before_selecting_survivor() {
+    use literal_rotation::{
+        Driver,
+        equipment::Equipment,
+        execution::{Execution, NativeAction, Prepared},
+    };
+    use server::simc_apl::{Action, Program};
+    use std::collections::BTreeMap;
+
+    let mut run = player(2);
+    let dead = run.targets[0];
+    let survivor = run.targets[1];
+    let equipment = Equipment::load(run.app.world(), run.actor, &mut Default::default()).unwrap();
+    let mut driver = Driver::new(Program::parse(&[("default", "explosive_shot")]).unwrap());
+    let action = Action {
+        source_row: None,
+        name: "explosive_shot".into(),
+        target: None,
+        options: Default::default(),
+    };
+    driver
+        .execute(
+            run.app.world_mut(),
+            run.actor,
+            action,
+            Execution::Queue(Box::new(Execution::Spell(212431, dead, Some(dead))), 0.0),
+        )
+        .unwrap();
+    run.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
+    run.targets = vec![survivor];
+    let sample = |run: &mut Run| {
+        Prepared::read(
+            run.app.world_mut(),
+            run.actor,
+            &run.targets,
+            &equipment,
+            [NativeAction {
+                name: "explosive_shot",
+                spell: 212431,
+                talent: None,
+                self_target: false,
+            }],
+            false,
+        )
+        .unwrap()
+    };
+    let facts = BTreeMap::<String, f64>::new();
+    let prepared = sample(&mut run);
+    assert!(
+        driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap()
+            .is_none(),
+        "dead queued target must be discarded"
+    );
+    let prepared = sample(&mut run);
+    let (action, execution) = driver
+        .select("default", &facts, &prepared, &equipment)
+        .unwrap()
+        .expect("survivor can be selected");
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    for _ in 0..160 {
+        run.app.update();
+    }
+    assert!(
+        hits(&run, 212431, survivor) > 0,
+        "survivor receives native Explosive Shot damage"
+    );
+}
+
 fn full_recharge(run: &Run, name: &str, spell: u32) -> f64 {
     use crate::simc_apl_native::{Bindings, Encounter, FightStyle, NativeFacts};
     use server::simc_apl::Facts;

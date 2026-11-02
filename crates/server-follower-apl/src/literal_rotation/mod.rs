@@ -240,9 +240,16 @@ impl Driver {
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
         if let Some((action, execution, deadline)) = self.queued.take() {
-            let ready = prepared.permits_row(&action)? && facts.target_ready(&action)?;
+            // The queued cast retains its original target. Recheck that target,
+            // not the new default target selected after the previous one died.
+            let mut queued_action = action.clone();
+            if let Execution::Spell(_, unit, primary) = &execution {
+                queued_action.target = Some(primary.unwrap_or(*unit).to_bits());
+            }
+            let ready =
+                prepared.permits_row(&queued_action)? && facts.target_ready(&queued_action)?;
             let current = if ready {
-                prepared.execution_in(&action, equipment, &self.program)?
+                prepared.execution_in(&queued_action, equipment, &self.program)?
             } else {
                 None
             };

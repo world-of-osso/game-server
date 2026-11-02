@@ -7,9 +7,6 @@ use shared::components::PowerType;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-/// The active navigation request has not published its destination yet.
-pub const DUNGEON_MOVEMENT_DESTINATION_PENDING: &str = "DUNGEON_MOVEMENT_DESTINATION_PENDING";
-
 /// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
 /// map-data fallback. Production worlds do not call this fixture setup.
 #[cfg(any(test, feature = "test-support"))]
@@ -412,7 +409,9 @@ impl<'a> NativeFacts<'a> {
             .get::<shared::casting::CastState>(target)
             .is_some()
         {
-            return Err("NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot".into());
+            return Err(server::simc_apl::not_ready(
+                "NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot",
+            ));
         }
         Ok(0.0)
     }
@@ -592,10 +591,18 @@ impl<'a> NativeFacts<'a> {
                 .ok_or("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")?;
             let destination = match navigation.current_destination(self.actor) {
                 Some(destination) => destination,
+                // The active request has not published its destination yet.
                 None if navigation.route_pending(self.actor) => {
-                    return Err(DUNGEON_MOVEMENT_DESTINATION_PENDING.into());
+                    return Err(server::simc_apl::not_ready(
+                        "DUNGEON_MOVEMENT_DESTINATION_PENDING",
+                    ));
                 }
-                None => return Err("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE".into()),
+                // Moving without a navigation route, e.g. under another movement driver.
+                None => {
+                    return Err(server::simc_apl::not_ready(
+                        "DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE",
+                    ));
+                }
             };
             return Ok(f64::from(position.distance(destination)));
         }
