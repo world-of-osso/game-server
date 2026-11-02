@@ -96,12 +96,15 @@ impl Mailbox {
         for (entity, request) in outgoing {
             match request {
                 Some(request) => self.queue(request),
-                None => {
-                    self.cancel(entity);
-                    self.cancelled.insert(entity);
-                }
+                None => self.withdraw(entity),
             }
         }
+    }
+
+    /// Drop queued work and the worker's retained plan for `entity`.
+    fn withdraw(&mut self, entity: u64) {
+        self.cancel(entity);
+        self.cancelled.insert(entity);
     }
 
     fn pop(&mut self) -> Option<Request> {
@@ -153,6 +156,19 @@ impl Worker {
             current: BTreeMap::new(),
             pending: BTreeMap::new(),
             failure,
+        }
+    }
+
+    /// Hold submissions and cancels until `poll`. Each entity's latest request then
+    /// reaches its map worker once, after any cancel, so superseded requests never
+    /// update a retained plan and results do not depend on worker-thread timing.
+    pub fn defer_dispatch(&mut self) {
+        for lane in self
+            .lanes
+            .values_mut()
+            .chain(std::iter::once(&mut self.unbaked))
+        {
+            lane.defer = true;
         }
     }
 
@@ -230,6 +246,9 @@ struct WorkerLane {
     wake: SyncSender<()>,
     thread: Option<JoinHandle<()>>,
     outgoing: BTreeMap<u64, Option<Request>>,
+    /// Deferred mode only: cancels to apply before `outgoing` at the next poll.
+    cancels: BTreeSet<u64>,
+    defer: bool,
     current: BTreeMap<u64, u64>,
     pending: BTreeMap<u64, u64>,
     failure: Option<String>,
@@ -255,6 +274,8 @@ impl WorkerLane {
             wake,
             thread,
             outgoing: BTreeMap::new(),
+            cancels: BTreeSet::new(),
+            defer: false,
             current: BTreeMap::new(),
             pending: BTreeMap::new(),
             failure,
@@ -273,14 +294,20 @@ impl WorkerLane {
         self.current.insert(request.entity, request.id);
         self.pending.insert(request.entity, request.id);
         self.outgoing.insert(request.entity, Some(request));
-        self.dispatch();
+        if !self.defer {
+            self.dispatch();
+        }
     }
 
     pub fn cancel(&mut self, entity: u64) {
         self.current.remove(&entity);
         self.pending.remove(&entity);
         self.outgoing.insert(entity, None);
-        self.dispatch();
+        if self.defer {
+            self.cancels.insert(entity);
+        } else {
+            self.dispatch();
+        }
     }
 
     pub fn is_idle(&self) -> bool {
@@ -332,6 +359,9 @@ impl WorkerLane {
             .is_none_or(|thread| thread.is_finished())
         {
             return Err("navigation worker exited unexpectedly".into());
+        }
+        for entity in std::mem::take(&mut self.cancels) {
+            mailbox.withdraw(entity);
         }
         mailbox.apply_updates(std::mem::take(&mut self.outgoing));
         Ok(Some(

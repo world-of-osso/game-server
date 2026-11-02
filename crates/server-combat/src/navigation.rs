@@ -327,9 +327,13 @@ pub(crate) fn install_publication(app: &mut App) {
     install_publication_with(app, publish_navigation_results);
 }
 
-/// Headless simulation: each fixed tick waits for the worker, so a seed replays exactly.
+/// Headless simulation: requests reach the worker only at the fixed-tick publication,
+/// which waits for them. A seed then replays exactly, independent of thread timing.
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) fn install_headless_publication(app: &mut App) {
+pub(crate) fn install_headless(app: &mut App, root: &Path) {
+    let mut navigation = Navigation::new(root);
+    navigation.worker.defer_dispatch();
+    app.insert_resource(navigation);
     install_publication_with(app, publish_all_navigation_results);
 }
 
