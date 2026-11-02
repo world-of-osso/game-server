@@ -771,3 +771,11 @@ D	shadow_priest.rs	slam_impact	launch_triggered_spell_with_primary	&damage	1	122
 D	shadow_volley.rs	grant	AuraApplication	spell	1	1242171,1279437
 D	soul_of_the_forest.rs	recast_on_nearby_allies	cast_triggered	spell	1	774,8936
 D	spellslinger.rs	conjure	schedule_full_trigger	spec.payload	1	443722,443763
+D	stacking_summons.rs	advance_counter	try_cast_triggered	policy.refund	1	1276318
+D	stacking_summons.rs	cast_summon	try_cast_triggered	child	1	193331,193332,455465,455476,1251781
+D	stacking_summons.rs	grant_stack	try_cast_triggered	policy.counter	1	1276166
+D	stacking_summons.rs	summon_choice	try_cast_triggered	spell	1	1276182,1276283,1282501,1282502
+D	subtlety_clone.rs	launch_due	launch_triggered_spell	&clone.spell	1	1269205,1269209,1269214,1269217,1269336,1269340,1269560,1269565
+D	subtlety_finishers.rs	dispatch_shadow_finisher	launch_triggered_spell	&child	1	319190,328082
+D	subtlety_secret.rs	launch_due_clones	launch_triggered_spell	&spell	1	282449
+D	subtlety_secret.rs	launch_player	launch_triggered_spell	&spell	1	280720
