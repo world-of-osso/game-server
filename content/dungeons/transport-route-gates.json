@@ -1,0 +1,10 @@
+{
+  "gates": [
+    {
+      "map_id": 2521,
+      "transport_source_guid": 3276417217,
+      "required_boss_entries": [188252],
+      "provenance": "INFERRED_RUBY_FERRY: server-combat taxi::start_ruby_ferry requires encounter 2609 (Melidrussa) Done before TaxiPath 11715"
+    }
+  ]
+}
