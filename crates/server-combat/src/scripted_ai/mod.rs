@@ -838,7 +838,8 @@ pub(crate) fn limit_scripted_loss(
         return lost_dwarves::limit_loss(health, loss);
     }
     let animated_gold = name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT);
-    let protected = herald_unkillable || animated_gold;
+    let council = name.is_some_and(|name| name.0 == "boss_council_of_tribes");
+    let protected = herald_unkillable || animated_gold || council;
     if protected && loss >= health.current {
         (health.current - 1.0).max(0.0)
     } else {
