@@ -757,3 +757,12 @@ D	periodic_counters.rs	apply_owned	AuraApplication	spell_id	1	205473,1222865
 D	pet_sets.rs	cast_stomps	cast_triggered	rule.payload	1	201754
 D	pet_sets.rs	cast_stomps	launch_triggered_spell	echo	1	201754
 D	pet_sets.rs	on_hit	cast_triggered	rule.aura	1	1299389
+D	protection_demolish.rs	demolish_tick	cast_triggered	spell	1	440884,440886,440888
+D	protection_demolish.rs	demolish_tick	try_cast_triggered	buff	1	1270843,1270846
+D	ret_damage.rs	queue_tempest	launch_triggered_spell	&child	1	53385,224239
+D	ret_damage.rs	queue_tempest	load_triggered_spell	id	1	53385,224239
+D	ret_purpose.rs	roll_selected_divine_purpose	try_cast_triggered	buff	1	223819,408458
+D	ret_tier.rs	after_foreground_spender	cast_triggered	kind	1	1306161,1306162,1310461
+D	ret_toll.rs	cast_child	launch_triggered_spell	&child	1	406957,1279408
+D	rogue_supercharger.rs	grant_counters	cast_triggered	counter	1	470398,470406,470409,470412,470414,470415,470416
+D	shadow_bolts.rs	launch_bolts	schedule_full_trigger	bolt.id	1	1242189
