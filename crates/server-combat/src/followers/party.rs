@@ -1658,9 +1658,24 @@ mod copy_tests {
             MessageReceiver::<ResurrectionOffer>::default(),
         ));
         super::super::release::update(h.app.world_mut());
-        h.advance(80);
-        let offers =
-            crate::spell_cast::test_harness::drain::<ResurrectionOffer>(&mut h.app, h.connection);
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_some(),
+            "resurrection cast must start"
+        );
+        let mut offers = Vec::new();
+        for _ in 0..80 {
+            h.advance(1);
+            offers.extend(crate::spell_cast::test_harness::drain::<ResurrectionOffer>(
+                &mut h.app,
+                h.connection,
+            ));
+            if !offers.is_empty() {
+                break;
+            }
+        }
         assert_eq!(offers.len(), 1);
         assert_eq!(h.health(h.caster), 0.0);
     }
