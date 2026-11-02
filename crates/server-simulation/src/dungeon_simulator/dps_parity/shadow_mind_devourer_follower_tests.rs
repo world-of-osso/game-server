@@ -43,7 +43,7 @@ fn follower_mind_blast_can_earn_mind_devourer_only_with_the_talent() {
     }
 }
 
-fn cast_madness(buffed: bool) -> (i32, f32, bool) {
+fn cast_madness(buffed: bool) -> (i32, i32, f32, bool) {
     let _seed = crate::random::seed_scope(70448);
     let (mut app, actor, target) = fixture();
     crate::spell_cast::cast_triggered(app.world_mut(), actor, 232698, Some(actor), 0);
@@ -56,7 +56,7 @@ fn cast_madness(buffed: bool) -> (i32, f32, bool) {
         .unwrap()
         .0;
     crate::spell_cast::creature_cast(app.world_mut(), actor, 335467, Some(target), false).unwrap();
-    for _ in 0..20 {
+    for _ in 0..80 {
         app.update();
     }
     let after = crate::spell_cast::powers::power_value(app.world(), actor, PowerType::Insanity)
@@ -72,8 +72,19 @@ fn cast_madness(buffed: bool) -> (i32, f32, bool) {
         })
         .expect("foreground Madness impact")
         .amount;
+    let tick = app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(335467) && event.kind == CombatLogKind::Damage && event.periodic
+        })
+        .expect("foreground Madness periodic tick")
+        .amount;
     (
         damage,
+        tick,
         before - after,
         crate::auras::has_aura(app.world(), actor, 373204),
     )
@@ -82,8 +93,8 @@ fn cast_madness(buffed: bool) -> (i32, f32, bool) {
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_mind_devourer_makes_madness_free_stronger_and_consumes_one_use() {
-    let (normal, normal_cost, _) = cast_madness(false);
-    let (enhanced, enhanced_cost, retained) = cast_madness(true);
+    let (normal, normal_tick, normal_cost, _) = cast_madness(false);
+    let (enhanced, enhanced_tick, enhanced_cost, retained) = cast_madness(true);
     assert!(normal_cost > 0.0);
     assert_eq!(enhanced_cost, 0.0);
     assert!(!retained);
@@ -91,4 +102,20 @@ fn follower_mind_devourer_makes_madness_free_stronger_and_consumes_one_use() {
         (enhanced as f32 / normal as f32 - 1.2).abs() < 0.02,
         "normal={normal} enhanced={enhanced}"
     );
+    assert!(
+        (enhanced_tick as f32 / normal_tick as f32 - 1.2).abs() < 0.02,
+        "normal tick={normal_tick} enhanced tick={enhanced_tick}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_mind_devourer_is_not_consumed_by_background_madness() {
+    let (mut app, actor, target) = fixture();
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 373204, Some(actor), 0);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 335467, Some(target), 0);
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(crate::auras::has_aura(app.world(), actor, 373204));
 }
