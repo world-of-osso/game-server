@@ -300,10 +300,13 @@ fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
                 continue;
             };
             if let std::collections::hash_map::Entry::Vacant(entry) = first_hits.entry(pack) {
+                let source = event.source.and_then(Entity::try_from_bits);
+                let source_detail = source
+                    .map(|unit| super::diagnostics::inspect_unit(run.app.world(), None, unit));
                 assert_eq!(
                     event.source,
                     Some(owner.to_bits()),
-                    "pack {pack} must be tagged by the owner"
+                    "pack {pack} must be tagged by the owner: event={event:?} source={source_detail:?}"
                 );
                 entry.insert(event.target.unwrap());
                 if first_hits.len() == 2 {
