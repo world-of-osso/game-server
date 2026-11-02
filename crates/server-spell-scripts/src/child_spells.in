@@ -738,3 +738,10 @@ D	hunter_howl/summons.rs	summon	cast_triggered_with_overrides	rule.spell	1	47199
 D	hunter_huntmaster.rs	earn_companion	cast_triggered_with_overrides	summon	1	459733,459739
 D	hunter_huntmaster.rs	earn_companion	try_cast_triggered	buff	1	459735,459738
 D	impact_procs.rs	cast_impact_proc	try_cast_triggered	policy.payload	1	445579
+D	marksmanship.rs	bank_residual	cast_triggered_with_effect0_amount	child	1	269576,394021,458169,469882,1253836,1263250,1270065,1280134
+D	melee_reset.rs	roll_reset	try_cast_triggered	reset.buff	1	406086
+D	mistweaver_celestial_conduit.rs	pulse	try_cast_triggered	spell	1	443038,443039
+D	monk_harmony.rs	apply	AuraApplication	spell	1	450521,450711
+D	outlaw_coup.rs	execute_coup	ScaledTrigger	spell_id	1	462140,462239,462240
+D	outlaw_spree_power.rs	launch_hand	launch_triggered_spell	&spell	1	57841,57842
+D	outlaw_spree_power.rs	launch_hand	load_triggered_spell	hand	1	57841,57842
