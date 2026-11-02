@@ -87,6 +87,38 @@ fn changed_destination_is_replanned_after_cached_route_ends() {
 }
 
 #[test]
+fn chase_replans_if_target_moves_at_cached_reach_boundary() {
+    let (mut world, pet) = pet_world(None, Vec3::ZERO, Vec3::X * 10.0);
+    let target = match world.get::<PetMotion>(pet).unwrap() {
+        PetMotion::Chase(target) => *target,
+        _ => unreachable!(),
+    };
+    for _ in 0..100 {
+        tick(&mut world);
+        if server::test_support::within_reach(
+            point(world.get::<Position>(pet).unwrap()),
+            Vec3::X * 10.0,
+            crate::creature_ai::CHASE_REACH,
+        ) {
+            break;
+        }
+    }
+    world.entity_mut(target).insert(Position {
+        x: 10.5,
+        y: 0.0,
+        z: 0.0,
+    });
+    for _ in 0..20 {
+        tick(&mut world);
+    }
+    let actual = point(world.get::<Position>(pet).unwrap());
+    assert!(
+        server::test_support::within_reach(actual, Vec3::X * 10.5, crate::creature_ai::CHASE_REACH),
+        "pet stopped at {actual:?}"
+    );
+}
+
+#[test]
 fn in_reach_pet_stays_in_reach_for_eighty_native_movement_ticks() {
     for from in [Vec3::ZERO, Vec3::new(1.83, 0.0, 0.0)] {
         let (mut world, pet) = pet_world(Some(stockade_space()), from, Vec3::ZERO);
