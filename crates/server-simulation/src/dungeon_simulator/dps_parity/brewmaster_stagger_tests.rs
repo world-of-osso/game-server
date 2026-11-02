@@ -292,12 +292,29 @@ fn stagger_mid_tick_refresh_preserves_deadline_and_small_pool_clears() {
     crate::combat::replay_healer_hit(run.app.world_mut(), attacker, actor, &hit).unwrap();
     let refreshed = crate::auras::stagger::pool_size(run.app.world(), actor);
     assert!(refreshed > initial, "a second hit adds unpaid damage");
-    let before_tick = run.app.world().get::<Health>(actor).unwrap().current;
+    let refreshed_at = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     for _ in 0..6 {
         run.app.update();
     }
+    // Net health also moves with same-tick heals (Rune of Unleashed Fire, Celestial
+    // Fortune), so observe the Stagger tick itself.
     assert!(
-        run.app.world().get::<Health>(actor).unwrap().current < before_tick,
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[refreshed_at..]
+            .iter()
+            .any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.spell_id == Some(124255)
+                    && event.target == Some(actor.to_bits())
+                    && event.amount > 0
+            ),
         "the first tick keeps its original deadline"
     );
     let pool = crate::auras::stagger::pool_size(run.app.world(), actor);

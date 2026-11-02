@@ -265,6 +265,16 @@ pub(super) fn equip_profile_item(party: &mut ClassParty, unit: Entity, spec: u32
 
 /// Run the party's APL precombat until the tank and healer enter combat.
 pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
+    wait_for_combat(app, actors, true)
+}
+
+/// Start the encounter when the first actor enters combat, before either can
+/// spend an opener while the other is still completing precombat.
+pub(super) fn start_at_first_combat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
+    wait_for_combat(app, actors, false)
+}
+
+fn wait_for_combat(app: &mut App, actors: &[Entity], wait_for_all: bool) -> Result<(), String> {
     for _ in 0..MAX_PRECOMBAT_TICKS {
         app.update();
         let world = app.world();
@@ -275,11 +285,16 @@ pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), S
         }) {
             return Err(format!("HEALER_REPLAY_APL_FAILED:{failed}"));
         }
-        if actors.iter().all(|&actor| {
+        let in_combat = |actor: &Entity| {
             world
-                .get::<server_follower_apl::FollowerApl>(actor)
+                .get::<server_follower_apl::FollowerApl>(*actor)
                 .is_some_and(|apl| apl.in_combat())
-        }) {
+        };
+        if if wait_for_all {
+            actors.iter().all(in_combat)
+        } else {
+            actors.iter().any(in_combat)
+        } {
             return Ok(());
         }
     }
@@ -341,7 +356,7 @@ fn replay(
     for &extra in &sources[1..] {
         super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
     }
-    finish_precombat(&mut app, &[tank, healer])?;
+    start_at_first_combat(&mut app, &[tank, healer])?;
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
     let frozen_sources = sources
