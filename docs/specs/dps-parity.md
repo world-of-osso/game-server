@@ -435,6 +435,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Frost literal rotation
 
+- Hyperpyrexia rolls on actual Frost Strike impacts for either weapon configuration, including the native two-handed damage child325464, and banks the native fraction of damage (`sc_death_knight.cpp`10759–10795).
+
 - Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
 
 - Successful native Pillar with selected Frozen Dominion377226 starts native1233152, whose real periodic clock triggers196771 area damage (`sc_death_knight.cpp`12050–12060,15341–15342). Do not synthesize periodic damage in the literal driver.
