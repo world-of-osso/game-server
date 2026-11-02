@@ -26,23 +26,28 @@ pub fn party_unintended_reach(world: &mut World, party: &[Entity]) -> Vec<(Entit
 fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
     let owners: HashSet<_> = party.iter().copied().collect();
     let mut units = party.to_vec();
-    let pets: Vec<_> = world
-        .query_filtered::<(
+    let pets: Vec<_> = crate::system_states::with_query::<
+        (
             Entity,
             Option<&crate::hunter_pet::HunterPet>,
             Option<&SummonedCreature>,
-        ), Or<(With<crate::hunter_pet::HunterPet>, With<SummonedCreature>)>>()
-        .iter(world)
-        .filter(|(unit, pet, summon)| {
-            let owner = pet
-                .map(|pet| pet.owner)
-                .or_else(|| summon.map(|summon| summon.owner));
-            owner.is_some_and(|owner| {
-                owners.contains(&owner) && targets::same_map(world, owner, *unit)
+        ),
+        Or<(With<crate::hunter_pet::HunterPet>, With<SummonedCreature>)>,
+        _,
+    >(world, |world, query| {
+        query
+            .iter(world)
+            .filter(|(unit, pet, summon)| {
+                let owner = pet
+                    .map(|pet| pet.owner)
+                    .or_else(|| summon.map(|summon| summon.owner));
+                owner.is_some_and(|owner| {
+                    owners.contains(&owner) && targets::same_map(world, owner, *unit)
+                })
             })
-        })
-        .map(|(unit, _, _)| unit)
-        .collect();
+            .map(|(unit, _, _)| unit)
+            .collect()
+    });
     for pet in pets {
         if !units.contains(&pet) {
             units.push(pet);

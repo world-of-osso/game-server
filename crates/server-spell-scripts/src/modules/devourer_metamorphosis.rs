@@ -166,10 +166,7 @@ fn trigger_voidsurge(world: &mut World, caster: Entity, spell: &combat::spell_in
 
 fn update_voidsurge(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<VoidSurges>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<VoidSurges>>(world);
     for caster in casters {
         let due = {
             let mut state = world
@@ -415,10 +412,7 @@ fn is_protected_cast(world: &World, unit: Entity) -> bool {
 
 fn update_drain(world: &mut World) {
     let now = spell_cast::now(world);
-    let units: Vec<_> = world
-        .query_filtered::<Entity, With<DrainDeadline>>()
-        .iter(world)
-        .collect();
+    let units = combat::system_states::entities_with::<With<DrainDeadline>>(world);
     for unit in units {
         while let Some(deadline) = world.get::<DrainDeadline>(unit).map(|pending| pending.0) {
             if !auras::has_aura(world, unit, META) {

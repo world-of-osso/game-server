@@ -192,10 +192,7 @@ pub(super) fn eruption(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     let milliseconds = script_effect_value(world, caster, ERUPTION_EXTENSION, 0)
         .max(0.0)
         .round() as u32;
-    let units: Vec<Entity> = world
-        .query_filtered::<Entity, With<crate::auras::ActiveAuras>>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<With<crate::auras::ActiveAuras>>(world);
     for unit in units {
         crate::auras::extend_owned_duration(
             world,

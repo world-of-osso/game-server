@@ -627,10 +627,7 @@ fn update_consecration_targets(world: &mut World, entity: Entity, pulses: &Groun
 }
 
 pub(in crate::spell_cast) fn update_ground_pulses(world: &mut World) {
-    let entities: Vec<_> = world
-        .query_filtered::<Entity, With<GroundPulses>>()
-        .iter(world)
-        .collect();
+    let entities = crate::system_states::entities_with::<With<GroundPulses>>(world);
     for entity in entities {
         update_ground_pulse(world, entity);
     }

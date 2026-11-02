@@ -617,14 +617,11 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
 
 /// `Creature::AIM_Create` + `InitializeAI` → `Reset`, for new and respawned creatures.
 fn init_creature_ai(world: &mut World) {
-    let pending: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<CreatureScriptName>,
-            Without<CreatureAiState>,
-            Without<DeathState>,
-        )>()
-        .iter(world)
-        .collect();
+    let pending = crate::system_states::entities_with::<(
+        With<CreatureScriptName>,
+        Without<CreatureAiState>,
+        Without<DeathState>,
+    )>(world);
     for creature in pending {
         initialize_ai(world, creature);
     }
@@ -677,14 +674,11 @@ pub(crate) fn reinitialize(world: &mut World, creature: Entity) {
 /// `Creature::Update` (ALIVE) → `AIUpdateTick` → `UpdateAI(diff)`.
 fn update_creature_ai(world: &mut World) {
     let diff_ms = world.resource::<Time>().delta().as_millis() as u32;
-    let creatures: Vec<Entity> = world
-        .query_filtered::<Entity, (
-            With<CreatureAiState>,
-            Without<DeathState>,
-            Without<GridDormant>,
-        )>()
-        .iter(world)
-        .collect();
+    let creatures = crate::system_states::entities_with::<(
+        With<CreatureAiState>,
+        Without<DeathState>,
+        Without<GridDormant>,
+    )>(world);
     for creature in creatures {
         dispatch(world, creature, Hook::UpdateAi(diff_ms));
     }

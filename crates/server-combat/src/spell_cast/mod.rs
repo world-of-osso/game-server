@@ -1447,10 +1447,7 @@ pub(crate) fn send_to_set<M: lightyear::prelude::Message + Clone>(
 ) {
     let receivers: Vec<Entity> = match world.get::<NetworkVisibility>(unit) {
         Some(visibility) => visibility.visible_senders().collect(),
-        None => world
-            .query_filtered::<Entity, With<Authenticated>>()
-            .iter(world)
-            .collect(),
+        None => crate::system_states::entities_with::<With<Authenticated>>(world),
     };
     for connection in receivers {
         if let Some(mut sender) = world.get_mut::<MessageSender<M>>(connection) {

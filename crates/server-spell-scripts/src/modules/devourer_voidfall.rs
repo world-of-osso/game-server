@@ -237,10 +237,7 @@ fn launch_meteor(world: &mut World, actor: Entity, mut impact: Impact) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query_filtered::<Entity, With<VoidfallState>>()
-        .iter(world)
-        .collect();
+    let actors = combat::system_states::entities_with::<With<VoidfallState>>(world);
     for actor in actors {
         let due = {
             let mut state = world.get_mut::<VoidfallState>(actor).unwrap();

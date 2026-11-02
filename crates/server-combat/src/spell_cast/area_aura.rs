@@ -96,10 +96,7 @@ pub(crate) fn create(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
 }
 
 pub(crate) fn update_dynamic_objects(world: &mut World) {
-    let objects: Vec<Entity> = world
-        .query_filtered::<Entity, With<DynamicObject>>()
-        .iter(world)
-        .collect();
+    let objects = crate::system_states::entities_with::<With<DynamicObject>>(world);
     for object in objects {
         update_object(world, object);
     }

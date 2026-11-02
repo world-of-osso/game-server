@@ -119,13 +119,10 @@ fn apply_updates(world: &mut World, unit: Entity, updates: Vec<AmountUpdate>) {
 /// Recalculate amounts only; never restart native aura duration, stacks or tick phase.
 pub(super) fn refresh_amounts(world: &mut World) {
     let now = super::aura_now(world);
-    let units: Vec<_> = world
-        .query_filtered::<Entity, (
-            Or<(With<Player>, With<Follower>)>,
-            Or<(Changed<CharacterStats>, Changed<ActiveAuras>)>,
-        )>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<(
+        Or<(With<Player>, With<Follower>)>,
+        Or<(Changed<CharacterStats>, Changed<ActiveAuras>)>,
+    )>(world);
     for unit in units {
         let updates = collect_updates(world, unit, now);
         apply_updates(world, unit, updates);

@@ -916,8 +916,21 @@ fn physical_spell_damage_takes_the_creatures_armor() {
     h.set_power(PowerType::Rage, 500.0);
     h.cast_and_deliver(MORTAL_STRIKE, Some(npc));
     // 5.2012 × AP 100 = 520 ± 2.5% (507-533), × 0.7 truncated: 354-373.
-    let damage = 5000.0 - h.health(npc);
-    assert!((354.0..=373.0).contains(&damage), "{damage}");
+    let damage: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Damage && event.target == Some(npc.to_bits()))
+        .collect();
+    let strike = damage
+        .iter()
+        .find(|event| event.spell_id == Some(MORTAL_STRIKE))
+        .unwrap_or_else(|| panic!("{damage:?}"));
+    assert!(
+        (354..=373).contains(&strike.amount),
+        "{damage:?} health lost {}",
+        5000.0 - h.health(npc)
+    );
 }
 
 #[test]

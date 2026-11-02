@@ -198,10 +198,7 @@ fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
 
 /// Drive every APL-controlled follower after the follower brain positioned it.
 pub fn drive_followers(world: &mut World) {
-    let units: Vec<_> = world
-        .query_filtered::<Entity, With<AplControlled>>()
-        .iter(world)
-        .collect();
+    let units = server::system_states::entities_with::<With<AplControlled>>(world);
     for unit in units {
         if let Some(follower) = server::followers::acting_follower(world, unit) {
             drive_follower(world, unit, follower.profile.spec_id);

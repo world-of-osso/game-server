@@ -1,5 +1,4 @@
 //! Select a fight position away from unrelated idle hostiles.
-use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 
 use super::{Follower, ai, owner_trail, positioning, pull_route, tank_planner};
@@ -7,6 +6,7 @@ use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
 use crate::networking::CombatTarget;
 use crate::spell_cast::targets;
+use crate::system_states::with_state;
 
 #[derive(Component)]
 struct PullBack {
@@ -64,19 +64,20 @@ pub(super) fn read_exclusions(
                 && !planned.contains(&actor)
         })
         .collect();
-    let mut geometry = SystemState::<AggroDistance>::new(world);
-    let mut exclusion = Vec::new();
-    for watcher in watchers {
-        let aggro_radius = if positioning::is_unpulled_hostile(world, tank, watcher) {
-            pull_route::read_native_radius(world, &mut geometry, tank, watcher)?
-        } else {
-            0.0
-        };
-        let radius = aggro_radius + reach;
-        let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
-        exclusion.push((center, radius));
-    }
-    Ok(exclusion)
+    with_state::<AggroDistance, _>(world, |world, geometry| {
+        let mut exclusion = Vec::new();
+        for watcher in watchers {
+            let aggro_radius = if positioning::is_unpulled_hostile(world, tank, watcher) {
+                pull_route::read_native_radius(world, geometry, tank, watcher)?
+            } else {
+                0.0
+            };
+            let radius = aggro_radius + reach;
+            let center = targets::position(world, watcher).ok_or("Idle hostile lacks position")?;
+            exclusion.push((center, radius));
+        }
+        Ok(exclusion)
+    })
 }
 
 pub(super) fn outside_exclusions(point: Vec3, exclusions: &[(Vec3, f32)]) -> bool {

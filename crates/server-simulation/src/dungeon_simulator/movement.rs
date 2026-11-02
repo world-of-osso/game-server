@@ -1,6 +1,5 @@
 //! Time along frozen edges replaces physical navigation, for every simulated mover.
 use super::{Space, campaign::MoveIntent};
-use crate::creature_ai::FollowerMoves;
 use bevy::prelude::*;
 use shared::components::{Health, Position, Rotation};
 
@@ -238,7 +237,6 @@ fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> V
 }
 
 fn handle_unreachable_movement(
-    moves: &mut FollowerMoves,
     world: &mut World,
     unit: Entity,
     from: Vec3,
@@ -250,14 +248,14 @@ fn handle_unreachable_movement(
     {
         crate::creature_ai::mark_chase_blocked(world, unit, *target);
         let position = *world.get::<Position>(unit).unwrap();
-        crate::creature_ai::move_follower_with(moves, world, unit, position, 0.0);
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
     if world.get::<MoveIntent>(unit).is_none()
         && world.get::<crate::creature_ai::FollowOwner>(unit).is_some()
     {
         let position = *world.get::<Position>(unit).unwrap();
-        crate::creature_ai::move_follower_with(moves, world, unit, position, 0.0);
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
     if matches!(
@@ -265,7 +263,7 @@ fn handle_unreachable_movement(
         Some(crate::creature_ai::PetMotion::Chase(_))
     ) {
         let position = *world.get::<Position>(unit).unwrap();
-        crate::creature_ai::move_follower_with(moves, world, unit, position, 0.0);
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
     Err(format!(
@@ -277,14 +275,9 @@ fn handle_unreachable_movement(
     ))
 }
 
-fn move_one(
-    moves: &mut FollowerMoves,
-    world: &mut World,
-    unit: Entity,
-    dt: f32,
-) -> Result<(), String> {
+fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     if flight_in_progress(world, unit) {
-        return advance_flight(moves, world, unit, dt);
+        return advance_flight(world, unit, dt);
     }
     if world
         .get::<crate::creature_ai::flight_follow::FlightFollow>(unit)
@@ -312,9 +305,7 @@ fn move_one(
         } else {
             match read_legs(world.get_resource::<Space>(), from, to) {
                 Ok(legs) => legs,
-                Err(error) => {
-                    return handle_unreachable_movement(moves, world, unit, from, to, error);
-                }
+                Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
             }
         };
         travel = Some(Travel {
@@ -328,8 +319,7 @@ fn move_one(
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
     let next = advance(from, &mut travel, speed * dt, reach);
-    crate::creature_ai::move_follower_with(
-        moves,
+    crate::creature_ai::move_follower(
         world,
         unit,
         Position {
@@ -365,12 +355,7 @@ fn move_one(
     Ok(())
 }
 
-fn advance_flight(
-    moves: &mut FollowerMoves,
-    world: &mut World,
-    owner: Entity,
-    dt: f32,
-) -> Result<(), String> {
+fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), String> {
     if !world
         .get::<Health>(owner)
         .is_some_and(|health| health.current > 0.0)
@@ -419,8 +404,7 @@ fn advance_flight(
             world
                 .entity_mut(owner)
                 .insert(shared::components::MovementSpeed(speed));
-            crate::creature_ai::move_follower_with(
-                moves,
+            crate::creature_ai::move_follower(
                 world,
                 owner,
                 Position {
@@ -501,8 +485,7 @@ fn dead_flight_leader_waits_for_native_release() {
             },
         ))
         .id();
-    let mut moves = FollowerMoves::from_world(&mut world);
-    advance_flight(&mut moves, &mut world, leader, 1.0).unwrap();
+    advance_flight(&mut world, leader, 1.0).unwrap();
     assert_eq!(*world.get::<Position>(leader).unwrap(), position);
     assert!(flight_in_progress(&world, leader));
 }
@@ -520,10 +503,7 @@ fn frozen_edge_time_is_not_straight_line_distance() {
     assert_eq!(position, to);
 }
 
-/// `moves` only looks units up by entity. The unit list stays a fresh query: a cached
-/// `QueryState` matches archetypes in creation order, not a fresh query's order, and
-/// the movement order is observable.
-pub(super) fn update(world: &mut World, mut moves: Local<FollowerMoves>) {
+pub(super) fn update(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let units: Vec<_> = world
         .query::<(Entity, &Position, &Health)>()
@@ -531,7 +511,7 @@ pub(super) fn update(world: &mut World, mut moves: Local<FollowerMoves>) {
         .map(|(unit, _, _)| unit)
         .collect();
     for unit in units {
-        move_one(&mut moves, world, unit, dt)
+        move_one(world, unit, dt)
             .unwrap_or_else(|error| panic!("simulated movement {unit:?}: {error}"));
     }
 }

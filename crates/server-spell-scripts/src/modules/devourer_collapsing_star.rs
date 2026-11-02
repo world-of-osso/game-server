@@ -42,10 +42,7 @@ fn schedule_apocalypse(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _
 
 fn deliver_apocalypse(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingApocalypse>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingApocalypse>>(world);
     for caster in casters {
         let due = {
             let mut pending = world

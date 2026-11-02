@@ -104,10 +104,7 @@ fn begin_shower(world: &mut World, caster: Entity, spell: &SpellInfo, damage: u3
 }
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query_filtered::<Entity, With<Showers>>()
-        .iter(world)
-        .collect();
+    let actors = combat::system_states::entities_with::<With<Showers>>(world);
     for actor in actors {
         let due = {
             let mut showers = world.get_mut::<Showers>(actor).unwrap();

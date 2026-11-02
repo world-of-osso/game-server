@@ -10,10 +10,7 @@ use shared::protocol::{EffectivePowerCost, SpellCostReading, SpellCostSnapshot};
 struct PublishedCosts(SpellCostSnapshot);
 
 pub(super) fn publish(world: &mut World) {
-    let players: Vec<_> = world
-        .query_filtered::<Entity, (With<Player>, With<KnownSpells>)>()
-        .iter(world)
-        .collect();
+    let players = crate::system_states::entities_with::<(With<Player>, With<KnownSpells>)>(world);
     for player in players {
         let snapshot = read_snapshot(world, player);
         if world

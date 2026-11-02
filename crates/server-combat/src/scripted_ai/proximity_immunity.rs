@@ -64,16 +64,18 @@ pub(super) fn update(world: &mut World) {
                 },
             );
         }
-        let nearby = world
-            .query::<(&Player, &InMap, &Position, &Health)>()
-            .iter(world)
-            .any(|(_, copy, player, health)| {
-                *copy == map
-                    && health.current > 0.0
-                    && Vec3::new(player.x, player.y, player.z)
-                        .distance(Vec3::new(position.x, position.y, position.z))
-                        <= release.radius
-            });
+        let nearby = crate::system_states::with_query::<(&Player, &InMap, &Position, &Health), (), _>(
+            world,
+            |world, players| {
+                players.iter(world).any(|(_, copy, player, health)| {
+                    *copy == map
+                        && health.current > 0.0
+                        && Vec3::new(player.x, player.y, player.z)
+                            .distance(Vec3::new(position.x, position.y, position.z))
+                            <= release.radius
+                })
+            },
+        );
         if nearby {
             world.get_mut::<UnitFlags>(creature).unwrap().0 &= !immunity;
             if let Some(spell_id) = release.aura {

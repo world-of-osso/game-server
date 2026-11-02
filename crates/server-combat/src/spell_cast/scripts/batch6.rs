@@ -253,10 +253,7 @@ pub(super) fn starfall(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     }
     let milliseconds = (script_effect_value(world, caster, AETHERIAL_KINDLING, 0) * 1000.0) as u32;
     let maximum_ms = (script_effect_value(world, caster, AETHERIAL_KINDLING, 1) * 1000.0) as u32;
-    let units: Vec<Entity> = world
-        .query_filtered::<Entity, With<ActiveAuras>>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<With<ActiveAuras>>(world);
     for unit in units {
         crate::auras::extend_owned_duration_capped(
             world,

@@ -88,10 +88,7 @@ fn spend(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingHits>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingHits>>(world);
     for caster in casters {
         let due = {
             let mut pending = world.get_mut::<PendingHits>(caster).unwrap();
