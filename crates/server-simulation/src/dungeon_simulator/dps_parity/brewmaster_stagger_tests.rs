@@ -309,10 +309,12 @@ fn stagger_mid_tick_refresh_preserves_deadline_and_small_pool_clears() {
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0[refreshed_at..]
             .iter()
-            .any(|event| event.kind == shared::protocol::CombatLogKind::Damage
-                && event.spell_id == Some(124255)
-                && event.target == Some(actor.to_bits())
-                && event.amount > 0),
+            .any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.spell_id == Some(124255)
+                    && event.target == Some(actor.to_bits())
+                    && event.amount > 0
+            ),
         "the first tick keeps its original deadline"
     );
     let pool = crate::auras::stagger::pool_size(run.app.world(), actor);
