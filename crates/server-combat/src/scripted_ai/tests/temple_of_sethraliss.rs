@@ -93,6 +93,37 @@ fn merektha_marks_two_living_party_members_for_knot_and_thunder_spit() {
 }
 
 #[test]
+fn galvazzt_induction_damages_a_nearby_party_member() {
+    let (mut h, boss, _) = bound_boss_at_difficulty(263658, 1877, 2, 8, None);
+    h.app.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .spell_store()
+            .clone(),
+    );
+    let floor = h.app.world().get::<Position>(boss).unwrap().y;
+    h.app
+        .insert_resource(crate::ground::GroundMap::flat_arena(floor));
+    let player = h.player();
+    let mut health = h.app.world_mut().get_mut::<Health>(player).unwrap();
+    health.max = 1_000_000_000.0;
+    health.current = health.max;
+    h.engage(boss);
+    h.advance(25.0);
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.spell_id == Some(1290531)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Induction must damage the party, not merely start a cast"
+    );
+}
+
+#[test]
 fn temple_keystone_bosses_cast_observed_openers() {
     for (entry, bit, spell, elapsed) in [
         (262822, 0, 1288457, 5.0),
