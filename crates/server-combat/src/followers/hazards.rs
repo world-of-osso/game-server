@@ -323,9 +323,7 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         return true;
     }
     match destination {
-        EscapeDestination::Ready(to) => {
-            advance_escape(world, unit, map.map_id, from, position(to), goal)
-        }
+        EscapeDestination::Ready(to) => advance_escape(world, unit, map, from, position(to), goal),
         EscapeDestination::Pending => hold_escape(world, unit, from, "pending"),
         EscapeDestination::Blocked => {
             warn!(
@@ -517,11 +515,10 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     })
 }
 
-// Hazard escape retains master's terrain projection; admitted points use creature floors below.
 pub(super) fn advance_escape(
     world: &mut World,
     unit: Entity,
-    map: u32,
+    map: InMap,
     from: Position,
     to: Position,
     goal: Goal,
@@ -546,7 +543,7 @@ pub(super) fn advance_escape(
     let step = world.resource_mut::<Navigation>().advance(
         unit,
         MoveRequest {
-            map_id: map,
+            map_id: map.map_id,
             goal,
             from,
             to,
@@ -554,11 +551,9 @@ pub(super) fn advance_escape(
             reach: 0.0,
         },
     );
-    if let Step::Moved { mut position, .. } = step {
-        let crate::ground::GroundProbe::Supported(height) = world
-            .resource_mut::<crate::ground::GroundMap>()
-            .ground_at(map, point(position))
-        else {
+    if let Step::Moved { position, .. } = step {
+        let Some(position) = resolve_follower_step(world, map, from, position) else {
+            world.resource_mut::<Navigation>().cancel_route(unit);
             error!("Follower {unit} escape route lost ground support");
             trace_escape_event(
                 world,
@@ -568,7 +563,6 @@ pub(super) fn advance_escape(
             );
             return;
         };
-        position.y = height;
         crate::creature_ai::move_follower(world, unit, position, speed);
         let after = world.get::<Position>(unit).copied();
         if after.is_some_and(|at| at != from) {
@@ -632,15 +626,23 @@ pub(super) fn advance_grounded_route(
             reach: 0.0,
         },
     );
-    if let Step::Moved { mut position, .. } = step {
-        let crate::ground::GroundProbe::Supported(height) = world
-            .resource_mut::<crate::ground::GroundMap>()
-            .creature_ground_in(map, point(position))
-        else {
-            error!("Follower {unit} escape route lost ground support");
+    if let Step::Moved { position, .. } = step {
+        let Some(position) = resolve_follower_step(world, map, from, position) else {
+            world.resource_mut::<Navigation>().cancel_route(unit);
+            error!("Follower {unit} admitted route lost ground support");
             return;
         };
-        position.y = height;
         crate::creature_ai::move_follower(world, unit, position, speed);
     }
+}
+
+fn resolve_follower_step(
+    world: &mut World,
+    map: InMap,
+    from: Position,
+    mut to: Position,
+) -> Option<Position> {
+    let mut ground = world.get_resource_mut::<crate::ground::GroundMap>()?;
+    to.y = crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to)?;
+    Some(to)
 }

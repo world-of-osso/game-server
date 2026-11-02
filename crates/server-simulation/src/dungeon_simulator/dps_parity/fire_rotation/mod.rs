@@ -3,21 +3,21 @@ pub(super) use server_follower_apl::fire_rotation::*;
 use bevy::prelude::*;
 
 
-fn apply_initial_spheres(run: &mut super::Run) {
-    let selected = run.app.world().get::<crate::class_progression::KnownSpells>(run.actor)
+pub(super) fn apply_initial_spheres(world: &mut World, actor: Entity) {
+    let selected = world.get::<crate::class_progression::KnownSpells>(actor)
         .is_some_and(|known| known.contains(448601));
     if selected {
-        // SimC76f8118 sc_mage.cpp366/6893–6894: the shipped profile keeps
-        // default initial5 applications; the native aura enforces its own stack cap.
-        for _ in 0..5 {
-            crate::spell_cast::cast_triggered(run.app.world_mut(), run.actor, 448604, Some(run.actor), 1);
+        // WCL Gt9TAHVbDJxQd1mw fight2 pulls2/4: three earned spheres
+        // persist into boss pulls. SimC76f8118 defaults to the same capped state.
+        for _ in 0..3 {
+            crate::spell_cast::cast_triggered(world, actor, 448604, Some(actor), 1);
         }
     }
 }
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
     use super::literal_rotation::PrecombatPoll;
-    apply_initial_spheres(run);
+    apply_initial_spheres(run.app.world_mut(), run.actor);
     let encounter = crate::simc_apl_native::Encounter::Fixture {
         started_at: crate::spell_cast::now(run.app.world()),
         duration: 300.0,
