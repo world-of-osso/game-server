@@ -127,6 +127,37 @@ pub fn read_registrations(
             });
         }
     }
+    if map == crate::npc_interaction::petalwing::MAP {
+        let network = crate::taxi::load_taxi_network(db)
+            .map_err(|error| format!("Petalwing taxi network: {error}"))?;
+        let points = network
+            .scripted_path(crate::npc_interaction::petalwing::PATH)
+            .ok_or("Petalwing TaxiPath 10799 unavailable")?;
+        let spawns = crate::world_data::load_spawns(db);
+        let source = spawns
+            .iter()
+            .find(|spawn| {
+                u32::from(spawn.map) == map
+                    && spawn.template_entry == crate::npc_interaction::petalwing::ENTRY
+            })
+            .ok_or("Petalwing source spawn unavailable")?;
+        let source = Vec3::new(source.position_x, source.position_z, -source.position_y);
+        let destination = *points.last().ok_or("Petalwing TaxiPath is empty")?;
+        registrations.push(Registration {
+            entry: crate::npc_interaction::petalwing::ENTRY,
+            source_guid: None,
+            source,
+            destination,
+            distance: source.distance(points[0])
+                + points
+                    .windows(2)
+                    .map(|pair| pair[0].distance(pair[1]))
+                    .sum::<f32>(),
+            radius: crate::npc_interaction::INTERACTION_DISTANCE,
+            departure: None,
+            action: Action::SpellClick,
+        });
+    }
     if map == crate::scripted_ai::academy_transport::MAP {
         registrations.extend(crate::scripted_ai::academy_transport::PADS.iter().map(
             |(entry, source, destination, radius)| Registration {

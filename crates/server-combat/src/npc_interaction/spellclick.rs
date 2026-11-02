@@ -34,6 +34,12 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
 }
 
 pub(crate) fn cast_spellclick(world: &mut World, player: Entity, npc: Entity, entry: u32) {
+    if entry == super::petalwing::ENTRY {
+        if let Err(error) = super::petalwing::traverse(world, player, npc) {
+            warn!(%error, "Petalwing interaction failed");
+        }
+        return;
+    }
     if entry == crate::taxi::RUBY_FERRY_ENTRY {
         crate::taxi::start_ruby_ferry(world, player, npc);
         return;

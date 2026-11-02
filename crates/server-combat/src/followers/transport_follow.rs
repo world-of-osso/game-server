@@ -13,6 +13,7 @@ use ::navigation::worker::{Output, Query};
 pub(crate) enum TransportKind {
     AzureBook,
     NalorakkPyre,
+    Petalwing,
 }
 
 #[derive(Clone, Copy)]
@@ -35,13 +36,22 @@ struct Pending(VecDeque<Request>);
 
 /// Record the actual interaction; each follower decides whether it needs the same transport.
 pub(crate) fn record_use(world: &mut World, owner: Entity, source: Entity, kind: TransportKind) {
-    let Some(copy) = world.get::<InMap>(owner).copied() else {
-        return;
-    };
     let Some(destination) = world.get::<Position>(owner).copied() else {
         return;
     };
-    let destination = point(destination);
+    record_use_to(world, owner, source, kind, point(destination));
+}
+
+pub(crate) fn record_use_to(
+    world: &mut World,
+    owner: Entity,
+    source: Entity,
+    kind: TransportKind,
+    destination: Vec3,
+) {
+    let Some(copy) = world.get::<InMap>(owner).copied() else {
+        return;
+    };
     let followers: Vec<_> = world
         .query::<(Entity, &super::Follower, &InMap)>()
         .iter(world)
@@ -196,6 +206,9 @@ pub(super) fn update(world: &mut World, unit: Entity, follower: &super::Follower
                     }
                     TransportKind::NalorakkPyre => {
                         crate::npc_interaction::nalorakk_pyre::traverse(world, unit, request.source)
+                    }
+                    TransportKind::Petalwing => {
+                        crate::npc_interaction::petalwing::traverse(world, unit, request.source)
                     }
                 };
                 if let Err(error) = result {
