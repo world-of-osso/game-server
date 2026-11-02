@@ -43,12 +43,18 @@ fn two_mind_blast_procs_allow_two_void_shields() {
         },
     );
     h.cast_and_deliver(8092, Some(h.npc));
-    h.advance(200);
+    h.advance(80);
     assert_eq!(
         darkness_stacks(&h),
         1,
         "first real Mind Blast grants one stack"
     );
+    // The fixture advances virtual time, while cooldowns use wall time. Clear
+    // cooldown state so this test isolates the stored aura, not elapsed wall time.
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::spell_cast::SpellHistory::default());
     h.cast_and_deliver(8092, Some(h.npc));
     h.advance(60);
     assert_eq!(
@@ -62,6 +68,10 @@ fn two_mind_blast_procs_allow_two_void_shields() {
             .filter(|event| event.kind == CombatLogKind::CastSuccess)
             .collect::<Vec<_>>()
     );
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::spell_cast::SpellHistory::default());
     h.cast_and_deliver(17, Some(h.caster));
     h.advance(10);
     assert_eq!(
@@ -69,7 +79,10 @@ fn two_mind_blast_procs_allow_two_void_shields() {
         1,
         "first Void Shield spends only one stack"
     );
-    h.advance(170);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::spell_cast::SpellHistory::default());
     h.cast_and_deliver(17, Some(h.caster));
     h.advance(10);
     assert_eq!(
