@@ -300,10 +300,11 @@ fn move_one(
         return Ok(());
     };
     let in_reach = server::test_support::within_reach(from, to, reach);
-    let mut travel = world
-        .entity_mut(unit)
-        .take::<Travel>()
-        .filter(|travel| travel.destination == to && !in_reach);
+    let mut travel = world.entity_mut(unit).take::<Travel>().filter(|travel| {
+        !travel.legs.is_empty()
+            && travel.destination.distance(to) <= server_combat::navigation::REPATH_DISTANCE
+            && !in_reach
+    });
     if travel.is_none() {
         let legs = if in_reach {
             Default::default()
