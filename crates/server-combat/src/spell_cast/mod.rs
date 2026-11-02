@@ -1160,6 +1160,9 @@ fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
 /// (haste auras fold in through `StatModifiers`). Native charge effects use
 /// this fold once (SimC76f8118 sc_mage.cpp2091–2100).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+    if script_registry::instant_cast_during_channel(world, caster, spell) {
+        return 0;
+    }
     // SimC76f8118 sc_warlock_pets.cpp1978–1987: the Inquisitor casts for
     // the native channel duration before the channel starts, with spell haste.
     let inquisitor_sear = spell.id == 1280457
