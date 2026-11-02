@@ -326,6 +326,71 @@ fn halls_recorded_safe_regroup_does_not_drop_to_pool() {
 }
 
 #[test]
+#[ignore = "requires Ara-Kara extracted WMO assets"]
+fn follower_ground_resolution_uses_creature_floor_on_recorded_owner_trail() {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+
+    let (mut h, unit, _) = spawn_profile_fixture(209072);
+    h.app.world_mut().despawn(h.npc);
+    let map = InMap::continent(2660);
+    let from = Position {
+        x: -285.53516,
+        y: 142.01108,
+        z: -396.19623,
+    };
+    let to = Position {
+        x: -285.37012,
+        y: 141.98491,
+        z: -396.2041,
+    };
+    let mut ground = GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2660, 5280631)]),
+    );
+    let GroundProbe::Supported(player_floor) = ground.ground_at(map.map_id, point(to)) else {
+        panic!("player floor missing")
+    };
+    let GroundProbe::Supported(creature_floor) = ground.creature_ground_at(map.map_id, point(to))
+    else {
+        panic!("creature floor missing")
+    };
+    assert!(
+        (player_floor - 139.28827).abs() < 0.05,
+        "player floor {player_floor}"
+    );
+    assert!(
+        (creature_floor - 141.91756).abs() < 0.05,
+        "creature floor {creature_floor}"
+    );
+    h.app.world_mut().entity_mut(unit).insert((from, map));
+    h.app.insert_resource(ground);
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let goal = Goal::OwnerTrail(h.caster.to_bits());
+    nav.adopt_candidate_route(
+        unit,
+        MoveRequest {
+            map_id: map.map_id,
+            goal,
+            from,
+            to,
+            distance: 0.0,
+            reach: 0.0,
+        },
+        vec![point(from), point(to)],
+    );
+    h.app.insert_resource(nav);
+    h.advance(1);
+    super::hazards::advance_escape(h.app.world_mut(), unit, map, from, to, goal);
+    let after = *h.app.world().get::<Position>(unit).unwrap();
+    assert!(after.x > from.x, "follower did not advance: {after:?}");
+    assert!(
+        (after.y - creature_floor).abs() < 0.05,
+        "follower used lower floor: {after:?}"
+    );
+}
+
+#[test]
 fn follower_ground_resolution_rejects_lower_floor_during_routed_moves() {
     use crate::navigation::{Goal, MoveRequest, Navigation};
 
