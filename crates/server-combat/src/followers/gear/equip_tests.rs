@@ -91,6 +91,40 @@ fn follower_gear_equips_real_items_and_stats_follow_dungeon_difficulty() {
     );
 }
 
+/// Every LFGDungeons follower entry (difficulty205) has a MapDifficulty row whose
+/// ItemContext/ItemContextPickerID resolves at both ContentTuning level bounds.
+#[test]
+fn every_follower_dungeon_resolves_its_item_level_at_both_level_bounds() {
+    let path = crate::test_data::world_db_path();
+    let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let source = load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap();
+    let templates = crate::item_templates::load_item_templates(&path).unwrap();
+    let scaling = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+    let bonuses = crate::item_instance::load::load_bonus_tables(&db).unwrap();
+    let dungeons: Vec<(u32, u8, u8)> = db
+        .prepare(
+            "SELECT d.map_id,t.MinLevelSquish,t.MaxLevelSquish FROM follower_lfg_dungeons d
+             JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.difficulty_id=205",
+        )
+        .unwrap()
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(dungeons.len(), 27, "every follower LFG dungeon is covered");
+    let failures: Vec<_> = dungeons
+        .iter()
+        .flat_map(|&(map, min, max)| [(map, min), (map, max)])
+        .filter_map(|(map, level)| {
+            source
+                .read_item_level(map, 205, level, &templates, &bonuses, &scaling)
+                .err()
+                .map(|error| format!("map{map} level{level}: {error}"))
+        })
+        .collect();
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
 #[test]
 fn murder_row_level_90_followers_equip_the_same_sourced_difficulty_level() {
     let mut dungeon_level = None;
