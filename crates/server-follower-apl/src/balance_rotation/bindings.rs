@@ -76,16 +76,18 @@ pub fn names(entries: &[(&str, u32)]) -> std::collections::BTreeMap<String, u32>
 }
 
 pub fn build(world: &World, actor: Entity) -> Result<Bindings, String> {
-    let incarnation = world
-        .get::<crate::class_progression::KnownSpells>(actor)
-        .is_some_and(|known| known.contains(394013));
+    let (ca_inc, lunar_calling) = read_selection(world, actor)?;
+    Ok(build_for_actions(ca_inc, lunar_calling))
+}
+
+/// The actor's selected `ca_inc` action and whether Lunar Calling is known.
+pub fn read_selection(world: &World, actor: Entity) -> Result<(u32, bool), String> {
+    let known = world.get::<crate::class_progression::KnownSpells>(actor);
+    let incarnation = known.is_some_and(|known| known.contains(394013));
     let requested = if incarnation { 102560 } else { 194223 };
     let ca_inc = server::spell_cast::knowledge::resolve_action(world, actor, requested)?
         .unwrap_or(requested);
-    let lunar_calling = world
-        .get::<crate::class_progression::KnownSpells>(actor)
-        .is_some_and(|known| known.contains(429523));
-    Ok(build_for_actions(ca_inc, lunar_calling))
+    Ok((ca_inc, known.is_some_and(|known| known.contains(429523))))
 }
 
 pub fn build_for_actions(ca_inc: u32, lunar_calling: bool) -> Bindings {
