@@ -9,7 +9,19 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
     let healer = party.healer;
     let follower = party.slots[0];
     let position = *party.app.world().get::<Position>(healer).unwrap();
-    *party.app.world_mut().get_mut::<Position>(follower).unwrap() = position;
+    // Reinsert Position so the area grid observes this test relocation.
+    party
+        .app
+        .world_mut()
+        .entity_mut(follower)
+        .remove::<Position>();
+    party.app.world_mut().entity_mut(follower).insert(position);
+    assert!(crate::spell_cast::targets::relation_matches(
+        party.app.world(),
+        healer,
+        follower,
+        crate::spell_cast::targets::Relation::Ally
+    ));
     let health = party.app.world_mut().get_mut::<Health>(follower).unwrap();
     let max = health.max;
     drop(health);
@@ -61,12 +73,12 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
             && e.source == Some(healer.to_bits())
             && e.target == Some(follower.to_bits())
             && e.amount > 0),
-        "rain must heal the follower: {events:?}"
+        "rain must heal the follower"
     );
     assert!(
         !events.iter().any(|e| e.kind == CombatLogKind::Heal
             && e.spell_id == Some(73921)
             && e.target == Some(totem.to_bits())),
-        "rain must exclude summoned totems: {events:?}"
+        "rain must exclude summoned totems"
     );
 }
