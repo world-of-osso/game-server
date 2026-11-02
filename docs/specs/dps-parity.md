@@ -206,6 +206,8 @@ Spec103 captures the native actor before setup and executes all74 pinned76f8118 
 
 Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
 
+- L90 follower, snapshot v3, map2813, 120 seconds, ten matched seeds and temporary enchants disabled, on tested candidate `ee3ea8e199`: native 31,559.9 DPS versus SimC 32,825.3; mean paired difference −3.60% ±5.31 pp (95% t interval). The point estimate meets the ±5% mean gate; the interval extends outside ±5%.
+
 ### Feral Thriving Growth
 
 Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 accumulator using native per-source amounts, native active-dot exponent and selected Feral Green Thumb1270565. Keep the pinned random initial phase, uniform increments and1000-point threshold. Success casts native439531 on the actual tick recipient; other periodic sources cannot roll it (`sc_druid.cpp2416–2448,12311–12406`). Vines applications retain independent native-duration stack deadlines through the existing asynchronous-stack scheduler, following the explicit source override (`sc_druid.cpp13755–13764`); refreshing a later stack cannot extend an earlier one. Native490-flagged auras retain their existing path. Selected Bursting Growth440120 casts native440122 for every actual expired Vines application and after a landed primary Bite on this caster's ticking Vines (`sc_druid.cpp4295–4307,13755–13821`). Preserve native area recipients and coefficients. Actual Vines periodic damage independently rolls selected Rampancy1270586's native effect0 chance and dispatches440122 at native effect2 effectiveness (`sc_druid.cpp4015–4020,11982–11988`). Other ticks cannot roll it; Bite/expiry relationships remain independent. Twin Sprouts and the greater-than-five-target reduction remain separately unqualified.
@@ -694,7 +696,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
 - INFERRED_SIMC: Bladestorm uses its charge recovery without a separate spell cooldown (`sc_warrior.cpp:3241`; contrast `action.cpp:710–719`). A Sudden Death Execute with Unrelenting Onslaught reduces that recovery (`sc_warrior.cpp:4361–4365`, `4561–4565`).
-- Culling Cyclone increases a single-target Bladestorm tick by its native effect1 (`sc_warrior.cpp:3202–3207`); the multi-target formula is not covered by this parity scope.
+- Culling Cyclone increases Bladestorm tick damage by its native effect1 divided by the number of engaged living hostiles, including the current target (`sc_warrior.cpp:3202–3207`).
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
@@ -771,6 +773,10 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 - A landed native Bladestorm main-hand50622 tick dispatches its native effect1 off-hand area95738 once for Fury72 with an actual off-hand weapon, not once per main-hand recipient. Arms cannot acquire that off-hand attack (`sc_warrior.cpp3249–3254,3335–3340`). Native child damage and area selectors remain authoritative.
 - [x] Selected Unhinged386628 dispatches Arms71 Mortal Strike12294 or Fury72's live native Bloodthirst23881 variant on odd Bladestorm227847/446035 effect0 ticks, including catch-up ticks and excluding tick0, using the actual selected hostile target and native effect1 damage multiplier. Arms Unhinged Mortal Strike does not cleave or consume Sweeping Strikes; foreground strikes retain Sweeping. Preserve ordinary parent pulses (`sc_warrior.cpp3057–3072,3257–3275,3313–3335`).
 - Frenzy335077 grants one335082 stack per final Rampage201363 execution, not per impact or arbitrary melee event. Its native passive effect0 supplies each stack's value (`sc_warrior.cpp5581–5588,8411,9616`). Source-owned proc policies must prevent the broad native proc hint from independently firing the same aura or consuming its ICD.
+
+### Destruction L70 follower parity
+
+- Map2515, 120 seconds, seeds70448 and1–9, temporary enchants disabled: native 4,591.43 DPS versus condition-only SimC 4,661.05; mean paired difference −1.42% ±2.88 percentage points (95% t interval). This measurement used snapshot v3 plus four source-backed class-summon templates: Unstable Tear196280, Shadowy Tear198547, Chaos Tear198555 and Voidwraith224466. The original snapshot v3 was unchanged.
 
 ### Destruction Echo of Sargeras
 
