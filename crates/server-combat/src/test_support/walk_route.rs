@@ -2,13 +2,13 @@
 use super::{Edge, Graph};
 use bevy::prelude::Vec3;
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BinaryHeap, VecDeque};
+use std::collections::{BTreeMap, BinaryHeap, HashMap, VecDeque};
 
 // Recorded f32 mover positions differ from their frozen edge by up to 0.002yd.
 const EDGE_ROUNDING_YARDS: f32 = 0.01;
 type Legs = VecDeque<(Vec3, f32)>;
 type Adjacency = BTreeMap<u64, Vec<(u64, f32)>>;
-type Distances = BTreeMap<u64, f32>;
+type Distances = HashMap<u64, f32>;
 type Previous = BTreeMap<u64, u64>;
 
 struct Pending {
@@ -47,7 +47,7 @@ struct Endpoint {
 }
 
 pub(super) fn read(graph: &Graph, from: Vec3, to: Vec3) -> Result<Legs, String> {
-    let points: BTreeMap<_, _> = graph
+    let points: HashMap<_, _> = graph
         .packs
         .iter()
         .map(|pack| (pack.id, pack.point()))
@@ -77,7 +77,7 @@ pub(super) fn read(graph: &Graph, from: Vec3, to: Vec3) -> Result<Legs, String> 
 
 fn locate_endpoint(
     graph: &Graph,
-    points: &BTreeMap<u64, Vec3>,
+    points: &HashMap<u64, Vec3>,
     position: Vec3,
 ) -> Result<Endpoint, String> {
     let (&id, &point) = points
@@ -114,7 +114,7 @@ fn locate_endpoint(
 }
 
 fn project_edge(
-    points: &BTreeMap<u64, Vec3>,
+    points: &HashMap<u64, Vec3>,
     index: usize,
     edge: &Edge,
     position: Vec3,
@@ -207,6 +207,25 @@ fn solve_distances(adjacency: &Adjacency, starts: &[(u64, f32)]) -> (Distances, 
     (distances, previous)
 }
 
+#[test]
+fn equal_cost_routes_keep_the_lowest_node_tie_break() {
+    let adjacency = Adjacency::from([
+        (1, vec![(3, 1.0), (2, 1.0)]),
+        (2, vec![(4, 1.0)]),
+        (3, vec![(4, 1.0)]),
+        (4, vec![]),
+    ]);
+    let endpoint = |node| Endpoint {
+        point: Vec3::ZERO,
+        offset: 0.0,
+        connections: vec![(node, 0.0)],
+        edge: None,
+    };
+    let (nodes, yards) = shortest_nodes(&adjacency, &endpoint(1), &endpoint(4)).unwrap();
+    assert_eq!(nodes, vec![1, 2, 4]);
+    assert_eq!(yards, 2.0);
+}
+
 fn shared_edge_yards(graph: &Graph, from: &Endpoint, to: &Endpoint) -> Option<f32> {
     let (a, from_fraction) = from.edge?;
     let (b, to_fraction) = to.edge?;
@@ -215,7 +234,7 @@ fn shared_edge_yards(graph: &Graph, from: &Endpoint, to: &Endpoint) -> Option<f3
 
 fn append_node_legs(
     legs: &mut Legs,
-    points: &BTreeMap<u64, Vec3>,
+    points: &HashMap<u64, Vec3>,
     adjacency: &Adjacency,
     nodes: &[u64],
     from: &Endpoint,
