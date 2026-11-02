@@ -702,6 +702,8 @@ fn normal_follower_reconnect_restores_live_enemies_and_following() {
     queue.apply(h.app.world_mut());
     let db =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_expected_stats(&db).armor_constants());
     let catalog = crate::followers::load_catalog(&db).unwrap();
     let entrance = catalog
         .dungeons
