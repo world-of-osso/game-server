@@ -1546,7 +1546,7 @@ Category133 ordinary spells apply native spell haste before the independent aura
 
 ### Shadow Idol of N'Zoth
 
-Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foreground Pain and Vampiric Touch executions, and Mind Flay and Void Torrent ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. The target counter rolls over at the native upper threshold.
+Selected Idol of N'Zoth tracks actual Madness and Mind Blast executions, foreground Pain and Vampiric Touch executions, and Mind Flay and Void Torrent ticks per owned target. Its native thresholds trigger Horrific Vision and Vision of N'Zoth, their damage, and their native periodic Insanity buffs. With selected Void Apparitions I1264096, either threshold also produces an apparition cohort at its target (native70448 description; SimC76f8118 `sc_priest_shadow.cpp2769–2799`). The target counter rolls over at the native upper threshold.
 ### Shadow Insidious Ire
 
 Selected Insidious Ire earns its temporary channel bonus when one target has all three caster-owned Pain, Vampiric Touch and Madness effects. The window lasts until the earliest expiry and may be refreshed to a later earned deadline. Its amount comes from the selected native trait effect.

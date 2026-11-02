@@ -468,6 +468,7 @@ mod shadow_mastery_tests;
 mod shadow_misery_follower_tests;
 mod shadow_mind_devourer_follower_tests;
 mod shadow_nzoth_tests;
+mod shadow_nzoth_apparitions_follower_tests;
 mod shadow_nzoth_sources_tests;
 mod shadow_overwhelming_follower_tests;
 mod shadow_rift_tests;
