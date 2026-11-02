@@ -45,6 +45,32 @@ fn select(rows: &[(&str, &str)], facts: &PoolFacts, usable: bool) -> Option<Acti
 }
 
 #[test]
+fn ordered_filter_evaluates_only_admitted_rows() {
+    let program = Program::parse(&[
+        ("precombat", "opener,if=missing_fact"),
+        ("precombat", "buff,if=energy>20"),
+    ])
+    .unwrap();
+    let facts = PoolFacts {
+        energy: 25.0,
+        combo_points: 0.0,
+        maximum_admitted: true,
+    };
+    let mut cursor = 0;
+    let selected = program
+        .select_next_matching(
+            "precombat",
+            &mut cursor,
+            &facts,
+            &mut program.state(),
+            |action| action.name == "buff",
+            |_| Ok(true),
+        )
+        .unwrap();
+    assert_eq!(selected.unwrap().name, "buff");
+}
+
+#[test]
 fn simc_apl_pool_wait_propagates_through_calls_without_dispatch_or_fallback() {
     let facts = PoolFacts {
         energy: 25.0,

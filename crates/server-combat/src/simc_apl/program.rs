@@ -207,6 +207,19 @@ impl Program {
         variables: &mut Variables,
         mut usable: impl FnMut(&Action) -> Result<bool, String>,
     ) -> Result<Option<Action>, String> {
+        self.select_next_matching(list, cursor, facts, variables, |_| true, &mut usable)
+    }
+
+    /// Select ordered rows that match the caller's action filter.
+    pub fn select_next_matching(
+        &self,
+        list: &str,
+        cursor: &mut usize,
+        facts: &dyn ActionFacts,
+        variables: &mut Variables,
+        mut include: impl FnMut(&Action) -> bool,
+        mut usable: impl FnMut(&Action) -> Result<bool, String>,
+    ) -> Result<Option<Action>, String> {
         let rules = self
             .lists
             .get(list)
@@ -220,6 +233,10 @@ impl Program {
             stop_before: None,
         };
         while let Some(rule) = rules.get(*cursor) {
+            if !include(&rule.action) {
+                *cursor += 1;
+                continue;
+            }
             if matches!(
                 &rule.body,
                 Body::Call(_) | Body::Run(_) | Body::PoolNext { .. }
