@@ -380,6 +380,73 @@ fn tank_pull_admission_native_bootstrap_is_one_source_pack_without_prior_rates()
 }
 
 #[test]
+fn tank_pull_admission_accepts_half_health_but_waits_below_it_or_for_mana() {
+    let mut f = fixture();
+    let owner = f.h.caster;
+    let max = f.h.app.world().get::<Health>(owner).unwrap().max;
+    f.h.app
+        .world_mut()
+        .get_mut::<Health>(owner)
+        .unwrap()
+        .current = max * 0.5;
+    assert!(matches!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Allow { .. }
+    ));
+    f.h.app
+        .world_mut()
+        .get_mut::<Health>(owner)
+        .unwrap()
+        .current = max * 0.49;
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::Recovery)
+    );
+    f.h.app
+        .world_mut()
+        .get_mut::<Health>(owner)
+        .unwrap()
+        .current = max * 0.5;
+    for unit in [f.tank, f.members[2], owner] {
+        f.h.app.world_mut().entity_mut(unit).insert(Mana {
+            current: 80.0,
+            max: 100.0,
+        });
+    }
+    f.h.app.world_mut().entity_mut(f.healer).insert(Mana {
+        current: 93.0,
+        max: 100.0,
+    });
+    assert!(matches!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Allow { .. }
+    ));
+    f.h.app
+        .world_mut()
+        .get_mut::<Mana>(f.healer)
+        .unwrap()
+        .current = 92.0;
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::Recovery)
+    );
+    f.h.app
+        .world_mut()
+        .get_mut::<Mana>(f.healer)
+        .unwrap()
+        .current = 100.0;
+    f.h.app
+        .world_mut()
+        .get_mut::<super::stockade_diagnostic::DiagnosticParty>(owner)
+        .unwrap()
+        .player_role = shared::group::GroupRole::Healer;
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::Recovery)
+    );
+}
+
+#[test]
 fn tank_pull_admission_waits_for_dead_or_ghost_member() {
     let mut f = fixture();
     let owner = f.h.caster;
