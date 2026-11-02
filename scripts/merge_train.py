@@ -421,8 +421,25 @@ def failing_paths(log, start):
         f.seek(start)
         text = f.read()
     # include!()d sources are reported through `..` hops (crates/a/src/../../b/...).
-    return {os.path.normpath(p) for p in
-            re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
+    paths = {os.path.normpath(p) for p in
+             re.findall(r"(?:-->|Diff in) /?(?:\S*?/game-server-land/)?(crates/\S+?\.(?:rs|in))", text)}
+    return paths | audit_failing_paths(text)
+
+
+def audit_failing_paths(text):
+    """Script modules blamed by a failing reach audit. Its panics name module-relative files,
+    not `-->` paths, so without this every audit failure cost a full bisect (2026-11-02)."""
+    names = set(re.findall(r"^(\S+?\.rs): child \d+ is undeclared", text, re.M))
+    names |= set(re.findall(r"^\('([^']+?\.rs)', [^\n]*\): dynamic child", text, re.M))
+    # The target-selection audit is an assert_eq of {(module, function, kind): count} maps;
+    # the culprits are the keys whose counts differ between the two sides.
+    for left, right in re.findall(r"^\s*left: (\{.*\})\n\s*right: (\{.*\})$", text, re.M):
+        sites = [dict(((m, f, k), int(n)) for m, f, k, n in
+                      re.findall(r'\("([^"]+)", "([^"]+)", "([^"]+)"\): (\d+)', side))
+                 for side in (left, right)]
+        names |= {key[0] for key in set(sites[0]) | set(sites[1])
+                  if sites[0].get(key) != sites[1].get(key)}
+    return {os.path.normpath(f"{SCRIPT_MODULES_DIR}/{name}") for name in names}
 
 
 def touches(entry, paths):
