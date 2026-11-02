@@ -2091,6 +2091,15 @@ fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
     );
     let target = run.targets[0];
     let hit = |run: &mut Run| {
+        run.app.insert_resource(
+            crate::spell_cast::effects::factor_capture::FactorCapture::new(
+                magus,
+                target,
+                1297055,
+                "grave_mastery",
+                1,
+            ),
+        );
         run.app
             .world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -2119,7 +2128,22 @@ fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
                 })
                 .map(|event| event.amount)
             {
-                return amount;
+                let capture = run
+                    .app
+                    .world()
+                    .resource::<crate::spell_cast::effects::factor_capture::FactorCapture>()
+                    .export();
+                let result = capture["events"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|event| event["event"] == "result")
+                    .expect("observed Magus bolt damage");
+                // Each actual bolt rolls its own base damage; compare critical
+                // multipliers rather than two independently rolled amounts.
+                let raw = result["factors"]["raw_amount"].as_f64().unwrap();
+                assert!(raw > 0.0);
+                return f64::from(amount) / raw;
             }
         }
         panic!("actual Magus bolt must land and crit");
@@ -2137,8 +2161,8 @@ fn dk252_grave_mastery_increases_actual_magus_critical_damage() {
         + crate::spell_cast::scripts::script_effect_value(run.app.world(), magus, 1238902, 0)
             / 100.0;
     assert!(
-        (with as f32 / without as f32 - expected).abs() < 0.01,
-        "native Grave Mastery must increase the real Magus critical hit: {without} -> {with}"
+        (with / without - f64::from(expected)).abs() < 0.01,
+        "native Grave Mastery must increase normalized Magus critical damage: {without} -> {with}"
     );
 }
 
@@ -3008,9 +3032,23 @@ fn dk252_lord_magus_uses_selected_native_lifetime() {
     while crate::spell_cast::now(run.app.world()) < started + f64::from(native_ms) / 1000.0 + 1.0 {
         run.app.update();
     }
+    // A retired Magus can remain as a zero-health source while its Grasp finishes.
+    if let Ok(entity) = run.app.world().get_entity(magus) {
+        assert_eq!(
+            entity.get::<shared::components::Health>().unwrap().current,
+            0.0,
+            "the Magus must stop acting at its selected native lifetime"
+        );
+    }
+    let cleanup_deadline = observed_expiry.unwrap() + 8.0;
+    while run.app.world().get_entity(magus).is_ok()
+        && crate::auras::aura_now(run.app.world()) < cleanup_deadline
+    {
+        run.app.update();
+    }
     assert!(
         run.app.world().get_entity(magus).is_err(),
-        "the real Magus must expire after its selected native lifetime"
+        "the retired Magus must despawn after its pending effects finish"
     );
 }
 
