@@ -4,6 +4,7 @@
 mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
 mod mistweaver_ancient_party_tests;
+mod mistweaver_ancient_pulse_tests;
 mod mistweaver_elixir_jadefire_tests;
 mod mistweaver_elixir_soothing_tests;
 mod mistweaver_soothing_channel_tests;
