@@ -73,7 +73,7 @@ pub(crate) fn program() -> Result<Program, String> {
         ),
         ("default", "sheiluns_gift,if=party.heal_worthwhile"),
         ("default", "vivify,if=party.heal_worthwhile"),
-        ("default", "soothing_mist,if=target.health.pct<90"),
+        ("soothing_setup", "soothing_mist"),
         ("priority_damage", "rising_sun_kick"),
         ("damage", "rising_sun_kick"),
         ("damage", "spinning_crane_kick,if=active_enemies>=2"),
@@ -273,7 +273,16 @@ impl Mistweaver {
         let tank_injured = world
             .get::<Health>(tank)
             .is_some_and(|health| health.current < health.max * 0.95);
-        let target = if tank_alive && tank_injured && !tank_mist && lowest_ratio >= 0.35 {
+        let channel_target = world
+            .get::<shared::casting::CastState>(healer)
+            .filter(|cast| {
+                cast.spell_id == 115175 && cast.cast_type == shared::casting::CastType::Channel
+            })
+            .and_then(|cast| Entity::try_from_bits(cast.target))
+            .filter(|unit| living.iter().any(|(living, _)| living == unit));
+        let target = if let Some(target) = channel_target {
+            target
+        } else if tank_alive && tank_injured && !tank_mist && lowest_ratio >= 0.35 {
             tank
         } else {
             lowest
@@ -364,10 +373,32 @@ impl Mistweaver {
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
         {
-            self.driver.execute(world, healer, action, execution)?;
+            // INFERRED_WCL: the median pre-channel target health was 60.43% in
+            // 349 sampled same-target follow-ups. This is not a retail cutoff.
+            let health = world
+                .get::<Health>(target)
+                .ok_or("Mistweaver target health absent")?;
+            let should_channel = channel_target.is_none()
+                && health.current / health.max < 0.60
+                && matches!(
+                    action.name.as_str(),
+                    "enveloping_mist" | "vivify" | "sheiluns_gift"
+                );
+            if should_channel
+                && let Some((setup, setup_execution)) =
+                    self.driver
+                        .select("soothing_setup", &facts, &prepared, &self.equipment)?
+            {
+                self.driver.execute(world, healer, setup, setup_execution)?;
+            } else {
+                self.driver.execute(world, healer, action, execution)?;
+            }
             return Ok(());
         }
         if let Some(enemy) = enemy {
+            if self.interrupt_soothing_for_kick(world, healer, enemy)? {
+                return Ok(());
+            }
             self.select_damage(world, healer, enemy)?;
         }
         Ok(())
