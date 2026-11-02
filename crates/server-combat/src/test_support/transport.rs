@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum Action {
     SpellClick,
     AzureBook,
+    AltarDrop,
     Proximity,
     GatewayProximity,
     TaxiProximity,
@@ -89,6 +90,20 @@ pub fn read_registrations(
     }
     if map == 2515 {
         registrations.extend(read_azure_books(db)?);
+    }
+    if map == crate::scripted_ai::altar_drop::MAP {
+        let source = crate::scripted_ai::altar_drop::SOURCE;
+        let destination = crate::scripted_ai::altar_drop::LANDING;
+        registrations.push(Registration {
+            entry: crate::scripted_ai::altar_drop::LIADRIN,
+            source_guid: None,
+            source,
+            destination,
+            distance: source.distance(destination),
+            radius: crate::npc_interaction::INTERACTION_DISTANCE,
+            departure: Some(source),
+            action: Action::AltarDrop,
+        });
     }
     let passages = crate::scripted_ai::dungeon_passage::PASSAGES
         .iter()
@@ -441,6 +456,7 @@ pub fn activate(
         Action::AzureBook => {
             crate::npc_interaction::azure_translocation::traverse(world, owner, npc)?;
         }
+        Action::AltarDrop => crate::scripted_ai::altar_drop::traverse(world, owner, npc)?,
         Action::Proximity => {}
         Action::ObjectGossip => crate::npc_interaction::nalorakk_pyre::traverse(world, owner, npc)?,
         Action::ObjectScript => {

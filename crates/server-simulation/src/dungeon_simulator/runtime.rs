@@ -333,7 +333,13 @@ fn build_runtime_app(
         .0
         .transports
         .iter()
-        .any(|edge| edge.action == server::test_support::transport::Action::CollisionDrop);
+        .any(|edge| {
+            matches!(
+                edge.action,
+                server::test_support::transport::Action::CollisionDrop
+                    | server::test_support::transport::Action::AltarDrop
+            )
+        });
     if has_drop {
         let db =
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
