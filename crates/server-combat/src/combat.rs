@@ -2797,6 +2797,7 @@ fn mark_replication_changed(queue: Option<&ReplicationDirtyQueue>, entity: Entit
 
 /// Commit NPC death with exclusive World access.
 pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
+    crate::death::soulstone::remember_on_death(world, entity);
     insert_npc_death(world.entity_mut(entity));
 }
 

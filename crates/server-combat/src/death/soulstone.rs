@@ -13,7 +13,7 @@ const DUMMY_AURA: u32 = 4;
 pub(crate) const EFFECT_SELF_RESURRECT: u32 = 94;
 
 #[derive(Component)]
-struct SoulstoneAvailable;
+struct SoulstoneAvailable(u32);
 
 /// TC Player.cpp InitializeSelfResurrectionSpells: the matching dummy aura grants 3026.
 pub(crate) fn remember_on_death(world: &mut World, unit: Entity) {
@@ -26,16 +26,19 @@ pub(crate) fn remember_on_death(world: &mut World, unit: Entity) {
     let Some(store) = world.get_resource::<SpellStore>() else {
         return;
     };
-    let found = auras.iter().any(|aura| {
-        store.get(aura.spell_id).is_some_and(|spell| {
-            spell.class_options.as_ref().is_some_and(|class| {
-                class.spell_class_set == WARLOCK_CLASS
-                    && class.spell_class_mask[1] & SOULSTONE_FAMILY_FLAG != 0
-            }) && spell.effects.iter().any(|effect| effect.aura == DUMMY_AURA)
-        })
+    let found = auras.iter().find_map(|aura| {
+        store
+            .get(aura.spell_id)
+            .filter(|spell| {
+                spell.class_options.as_ref().is_some_and(|class| {
+                    class.spell_class_set == WARLOCK_CLASS
+                        && class.spell_class_mask[1] & SOULSTONE_FAMILY_FLAG != 0
+                }) && spell.effects.iter().any(|effect| effect.aura == DUMMY_AURA)
+            })
+            .map(|_| aura.spell_id)
     });
-    if found {
-        world.entity_mut(unit).insert(SoulstoneAvailable);
+    if let Some(spell) = found {
+        world.entity_mut(unit).insert(SoulstoneAvailable(spell));
     }
 }
 
@@ -94,6 +97,13 @@ pub(crate) fn self_resurrect(
     if in_combat(world, target, map) && !crate::mythic_plus::consume_combat_res(world, map) {
         return;
     }
+    let aura = world.get::<SoulstoneAvailable>(target).unwrap().0;
+    crate::auras::remove_auras(
+        world,
+        target,
+        crate::auras::RemoveReason::Death,
+        |instance| instance.spell_id == aura,
+    );
     let percent = effect.base_points.clamp(0.0, 100.0) / 100.0;
     if let Some(mut health) = world.get_mut::<Health>(target) {
         health.current = (health.max * percent).floor().max(1.0);

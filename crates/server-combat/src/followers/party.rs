@@ -1768,7 +1768,6 @@ mod copy_tests {
             false,
         );
         assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
-        h.advance(2);
         h.app.insert_resource(crate::maps::ServerClock {
             offset_secs: 0,
             fixed_unix: Some(1_791_705_600),
@@ -1795,6 +1794,7 @@ mod copy_tests {
             Some(false)
         );
         assert!(!crate::death::soulstone::available(h.app.world(), target));
+        assert!(!crate::auras::has_aura(h.app.world(), target, 20707));
 
         let soulstone = h
             .app
