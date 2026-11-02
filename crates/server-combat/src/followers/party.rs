@@ -1598,6 +1598,58 @@ mod copy_tests {
     }
 
     #[test]
+    fn native_class_druid_resurrects_follower_out_of_combat() {
+        use shared::components::{Health, Level, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, _, target, _) = brackenhide_release_fixture(owner_position);
+        let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+        let mut instances = crate::maps::InstanceManager::default();
+        let map = instances
+            .create_map(
+                &maps,
+                2520,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: 205,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(instances);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((map, Level(70)));
+        h.app.insert_resource(super::super::FollowerActionProvider {
+            before_passives: |_, _, _| Ok(()),
+            source_actions: |_, _, _| Ok(Vec::new()),
+            equipped_actions: |_, _, _| Ok(Vec::new()),
+        });
+        let caster =
+            super::super::native_fixture::spawn_class(h.app.world_mut(), h.caster, 105).unwrap();
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        h.app.world_mut().entity_mut(caster).insert((map, corpse));
+        h.app.world_mut().entity_mut(target).insert(map);
+        let mut run = h.app.world_mut().get_mut::<FollowerRun>(h.caster).unwrap();
+        run.copy = Some(map);
+        run.members = vec![caster, target];
+        super::super::release::update(h.app.world_mut());
+        h.advance(200);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
     fn class_follower_casts_resurrection_before_release() {
         use shared::components::{Health, Position};
         let owner_position = Position {
