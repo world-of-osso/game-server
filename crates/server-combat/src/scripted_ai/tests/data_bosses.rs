@@ -630,10 +630,7 @@ fn encounter_fixture(
 
 #[test]
 fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
-    use lightyear::prelude::AppMessageExt;
-    use shared::protocol::{
-        EnterWorldResponse, GameObjectInfo, KeystoneInfo, LoadTerrain, SelectCharacter,
-    };
+    use shared::protocol::{GameObjectInfo, KeystoneInfo};
 
     let (mut h, _, _) =
         encounter_fixture(186644, 2515, 0, 23, None, EncounterState::NotStarted, true);
@@ -764,9 +761,6 @@ fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
     crate::mythic_plus::fixture::tick(h.app.world_mut());
     let before = crate::mythic_plus::fixture::snapshot(h.app.world(), map);
     crate::networking::install_disconnect_fixture(&mut h.app);
-    h.app.register_message::<SelectCharacter>();
-    h.app.register_message::<EnterWorldResponse>();
-    h.app.register_message::<LoadTerrain>();
     h.app
         .add_systems(Update, crate::auth_character::process_select_character);
     h.app
