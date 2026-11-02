@@ -29,7 +29,25 @@ fn temple_keystone_bosses_cast_observed_openers() {
                 entries: Vec::new(),
             });
         h.engage(boss);
-        h.advance(elapsed);
+        if entry == 263658 {
+            h.advance(21.0);
+            eprintln!(
+                "induction at 21s: cast={:?} moving={:?} pos={:?}",
+                h.app.world().get::<shared::casting::CastState>(boss),
+                h.app.world().get::<shared::components::Moving>(boss),
+                h.app.world().get::<Position>(boss)
+            );
+            h.advance(0.1);
+            eprintln!(
+                "induction at 21.1s: cast={:?} moving={:?} pos={:?}",
+                h.app.world().get::<shared::casting::CastState>(boss),
+                h.app.world().get::<shared::components::Moving>(boss),
+                h.app.world().get::<Position>(boss)
+            );
+            h.advance(elapsed - 21.1);
+        } else {
+            h.advance(elapsed);
+        }
         assert!(
             h.inbox(0)
                 .spell_gos
