@@ -47,8 +47,28 @@ fn scarlet_periodic_heal_survives_full_twilight_trance() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    assert!(crate::auras::has_aura(run.app.world(), actor, 210313));
+    let trance = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 210313)
+        .expect("the full Twilight Trance must apply");
+    assert!(
+        trance
+            .effects
+            .iter()
+            .any(|effect| effect.index == 0 && effect.aura_type == 12)
+    );
+    assert!(
+        trance
+            .effects
+            .iter()
+            .any(|effect| effect.index == 3 && effect.aura_type == 37)
+    );
     assert!(crate::auras::has_aura(run.app.world(), actor, 361509));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 372469));
     let before = run
         .app
         .world()
@@ -69,9 +89,11 @@ fn scarlet_periodic_heal_survives_full_twilight_trance() {
                 && event.target == Some(actor.to_bits())
                 && event.spell_id == Some(361509)
                 && event.kind == CombatLogKind::Heal
+                && event.amount > 0
         }),
         "the existing Living Flame heal must tick during Twilight Trance"
     );
     assert!(crate::auras::has_aura(run.app.world(), actor, 210313));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 372469));
     assert!(!crate::auras::has_aura(run.app.world(), actor, 372470));
 }
