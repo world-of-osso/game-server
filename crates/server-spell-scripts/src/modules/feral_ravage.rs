@@ -1,18 +1,22 @@
 //! Feral Ravage is earned from landed white swings.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::ActiveAuras;
+use combat::auras::{ActiveAuras, RemoveReason};
 use combat::melee::Hand;
-use combat::spell_cast::{self, script_registry::SpellScriptHook};
+use combat::spell_cast::{self, script_registry::SpellScriptHook, scripts::AfterCastHook};
+use combat::spell_info::SpellInfo;
 use shared::components::ActiveSpec;
 
 const RAVAGE_TALENT: u32 = 441583;
 const RAVAGE_BUFF: u32 = 441585;
+const RAVAGE: u32 = 441591;
 const LIMB_FROM_LIMB: u32 = 1271540;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(owns_proc),
     SpellScriptHook::AfterWhiteHandHit(after_white_hit),
+    SpellScriptHook::ResourceContext(&[RAVAGE]),
+    SpellScriptHook::NativeAfterCast(after_cast),
 ];
 
 #[derive(Component, Default)]
@@ -20,6 +24,17 @@ struct RavageAttempts(u32);
 
 fn owns_proc(spell: u32) -> bool {
     spell == RAVAGE_TALENT
+}
+
+fn after_cast(spell: u32) -> Option<AfterCastHook> {
+    (spell == RAVAGE).then_some(consume_ravage)
+}
+
+// SimC76f8118 sc_druid.cpp4442–4450 consumes the replacement on execution.
+fn consume_ravage(world: &mut World, caster: Entity, _: &SpellInfo) {
+    combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == RAVAGE_BUFF && aura.caster == caster
+    });
 }
 
 fn selected_effect(world: &World, actor: Entity, spell: u32, index: u8) -> Option<f32> {
