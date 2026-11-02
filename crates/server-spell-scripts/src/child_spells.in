@@ -729,3 +729,12 @@ D	havoc/demonsurge.rs	trigger_meta_entry	try_cast_triggered	trigger	1	453323,123
 D	havoc/demonsurge.rs	expire_meta	try_cast_triggered	buff	1	452550,453314
 D	havoc/demonsurge.rs	initialize_non_meta_buff	try_cast_triggered	buff	1	452550,453314
 D	havoc/onslaught.rs	execute_copy	try_cast_triggered	spell	1	162794,201427
+D	hellcaller_counters.rs	apply_native_aura	AuraApplication	spell	1	445731
+D	hellcaller_counters.rs	cast_native_damage	cast_triggered	spell	1	445736,446285
+D	hellcaller_counters.rs	trigger_seed_payout	launch_triggered_spell	&buff	1	387263,1260269
+D	hot_streak.rs	apply_hot_streak_outcome	cast_triggered	proc	1	48107,48108
+D	hunter_howl.rs	apply_self	try_cast_triggered	spell	1	471877,471878,472324,472325,1258338,1258344
+D	hunter_howl/summons.rs	summon	cast_triggered_with_overrides	rule.spell	1	471990,1222271
+D	hunter_huntmaster.rs	earn_companion	cast_triggered_with_overrides	summon	1	459733,459739
+D	hunter_huntmaster.rs	earn_companion	try_cast_triggered	buff	1	459735,459738
+D	impact_procs.rs	cast_impact_proc	try_cast_triggered	policy.payload	1	445579
