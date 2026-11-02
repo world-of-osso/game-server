@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
-use super::{combat, shadow_link};
+use super::{combat, shadow_link, shadow_void_apparitions};
 use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
@@ -105,6 +105,14 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
         depth,
     );
     cast_maddening_tentacles(world, caster, primary, depth);
+    let ctx = EffectCtx {
+        caster,
+        spell: &damage,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    shadow_void_apparitions::trigger(world, &ctx, primary);
 }
 
 fn load_slam_damage(

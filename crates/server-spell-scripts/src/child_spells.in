@@ -479,6 +479,9 @@ C	shadow_priest.rs	1227621
 C	shadow_rift.rs	447448
 C	shadow_rift.rs	459314
 C	shadow_screams.rs	393919
+C	shadow_void_apparitions.rs	262485
+C	shadow_void_apparitions.rs	373316
+C	shadow_void_apparitions.rs	1280172
 C	shadow_void_blast.rs	450404
 C	shadow_voidheart.rs	449887
 C	shadow_volley.rs	194249
@@ -617,8 +620,8 @@ D	ret_damage.rs	sentence_init	launch_triggered_spell_with_primary	&child	1	12602
 D	ret_empyrean.rs	cast_background_storm	launch_triggered_spell	&storm	1	53385
 D	ret_toll.rs	cast_protection_child	launch_triggered_spell	&child	1	31935
 D	shadow_apparitions.rs	burst_at_parent	launch_triggered_spell_with_primary	&spell	1	1231479
-D	shadow_cthun.rs	try_summon	launch_triggered_spell	&summon	1	377355,377357
-D	shadow_cthun.rs	try_summon	load_triggered_spell	id	1	377355,377357
+D	shadow_cthun.rs	spawn_idol	launch_triggered_spell	&summon	1	377355,377357
+D	shadow_cthun.rs	spawn_idol	load_triggered_spell	id	1	377355,377357
 D	shadow_priest.rs	cast_maddening_tentacles	launch_triggered_spell	&child	1	335467
 D	shadow_rift.rs	pulse	launch_triggered_spell	&damage	1	447448
 D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277

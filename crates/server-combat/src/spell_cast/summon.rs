@@ -803,7 +803,7 @@ fn read_summon_template(
         .is_some_and(|spec| {
             (spec.0 == 256 && matches!(spell_id, 1280172 | 200174 | 451235))
                 || (spec.0 == 250 && spell_id == 434237)
-                || (spec.0 == 258 && matches!(spell_id, 377355 | 377357))
+                || (spec.0 == 258 && matches!(spell_id, 1280172 | 377355 | 377357))
         });
     let selected = if owner_level_pet {
         SelectedSummonLevel {
