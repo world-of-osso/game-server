@@ -227,8 +227,9 @@ fn follower_healer_casts_on_nearby_heal_objective() {
     let faction = *world.get::<UnitFactionTemplate>(actor).unwrap();
     let max = world.get::<Health>(actor).unwrap().max;
     world.get_mut::<Health>(owner).unwrap().current = max;
+    world.init_resource::<server_combat::maps::MapStore>();
     world
-        .init_resource::<server_combat::maps::MapStore>()
+        .resource_mut::<server_combat::maps::MapStore>()
         .encounter_heal_objectives
         .insert((1877, 133392), 25.0);
     let avatar = world
@@ -238,6 +239,7 @@ fn follower_healer_casts_on_nearby_heal_objective() {
             faction,
             Npc {
                 template_id: 133392,
+                name: "Avatar of Sethraliss".into(),
             },
             Health {
                 current: max * 0.25,
