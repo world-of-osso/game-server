@@ -8,6 +8,7 @@ use combat::spell_info::SpellInfo;
 const TALENT: u32 = 373202;
 const BUFF: u32 = 373204;
 const MIND_BLAST: u32 = 8092;
+const VOID_BLAST: u32 = 450983;
 const MADNESS: u32 = 335467;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
@@ -17,7 +18,9 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn after_mind_blast(world: &mut World, ctx: &EffectCtx<'_>, _: Entity, _: bool, _: f32) {
-    if ctx.spell.id != MIND_BLAST || !auras::has_aura(world, ctx.caster, TALENT) {
+    if !matches!(ctx.spell.id, MIND_BLAST | VOID_BLAST)
+        || !auras::has_aura(world, ctx.caster, TALENT)
+    {
         return;
     }
     let chance = spell_cast::scripts::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
