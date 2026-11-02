@@ -1,9 +1,9 @@
 //! Earth Shield heals its holder when damage triggers its native cooldown.
 use super::combat;
 use bevy::prelude::*;
+use combat::auras::AuraInstance;
 use combat::auras::procs::AuraEvent;
 use combat::auras::scripts::{AuraScript, AuraScripts};
-use combat::auras::AuraInstance;
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
 const EARTH_SHIELD: u32 = 974;
@@ -12,11 +12,14 @@ const EARTH_SHIELD_HEAL: u32 = 379;
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::SupportAuraRegistration(register)];
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(EARTH_SHIELD, AuraScript {
-        check_proc: Some(took_damage),
-        on_damage_proc: Some(heal_holder),
-        ..Default::default()
-    });
+    scripts.0.insert(
+        EARTH_SHIELD,
+        AuraScript {
+            check_proc: Some(took_damage),
+            on_damage_proc: Some(heal_holder),
+            ..Default::default()
+        },
+    );
 }
 
 fn took_damage(_world: &World, _aura: &AuraInstance, event: &AuraEvent) -> bool {
