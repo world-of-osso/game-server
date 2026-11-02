@@ -54,6 +54,45 @@ fn temple_pair_engages_together_and_completes_only_after_both_die() {
 }
 
 #[test]
+fn merektha_marks_two_living_party_members_for_knot_and_thunder_spit() {
+    let (mut h, boss, map) = bound_boss_at_difficulty(133384, 1877, 1, 8, None);
+    h.app.insert_resource(
+        crate::spell_cast::test_harness::world_db()
+            .unwrap()
+            .spell_store()
+            .clone(),
+    );
+    let player = h.player();
+    let pos = h.wow_position(boss);
+    let near = [pos.x + 3.0, pos.y, pos.z, 0.0];
+    let (second, _) = spawn_player(&mut h.app, map, near, 101);
+    let (third, _) = spawn_player(&mut h.app, map, near, 102);
+    let players = [player, second, third];
+    for unit in players {
+        let mut health = h.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.max = 1_000_000_000.0;
+        health.current = health.max;
+        crate::creature_aggro::add_threat(h.app.world_mut(), boss, unit, 1.0);
+    }
+    h.advance(13.3);
+    assert_eq!(
+        players
+            .iter()
+            .filter(|&&unit| h.has_aura(unit, 1290030))
+            .count(),
+        2
+    );
+    h.advance(12.0);
+    assert_eq!(
+        players
+            .iter()
+            .filter(|&&unit| h.has_aura(unit, 1289109))
+            .count(),
+        2
+    );
+}
+
+#[test]
 fn temple_keystone_bosses_cast_observed_openers() {
     for (entry, bit, spell, elapsed) in [
         (262822, 0, 1288457, 5.0),
