@@ -375,7 +375,7 @@ fn build_runtime_app(
     app
 }
 
-fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
+pub(super) fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
     let db =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
@@ -417,6 +417,15 @@ pub(super) fn create_copy_at_difficulty(
     difficulty_id: u32,
 ) -> Result<crate::maps::InMap, String> {
     let map_id = app.world().resource::<super::Space>().0.map_id;
+    create_map_copy(app, map_id, difficulty_id)
+}
+
+/// A native instance copy of `map_id`, as the server creates for a dungeon entrant.
+pub(super) fn create_map_copy(
+    app: &mut App,
+    map_id: u32,
+    difficulty_id: u32,
+) -> Result<crate::maps::InMap, String> {
     app.world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
             world
