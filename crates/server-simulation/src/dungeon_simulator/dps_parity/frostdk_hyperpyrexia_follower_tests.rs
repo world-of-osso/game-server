@@ -1,51 +1,25 @@
 //! Two-handed Frost Strike must feed the native Hyperpyrexia residual.
+use super::follower_dps_diagnostic::*;
 use super::*;
-use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::protocol::CombatLogKind;
 
-fn cast_when_ready(run: &mut Run, spell: u32) {
-    for _ in 0..1200 {
-        match crate::spell_cast::creature_cast(
-            run.app.world_mut(),
-            run.actor,
-            spell,
-            Some(run.targets[0]),
-            false,
-        ) {
-            Ok(()) => {
-                preparation::finish_pending_setup(run).unwrap();
-                return;
-            }
-            Err(
-                crate::spell_cast::CastFailure::OnGlobalCooldown
-                | crate::spell_cast::CastFailure::OnCooldown
-                | crate::spell_cast::CastFailure::NoCharges
-                | crate::spell_cast::CastFailure::InProgress
-                | crate::spell_cast::CastFailure::NotEnoughPower(_),
-            ) => run.app.update(),
-            Err(reason) => panic!("Frost cast {spell}: {reason:?}"),
-        }
-    }
-    panic!("Frost cast {spell} did not become ready");
-}
-
 #[test]
-#[ignore = "native Frost profile and ordinary two-handed casts"]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn frost_two_hand_strikes_produce_hyperpyrexia() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_literal(251, 1).unwrap();
-    assert!(run.app.world().get::<crate::stats::CharacterStats>(run.actor).unwrap().off_hand.is_none());
-    assert!(crate::auras::has_aura(run.app.world(), run.actor, 456238));
-    engage(&mut run);
-    for _ in 0..12 {
-        cast_when_ready(&mut run, 49020);
-        cast_when_ready(&mut run, 49020);
-        cast_when_ready(&mut run, 49143);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 251, 90);
+    assert!(app.world().get::<crate::stats::CharacterStats>(actor).unwrap().off_hand.is_none());
+    assert!(crate::auras::has_aura(app.world(), actor, 456238));
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(app.world_mut(), actor, 49143, Some(target), 1);
     }
     for _ in 0..200 {
-        run.app.update();
+        app.update();
     }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+    let events = &app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
     assert!(events.iter().any(|event| event.spell_id == Some(325464) && event.amount > 0));
     assert!(events.iter().any(|event| event.spell_id == Some(458169)
         && event.kind == CombatLogKind::Damage && event.periodic && event.amount > 0),
