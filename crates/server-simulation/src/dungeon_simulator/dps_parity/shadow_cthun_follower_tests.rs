@@ -52,6 +52,15 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
+        let mut counts = std::collections::BTreeMap::new();
+        for event in events {
+            if let Some(spell) = event.spell_id {
+                *counts
+                    .entry((spell, format!("{:?}", event.kind)))
+                    .or_insert(0usize) += 1;
+            }
+        }
+        println!("CTHUN_EVENTS selected={selected} targets={count} {counts:?}");
         let tendril = events.iter().any(|event| {
             event.kind == CombatLogKind::Damage
                 && event.spell_id == Some(193473)
