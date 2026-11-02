@@ -229,6 +229,7 @@ mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod evoker_titanic_tests;
 mod feral_apex_follower_tests;
+mod feral_apex_spender_follower_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
 mod feral_dreadful_wound_follower_tests;
