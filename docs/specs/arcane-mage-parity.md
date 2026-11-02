@@ -36,6 +36,11 @@ Spec62 follows the pinned SimC behavior and native-value rules in [DPS parity](d
 
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/arcane_tests.rs`
 
+## Follower L90 measurement
+
+- Snapshot v3, map2813, 120 seconds, seeds 70448 and 1–19: native 43,917 DPS, SimC 42,797 DPS; mean paired difference +2.74% ±4.28 percentage points (95% paired t interval). The paired mean meets the ±5% gate; the interval extends beyond it. Native source `2157a62ae2`, test binary SHA-256 `74ae5122b980d4930dbf8da6ccf546906ef2ac348ec4c341dcccf3c3cbfa1920`; SimC `76f8118`, saved gear and temporary enchants disabled.
+- Each native fight cast Time Warp once, with 33.29% uptime; each reference activated Bloodlust once, with 33.33% uptime. The 20-seed means for Barrage damage were 1,342,857 native and 1,338,831 SimC; Missiles were 1,218,160 and 1,208,447; Touch discharge was 394,834 and 387,696. Surge uptime was 25% on both sides. Prismatic Bolt damage was 902,078 versus 818,270; this aggregate difference alone does not establish a defect. Earlier per-attempt Augury and Familiar proc comparisons did not establish a rate defect. No new mechanic defect was proven in this measurement.
+
 ## Known gaps (current cycle)
 
 - [x] Blast and Barrage apply one native charge damage modifier frozen before charge gain/spend. Savant augments only its per-charge term; Prodigious multiplies both that mastery contribution (`sc_mage.cpp2076–2083`) and the 36032 base points (SimC affecting-aura debug: Barrage 90→108, Blast 60→72).
