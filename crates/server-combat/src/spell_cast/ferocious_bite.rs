@@ -12,6 +12,7 @@ use crate::{
 
 const FEROCIOUS_BITE: u32 = 22_568;
 const RAVAGE: u32 = 441_591;
+const APEX: u32 = 391_882;
 const INCARNATION: u32 = 102_543;
 const SABER_JAWS: u32 = 421_432;
 const BURN_EFFECT: u8 = 1;
@@ -95,6 +96,10 @@ fn is_free_spender(spell: &SpellInfo) -> bool {
         .cast_policy_context
         .as_ref()
         .is_some_and(|context| context.free_spender)
+        || spell
+            .cast_charge_mods
+            .as_ref()
+            .is_some_and(|mods| mods.iter().any(|modifier| modifier.aura_spell_id == APEX))
 }
 
 fn read_extra_fraction(world: &World, caster: Entity, source: &SpellInfo) -> f32 {
