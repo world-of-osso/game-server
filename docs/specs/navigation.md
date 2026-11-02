@@ -7,6 +7,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] `GAME_SERVER_NAV_DIR`, when set, selects the baked navigation directory independently of `GAME_SERVER_GROUND_DIR`. An unset setting uses `<ground dir>/navmesh`; an invalid selected directory is not replaced by another source.
 
 - [x] Produce reproducible per-tile navigation beside `<ground dir>/los`, covering existing LOS maps/tiles starting with map 0; include Stockade global-WMO geometry for acceptance.
+- INFERRED_WCL: Exclude Blinding Vale map 2859 WMO placement 63094801 (FDID 6871907) from navigation collision. Retail NPC positions cross its wall in reports `hbyB6K8cfCDwJvAR` fight 3 and `p3QW9RkBvK86bCga` fight 10. Retire the exclusion when client R-file placement gating is established. Do not alter LOS or other maps.
 - Preserve collision floors when a subtile exceeds Recast's span-height range: bake walkable height bands into Detour layers without changing voxel height, and clip walls and ceilings into each band. If walkable geometry cannot be separated safely, fail the bake explicitly rather than clamp it.
 - Size Detour tile capacity for all packets in the map, including vertical layers, with power-of-two headroom and the 64-bit reference limit.
 - Creature MoveFall searches collision floors to TrinityCore's 250,000-yard fall limit; ordinary ground snapping keeps its 50-yard search.

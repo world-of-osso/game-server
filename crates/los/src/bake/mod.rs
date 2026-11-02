@@ -123,6 +123,7 @@ pub struct Baker {
     listfile: Option<rusqlite::Connection>,
     pub cutoff: f32,
     collision: bool,
+    navigation_map: Option<u32>,
     m2_only: bool,
     m2_solids: bool,
     m2s: HashMap<u32, Option<Rc<ModelGeometry>>>,
@@ -149,6 +150,7 @@ impl Baker {
             listfile,
             cutoff,
             collision: false,
+            navigation_map: None,
             m2_only: false,
             m2_solids: false,
             m2s: HashMap::new(),
@@ -165,6 +167,14 @@ impl Baker {
         Self {
             collision: true,
             ..Self::new(data, 0.0)
+        }
+    }
+
+    /// Navigation collision for a specific map, including map-specific source corrections.
+    pub fn for_navigation_map(data: &Path, map: u32) -> Self {
+        Self {
+            navigation_map: Some(map),
+            ..Self::for_navigation(data)
         }
     }
 
@@ -568,6 +578,15 @@ impl Baker {
         let ModelRef::Fdid(fdid) = placement.model else {
             return;
         };
+        // INFERRED_WCL: hbyB6K8cfCDwJvAR/3 and p3QW9RkBvK86bCga/10 show mobs
+        // moving across this collision-only wall during a key. Retire this exclusion
+        // when client placement-gating behavior is established from the R-file.
+        if self.navigation_map == Some(2859)
+            && placement.unique_id == 63_094_801
+            && fdid == 6_871_907
+        {
+            return;
+        }
         let Some(model) = self.wmo(fdid) else { return };
         if !self.m2_only && overlaps_tile(&model.geometry, world, build.tile, build.border) {
             build.stats.wmo_triangles += build.add(&model.geometry.triangles, world);
