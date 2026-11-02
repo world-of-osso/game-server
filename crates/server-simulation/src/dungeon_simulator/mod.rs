@@ -49,6 +49,7 @@ mod restoration_shaman_replay_tests;
 mod runtime;
 mod tank_replay;
 mod tank_replay_tests;
+mod windrunner_pull_back_tests;
 pub(crate) use graph::Space;
 
 #[test]

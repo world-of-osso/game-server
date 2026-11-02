@@ -16,25 +16,19 @@ fn at(point: Vec3) -> Position {
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_tank_pulls_back_and_waits_without_pulling_hatchling() {
-    run_native_pull_back(false, false, false);
+    run_native_pull_back(false, false);
 }
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_production_ai_pulls_back_without_pulling_hatchling() {
-    run_native_pull_back(true, false, false);
-}
-
-#[test]
-#[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
-fn windrunner_production_party_follows_and_heals_during_pull_back() {
-    run_native_pull_back(true, true, false);
+    run_native_pull_back(true, false);
 }
 
 #[test]
 #[ignore = "requires Windrunner native ground, navigation and sourced follower data"]
 fn windrunner_follower_shield_does_not_damage_idle_hatchling() {
-    run_native_pull_back(true, false, true);
+    run_native_pull_back(true, true);
 }
 
 fn verify_shield_avoids_hatchling(
@@ -110,7 +104,7 @@ fn verify_shield_avoids_hatchling(
     );
 }
 
-fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) {
+fn run_native_pull_back(production: bool, shield_probe: bool) {
     use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
     let (mut h, tank, profile) = spawn_profile_fixture_with_plugins(209057, |app| {
         app.insert_resource(crate::test_data::world_data().clone());
@@ -215,33 +209,6 @@ fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) 
         owner_trail::record(h.app.world_mut(), owner);
     }
     h.app.world_mut().entity_mut(tank).insert(at(start));
-    let mut companions = Vec::new();
-    if full_party {
-        let profiles: Vec<_> = h
-            .app
-            .world()
-            .resource::<super::FollowerCatalog>()
-            .profiles
-            .iter()
-            .filter(|profile| matches!(profile.entry, 209072 | 209059))
-            .cloned()
-            .collect();
-        assert_eq!(profiles.len(), 2);
-        for profile in profiles {
-            let unit = super::spawning::spawn(h.app.world_mut(), owner, profile).unwrap();
-            companions.push(unit);
-        }
-        h.app
-            .world_mut()
-            .entity_mut(owner)
-            .insert(super::stockade_diagnostic::DiagnosticParty {
-                copy: map,
-                members: std::iter::once(tank)
-                    .chain(companions.iter().copied())
-                    .collect(),
-                player_role: shared::group::GroupRole::Dps,
-            });
-    }
     if shield_probe {
         verify_shield_avoids_hatchling(&mut h, owner, tank, target, hatchling);
         return;
@@ -279,13 +246,6 @@ fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) 
     );
     owner_trail::record(h.app.world_mut(), owner);
     pull_history::sample_all(h.app.world_mut());
-    let initial_health = if full_party {
-        let mut health = h.app.world_mut().get_mut::<Health>(owner).unwrap();
-        health.current = health.max * 0.1;
-        health.current
-    } else {
-        0.0
-    };
     if !production {
         crate::spell_cast::creature_cast(h.app.world_mut(), tank, 62124, Some(target), false)
             .expect("native ranged taunt must acquire the intended Groundskeeper");
@@ -296,9 +256,6 @@ fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) 
     let mut farthest = 0.0_f32;
     let mut waited = false;
     let mut acquired = false;
-    let mut healed_while_waiting = false;
-    let mut followed = vec![false; companions.len()];
-    let mut moved = vec![false; companions.len()];
     for _ in 0..1200 {
         if production {
             super::update_ai(h.app.world_mut());
@@ -313,40 +270,12 @@ fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) 
             .world()
             .get::<crate::networking::CombatTarget>(target)
             .is_some_and(|victim| victim.0 == Some(tank));
-        let waiting_now = tank_pull_back::party_should_wait(h.app.world(), owner);
-        let before_events = h.inbox.log.len();
         h.advance(1);
-        if full_party && waiting_now {
-            healed_while_waiting |= h.health(owner) > initial_health;
-            for (index, &unit) in companions.iter().enumerate() {
-                followed[index] |= h
-                    .app
-                    .world()
-                    .get::<crate::creature_ai::FollowOwner>(unit)
-                    .is_some_and(|follow| follow.owner == tank);
-                moved[index] |= crate::spell_cast::targets::position(h.app.world(), unit)
-                    .is_some_and(|position| position.distance(start) > 1.0);
-            }
-            assert!(
-                h.inbox.log[before_events..].iter().all(|event| {
-                    !matches!(event.kind, shared::protocol::CombatLogKind::Damage)
-                        || !companions
-                            .iter()
-                            .any(|unit| event.source == Some(unit.to_bits()))
-                }),
-                "non-tank follower damaged an enemy while waiting"
-            );
-            assert!(
-                crate::combat_refs::has_active_reference_to(h.app.world(), owner, target),
-                "waiting must preserve owner combat reference"
-            );
-        }
         let point = crate::spell_cast::targets::position(h.app.world(), tank).unwrap();
         farthest = farthest.max(start.distance(point));
         assert!(
-            std::iter::once(owner)
-                .chain(std::iter::once(tank))
-                .chain(companions.iter().copied())
+            [owner, tank]
+                .into_iter()
                 .all(|member| !crate::combat_refs::has_active_reference_to(
                     h.app.world(),
                     hatchling,
@@ -380,17 +309,6 @@ fn run_native_pull_back(production: bool, full_party: bool, shield_probe: bool) 
         "tank must retreat on real ground: start={start:?}, end={end:?}"
     );
     assert!(waited, "party must wait for the pull-back");
-    if full_party {
-        assert!(healed_while_waiting, "healer must heal while waiting");
-        assert!(
-            followed.iter().all(|seen| *seen),
-            "both companions must follow the tank: {followed:?}"
-        );
-        assert!(
-            moved.iter().all(|seen| *seen),
-            "both companions must move during pull-back: {moved:?}"
-        );
-    }
     assert!(acquired, "tank must acquire the intended Groundskeeper");
     if production {
         assert!(
