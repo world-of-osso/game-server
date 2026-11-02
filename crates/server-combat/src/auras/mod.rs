@@ -1014,6 +1014,10 @@ fn build_effect(
 
 /// Fresh native stack limit, including the caster's MaxAuraStacks modifiers.
 pub fn fresh_max_stacks(world: &World, caster: Entity, spell: &SpellInfo) -> u8 {
+    // SimC76f8118 sc_druid.cpp13852–13854 caps Sabertooth at base combo points.
+    if spell.id == 391722 {
+        return 5;
+    }
     if let Some(maximum) = ret_crusade::maximum_stacks(world, caster, spell) {
         return maximum;
     }
