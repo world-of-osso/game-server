@@ -165,6 +165,17 @@ mod group_buff_tests;
 
 pub use ai::{AplControlled, FollowerReach, acting_follower, engaged_targets, party_units};
 
+/// Whether a follower is approaching or casting a resurrection, or the owner has an offer.
+pub fn resurrection_pending(world: &mut World, owner: Entity) -> bool {
+    world
+        .get::<crate::death::resurrection::PendingResurrection>(owner)
+        .is_some()
+        || world
+            .query::<(&Follower, &release::ResurrectionApproach)>()
+            .iter(world)
+            .any(|(follower, _)| follower.owner == owner)
+}
+
 #[cfg(feature = "test-support")]
 pub fn set_test_pull_back(world: &mut World, owner: Entity, tank: Entity) {
     world

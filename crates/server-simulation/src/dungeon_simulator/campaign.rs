@@ -3966,6 +3966,19 @@ impl Run {
                 .entity_mut(self.party.owner)
                 .remove::<server_follower_apl::DirectedOwnerTarget>();
             if server::test_support::player_death_recorded(self.app.world(), self.party.owner) {
+                if server::test_support::accept_resurrection(self.app.world_mut(), self.party.owner)
+                {
+                    return Ok(());
+                }
+                if crate::followers::simulator::has_uncleared_fight(
+                    self.app.world(),
+                    self.party.owner,
+                ) || crate::followers::resurrection_pending(
+                    self.app.world_mut(),
+                    self.party.owner,
+                ) {
+                    return Ok(());
+                }
                 server::test_support::release_dungeon_player(
                     self.app.world_mut(),
                     self.party.owner,

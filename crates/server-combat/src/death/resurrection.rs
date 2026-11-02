@@ -203,6 +203,26 @@ fn expire_offers(world: &mut World) {
     }
 }
 
+#[cfg(feature = "test-support")]
+pub(crate) fn accept_pending(world: &mut World, player: Entity) -> bool {
+    let Some(offer) = world
+        .get::<PendingResurrection>(player)
+        .map(|pending| pending.offer.clone())
+    else {
+        return false;
+    };
+    respond(
+        world,
+        player,
+        ResurrectionResponse {
+            caster: offer.caster,
+            spell_id: offer.spell_id,
+            accept: true,
+        },
+    );
+    true
+}
+
 pub(crate) fn respond(world: &mut World, player: Entity, response: ResurrectionResponse) {
     let Some(pending) = world.get::<PendingResurrection>(player).cloned() else {
         return;
