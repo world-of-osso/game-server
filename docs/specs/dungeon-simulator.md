@@ -41,6 +41,10 @@ A gameplay panic or initialization failure must return an explicit `aborted` res
 
 Extract each in-dungeon transport from its production registration and execute its production handler. Azure book routes must be available in generic extraction and in the frozen Azure graph; they must not use an implicit fallback dispatcher.
 
+## Non-attackable boss anchors
+
+Graph extraction moves a bound boss source pack that stays unreachable after walking, transport and flight edges to the reachable navmesh point closest to the boss, only when players cannot attack the boss (runtime faction reaction or `NON_ATTACKABLE`/`NON_ATTACKABLE_2`/`IMMUNE_TO_PC`/`NOT_SELECTABLE` flags) and that point is within 35 yd horizontally. The bound is the Temple of Sethraliss Avatar arena: Retail +2 players and enemies stand 13–31 yd from the healed Avatar. Spawn position, encounter binding and credit are unchanged. The graph JSON `boss_anchors` lists each move (original, anchor, horizontal yards, via pack, reason). An attackable unreachable boss, or a closest point beyond the bound, fails extraction.
+
 ## Route progress
 
 A party member makes movement progress only when its remaining native route distance to the same goal decreases. Damage and HP/mana recovery also count as progress; movement that does not reduce the route does not. The leader waits when the tank's native walking distance to the leader exceeds the tank's opening range, and resumes after the tank regroups.
