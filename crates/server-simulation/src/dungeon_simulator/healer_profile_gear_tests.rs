@@ -37,37 +37,39 @@ fn discipline_and_holy_replay_healers_equip_profile_items() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn discipline_replay_uses_its_equipped_soulcoiler() {
+fn priest_replay_healers_use_their_equipped_soulcoiler() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
 
-    let _seed = crate::random::seed_scope(1);
-    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
-    let healer = run.healer;
-    run.app
-        .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 120.0 });
-    super::healer_simc_replay::engage(&mut run);
-    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    for _ in 0..600 {
-        run.app.update();
-        if run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
-            .iter()
-            .any(|event| {
-                event.source == Some(healer.to_bits())
-                    && event.spell_id == Some(1307578)
-                    && event.kind == CombatLogKind::AuraApplied
-            })
-        {
-            break;
+    for spec in [256, 257] {
+        let _seed = crate::random::seed_scope(1);
+        let mut run = super::healer_simc_replay::snapshot_party(spec, 90, 1);
+        let healer = run.healer;
+        run.app
+            .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 120.0 });
+        super::healer_simc_replay::engage(&mut run);
+        let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+        for _ in 0..600 {
+            run.app.update();
+            if run.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+                .iter()
+                .any(|event| {
+                    event.source == Some(healer.to_bits())
+                        && event.spell_id == Some(1307578)
+                        && event.kind == CombatLogKind::AuraApplied
+                })
+            {
+                break;
+            }
         }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(1307578)
+                    && event.kind == CombatLogKind::AuraApplied),
+            "spec {spec} must use its equipped Soulcoiler: {events:?}"
+        );
     }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
-    assert!(
-        events
-            .iter()
-            .any(|event| event.source == Some(healer.to_bits())
-                && event.spell_id == Some(1307578)
-                && event.kind == CombatLogKind::AuraApplied),
-        "the real follower must use its equipped Soulcoiler: {events:?}"
-    );
 }
