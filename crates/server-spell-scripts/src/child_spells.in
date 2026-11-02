@@ -624,3 +624,12 @@ D	affliction_grasp.rs	copy_owned_ticks	cast_triggered_with_effect0_amount	child	
 D	assassination_runtime/rogue_children.rs	tick_implacable	cast_triggered	child	1	1265794,1265795
 D	aura_rolls.rs	apply_roll	AuraApplication	payload	1	1214933,1214934,1214935,1214937
 D	blood_ground.rs	apply	AuraApplication	spell	1	188290,391459,434034
+D	bloodlust_lockout.rs	apply_lockout	AuraApplication	lockout	1	57723,57724,80354,264689,390435
+D	brewmaster_empty_barrel.rs	grant_empty_barrel	AuraApplication	spell_id	1	1265140,1265307
+D	brewmaster_harmonic_surge.rs	launch_surge	launch_triggered_spell	&spell	1	1271011,1271045
+D	brewmaster_harmonic_surge.rs	launch_surge	load_triggered_spell	id	1	1271011,1271045
+D	cast_grants.rs	roll_grant	try_cast_triggered	grant.buff	1	445206
+D	demon_hunter_burning.rs	apply	cast_triggered_with_effect0_amount	residual	1	453177,1245654
+D	demon_hunter_catastrophe.rs	apply_deposit	AuraApplication	deposit.spell	1	1256667,1256676
+D	demon_hunter_meteor_shower.rs	update	cast_triggered_at_destination	spell	1	1264129,1264130
+D	demonology_tyrant_buffs.rs	grant	try_cast_triggered	buff	1	456323,1276767
