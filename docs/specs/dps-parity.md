@@ -453,6 +453,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Frost literal rotation
 
+- Follower fixed-fight recheck, ten paired seeds at server `602720a971` (binary SHA-256 `be2e8b363e1400f9ff8b972cbe5040219978f1035d895c4f5657b0ccc50c0fd4`): L70 native 3,757.62 vs SimC 3,912.53 DPS, −3.39% ±7.47 pp; L90 native 35,955.30 vs pinned SimC 38,297.01 DPS, −5.98% ±4.24 pp. Neutralizing only Icy Talons effect1160266 in SimC gives L90 37,401.96 DPS, −3.74% ±4.27 pp; L70 is unchanged. Retail log `WoWCombatLog-102526_094013.txt` 11:28:56.175 and 11:28:57.583 shows no stack-based white-damage increase, so native retains the Retail behavior. The unmodified SimC result remains the raw reference; the override is a documented Retail-qualified comparison.
+
 - Hyperpyrexia rolls on actual Frost Strike impacts for either weapon configuration, including the native two-handed damage child325464, and banks the native fraction of damage (`sc_death_knight.cpp`10759–10795).
 
 - Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
