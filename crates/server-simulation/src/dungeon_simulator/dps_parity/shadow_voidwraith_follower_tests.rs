@@ -16,6 +16,7 @@ fn follower_rift_end_spawns_a_damaging_insanity_generating_voidwraith() {
         let (mut app, actor, target, _) = prepare_class_follower(app, copy, 258, 90);
         app.world_mut()
             .entity_mut(actor)
+            .insert(crate::networking::CombatTarget(Some(target)))
             .remove::<crate::followers::Follower>();
         assert!(auras::has_aura(app.world(), actor, 451234));
         if !selected {
