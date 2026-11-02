@@ -48,6 +48,7 @@ mod arms_precision_follower_tests;
 mod arms_followup_relationship_tests;
 mod arms_massacre_sudden_death_tests;
 mod arms_onslaught_follower_tests;
+mod arms_overwhelming_blades_follower_tests;
 mod arms_missing_relationship_tests;
 mod arms_reap_cleave_tests;
 mod arms_reap_tests;
