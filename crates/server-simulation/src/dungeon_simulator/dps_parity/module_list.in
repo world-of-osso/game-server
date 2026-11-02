@@ -232,6 +232,7 @@ mod feral_growth_tests;
 mod feral_literal_tests;
 mod feral_lunar_tests;
 mod feral_native_tests;
+mod feral_ravage_follower_tests;
 mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
