@@ -579,8 +579,9 @@ impl Baker {
             return;
         };
         // INFERRED_WCL: hbyB6K8cfCDwJvAR/3 and p3QW9RkBvK86bCga/10 show mobs
-        // moving across this collision-only wall during a key. Retire this exclusion
-        // when client placement-gating behavior is established from the R-file.
+        // moving across this collision-only wall during a key. Replace this exclusion
+        // with a 0x40-face rule if retail movement uses query flag 0x4000
+        // (R-wmo-collision-gating follow-up).
         if self.navigation_map == Some(2859)
             && placement.unique_id == 63_094_801
             && fdid == 6_871_907
