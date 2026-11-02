@@ -218,11 +218,16 @@ impl Pull {
 #[test]
 fn follower_healer_casts_on_nearby_heal_objective() {
     use shared::components::{Npc, Position, UnitFactionTemplate};
-    let mut pull = spawn_at_map(257, 90, 1877);
+    let mut pull = spawn_at_map(257, 90, 2515);
     let actor = pull.follower;
     let owner = pull.harness.caster;
     let world = pull.harness.app.world_mut();
-    let map = *world.get::<server_combat::maps::InMap>(actor).unwrap();
+    let map = server_combat::maps::InMap {
+        map_id: 1877,
+        instance_id: 1,
+    };
+    world.entity_mut(actor).insert(map);
+    world.entity_mut(owner).insert(map);
     let position = *world.get::<Position>(actor).unwrap();
     let faction = *world.get::<UnitFactionTemplate>(actor).unwrap();
     let max = world.get::<Health>(actor).unwrap().max;
