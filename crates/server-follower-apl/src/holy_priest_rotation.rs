@@ -246,7 +246,7 @@ impl crate::follower::SpecRotation for Holy {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        let party = crate::follower::party_of(world, actor);
+        let party = crate::follower::healing_party(world, actor);
         Holy::drive(self, world, actor, &party, targets.first().copied())
     }
 }

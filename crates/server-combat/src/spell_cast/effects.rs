@@ -2289,7 +2289,7 @@ fn deal_source_damage_and_report(
             blocked: was_blocked,
         },
     );
-    if crate::auras::is_immune(world, target, school) {
+    if crate::auras::is_damage_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);
@@ -2796,6 +2796,9 @@ fn apply_resolved_heal(
     {
         return;
     }
+    if !crate::scripted_ai::heal_objective::accepts_healing(world, target, ctx.caster) {
+        return;
+    }
     let absorbed =
         crate::auras::consume_heal_absorbs(world, target, ctx.spell.school_mask(), amount);
     let amount = amount - absorbed;
@@ -2805,6 +2808,7 @@ fn apply_resolved_heal(
     let before = health.current;
     let effective = amount.min(health.max - health.current).max(0.0);
     health.current += effective;
+    crate::scripted_ai::heal_objective::healed(world, target, effective);
     crate::achievement::record_healing(world, ctx.caster, target, amount, effective);
     crate::creature_aggro::add_healing_threat(
         world,

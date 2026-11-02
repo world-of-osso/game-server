@@ -23,6 +23,7 @@ pub(crate) enum GossipAction {
     Close,
     AzureTranslocation,
     NalorakkPyre,
+    TempleAvatarStart,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,7 +99,10 @@ impl GossipCatalog {
             .iter()
             .filter(|option| flags.0 & option.npc_flag.0 != 0)
             .filter_map(|option| {
-                let action = if super::azure_translocation::LINKS
+                let action = if menu_id == 22561 && option.option_id == 0 {
+                    // LittleWigs Avatar.lua GOSSIP_SHOW: "We will restore you!" starts the encounter.
+                    GossipAction::TempleAvatarStart
+                } else if super::azure_translocation::LINKS
                     .iter()
                     .any(|link| link.menu == menu_id)
                 {

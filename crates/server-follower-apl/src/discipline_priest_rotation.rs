@@ -587,7 +587,7 @@ impl crate::follower::SpecRotation for Discipline {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        let party = crate::follower::party_of(world, actor);
+        let party = crate::follower::healing_party(world, actor);
         Discipline::drive(self, world, actor, &party, targets)
     }
 }

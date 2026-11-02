@@ -39,4 +39,6 @@ mod registry_target_tests;
 #[cfg(test)]
 mod runtime_stage_tests;
 #[cfg(test)]
+mod temple_strikes_tests;
+#[cfg(test)]
 mod tests;

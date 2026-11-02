@@ -252,7 +252,7 @@ impl crate::follower::SpecRotation for HolyPaladin {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        let party = crate::follower::party_of(world, actor);
+        let party = crate::follower::healing_party(world, actor);
         self.drive(world, actor, &party, targets.first().copied())
     }
 }
