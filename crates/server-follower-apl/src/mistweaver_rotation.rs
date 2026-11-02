@@ -493,7 +493,30 @@ impl Mistweaver {
                 self_target,
                 talent: None,
             });
-        let prepared = Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?;
+        let channel = world
+            .get::<shared::casting::CastState>(healer)
+            .filter(|cast| {
+                cast.spell_id == 115175 && cast.cast_type == shared::casting::CastType::Channel
+            });
+        if channel.is_some_and(|cast| cast.elapsed < cast.channel_tick_interval) {
+            return Ok(false);
+        }
+        let interrupt_soothing = channel.is_some();
+        if interrupt_soothing {
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(107428)
+                .ok_or("Mistweaver Rising Sun Kick missing")?;
+            if crate::spell_cast::native_apl::gcd_value(world, healer, spell, "gcd.remains")? > 0.0
+            {
+                return Ok(false);
+            }
+        }
+        let prepared = if interrupt_soothing {
+            Prepared::read_after_channel(world, healer, &enemies, &self.equipment, damage)?
+        } else {
+            Prepared::read(world, healer, &enemies, &self.equipment, damage, false)?
+        };
         let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
             .with_targets(Some(enemy), &enemies);
         let Some((action, execution)) =
@@ -502,6 +525,9 @@ impl Mistweaver {
         else {
             return Ok(false);
         };
+        if interrupt_soothing {
+            crate::spell_cast::cancel_cast(world, healer);
+        }
         self.driver.execute(world, healer, action, execution)?;
         Ok(true)
     }
