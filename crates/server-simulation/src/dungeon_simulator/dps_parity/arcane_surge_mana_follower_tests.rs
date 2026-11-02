@@ -4,7 +4,7 @@ use super::*;
 use shared::components::Mana;
 use shared::protocol::CombatLogKind;
 
-fn surge_damage(mana_fraction: f32) -> u32 {
+fn surge_damage(mana_fraction: f32) -> i32 {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
