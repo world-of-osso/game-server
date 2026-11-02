@@ -60,9 +60,32 @@ impl Navigation {
     }
 
     pub(super) fn publish_ready_routes(&mut self, simulation_s: Option<f64>) {
+        let responses = self.worker.poll();
+        self.publish_responses(responses, simulation_s);
+    }
+
+    /// Wait for every submitted request, then publish in `(entity, id)` order. A route
+    /// requested on one fixed tick is therefore published on the next, independent of
+    /// worker-thread timing.
+    #[cfg(any(test, feature = "test-support"))]
+    pub(super) fn publish_all_routes(&mut self, simulation_s: Option<f64>) {
+        let mut responses = Vec::new();
+        while !self.worker.is_idle() {
+            responses.extend(self.worker.poll());
+            std::thread::yield_now();
+        }
+        responses.sort_by_key(|response| (response.entity, response.id));
+        self.publish_responses(responses, simulation_s);
+    }
+
+    fn publish_responses(
+        &mut self,
+        responses: Vec<::navigation::worker::Response>,
+        simulation_s: Option<f64>,
+    ) {
         #[cfg(any(test, feature = "test-support"))]
         self.applied.clear();
-        for response in self.worker.poll() {
+        for response in responses {
             let entity = Entity::from_bits(response.entity);
             if self.publish_query(&response, simulation_s) {
                 #[cfg(any(test, feature = "test-support"))]
@@ -313,4 +336,12 @@ fn same_route_request(previous: &MoveRequest, next: &MoveRequest) -> bool {
 
 pub(super) fn publish_navigation_results(mut nav: ResMut<Navigation>, time: Res<Time<Virtual>>) {
     nav.publish_ready_routes(Some(time.elapsed_secs_f64()));
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub(super) fn publish_all_navigation_results(
+    mut nav: ResMut<Navigation>,
+    time: Res<Time<Virtual>>,
+) {
+    nav.publish_all_routes(Some(time.elapsed_secs_f64()));
 }

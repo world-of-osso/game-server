@@ -107,6 +107,62 @@ fn held_tile_on_one_map_does_not_block_another_map() {
     writer.join().unwrap();
 }
 
+#[cfg(unix)]
+#[test]
+fn deferred_dispatch_never_runs_superseded_requests() {
+    use std::sync::mpsc;
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("12");
+    std::fs::create_dir(&map).unwrap();
+    let tile = map.join("32_31.nav");
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg(&tile)
+            .status()
+            .unwrap()
+            .success()
+    );
+    // Opening the pipe for writing completes only once a worker opens the tile.
+    let (opened_tx, opened_rx) = mpsc::channel();
+    let writer_tile = tile.clone();
+    let writer = std::thread::spawn(move || {
+        let pipe = std::fs::OpenOptions::new()
+            .write(true)
+            .open(writer_tile)
+            .unwrap();
+        opened_tx.send(()).unwrap();
+        drop(pipe);
+    });
+    let mut worker = Worker::new(temp.path().to_owned());
+    worker.defer_dispatch();
+    worker.submit(request(1, 1, 12));
+    worker.submit(request(1, 2, 99));
+    let responses = drain(&mut worker);
+    assert_eq!(responses.len(), 1);
+    assert_eq!((responses[0].entity, responses[0].id), (1, 2));
+    assert!(matches!(responses[0].result, Ok(None)));
+    assert!(
+        opened_rx.recv_timeout(Duration::from_millis(500)).is_err(),
+        "the superseded map-12 request reached its worker"
+    );
+    worker.submit(request(2, 1, 12));
+    assert!(
+        opened_rx.try_recv().is_err(),
+        "a deferred request reached its worker before poll"
+    );
+    assert!(worker.poll().is_empty());
+    opened_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("poll dispatches the deferred request");
+    let response = drain(&mut worker).pop().unwrap();
+    assert_eq!((response.entity, response.id), (2, 1));
+    assert!(
+        response.result.is_err(),
+        "the empty pipe is not a valid tile"
+    );
+    writer.join().unwrap();
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
 fn worker_loads_graph_before_the_first_long_request() {

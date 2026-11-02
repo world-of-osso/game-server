@@ -15,6 +15,8 @@ mod fixture_queries;
 pub(crate) mod hazard_trace;
 mod requests;
 use deferred::PendingQuery;
+#[cfg(any(test, feature = "test-support"))]
+use requests::publish_all_navigation_results;
 use requests::{PendingRoute, publish_navigation_results};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -322,6 +324,23 @@ fn position(p: Vec3) -> Position {
 struct NavigationPublicationInstalled;
 
 pub(crate) fn install_publication(app: &mut App) {
+    install_publication_with(app, publish_navigation_results);
+}
+
+/// Headless simulation: requests reach the worker only at the fixed-tick publication,
+/// which waits for them. A seed then replays exactly, independent of thread timing.
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) fn install_headless(app: &mut App, root: &Path) {
+    let mut navigation = Navigation::new(root);
+    navigation.worker.defer_dispatch();
+    app.insert_resource(navigation);
+    install_publication_with(app, publish_all_navigation_results);
+}
+
+fn install_publication_with<M>(
+    app: &mut App,
+    publish: impl bevy::ecs::schedule::IntoScheduleConfigs<bevy::ecs::system::ScheduleSystem, M>,
+) {
     if app
         .world()
         .contains_resource::<NavigationPublicationInstalled>()
@@ -333,7 +352,7 @@ pub(crate) fn install_publication(app: &mut App) {
         FixedFirst,
         (
             prune_routes,
-            publish_navigation_results,
+            publish,
             collision_drop::advance_collision_drops,
         )
             .chain(),

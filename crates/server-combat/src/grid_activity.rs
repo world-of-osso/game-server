@@ -25,7 +25,7 @@
 //! Respawn is not gated: `combat::respawn_system` only visits dead creatures,
 //! so a dormant creature respawns at its spawn point on its normal timer.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 use bevy::prelude::*;
 use shared::components::{Player, Position};
@@ -67,7 +67,9 @@ struct GridIndex {
     creatures_by_grid: HashMap<GridCoord, Vec<Entity>>,
     home_grids: HashMap<Entity, Vec<GridCoord>>,
     player_grids: HashMap<Entity, GridCoord>,
-    active_grids: HashSet<GridCoord>,
+    /// Ordered: waking and sleeping move creatures between archetypes, which fixes
+    /// later query order, so grids must toggle in the same order on every run.
+    active_grids: BTreeSet<GridCoord>,
 }
 
 impl GridIndex {
@@ -234,8 +236,8 @@ fn update_grid_activity(
 }
 
 /// The 3x3 grids around each player grid.
-fn neighbourhoods<'a>(player_grids: impl Iterator<Item = &'a GridCoord>) -> HashSet<GridCoord> {
-    let mut active = HashSet::new();
+fn neighbourhoods<'a>(player_grids: impl Iterator<Item = &'a GridCoord>) -> BTreeSet<GridCoord> {
+    let mut active = BTreeSet::new();
     for &(map, gx, gy) in player_grids {
         for dx in -1..=1 {
             for dy in -1..=1 {

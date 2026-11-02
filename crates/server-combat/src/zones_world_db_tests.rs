@@ -40,7 +40,7 @@ fn world_data() -> &'static WorldData {
 
 /// Spawn guid -> entity for the spawns a `patrol_app` created.
 #[derive(Resource)]
-struct Spawned(HashMap<u64, Entity>);
+struct Spawned(std::collections::BTreeMap<u64, Entity>);
 
 /// App running the creature AI with only the spawns in `guids`.
 fn patrol_app(guids: &'static [u64]) -> App {

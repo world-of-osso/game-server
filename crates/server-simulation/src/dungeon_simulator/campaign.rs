@@ -3065,6 +3065,15 @@ pub(super) fn run_keystone(
     seed: u64,
     options: super::keystone::Options,
 ) -> super::keystone_record::RunRecord {
+    run_keystone_ticks(seed, options, MAX_TICKS)
+}
+
+/// `run_keystone` stopped after `max_ticks` fixed updates.
+pub(super) fn run_keystone_ticks(
+    seed: u64,
+    options: super::keystone::Options,
+    max_ticks: usize,
+) -> super::keystone_record::RunRecord {
     let _rng_scope = crate::random::seed_scope(seed);
     let mut planned_route = None;
     let initialized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -3081,7 +3090,7 @@ pub(super) fn run_keystone(
     let mut progress = super::keystone::Progress::default();
     let outcome =
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
-            for _ in 0..MAX_TICKS {
+            for _ in 0..max_ticks {
                 if run.finished() {
                     break;
                 }
