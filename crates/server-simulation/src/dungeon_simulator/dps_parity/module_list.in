@@ -544,6 +544,7 @@ mod windwalker_karma_follower_tests;
 mod windwalker_thunderfist_follower_tests;
 mod windwalker_wdp_thunderfist_follower_tests;
 mod windwalker_tigereye_tests;
+mod warrior_parry_follower_tests;
 mod warrior_proc_tests;
 mod warrior_stat_tests;
 mod wither_stack_tests;
