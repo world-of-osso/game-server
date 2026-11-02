@@ -66,6 +66,10 @@ fn try_summon(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     if !procs::try_native_policy_proc(world, ctx.caster, instance) {
         return;
     }
+    spawn_idol(world, ctx, target);
+}
+
+pub(super) fn spawn_idol(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
     // SimC action.cpp1738–1773 and sc_priest.cpp4268–4276 use its live enemy list.
     let count = combat::combat_refs::active_opponents(world, ctx.caster)
         .filter(|&unit| spell_cast::targets::is_alive(world, unit))

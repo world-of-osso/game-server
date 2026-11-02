@@ -7,14 +7,14 @@ use combat::spell_info::SpellInfo;
 
 const TALENT: u32 = 373212;
 const DOTS: &[u32] = &[589, 34914, 335467];
-const CHANNELS: &[u32] = &[15407, 391403, 263165, 1242189];
+const AFFECTED: &[u32] = &[8092, 15407, 391403, 263165, 450983, 1242189];
 
 #[derive(Component)]
 struct IreWindow(f64);
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(refresh_window),
-    SpellScriptHook::TargetDamageMultiplier(channel_multiplier),
+    SpellScriptHook::TargetDamageMultiplier(ire_multiplier),
 ];
 
 fn refresh_window(world: &mut World, target: Entity, aura: &AuraInstance) {
@@ -48,11 +48,11 @@ fn refresh_window(world: &mut World, target: Entity, aura: &AuraInstance) {
     }
 }
 
-fn channel_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
+fn ire_multiplier(world: &World, caster: Entity, _: Entity, spell: &SpellInfo) -> f32 {
     let live = world
         .get::<IreWindow>(caster)
         .is_some_and(|window| window.0 > spell_cast::now(world));
-    if !live || !CHANNELS.contains(&spell.id) {
+    if !live || !AFFECTED.contains(&spell.id) {
         return 1.0;
     }
     1.0 + spell_cast::scripts::script_effect_value(world, caster, TALENT, 0) / 100.0
