@@ -404,9 +404,19 @@ fn after_darkness_action(world: &mut World, caster: Entity, spell: &SpellInfo) {
         return;
     }
     if spell.id == 1253593 {
-        auras::remove_auras(world, caster, auras::RemoveReason::Consumed, |aura| {
-            aura.spell_id == 1253591 && aura.caster == caster
-        });
+        // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: at 102363 the aura
+        // reaches two stacks; Void Shield at 103750 consumes only one.
+        let instance = world
+            .get::<ActiveAuras>(caster)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == 1253591 && aura.caster == caster)
+            })
+            .map(|aura| aura.instance_id);
+        if let Some(instance) = instance {
+            auras::spend_stack(world, caster, instance);
+        }
         return;
     }
     let proc = if spell.id == 8092 {

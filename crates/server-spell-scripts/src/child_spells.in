@@ -1,0 +1,825 @@
+# C <module-path> <child-id>; D <module-path> <function> <api> <expression> <count> <child-ids>
+C	affliction_empowerment.rs	1305774
+C	affliction_instability.rs	1260269
+C	affliction_nathreza.rs	1262710
+C	affliction_nightfall.rs	264571
+C	affliction_procs.rs	264571
+C	affliction_procs.rs	453176
+C	affliction_seed_ua.rs	1259790
+C	affliction_shared_agony.rs	980
+C	affliction_ua.rs	1261125
+C	affliction_wrath.rs	1262094
+C	arcane_enlightened.rs	1217242
+C	arcane_familiar.rs	225119
+C	arms_battlelord.rs	386631
+C	arms_bloodletting.rs	388539
+C	arms_concussive_slam.rs	1300660
+C	arms_fatality.rs	383704
+C	arms_fatality.rs	383706
+C	arms_heroic_might.rs	1292058
+C	arms_mortal_wounds.rs	262115
+C	arms_tactical_edge.rs	52437
+C	arms_tactician.rs	456120
+C	arms_winding_up.rs	1300670
+C	assassination_finish_job.rs	457273
+C	assassination_finish_job.rs	1249810
+C	assassination_focus.rs	457236
+C	assassination_runtime/rogue_children.rs	121153
+C	assassination_runtime/rogue_children.rs	1265787
+C	assassination_runtime/rogue_hero.rs	457157
+C	assassination_runtime/rogue_hero.rs	1248775
+C	assassination_white.rs	457193
+C	aura_rolls.rs	256171
+C	blood_boiling.rs	50842
+C	blood_boiling.rs	1265968
+C	blood_boiling.rs	1265982
+C	blood_death_strike.rs	77535
+C	blood_death_strike.rs	274009
+C	blood_draw.rs	374606
+C	blood_draw.rs	454871
+C	blood_ground.rs	52212
+C	blood_ground.rs	81141
+C	blood_ground.rs	317614
+C	blood_ground.rs	461130
+C	blood_mid2.rs	195181
+C	blood_mid2.rs	1300369
+C	blood_mid2.rs	1310372
+C	blood_mid2.rs	1310571
+C	blood_ossuary.rs	219788
+C	blood_purgatory.rs	116888
+C	blood_purgatory.rs	123981
+C	blood_purgatory.rs	123982
+C	blood_reflection.rs	1279656
+C	blood_rune_weapon.rs	49998
+C	blood_rune_weapon.rs	50842
+C	blood_rune_weapon.rs	81256
+C	blood_rune_weapon.rs	195181
+C	blood_rune_weapon.rs	228645
+C	blood_rune_weapon.rs	433895
+C	blood_rune_weapon.rs	1237128
+C	blood_rune_weapon.rs	1263729
+C	blood_rune_weapon.rs	1263774
+C	blood_rune_weapon.rs	1263786
+C	blood_rune_weapon.rs	1264353
+C	blood_rune_weapon.rs	1264407
+C	blood_rune_weapon.rs	1264568
+C	blood_rune_weapon.rs	1265577
+C	blood_sanlayn.rs	433899
+C	blood_sanlayn.rs	434144
+C	blood_sanlayn.rs	434153
+C	blood_sanlayn.rs	434237
+C	blood_sanlayn.rs	434246
+C	bloodied_blade.rs	433895
+C	bloodied_blade.rs	460499
+C	bloodied_blade.rs	460500
+C	bloodied_blade.rs	460501
+C	brewmaster_blackout_combo.rs	228563
+C	brewmaster_cellar.rs	1262765
+C	brewmaster_cellar.rs	1262768
+C	brewmaster_chi_burst.rs	130654
+C	brewmaster_chi_burst.rs	148135
+C	brewmaster_elusive_brawler.rs	195630
+C	brewmaster_empty_barrel.rs	1265133
+C	brewmaster_empty_barrel.rs	1265145
+C	brewmaster_gift_of_the_ox.rs	124507
+C	brewmaster_gift_of_the_ox.rs	178173
+C	brewmaster_harmonic_surge.rs	1270990
+C	brewmaster_niuzao.rs	227291
+C	brewmaster_purify.rs	455071
+C	brewmaster_shuffle.rs	215479
+C	brewmaster_special_delivery.rs	196733
+C	brewmaster_special_delivery.rs	1263667
+C	brewmaster_walk_ox.rs	1242373
+C	death_knight_permafrost.rs	207203
+C	demon_hunter_burning.rs	1490
+C	demon_hunter_meteor_shower.rs	1256308
+C	demon_hunter_reactive.rs	320334
+C	demon_hunter_reactive.rs	391159
+C	demon_hunter_sigil_spite.rs	389860
+C	demonology_carnivorous.rs	271971
+C	demonology_diabolist_demons.rs	432592
+C	demonology_diabolist_demons.rs	434424
+C	demonology_doom.rs	460553
+C	demonology_doom.rs	460555
+C	demonology_flametouched.rs	453704
+C	demonology_gloom_slash.rs	455491
+C	demonology_hellbent.rs	1281559
+C	demonology_infernal_presence.rs	428453
+C	demonology_inner_demons.rs	279910
+C	demonology_knowledge.rs	264173
+C	demonology_mind_sear.rs	1280457
+C	demonology_mind_sear.rs	1280460
+C	demonology_pet_actions.rs	89751
+C	demonology_pet_actions.rs	1276960
+C	demonology_reign.rs	1276788
+C	destruction_chaotic_inferno.rs	1244860
+C	destruction_echo.rs	1265884
+C	destruction_echo.rs	1265939
+C	destruction_echo.rs	1305711
+C	destruction_fiendish.rs	1245664
+C	destruction_overfiend.rs	434587
+C	destruction_overfiend.rs	457578
+C	destruction_periodic.rs	157736
+C	devastation.rs	441172
+C	devastation.rs	1265804
+C	devastation.rs	1266165
+C	devourer_collapsing_star.rs	1221162
+C	devourer_collapsing_star.rs	1227338
+C	devourer_devour.rs	1238495
+C	devourer_devour.rs	1288123
+C	devourer_devour.rs	1297432
+C	devourer_fragment_heal.rs	1213809
+C	devourer_fragment_heal.rs	1221171
+C	devourer_fragment_heal.rs	1232310
+C	devourer_fragment_heal.rs	1242504
+C	devourer_immolation.rs	1241937
+C	devourer_immolation.rs	1242475
+C	devourer_metamorphosis.rs	452435
+C	devourer_metamorphosis.rs	1227702
+C	devourer_metamorphosis.rs	1244235
+C	devourer_metamorphosis.rs	1245496
+C	devourer_metamorphosis.rs	1246160
+C	devourer_metamorphosis.rs	1272462
+C	devourer_metamorphosis.rs	1277769
+C	devourer_reap.rs	1261679
+C	devourer_reap.rs	1297433
+C	devourer_reapers_toll.rs	1223157
+C	devourer_reapers_toll.rs	1239127
+C	devourer_reapers_toll.rs	1239507
+C	devourer_void_ray.rs	1238495
+C	devourer_void_ray.rs	1239524
+C	devourer_void_ray.rs	1241922
+C	devourer_voidblade.rs	1239525
+C	devourer_voidblade.rs	1239526
+C	devourer_voidblade.rs	1241532
+C	devourer_voidblade.rs	1245414
+C	devourer_voidblade.rs	1245523
+C	devourer_voidfall.rs	1256301
+C	devourer_voidfall.rs	1256302
+C	devourer_voidfall.rs	1256322
+C	discipline_atonement.rs	589
+C	discipline_atonement.rs	47753
+C	discipline_atonement.rs	47755
+C	discipline_atonement.rs	194384
+C	discipline_atonement.rs	198069
+C	discipline_atonement.rs	390978
+C	discipline_atonement.rs	421543
+C	discipline_atonement.rs	451435
+C	discipline_atonement.rs	1232571
+C	discipline_atonement.rs	1235193
+C	discipline_atonement.rs	1253591
+C	discipline_atonement.rs	1253828
+C	discipline_atonement.rs	1280172
+C	dragonflight_burgeoning_seed.rs	384658
+C	dragonflight_heart.rs	433522
+C	dragonflight_tome.rs	434021
+C	druid_ascendant_bolts.rs	1261573
+C	druid_ascendant_bolts.rs	1261700
+C	druid_ascendant_stars.rs	1263382
+C	druid_atmospheric_exposure.rs	430589
+C	druid_eclipse.rs	343648
+C	druid_eclipse.rs	1233353
+C	druid_eclipse.rs	1263363
+C	druid_shooting_stars.rs	202497
+C	druid_star_cascade.rs	343648
+C	druid_star_cascade.rs	1271222
+C	druid_starlord.rs	279709
+C	druid_sundered_firmament.rs	394106
+C	druid_sundered_firmament.rs	394108
+C	druid_sundered_firmament.rs	395110
+C	druid_touch_cosmos.rs	450360
+C	druid_umbral.rs	393763
+C	elemental_ascendance.rs	188389
+C	elemental_ascendance.rs	285452
+C	elemental_fusion.rs	191877
+C	elemental_tier.rs	1300219
+C	elemental_tier.rs	1300222
+C	empower_evoker.rs	370901
+C	enhancement/enhancement_elemental_weapons.rs	408390
+C	enhancement/enhancement_imbues.rs	10444
+C	enhancement/enhancement_imbues.rs	25504
+C	enhancement/enhancement_imbues.rs	382028
+C	enhancement/enhancement_modes.rs	469270
+C	enhancement/enhancement_nova.rs	333977
+C	enhancement/enhancement_rod.rs	197568
+C	enhancement/enhancement_stormblast.rs	201846
+C	enhancement/enhancement_stormblast.rs	390287
+C	enhancement/enhancement_stormblast.rs	470466
+C	enhancement/enhancement_tier.rs	333977
+C	enhancement/enhancement_tier.rs	1299975
+C	enhancement/enhancement_tier.rs	1299991
+C	enhancement/maelstrom_weapon.rs	187881
+C	enhancement/maelstrom_weapon.rs	344179
+C	enhancement_converging.rs	198300
+C	enhancement_crackling.rs	224127
+C	essence_burst.rs	359618
+C	evoker_bombardments.rs	434473
+C	evoker_bombardments.rs	443788
+C	evoker_burnout.rs	375802
+C	evoker_command_squadron.rs	1236943
+C	evoker_command_squadron.rs	1236970
+C	evoker_dragonrage.rs	393568
+C	evoker_flames.rs	361500
+C	evoker_flames.rs	361509
+C	evoker_flames.rs	372470
+C	evoker_imminent.rs	411055
+C	evoker_onslaught.rs	375802
+C	evoker_rising_fury.rs	1271783
+C	evoker_rising_fury.rs	1292323
+C	evoker_siege.rs	441248
+C	evoker_temporal_anomaly.rs	373862
+C	evoker_tier.rs	1265871
+C	evoker_verdant.rs	361195
+C	feral_apex.rs	391882
+C	feral_claw_rampage.rs	441585
+C	feral_dreadful_wound.rs	441812
+C	feral_frantic_momentum.rs	391876
+C	feral_frenzy.rs	274838
+C	feral_frenzy.rs	1278969
+C	feral_growth.rs	439531
+C	feral_growth/bursting.rs	440122
+C	feral_lunar.rs	155627
+C	feral_lycaras.rs	106840
+C	feral_omen.rs	135700
+C	feral_overflow.rs	405189
+C	feral_primal_fury.rs	16953
+C	feral_ravage.rs	441585
+C	feral_sabertooth.rs	391722
+C	feral_savage_fury.rs	449646
+C	feral_stalking.rs	1263962
+C	feral_unseen.rs	1263890
+C	feral_unseen.rs	1263908
+C	feral_unseen.rs	1263939
+C	feral_unseen.rs	1271863
+C	fire_brainstorm.rs	461531
+C	fire_phoenix.rs	448659
+C	fire_phoenix.rs	449314
+C	fire_procs.rs	383874
+C	fire_procs.rs	448604
+C	fire_procs.rs	449314
+C	fire_procs.rs	451073
+C	fire_procs.rs	453268
+C	fire_procs.rs	458964
+C	fire_procs.rs	1242220
+C	fire_procs.rs	1257350
+C	frost_chamber.rs	456370
+C	frost_chamber.rs	456371
+C	frost_comet_storm.rs	1247778
+C	frost_death_knight.rs	51714
+C	frost_death_knight.rs	195617
+C	frost_death_knight.rs	279303
+C	frost_death_knight.rs	281327
+C	frost_death_knight.rs	341725
+C	frost_death_knight.rs	374557
+C	frost_death_knight.rs	374585
+C	frost_death_knight.rs	377103
+C	frost_death_knight.rs	377195
+C	frost_death_knight.rs	377253
+C	frost_death_knight.rs	443532
+C	frost_death_knight.rs	443586
+C	frost_death_knight.rs	443595
+C	frost_death_knight.rs	1233351
+C	frost_death_knight.rs	1233619
+C	frost_death_knight.rs	1234304
+C	frost_death_knight.rs	1265630
+C	frost_death_knight.rs	1265639
+C	frost_death_knight.rs	1297365
+C	frost_deathbringer.rs	51124
+C	frost_deathbringer.rs	55095
+C	frost_deathbringer.rs	435802
+C	frost_deathbringer.rs	436304
+C	frost_deathbringer.rs	439594
+C	frost_deathbringer.rs	441416
+C	frost_deathbringer.rs	443404
+C	frost_deathbringer.rs	469169
+C	frost_followups.rs	1221389
+C	frost_followups.rs	1262769
+C	frost_icy_torrent.rs	439539
+C	frost_mage.rs	1221389
+C	frost_mage.rs	1246949
+C	frost_orb.rs	44544
+C	frost_rapid_refreezing.rs	1310248
+C	frost_runtime/frost_mage_procs.rs	228598
+C	fury_bloodbath.rs	113344
+C	fury_gushing.rs	385042
+C	generic_leech.rs	143924
+C	germination.rs	155777
+C	guardian_after_the_wildfire.rs	371982
+C	guardian_berserk_form.rs	5487
+C	guardian_blood_frenzy.rs	203961
+C	guardian_fury_of_nature.rs	370701
+C	guardian_galactic.rs	8921
+C	guardian_galactic.rs	164812
+C	guardian_galactic.rs	213708
+C	guardian_gore.rs	93622
+C	guardian_natures_guardian.rs	227034
+C	guardian_rampant_thorn.rs	1310213
+C	guardian_star_cascade.rs	197626
+C	guardian_wild_guardian.rs	1308125
+C	guardian_wild_guardian.rs	1308399
+C	guardian_wild_guardian.rs	1308647
+C	havoc.rs	208628
+C	havoc/children.rs	213243
+C	havoc/children.rs	1245759
+C	havoc/damage.rs	391215
+C	havoc/demonsurge.rs	258920
+C	havoc/demonsurge.rs	452489
+C	havoc/eternal.rs	1271092
+C	havoc/eternal.rs	1271144
+C	havoc/fury.rs	193840
+C	havoc/fury.rs	389890
+C	havoc/fury.rs	390195
+C	havoc/fury.rs	453239
+C	havoc/immolation.rs	258920
+C	havoc/immolation.rs	258921
+C	havoc/recovery.rs	343312
+C	havoc/recovery.rs	1214887
+C	hellcaller_devil_fruit.rs	442726
+C	holy_runtime/holy_priest.rs	64844
+C	holy_runtime/holy_priest.rs	114255
+C	holy_runtime/holy_priest.rs	243241
+C	holy_runtime/holy_priest.rs	1250581
+C	holy_runtime/holy_priest.rs	1262766
+C	holy_runtime/prayer_of_mending.rs	33110
+C	holy_runtime/prayer_of_mending.rs	41635
+C	holy_runtime/prayer_of_mending.rs	155793
+C	holy_runtime/prayer_of_mending.rs	1246798
+C	hot_streak.rs	269651
+C	hunter_bear.rs	471999
+C	hunter_dire_command.rs	219199
+C	hunter_howl.rs	471936
+C	hunter_howl.rs	471938
+C	hunter_howl/hogstrider.rs	472640
+C	hunter_huntmaster.rs	459731
+C	hunter_huntmaster.rs	459753
+C	hunter_wildspeaker.rs	1232922
+C	hunter_wildspeaker.rs	1284992
+C	hunter_wildspeaker/wrath.rs	1235388
+C	item_gaze_alnseer.rs	1266687
+C	lava_surge.rs	77762
+C	marksmanship.rs	194594
+C	marksmanship.rs	257045
+C	marksmanship.rs	263585
+C	marksmanship.rs	1277549
+C	marksmanship_explosive.rs	212680
+C	marksmanship_salvo.rs	212431
+C	marksmanship_sentinel.rs	1253601
+C	marksmanship_sentinel.rs	1301098
+C	marksmanship_sentinel.rs	1319015
+C	midnight_item_damage.rs	1296735
+C	midnight_item_damage.rs	1310209
+C	midnight_stormbound.rs	1294745
+C	midnight_tendril.rs	1310414
+C	mistweaver_chiji.rs	343819
+C	mistweaver_chiji.rs	406220
+C	mistweaver_courage.rs	460127
+C	mistweaver_gust.rs	191894
+C	mistweaver_mana_tea.rs	115867
+C	mistweaver_rushing_wind.rs	1269159
+C	mistweaver_spiritfont.rs	1260565
+C	mistweaver_spiritfont.rs	1260617
+C	mistweaver_spiritfont.rs	1260670
+C	mistweaver_spiritfont.rs	1260681
+C	mistweaver_way_of_the_crane.rs	100780
+C	monk_harmony.rs	450763
+C	monk_harmony.rs	450820
+C	outlaw_ace.rs	394120
+C	outlaw_blade_rush.rs	271881
+C	outlaw_blade_rush.rs	271896
+C	outlaw_bte.rs	315341
+C	outlaw_bte.rs	1279356
+C	outlaw_coup.rs	441326
+C	outlaw_fatal_flourish.rs	35546
+C	outlaw_flurry.rs	429951
+C	outlaw_gravedigger.rs	1265931
+C	outlaw_gravedigger.rs	1265935
+C	outlaw_improved_adrenaline.rs	395424
+C	outlaw_main_gauche.rs	86392
+C	outlaw_opportunity.rs	195627
+C	outlaw_opportunity.rs	1259493
+C	outlaw_pistol.rs	1254567
+C	outlaw_spree.rs	1235074
+C	outlaw_trickster.rs	441144
+C	outlaw_trickster.rs	441224
+C	outlaw_trickster.rs	441326
+C	outlaw_trickster.rs	441786
+C	outlaw_trickster.rs	459485
+C	outlaw_zero_producer.rs	1259486
+C	paladin_armaments.rs	85673
+C	paladin_armaments.rs	327510
+C	paladin_armaments.rs	379017
+C	paladin_armaments.rs	386652
+C	paladin_armaments.rs	400745
+C	paladin_armaments.rs	432607
+C	paladin_armaments.rs	433106
+C	paladin_armaments.rs	1268810
+C	paladin_armaments.rs	1269179
+C	paladin_armaments.rs	1269224
+C	paladin_edict.rs	1300662
+C	paladin_sacred_weapon.rs	432616
+C	paladin_sacred_weapon.rs	441590
+C	paladin_strength_adversity.rs	393038
+C	protection_demolish.rs	262115
+C	protection_fray.rs	202602
+C	protection_fueled.rs	383104
+C	protection_outburst.rs	190456
+C	protection_outburst.rs	386478
+C	protection_outburst.rs	386486
+C	protection_revenge.rs	5302
+C	protection_revenge.rs	392793
+C	reap_the_storm.rs	446005
+C	resource_bridges.rs	246152
+C	resource_bridges.rs	1282660
+C	restoration_bursting_growth.rs	440121
+C	restoration_earthliving.rs	382022
+C	restoration_earthliving.rs	382024
+C	restoration_grove_guardians.rs	102693
+C	restoration_lifetreading.rs	1232285
+C	restoration_master_shapeshifter.rs	411143
+C	restoration_master_shapeshifter.rs	411146
+C	restoration_resurgence.rs	101033
+C	restoration_symbiotic_blooms.rs	439530
+C	restoration_tidewaters.rs	462425
+C	restoration_verdancy.rs	392329
+C	restoration_water_shield.rs	52128
+C	ret_aurora.rs	408458
+C	ret_damage.rs	26573
+C	ret_damage.rs	383921
+C	ret_damage.rs	431414
+C	ret_damage.rs	431911
+C	ret_damage.rs	454351
+C	ret_damage.rs	1260251
+C	ret_empyrean.rs	387178
+C	ret_judgment.rs	197277
+C	ret_resonance.rs	1266308
+C	ret_tier.rs	1305230
+C	ret_tier.rs	1306923
+C	rogue_cloud_cover.rs	441224
+C	rogue_cloud_cover.rs	441640
+C	rogue_ruthlessness.rs	1258235
+C	rogue_supercharger.rs	470671
+C	rogue_vanish.rs	1784
+C	rogue_vanish.rs	11327
+C	rogue_vanish.rs	158188
+C	shadow_apparitions.rs	405746
+C	shadow_apparitions.rs	1231479
+C	shadow_apparitions.rs	1264177
+C	shadow_bolts.rs	1242173
+C	shadow_collapse.rs	448405
+C	shadow_cthun.rs	377358
+C	shadow_insight.rs	375981
+C	shadow_mind_devourer.rs	373204
+C	shadow_nzoth.rs	1243105
+C	shadow_nzoth.rs	1243106
+C	shadow_priest.rs	589
+C	shadow_priest.rs	34914
+C	shadow_priest.rs	335467
+C	shadow_priest.rs	391232
+C	shadow_priest.rs	1227621
+C	shadow_rift.rs	447448
+C	shadow_rift.rs	459314
+C	shadow_screams.rs	393919
+C	shadow_void_blast.rs	450404
+C	shadow_voidheart.rs	449887
+C	shadow_volley.rs	194249
+C	shadow_volley.rs	232698
+C	shadow_yogg.rs	373276
+C	shadow_yogg.rs	373277
+C	snakeskin_quiver.rs	193455
+C	soul_of_the_forest.rs	114108
+C	soulcoiler_ritual.rs	1307578
+C	spellslinger.rs	1247908
+C	spellslinger_hits.rs	1221389
+C	subtlety_danse.rs	1264397
+C	subtlety_darkness.rs	457273
+C	subtlety_finishers.rs	1264521
+C	subtlety_focus.rs	112942
+C	subtlety_focus.rs	343173
+C	subtlety_master_shadows.rs	196980
+C	subtlety_shadow.rs	385960
+C	subtlety_techniques.rs	1269163
+C	survival_boomstick.rs	471536
+C	survival_mastery.rs	459722
+C	survival_pet.rs	1251779
+C	survival_pet.rs	1253138
+C	survival_takedown.rs	260286
+C	survival_takedown.rs	1253859
+C	survival_takedown.rs	1253862
+C	survival_takedown.rs	1258571
+C	survival_wildfire.rs	265157
+C	unholy_abomination.rs	288853
+C	unholy_abomination.rs	1244347
+C	unholy_army.rs	317776
+C	unholy_army.rs	1242223
+C	unholy_army.rs	1294026
+C	unholy_aura.rs	1268917
+C	unholy_brittle.rs	374557
+C	unholy_coil_devastation.rs	390271
+C	unholy_commander.rs	390260
+C	unholy_commander.rs	390264
+C	unholy_devotion.rs	1270491
+C	unholy_doomed_bidding.rs	275430
+C	unholy_eruption.rs	191587
+C	unholy_eruption.rs	275430
+C	unholy_grave_mastery.rs	1238902
+C	unholy_infected_claws.rs	1241786
+C	unholy_mograine.rs	1251951
+C	unholy_necrotic_coil.rs	1242172
+C	unholy_necrotic_coil.rs	1242178
+C	unholy_outnumber.rs	1242998
+C	unholy_pet_mastery.rs	1250728
+C	unholy_putrefy.rs	1242294
+C	unholy_putrefy.rs	1254252
+C	unholy_putrefy.rs	1256576
+C	unholy_putrefy.rs	1277098
+C	unholy_putrefy.rs	1292072
+C	unholy_reaping.rs	1242654
+C	unholy_rune_mastery.rs	374585
+C	unholy_runic_corruption.rs	51460
+C	unholy_ruptured_viscera.rs	1247379
+C	unholy_soul_reaper.rs	275430
+C	unholy_sudden_doom.rs	81340
+C	unholy_trollbane.rs	444834
+C	unholy_undeath.rs	444633
+C	unholy_undeath.rs	444634
+C	unholy_undeath.rs	445513
+C	unholy_undeath.rs	1237172
+C	unrelenting_onslaught.rs	445836
+C	vengeance_fallout.rs	258921
+C	vengeance_fel_devastation.rs	212106
+C	vengeance_fiery_brand.rs	207771
+C	vengeance_frailty.rs	227255
+C	vengeance_frailty.rs	247456
+C	vengeance_last_resort.rs	187827
+C	vengeance_last_resort.rs	209261
+C	vengeance_sigil.rs	389787
+C	vengeance_soul_cleave.rs	228478
+C	vengeance_soul_cleave.rs	1270476
+C	vengeance_soul_cleave.rs	1270547
+C	vengeance_spirit_bomb.rs	247455
+C	voltaic_blaze.rs	1259101
+C	warlock_ritual.rs	1269800
+C	windwalker_tigereye.rs	1261724
+C	zathatek_breath.rs	1305391
+C	zathatek_breath.rs	1305395
+C	warrior_overwhelming_blades.rs	445836
+D	arms_concussive_slam.rs	cast_after_slam	launch_triggered_spell_with_primary	&child	1	1300660
+D	arms_fatality.rs	cast_mark_damage	launch_triggered_spell	&payload	1	383706
+D	assassination_runtime/rogue_children.rs	grant_regicide	launch_triggered_spell	&buff	1	1250331
+D	assassination_runtime/rogue_children.rs	on_hit	launch_triggered_spell	&child	1	381628
+D	assassination_runtime/rogue_hero.rs	apply_mark	launch_triggered_spell	&mark	1	457129
+D	assassination_runtime/rogue_hero.rs	spend_mark	launch_triggered_spell	&payload	1	1273061
+D	blood_boiling.rs	echo	launch_triggered_spell	&spell	1	50842
+D	blood_death_strike.rs	blood_shield_from_heal	launch_triggered_spell	&shield	1	77535
+D	blood_ground.rs	trigger_relish	launch_triggered_spell	&heal	1	317614
+D	blood_mid2.rs	cast_bloody_demise	launch_triggered_spell_with_primary	&spell	1	1310571
+D	blood_rune_weapon.rs	copy_weapon_actions	launch_triggered_spell	&copy	3	50842,228645,433895
+D	blood_sanlayn.rs	erupt_blood_beast	launch_triggered_spell_with_primary	&eruption	1	434246
+D	brewmaster_special_delivery.rs	launch	launch_triggered_spell	&spell	1	196733
+D	destruction_crashing_chaos.rs	earn_uses	launch_triggered_spell	&buff	1	417282
+D	devastation.rs	melt_armor	launch_triggered_spell	&child	1	441172
+D	devastation.rs	shattering_stars	launch_triggered_spell	&child	1	1265804
+D	discipline_atonement.rs	after_evangelism	launch_triggered_spell	&radiance	1	194509
+D	discipline_atonement.rs	finish_penance_bolt	launch_triggered_spell	&spell	1	47750
+D	dragonflight_tome.rs	fire_barrage	launch_triggered_spell	&spell	1	434021
+D	druid_sundered_firmament.rs	on_parting_end	launch_triggered_spell_with_primary	&field	1	394106
+D	elemental_ascendance.rs	cast_entry_lava_burst	launch_triggered_spell	&damage	1	285452
+D	elemental_fusion.rs	cast_fusion	launch_triggered_spell	&blast	1	117014
+D	enhancement/enhancement_strikes.rs	cast_crash_payload	launch_triggered_spell	&payload	1	195592
+D	enhancement/enhancement_strikes.rs	cast_ride_the_lightning	launch_triggered_spell	&payload	1	211094
+D	enhancement/enhancement_unleashed.rs	cast_pack_pulse	launch_triggered_spell	&payload	1	1252431
+D	evoker_flames.rs	cast_scarlet_damage	launch_triggered_spell	&child	1	361500
+D	feral_dreadful_wound.rs	apply_wound	launch_triggered_spell	&spell	1	441812
+D	feral_growth/bursting.rs	roll_rampancy	launch_triggered_spell	&spell	1	440122
+D	feral_sabertooth.rs	apply_sabertooth	launch_triggered_spell	&spell	1	391722
+D	feral_stalking.rs	grant_stalking	launch_triggered_spell	&spell	1	1263962
+D	feral_unseen.rs	apply_craving	launch_triggered_spell	&buff	1	1263939
+D	feral_unseen.rs	finish_unseen	launch_triggered_spell	&bleed	1	1271863
+D	frost_death_knight.rs	launch_fury_damage	launch_triggered_spell	&damage	1	279303
+D	frost_deathbringer.rs	explode_mark	launch_triggered_spell	&explosion	1	436304
+D	frost_deathbringer.rs	launch_wave	launch_triggered_spell	&spell	1	435802
+D	frost_deathbringer.rs	trigger_soul_rupture	launch_triggered_spell_with_primary	&rupture	1	439594
+D	frost_followups.rs	launch_hand	launch_triggered_spell	&buff	1	1263263
+D	frost_mage.rs	launch_shatter	launch_triggered_spell	&payload	1	1246949
+D	frost_runtime/frost_mage_procs.rs	launch_lance_payload	launch_triggered_spell	&payload	1	228598
+D	guardian_after_the_wildfire.rs	on_payment	launch_triggered_spell	&heal	1	371982
+D	guardian_matted_fur.rs	on_cast	launch_triggered_spell	&shield	1	385787
+D	guardian_ursocs_fury.rs	grant_shield	launch_triggered_spell	&shield	1	372505
+D	holy_runtime/holy_priest.rs	cast_hymn_tick	launch_triggered_spell	&spell	1	64844,243241
+D	holy_runtime/holy_priest.rs	cast_hymn_tick	launch_triggered_spell_with_primary	&spell	1	64844,243241
+D	marksmanship_explosive.rs	launch_cleave	launch_triggered_spell_with_primary	&cleave	1	212680
+D	outlaw_opportunity.rs	grant_opportunity	launch_triggered_spell	&spell	1	195627
+D	paladin_sacred_weapon.rs	wield_sacred_weapon	launch_triggered_spell_with_primary	&spell	1	432616
+D	pet_sets.rs	cast_thundering_hooves	launch_triggered_spell	&stomp	1	201754
+D	restoration_bursting_growth.rs	burst	launch_triggered_spell	&spell	1	440121
+D	ret_damage.rs	cast_consecrated_blade	launch_triggered_spell	&spell	1	26573
+D	ret_damage.rs	sentence_init	launch_triggered_spell_with_primary	&child	1	1260251
+D	ret_empyrean.rs	cast_background_storm	launch_triggered_spell	&storm	1	53385
+D	ret_toll.rs	cast_protection_child	launch_triggered_spell	&child	1	31935
+D	shadow_apparitions.rs	burst_at_parent	launch_triggered_spell_with_primary	&spell	1	1231479
+D	shadow_cthun.rs	try_summon	launch_triggered_spell	&summon	1	377355,377357
+D	shadow_cthun.rs	try_summon	load_triggered_spell	id	1	377355,377357
+D	shadow_priest.rs	cast_maddening_tentacles	launch_triggered_spell	&child	1	335467
+D	shadow_rift.rs	pulse	launch_triggered_spell	&damage	1	447448
+D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
+D	subtlety_techniques.rs	earn_storage	launch_triggered_spell	&spell	1	196911
+D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
+D	survival_takedown.rs	cast_pet_damage	launch_triggered_spell	&spell	1	1253862
+D	destruction_rift.rs	roll_rift	try_cast_triggered	summon	1	387979,394235,394243,434587
+D	destruction_rift.rs	barrage_tick	try_cast_triggered	child	1	387985,394238
+D	affliction_grasp.rs	copy_owned_ticks	cast_triggered_with_effect0_amount	child	1	1261158,1261166,1261176,1279686
+D	assassination_runtime/rogue_children.rs	tick_implacable	cast_triggered	child	1	1265794,1265795
+D	aura_rolls.rs	apply_roll	AuraApplication	payload	1	1214933,1214934,1214935,1214937
+D	blood_ground.rs	apply	AuraApplication	spell	1	188290,391459,434034
+D	bloodlust_lockout.rs	apply_lockout	AuraApplication	lockout	1	57723,57724,80354,264689,390435
+D	brewmaster_empty_barrel.rs	grant_empty_barrel	AuraApplication	spell_id	1	1265140,1265307
+D	brewmaster_harmonic_surge.rs	launch_surge	launch_triggered_spell	&spell	1	1271011,1271045
+D	brewmaster_harmonic_surge.rs	launch_surge	load_triggered_spell	id	1	1271011,1271045
+D	cast_grants.rs	roll_grant	try_cast_triggered	grant.buff	1	445206
+D	demon_hunter_burning.rs	apply	cast_triggered_with_effect0_amount	residual	1	453177,1245654
+D	demon_hunter_catastrophe.rs	apply_deposit	AuraApplication	deposit.spell	1	1256667,1256676
+D	demon_hunter_meteor_shower.rs	update	cast_triggered_at_destination	spell	1	1264129,1264130
+D	demonology_tyrant_buffs.rs	grant	try_cast_triggered	buff	1	456323,1276767
+D	destruction_roaring_blaze.rs	spread_dot	try_cast_triggered	dot	1	157736,445474
+D	devastation.rs	scintillation_tick	launch_triggered_spell	&child	1	359077
+D	devourer_fragment_heal.rs	on_fragment_heal	try_cast_triggered	stack	1	1225789,1227702
+D	devourer_metamorphosis.rs	exit_meta	try_cast_triggered	buff	1	452550,453314
+D	devourer_reap.rs	execute_damage	launch_triggered_spell	&damage	1	1225823,1225827,1245455,1279200
+D	devourer_reap.rs	execute_damage	load_triggered_spell	pending.damage	1	1225823,1225827,1245455,1279200
+D	devourer_void_ray.rs	cast_tick	cast_triggered	child	1	1213649,1214595
+D	devourer_void_ray.rs	finish_ray	launch_triggered_spell	&spell	1	1213649,1214595
+D	devourer_void_ray.rs	finish_ray	load_triggered_spell	child	1	1213649,1214595
+D	devourer_voidfall.rs	update	launch_triggered_spell	&damage	1	1256305,1256619
+D	devourer_voidfall.rs	update	load_triggered_spell	impact.spell	1	1256305,1256619
+D	discipline_atonement.rs	fiend_mana_on_landed_melee	cast_triggered_with_effect0_amount	spell	1	123051,343727
+D	druid_balance_of_all_things.rs	on_eclipse	cast_triggered_with_overrides	buff	1	394049,394050
+D	druid_eclipse.rs	apply_eclipse	cast_triggered_with_overrides	spell	1	48517,48518
+D	druid_fluid_form.rs	shift	cast_triggered	form	1	768,5487
+D	druid_fury_of_elune.rs	update_fields	launch_triggered_spell_with_primary	&spell	1	211545,394111
+D	druid_fury_of_elune.rs	update_fields	load_triggered_spell	damage	1	211545,394111
+D	echo_policies.rs	queue_echo	launch_triggered_spell	&child	1	24275,53385
+D	echo_policies.rs	queue_echo	load_triggered_spell	policy.payload	1	24275,53385
+D	elemental.rs	grant_blast_buff	try_cast_triggered	buff	1	118522,173183,173184
+D	elemental_primals.rs	summon_elemental	try_cast_triggered	root	1	118291,157299,157319,188592
+D	empower_evoker.rs	grant_empower_buffs	try_cast_triggered	buff	1	376850,436336
+D	empower_evoker.rs	release	execute_cast	&child	1	357209,359077
+D	preservation_empower.rs	release_dream	execute_cast	&heal	1	355941
+D	preservation_empower.rs	release_spirit	execute_cast	&heal	1	367230
+D	shadow_collapse.rs	burst	launch_planned_spell	&damage	1	448405
+D	shadow_apparitions.rs	launch_apparition	launch_planned_spell	&missile	1	148859,1264175
+D	shadow_apparitions.rs	launch_apparition	load_triggered_spell	parent	1	148859,1264175
+D	cast_relationships.rs	grant	try_cast_triggered	spell	1	194594,260242,269651,1253750,1301778
+D	cast_relationships.rs	grant_with_overrides	cast_triggered_with_overrides	spell	1	257622,389020
+D	enhancement/enhancement_spending.rs	grant_for_spending	cast_triggered	proc.cast_spell	1	384352,454015,1262830
+D	enhancement/enhancement_stormblast.rs	execute_flurry	launch_triggered_spell	payload	1	17364,115356
+D	enhancement/enhancement_strikes.rs	after_crash	cast_triggered	buff	1	187878,1252415
+D	enhancement/enhancement_strikes.rs	invoke_thorim	launch_triggered_spell	&payload	1	188196,188443,452201
+D	enhancement/enhancement_tempest_buffs.rs	cast_discharge	launch_triggered_spell	&payload	1	188443,211094
+D	enhancement/enhancement_tempest_buffs.rs	grant	cast_triggered	buff	1	455089,470532
+D	evoker_command_squadron.rs	start_squadron	cast_triggered_with_overrides	summon	1	1235843,1237036
+D	evoker_echo.rs	replicate	cast_triggered_with_overrides	payload	1	355941,361195,361509,366155,367230,1256581
+D	evoker_temporal_anomaly.rs	apply_partial_echo	AuraApplication	ECHO	1	364343
+D	execution_counters.rs	cast_valued_execution	cast_triggered_with_overrides	payload	1	335082
+D	execution_counters.rs	grant_selected_counter	try_cast_triggered	consumer.counter	1	445606
+D	feral_convoke.rs	launch_child	launch_triggered_spell	&spell	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
+D	feral_convoke.rs	launch_child	load_triggered_spell	id	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
+D	feral_lycaras.rs	apply_teachings_child	cast_triggered_with_overrides	child	1	378990,378991
+D	feral_unseen.rs	launch_effective_unseen	launch_triggered_spell	&spell	1	1263890,1263908
+D	fire_phoenix.rs	cast_next	cast_triggered	spell	1	449559,450421,450461,450462,450499,453326
+D	foreground_procs.rs	grant_buff_and_reset_actions	try_cast_triggered	buff	1	52437
+D	frost_followups.rs	apply_self_aura	AuraApplication	spell_id	1	205473,1222865
+D	frost_death_knight.rs	cast_buff_stacks	cast_triggered_with_overrides	spell	1	193486,194879,207062,211805,377101,377192,1230916,1233152
+D	blood_rune_weapon.rs	copy_weapon_actions	cast_triggered	spell.id	1	49998,50842,195182,195292,206930,433895
+C	affliction_ua.rs	1259790
+C	arcane_feedback.rs	394195
+C	assassination_runtime/rogue_hero.rs	457280
+C	brewmaster_dragonfire.rs	387621
+C	elemental_rod.rs	197209
+C	enhancement/enhancement_rod.rs	197209
+C	feral_frenzy.rs	1244079
+C	fire_procs.rs	383811
+C	fire_procs.rs	394195
+C	fire_procs.rs	449560
+C	frost_comet_storm.rs	153596
+C	frost_death_knight.rs	195975
+C	frost_deathbringer.rs	441424
+C	frost_deathbringer.rs	441426
+C	frost_feedback.rs	394195
+C	guardian_flashing_claws.rs	77758
+C	guardian_lunar_beam.rs	204069
+C	guardian_lunar_beam.rs	414613
+C	guardian_wild_guardian.rs	1308093
+C	havoc/children.rs	320338
+C	hunter_howl.rs	201594
+C	marksmanship_sentinel.rs	1253733
+C	marksmanship_sentinel.rs	1319016
+C	mistweaver_courage.rs	457917
+C	outlaw_gravedigger.rs	1265918
+C	outlaw_opportunity.rs	197834
+C	outlaw_pistol.rs	185763
+C	paladin_armaments.rs	1269175
+C	restoration_everbloom.rs	33778
+C	ret_damage.rs	1261160
+C	voltaic_blaze.rs	188389
+C	warlock_seed.rs	27285
+D	frost_runtime/frost_mage_procs.rs	apply_buff	AuraApplication	spell	1	44544,190446,455122,1247730
+D	frost_runtime/frost_mage_supply.rs	apply_buff	AuraApplication	spell_id	1	44544,461531
+D	guardian_impacts.rs	launch_child	try_cast_triggered	child	1	1292391
+D	guardian_rampant_thorn.rs	tick	launch_triggered_spell	&child	1	1301157
+D	guardian_wild_guardian.rs	wild_guardian_action	cast_triggered	override_aura	1	1269616,1270277
+D	havoc.rs	transform_or_extend	try_cast_triggered	DEMONIC.payload	1	162264
+D	havoc/beam.rs	cast_tick	cast_triggered	child	1	198030,1287949
+D	havoc/beam.rs	finish_final_breath	cast_triggered_with_overrides	child	1	198030,1287949
+D	havoc/children.rs	apply_hunt_secondary_dots	cast_triggered	dot_id	1	370969,1246168
+D	havoc/demonsurge.rs	before_cast	try_cast_triggered	trigger	1	453323,1238696
+D	havoc/demonsurge.rs	trigger_meta_entry	try_cast_triggered	trigger	1	453323,1238696
+D	havoc/demonsurge.rs	expire_meta	try_cast_triggered	buff	1	452550,453314
+D	havoc/demonsurge.rs	initialize_non_meta_buff	try_cast_triggered	buff	1	452550,453314
+D	havoc/onslaught.rs	execute_copy	try_cast_triggered	spell	1	162794,201427
+D	hellcaller_counters.rs	apply_native_aura	AuraApplication	spell	1	445731
+D	hellcaller_counters.rs	cast_native_damage	cast_triggered	spell	1	445736,446285
+D	hellcaller_counters.rs	trigger_seed_payout	launch_triggered_spell	&buff	1	387263,1260269
+D	hot_streak.rs	apply_hot_streak_outcome	cast_triggered	proc	1	48107,48108
+D	hunter_howl.rs	apply_self	try_cast_triggered	spell	1	471877,471878,472324,472325,1258338,1258344
+D	hunter_howl/summons.rs	summon	cast_triggered_with_overrides	rule.spell	1	471990,1222271
+D	hunter_huntmaster.rs	earn_companion	cast_triggered_with_overrides	summon	1	459733,459739
+D	hunter_huntmaster.rs	earn_companion	try_cast_triggered	buff	1	459735,459738
+D	impact_procs.rs	cast_impact_proc	try_cast_triggered	policy.payload	1	445579
+D	marksmanship.rs	bank_residual	cast_triggered_with_effect0_amount	child	1	269576,394021,458169,469882,1253836,1263250,1270065,1280134
+D	melee_reset.rs	roll_reset	try_cast_triggered	reset.buff	1	406086
+D	mistweaver_celestial_conduit.rs	pulse	try_cast_triggered	spell	1	443038,443039
+D	monk_harmony.rs	apply	AuraApplication	spell	1	450521,450711
+D	outlaw_coup.rs	execute_coup	ScaledTrigger	spell_id	1	462140,462239,462240
+D	outlaw_spree_power.rs	launch_hand	launch_triggered_spell	&spell	1	57841,57842
+D	outlaw_spree_power.rs	launch_hand	load_triggered_spell	hand	1	57841,57842
+D	paladin_armaments.rs	advance_shining_light	AuraApplication	id	1	182104,327510
+D	paladin_armaments.rs	after_cast	AuraApplication	override_id	1	432478
+D	paladin_armaments.rs	cast_guidance_effect	cast_triggered_with_overrides	id	1	433807,433808
+D	paladin_armaments.rs	echo_forge	cast_triggered	echo	1	447246,447258
+D	paladin_armaments.rs	roll_divine_inspiration	AuraApplication	next	1	432496,432502
+D	paladin_armaments.rs	summon_forge	AuraApplication	spell_id	1	432502,434255
+D	paladin_masterwork.rs	add_stacks	AuraApplication	spell	1	1239091,1271436
+D	paladin_masterwork.rs	strike_with_lesser_weapon	cast_triggered	spell	1	1239276,1239282
+D	periodic_counters.rs	apply_owned	AuraApplication	spell_id	1	205473,1222865
+D	pet_sets.rs	cast_stomps	cast_triggered	rule.payload	1	201754
+D	pet_sets.rs	cast_stomps	launch_triggered_spell	echo	1	201754
+D	pet_sets.rs	on_hit	cast_triggered	rule.aura	1	1299389
+D	protection_demolish.rs	demolish_tick	cast_triggered	spell	1	440884,440886,440888
+D	protection_demolish.rs	demolish_tick	try_cast_triggered	buff	1	1270843,1270846
+D	ret_damage.rs	queue_tempest	launch_triggered_spell	&child	1	53385,224239
+D	ret_damage.rs	queue_tempest	load_triggered_spell	id	1	53385,224239
+D	ret_purpose.rs	roll_selected_divine_purpose	try_cast_triggered	buff	1	223819,408458
+D	ret_tier.rs	after_foreground_spender	cast_triggered	kind	1	1306161,1306162,1310461
+D	ret_toll.rs	cast_child	launch_triggered_spell	&child	1	406957,1279408
+D	rogue_supercharger.rs	grant_counters	cast_triggered	counter	1	470398,470406,470409,470412,470414,470415,470416
+D	shadow_bolts.rs	launch_bolts	schedule_full_trigger	bolt.id	1	1242189
+D	shadow_nzoth.rs	apply_owned	AuraApplication	spell_id	1	1243069,1243113,1243114
+D	shadow_priest.rs	slam_impact	launch_triggered_spell_with_primary	&damage	1	1227621
+D	shadow_volley.rs	grant	AuraApplication	spell	1	1242171,1279437
+D	soul_of_the_forest.rs	recast_on_nearby_allies	cast_triggered	spell	1	774,8936
+D	spellslinger.rs	conjure	schedule_full_trigger	spec.payload	1	443722,443763
+D	stacking_summons.rs	advance_counter	try_cast_triggered	policy.refund	1	1276318
+D	stacking_summons.rs	cast_summon	try_cast_triggered	child	1	193331,193332,455465,455476,1251781
+D	stacking_summons.rs	grant_stack	try_cast_triggered	policy.counter	1	1276166
+D	stacking_summons.rs	summon_choice	try_cast_triggered	spell	1	1276182,1276283,1282501,1282502
+D	subtlety_clone.rs	launch_due	launch_triggered_spell	&clone.spell	1	1269205,1269209,1269214,1269217,1269336,1269340,1269560,1269565
+D	subtlety_finishers.rs	dispatch_shadow_finisher	launch_triggered_spell	&child	1	319190,328082
+D	subtlety_secret.rs	launch_due_clones	launch_triggered_spell	&spell	1	282449
+D	subtlety_secret.rs	launch_player	launch_triggered_spell	&spell	1	280720
+D	survival.rs	apply_self	AuraApplication	spell_id	1	260286,1273155
+D	survival_buffs.rs	grant_self_buff	try_cast_triggered	spell	1	259388,1253750,1280140,1292687
+D	survival_wildfire.rs	apply_periodic_payload	launch_triggered_spell	&spell	1	269747,1253171
+D	survival_wildfire.rs	apply_periodic_payload	load_triggered_spell	payload	1	269747,1253171
+D	unholy_apocalypse_rune.rs	on_hit	try_cast_triggered	spell	1	327092,327093,327095,327096
+D	unholy_army.rs	summon_apocalypse_now_riders	try_cast_triggered	spell	1	444248,444251,444252,444254
+D	unholy_blightburst.rs	blightburst	cast_triggered_with_effect0_amount	eruption	1	1241167,1241171
+D	unholy_blightburst.rs	blightburst	try_cast_triggered	plague	1	191587,1240996
+D	unholy_eruption.rs	cast_army_order	launch_triggered_spell_with_primary	&spell	1	1294264,1300330
+D	unholy_eruption.rs	cast_army_order	load_triggered_spell	order	1	1294264,1300330
+D	unholy_eruption.rs	erupt_and_apply_missing	cast_triggered_with_effect0_amount	child	1	1241167,1241171
+D	unholy_mograine.rs	initialize	try_cast_triggered	spell	1	188290,444505
+D	unholy_permanent_claws.rs	update_pet	try_cast_triggered	spell	1	91776,91778
+D	unholy_putrefy.rs	impact_and_dismiss	try_cast_triggered	spell	1	390220,1277016
+D	unholy_rider_proc.rs	on_cast	try_cast_triggered	chosen	1	444248,444251,444252,444254
+D	fire_phoenix.rs	schedule_meteorite_impact	DestinationTrigger	impact	1	449569,456139
+D	hunter_bounces.rs	read_impacts	ScaledTrigger	policy.payload	1	1266081
+D	hunter_bounces.rs	schedule_bounces	schedule_full_trigger	policy.finisher	1	1266096
+D	vengeance_voidfall.rs	apply	AuraApplication	spell	1	1256301,1256302,1256322
+D	vengeance_voidfall.rs	launch_meteor	cast_triggered_at_destination	meteor.spell	1	1256303,1256616
+D	warlock_ritual.rs	advance_ritual	try_cast_triggered	ritual	1	431944,432815,432816
+D	warlock_ritual.rs	art_removed	try_cast_triggered	demon.summon	1	428565,428571,434400
+D	warlock_ritual.rs	art_removed	try_cast_triggered	granted.1	1	433885,433891
+D	warlock_ritual.rs	gaze	cast_triggered	spell	1	1269885,1269886,1269892
+D	warlock_ritual.rs	grant	try_cast_triggered	buff	1	1269643,1269879
+D	warlock_ritual.rs	grant_art	try_cast_triggered	art	1	428524,432794,432795
+D	warlock_seed.rs	apply_background_dot	try_cast_triggered	dot	1	146739,445474
+D	after_cast_auras.rs	apply	try_cast_triggered	child	1	trigger:1243659
+D	elemental.rs	grant_mote	try_cast_triggered	child	1	trigger:16166
+D	enhancement/enhancement_imbues.rs	apply_enchant_aura	cast_triggered	child	1	enchant:334294,enchant:334302
+D	frost_death_knight.rs	trigger_native_buff	try_cast_triggered	buff	1	trigger:51128,trigger:59057
+D	guardian_rampant_thorn.rs	roll_gorestained_claws	cast_triggered	child	1	trigger:1296607
+D	midnight_stat_items.rs	apply_stat_buff	AuraApplication	id	1	1252524,1252818,1295057,1295898,1295899,1295900,1295901,trigger:1297654
+D	resource_values.rs	apply_producers	cast_triggered	payload	1	trigger:1296589
+D	survival_boomstick.rs	emit_tick	cast_triggered	child	1	trigger:1261193
+C	feral_rip_and_tear.rs	391356
+C	feral_twin_claw.rs	1271636

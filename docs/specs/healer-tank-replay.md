@@ -6,7 +6,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 
 - [ ] Load incoming hits with time, damage school, raw amount and target role. Reject invalid timelines rather than silently changing them. An optional `--party-trace` replays SimC raid-event source rolls onto the five native party slots alongside the tank trace.
 - [ ] Prefer SimulationCraft tank-dummy output as the timeline source; also accept recorded World of Osso runs. Preserve the distinction between swings, strikes and bleeds. SimC direct damage amounts are source rolls before hit outcomes and must not be reported as post-crit damage. Use each trace-declared attacker miss and crit chance while retaining native defender dodge, parry and block. Replay the physical spell_dot's zero-damage application as a landed direct spell hit, separate from its later bleed ticks.
-- [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for measurements unless an explicit immutable snapshot is selected for tank replay with `DPS_PARITY_WORLD_DB`. Tank startup and reference catalogs must read the same selected database. Use level-90 MID2 profile gear and selected talents for max-level measurements; Stockade is a smoke test. The replay party is single-faction; the healer adopts the tank's faction template before setup advances the world, while retaining its profile race and stats.
+- [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for measurements unless an explicit immutable snapshot is selected for tank replay with `DPS_PARITY_WORLD_DB`. Tank startup and reference catalogs must read the same selected database. Use each level-90 healer's tracked MID2 profile equipment and selected talents for max-level measurements; the other party actors retain Journal gear. Level-70 Stockade is a Journal-gear smoke test. The replay party is single-faction; the healer adopts the tank's faction template before setup advances the world, while retaining its profile race and stats.
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells. The initial Holy Paladin benchmark uses its native learned Holy Light and Flash of Light; this is not complete spell coverage.
 - [ ] In SimC healer replay, begin the measured fight with the full update in which the first of tank or healer enters combat, rather than waiting for both. This includes instant actions on that transition and opening actions while the other completes precombat. The Restoration Druid 0.824 ratio and earlier Mistweaver results used the old boundary; remeasure them before comparing against the new boundary. Project the enemy training dummy's health from 100% to 0% over the requested fixed fight duration, using the DPS fixture's SimC fixed-time target-health model. This controls execute thresholds and does not change the incoming damage trace.
 - [ ] For each healer report effective HPS, raw HPS, overheal percentage, per-spell HPS, mana over time, time to first party death, and idle-GCD percentage. Idle-GCD percentage is the fraction of fight time sampled at 50 ms when the living healer has no active cast or channel and no active GCD, after the policy has acted; dead time is not idle. Sample mana at one-second intervals. Use the recorded combat duration for HPS and report no death as null.
@@ -70,6 +70,45 @@ All native runs survived. The paired mean damage changes have standard errors 24
 Recipient rolls (avoidance, block, critical block) for each replayed attack draw from their own stream, seeded from the run seed and the attack's trace index. The tank's procs and decisions use the separate actor stream, so a scale change cannot reshuffle later attack outcomes. For the same seed, equal avoidance and block chances roll equal outcomes at every scale. Blood and Brewmaster still change outcomes across scales, because their own procs change the chances themselves: Dancing Rune Weapon raises Blood parry from about 34% to 65%, and Elusive Brawler raises Brewmaster dodge.
 
 `--pressure-sweep` runs each tank without external healing at every scale from 1.0 to 5.0 in 0.25 steps (17 scales) and ten consecutive native seeds, starting at 70448 by default. The survival scale is the last grid scale before the first scale with fewer than five survivors; a later recovery does not count. The sweep also reports mean net damage per second at 1.0×. Damage taken is already after absorbs, so net damage subtracts effective self-healing only. Per-seed reports and `summary.json` are written to the output directory. This synthetic trace is not a general ranking of tank performance in encounters.
+
+### Qualified tank comparison (snapshot v3)
+
+These are **scenario-specific estimates, not a general tank ranking**. The DTPS tables rank lower expected-avoidance damage taken first, after absorbs but before self-healing. They use ten 120-second paired follower replays per row with the recorded SimC dummy traces, infinite health and external healing. Means have Student-t 95% intervals. The point-estimate ordering is not proof of differences between tanks: intervals overlap, profiles and reference adjustments differ, and there is no paired cross-spec significance test. The 70 and 90 profiles have different gear and talents; do not compare values across levels.
+
+| Rank | Level 70 tank | Expected native DTPS ± 95% CI | Qualification |
+|---:|---|---:|---|
+| 1 | [Protection Paladin 66](healer-tank-replay/66.md) | 72,862 ± 3,889 | Native/reference difference +4.11 ± 2.59 pp; interval crosses ±5%. |
+| 2 | [Protection Warrior 73](healer-tank-replay/73.md) | 73,737 ± 4,367 | Each side's own per-swing avoidance; adjusted reference uses logged-keystone APL and omits Focused Vigor's DB2 Strength effect. |
+| 3 | [Brewmaster 268](healer-tank-replay/268.md) | 74,253 ± 4,561 | Pre-Stagger expectation; keeps native Treemouth self-damage. |
+| 4 | [Vengeance 581](healer-tank-replay/581.md) | 75,897 ± 1,057 | Reference needs retail-supported armor correction; corrected delta +0.91 ± 2.19 pp. |
+| 5 | [Guardian 104](healer-tank-replay/104.md) | 88,526 ± 3,531 | WCL/DB2-adjusted reference; delta +3.03 ± 2.61 pp crosses ±5%. |
+| 6 | [Blood 250](healer-tank-replay/250.md) | 122,539 ± 6,896 | DTPS excludes Death Strike healing; compare the separate survival measure. |
+
+| Rank | Level 90 tank | Expected native DTPS ± 95% CI | Qualification |
+|---:|---|---:|---|
+| 1 | [Brewmaster 268](healer-tank-replay/268.md) | 53,426 ± 1,768 | Pre-Stagger expectation; its normalization differs from other rows. |
+| 2 | [Protection Warrior 73](healer-tank-replay/73.md) | 68,904 ± 1,959 | Each side's own per-swing avoidance; adjusted-reference delta −4.83 ± 5.52 pp. |
+| 3 | [Guardian 104](healer-tank-replay/104.md) | 69,749 ± 2,462 | WCL/DB2-adjusted reference; expected delta +0.36 ± 2.07 pp. |
+| 4 | [Protection Paladin 66](healer-tank-replay/66.md) | 73,976 ± 1,080 | Solo reference; delta −3.91 ± 2.34 pp crosses ±5%. |
+| 5 | [Vengeance 581](healer-tank-replay/581.md) | 75,058 ± 2,570 | Retail-armor-adjusted delta +4.29 ± 5.59 pp crosses ±5%. |
+| 6 | [Blood 250](healer-tank-replay/250.md) | 93,244 ± 8,606 | First ten seeds of the documented 30-seed run; excludes Death Strike healing. |
+
+The comparison-only reference adjustments are **INFERRED**: Guardian uses the WCL/DB2 absorb evidence in [104](healer-tank-replay/104.md); Warrior uses the DB2 and WCL charge/armor evidence in [73](healer-tank-replay/73.md); Brewmaster applies DB2 Calming Presence as described in [268](healer-tank-replay/268.md); Vengeance re-mitigates with DB2 and WCL armor evidence in [581](healer-tank-replay/581.md). Retire each adjustment when the pinned SimC reference reproduces the corresponding retail behavior, or revise it if stronger retail evidence contradicts it. None is a native data override.
+
+For 104, 250 and 73, expected DTPS and intervals above scale each side's landed swing damage by expected/observed landed swings, preserving other damage. The first ten level-90 Blood seeds give +1.51 ± 1.81 pp rather than the documented 30-seed result. Warrior uses each side's own measured per-swing probabilities, which are not identical; its post-absorb rescaling remains approximate because block, shield depletion and procs can correlate with avoidance. The 268 pre-Stagger calculation changes incoming swings before mitigation and shields. Receipts: `game-engine/data/diagnostics/tank-fightremains-v3-2026-11-01/`, `tank-notemp-v3-2026-11-01/`, `prot-warrior-parity-2026-11-01/`, `tank-parity-brm-prot-2026-11-01/` and `vdh-parity-2026-10-31/`. Analyses: `/home/osso/.worktrees/logs/tank-104-581-estimates.py` and `/home/osso/.worktrees/tank-73-parry-evidence/analyze.py`.
+
+**Survival is a separate measurement.** The following is a mixed-tree, ten-seed, level-90 no-healer 300-second pressure grid, not the DTPS test. The 0.25-step scale is the last step before fewer than five survivors, as defined above. The interval shown is a 95% Wilson interval for survival probability at that single selected step, **not a confidence interval for the survival scale or rank**; selection and sparse seeds make the scale uncertain.
+
+| Rank | Tank | Scale; survivors/10 | Survival probability 95% CI | Qualification |
+|---:|---|---:|---:|---|
+| 1 | Vengeance 581 | 4.50×; 6/10 | 31.3–83.2% | Post-attr6 tree; SimC omits two healing talents. |
+| 2 | Blood 250 | 3.75×; 5/10 | 23.7–76.3% | Integrated `a14a55cc97` grid; exactly at the threshold. |
+| 3 | Brewmaster 268 | 3.25×; 8/10 | 49.0–94.3% | Integrated grid, before the newer level-70 fixes. |
+| 4 | Protection Warrior 73 | 3.00×; 10/10 | 72.2–100% | Post-Pain and Gain correction; SimC omits that talent. |
+| 5 | Guardian 104 | 2.00×; 10/10 | 72.2–100% | Post-Wildfire/proc-mask grid; 3/10 at 2.25×. |
+| 6 | Protection Paladin 66 | 1.25×; 8/10 | 49.0–94.3% | Integrated grid; not a current same-tree comparison. |
+
+The corrected per-spec survival grids for 73, 104 and 581 supersede their older integrated-grid rows. The other three retain the integrated grid below. These measurements use different native trees and have not been rerun as one integrated grid; the ordering is provisional and must not be read as retail class balance.
 
 ### Integrated pressure grid at `a14a55cc97`
 
@@ -175,7 +214,7 @@ These are not validated real-key ceilings: the field is not proven attacker-side
 
 ## SimC party-pressure trace
 
-The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls.
+The second canonical healer input is `game-engine/data/diagnostics/healer-tank-replay/66.simc-party-pulse-seed70448.debug.log`. It adds a 20,000 Shadow pulse every 12 seconds from 8 seconds through 296 seconds. This is a reproducible synthetic dungeon-pressure scenario, not a measured dungeon encounter. SimC `76f8118` generates the five recipient source rolls with the MID2 Protection profile and four named copies; the native replay maps them to its tank, healer and three DPS followers. The original tank-only trace still supplies the tank's melee and bleed rolls. Each party pulse is a landed hostile magic hit for native damage-taken procs. Earlier party-pulse healer measurements lacked this hit classification and must not be compared as equivalent to corrected results.
 
 Generate it with the pinned `engine/simc`, the MID2 Protection profile, `copy=party_healer copy=party_damage_1 copy=party_damage_2 copy=party_damage_3 tank_dummy=Tank_Dummy_Dungeon iterations=1 threads=1 max_time=300 fixed_time=1 vary_combat_length=0 seed=70448 debug=1 'raid_events+=/damage,first=8,cooldown=12,amount=20000,type=shadow'` and the canonical output path. The copied SimC actors supply event slots, not reference healer or DPS behavior. The healer replay CLI accepts `HEALER_TANK_TARGETS` for a fixed number of engaged dummies; the default is one. The first dummy supplies the recorded tank pressure, and the same raid debuffs apply to every dummy. Reports include damage per dummy and Discipline Pain/Atonement target-time receipts for enemy-count controls.
 

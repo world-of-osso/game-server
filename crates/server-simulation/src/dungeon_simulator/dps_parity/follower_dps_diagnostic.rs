@@ -3432,6 +3432,7 @@ fn follower_dps_production_dummy() {
     } else {
         None
     };
+    super::fire_rotation::apply_initial_spheres(app.world_mut(), actor);
     start_fixed_time_fight(
         &mut app,
         owner,

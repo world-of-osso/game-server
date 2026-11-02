@@ -7,8 +7,29 @@
 //! necessary. Each exception states why the site cannot acquire an idle enemy.
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use super::combat::spell_cast::script_registry::SpellScriptHook;
+
+#[test]
+fn script_child_declarations_cover_cast_sites() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("spell scripts crate is in the workspace crates directory");
+    let output = Command::new("python3")
+        .arg(root.join("scripts/spell_child_audit.py"))
+        .arg("--check")
+        .current_dir(root)
+        .output()
+        .expect("run the script-child declaration audit");
+    assert!(
+        output.status.success(),
+        "script-child declaration audit failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
 
 type Site = (String, String, String);
 type Sites = BTreeMap<Site, usize>;
@@ -79,6 +100,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // Exceptions are explicit and site-specific. Counts make new calls in the same
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
+    (
+        "feral_aggravate_wounds.rs",
+        "collect_owned_wounds",
+        "query",
+        1,
+        "extends existing caster-owned wounds without selecting new targets",
+    ),
     (
         "feral_apex.rs",
         "count_owned_rips",

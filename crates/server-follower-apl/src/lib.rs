@@ -61,6 +61,6 @@ pub mod vengeance_tank_rotation;
 pub mod windwalker_rotation;
 
 pub use follower::{
-    FollowerApl, FollowerAplFailed, FollowerAplPlugin, SpecRotation, drive_followers, party_of,
-    party_tank,
+    DirectedOwnerTarget, FollowerApl, FollowerAplFailed, FollowerAplPlugin, SpecRotation,
+    drive_followers, party_of, party_tank,
 };

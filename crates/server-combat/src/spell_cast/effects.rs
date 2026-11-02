@@ -1881,6 +1881,20 @@ pub fn damage_source_amount(
     // SimC76f8118 sc_druid.cpp2888–2948: Tear already stores Rip's
     // source-side periodic damage; do not apply caster modifiers a second time.
     if periodic && ctx.spell.id == 391356 {
+        #[cfg(any(test, feature = "test-support"))]
+        factor_capture::record_source(
+            world,
+            ctx,
+            target,
+            factor_capture::Source {
+                input: amount,
+                scripted: amount,
+                modded: amount,
+                done: 1.0,
+                after: amount,
+                skipped_caster_modifiers: true,
+            },
+        );
         return amount;
     }
     let school = ctx.spell.school_mask();
@@ -2541,9 +2555,10 @@ fn push_damage_event(
             .spell
             .categories
             .as_ref()
-            .is_some_and(|category| category.defense_type == 2)
+            .is_some_and(|category| matches!(category.defense_type, 1 | 2))
     {
-        // SimC's ID-zero melee nuke bypasses a cast hit ledger but is still a melee ability.
+        // Classified ID-zero replay damage has no cast ledger but still lands
+        // as its authored hostile spell or melee ability.
         procs::spell_hit_masks(ctx.spell, true)
     } else {
         (0, 0)
@@ -2835,7 +2850,7 @@ fn apply_resolved_heal(
             amount,
             procs::landed_hit_mask(crit, 0.0, 0.0, amount),
         );
-        super::scripts::heal_beacon(world, ctx, target, effective);
+        super::scripts::heal_beacon(world, ctx, target, amount);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
     if periodic {

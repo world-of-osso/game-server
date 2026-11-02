@@ -147,8 +147,9 @@ pub(super) fn replay_simc_party_with_targets(
     )
 }
 
-/// A class party (tank, `spec` healer, two DPS and the leader DPS), each in
-/// its level's Journal gear and casting through its spec APL, engaged on the
+/// A class party (tank, `spec` healer, two DPS and the leader DPS), with a
+/// level-90 healer in its tracked profile gear and other actors in Journal gear,
+/// casting through their spec APLs, engaged on the
 /// SimC tank dummy whose recorded pressure is replayed onto it.
 pub(super) struct ClassParty {
     pub(super) app: App,
@@ -189,6 +190,9 @@ fn spawn_class_party(
         spec,
     )?;
     let (tank, healer) = (party.tank, party.members[1]);
+    if level == 90 {
+        equip_healer_profile(app.world_mut(), healer, spec)?;
+    }
     let sources = (0..targets)
         .map(|index| super::dps_parity::spawn_level_dummy(&mut app, tank, level, index))
         .collect::<Result<Vec<_>, _>>()?;
@@ -208,6 +212,21 @@ fn spawn_class_party(
             party.owner,
         ],
     })
+}
+
+/// Equip the same tracked level-90 profile source for every healer spec.
+fn equip_healer_profile(world: &mut World, healer: Entity, spec: u32) -> Result<(), String> {
+    let profile = server_follower_apl::profiles::profile(spec)?;
+    crate::followers::parity_profile::equip(world, healer, &profile)?;
+    let provider = *world.resource::<crate::followers::FollowerActionProvider>();
+    let mut actions = (provider.source_actions)(world, healer, spec)?;
+    actions.extend((provider.equipped_actions)(world, healer, spec)?);
+    actions.sort_unstable();
+    actions.dedup();
+    world
+        .entity_mut(healer)
+        .insert(crate::followers::FollowerActionSpells(actions));
+    Ok(())
 }
 
 /// The leader attacks the first dummy and enters combat with every dummy,
@@ -538,13 +557,17 @@ fn replay(
     )
 }
 
-fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {
+pub(super) fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {
     // SimC76f8118 raid_event.cpp:1814-1866: non-critical Shadow spell source roll.
     let spell = crate::spell_info::SpellInfo {
         misc: Some(crate::spell_info::SpellMisc {
             school_mask: 32,
             ..Default::default()
         }),
+        categories: Some(Box::new(crate::spell_info::SpellCategories {
+            defense_type: 1,
+            ..Default::default()
+        })),
         ..Default::default()
     };
     let ctx = crate::spell_cast::effects::EffectCtx {

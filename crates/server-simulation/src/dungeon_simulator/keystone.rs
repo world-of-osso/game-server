@@ -1,5 +1,8 @@
 //! Set up the native keystone lifecycle and collect one headless run.
 #[cfg(test)]
+#[path = "keystone_level_tests.rs"]
+mod level_tests;
+#[cfg(test)]
 #[path = "keystone_tests.rs"]
 mod tests;
 use bevy::prelude::*;
@@ -53,6 +56,55 @@ impl Options {
     }
 }
 
+#[derive(Clone, Copy)]
+struct TankProgress<'a> {
+    position: Option<[f32; 3]>,
+    state: Option<&'a crate::creature_ai::CreatureState>,
+    follow: Option<&'a crate::creature_ai::FollowOwner>,
+}
+
+/// Emits progress at the start and each simulated minute after the countdown.
+#[derive(Default)]
+pub(super) struct Progress {
+    next_ms: u64,
+}
+
+impl Progress {
+    fn write(
+        &mut self,
+        writer: &mut impl std::io::Write,
+        sim_ms: u64,
+        snapshot: &shared::protocol::ChallengeRun,
+        current_pack: Option<u32>,
+        route: &[super::graph::RouteStep],
+        tank: TankProgress<'_>,
+    ) -> std::io::Result<()> {
+        if snapshot.phase != shared::protocol::ChallengePhase::Running || sim_ms < self.next_ms {
+            return Ok(());
+        }
+        let bosses = snapshot.bosses.iter().filter(|boss| boss.defeated).count();
+        let step = current_pack
+            .and_then(|pack| route.iter().position(|step| step.pack == pack))
+            .map(|index| index + 1);
+        writeln!(
+            writer,
+            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} tank_position={:?} tank_state={:?} tank_follow={:?}",
+            snapshot.forces,
+            snapshot.forces_required,
+            bosses,
+            snapshot.bosses.len(),
+            snapshot.deaths,
+            route.len(),
+            tank.position,
+            tank.state,
+            tank.follow
+        )?;
+        writer.flush()?;
+        self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
+        Ok(())
+    }
+}
+
 pub(super) struct State {
     session: server::test_support::keystone::Session,
     tracker: Tracker,
@@ -63,7 +115,7 @@ pub(super) struct State {
     countdown_ms: u64,
 }
 
-/// Plan from the actual challenge criteria and the selected dungeon's native level cap.
+/// Plan from challenge criteria and the Mythic copy's native level cap.
 pub(super) fn prepare_challenge(
     graph: &Graph,
 ) -> Result<(server::mythic_plus_runtime::ChallengeDefinition, u8), String> {
@@ -73,27 +125,27 @@ pub(super) fn prepare_challenge(
     let definition = server::mythic_plus_catalog::load_by_map(&db, graph.map_id)
         .map_err(|error| format!("load challenge criteria: {error}"))?
         .ok_or("selected dungeon has no qualified keystone challenge")?;
-    let mut statement = db.prepare("SELECT DISTINCT t.MaxLevelSquish FROM follower_lfg_dungeons d JOIN content_tuning t ON t.ID=d.content_tuning_id WHERE d.map_id=? AND d.difficulty_id=205")
-        .map_err(|error| format!("read follower level range: {error}"))?;
+    let level = read_mythic_level(&db, graph.map_id)?;
+    Ok((definition, level))
+}
+
+fn read_mythic_level(db: &Connection, map: u32) -> Result<u8, String> {
+    // MapDifficulty 23 supplies the actual Mythic copy's ContentTuning. For
+    // Ruby, DB2 70448 tuning3025 caps at90; follower difficulty205 caps at70.
+    let mut statement = db.prepare("SELECT DISTINCT t.MaxLevelSquish FROM map_difficulty d JOIN content_tuning t ON t.ID=d.ContentTuningID WHERE d.MapID=? AND d.DifficultyID=23")
+        .map_err(|error| format!("read Mythic level range: {error}"))?;
     let levels = statement
-        .query_map([graph.map_id], |row| row.get::<_, u8>(0))
-        .map_err(|error| format!("query follower level range: {error}"))?
+        .query_map([map], |row| row.get::<_, u8>(0))
+        .map_err(|error| format!("query Mythic level range: {error}"))?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| format!("decode follower level range: {error}"))?;
+        .map_err(|error| format!("decode Mythic level range: {error}"))?;
     let [level] = levels.as_slice() else {
-        return Err(format!(
-            "map{} has {} follower level caps",
-            graph.map_id,
-            levels.len()
-        ));
+        return Err(format!("map{map} has {} Mythic level caps", levels.len()));
     };
     if *level == 0 || u32::from(*level) > crate::spell_info::MAX_LEVEL {
-        return Err(format!(
-            "map{} has invalid follower level {level}",
-            graph.map_id
-        ));
+        return Err(format!("map{map} has invalid Mythic level {level}"));
     }
-    Ok((definition, *level))
+    Ok(*level)
 }
 
 pub(super) fn start(
@@ -205,6 +257,39 @@ impl State {
                 .observe_world(world, elapsed.saturating_sub(self.countdown_ms));
         }
         Ok(())
+    }
+
+    pub fn report_progress(
+        &self,
+        reporter: &mut Progress,
+        world: &World,
+        current_pack: Option<u32>,
+        tank: Entity,
+    ) -> Result<(), String> {
+        let elapsed = self.elapsed_ms(world);
+        if elapsed < self.countdown_ms || elapsed - self.countdown_ms < reporter.next_ms {
+            return Ok(());
+        }
+        let snapshot = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        reporter
+            .write(
+                &mut std::io::stdout().lock(),
+                elapsed - self.countdown_ms,
+                &snapshot,
+                current_pack,
+                &self.route.steps,
+                TankProgress {
+                    position: world
+                        .get::<shared::components::Position>(tank)
+                        .map(|p| [p.x, p.y, p.z]),
+                    state: world.get::<crate::creature_ai::CreatureState>(tank),
+                    follow: world.get::<crate::creature_ai::FollowOwner>(tank),
+                },
+            )
+            .map_err(|error| format!("write keystone progress: {error}"))
     }
 
     pub fn waiting_for_start(&self, world: &World) -> Result<bool, String> {

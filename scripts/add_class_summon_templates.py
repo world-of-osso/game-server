@@ -17,7 +17,7 @@ def add_class_summon_templates(conn):
     retail_content.create_difficulty_table(conn)
     conn.create_function("health_expansion", 1, retail_content.health_expansion, deterministic=True)
     before = {row[0] for row in conn.execute("SELECT entry FROM content_creature_template")}
-    retail_content.insert_tdb_templates(conn, retail_content.CLASS_SUMMON_ENTRIES)
+    retail_content.insert_tdb_templates(conn, retail_content.follower_class_summon_entries(conn))
     after = {row[0] for row in conn.execute("SELECT entry FROM content_creature_template")}
     added = sorted(after - before)
     conn.execute("CREATE TEMP TABLE added_class_summon(entry INTEGER PRIMARY KEY)")
