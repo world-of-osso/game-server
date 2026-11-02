@@ -71,6 +71,20 @@ fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
                     break;
                 }
             }
+            let spell = party
+                .app
+                .world()
+                .resource::<crate::spell_info::SpellStore>()
+                .get(124682)
+                .unwrap()
+                .clone();
+            let readiness = crate::spell_cast::read_native_cast_start(
+                party.app.world_mut(),
+                healer,
+                &spell,
+                target,
+            );
+            let mist = crate::auras::has_aura(party.app.world(), target, 124682);
             let events = &party.app.world().resource::<ObservedCombatEvents>().0[start..];
             assert!(
                 events
@@ -78,7 +92,7 @@ fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
                     .any(|event| event.kind == CombatLogKind::CastSuccess
                         && event.spell_id == Some(124682)
                         && event.target == Some(target.to_bits())),
-                "ready Enveloping must follow the channel: health={:?}, cast={:?}, events={events:?}",
+                "ready Enveloping must follow the channel: readiness={readiness:?}, mist={mist}, health={:?}, cast={:?}",
                 party.app.world().get::<Health>(target),
                 party.app.world().get::<CastState>(healer)
             );
