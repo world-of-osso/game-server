@@ -351,10 +351,7 @@ pub fn install_drop_system(
     if !app.world().contains_resource::<crate::ground::GroundMap>() {
         app.insert_resource(open_ground(db)?);
     }
-    app.add_systems(
-        FixedUpdate,
-        crate::navigation::collision_drop::advance_collision_drops,
-    );
+    crate::navigation::install_publication(app);
     Ok(())
 }
 

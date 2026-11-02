@@ -21,10 +21,13 @@ fn leader_reaches_drop_from_the_observed_stall_position() {
             &root,
             HashMap::from([(MAP, 7_213_439)]),
         ));
-        crate::navigation::install_fixture(
-            app,
-            crate::navigation::Navigation::new(&root.join("navmesh")),
-        );
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        crate::test_support::transport::install_drop_system(app, &db, &root.join("navmesh"))
+            .unwrap();
         app.add_systems(
             Update,
             (
