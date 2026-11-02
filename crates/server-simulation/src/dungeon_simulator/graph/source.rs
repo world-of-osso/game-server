@@ -66,7 +66,7 @@ pub(super) fn read_source(
         FROM dungeon_encounter d LEFT JOIN raid_encounter_creature b
           ON b.encounter_id=d.ID AND b.map_id=d.MapID AND b.bit=d.Bit
         WHERE d.MapID=?1 AND (d.DifficultyID<=0 OR d.DifficultyID=?2)
-        ORDER BY d.OrderIndex, d.ID, b.creature_entry",
+        ORDER BY d.OrderIndex, d.ID",
         )
         .map_err(|error| format!("map{map} encounter definitions: {error}"))?;
     let rows = query
@@ -84,22 +84,137 @@ pub(super) fn read_source(
     if rows.is_empty() {
         return Err(format!("map{map} missing encounter definitions"));
     }
-    let bosses = rows
+    let mut bosses = rows
         .into_iter()
         .map(|(id, bit, name, entry)| {
             if bit >= 32 {
                 return Err(format!("map{map} encounter{id} has invalid bit{bit}"));
             }
-            entry.map(|entry| (bit, entry)).ok_or_else(|| {
+            entry.map(|entry| (id, bit, entry)).ok_or_else(|| {
                 format!("map{map} missing encounter binding for {name} (encounter{id}, bit{bit})")
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
+    order_encounter_members(map, difficulty, &mut bosses)?;
     Ok(Source {
         difficulty,
         entrance,
-        bosses,
+        bosses: bosses
+            .into_iter()
+            .map(|(_, bit, entry)| (bit, entry))
+            .collect(),
     })
+}
+
+fn order_encounter_members(
+    map: u32,
+    difficulty: u32,
+    bosses: &mut [(u32, u32, u32)],
+) -> Result<(), String> {
+    let mut start = 0;
+    while start < bosses.len() {
+        let encounter = bosses[start].0;
+        let end = start
+            + bosses[start..]
+                .iter()
+                .take_while(|row| row.0 == encounter)
+                .count();
+        let members = &mut bosses[start..end];
+        if members.len() > 1 {
+            let sequence = activation_sequence(map, encounter, difficulty)?;
+            if sequence.len() != members.len()
+                || members
+                    .iter()
+                    .any(|member| sequence.iter().filter(|entry| **entry == member.2).count() != 1)
+            {
+                return Err(format!(
+                    "map{map} encounter{encounter} difficulty{difficulty} activation sequence does not match bindings"
+                ));
+            }
+            members.sort_by_key(|member| {
+                sequence
+                    .iter()
+                    .position(|entry| *entry == member.2)
+                    .unwrap()
+            });
+        }
+        start = end;
+    }
+    Ok(())
+}
+
+fn activation_sequence(map: u32, encounter: u32, difficulty: u32) -> Result<Vec<u32>, String> {
+    let mut found = None;
+    for line in include_str!("activation_order.csv")
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+    {
+        let values = line
+            .split(',')
+            .map(str::parse::<u32>)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("invalid encounter activation sequence: {error}"))?;
+        let [
+            source_map,
+            source_encounter,
+            source_difficulty,
+            entries @ ..,
+        ] = values.as_slice()
+        else {
+            return Err("invalid encounter activation sequence row".into());
+        };
+        if (*source_map, *source_encounter, *source_difficulty) == (map, encounter, difficulty) {
+            if found.replace(entries.to_vec()).is_some() {
+                return Err(format!(
+                    "duplicate activation sequence for map{map} encounter{encounter} difficulty{difficulty}"
+                ));
+            }
+        }
+    }
+    found.ok_or_else(|| format!("map{map} encounter{encounter} difficulty{difficulty} missing sourced activation sequence"))
+}
+
+#[test]
+fn source_uses_sourced_council_activation_order() {
+    let db = Connection::open_in_memory().unwrap();
+    db.execute_batch(
+        "CREATE TABLE map_difficulty(MapID INTEGER, DifficultyID INTEGER);
+         CREATE TABLE tdb_world_safe_locs(ID INTEGER, MapID INTEGER, LocX REAL, LocY REAL, LocZ REAL, Comment TEXT);
+         CREATE TABLE content_creature(map INTEGER);
+         CREATE TABLE raid_encounter_creature(map_id INTEGER, bit INTEGER, creature_entry INTEGER, encounter_id INTEGER);
+         CREATE TABLE dungeon_encounter(ID INTEGER, MapID INTEGER, DifficultyID INTEGER, Bit INTEGER, OrderIndex INTEGER, Name_lang TEXT);
+         INSERT INTO map_difficulty VALUES(1762,8);
+         INSERT INTO tdb_world_safe_locs VALUES(1,1762,10,20,30,'Entrance');
+         INSERT INTO content_creature VALUES(1762);
+         INSERT INTO dungeon_encounter VALUES(2139,1762,0,0,0,'Serpent'),(2140,1762,0,1,1,'Council');
+         INSERT INTO raid_encounter_creature VALUES(1762,0,135322,2139),(1762,1,135470,2140),(1762,1,135472,2140),(1762,1,135475,2140);",
+    ).unwrap();
+    assert_eq!(
+        read_source(&db, 1762, Some(8)).unwrap().bosses,
+        [(0, 135322), (1, 135475), (1, 135470), (1, 135472)]
+    );
+    db.execute(
+        "DELETE FROM raid_encounter_creature WHERE creature_entry=135472",
+        [],
+    )
+    .unwrap();
+    assert!(
+        read_source(&db, 1762, Some(8))
+            .unwrap_err()
+            .contains("activation sequence does not match bindings")
+    );
+    db.execute("UPDATE dungeon_encounter SET ID=9999 WHERE ID=2140", [])
+        .unwrap();
+    db.execute(
+        "UPDATE raid_encounter_creature SET encounter_id=9999 WHERE encounter_id=2140",
+        [],
+    )
+    .unwrap();
+    assert!(
+        read_source(&db, 1762, Some(8))
+            .unwrap_err()
+            .contains("missing sourced activation sequence")
+    );
 }
 
 #[test]
