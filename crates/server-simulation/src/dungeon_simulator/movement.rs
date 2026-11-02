@@ -307,6 +307,10 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     {
         follow.set_moving(false);
     }
+    if server::test_support::transport::in_progress(world, unit) {
+        world.entity_mut(unit).remove::<(Travel, MoveIntent)>();
+        return Ok(());
+    }
     if !can_move(world, unit) {
         return Ok(());
     }

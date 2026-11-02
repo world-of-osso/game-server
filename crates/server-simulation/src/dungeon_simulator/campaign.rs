@@ -1415,6 +1415,62 @@ fn azure_rune_does_not_attack_owner_while_hostile_does() {
 }
 
 #[test]
+#[ignore = "requires extracted Altar graph, world data and native ground"]
+fn altar_automatic_drop_discards_upper_floor_travel_before_landing() {
+    let options = super::keystone::Options {
+        map_id: 2993,
+        level: 2,
+        specs: [104, 256, 254, 260, 262],
+    };
+    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let owner = run.party.owner;
+    crate::followers::simulator::stop_leader_driver(run.app.world_mut(), owner);
+    let edge = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.action == server::test_support::transport::Action::AltarDrop)
+        .unwrap()
+        .clone();
+    let source = Vec3::from_array(edge.departure.unwrap());
+    run.app.world_mut().entity_mut(owner).insert((
+        Position {
+            x: 1620.0,
+            y: 15.6,
+            z: -2127.0,
+        },
+        MoveIntent(source),
+    ));
+    let mut saw_travel = false;
+    let mut saw_transport = false;
+    for _ in 0..400 {
+        run.app.update();
+        saw_travel |= !super::movement::inspect_travel(run.app.world(), owner).is_null();
+        if server::test_support::transport::in_progress(run.app.world(), owner) {
+            saw_transport = true;
+        } else if saw_transport {
+            break;
+        }
+    }
+    assert!(
+        saw_travel && saw_transport,
+        "did not walk to and enter the native drop"
+    );
+    assert!(run.app.world().get::<MoveIntent>(owner).is_none());
+    assert!(super::movement::inspect_travel(run.app.world(), owner).is_null());
+    let landing = *run.app.world().get::<Position>(owner).unwrap();
+    assert!(landing.y < -60.0, "did not land: {landing:?}");
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let after = *run.app.world().get::<Position>(owner).unwrap();
+    assert!(
+        (after.y - landing.y).abs() < 0.1,
+        "stale upper-floor route moved leader: {landing:?} -> {after:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
