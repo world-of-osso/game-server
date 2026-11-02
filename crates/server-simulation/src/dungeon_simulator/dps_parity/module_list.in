@@ -414,6 +414,7 @@ mod profile_initialization;
 mod profile_oils;
 mod rake_stealth_tests;
 mod report;
+mod restoration_shaman_earth_shield_follower_tests;
 mod restoration_shaman_surging_rain_follower_tests;
 mod ret_arbiter_supply_tests;
 mod ret_aurora_tests;
