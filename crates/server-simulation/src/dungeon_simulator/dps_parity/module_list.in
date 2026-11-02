@@ -453,6 +453,7 @@ mod shadow_link_tests;
 mod shadow_maddening_touch_follower_tests;
 mod shadow_mastery_tests;
 mod shadow_misery_follower_tests;
+mod shadow_mind_devourer_follower_tests;
 mod shadow_nzoth_tests;
 mod shadow_nzoth_sources_tests;
 mod shadow_rift_tests;
