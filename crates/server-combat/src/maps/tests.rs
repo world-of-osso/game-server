@@ -1301,12 +1301,7 @@ fn exercise_pvp_reconnect(
         .insert(lightyear::prelude::server::ClientOf)
         .remove::<Connected>();
     h.app.world_mut().flush();
-    h.app
-        .world_mut()
-        .resource_mut::<Time>()
-        .advance_by(std::time::Duration::from_secs(60));
-    h.app.world_mut().run_schedule(PreUpdate);
-    h.advance(3);
+    h.advance(1201);
     assert!(
         h.app.world().get_entity(who.player).is_err(),
         "the actual disconnect cleanup despawned the old player"
