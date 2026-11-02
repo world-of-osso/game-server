@@ -349,6 +349,8 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (1260745, 1235843), (1260745, 1237036),
     # SimC76f8118 sc_warlock_init.cpp539–547: Diabolic Ritual's three demons.
     (428514, 428571), (428514, 428565), (428514, 434400),
+    # SimC76f8118 sc_warlock_init.cpp475–482: Dimensional Rift's actual tears.
+    (1280868, 394235), (1280868, 387979), (1280868, 394243),
     # SimC76f8118 sc_warlock_init.cpp33/289, 334–335, 348–353, 357–365 and
     # actions.cpp6015–6025: Inner Demons, Summon Vilefiend, Mark of Shatug/F'harg
     # and Dominion of Argus I summon their native Effect28 guardians.
