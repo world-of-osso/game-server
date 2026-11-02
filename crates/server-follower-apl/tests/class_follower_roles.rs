@@ -1097,7 +1097,7 @@ fn arms_casts_damage_beside_engaged_boss_with_pull_back_hold() {
 #[test]
 fn follower_apl_retries_after_a_pending_navigation_destination() {
     use server_combat::navigation::{Goal, MoveRequest, Navigation, Step};
-    use server_combat::simc_apl::{Action, ActionFacts};
+    use server_combat::simc_apl::{Action, Facts};
     use server_combat::simc_apl_native::{Bindings, Encounter, NativeFacts};
     use server_follower_apl::SpecRotation;
     use server_follower_apl::literal_rotation::{PrecombatPoll, execution::Execution};
