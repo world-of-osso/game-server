@@ -2835,7 +2835,7 @@ fn apply_resolved_heal(
             amount,
             procs::landed_hit_mask(crit, 0.0, 0.0, amount),
         );
-        super::scripts::heal_beacon(world, ctx, target, effective);
+        super::scripts::heal_beacon(world, ctx, target, amount);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
     if periodic {
