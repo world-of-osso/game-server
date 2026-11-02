@@ -622,6 +622,8 @@ D	ret_toll.rs	cast_protection_child	launch_triggered_spell	&child	1	31935
 D	shadow_apparitions.rs	burst_at_parent	launch_triggered_spell_with_primary	&spell	1	1231479
 D	shadow_cthun.rs	spawn_idol	launch_triggered_spell	&summon	1	377355,377357
 D	shadow_cthun.rs	spawn_idol	load_triggered_spell	id	1	377355,377357
+D	shadow_void_apparitions.rs	cast_vision	AuraApplication	buff	1	1243113,1243114
+D	shadow_void_apparitions.rs	cast_vision	cast_triggered	damage	1	1243105,1243106
 D	shadow_priest.rs	cast_maddening_tentacles	launch_triggered_spell	&child	1	335467
 D	shadow_rift.rs	pulse	launch_triggered_spell	&damage	1	447448
 D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
