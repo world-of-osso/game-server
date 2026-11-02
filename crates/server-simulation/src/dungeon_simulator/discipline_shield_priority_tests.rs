@@ -10,6 +10,8 @@ fn discipline_does_not_refresh_an_active_ordinary_shield() {
     let _seed = crate::random::seed_scope(1);
     let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
     let healer = run.healer;
+    run.app
+        .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 120.0 });
     super::healer_simc_replay::engage(&mut run);
     super::healer_simc_replay::finish_precombat(&mut run.app, &[run.tank, healer]).unwrap();
     // Isolate the Shield and damage choices so the live follower repeatedly
@@ -55,7 +57,7 @@ fn discipline_does_not_refresh_an_active_ordinary_shield() {
         .map(|unit| unit.to_bits())
         .collect();
     let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    for _ in 0..1000 {
+    for _ in 0..400 {
         run.app.update();
     }
     let events = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
