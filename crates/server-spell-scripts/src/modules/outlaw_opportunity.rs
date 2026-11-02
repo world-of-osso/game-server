@@ -16,6 +16,7 @@ const FLICKERING_STEEL: u32 = 1259492;
 const FLICKERING_STEEL_ENERGIZE: u32 = 1259493;
 const ROLL_THE_BONES: u32 = 1214909;
 const JACKPOT: u32 = 1214937;
+const FIND_AN_OPENING: u32 = 1259457;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_hit),
@@ -64,7 +65,15 @@ fn read_proc_chance(world: &World, caster: Entity) -> Option<f32> {
     } else {
         0.0
     };
-    Some(chance(TALENT) + bonus)
+    // Find an Opening's native label modifier applies to Opportunity's
+    // effect 1. SimC76f8118 sc_rogue.cpp1286–1292 includes it in the
+    // selected talent's base chance, in addition to the Roll the Bones bonus.
+    let opening = if auras::has_aura(world, caster, FIND_AN_OPENING) {
+        script_effect_value(world, caster, FIND_AN_OPENING, 0)
+    } else {
+        0.0
+    };
+    Some(chance(TALENT) + opening + bonus)
 }
 
 fn grant_opportunity(world: &mut World, caster: Entity) {
