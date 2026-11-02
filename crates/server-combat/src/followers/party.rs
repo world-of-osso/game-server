@@ -1598,6 +1598,27 @@ mod copy_tests {
     }
 
     #[test]
+    fn class_follower_casts_resurrection_before_release() {
+        use shared::components::{Health, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(owner_position);
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            corpse,
+        ));
+        super::super::release::update(h.app.world_mut());
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+    }
+
+    #[test]
     fn follower_release_long_brackenhide_route_walks_back() {
         use shared::components::{Health, Position};
         let owner_position = Position {

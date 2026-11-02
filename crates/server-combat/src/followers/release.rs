@@ -11,7 +11,17 @@ use ::navigation::worker::{Output, Query};
 #[derive(Component)]
 pub(super) struct ReturningFromGraveyard;
 
+#[derive(Component)]
+pub(super) struct ResurrectionApproach;
+
 pub(super) fn update(world: &mut World) {
+    let approaching: Vec<_> = world
+        .query_filtered::<Entity, With<ResurrectionApproach>>()
+        .iter(world)
+        .collect();
+    for unit in approaching {
+        world.entity_mut(unit).remove::<ResurrectionApproach>();
+    }
     let returned: Vec<_> = world
         .query_filtered::<(Entity, &Follower, &Position), With<ReturningFromGraveyard>>()
         .iter(world)
@@ -29,9 +39,85 @@ pub(super) fn update(world: &mut World) {
         .map(|(unit, follower, _)| (unit, follower.owner))
         .collect();
     for (unit, owner) in dead {
+        if request_resurrection(world, unit, owner) {
+            continue;
+        }
         let (decision, reason, walk_seconds, error) = release_if_reachable(world, unit, owner);
         info!(follower = ?unit, owner = ?owner, decision, reason, walk_seconds = ?walk_seconds, error = ?error, "Follower release evaluation");
     }
+}
+
+fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> bool {
+    let Some((map, members, _)) = party::read_admission(world, owner) else {
+        return false;
+    };
+    let members = members.to_vec();
+    if std::iter::once(owner)
+        .chain(members.iter().copied())
+        .any(|member| {
+            world
+                .get::<CombatStatus>(member)
+                .is_some_and(|status| status.0)
+        })
+    {
+        return false;
+    }
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let candidates: Vec<_> = members
+        .iter()
+        .copied()
+        .filter(|&unit| {
+            unit != target
+                && world.get::<super::AplControlled>(unit).is_some()
+                && world.get::<InMap>(unit) == Some(&map)
+                && crate::spell_cast::targets::is_alive(world, unit)
+        })
+        .flat_map(|unit| {
+            world
+                .get::<crate::class_progression::KnownSpells>(unit)
+                .into_iter()
+                .flat_map(move |known| {
+                    known.iter().filter_map(move |spell| {
+                        store
+                            .get(spell)
+                            .filter(|info| {
+                                info.effects
+                                    .iter()
+                                    .any(crate::death::resurrection::is_resurrection)
+                            })
+                            .map(|_| (unit, spell))
+                    })
+                })
+        })
+        .collect();
+    for (caster, spell) in candidates {
+        match crate::spell_cast::creature_cast(world, caster, spell, Some(target), false) {
+            Ok(())
+            | Err(
+                crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::Moving,
+            ) => {
+                world.entity_mut(caster).insert(ResurrectionApproach);
+                return true;
+            }
+            Err(crate::spell_cast::CastFailure::OutOfRange) => {
+                world.entity_mut(caster).insert((
+                    ResurrectionApproach,
+                    crate::creature_ai::FollowOwner::new(target),
+                ));
+                return true;
+            }
+            Err(error) => debug!(
+                ?caster,
+                ?target,
+                spell,
+                ?error,
+                "Follower resurrection unavailable"
+            ),
+        }
+    }
+    false
 }
 
 type Evaluation = (&'static str, &'static str, Option<f32>, Option<String>);
