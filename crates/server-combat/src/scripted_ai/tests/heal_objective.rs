@@ -1,29 +1,53 @@
 use super::*;
 
+fn temple_add_database() -> Connection {
+    let db = Connection::open_in_memory().unwrap();
+    let path = crate::test_data::world_db_path();
+    let uri = format!("file:{}?mode=ro", path.display());
+    db.execute("ATTACH DATABASE ?1 AS source", [uri]).unwrap();
+    for table in [
+        "content_creature_template",
+        "content_creature_template_model",
+    ] {
+        let sql: String = db
+            .query_row(
+                "SELECT sql FROM source.sqlite_master WHERE type='table' AND name=?1",
+                [table],
+                |row| row.get(0),
+            )
+            .unwrap();
+        db.execute_batch(&sql).unwrap();
+    }
+    for table in [
+        "tdb_creature_template",
+        "tdb_creature_template_difficulty",
+        "tdb_creature_template_model",
+        "faction_template",
+        "creature_display_info",
+        "creature_model_data",
+    ] {
+        db.execute_batch(&format!(
+            "CREATE TEMP VIEW {table} AS SELECT * FROM source.{table};"
+        ))
+        .unwrap();
+    }
+    db.execute_batch(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../scripts/temple-avatar-adds.sql"
+    )))
+    .unwrap();
+    db
+}
+
 #[test]
 fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
     let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, 8, None);
-    let source = crate::test_data::world_data()
-        .templates
-        .get(&262530)
-        .unwrap()
-        .clone();
+    let db = temple_add_database();
     {
         let mut data = h.app.world_mut().resource_mut::<WorldData>();
-        for (entry, name) in [
-            (268344, "Corrupted Guardian"),
-            (268427, "Essence Defiler"),
-            (268491, "Twisted Hexxer"),
-        ] {
-            let mut template = source.clone();
-            template.entry = entry;
-            template.name = name.into();
-            template.faction = 16;
-            template.unit_flags = 0;
-            template.unit_flags2 = 0;
-            template.aggro_mode = crate::creature_aggro::AggroMode::Aggressive;
-            data.templates.insert(entry, template);
-        }
+        let mut templates = crate::world_data::load_templates(&db, &data.expected_stats);
+        crate::world_data::load_template_models(&db, &mut templates);
+        data.templates.extend(templates);
     }
     h.app
         .world_mut()
@@ -133,38 +157,11 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
 
 #[test]
 fn temple_avatar_add_delta_installs_sourced_templates_once() {
-    let db = Connection::open_in_memory().unwrap();
-    let path = crate::test_data::world_db_path();
-    let uri = format!("file:{}?mode=ro", path.display());
-    db.execute("ATTACH DATABASE ?1 AS source", [uri]).unwrap();
-    for table in [
-        "content_creature_template",
-        "content_creature_template_model",
-    ] {
-        let sql: String = db
-            .query_row(
-                "SELECT sql FROM source.sqlite_master WHERE type='table' AND name=?1",
-                [table],
-                |row| row.get(0),
-            )
-            .unwrap();
-        db.execute_batch(&sql).unwrap();
-    }
-    for table in [
-        "tdb_creature_template",
-        "tdb_creature_template_difficulty",
-        "tdb_creature_template_model",
-    ] {
-        db.execute_batch(&format!(
-            "CREATE TEMP VIEW {table} AS SELECT * FROM source.{table};"
-        ))
-        .unwrap();
-    }
+    let db = temple_add_database();
     let sql = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../scripts/temple-avatar-adds.sql"
     ));
-    db.execute_batch(sql).unwrap();
     let actors: Vec<(u32, u32)> = db
         .prepare("SELECT entry,faction FROM content_creature_template ORDER BY entry")
         .unwrap()
