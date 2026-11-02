@@ -53,7 +53,8 @@ fn world_db() -> PathBuf {
 /// Doomwalker's content_creature row, spawned as its game event would.
 fn spawn_doomwalker(server: &mut App) -> Entity {
     let conn = rusqlite::Connection::open(world_db()).unwrap();
-    let spawn = load_spawn(&conn, DOOMWALKER_GUID).expect("Doomwalker in content_creature");
+    let spawn =
+        load_spawn(&conn, u64::from(DOOMWALKER_GUID)).expect("Doomwalker in content_creature");
     server
         .world_mut()
         .run_system_once(move |mut commands: Commands, data: Res<WorldData>| {

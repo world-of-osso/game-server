@@ -491,7 +491,7 @@ pub fn stop_leader_driver(world: &mut World, owner: Entity) {
         .remove::<(LeaderProfile, AplControlled)>();
 }
 
-pub fn observed_cleared_sources(world: &World, owner: Entity) -> Option<Vec<u32>> {
+pub fn observed_cleared_sources(world: &World, owner: Entity) -> Option<Vec<u64>> {
     pull_history::snapshot(world, owner).map(|history| history.cleared_spawns.into_iter().collect())
 }
 
@@ -508,7 +508,7 @@ pub fn active_enemies(world: &World, owner: Entity) -> Vec<Entity> {
 pub fn pull(
     world: &mut World,
     tank: Entity,
-    guids: &std::collections::BTreeSet<u32>,
+    guids: &std::collections::BTreeSet<u64>,
 ) -> Result<(bool, String), String> {
     let map = *world
         .get::<crate::maps::InMap>(tank)

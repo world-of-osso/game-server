@@ -2,7 +2,7 @@
 use super::campaign::Report;
 
 pub(super) fn summarize(reports: &[Report]) -> serde_json::Value {
-    let mut packs = std::collections::BTreeMap::<u32, (usize, usize, usize)>::new();
+    let mut packs = std::collections::BTreeMap::<u64, (usize, usize, usize)>::new();
     for report in reports {
         let reached: std::collections::BTreeSet<_> = report
             .pulls
@@ -70,7 +70,7 @@ fn run_stockade_batch() {
 
 #[test]
 fn batch_summary_counts_wipes_per_reached_pack_and_retains_stalls() {
-    let report = |seed, status: &str, failed_pack, packs: &[u32]| Report {
+    let report = |seed, status: &str, failed_pack, packs: &[u64]| Report {
         seed,
         status: status.into(),
         failed_pack,

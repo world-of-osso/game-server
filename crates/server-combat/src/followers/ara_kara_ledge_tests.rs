@@ -7,7 +7,7 @@ use shared::components::{CombatStatus, Health, Level};
 
 /// Live 2026-11-01 22:07 UTC: source GUIDs alive within 70 yd of the held tank
 /// (npc-info; the only dead one nearby was Blood Overseer 30004007).
-const ALIVE_AT_LEDGE: &[u32] = &[
+const ALIVE_AT_LEDGE: &[u64] = &[
     30004014, 30004017, 30004021, 30004031, 30004036, 30004037, 30004038, 30004039, 30004040,
     30004041, 30004043, 30004044, 30004045, 30004046, 30004047, 30004048, 30004049, 30004052,
     30004112, 30004113, 30004114, 30004115, 30004116, 30004117, 30004118,

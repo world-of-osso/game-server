@@ -440,7 +440,7 @@ pub(super) fn create_copy_at_difficulty(
 pub(super) fn spawn_population(
     app: &mut App,
     copy: crate::maps::InMap,
-) -> std::collections::BTreeMap<u32, Entity> {
+) -> std::collections::BTreeMap<u64, Entity> {
     let difficulty_id = app
         .world()
         .resource::<crate::maps::InstanceManager>()
@@ -470,7 +470,7 @@ pub(super) fn spawn_population(
 pub(super) fn live_population(
     world: &mut World,
     copy: crate::maps::InMap,
-) -> std::collections::BTreeMap<u32, Entity> {
+) -> std::collections::BTreeMap<u64, Entity> {
     world
         .query::<(Entity, &crate::zones::CreatureOrigin, &crate::maps::InMap)>()
         .iter(world)

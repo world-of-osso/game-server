@@ -6,7 +6,7 @@ pub(crate) fn source_is_withheld(
     data: &crate::world_data::WorldData,
     copy: crate::maps::InMap,
     difficulty_id: u32,
-    guid: u32,
+    guid: u64,
 ) -> bool {
     let Some(source) = data.spawns.iter().find(|spawn| spawn.guid == guid) else {
         return false;
@@ -85,9 +85,9 @@ fn freeze_native_corridor_inputs() {
             "position":[position.x,position.y,position.z]}),
         );
     }
-    let present: std::collections::BTreeSet<u32> = sources
+    let present: std::collections::BTreeSet<u64> = sources
         .iter()
-        .filter_map(|source| source["guid"].as_u64().map(|guid| guid as u32))
+        .filter_map(|source| source["guid"].as_u64())
         .collect();
     let data = app.world().resource::<crate::world_data::WorldData>();
     let mut deferred = Vec::new();

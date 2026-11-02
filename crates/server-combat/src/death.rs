@@ -136,10 +136,11 @@ fn load_graveyards_from_world_data(
     mut state: ResMut<DeathServerState>,
 ) {
     let Some(world_data) = world_data else { return };
-    state.graveyards = build_graveyard_registry(&world_data);
+    state.graveyards = build_graveyard_registry(&world_data)
+        .expect("spirit healer GUID must fit the graveyard protocol ID");
 }
 
-fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
+fn build_graveyard_registry(world_data: &WorldData) -> Result<GraveyardRegistry, String> {
     let mut graveyards = GraveyardRegistry::new();
     for spawn in &world_data.spawns {
         let Some(template) = world_data.templates.get(&spawn.template_entry) else {
@@ -154,7 +155,8 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
             spawn.position_z,
         );
         graveyards.add(Graveyard {
-            id: spawn.guid,
+            id: u32::try_from(spawn.guid)
+                .map_err(|_| format!("spirit healer GUID {} exceeds u32", spawn.guid))?,
             zone_id: spawn.zone_id as u32,
             faction: 0,
             map_id: spawn.map,
@@ -163,7 +165,7 @@ fn build_graveyard_registry(world_data: &WorldData) -> GraveyardRegistry {
             z,
         });
     }
-    graveyards
+    Ok(graveyards)
 }
 
 fn lookup_graveyard(

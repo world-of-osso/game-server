@@ -53,7 +53,7 @@ pub(crate) fn read_endpoint(world: &World, destination: u32) -> Result<WorldLoca
         .resource::<crate::world_data::WorldData>()
         .spawns
         .iter()
-        .find(|spawn| spawn.guid == destination && spawn.map == 2515)
+        .find(|spawn| spawn.guid == u64::from(destination) && spawn.map == 2515)
         .ok_or_else(|| format!("Azure receiving book source{destination} absent"))?;
     Ok(WorldLocation {
         map_id: 2515,

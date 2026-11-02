@@ -10,8 +10,8 @@ use shared::group::GroupRole;
 use std::collections::{BTreeSet, HashMap};
 
 const MAP: u32 = 2515;
-const LEYMOR_GUID: u32 = 29001810;
-const PARTY_ORIGIN_GUID: u32 = 29001813;
+const LEYMOR_GUID: u64 = 29001810;
+const PARTY_ORIGIN_GUID: u64 = 29001813;
 const LEYMOR: u32 = 186644;
 const TENDER: u32 = 191164;
 const FISSURE: u32 = 386660;
@@ -69,7 +69,7 @@ fn initialize_native_owner(h: &mut Harness, level: u8, map: InMap, position: Pos
     );
 }
 
-fn source(h: &mut Harness, map: InMap, guid: u32) -> Entity {
+fn source(h: &mut Harness, map: InMap, guid: u64) -> Entity {
     h.app
         .world_mut()
         .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()

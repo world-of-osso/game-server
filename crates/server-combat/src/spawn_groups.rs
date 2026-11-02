@@ -42,30 +42,30 @@ struct Condition {
 pub struct SpawnGroup {
     pub despawn_on_failure: bool,
     /// Content creature spawn guids.
-    pub creatures: Vec<u32>,
+    pub creatures: Vec<u64>,
     /// Content gameobject spawn guids.
-    pub objects: Vec<u32>,
+    pub objects: Vec<u64>,
     /// `ElseGroup` alternatives, each a conjunction.
     alternatives: Vec<Vec<Condition>>,
 }
 
 /// A creature spawned by its condition-driven spawn group: the spawn guid it is.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GroupedSpawn(pub u32);
+pub struct GroupedSpawn(pub u64);
 
 /// A game object spawned by its condition-driven spawn group: the spawn guid it is.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GroupedObject(pub u32);
+pub struct GroupedObject(pub u64);
 
 /// Grouped spawns of each map copy whose group is inactive: they must not respawn.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct InactiveGroupedSpawns(pub HashMap<crate::maps::InMap, BTreeSet<u32>>);
+pub(crate) struct InactiveGroupedSpawns(pub HashMap<crate::maps::InMap, BTreeSet<u64>>);
 
 #[derive(Debug, Clone, Default)]
 pub struct SpawnGroups {
     groups: Vec<SpawnGroup>,
-    creature_members: HashSet<u32>,
-    object_members: HashSet<u32>,
+    creature_members: HashSet<u64>,
+    object_members: HashSet<u64>,
 }
 
 impl SpawnGroups {
@@ -91,12 +91,12 @@ impl SpawnGroups {
         Ok(groups)
     }
 
-    pub fn is_member(&self, guid: u32) -> bool {
+    pub fn is_member(&self, guid: u64) -> bool {
         self.creature_members.contains(&guid)
     }
 
     pub fn is_object_member(&self, guid: u32) -> bool {
-        self.object_members.contains(&guid)
+        self.object_members.contains(&u64::from(guid))
     }
 
     /// Every instance data id a group condition reads.
@@ -141,13 +141,13 @@ pub(crate) fn synchronize(
 ) {
     let states: HashMap<u32, i32> = states.iter().copied().collect();
     let mut creatures = world.query::<(Entity, &GroupedSpawn, &crate::maps::InMap)>();
-    let creatures: HashMap<u32, Entity> = creatures
+    let creatures: HashMap<u64, Entity> = creatures
         .iter(world)
         .filter(|(_, _, copy)| **copy == map)
         .map(|(entity, spawn, _)| (spawn.0, entity))
         .collect();
     let mut objects = world.query::<(Entity, &GroupedObject, &crate::maps::InMap)>();
-    let objects: HashMap<u32, Entity> = objects
+    let objects: HashMap<u64, Entity> = objects
         .iter(world)
         .filter(|(_, _, copy)| **copy == map)
         .map(|(entity, spawn, _)| (spawn.0, entity))
@@ -161,27 +161,27 @@ pub(crate) fn synchronize(
 
 #[derive(Default)]
 struct Plan {
-    creatures: BTreeSet<u32>,
-    objects: BTreeSet<u32>,
+    creatures: BTreeSet<u64>,
+    objects: BTreeSet<u64>,
     despawn: Vec<Entity>,
-    inactive: BTreeSet<u32>,
+    inactive: BTreeSet<u64>,
 }
 
 fn plan(
     groups: &SpawnGroups,
     states: &HashMap<u32, i32>,
     data: &impl Fn(u32) -> u32,
-    creatures: &HashMap<u32, Entity>,
-    objects: &HashMap<u32, Entity>,
+    creatures: &HashMap<u64, Entity>,
+    objects: &HashMap<u64, Entity>,
 ) -> Plan {
-    let absent = |guids: &[u32], present: &HashMap<u32, Entity>| {
+    let absent = |guids: &[u64], present: &HashMap<u64, Entity>| {
         guids
             .iter()
             .filter(|guid| !present.contains_key(guid))
             .copied()
             .collect::<Vec<_>>()
     };
-    let spawned = |guids: &[u32], present: &HashMap<u32, Entity>| {
+    let spawned = |guids: &[u64], present: &HashMap<u64, Entity>| {
         guids
             .iter()
             .filter_map(|guid| present.get(guid).copied())
@@ -232,10 +232,12 @@ fn apply(world: &mut World, map: crate::maps::InMap, plan: Plan) {
         for spawn in catalog
             .0
             .iter()
-            .filter(|spawn| plan.objects.contains(&spawn.guid))
+            .filter(|spawn| plan.objects.contains(&u64::from(spawn.guid)))
         {
             let object = crate::game_objects::spawn_game_object(&mut commands, spawn, map);
-            commands.entity(object).insert(GroupedObject(spawn.guid));
+            commands
+                .entity(object)
+                .insert(GroupedObject(u64::from(spawn.guid)));
         }
     });
     queue.apply(world);
@@ -302,8 +304,8 @@ fn parse_check(kind: u32, value1: i64, value2: i64, value3: i64) -> Result<Check
 struct Members {
     id: u32,
     flags: u32,
-    creatures: Vec<u32>,
-    objects: Vec<u32>,
+    creatures: Vec<u64>,
+    objects: Vec<u64>,
 }
 
 fn load_members(conn: &Connection) -> rusqlite::Result<Vec<Members>> {
@@ -323,7 +325,7 @@ fn load_members(conn: &Connection) -> rusqlite::Result<Vec<Members>> {
             row.get::<_, u32>(0)?,
             row.get::<_, u32>(1)?,
             row.get::<_, u8>(2)?,
-            row.get::<_, u32>(3)?,
+            row.get::<_, u64>(3)?,
         ))
     })? {
         let (id, flags, kind, guid) = row?;

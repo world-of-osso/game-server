@@ -121,7 +121,7 @@ pub(crate) fn spawn_selected_node(
             .get_mut(&map)
             .expect("node pool state")
             .gameobjects
-            .insert(spawn.guid, entity);
+            .insert(u64::from(spawn.guid), entity);
     }
 }
 

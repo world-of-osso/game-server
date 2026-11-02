@@ -5,9 +5,9 @@ use std::path::Path;
 mod pack_identity;
 
 pub struct Spawn {
-    pub guid: u32,
+    pub guid: u64,
     pub entry: u32,
-    pub pack: u32,
+    pub pack: u64,
     pub position: [f32; 3],
 }
 
@@ -33,7 +33,7 @@ pub fn read_scene(database: &Path, navmesh: &Path) -> Result<Scene, String> {
     let spawns = query
         .query_map([], |row| {
             let guid = row.get(0)?;
-            let leader: Option<u32> = row.get(5)?;
+            let leader: Option<u64> = row.get(5)?;
             let x: f32 = row.get(2)?;
             let y: f32 = row.get(3)?;
             let z: f32 = row.get(4)?;

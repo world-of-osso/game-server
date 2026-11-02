@@ -7,8 +7,8 @@ use bevy::prelude::*;
 use shared::components::{Level, ModelDisplay, Position, UnitLevel};
 use std::collections::BTreeSet;
 
-const TARGET_GUID: u32 = 20375682;
-const INTERVENING_GUID: u32 = 20375688;
+const TARGET_GUID: u64 = 20375682;
+const INTERVENING_GUID: u64 = 20375688;
 
 pub(super) fn route_fixture() -> (Harness, Entity) {
     route_fixture_with_plugins(|_| {})

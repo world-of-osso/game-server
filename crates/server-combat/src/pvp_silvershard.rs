@@ -87,7 +87,7 @@ pub(crate) fn insert_track_switch(entity: &mut EntityCommands, spawn: &CreatureS
     }
     // Promoted TDB1210 source GUIDs use the content namespace offset.
     const RETAIL_GUID_OFFSET: u32 = 20_000_000;
-    let state = match spawn.guid.checked_sub(RETAIL_GUID_OFFSET) {
+    let state = match spawn.guid.checked_sub(u64::from(RETAIL_GUID_OFFSET)) {
         Some(4000143) => 6467,
         Some(4000144) => 6468,
         _ => return,

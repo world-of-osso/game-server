@@ -37,6 +37,36 @@ fn discipline_and_holy_replay_healers_equip_profile_items() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn discipline_profile_crit_applies_inner_focus_once() {
+    let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+    run.app.update();
+    let world = run.app.world();
+    let stats = world
+        .get::<crate::stats::CharacterStats>(run.healer)
+        .unwrap();
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let chance = |id| {
+        crate::spell_cast::effects::caster_action_crit_chance(
+            world,
+            run.healer,
+            store.get(id).unwrap(),
+        )
+    };
+    let (heal, radiance, damage) = (chance(47750), chance(194509), chance(47666));
+    println!(
+        "crit rating={}, sheet={}%, Penance heal={}%, Radiance={}%, Penance damage={}%",
+        stats.ratings.crit, stats.crit_pct, heal, radiance, damage
+    );
+    // Level 90 uses 46 rating per percentage point. Inner Focus adds 20
+    // percentage points to healing Penance and Radiance, but not damage.
+    let base = 5.0 + stats.ratings.crit / 46.0;
+    assert!((damage - base).abs() < 0.01);
+    assert!((heal - (base + 20.0)).abs() < 0.01);
+    assert!((radiance - (base + 20.0)).abs() < 0.01);
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn priest_replay_healers_use_their_equipped_soulcoiler() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;

@@ -6,7 +6,7 @@ use super::herald_intro2::{WEST, prepared_ramparts, received_casts};
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
-const GROUP_GUIDS: [u32; 3] = [20_202_693, 20_202_705, 20_202_706];
+const GROUP_GUIDS: [u64; 3] = [20_202_693, 20_202_705, 20_202_706];
 const DESCEND: Position = Position {
     x: -1429.1720,
     y: 84.34760,
@@ -14,7 +14,7 @@ const DESCEND: Position = Position {
 };
 const WIPE_PROBE: u32 = 5;
 
-fn alive_group(h: &mut Harness, map: InMap) -> Vec<(u32, Entity, u32)> {
+fn alive_group(h: &mut Harness, map: InMap) -> Vec<(u64, Entity, u32)> {
     let mut rows: Vec<_> = h
         .app
         .world_mut()
@@ -167,8 +167,8 @@ fn encounter_coverage_herald_reset_native_group_and_wipe_qualification() {
         "regular initial population; not a manual-spawn conversion"
     );
     let mut statement=conn.prepare("SELECT spawnId FROM tdb_spawn_group WHERE groupId=357 AND spawnType=0 ORDER BY spawnId").unwrap();
-    let ids: Vec<u32> = statement
-        .query_map([], |row| row.get::<_, u32>(0))
+    let ids: Vec<u64> = statement
+        .query_map([], |row| row.get::<_, u64>(0))
         .unwrap()
         .map(|row| row.unwrap() + 20_000_000)
         .collect();

@@ -420,7 +420,7 @@ fn gathering_authored_pool_selection_and_repick_respect_member_limits() {
     };
     assert!(count(&selected) > 0 && count(&selected) <= limit);
     let changes = pools.respawn_gameobject(&mut selected, guid, &mut rng);
-    assert!(changes.gameobjects_despawned.contains(&guid));
+    assert!(changes.gameobjects_despawned.contains(&u64::from(guid)));
     assert!(!changes.gameobjects_spawned.is_empty());
     assert!(
         changes

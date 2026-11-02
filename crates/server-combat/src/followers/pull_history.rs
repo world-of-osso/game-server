@@ -17,7 +17,7 @@ pub(super) struct Snapshot {
     pub healer_hps: Option<f64>,
     pub completed_fights: u32,
     pub party_stable: bool,
-    pub cleared_spawns: BTreeSet<u32>,
+    pub cleared_spawns: BTreeSet<u64>,
     pub active_enemies: BTreeSet<Entity>,
 }
 
@@ -44,7 +44,7 @@ struct PullHistory {
     health: VecDeque<HealthSample>,
     output: VecDeque<OutputSample>,
     active_enemies: BTreeSet<Entity>,
-    cleared_spawns: BTreeSet<u32>,
+    cleared_spawns: BTreeSet<u64>,
     completed_fights: u32,
 }
 
@@ -121,7 +121,7 @@ impl PullHistory {
         Some((damage / RATE_SECONDS, healing / RATE_SECONDS))
     }
 
-    fn observe_death(&mut self, target: Entity, guid: Option<u32>) {
+    fn observe_death(&mut self, target: Entity, guid: Option<u64>) {
         if let Some(guid) = guid.filter(|guid| *guid != 0) {
             self.cleared_spawns.insert(guid);
         }
@@ -307,7 +307,7 @@ struct EventInput<'a> {
     event: &'a CombatLogEvent,
     living_source: Option<Entity>,
     target: Entity,
-    guid: Option<u32>,
+    guid: Option<u64>,
     now: f64,
 }
 

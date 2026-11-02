@@ -24,7 +24,7 @@ fn world_db_path() -> PathBuf {
 }
 
 /// `content_pool_members` creature spawn guids of `pools`.
-fn pool_creature_guids(pools: impl IntoIterator<Item = u32>) -> Vec<u32> {
+fn pool_creature_guids(pools: impl IntoIterator<Item = u32>) -> Vec<u64> {
     let conn = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("world.db");
     let mut statement = conn
@@ -33,14 +33,14 @@ fn pool_creature_guids(pools: impl IntoIterator<Item = u32>) -> Vec<u32> {
     let mut guids = Vec::new();
     for pool in pools {
         let rows = statement
-            .query_map([pool], |row| row.get::<_, u32>(0))
+            .query_map([pool], |row| row.get::<_, u64>(0))
             .unwrap();
         guids.extend(rows.map(Result::unwrap));
     }
     guids
 }
 
-fn pooled_guids_on_map(map: u16) -> HashSet<u32> {
+fn pooled_guids_on_map(map: u16) -> HashSet<u64> {
     let conn = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("world.db");
     let mut statement = conn
@@ -50,7 +50,7 @@ fn pooled_guids_on_map(map: u16) -> HashSet<u32> {
         )
         .unwrap();
     statement
-        .query_map([map], |row| row.get::<_, u32>(0))
+        .query_map([map], |row| row.get::<_, u64>(0))
         .unwrap()
         .map(Result::unwrap)
         .collect()
@@ -89,9 +89,9 @@ fn continents_app() -> App {
 
 /// The living creature entities standing at one of `guids`' spawn points as that
 /// spawn's entry, with the guid of the spawn each one is.
-fn alive_spawns(app: &mut App, guids: &[u32]) -> Vec<(u32, Entity)> {
+fn alive_spawns(app: &mut App, guids: &[u64]) -> Vec<(u64, Entity)> {
     let world_data = app.world().resource::<WorldData>();
-    let spawns: Vec<(u32, u32, Position)> = world_data
+    let spawns: Vec<(u64, u32, Position)> = world_data
         .spawns
         .iter()
         .filter(|spawn| guids.contains(&spawn.guid))
@@ -107,7 +107,7 @@ fn alive_spawns(app: &mut App, guids: &[u32]) -> Vec<(u32, Entity)> {
     let mut query = app
         .world_mut()
         .query_filtered::<(Entity, &Npc, &Position), Without<DeathState>>();
-    let mut alive: Vec<(u32, Entity)> = query
+    let mut alive: Vec<(u64, Entity)> = query
         .iter(app.world())
         .filter_map(|(entity, npc, position)| {
             spawns
@@ -138,7 +138,7 @@ fn continents_start_with_max_limit_members_of_each_pool_alive() {
     assert_eq!(alive_spawns(&mut app, &deadwood), vec![]);
 
     for map in [0, 1] {
-        let pooled: Vec<u32> = pooled_guids_on_map(map).into_iter().collect();
+        let pooled: Vec<u64> = pooled_guids_on_map(map).into_iter().collect();
         eprintln!(
             "map {map}: {} pooled creature spawns, {} alive at startup",
             pooled.len(),

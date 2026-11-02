@@ -15,7 +15,7 @@ pub(super) struct Fixture {
     pub(super) engaged: Entity,
 }
 
-pub(super) fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
+pub(super) fn source(h: &mut Harness, tank: Entity, guid: u64) -> Entity {
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     h.app
         .world_mut()

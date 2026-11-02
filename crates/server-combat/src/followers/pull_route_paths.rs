@@ -7,8 +7,8 @@ use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum Key {
-    Target(u32),
-    Pursuit(u32),
+    Target(u64),
+    Pursuit(u64),
     Point,
 }
 

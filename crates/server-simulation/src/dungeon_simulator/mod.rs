@@ -68,7 +68,7 @@ fn frozen_stockade_graph_covers_native_formations() {
     assert_eq!(graph.map_id, 34);
     let nodes = &graph.packs;
     let data = crate::test_data::world_data();
-    let mut expected = std::collections::BTreeMap::<u32, Vec<u32>>::new();
+    let mut expected = std::collections::BTreeMap::<u64, Vec<u64>>::new();
     for &index in &data.spawns_by_map[&34] {
         let spawn = &data.spawns[index];
         if !spawn.spawns_at(crate::maps::store::DIFFICULTY_NORMAL) {
@@ -80,10 +80,10 @@ fn frozen_stockade_graph_covers_native_formations() {
             .map_or(spawn.guid, |formation| formation.leader_guid);
         expected.entry(pack).or_default().push(spawn.guid);
     }
-    let actual: std::collections::BTreeMap<u32, Vec<u32>> = nodes
+    let actual: std::collections::BTreeMap<u64, Vec<u64>> = nodes
         .iter()
         .map(|node| {
-            let mut members: Vec<u32> = node.spawns.iter().map(|spawn| spawn.guid).collect();
+            let mut members: Vec<u64> = node.spawns.iter().map(|spawn| spawn.guid).collect();
             members.sort_unstable();
             (node.id, members)
         })
