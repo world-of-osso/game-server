@@ -80,6 +80,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
     (
+        "feral_apex.rs",
+        "count_owned_rips",
+        "query",
+        1,
+        "counts the caster's own active Rips for the proc chance; selects no target",
+    ),
+    (
         "unholy_doomed_bidding.rs",
         "command_ghouls",
         "query",

@@ -4,6 +4,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ## What it must do
 
+- Match Bloodlust-family effects across native and SimC runs. When the native actor or its pet casts one during the fight, enable `override.bloodlust=1` in the SimC reference and verify that both sides receive it. A reference with unmatched Bloodlust is not qualified.
 - Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
@@ -28,6 +29,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Unholy Magus
 
+- Without the MID2 two-piece1296654, Magi cast Frostbolt317792 and Shadow Bolt317791, and Lords cast Frostbolt1292107. Magus Frostbolt's cooldown uses its native slow duration. With the two-piece, they use the native Necrotic Bolt and Withering Grasp actions (SimC76f8118 `sc_death_knight.cpp4424–4434,4598–4607,4664–4670,15494–15502`).
+- Unholy252 follower, snapshot v3, 120 seconds, seeds70448 and 1–9, temporary enchants disabled: L70 map2515 against the qualified tree-only reference: native 3,925 DPS, SimC 3,906; mean paired difference +0.50% ±1.57 pp (95% t interval). L90 map2813: native 31,516 DPS, SimC 32,030; −1.39% ±4.35 pp. Both point estimates are within ±5%; the L90 interval extends outside it.
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
 ### Unholy Commander of the Dead
 
@@ -215,6 +218,18 @@ Selected Cat Convoke391528 dispatches one native child per actual periodic-drive
 ### Feral Lunar Inspiration
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.
+
+### Feral Apex Predator's Craving
+
+Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
+
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
+- Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
+- Landed primary Ferocious Bite applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
+- Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`).
+- Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`).
+- Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, and apply excess Energy only to the primary hit (`sc_druid.cpp4358–4401,4418–4450`).
+- [ ] Dreadful Wound's Tiger's Fury refresh retention is unqualified.
 
 ### Shared merged critical feedback
 
@@ -660,6 +675,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 ### Arms literal controller
 
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
+- INFERRED_SIMC: Bladestorm uses its charge recovery without a separate spell cooldown (`sc_warrior.cpp:3241`; contrast `action.cpp:710–719`). A Sudden Death Execute with Unrelenting Onslaught reduces that recovery (`sc_warrior.cpp:4361–4365`, `4561–4565`).
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
@@ -923,6 +939,7 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
 
+- Voidform194249 suspends an active Shadowform232698 while it lasts, then restores Shadowform only when it was previously active (SimC76f8118 `sc_priest_shadow.cpp1940–1973`).
 - Voidform228260 grants1242171 uses from native effect2 after its free Volley. Ordinary1242173 consumes earned uses and cannot cast without one. Primary/secondary bolts retain native counts and the pinned50ms interval. Native1296580 grants a capped tier use after Slam in1242171 during Voidform or1279437 outside it. Voidform expiry grants selected Crushing Void and transfers earned tier uses. Literal Voidform readiness is checked before native action aliases can turn it into Volley (SimC76f8118 `sc_priest_shadow.cpp960–1079/1380–1401/1829–1846/1960–2000`).
 
 - [x] Implicit selector unions retain each unit once per effect in first-selection order; overlapping destination-area/line selectors cannot duplicate damage or use target-cap slots twice.
@@ -1059,6 +1076,7 @@ Final30s sustained-damage qualification compares cumulative damage to every meas
 - `scripts/simc_selected_traits.cpp` — diagnostic CLI wrapper around unchanged76f8118 engine objects; not the reference DPS executable. It replaces only the CLI entry object to inspect actual `player_traits` after one0.1s metadata iteration. Retire when the official CLI emits lossless allocated-trait metadata.
 - `crates/server/src/hunter_pet_stats.rs` — native Hunter HP/armor inheritance and the shared integer22% total-owner-RAP source used by melee and abilities.
 - `crates/server-simulation/src/dungeon_simulator/dps_parity/` — opt-in ignored300s native follower fixture; reuses dungeon runtime and single-follower initialization, real31146 dummy, existing diagnostic-run ownership (so normal orphan cleanup retains the follower), exact instance gear, strict native trait validation and actual combat/buff receipts. Set `DPS_PARITY_OUTPUT`, `DPS_PARITY_WORLD_DB`, `DPS_PARITY_SPEC`, `DPS_PARITY_TARGETS=1|3`. Unmodeled race0/consumables/item options and existing kit-vs-APL remain named measurement gaps; invalid traits fail instead of resetting the loadout. Initial execution exposed the noncombat owner's first-tick attack cancellation: six specs never engaged, and73 dealt only two first-tick hits. These are fixture diagnostics, not qualified class DPS. Qualification requires actual damage in the final30s as well as a300s clock, preventing a first-tick-only hit from passing. Pet specs253/266 must execute learned casts and actual damage from their sourced pet. The parity App installs the ordinary HunterPet/PetControl systems and explicitly loads pet catalog/level-up metadata from its read-only prepared world snapshot. Missing native Duck174884 content is supplied by the existing class-summon producer, with stable-key `scripts/dps_parity_duck_174884.sql` and its receipt; no world spawn or fabricated creature statistics are added. Canonical application remains lead-owned; three-target qualification requires10 timed waves with20 distinct add identities and one persistent main dummy. The fixture reuses the existing native Player-owner initializer, places that quiet owner outside melee range and requires zero owner damage; the measured follower remains an NPC. No owner health/flags/timers are fabricated and no gameplay AI decisions change. Native8163 armor loading is separately RED→GREEN qualified;1467/103 strict trait rejections remain named gaps.
+- Brewmaster ignored parity fixtures require `DPS_PARITY_OUTPUT` containing `268.profile.json` and `268.selected-traits-active.json`, plus `DPS_PARITY_WORLD_DB` pointing to the prepared native world database. Use `DPS_PARITY_ACTOR=player` for the player-mode suite. The three tank replay tests additionally require `HEALER_TANK_SIMC_TRACE`; the follower avoidance diagnostic instead requires `FOLLOWER_DPS_WORLD_DB`.
 - `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution, consumed by production equipment Stats.
 - `crates/server/src/item_instance/{bonuses,effects,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state. Type23 preserves ItemEffect IDs; base/bonus resolution retains native spell IDs, trigger types and cooldown sentinels. Equip-proc execution is not yet integrated.
 - `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties.
