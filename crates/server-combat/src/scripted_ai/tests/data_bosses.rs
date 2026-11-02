@@ -630,6 +630,15 @@ fn encounter_fixture(
 
 #[test]
 fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
+    exercise_mythic_follower_reconnect(false);
+}
+
+#[test]
+fn mythic_follower_reconnect_after_logout_keeps_running_timer() {
+    exercise_mythic_follower_reconnect(true);
+}
+
+fn exercise_mythic_follower_reconnect(after_grace: bool) {
     use shared::protocol::{GameObjectInfo, KeystoneInfo};
 
     let (mut h, _, _) =
@@ -778,16 +787,24 @@ fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
             .get::<crate::networking::DisconnectedPlayer>(player)
             .is_some()
     );
+    if after_grace {
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        h.app.world_mut().run_schedule(PreUpdate);
+        assert!(h.app.world().get_entity(player).is_err());
+    }
     h.app
         .world_mut()
         .resource_mut::<crate::maps::ServerClock>()
-        .fixed_unix = Some(1791705640);
+        .fixed_unix = Some(if after_grace { 1791705680 } else { 1791705640 });
     crate::mythic_plus::fixture::tick(h.app.world_mut());
     let during = crate::mythic_plus::fixture::snapshot(h.app.world(), map);
     assert!(during.elapsed_ms >= before.elapsed_ms + 30_000);
     let restored = crate::auth_character::tests::reconnect_character(&mut h.app, 1, character);
-    assert_eq!(restored, player);
-    assert_eq!(h.app.world().get::<InMap>(player), Some(&map));
+    assert_eq!(restored == player, !after_grace);
+    assert_eq!(h.app.world().get::<InMap>(restored), Some(&map));
     assert_eq!(
         crate::mythic_plus::fixture::snapshot(h.app.world(), map).run_id,
         before.run_id
@@ -796,7 +813,7 @@ fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
         h.app
             .world()
             .get::<crate::followers::Follower>(*unit)
-            .is_some_and(|f| f.owner == player)
+            .is_some_and(|f| f.owner == restored)
             && h.app
                 .world()
                 .get::<Health>(*unit)
