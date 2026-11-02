@@ -21,7 +21,8 @@ fn apply_aura(app: &mut App, actor: Entity, spell: u32) {
 
 fn simc_parry(stats: &CharacterStats, base_strength: f32, denominator: f32, rating: f32) -> f32 {
     // SimC 76f8118 player.cpp:1644–1683,5275–5298, sc_extra_data.inc:1798–1820.
-    let bonus = (stats.primary.strength - base_strength) / denominator + stats.ratings.parry / rating;
+    let bonus =
+        (stats.primary.strength - base_strength) / denominator + stats.ratings.parry / rating;
     3.0 + base_strength / denominator + bonus / (bonus * 0.01 + 1.0 / 0.94)
 }
 
@@ -43,19 +44,31 @@ fn warrior_parry_follower_tracks_strength_and_crit_at_both_levels() {
         let stats = |app: &App| *app.world().get::<CharacterStats>(actor).unwrap();
         let initial = stats(&app);
         assert!(crate::auras::has_aura(app.world(), actor, 384067));
-        assert!((initial.defense.parry - simc_parry(&initial, base_strength, denominator, rating)).abs() < 0.001);
+        assert!(
+            (initial.defense.parry - simc_parry(&initial, base_strength, denominator, rating))
+                .abs()
+                < 0.001
+        );
 
         apply_aura(&mut app, actor, 16612); // Agamaggan's Strength: native +10% Strength.
         let strength = stats(&app);
         assert!(strength.primary.strength > initial.primary.strength);
         assert!(strength.defense.parry > initial.defense.parry);
-        assert!((strength.defense.parry - simc_parry(&strength, base_strength, denominator, rating)).abs() < 0.001);
+        assert!(
+            (strength.defense.parry - simc_parry(&strength, base_strength, denominator, rating))
+                .abs()
+                < 0.001
+        );
 
         apply_aura(&mut app, actor, 28755); // Rapid Fire: native +30 critical rating.
         let critical = stats(&app);
         assert_eq!(critical.ratings.crit, strength.ratings.crit + 30.0);
         assert_eq!(critical.ratings.parry, strength.ratings.parry + 30.0);
         assert!(critical.defense.parry > strength.defense.parry);
-        assert!((critical.defense.parry - simc_parry(&critical, base_strength, denominator, rating)).abs() < 0.001);
+        assert!(
+            (critical.defense.parry - simc_parry(&critical, base_strength, denominator, rating))
+                .abs()
+                < 0.001
+        );
     }
 }
