@@ -1,7 +1,6 @@
 //! Native action permission shared by follower kits and literal fixture casts.
 //! Selected trait metadata wins; named parent projections cover missing DB2 links.
 use bevy::prelude::*;
-use std::collections::HashSet;
 
 use super::CastFailure;
 use crate::class_progression::{KnownSpells, TraitLoadout};
@@ -86,13 +85,14 @@ pub fn resolve_optional_actor_action(
 
 fn resolve_aliases(world: &World, actor: Entity, requested: u32) -> Result<u32, CastFailure> {
     let mut current = requested;
-    let mut visited = HashSet::new();
+    let mut visited = Vec::new();
     loop {
-        if !visited.insert(current) {
+        if visited.contains(&current) {
             return Err(CastFailure::Unsupported(format!(
                 "native action alias cycle for spell{requested}"
             )));
         }
+        visited.push(current);
         let selected = selected_trait_action(world, actor, current);
         let projected = project_known_parent(world, actor, selected);
         let resolved = crate::auras::overrides::resolve_spell(world, actor, projected);

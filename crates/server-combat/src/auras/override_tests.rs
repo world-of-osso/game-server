@@ -102,3 +102,33 @@ fn spell_override_recklessness_replaces_raging_blow_and_restores_after_removal()
             .any(|e| e.kind == CombatLogKind::CastSuccess && e.spell_id == Some(85288))
     );
 }
+
+#[test]
+fn spell_override_known_replacement_follows_the_recklessness_aura() {
+    // Actual matrix1719 rows: MiscValue85288 -> amount335097.
+    let mut h = harness(Vec::new(), &[1719, 85288, 335097], 1).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            1719, 85288,
+        ]));
+    let knows = |h: &mut Harness, spell| {
+        crate::spell_cast::caster_knows_spell(h.app.world_mut(), h.caster, spell)
+    };
+    assert!(knows(&mut h, 85288));
+    assert!(!knows(&mut h, 335097));
+    apply(&mut h, 1719);
+    assert!(
+        knows(&mut h, 335097),
+        "Recklessness grants Raging Blow's replacement"
+    );
+    super::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        super::RemoveReason::Cancelled,
+        |a| a.spell_id == 1719,
+    );
+    assert!(knows(&mut h, 85288));
+    assert!(!knows(&mut h, 335097), "removal restores the base action");
+}

@@ -1991,9 +1991,7 @@ pub(crate) fn caster_knows_spell(world: &mut World, caster: Entity, spell_id: u3
         || taught_by_known_spell(world, caster, spell_id)
         || crate::auras::overrides::grants_spell(world, caster, spell_id)
         || world.get::<KnownSpells>(caster).is_some_and(|known| {
-            known
-                .iter()
-                .any(|base| crate::auras::overrides::resolve_spell(world, caster, base) == spell_id)
+            crate::auras::overrides::resolves_known(world, caster, known, spell_id)
         })
 }
 
