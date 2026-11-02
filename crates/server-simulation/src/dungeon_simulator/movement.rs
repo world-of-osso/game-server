@@ -3,6 +3,8 @@ use super::{campaign::MoveIntent, native_movement::NativeMovement};
 use bevy::prelude::*;
 use shared::components::{Health, Position, Rotation};
 
+#[path = "movement_audit_tests.rs"]
+mod audit_tests;
 #[path = "movement_edge_tests.rs"]
 mod edge_tests;
 #[path = "movement_reach_tests.rs"]
