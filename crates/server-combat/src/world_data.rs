@@ -173,7 +173,7 @@ pub struct CreatureModelInfo {
 
 #[derive(Clone)]
 pub struct CreatureSpawn {
-    pub guid: u32,
+    pub guid: u64,
     pub template_entry: u32,
     pub map: u16,
     pub zone_id: u16,
@@ -252,7 +252,7 @@ pub struct CreatureAddon {
 /// `creature_formations` row, including a leader's authored self-membership.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FormationInfo {
-    pub leader_guid: u32,
+    pub leader_guid: u64,
     pub follow_dist: f32,
     /// Radians (the table stores degrees).
     pub follow_angle: f32,
@@ -279,11 +279,11 @@ pub struct WorldData {
     /// Keyed by `waypoint_data.id` (path ID, not creature guid).
     pub waypoints: HashMap<u32, WaypointPath>,
     /// `creature_addon` keyed by spawn guid.
-    pub addons: HashMap<u32, CreatureAddon>,
+    pub addons: HashMap<u64, CreatureAddon>,
     /// `creature_template_addon` keyed by template entry.
-    pub template_addons: HashMap<u32, CreatureAddon>,
+    pub template_addons: HashMap<u64, CreatureAddon>,
     /// `creature_formations` keyed by member guid, including authored leader rows.
-    pub formations: HashMap<u32, FormationInfo>,
+    pub formations: HashMap<u64, FormationInfo>,
     /// `content_creature_equip_template` keyed by entry, then ID (ascending, as
     /// ObjectMgr's `_equipmentInfoStore`).
     pub equipment: HashMap<u32, BTreeMap<u8, EquipmentAppearance>>,
@@ -303,12 +303,12 @@ pub struct WorldData {
     /// TDB `creature_template.StringId` keyed by entry.
     pub template_string_ids: HashMap<u32, String>,
     /// TDB `creature.StringId` keyed by content spawn guid.
-    pub spawn_string_ids: HashMap<u32, String>,
+    pub spawn_string_ids: HashMap<u64, String>,
     /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
     /// keyed by group; copy fill withholds them.
-    pub script_spawn_groups: HashMap<u32, Vec<u32>>,
+    pub script_spawn_groups: HashMap<u32, Vec<u64>>,
     /// Ordinary groups scripts reset with ignoreRespawn; never withheld at copy fill.
-    pub reset_spawn_groups: HashMap<u32, Vec<u32>>,
+    pub reset_spawn_groups: HashMap<u32, Vec<u64>>,
 }
 
 impl WorldData {
@@ -338,7 +338,7 @@ impl WorldData {
     pub fn addon_for(&self, spawn: &CreatureSpawn) -> Option<&CreatureAddon> {
         self.addons
             .get(&spawn.guid)
-            .or_else(|| self.template_addons.get(&spawn.template_entry))
+            .or_else(|| self.template_addons.get(&u64::from(spawn.template_entry)))
     }
 }
 
@@ -449,7 +449,7 @@ pub(crate) fn load_template_string_ids(
         .collect()
 }
 
-pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashMap<u32, String>> {
+pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashMap<u64, String>> {
     conn.prepare(
         "SELECT creature.guid, tdb.StringId FROM content_creature creature
          JOIN tdb_creature tdb ON creature.guid = tdb.guid + ?1 AND creature.id1 = tdb.id
@@ -463,7 +463,7 @@ pub(crate) fn load_script_spawn_groups(
     conn: &Connection,
     groups: &[u32],
     manual_only: bool,
-) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
+) -> rusqlite::Result<HashMap<u32, Vec<u64>>> {
     let mut query = conn.prepare(
         "SELECT creature.guid FROM tdb_spawn_group grp
          JOIN tdb_spawn_group_template template USING(groupId)
@@ -476,7 +476,7 @@ pub(crate) fn load_script_spawn_groups(
         .map(|&group| {
             let guids = query
                 .query_map(params![group, TDB_GUID_OFFSET, manual_only], |row| row.get(0))?
-                .collect::<rusqlite::Result<Vec<u32>>>()?;
+                .collect::<rusqlite::Result<Vec<u64>>>()?;
             if guids.is_empty() {
                 error!("script spawn group {group} has no matching content creatures (manual_only={manual_only})");
             }
@@ -902,7 +902,7 @@ pub(crate) fn load_template_models(
 
 fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
     Ok(CreatureSpawn {
-        guid: row.get::<_, i64>(0)? as u32,
+        guid: row.get(0)?,
         template_entry: row.get::<_, i64>(1)? as u32,
         map: row.get::<_, i64>(2)? as u16,
         zone_id: row.get::<_, i64>(3)? as u16,
@@ -934,7 +934,7 @@ const SPAWN_COLUMNS: &str = "guid, id1, map, zoneId, position_x, position_y, pos
 
 /// The `content_creature` row `guid`, whether or not a game event gates it.
 #[cfg(test)]
-pub(crate) fn load_spawn(conn: &Connection, guid: u32) -> rusqlite::Result<CreatureSpawn> {
+pub(crate) fn load_spawn(conn: &Connection, guid: u64) -> rusqlite::Result<CreatureSpawn> {
     conn.query_row(
         &format!("SELECT {SPAWN_COLUMNS} FROM content_creature WHERE guid = ?1"),
         params![guid],
@@ -1018,8 +1018,8 @@ fn load_waypoints(conn: &Connection) -> HashMap<u32, WaypointPath> {
     map
 }
 
-fn addon_from_row(row: &Row) -> rusqlite::Result<(u32, CreatureAddon)> {
-    let key = row.get::<_, i64>(0)? as u32;
+fn addon_from_row(row: &Row) -> rusqlite::Result<(u64, CreatureAddon)> {
+    let key: u64 = row.get(0)?;
     let auras: Option<String> = row.get(3)?;
     let stand_state = (row.get::<_, i64>(4)? & 0xFF) as u8;
     let sheath_state = (row.get::<_, i64>(5)? & 0xFF) as u8;
@@ -1058,7 +1058,7 @@ fn parse_addon_auras(text: &str) -> Vec<u32> {
 }
 
 /// `content_creature_addon` keyed by spawn guid.
-pub(crate) fn load_spawn_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+pub(crate) fn load_spawn_addons(conn: &Connection) -> HashMap<u64, CreatureAddon> {
     load_addons(
         conn,
         "SELECT guid, path_id, mount, auras, bytes1, bytes2, emote FROM content_creature_addon",
@@ -1066,7 +1066,7 @@ pub(crate) fn load_spawn_addons(conn: &Connection) -> HashMap<u32, CreatureAddon
 }
 
 /// `content_creature_template_addon` keyed by template entry.
-pub(crate) fn load_template_addons(conn: &Connection) -> HashMap<u32, CreatureAddon> {
+pub(crate) fn load_template_addons(conn: &Connection) -> HashMap<u64, CreatureAddon> {
     load_addons(
         conn,
         "SELECT entry, path_id, mount, auras, bytes1, bytes2, emote
@@ -1074,7 +1074,7 @@ pub(crate) fn load_template_addons(conn: &Connection) -> HashMap<u32, CreatureAd
     )
 }
 
-fn load_addons(conn: &Connection, sql: &str) -> HashMap<u32, CreatureAddon> {
+fn load_addons(conn: &Connection, sql: &str) -> HashMap<u64, CreatureAddon> {
     let mut stmt = conn
         .prepare(sql)
         .expect("Failed to prepare creature addon query");
@@ -1161,11 +1161,11 @@ fn load_equipment(conn: &Connection) -> HashMap<u32, BTreeMap<u8, EquipmentAppea
     equipment
 }
 
-fn formation_from_row(row: &Row) -> rusqlite::Result<(u32, FormationInfo)> {
+fn formation_from_row(row: &Row) -> rusqlite::Result<(u64, FormationInfo)> {
     Ok((
-        row.get::<_, i64>(1)? as u32,
+        row.get(1)?,
         FormationInfo {
-            leader_guid: row.get::<_, i64>(0)? as u32,
+            leader_guid: row.get(0)?,
             follow_dist: row.get(2)?,
             follow_angle: row.get::<_, f32>(3)?.to_radians(),
             group_ai: row.get::<_, i64>(4)? as u32,
@@ -1173,7 +1173,7 @@ fn formation_from_row(row: &Row) -> rusqlite::Result<(u32, FormationInfo)> {
     ))
 }
 
-fn load_formations(conn: &Connection) -> HashMap<u32, FormationInfo> {
+fn load_formations(conn: &Connection) -> HashMap<u64, FormationInfo> {
     let mut stmt = conn
         .prepare(
             // A leader joins its group only through its own row
@@ -1379,6 +1379,10 @@ fn startup_load_world_data(mut commands: Commands) {
             "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
         ));
 }
+
+#[cfg(test)]
+#[path = "world_data/guid_tests.rs"]
+mod guid_tests;
 
 pub struct WorldDataPlugin;
 

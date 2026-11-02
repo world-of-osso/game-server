@@ -28,11 +28,11 @@ struct Fixture {
     healer: Entity,
     members: Vec<Entity>,
     first: Entity,
-    first_guid: u32,
+    first_guid: u64,
     second: Entity,
 }
 
-fn spawn_source(h: &mut Harness, guid: u32, map: InMap) -> Entity {
+fn spawn_source(h: &mut Harness, guid: u64, map: InMap) -> Entity {
     let data = crate::test_data::world_data();
     let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
     let template = data.template_for(spawn.template_entry, 1).unwrap();

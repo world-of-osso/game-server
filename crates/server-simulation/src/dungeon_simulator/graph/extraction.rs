@@ -83,7 +83,7 @@ fn append_registered_transports(
         .chain(
             registrations
                 .iter()
-                .filter_map(|registration| registration.source_guid),
+                .filter_map(|registration| registration.source_guid.map(u64::from)),
         )
         .max()
         .unwrap_or(0);
@@ -114,7 +114,7 @@ fn append_registered_transports(
                     height: point.y,
                     spawns: Vec::new(),
                 });
-                (next, guid)
+                (next, u64::from(guid))
             } else {
                 let candidates: Vec<_> = packs
                     .iter()
@@ -272,7 +272,7 @@ fn extract(
     Ok((graph, route_bosses))
 }
 
-fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<u32, String> {
+fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<u64, String> {
     let id = graph
         .packs
         .iter()
@@ -315,13 +315,13 @@ fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<
 fn append_flight_path(
     graph: &mut Graph,
     path: &[Vec3],
-    from_anchor: Option<u32>,
+    from_anchor: Option<u64>,
     mut walk: impl FnMut(Vec3, Vec3) -> Result<Vec<Vec3>, String>,
 ) -> Result<(), String> {
     let (Some(&start), Some(&end)) = (path.first(), path.last()) else {
         return Err("empty flight path".into());
     };
-    let mut anchor = |point: Vec3| -> Result<u32, String> {
+    let mut anchor = |point: Vec3| -> Result<u64, String> {
         let mut candidates: Vec<_> = graph
             .packs
             .iter()

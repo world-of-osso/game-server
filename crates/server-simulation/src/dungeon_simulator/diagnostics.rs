@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use shared::components::{Health, Position};
 
-pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> serde_json::Value {
+pub(super) fn inspect_unit(world: &World, guid: Option<u64>, actor: Entity) -> serde_json::Value {
     let health = world.get::<Health>(actor);
     let position = world.get::<Position>(actor);
     let threat: Vec<_> = world
@@ -118,7 +118,7 @@ impl PetRecorder {
         &mut self,
         world: &World,
         members: &[Entity],
-        actors: &std::collections::BTreeMap<u32, Entity>,
+        actors: &std::collections::BTreeMap<u64, Entity>,
     ) -> Vec<serde_json::Value> {
         for &owner in members {
             if let Some(pet) = crate::hunter_pet::summoned_pet(world, owner) {

@@ -19,7 +19,7 @@ struct RunBudget {
 }
 
 struct Projection {
-    estimates: Vec<(u32, MeleeEstimate)>,
+    estimates: Vec<(u64, MeleeEstimate)>,
     pack_count: usize,
     overlapping: bool,
 }
@@ -27,7 +27,7 @@ struct Projection {
 pub(super) fn read_pull_budget(
     world: &mut World,
     tank: Entity,
-    projected: &BTreeSet<u32>,
+    projected: &BTreeSet<u64>,
     difficulty: u32,
 ) -> Result<Decision, String> {
     let run = read_run_budget(world, tank)?;
@@ -53,9 +53,9 @@ pub(super) fn read_pull_budget(
 pub(super) fn expand_assistance(
     world: &World,
     tank: Entity,
-    projected: &BTreeSet<u32>,
-    sources: &BTreeMap<u32, Source>,
-) -> Result<BTreeSet<u32>, String> {
+    projected: &BTreeSet<u64>,
+    sources: &BTreeMap<u64, Source>,
+) -> Result<BTreeSet<u64>, String> {
     let mut expanded = projected.clone();
     for guid in projected {
         let source = sources
@@ -80,7 +80,7 @@ fn read_cleared_single_pull(
     world: &mut World,
     tank: Entity,
     run: &RunBudget,
-    projected: &BTreeSet<u32>,
+    projected: &BTreeSet<u64>,
     difficulty: u32,
 ) -> Result<Option<Decision>, String> {
     let fighting = pull_history::has_attackable_combat(world, &run.party);
@@ -198,7 +198,7 @@ fn has_admitted_healer(world: &World, run: &RunBudget) -> bool {
 pub(super) fn read_forecast_health(
     world: &mut World,
     tank: Entity,
-    projected: &BTreeSet<u32>,
+    projected: &BTreeSet<u64>,
     difficulty: u32,
 ) -> Result<(f64, f64, usize), String> {
     let run = read_run_budget(world, tank)?;
@@ -238,7 +238,7 @@ fn read_projection(
     world: &mut World,
     tank: Entity,
     run: &RunBudget,
-    projected: &BTreeSet<u32>,
+    projected: &BTreeSet<u64>,
     difficulty: u32,
 ) -> Result<Projection, String> {
     if projected.is_empty() {
@@ -275,7 +275,7 @@ fn read_projection(
     })
 }
 
-fn read_source_pack(sources: &BTreeMap<u32, Source>, guid: u32) -> Result<u32, String> {
+fn read_source_pack(sources: &BTreeMap<u64, Source>, guid: u64) -> Result<u64, String> {
     sources
         .get(&guid)
         .map(|source| source.pack_guid)
@@ -284,9 +284,9 @@ fn read_source_pack(sources: &BTreeMap<u32, Source>, guid: u32) -> Result<u32, S
 
 fn read_engaged_packs(
     world: &World,
-    sources: &BTreeMap<u32, Source>,
+    sources: &BTreeMap<u64, Source>,
     engaged: &BTreeSet<Entity>,
-) -> Result<BTreeSet<u32>, String> {
+) -> Result<BTreeSet<u64>, String> {
     engaged
         .iter()
         .map(|unit| {
@@ -304,7 +304,7 @@ fn read_source_forecast(
     world: &World,
     tank: Entity,
     source: &Source,
-) -> Result<(u32, MeleeEstimate), String> {
+) -> Result<(u64, MeleeEstimate), String> {
     let actor = source.actor.ok_or_else(|| {
         format!(
             "Source GUID {} remains present but has no forecast actor",

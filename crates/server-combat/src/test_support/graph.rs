@@ -12,14 +12,14 @@ mod azure_extraction;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Spawn {
-    pub guid: u32,
+    pub guid: u64,
     pub entry: u32,
     pub position: [f32; 2],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Pack {
-    pub id: u32,
+    pub id: u64,
     pub position: [f32; 2],
     pub height: f32,
     pub spawns: Vec<Spawn>,
@@ -27,22 +27,22 @@ pub struct Pack {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
-    pub from: u32,
-    pub to: u32,
+    pub from: u64,
+    pub to: u64,
     pub yards: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RouteStep {
-    pub pack: u32,
+    pub pack: u64,
     pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TransportEdge {
-    pub from: u32,
-    pub to: u32,
-    pub source_guid: u32,
+    pub from: u64,
+    pub to: u64,
+    pub source_guid: u64,
     pub radius: f32,
     pub departure: Option<[f32; 3]>,
     pub landing: [f32; 3],
@@ -52,8 +52,8 @@ pub struct TransportEdge {
 /// A directed, LOS-checked 3D flight path between frozen graph anchors.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FlightEdge {
-    pub from: u32,
-    pub to: u32,
+    pub from: u64,
+    pub to: u64,
     pub points: Vec<[f32; 3]>,
 }
 
@@ -62,7 +62,7 @@ pub struct Graph {
     pub map_id: u32,
     pub entrance: [f32; 2],
     pub entrance_height: f32,
-    pub entrance_pack: u32,
+    pub entrance_pack: u64,
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
     pub teleports: Vec<Edge>,
@@ -70,7 +70,7 @@ pub struct Graph {
     pub transports: Vec<TransportEdge>,
     #[serde(default)]
     pub flights: Vec<FlightEdge>,
-    pub unreachable: Vec<u32>,
+    pub unreachable: Vec<u64>,
     pub route: Vec<RouteStep>,
     #[serde(default)]
     pub follower_difficulty: u32,
@@ -91,7 +91,7 @@ mod walk_route;
 pub struct Space(pub Graph);
 
 struct PendingNode {
-    id: u32,
+    id: u64,
     distance: f32,
 }
 impl PartialEq for PendingNode {
@@ -135,7 +135,7 @@ impl Space {
         walk_route::read(&self.0, from, to)
     }
 
-    pub fn next_translocation(&self, from: Vec3, to: Vec3) -> Result<Option<(u32, u32)>, String> {
+    pub fn next_translocation(&self, from: Vec3, to: Vec3) -> Result<Option<(u64, u64)>, String> {
         let nodes = self.path_nodes(from, to)?;
         Ok(nodes.windows(2).find_map(|pair| {
             self.0
@@ -146,7 +146,7 @@ impl Space {
         }))
     }
 
-    fn path_nodes(&self, from: Vec3, to: Vec3) -> Result<Vec<u32>, String> {
+    fn path_nodes(&self, from: Vec3, to: Vec3) -> Result<Vec<u64>, String> {
         let nearest = |point: Vec3| {
             self.0
                 .packs
@@ -162,7 +162,7 @@ impl Space {
         let goal = nearest(to)?;
         let mut distances = BTreeMap::from([(start, 0.0_f32)]);
         let mut previous = BTreeMap::new();
-        let mut adjacency = BTreeMap::<u32, Vec<(u32, f32)>>::new();
+        let mut adjacency = BTreeMap::<u64, Vec<(u64, f32)>>::new();
         for edge in &self.0.edges {
             adjacency
                 .entry(edge.from)
@@ -270,7 +270,7 @@ pub fn read_graph() -> Result<Graph, String> {
 
 #[cfg(test)]
 fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
-    let mut packs = BTreeMap::<u32, Vec<Spawn>>::new();
+    let mut packs = BTreeMap::<u64, Vec<Spawn>>::new();
     for &index in &data.spawns_by_map[&map_id] {
         let spawn = &data.spawns[index];
         if !spawn.spawns_at(crate::maps::store::DIFFICULTY_NORMAL) {
@@ -306,7 +306,7 @@ fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
 }
 
 #[cfg(test)]
-fn source_point(data: &crate::world_data::WorldData, guid: u32) -> Vec3 {
+fn source_point(data: &crate::world_data::WorldData, guid: u64) -> Vec3 {
     if guid == 7116 {
         // Authenticated70448 AreaPOI7116; qualified inside Umbrelskul's component.
         let point = crate::npc_interaction::azure_translocation::FINAL_POI_WOW;
@@ -357,7 +357,7 @@ fn query_edges(
 #[cfg(test)]
 fn select_edges(packs: &[Pack], candidates: Vec<Edge>) -> Vec<Edge> {
     let mut roots: BTreeMap<_, _> = packs.iter().map(|pack| (pack.id, pack.id)).collect();
-    let mut counts = BTreeMap::<u32, usize>::new();
+    let mut counts = BTreeMap::<u64, usize>::new();
     let mut selected = Vec::new();
     for edge in candidates {
         let from = roots[&edge.from];
@@ -381,7 +381,7 @@ fn select_edges(packs: &[Pack], candidates: Vec<Edge>) -> Vec<Edge> {
 }
 
 #[cfg(test)]
-fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
+fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u64) -> Vec<u64> {
     let mut reached = BTreeSet::from([entrance]);
     loop {
         let before = reached.len();
@@ -487,7 +487,7 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
     let graph = read_graph().unwrap();
     let mut seen = BTreeSet::new();
     for step in route {
-        let pack = step["pack"].as_u64().unwrap() as u32;
+        let pack = step["pack"].as_u64().unwrap();
         assert!(seen.insert(pack), "duplicate authored pack{pack}");
         assert!(graph.packs.iter().any(|entry| entry.id == pack));
         let anchor = step["anchor"].as_array().unwrap();

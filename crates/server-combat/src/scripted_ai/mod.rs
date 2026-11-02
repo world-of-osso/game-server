@@ -191,6 +191,7 @@ impl Plugin for ScriptedAiPlugin {
                     academy_transport::launch_entrance_pad,
                     murder_row_gateway::update,
                     dungeon_passage::update,
+                    crate::npc_interaction::petalwing::update_visibility,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
                     nethekurse_intro::detect_entries,

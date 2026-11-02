@@ -33,7 +33,7 @@ fn extract_azure_graph() {
                 .find(|link| link.entry == spawn.template_entry)
                 .map(|link| Edge {
                     from: pack_for(spawn.guid),
-                    to: pack_for(link.destination),
+                    to: pack_for(u64::from(link.destination)),
                     yards: 0.0,
                 })
         })

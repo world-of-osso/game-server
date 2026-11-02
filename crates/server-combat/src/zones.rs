@@ -28,7 +28,7 @@ pub(crate) use entry::read_entry_projection;
 /// Original ordinary population identity, independent of a temporary entry change.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CreatureOrigin {
-    pub guid: u32,
+    pub guid: u64,
     pub original_entry: u32,
 }
 
@@ -256,8 +256,8 @@ pub(crate) fn spawn_withheld_entry(world: &mut World, map: crate::maps::InMap, e
 fn remove_dead_group_members(
     world: &mut World,
     map: crate::maps::InMap,
-    guids: &[u32],
-) -> (HashSet<u32>, bool) {
+    guids: &[u64],
+) -> (HashSet<u64>, bool) {
     let members: Vec<_> = world
         .query::<(
             Entity,
@@ -295,7 +295,7 @@ pub struct CreatureFlagsExtra(pub u32);
 
 /// The same script-owned copy-fill exclusions used by the live spawn path.
 pub fn script_withholds_spawn(
-    withheld: &HashSet<u32>,
+    withheld: &HashSet<u64>,
     content: &MapContent,
     spawn: &crate::world_data::CreatureSpawn,
 ) -> bool {
@@ -319,8 +319,8 @@ pub fn spawn_map_creatures(
     let (pool_spawns, picked) = world_data
         .pools
         .init_map(map.map_id as u16, &mut rand::thread_rng());
-    let picked: HashSet<u32> = picked.into_iter().collect();
-    let withheld: HashSet<u32> = world_data
+    let picked: HashSet<u64> = picked.into_iter().collect();
+    let withheld: HashSet<u64> = world_data
         .script_spawn_groups
         .values()
         .flatten()
@@ -375,9 +375,9 @@ pub(crate) fn spawn_pooled_creatures(
     world_data: &WorldData,
     map: crate::maps::InMap,
     map_pools: &MapPools,
-    guids: &[u32],
+    guids: &[u64],
     ground: Option<&mut crate::ground::GroundMap>,
-) -> HashMap<u32, Entity> {
+) -> HashMap<u64, Entity> {
     let indices = &world_data.spawns_by_map[&(map.map_id as u16)];
     let spawns = indices
         .iter()
@@ -405,7 +405,7 @@ pub(crate) fn spawn_grouped_creatures(
     world_data: &WorldData,
     map: crate::maps::InMap,
     difficulty_id: u32,
-    guids: &std::collections::BTreeSet<u32>,
+    guids: &std::collections::BTreeSet<u64>,
     ground: Option<&mut crate::ground::GroundMap>,
 ) {
     let spawns = world_data.spawns_by_map[&(map.map_id as u16)]
@@ -438,7 +438,7 @@ fn spawn_creatures<'a>(
     replicate: bool,
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
     ground: Option<&mut crate::ground::GroundMap>,
-) -> HashMap<u32, Entity> {
+) -> HashMap<u64, Entity> {
     let mut context = CreatureSpawnContext {
         map,
         difficulty_id,
@@ -739,7 +739,7 @@ pub(crate) struct SpawnPose(pub UnitPose);
 pub(crate) fn insert_formation_members(
     commands: &mut Commands,
     world_data: &WorldData,
-    entities: &HashMap<u32, Entity>,
+    entities: &HashMap<u64, Entity>,
 ) {
     for (guid, &member) in entities {
         let Some(info) = world_data.formations.get(guid) else {
@@ -1216,7 +1216,7 @@ fn insert_ai_components(
             target_x: bx,
             target_z: bz,
             idle_remaining: 1.0,
-            seed: spawn.guid,
+            seed: wander_seed(spawn.guid),
         });
     } else if spawn.movement_type == 2
         && let Some(path_id) = patrol_path(addon, world_data)
@@ -1233,6 +1233,11 @@ fn insert_ai_components(
 /// MovementType 2 walks the addon's `path_id` (Creature::LoadCreaturesAddon
 /// sets `m_path_id`; WaypointMovementGenerator::LoadPath reads it). Without
 /// an addon path AzerothCore idles the spawn (ObjectMgr::LoadCreatureAddons).
+// A seed is not a spawn identity: fold both halves without changing old u32 seeds.
+fn wander_seed(guid: u64) -> u32 {
+    (guid ^ (guid >> 32)) as u32
+}
+
 fn patrol_path(addon: Option<&CreatureAddon>, world_data: &WorldData) -> Option<u32> {
     addon
         .map(|addon| addon.path_id)
@@ -1268,6 +1273,13 @@ mod tests {
     use super::*;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
     use std::collections::HashMap;
+
+    #[test]
+    fn wander_seed_folds_high_bits_and_preserves_old_seeds() {
+        assert_eq!(wander_seed(20_375_682), 20_375_682);
+        assert_eq!(wander_seed(u64::from(u32::MAX)), u32::MAX);
+        assert_eq!(wander_seed(0x0000_0001_0000_0002), 3);
+    }
 
     fn make_template(entry: u32, health_mod: f32, display_id: u32) -> CreatureTemplate {
         CreatureTemplate {

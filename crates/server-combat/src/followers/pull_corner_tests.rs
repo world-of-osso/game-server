@@ -10,13 +10,13 @@ use serde_json::{Value, json};
 use shared::components::Mana;
 use std::collections::{BTreeMap, BTreeSet};
 
-const TARGET_GUID: u32 = 20375689;
+const TARGET_GUID: u64 = 20375689;
 
 #[derive(Clone, Copy)]
 struct BakedCorner {
     point: Vec3,
     source_kind: &'static str,
-    source_id: u32,
+    source_id: u64,
     path_index: usize,
 }
 
@@ -140,8 +140,8 @@ fn proximity_recipients(
 fn nearby_unengaged_sources(
     f: &mut Fixture,
     party: &[Entity],
-    cleared: &BTreeSet<u32>,
-) -> Result<Vec<(u32, Entity)>, String> {
+    cleared: &BTreeSet<u64>,
+) -> Result<Vec<(u64, Entity)>, String> {
     let world = f.h.app.world_mut();
     let follower = world.get::<Follower>(f.tank).unwrap().clone();
     let engaged: BTreeSet<_> = ai::engaged_enemies(world, &follower, f.tank, party)
@@ -194,7 +194,7 @@ fn nearby_unengaged_sources(
 fn read_other_acquisitions(
     f: &mut Fixture,
     party: &[Entity],
-    cleared: &BTreeSet<u32>,
+    cleared: &BTreeSet<u64>,
 ) -> Result<Vec<Value>, String> {
     let nearby = nearby_unengaged_sources(f, party, cleared)?;
     let mut acquisitions = Vec::new();
@@ -214,7 +214,7 @@ fn read_corner(
     f: &mut Fixture,
     target: Entity,
     party: &[Entity],
-    cleared: &BTreeSet<u32>,
+    cleared: &BTreeSet<u64>,
     corner: BakedCorner,
 ) -> Value {
     let mut row = json!({"baked_corner":[corner.point.x,corner.point.y,corner.point.z],

@@ -28,7 +28,7 @@ fn tagged_trash_deaths_start_copy_local_edna_walk_and_release_immunity_on_arriva
     let mut trash = Vec::new();
     for (guid, x, y, z) in spawns {
         let mut spawn = load_authored_spawn(&conn, 210109, 2652, 205);
-        spawn.guid = guid;
+        spawn.guid = u64::from(guid);
         spawn.position_x = x;
         spawn.position_y = y;
         spawn.position_z = z;

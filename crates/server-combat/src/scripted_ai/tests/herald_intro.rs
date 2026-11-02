@@ -75,7 +75,7 @@ fn assert_source_origins(h: &Harness, herald: Entity, sentries: &[Entity]) {
     );
 }
 
-fn spawn_source_actor(h: &mut Harness, map: InMap, guid: u32) -> Entity {
+fn spawn_source_actor(h: &mut Harness, map: InMap, guid: u64) -> Entity {
     let difficulty = crate::zones::map_difficulty_id(h.app.world(), map);
     let data = h.app.world().resource::<WorldData>();
     let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
