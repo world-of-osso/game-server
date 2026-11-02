@@ -34,14 +34,14 @@ fn temple_keystone_bosses_cast_observed_openers() {
             eprintln!(
                 "induction at 21s: cast={:?} moving={:?} pos={:?}",
                 h.app.world().get::<shared::casting::CastState>(boss),
-                h.app.world().get::<shared::components::Moving>(boss),
+                h.app.world().get::<crate::networking::Moving>(boss),
                 h.app.world().get::<Position>(boss)
             );
             h.advance(0.1);
             eprintln!(
                 "induction at 21.1s: cast={:?} moving={:?} pos={:?}",
                 h.app.world().get::<shared::casting::CastState>(boss),
-                h.app.world().get::<shared::components::Moving>(boss),
+                h.app.world().get::<crate::networking::Moving>(boss),
                 h.app.world().get::<Position>(boss)
             );
             h.advance(elapsed - 21.1);
