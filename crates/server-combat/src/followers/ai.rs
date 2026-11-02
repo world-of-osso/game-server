@@ -26,7 +26,11 @@ pub(super) struct LeaderProfile(pub(super) super::Profile);
 /// following itself.
 pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
     if let Some(follower) = world.get::<Follower>(unit) {
-        return Some(follower.clone());
+        return (world.get_entity(follower.owner).is_ok()
+            && world
+                .get::<crate::networking::DisconnectedPlayer>(follower.owner)
+                .is_none())
+        .then(|| follower.clone());
     }
     world.get::<LeaderProfile>(unit).map(|leader| Follower {
         owner: unit,
