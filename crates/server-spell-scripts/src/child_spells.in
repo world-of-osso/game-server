@@ -785,3 +785,12 @@ D	survival_wildfire.rs	apply_periodic_payload	launch_triggered_spell	&spell	1	26
 D	survival_wildfire.rs	apply_periodic_payload	load_triggered_spell	payload	1	269747,1253171
 D	unholy_apocalypse_rune.rs	on_hit	try_cast_triggered	spell	1	327092,327093,327095,327096
 D	unholy_army.rs	summon_apocalypse_now_riders	try_cast_triggered	spell	1	444248,444251,444252,444254
+D	unholy_blightburst.rs	blightburst	cast_triggered_with_effect0_amount	eruption	1	1241167,1241171
+D	unholy_blightburst.rs	blightburst	try_cast_triggered	plague	1	191587,1240996
+D	unholy_eruption.rs	cast_army_order	launch_triggered_spell_with_primary	&spell	1	1294264,1300330
+D	unholy_eruption.rs	cast_army_order	load_triggered_spell	order	1	1294264,1300330
+D	unholy_eruption.rs	erupt_and_apply_missing	cast_triggered_with_effect0_amount	child	1	1241167,1241171
+D	unholy_mograine.rs	initialize	try_cast_triggered	spell	1	188290,444505
+D	unholy_permanent_claws.rs	update_pet	try_cast_triggered	spell	1	91776,91778
+D	unholy_putrefy.rs	impact_and_dismiss	try_cast_triggered	spell	1	390220,1277016
+D	unholy_rider_proc.rs	on_cast	try_cast_triggered	chosen	1	444248,444251,444252,444254
