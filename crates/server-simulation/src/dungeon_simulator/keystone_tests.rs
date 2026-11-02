@@ -1,6 +1,87 @@
 use super::*;
 
 #[test]
+fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
+    use shared::protocol::{ChallengeBoss, ChallengePhase, ChallengeRun, KeystoneInfo};
+
+    let mut snapshot = ChallengeRun {
+        run_id: 1,
+        map_id: 2813,
+        instance_id: 2,
+        name: "Murder Row".into(),
+        key: KeystoneInfo {
+            item_guid: 1,
+            item_id: 180653,
+            challenge_id: 587,
+            level: 2,
+            affixes: vec![],
+        },
+        phase: ChallengePhase::Countdown,
+        countdown_ms: 10_000,
+        elapsed_ms: 0,
+        time_limit_ms: 2_040_000,
+        deaths: 0,
+        time_lost_ms: 0,
+        forces: 0,
+        forces_required: 655,
+        bosses: vec![
+            ChallengeBoss {
+                encounter_id: 3101,
+                name: "Kystia".into(),
+                defeated: false,
+            },
+            ChallengeBoss {
+                encounter_id: 3102,
+                name: "Zaen".into(),
+                defeated: false,
+            },
+        ],
+        upgrade_levels: 0,
+        resulting_level: None,
+        rating: None,
+    };
+    let route = [
+        super::super::graph::RouteStep {
+            pack: 10,
+            anchor: [0.0; 3],
+        },
+        super::super::graph::RouteStep {
+            pack: 42,
+            anchor: [0.0; 3],
+        },
+    ];
+    let mut reporter = Progress::default();
+    let mut output = Vec::new();
+    reporter
+        .write(&mut output, 0, &snapshot, None, &route)
+        .unwrap();
+    assert!(output.is_empty(), "countdown is not running time");
+    snapshot.phase = ChallengePhase::Running;
+    reporter
+        .write(&mut output, 0, &snapshot, None, &route)
+        .unwrap();
+    reporter
+        .write(&mut output, 59_999, &snapshot, Some(10), &route)
+        .unwrap();
+    snapshot.forces = 75;
+    snapshot.deaths = 1;
+    snapshot.bosses[0].defeated = true;
+    reporter
+        .write(&mut output, 60_000, &snapshot, Some(42), &route)
+        .unwrap();
+    reporter
+        .write(&mut output, 60_050, &snapshot, Some(42), &route)
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(output).unwrap(),
+        concat!(
+            "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2\n",
+            "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(42) route_step=Some(2)/2\n",
+        )
+    );
+}
+
+#[test]
 fn parses_explicit_dungeon_key_and_five_spec_party() {
     let options = Options::parse("2515", "2", "66,105,262,63,253").unwrap();
     assert_eq!(

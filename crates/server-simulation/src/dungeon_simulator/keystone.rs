@@ -53,6 +53,44 @@ impl Options {
     }
 }
 
+/// Emits progress at the start and each simulated minute after the countdown.
+#[derive(Default)]
+pub(super) struct Progress {
+    next_ms: u64,
+}
+
+impl Progress {
+    fn write(
+        &mut self,
+        writer: &mut impl std::io::Write,
+        sim_ms: u64,
+        snapshot: &shared::protocol::ChallengeRun,
+        current_pack: Option<u32>,
+        route: &[super::graph::RouteStep],
+    ) -> std::io::Result<()> {
+        if snapshot.phase != shared::protocol::ChallengePhase::Running || sim_ms < self.next_ms {
+            return Ok(());
+        }
+        let bosses = snapshot.bosses.iter().filter(|boss| boss.defeated).count();
+        let step = current_pack
+            .and_then(|pack| route.iter().position(|step| step.pack == pack))
+            .map(|index| index + 1);
+        writeln!(
+            writer,
+            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{}",
+            snapshot.forces,
+            snapshot.forces_required,
+            bosses,
+            snapshot.bosses.len(),
+            snapshot.deaths,
+            route.len()
+        )?;
+        writer.flush()?;
+        self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
+        Ok(())
+    }
+}
+
 pub(super) struct State {
     session: server::test_support::keystone::Session,
     tracker: Tracker,
@@ -205,6 +243,31 @@ impl State {
                 .observe_world(world, elapsed.saturating_sub(self.countdown_ms));
         }
         Ok(())
+    }
+
+    pub fn report_progress(
+        &self,
+        reporter: &mut Progress,
+        world: &World,
+        current_pack: Option<u32>,
+    ) -> Result<(), String> {
+        let elapsed = self.elapsed_ms(world);
+        if elapsed < self.countdown_ms || elapsed - self.countdown_ms < reporter.next_ms {
+            return Ok(());
+        }
+        let snapshot = self
+            .session
+            .snapshot(world)
+            .ok_or("active keystone snapshot unavailable")?;
+        reporter
+            .write(
+                &mut std::io::stdout().lock(),
+                elapsed - self.countdown_ms,
+                &snapshot,
+                current_pack,
+                &self.route.steps,
+            )
+            .map_err(|error| format!("write keystone progress: {error}"))
     }
 
     pub fn waiting_for_start(&self, world: &World) -> Result<bool, String> {
