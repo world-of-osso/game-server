@@ -1,7 +1,7 @@
 //! Literal pinned Enhancement driver; all numeric facts/casts remain native.
 pub mod bindings;
 use crate::literal_rotation::{
-    Driver,
+    Driver, PrecombatPoll,
     equipment::Equipment,
     execution::{Execution, Prepared},
 };
@@ -18,6 +18,8 @@ pub struct Rotation {
     pub ti_chain_lightning: bool,
     pub liquid_luster: bool,
     pub debuff_values: std::collections::BTreeMap<&'static str, f64>,
+    /// Enemy count of the latest decision; Tempest's Thorim choice reads it at execution.
+    decision_targets: usize,
 }
 
 impl Rotation {
@@ -52,6 +54,7 @@ impl Rotation {
             ti_chain_lightning: false,
             liquid_luster,
             debuff_values,
+            decision_targets: 0,
         };
         Ok(rotation)
     }
@@ -60,6 +63,7 @@ impl Rotation {
         self.encounter = crate::literal_rotation::encounter_starting_at(self.encounter, time);
     }
 
+    /// Legacy wrapper: one decision from `list`, executed through `execute`.
     pub fn step(
         &mut self,
         world: &mut World,
@@ -67,23 +71,23 @@ impl Rotation {
         targets: &[Entity],
         list: &str,
     ) -> Result<bool, String> {
-        let Some((action, execution)) = self.select(world, actor, targets, list)? else {
-            return Ok(false);
-        };
-        let ti_choice = match action.name.as_str() {
-            "chain_lightning" => Some(true),
-            "lightning_bolt" => Some(false),
-            "tempest" => Some(targets.len() > 1),
-            _ => None,
-        };
-        self.driver.execute(world, actor, action, execution)?;
-        // SimC76f8118 sc_shaman.cpp6673-6676/7448-7451/10011-10019:
-        // only foreground LB/CL/Tempest changes Thorim's selected invocation.
-        // No next action is admitted while the accepted cast is pending.
-        if let Some(chain) = ti_choice {
-            self.ti_chain_lightning = chain;
+        match self.decide(world, actor, targets, list)? {
+            PrecombatPoll::Waiting => Ok(true),
+            PrecombatPoll::Finished => Ok(false),
+            PrecombatPoll::Selected { action, execution } => {
+                self.execute(world, actor, action, execution)?;
+                Ok(true)
+            }
         }
-        Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        self.decide(world, actor, targets, "precombat")
     }
 
     pub fn select(
@@ -93,6 +97,21 @@ impl Rotation {
         targets: &[Entity],
         list: &str,
     ) -> Result<Option<(Action, Execution)>, String> {
+        Ok(match self.decide(world, actor, targets, list)? {
+            PrecombatPoll::Selected { action, execution } => Some((action, execution)),
+            PrecombatPoll::Waiting | PrecombatPoll::Finished => None,
+        })
+    }
+
+    /// Select without executing; precombat waits through native setup frames.
+    fn decide(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+        list: &str,
+    ) -> Result<PrecombatPoll, String> {
+        self.decision_targets = targets.len();
         let prepared = Prepared::read(
             world,
             actor,
@@ -110,7 +129,44 @@ impl Rotation {
             liquid_luster: self.liquid_luster,
             debuff_values: &self.debuff_values,
         };
-        self.driver.select(list, &facts, &prepared, &self.equipment)
+        if list == "precombat" {
+            return self
+                .driver
+                .poll_precombat(&facts, &prepared, &self.equipment);
+        }
+        Ok(
+            match self
+                .driver
+                .select(list, &facts, &prepared, &self.equipment)?
+            {
+                Some((action, execution)) => PrecombatPoll::Selected { action, execution },
+                None => PrecombatPoll::Finished,
+            },
+        )
+    }
+
+    /// The only dispatch for selected actions, so Thorim's invocation follows every path.
+    pub fn execute(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        action: Action,
+        execution: Execution,
+    ) -> Result<(), String> {
+        let ti_choice = match action.name.as_str() {
+            "chain_lightning" => Some(true),
+            "lightning_bolt" => Some(false),
+            "tempest" => Some(self.decision_targets > 1),
+            _ => None,
+        };
+        self.driver.execute(world, actor, action, execution)?;
+        // SimC76f8118 sc_shaman.cpp6673-6676/7448-7451/10011-10019:
+        // only foreground LB/CL/Tempest changes Thorim's selected invocation.
+        // No next action is admitted while the accepted cast is pending.
+        if let Some(chain) = ti_choice {
+            self.ti_chain_lightning = chain;
+        }
+        Ok(())
     }
 
     pub fn report(&self) -> Value {
@@ -243,12 +299,8 @@ impl crate::follower::SpecRotation for Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, "precombat")? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+    ) -> Result<PrecombatPoll, String> {
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(
@@ -258,7 +310,7 @@ impl crate::follower::SpecRotation for Rotation {
         action: server::simc_apl::Action,
         execution: crate::literal_rotation::execution::Execution,
     ) -> Result<(), String> {
-        self.driver.execute(world, actor, action, execution)
+        Rotation::execute(self, world, actor, action, execution)
     }
 
     fn start_combat_at(&mut self, started_at: f64) {
