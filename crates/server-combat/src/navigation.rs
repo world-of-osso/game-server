@@ -5,7 +5,7 @@ use shared::components::Position;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-const REPATH_DISTANCE: f32 = 1.0;
+pub const REPATH_DISTANCE: f32 = 1.0;
 const TELEPORT_DISTANCE: f32 = 2.0;
 
 pub(crate) mod collision_drop;
