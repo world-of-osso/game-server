@@ -1782,6 +1782,11 @@ mod copy_tests {
             false,
         );
         assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        h.advance(2);
+        assert!(
+            crate::death::soulstone::available(h.app.world(), target),
+            "death must retain the Soulstone offer"
+        );
         super::super::release::update(h.app.world_mut());
         assert_eq!(
             h.app.world().get::<Health>(target).unwrap().current,

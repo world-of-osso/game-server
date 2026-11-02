@@ -39,6 +39,11 @@ pub(crate) fn remember_on_death(world: &mut World, unit: Entity) {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn available(world: &World, unit: Entity) -> bool {
+    world.get::<SoulstoneAvailable>(unit).is_some()
+}
+
 pub(crate) fn clear_available(world: &mut World, unit: Entity) {
     world.entity_mut(unit).remove::<SoulstoneAvailable>();
 }
