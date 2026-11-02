@@ -21,7 +21,7 @@ fn fixture() -> (
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
 fn follower_mind_blast_can_earn_mind_devourer_only_with_the_talent() {
-    for selected in [true, false] {
+    for (spell, selected) in [(8092, true), (8092, false), (450983, true), (450983, false)] {
         let _seed = crate::random::seed_scope(70448);
         let (mut app, actor, target) = fixture();
         assert!(crate::auras::has_aura(app.world(), actor, 373202));
@@ -34,12 +34,16 @@ fn follower_mind_blast_can_earn_mind_devourer_only_with_the_talent() {
             );
         }
         for _ in 0..200 {
-            crate::spell_cast::cast_triggered(app.world_mut(), actor, 8092, Some(target), 0);
+            crate::spell_cast::cast_triggered(app.world_mut(), actor, spell, Some(target), 0);
             if crate::auras::has_aura(app.world(), actor, 373204) {
                 break;
             }
         }
-        assert_eq!(crate::auras::has_aura(app.world(), actor, 373204), selected);
+        assert_eq!(
+            crate::auras::has_aura(app.world(), actor, 373204),
+            selected,
+            "spell {spell}"
+        );
     }
 }
 
