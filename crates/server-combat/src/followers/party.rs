@@ -1606,7 +1606,36 @@ mod copy_tests {
             z: -4078.9055,
         };
         let (mut h, caster, _, _) = brackenhide_release_fixture(far);
-        h.app.world_mut().entity_mut(caster).insert(far);
+        let maps = h.app.world().resource::<crate::maps::MapStore>().clone();
+        let mut instances = crate::maps::InstanceManager::default();
+        let copy = instances
+            .create_map(
+                &maps,
+                2520,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 1,
+                    leader: 1,
+                    difficulty_id: 205,
+                    ..default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_792_454_400,
+                },
+            )
+            .unwrap()
+            .map;
+        h.app.insert_resource(instances);
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert((copy, crate::persistence::ClientId(1)));
+        h.app
+            .world_mut()
+            .get_mut::<FollowerRun>(h.caster)
+            .unwrap()
+            .copy = Some(copy);
+        h.app.world_mut().entity_mut(caster).insert((far, copy));
         h.app
             .world_mut()
             .entity_mut(h.caster)
