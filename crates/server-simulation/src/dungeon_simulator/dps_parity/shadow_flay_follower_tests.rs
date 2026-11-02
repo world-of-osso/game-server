@@ -68,6 +68,15 @@ fn shadow_follower_recasts_mind_flay_after_two_ticks() {
         // 50ms simulation frames for quantization and immediate recasting.
         elapsed <= 29 && ticks == 2
     });
+    if !clipped {
+        for line in text
+            .lines()
+            .filter(|line| line.contains("FLAY_CLOCK"))
+            .take(120)
+        {
+            eprintln!("{line}");
+        }
+    }
     assert!(
         clipped,
         "expected a Mind Flay recast after two damage ticks"
