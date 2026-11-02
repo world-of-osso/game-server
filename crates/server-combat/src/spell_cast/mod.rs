@@ -1160,6 +1160,9 @@ fn spell_haste_multiplier(world: &World, caster: Entity) -> f32 {
 /// (haste auras fold in through `StatModifiers`). Native charge effects use
 /// this fold once (SimC76f8118 sc_mage.cpp2091–2100).
 pub fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+    if script_registry::instant_cast_during_channel(world, caster, spell) {
+        return 0;
+    }
     // SimC76f8118 sc_warlock_pets.cpp1978–1987: the Inquisitor casts for
     // the native channel duration before the channel starts, with spell haste.
     let inquisitor_sear = spell.id == 1280457
@@ -2802,6 +2805,29 @@ fn begin_cast_with_primary(
         return Ok(());
     }
     execute_and_channel(world, caster, spell, target)
+}
+
+/// Start a triggered channel without paying its cost or starting its GCD.
+pub fn start_triggered_channel(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+) -> bool {
+    let Some(spell) = world.resource::<SpellStore>().get(spell_id).cloned() else {
+        return false;
+    };
+    if world.get::<CastState>(caster).is_some()
+        || !is_channeled_for_actor(world, caster, &spell)
+        || duration_ms(world, caster, &spell) <= 0
+    {
+        return false;
+    }
+    if !try_cast_triggered(world, caster, spell_id, Some(target), 1) {
+        return false;
+    }
+    start_channel(world, caster, &spell, Some(target));
+    true
 }
 
 /// Resolve the spell; a channeled spell then channels for its duration.

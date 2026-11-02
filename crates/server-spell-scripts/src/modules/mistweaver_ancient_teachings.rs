@@ -1,12 +1,13 @@
 //! 70448 Ancient Teachings transfers eligible damage to injured allies.
 use super::combat;
 use bevy::prelude::*;
+use combat::spell_cast::summon::SummonedCreature;
 use combat::spell_cast::{
     effects::{self, EffectCtx},
     script_registry::SpellScriptHook,
     targets::{self, Relation},
 };
-use shared::components::Health;
+use shared::components::{Health, UnitIsPet};
 
 const PASSIVE: u32 = 388023;
 const HEAL: u32 = 388024;
@@ -47,9 +48,11 @@ fn heal_from_damage(
     let radius = targets::radius(&spell.effects[0], 1);
     let mut allies = targets::area_units(world, caster, center, radius, Relation::Ally, 0);
     allies.retain(|&unit| {
-        world
-            .get::<Health>(unit)
-            .is_some_and(|health| health.current > 0.0 && health.current < health.max)
+        world.get::<SummonedCreature>(unit).is_none()
+            && !world.get::<UnitIsPet>(unit).is_some_and(|pet| pet.0)
+            && world
+                .get::<Health>(unit)
+                .is_some_and(|health| health.current > 0.0 && health.current < health.max)
     });
     allies.sort_by(|&a, &b| {
         let a = world.get::<Health>(a).unwrap();

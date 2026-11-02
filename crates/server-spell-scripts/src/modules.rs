@@ -364,6 +364,7 @@ register_modules! {
     mistweaver_celestial_conduit: (2700, "modules/mistweaver_celestial_conduit.rs"),
     mistweaver_chiji: (2700, "modules/mistweaver_chiji.rs"),
     mistweaver_courage: (2700, "modules/mistweaver_courage.rs"),
+    mistweaver_emperors_elixir: (2700, "modules/mistweaver_emperors_elixir.rs"),
     mistweaver_gust: (2700, "modules/mistweaver_gust.rs"),
     mistweaver_mana_tea: (2700, "modules/mistweaver_mana_tea.rs"),
     mistweaver_rushing_wind: (2700, "modules/mistweaver_rushing_wind.rs"),

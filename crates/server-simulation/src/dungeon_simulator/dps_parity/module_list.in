@@ -3,6 +3,13 @@
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
+mod mistweaver_ancient_party_tests;
+mod mistweaver_ancient_pulse_tests;
+mod mistweaver_elixir_jadefire_tests;
+mod mistweaver_elixir_soothing_tests;
+mod mistweaver_soothing_channel_tests;
+mod mistweaver_soothing_priority_tests;
+mod mistweaver_tea_enveloping_tests;
 mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_bolt_splinter_follower_tests;
 #[cfg(test)] mod arcane_blast_cost_tests;
