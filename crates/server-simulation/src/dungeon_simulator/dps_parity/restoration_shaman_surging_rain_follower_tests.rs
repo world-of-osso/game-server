@@ -22,6 +22,37 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
         follower,
         crate::spell_cast::targets::Relation::Ally
     ));
+    let candidates = crate::spell_cast::targets::area_units(
+        party.app.world_mut(),
+        healer,
+        bevy::prelude::Vec3::new(position.x, position.y, position.z),
+        11.0,
+        crate::spell_cast::targets::Relation::Ally,
+        0,
+    );
+    println!(
+        "rain diagnostics follower={follower:?} healer={healer:?} candidates={candidates:?} hunter={} summon={} temporary={} follower_component={}",
+        party
+            .app
+            .world()
+            .get::<crate::hunter_pet::HunterPet>(follower)
+            .is_some(),
+        party
+            .app
+            .world()
+            .get::<crate::spell_cast::summon::SummonedCreature>(follower)
+            .is_some(),
+        party
+            .app
+            .world()
+            .get::<crate::zones::TempSummon>(follower)
+            .is_some(),
+        party
+            .app
+            .world()
+            .get::<crate::followers::Follower>(follower)
+            .is_some()
+    );
     let health = party.app.world_mut().get_mut::<Health>(follower).unwrap();
     let max = health.max;
     drop(health);
