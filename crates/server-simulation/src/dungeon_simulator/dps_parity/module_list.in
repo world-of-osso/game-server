@@ -543,6 +543,7 @@ mod venomcursed_tests;
 mod windwalker_karma_follower_tests;
 mod windwalker_thunderfist_follower_tests;
 mod windwalker_wdp_thunderfist_follower_tests;
+mod hunter_lust_follower_tests;
 mod windwalker_tigereye_tests;
 mod warrior_parry_follower_tests;
 mod warrior_proc_tests;
