@@ -340,6 +340,8 @@ mod multi_seed;
 mod named_action_cooldown_tests;
 mod native_pandemic_tests;
 mod outlaw_ace_tests;
+#[cfg(test)]
+mod outlaw_blade_rush_follower_tests;
 mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
 mod outlaw_coup_tests;
@@ -540,3 +542,4 @@ mod windwalker_player_tests;
 
 #[cfg(test)] mod brewmaster_stagger_tests;
 #[cfg(test)] mod brewmaster_empty_barrel_tests;
+#[cfg(test)] mod unholy_magus_follower_tests;

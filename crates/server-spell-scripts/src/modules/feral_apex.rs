@@ -12,10 +12,16 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistra
 
 fn register(scripts: &mut AuraScripts) {
     let talent = scripts.0.entry(TALENT).or_default();
-    assert!(talent.check_proc.is_none(), "Apex Predator's Craving proc already scripted");
+    assert!(
+        talent.check_proc.is_none(),
+        "Apex Predator's Craving proc already scripted"
+    );
     talent.check_proc = Some(block_generic_periodic_proc);
     let rip = scripts.0.entry(RIP).or_default();
-    assert!(rip.after_periodic_damage.is_none(), "Rip periodic damage already scripted");
+    assert!(
+        rip.after_periodic_damage.is_none(),
+        "Rip periodic damage already scripted"
+    );
     rip.after_periodic_damage = Some(roll_apex_on_rip_tick);
 }
 
@@ -39,7 +45,11 @@ fn count_owned_rips(world: &mut World, caster: Entity) -> usize {
     let mut units = world.query::<&ActiveAuras>();
     units
         .iter(world)
-        .filter(|auras| auras.iter().any(|aura| aura.spell_id == RIP && aura.caster == caster))
+        .filter(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == RIP && aura.caster == caster)
+        })
         .count()
 }
 

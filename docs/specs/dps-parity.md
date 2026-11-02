@@ -28,6 +28,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Unholy Magus
 
+- Without the MID2 two-piece1296654, Magi cast Frostbolt317792 and Shadow Bolt317791, and Lords cast Frostbolt1292107. Magus Frostbolt's cooldown uses its native slow duration. With the two-piece, they use the native Necrotic Bolt and Withering Grasp actions (SimC76f8118 `sc_death_knight.cpp4424–4434,4598–4607,4664–4670,15494–15502`).
+- Unholy252 follower, snapshot v3, 120 seconds, seeds70448 and 1–9, temporary enchants disabled: L70 map2515 against the qualified tree-only reference: native 3,925 DPS, SimC 3,906; mean paired difference +0.50% ±1.57 pp (95% t interval). L90 map2813: native 31,516 DPS, SimC 32,030; −1.39% ±4.35 pp. Both point estimates are within ±5%; the L90 interval extends outside it.
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
 ### Unholy Commander of the Dead
 
