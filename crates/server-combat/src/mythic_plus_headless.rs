@@ -97,7 +97,14 @@ impl Session {
         persistence::save_inventory(&database, owner, &inventory);
         save_key(&database, &key);
         world.insert_resource(GameDatabase::new(database));
+        let weeks_path = std::env::var_os("GAME_SERVER_MYTHIC_PLUS_WEEKS")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../data/mythic_plus_weeks.json")
+            });
         world.insert_resource(Challenges {
+            weeks_path,
             definition: Some(definition),
             start_positions,
             ..Default::default()
