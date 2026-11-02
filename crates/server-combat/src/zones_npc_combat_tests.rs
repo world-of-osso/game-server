@@ -87,6 +87,7 @@ fn fight_app(spawns: Vec<CreatureSpawn>) -> Option<App> {
     .unwrap();
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(templates);
+    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     app.add_plugins((
         crate::creature_ai::CreatureAiPlugin,
         crate::combat::CombatPlugin,
@@ -649,7 +650,6 @@ fn meat_pile_does_not_attack_a_nearby_player() {
     let base = spawn_of(INFANTRY);
     let source = placed(base, 244041, 0.0);
     let mut app = fight_app(vec![source.clone()]).unwrap();
-    app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     let creature = spawned(&app, 0);
     // The live aura plugin initializes every creature after spawn.
     crate::auras::ensure_aura_components(app.world_mut(), creature);
