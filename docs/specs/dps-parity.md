@@ -206,7 +206,8 @@ Spec103 captures the native actor before setup and executes all74 pinned76f8118 
 
 Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
 
-- L90 follower, snapshot v3, map2813, 120 seconds, ten matched seeds and temporary enchants disabled, on tested candidate `ee3ea8e199`: native 31,559.9 DPS versus SimC 32,825.3; mean paired difference −3.60% ±5.31 pp (95% t interval). The point estimate meets the ±5% mean gate; the interval extends outside ±5%.
+- L70 follower, snapshot v3, map2515, 120 seconds, ten matched seeds and temporary enchants disabled, after the Frantic Momentum fix: native 4,649.2 DPS versus SimC 4,669.5; paired difference −0.37% ±3.69 pp (95% t interval). Both point estimate and interval meet ±5%. The independently checked logged Druid of the Claw condition-only reference gives the same results without hero talents.
+- L90 follower, snapshot v3, map2813 and the same seeds and settings, after the Frantic Momentum fix: native 29,068.4 DPS versus SimC 32,825.3; paired difference −11.20% ±5.11 pp. Both point estimate and interval are outside the ±5% mean gate. The earlier −3.60% ±5.31 pp included incorrectly permanent Frantic Momentum.
 
 ### Feral Thriving Growth
 
@@ -215,6 +216,10 @@ Actual owned Rip1079 and Rake155722 periodic damage feeds the selected439528 acc
 ### Feral Unseen attacks
 
 An actual landed primary Bite or Ravage with selected1263657 rolls its native chance per frozen effective combo point. The existing cast-resource context retains those points independently of payment; the readonly Bite accessor reads its retained extra-Energy fraction, not its Saber-amplified damage effectiveness. Select an actual enemy inside the talent's native range, and preserve the chosen recipient and native CP-fraction×extra-Energy factor through the pinned400–500ms delayed Unseen1263890 impact and native1271863 bleed. Selected1263658 earns native1263939 for its native duration times the retained points (`sc_druid.cpp2776–2804,4321–4327,4891–4977`). The Unseen bleed pays one actual damage event per scheduled dot tick, using native effect0's coefficient and period. The second native periodic row is not a second SimC dot clock (`action.cpp838–865`); do not compound both rows into duplicate damage. Other registered spender consumers retain their existing resource snapshots. Selected1263660 makes actual Tiger's Fury5217 grant native1263962 at its native maximum stacks. Each eligible ordinary Cat action consumes one stack through its native ICD and emits a guaranteed Unseen attack using maximum effective combo points and full extra-Energy fraction, without granting or spending either pool (`sc_druid.cpp3745–3749,4879,11313–11316`). Apply this once per cast, not once per AoE recipient or triggered child; Cat Form alone cannot grant the uses. Greater-than-three-target Swipe and live-versus-snapshotted Tiger's Fury on Unseen remain separately unqualified.
+
+### Feral Frantic Momentum
+
+Selected391875 rolls its native effect1 chance per effective combo point on actual Feral finishers, with the native proc cooldown. Builders and unrelated damage cannot grant391876 (`sc_druid.cpp3818–3844,11272–11276`).
 
 ### Feral Rip and Tear
 
@@ -239,8 +244,8 @@ Selected391881 grants native391882 only from an actual owned Rip tick. Its chanc
 - L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
 - Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
 - Landed primary Ferocious Bite or its Ravage replacement applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
-- Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`).
-- Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`).
+- Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`). Selected Aggravate Wounds441829 extends every existing owned wound by its native effect2 before each eligible Feral combo action, capped at its effect3 remaining duration, even if the action misses (`sc_druid.cpp2119–2146,3705,3765`).
+- Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`). Selected Claw Rampage441835 independently rolls its native effect1 chance on landed Shred and Cat Swipe impacts while Berserk or Incarnation is active, respecting its native ICD (`sc_druid.cpp2215–2255,4780–4786,4833–4835`).
 - Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, apply excess Energy only to the primary hit, and exclude that target from splash (`sc_druid.cpp4358–4401,4418–4450`).
 - [ ] Dreadful Wound's Tiger's Fury refresh retention is unqualified.
 
