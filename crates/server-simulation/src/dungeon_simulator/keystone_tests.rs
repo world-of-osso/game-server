@@ -153,6 +153,12 @@ fn same_seed_headless_keystones_produce_identical_records() {
         .expect("serialize keystone record")
     };
     let first = run();
+    assert_eq!(first["schedule_epoch"], schedule_epoch().unwrap());
+    let second = run();
+    assert_eq!(
+        first["affixes"], second["affixes"],
+        "same inputs changed affixes"
+    );
     assert!(
         first["outcome"]["forces"]
             .as_u64()
@@ -161,7 +167,7 @@ fn same_seed_headless_keystones_produce_identical_records() {
         first["outcome"]
     );
     assert!(
-        first == run(),
+        first == second,
         "same seed and inputs produced different records"
     );
 }

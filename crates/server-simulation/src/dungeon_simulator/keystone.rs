@@ -16,6 +16,19 @@ use super::graph::Graph;
 use super::keystone_record::{PartyMember, RunRecord, Tracker};
 use super::keystone_route::PlannedRoute;
 
+/// Fixed simulator epoch (2026-10-20 00:00 UTC), unless explicitly overridden.
+const DEFAULT_SCHEDULE_EPOCH: i64 = 1_792_454_400;
+
+pub(super) fn schedule_epoch() -> Result<i64, String> {
+    match std::env::var("KEYSTONE_SIMULATOR_SCHEDULE_EPOCH") {
+        Ok(value) => value
+            .parse()
+            .map_err(|error| format!("invalid schedule epoch: {error}")),
+        Err(std::env::VarError::NotPresent) => Ok(DEFAULT_SCHEDULE_EPOCH),
+        Err(error) => Err(format!("invalid schedule epoch: {error}")),
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct Options {
     pub map_id: u32,
@@ -162,6 +175,7 @@ pub(super) fn start(
         &crate::test_data::world_db_path(),
         party.owner,
         options.level,
+        schedule_epoch()?,
     )?;
     let target = session.font_position(app.world())?;
     app.world_mut()
@@ -337,6 +351,7 @@ impl State {
         Ok(RunRecord {
             schema_version: 1,
             seed,
+            schedule_epoch: Some(self.session.schedule_epoch()),
             requested_specs: options.specs,
             map_id: snapshot.map_id,
             challenge_id: Some(snapshot.key.challenge_id),
