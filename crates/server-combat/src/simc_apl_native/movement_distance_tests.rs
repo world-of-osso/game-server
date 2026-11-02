@@ -160,14 +160,16 @@ fn dungeon_movement_distance_distinguishes_pending_route_from_missing_destinatio
     );
     assert!(matches!(step, Step::Pending));
     world.insert_resource(navigation);
+    let pending = read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err();
     assert_eq!(
-        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err(),
-        DUNGEON_MOVEMENT_DESTINATION_PENDING
+        pending,
+        server::simc_apl::not_ready("DUNGEON_MOVEMENT_DESTINATION_PENDING")
     );
     world.resource_mut::<Navigation>().cancel_route(actor);
+    let missing = read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err();
     assert_eq!(
-        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err(),
-        "DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE"
+        missing,
+        server::simc_apl::not_ready("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")
     );
 }
 

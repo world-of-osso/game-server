@@ -162,7 +162,8 @@ TC a352b1fa `Player.cpp5334–5361` applies old/new haste rating through `ApplyC
 - [x] Owned `active_dot` counts use actual active native aura instances across that universe; foreign caster instances do not count. Unknown aliases fail.
 - [x] Fixture movement-event absence uses pinned no-event values; actual movement never invents a configured raid event. Dungeon timing remains explicitly unavailable.
 - [x] Fire Breath refresh decisions consume freshly resolved native empower-duration data and a sourced refresh policy, not raw child duration or current aura carry. Actual rank1 native20s versus raw3572092s refresh-window case is qualified.
-- [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE rather than inventing a timer.
+- [ ] Positive selected-target casting reaction requires a qualified native snapshot. Actual absence of CastState is known false; active casting stays NATIVE_CASTING_REACTION_UNAVAILABLE, not ready for that tick, rather than inventing a timer.
+- [x] A native fact the world cannot answer on the current tick (an unpublished route destination, movement without a navigation route, an active cast without a reaction snapshot) makes only the condition that reads it not ready for that tick. Lower rows still run and the follower APL is not stopped for the pull. Unknown operands, missing bindings and invalid data remain explicit errors.
 
 [Target-context API proof and exact remaining gaps](../handoffs/native-target-context-proof-ledger.md).
 

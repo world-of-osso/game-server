@@ -226,9 +226,15 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
             if world.get::<FollowerAplFailed>(unit).is_some() {
                 return;
             }
-            if let Err(error) = heal_recovery_target(world, unit, spec, target) {
-                error!(?unit, "follower recovery healing failed: {error}");
-                world.entity_mut(unit).insert(FollowerAplFailed);
+            match heal_recovery_target(world, unit, spec, target) {
+                Ok(()) => {}
+                Err(error) if server::simc_apl::is_not_ready(&error) => {
+                    debug!(?unit, "follower recovery healing waits one tick: {error}");
+                }
+                Err(error) => {
+                    error!(?unit, "follower recovery healing failed: {error}");
+                    world.entity_mut(unit).insert(FollowerAplFailed);
+                }
             }
         } else {
             world.entity_mut(unit).remove::<FollowerAplFailed>();
@@ -249,11 +255,8 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     };
     let result = apl.and_then(|mut apl| match apl.tick(world, unit, &targets) {
         Ok(()) => Ok(apl),
-        Err(error) if error == server::simc_apl_native::DUNGEON_MOVEMENT_DESTINATION_PENDING => {
-            debug!(
-                ?unit,
-                "follower APL waits for its pending navigation destination"
-            );
+        Err(error) if server::simc_apl::is_not_ready(&error) => {
+            debug!(?unit, "follower APL waits one tick: {error}");
             Ok(apl)
         }
         Err(error) => Err(error),
