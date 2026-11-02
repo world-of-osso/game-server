@@ -1619,6 +1619,43 @@ mod copy_tests {
     }
 
     #[test]
+    fn class_follower_boss_resurrection_consumes_keystone_charge() {
+        use shared::components::{CombatStatus, Health, Position};
+        let owner_position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(owner_position);
+        let corpse = *h.app.world().get::<Position>(target).unwrap();
+        let map = *h.app.world().get::<InMap>(caster).unwrap();
+        h.app.insert_resource(crate::maps::ServerClock {
+            offset_secs: 0,
+            fixed_unix: Some(1_791_705_600),
+        });
+        crate::mythic_plus::fixture_combat_res(h.app.world_mut(), map);
+        assert!(crate::scripted_ai::instance_script::set_boss_state(
+            h.app.world_mut(),
+            map,
+            0,
+            crate::scripted_ai::instance_script::EncounterState::InProgress
+        ));
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            corpse,
+            CombatStatus(true),
+        ));
+        super::super::release::update(h.app.world_mut());
+        h.advance(80);
+        assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
+        assert_eq!(
+            crate::mythic_plus::combat_res_available(h.app.world_mut(), map),
+            Some(false)
+        );
+    }
+
+    #[test]
     fn class_follower_offers_owner_resurrection() {
         use lightyear::prelude::{MessageReceiver, MessageSender};
         use shared::components::{Health, Position};

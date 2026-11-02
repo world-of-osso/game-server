@@ -71,13 +71,16 @@ fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> boo
         return false;
     };
     let members = members.to_vec();
-    if std::iter::once(owner)
+    let in_combat = std::iter::once(owner)
         .chain(members.iter().copied())
         .any(|member| {
             world
                 .get::<CombatStatus>(member)
                 .is_some_and(|status| status.0)
-        })
+        });
+    if in_combat
+        && (!crate::scripted_ai::instance_script::boss_in_progress(world, map)
+            || crate::mythic_plus::combat_res_available(world, map) == Some(false))
     {
         return false;
     }
@@ -100,9 +103,15 @@ fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> boo
                         store
                             .get(spell)
                             .filter(|info| {
-                                info.effects
-                                    .iter()
-                                    .any(crate::death::resurrection::is_resurrection)
+                                (!in_combat
+                                    || info
+                                        .misc
+                                        .as_ref()
+                                        .is_some_and(|misc| misc.attributes[0] & 0x1000_0000 == 0))
+                                    && info
+                                        .effects
+                                        .iter()
+                                        .any(crate::death::resurrection::is_resurrection)
                             })
                             .map(|_| (unit, spell))
                     })

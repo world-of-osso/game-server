@@ -512,6 +512,18 @@ pub(super) fn send_to_players<M: lightyear::prelude::Message + Clone>(
     }
 }
 
+pub(crate) fn boss_in_progress(world: &World, map: InMap) -> bool {
+    world
+        .get_resource::<InstanceScripts>()
+        .and_then(|scripts| scripts.0.get(&map))
+        .is_some_and(|script| {
+            script
+                .bosses
+                .iter()
+                .any(|boss| boss.state == EncounterState::InProgress)
+        })
+}
+
 /// A live instance boss, not an ordinary creature with a similar spell.
 pub(super) fn active_encounter_id(world: &World, map: InMap, unit: Entity) -> Option<u32> {
     let npc = world.get::<shared::components::Npc>(unit)?;

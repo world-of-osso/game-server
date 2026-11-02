@@ -24,6 +24,7 @@ pub(crate) struct PendingResurrection {
     health: f32,
     mana: f32,
     aura: u32,
+    combat_res: bool,
 }
 
 pub(crate) fn is_resurrection(effect: &SpellEffect) -> bool {
@@ -48,6 +49,11 @@ pub(crate) fn send_offer(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
     let Some(pending) = build_offer(world, ctx, effect, target) else {
         return;
     };
+    if pending.combat_res
+        && crate::mythic_plus::combat_res_available(world, pending.map) == Some(false)
+    {
+        return;
+    }
     let Some(connection) = connection(world, target) else {
         return;
     };
@@ -80,6 +86,9 @@ fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, 
     let Some(pending) = build_offer(world, ctx, effect, target) else {
         return;
     };
+    if pending.combat_res && !crate::mythic_plus::consume_combat_res(world, pending.map) {
+        return;
+    }
     if let Some(mut nav) = world.get_resource_mut::<crate::navigation::Navigation>() {
         nav.cancel_query(target, crate::navigation::Goal::FollowerRelease);
     }
@@ -150,6 +159,10 @@ fn build_offer(
         map,
         health,
         mana,
+        combat_res: world
+            .get::<shared::components::CombatStatus>(ctx.caster)
+            .is_some_and(|status| status.0)
+            || crate::scripted_ai::instance_script::boss_in_progress(world, map),
         aura: if effect.effect == EFFECT_RESURRECT_WITH_AURA {
             effect.trigger_spell
         } else {
@@ -205,6 +218,9 @@ pub(crate) fn respond(world: &mut World, player: Entity, response: ResurrectionR
         .get::<PlayerDeathState>(player)
         .is_some_and(|state| matches!(state.state, DeathState::Dead | DeathState::Ghost));
     if !dead || world.get::<InMap>(player) != Some(&pending.map) {
+        return;
+    }
+    if pending.combat_res && !crate::mythic_plus::consume_combat_res(world, pending.map) {
         return;
     }
     apply_resurrection(world, player, &pending);
