@@ -240,7 +240,7 @@ fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
     fn run(seed: u64) -> Vec<f32> {
         let _seed = crate::random::seed_scope(seed);
         let (mut h, targets, bindings) = enemies();
-        let target = targets[0];
+        let target = h.npc;
         let caster = h.caster;
         let mut delays = Vec::new();
         for spell in [1230298, 1253811] {
