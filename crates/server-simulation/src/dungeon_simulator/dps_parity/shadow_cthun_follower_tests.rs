@@ -27,16 +27,23 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
                 |aura| aura.spell_id == 377349 && aura.caster == actor,
             );
         }
-        crate::combat_refs::set_in_combat_with(app.world_mut(), actor, target);
+        let mut targets = vec![target];
         for i in 1..count {
-            let other = spawn_level_dummy(&mut app, actor, 70, i).unwrap();
-            crate::combat_refs::set_in_combat_with(app.world_mut(), actor, other);
+            targets.push(spawn_level_dummy(&mut app, actor, 70, i).unwrap());
         }
         app.world_mut()
             .entity_mut(actor)
             .insert(crate::networking::CombatTarget(Some(target)));
         let mut observed = Vec::new();
         for _ in 0..32 {
+            for &enemy in &targets {
+                let mut health = app
+                    .world_mut()
+                    .get_mut::<shared::components::Health>(enemy)
+                    .unwrap();
+                health.current = health.max;
+                crate::combat_refs::set_in_combat_with(app.world_mut(), actor, enemy);
+            }
             crate::spell_cast::powers::change_power(
                 app.world_mut(),
                 actor,
