@@ -15,7 +15,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::LateAuraRegistra
 fn register(scripts: &mut AuraScripts) {
     scripts.0.entry(MARK).or_default().on_natural_end = Some(begin_strikes);
     let strikes = scripts.0.entry(STRIKES).or_default();
-    strikes.on_apply = Some(initial_strike);
+    // Native 1289588 requests its first periodic tick on application.
     strikes.on_periodic = Some(periodic_strike);
 }
 
