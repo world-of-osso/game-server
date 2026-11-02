@@ -14,6 +14,7 @@ pub(crate) enum TransportKind {
     AzureBook,
     NalorakkPyre,
     Petalwing,
+    AltarDrop,
 }
 
 #[derive(Clone, Copy)]
@@ -209,6 +210,9 @@ pub(super) fn update(world: &mut World, unit: Entity, follower: &super::Follower
                     }
                     TransportKind::Petalwing => {
                         crate::npc_interaction::petalwing::traverse(world, unit, request.source)
+                    }
+                    TransportKind::AltarDrop => {
+                        crate::scripted_ai::altar_drop::traverse(world, unit, request.source)
                     }
                 };
                 if let Err(error) = result {

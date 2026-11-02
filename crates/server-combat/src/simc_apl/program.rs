@@ -306,7 +306,14 @@ impl Program {
                 // action.cpp4749–4763 switches lists without resuming this caller.
                 // player.cpp2467–2476 changes no child targets: the run's selector
                 // belongs only to that control row, not its child actions.
-                Body::Run(name) => return self.select_list(name, selection),
+                Body::Run(name) => {
+                    // During a channel priority scan SimC returns the run action itself;
+                    // it only switches to the child list when that action executes.
+                    if selection.stop_before.is_some() {
+                        return Ok(Some(action));
+                    }
+                    return self.select_list(name, selection);
+                }
                 Body::Action => return Ok(Some(action)),
             }
         }

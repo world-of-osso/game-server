@@ -13,6 +13,8 @@ table the server already reads. docs/specs/retail-world-content.md is the contra
 import json
 
 from content_common import clone_table
+from follower_summon_roots import gear_spell_roots
+from spell_child_audit import MANIFEST, read_manifest
 
 RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998, 727)
 # TrinityCore's DEFAULT_PHASE 169 is unphased (PhaseShift.h:31, PhasingHandler::InitDbPhaseShift):
@@ -373,8 +375,41 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     (444005, 444248), (444005, 444251), (444005, 444252), (444005, 444254),
 )
 CLASS_SUMMON_POLICY_VALUES = ','.join(f'({parent},{child})' for parent, child in CLASS_SUMMON_POLICY_CHILDREN)
+
+
+def declared_script_roots():
+    """Over-approximate reach: every declared script child is a closure root.
+
+    Runtime callbacks do not expose a static root-to-module mapping. Importing
+    all declarations is intentional; it does not prove a follower can reach them.
+    Native trigger sources are included as roots, and enchant sources are
+    expanded through the native spell-effect/enchantment tables below.
+    """
+    children, dynamic = read_manifest(MANIFEST)
+    roots = sorted({spell for spells in children.values() for spell in spells})
+    enchant_sources = sorted({spell for _, _, sources in dynamic.values() for spell in sources})
+    if not roots:
+        raise ValueError('script child declarations require roots')
+    return roots, enchant_sources
+
+
+CLASS_SCRIPT_ROOTS, CLASS_SCRIPT_ENCHANT_SOURCES = declared_script_roots()
+CLASS_SCRIPT_ROOT_VALUES = ','.join(f'({spell})' for spell in CLASS_SCRIPT_ROOTS)
+CLASS_SCRIPT_ENCHANT_VALUES = ','.join(str(spell) for spell in CLASS_SCRIPT_ENCHANT_SOURCES)
 CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (
     VALUES {CLASS_SUMMON_POLICY_VALUES}
+), script_roots(id) AS (
+    VALUES {CLASS_SCRIPT_ROOT_VALUES}
+), script_enchant_ids(id) AS (
+    SELECT EffectMiscValue_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=54
+      AND SpellID IN ({CLASS_SCRIPT_ENCHANT_VALUES}) AND EffectMiscValue_0>0
+), script_enchant_roots(id) AS (
+    SELECT e.EffectArg_0 FROM spell_item_enchantment e JOIN script_enchant_ids i ON i.id=e.ID
+      WHERE e.Effect_0=3 AND e.EffectArg_0>0
+    UNION SELECT e.EffectArg_1 FROM spell_item_enchantment e JOIN script_enchant_ids i ON i.id=e.ID
+      WHERE e.Effect_1=3 AND e.EffectArg_1>0
+    UNION SELECT e.EffectArg_2 FROM spell_item_enchantment e JOIN script_enchant_ids i ON i.id=e.ID
+      WHERE e.Effect_2=3 AND e.EffectArg_2>0
 ), class_line AS (
     SELECT l.ID, c.ID AS class_id FROM skill_line l JOIN chr_classes c
       ON c.Name_lang=l.DisplayName_lang WHERE l.CategoryID=7 AND c.ID BETWEEN 1 AND 13
@@ -393,6 +428,8 @@ CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (
       JOIN class_line l ON l.ID=t.SkillLineID
 ), reachable(id) AS (
     SELECT id FROM roots WHERE id>0
+    UNION SELECT id FROM script_roots
+    UNION SELECT id FROM script_enchant_roots
     UNION SELECT e.EffectTriggerSpell FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
       WHERE e.DifficultyID=0 AND e.EffectTriggerSpell>0
     UNION SELECT p.child FROM policy_links p JOIN reachable r ON r.id=p.parent
@@ -400,6 +437,13 @@ CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE policy_links(parent,child) AS (
 SELECT e.EffectMiscValue_0 FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
 WHERE e.DifficultyID=0 AND e.Effect IN (28,56) AND e.EffectMiscValue_0>0
 UNION SELECT entry FROM tdb_creature_template WHERE entry={FOLLOWER_HUNTER_PET_SIMC_DEFAULT}"""
+
+
+def follower_class_summon_entries(conn):
+    roots = sorted(set(CLASS_SCRIPT_ROOTS) | gear_spell_roots(conn))
+    values = ','.join(f'({spell})' for spell in roots)
+    return CLASS_SUMMON_ENTRIES.replace(
+        f'VALUES {CLASS_SCRIPT_ROOT_VALUES}', f'VALUES {values}', 1)
 
 
 def insert_tdb_templates(conn, entries, *, replace_legacy=False):
@@ -458,7 +502,7 @@ def build_templates(conn, report):
     insert_tdb_templates(conn, "SELECT id1 FROM content_creature WHERE guid IN (SELECT guid FROM temp.retail_spawn)")
     insert_tdb_templates(conn, TRANSFORM_ENTRIES)
     insert_tdb_templates(conn, TOY_SUMMON_ENTRIES)
-    insert_tdb_templates(conn, CLASS_SUMMON_ENTRIES)
+    insert_tdb_templates(conn, follower_class_summon_entries(conn))
     # Retail quest objectives count Retail kill credits (Player::KilledMonster credits the entry
     # and its KillCredit1/2): an AzerothCore template TrinityCore also has takes them.
     conn.execute("""UPDATE content_creature_template SET KillCredit1 = t.KillCredit1, KillCredit2 = t.KillCredit2

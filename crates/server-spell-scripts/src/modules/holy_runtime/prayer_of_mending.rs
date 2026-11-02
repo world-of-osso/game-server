@@ -145,5 +145,7 @@ fn read_target_priority(world: &World, unit: Entity) -> (bool, bool) {
         .is_none_or(|health| health.current >= health.max);
     // NPC static-flag4 treat-as-raid priority has no producer in this runtime;
     // that special NPC classification remains an explicitly unqualified case.
-    (full, world.get::<Player>(unit).is_none())
+    let party_actor = world.get::<Player>(unit).is_some()
+        || world.get::<combat::followers::Follower>(unit).is_some();
+    (full, !party_actor)
 }

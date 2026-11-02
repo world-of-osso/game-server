@@ -18,6 +18,7 @@
 use crate::random as rand;
 pub(crate) mod academy_transport;
 pub(crate) mod algethar_academy;
+pub(crate) mod altar_drop;
 mod anubzekt;
 pub(crate) mod azure_vault;
 mod azureblade;
@@ -161,6 +162,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPostUpdate, proximity_unlock::update)
             .add_systems(FixedPostUpdate, tagged_trash_intro::advance)
             .add_systems(FixedPostUpdate, proximity_immunity::update)
+            .add_systems(FixedPostUpdate, altar_drop::start_nearby)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
             .add_systems(
@@ -214,6 +216,7 @@ impl Plugin for ScriptedAiPlugin {
                         .after(waypoint_path::path_movement_system)
                         .before(update_creature_ai)
                         .before(crate::creature_ai::chase_system),
+                    altar_drop::advance.before(fall_movement::advance_falls),
                     fall_movement::advance_falls
                         .after(movement::point_movement_system)
                         .after(waypoint_path::path_movement_system)
