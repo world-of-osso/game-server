@@ -17,6 +17,29 @@ fn beacon_of_virtue_transfers_heals_between_marked_followers() {
         let mut health = party.app.world_mut().get_mut::<Health>(unit).unwrap();
         health.current = health.max / 2.0;
     }
+    let map = *party.app.world().get::<crate::maps::InMap>(healer).unwrap();
+    let faction = *party
+        .app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(healer)
+        .unwrap();
+    let pet = party
+        .app
+        .world_mut()
+        .spawn((
+            map,
+            position,
+            faction,
+            Health {
+                current: 500.0,
+                max: 1000.0,
+            },
+            crate::hunter_pet::HunterPet {
+                owner: healer,
+                slot: 0,
+            },
+        ))
+        .id();
     assert_eq!(
         crate::spell_cast::knowledge::resolve_actor_action(party.app.world(), healer, 53563)
             .unwrap(),
@@ -37,6 +60,14 @@ fn beacon_of_virtue_transfers_heals_between_marked_followers() {
             "Virtue must mark both followers"
         );
     }
+    assert!(
+        !party
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(pet)
+            .is_some_and(|auras| auras.iter().any(|aura| aura.spell_id == 200025)),
+        "Virtue must not mark a secondary pet"
+    );
     let cursor = party.app.world().resource::<ObservedCombatEvents>().0.len();
     crate::spell_cast::cast_triggered(party.app.world_mut(), healer, 19750, Some(ally), 1);
     for _ in 0..8 {

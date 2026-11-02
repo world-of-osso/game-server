@@ -110,6 +110,30 @@ pub(crate) fn replace_beacon(world: &mut World, unit: Entity, aura: &crate::aura
     }
 }
 
+/// 200025s2 selects four injured allies in addition to its explicit target.
+pub(super) fn filter_virtue_targets(
+    world: &World,
+    spell: &SpellInfo,
+    primary: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
+    let extra = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Beacon of Virtue requires its target count")
+        .base_points as usize;
+    units.retain(|&unit| {
+        Some(unit) == primary
+            || (!crate::spell_cast::targets::is_non_follower_summon(world, unit)
+                && world
+                    .get::<shared::components::Health>(unit)
+                    .is_some_and(|health| health.current < health.max))
+    });
+    let primary_count = usize::from(primary.is_some_and(|target| units.contains(&target)));
+    units.truncate(extra + primary_count);
+}
+
 fn same_group(world: &World, a: Entity, b: Entity) -> bool {
     let (Some(a), Some(b), Some(groups)) = (
         crate::spell_cast::targets::raid_member_id(world, a),
