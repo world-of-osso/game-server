@@ -78,7 +78,7 @@ These are **scenario-specific estimates, not a general tank ranking**. The DTPS 
 | Rank | Level 70 tank | Expected native DTPS ± 95% CI | Qualification |
 |---:|---|---:|---|
 | 1 | [Protection Paladin 66](healer-tank-replay/66.md) | 72,862 ± 3,889 | Native/reference difference +4.11 ± 2.59 pp; interval crosses ±5%. |
-| 2* | [Protection Warrior 73](healer-tank-replay/73.md) | 73,803 ± 4,221 | Proxy only: native per-swing avoidance has not been matched to the reference; adjusted reference uses logged-keystone APL. |
+| 2 | [Protection Warrior 73](healer-tank-replay/73.md) | 73,737 ± 4,367 | Each side's own per-swing avoidance; adjusted reference uses logged-keystone APL and omits Focused Vigor's DB2 Strength effect. |
 | 3 | [Brewmaster 268](healer-tank-replay/268.md) | 74,253 ± 4,561 | Pre-Stagger expectation; keeps native Treemouth self-damage. |
 | 4 | [Vengeance 581](healer-tank-replay/581.md) | 75,897 ± 1,057 | Reference needs retail-supported armor correction; corrected delta +0.91 ± 2.19 pp. |
 | 5 | [Guardian 104](healer-tank-replay/104.md) | 88,526 ± 3,531 | WCL/DB2-adjusted reference; delta +3.03 ± 2.61 pp crosses ±5%. |
@@ -87,7 +87,7 @@ These are **scenario-specific estimates, not a general tank ranking**. The DTPS 
 | Rank | Level 90 tank | Expected native DTPS ± 95% CI | Qualification |
 |---:|---|---:|---|
 | 1 | [Brewmaster 268](healer-tank-replay/268.md) | 53,426 ± 1,768 | Pre-Stagger expectation; its normalization differs from other rows. |
-| 2* | [Protection Warrior 73](healer-tank-replay/73.md) | 68,398 ± 1,820 | Proxy only: native per-swing avoidance has not been matched to the reference; proxy delta −5.52 ± 5.31 pp. |
+| 2 | [Protection Warrior 73](healer-tank-replay/73.md) | 68,904 ± 1,959 | Each side's own per-swing avoidance; adjusted-reference delta −4.83 ± 5.52 pp. |
 | 3 | [Guardian 104](healer-tank-replay/104.md) | 69,749 ± 2,462 | WCL/DB2-adjusted reference; expected delta +0.36 ± 2.07 pp. |
 | 4 | [Protection Paladin 66](healer-tank-replay/66.md) | 73,976 ± 1,080 | Solo reference; delta −3.91 ± 2.34 pp crosses ±5%. |
 | 5 | [Vengeance 581](healer-tank-replay/581.md) | 75,058 ± 2,570 | Retail-armor-adjusted delta +4.29 ± 5.59 pp crosses ±5%. |
@@ -95,7 +95,7 @@ These are **scenario-specific estimates, not a general tank ranking**. The DTPS 
 
 The comparison-only reference adjustments are **INFERRED**: Guardian uses the WCL/DB2 absorb evidence in [104](healer-tank-replay/104.md); Warrior uses the DB2 and WCL charge/armor evidence in [73](healer-tank-replay/73.md); Brewmaster applies DB2 Calming Presence as described in [268](healer-tank-replay/268.md); Vengeance re-mitigates with DB2 and WCL armor evidence in [581](healer-tank-replay/581.md). Retire each adjustment when the pinned SimC reference reproduces the corresponding retail behavior, or revise it if stronger retail evidence contradicts it. None is a native data override.
 
-For 104, 250 and 73, expected DTPS and intervals above were calculated from the ten original paired receipts by scaling each side's landed swing damage by expected/observed landed swings, preserving other damage. This reproduces the documented 104 and 250 expected deltas; the first ten level-90 Blood seeds give +1.51 ± 1.81 pp rather than the 30-seed result. *Warrior's position is provisional: its reference parry chance varies over the fight, and native per-swing chances have not been demonstrated equal. Applying the reference probabilities to both sides is therefore only a proxy; blocks and absorbs also interact with swing outcomes. It cannot establish Warrior's expected-avoidance rank or parity. The 268 pre-Stagger calculation changes incoming swings before mitigation and shields. Receipts: `game-engine/data/diagnostics/tank-fightremains-v3-2026-11-01/`, `tank-notemp-v3-2026-11-01/`, `prot-warrior-parity-2026-11-01/`, `tank-parity-brm-prot-2026-11-01/` and `vdh-parity-2026-10-31/`. Analysis: `/home/osso/.worktrees/logs/tank-104-581-estimates.py`.
+For 104, 250 and 73, expected DTPS and intervals above scale each side's landed swing damage by expected/observed landed swings, preserving other damage. The first ten level-90 Blood seeds give +1.51 ± 1.81 pp rather than the documented 30-seed result. Warrior uses each side's own measured per-swing probabilities, which are not identical; its post-absorb rescaling remains approximate because block, shield depletion and procs can correlate with avoidance. The 268 pre-Stagger calculation changes incoming swings before mitigation and shields. Receipts: `game-engine/data/diagnostics/tank-fightremains-v3-2026-11-01/`, `tank-notemp-v3-2026-11-01/`, `prot-warrior-parity-2026-11-01/`, `tank-parity-brm-prot-2026-11-01/` and `vdh-parity-2026-10-31/`. Analyses: `/home/osso/.worktrees/logs/tank-104-581-estimates.py` and `/home/osso/.worktrees/tank-73-parry-evidence/analyze.py`.
 
 **Survival is a separate measurement.** The following is a mixed-tree, ten-seed, level-90 no-healer 300-second pressure grid, not the DTPS test. The 0.25-step scale is the last step before fewer than five survivors, as defined above. The interval shown is a 95% Wilson interval for survival probability at that single selected step, **not a confidence interval for the survival scale or rank**; selection and sparse seeds make the scale uncertain.
 
