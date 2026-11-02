@@ -52,3 +52,7 @@ The current extraction has 266 encounter pulls, including 253 successful pulls. 
 ## Encounter actors duplicated by later placements — 2026-10-29
 
 The live Ruby run had two Erkhart Stormvein 190485 spawns. The importer added the logged Erkhart while the journal placeholder 63521000 was 12 yards away, outside its 10-yard match radius; `ruby_population.py` later moved the placeholder 1.8 yards from that row. `retire_encounter_duplicates` deletes a log-derived row of a `raid_encounter_creature` entry that lies within 10 yards of another spawn of the same entry on the same map. On the canonical database it retired Ruby 3276416184 (applied first) and map 2813 234649 row 3276416398 (7.5 yards). Five other encounter observations remain because they are 15–37 yards from their placements: map 1762 135322, 2923 239008 and three 2993 259445 rows.
+
+## One spawn imported once per run — 2026-11-02
+
+Each combat-log run gives an observed spawn its own source key, and `match_existing` compares a batch only with rows present before it, so one spawn seen in two runs was imported twice. Altar of Fangs (2993) had four such pairs: identical entry, position, height and facing, observed under different instance IDs (262011 3276417196/199; 264798 3276417203/206 and 3276417204/208; 272104 3276417214/215). `retire_cross_run_duplicates` groups log-derived rows by map, entry and exact position/facing, keeps the run that observed the most units there and deletes the rest, so units stacked within one run stay distinct. The importer runs it after encounter retirement.

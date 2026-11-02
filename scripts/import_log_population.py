@@ -242,6 +242,35 @@ def retire_encounter_duplicates(db, logs=LOG_ARCHIVE, maps=None):
     return retired
 
 
+def retire_cross_run_duplicates(db, maps=None):
+    """Keep one run's rows at each identical log-derived spawn point.
+
+    Separate runs observe the same spawn at the same position and facing; each
+    run imports it under a distinct source key.
+    """
+    groups = defaultdict(lambda: defaultdict(list))
+    rows = db.execute('''SELECT c.guid,c.map,c.id1,c.position_x,c.position_y,c.position_z,c.orientation,
+            p.observation_json FROM content_creature c JOIN log_derived_population p ON p.guid=c.guid
+        WHERE c.Comment=? ORDER BY c.guid''', (POLICY,)).fetchall()
+    for guid, map_id, entry, x, y, z, facing, observation in rows:
+        if maps is not None and map_id not in maps:
+            continue
+        record = json.loads(observation)
+        run = (record.get('source_file'), record.get('source_run_start'))
+        groups[(map_id, entry, x, y, z, facing)][run].append(guid)
+    retired = []
+    for (map_id, entry, *_), runs in sorted(groups.items()):
+        kept = min(runs.values(), key=lambda guids: (-len(guids), guids[0]))
+        for guids in runs.values():
+            if guids is kept:
+                continue
+            for guid in guids:
+                db.execute('DELETE FROM content_creature WHERE guid=?', (guid,))
+                db.execute('DELETE FROM log_derived_population WHERE guid=?', (guid,))
+                retired.append((map_id, entry, guid))
+    return sorted(retired)
+
+
 def import_population(destination, records, radius=10.0, logs=LOG_ARCHIVE):
     destination = validate_copy(destination)
     report = defaultdict(lambda: {'imported': 0, 'already_present': 0, 'gaps': [], 'templates_from_tdb': set(), 'templates_absent': set()})
@@ -313,6 +342,7 @@ def import_population(destination, records, radius=10.0, logs=LOG_ARCHIVE):
             result['gaps'].append({'source_key': source_key, 'reason': 'PATROL_UNOBSERVED'})
             next_guid += 1
         retire_encounter_duplicates(db, logs, maps={int(record['map']) for record in records})
+        retire_cross_run_duplicates(db, maps={int(record['map']) for record in records})
     for value in report.values():
         value['templates_from_tdb'] = sorted(value['templates_from_tdb'])
         value['templates_absent'] = sorted(value['templates_absent'])
