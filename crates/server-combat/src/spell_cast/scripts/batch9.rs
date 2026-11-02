@@ -62,6 +62,9 @@ pub(super) struct GroundPulses {
     depth: u8,
 }
 
+#[derive(Component)]
+struct SurgingRainTotem(Entity);
+
 struct SourcedPulse {
     root: u32,
     child: u32,
@@ -254,6 +257,42 @@ fn spawn_ground_pulses(
             cast_ground_pulse(world, entity, &pulses);
         }
     }
+}
+
+pub(in crate::spell_cast) fn spawn_surging_rain(world: &mut World, ctx: &EffectCtx, totem: Entity) {
+    let center = ctx.dest.expect("Surging Totem requires a destination");
+    let rain = world
+        .resource::<SpellStore>()
+        .get(HEALING_RAIN)
+        .expect("Surging Totem requires Healing Rain")
+        .clone();
+    let rain_ctx = EffectCtx {
+        spell: &rain,
+        ..*ctx
+    };
+    let mut pulses = read_ground_pulses(world, &rain_ctx);
+    pulses.expires_at = crate::auras::aura_now(world)
+        + f64::from(spell_cast::duration_ms(world, ctx.caster, ctx.spell)) / 1000.0;
+    replace_owned_field(world, ctx.caster, HEALING_RAIN);
+    let map = *world
+        .get::<crate::maps::InMap>(ctx.caster)
+        .expect("totem owner map");
+    let field = world
+        .spawn((
+            pulses.clone(),
+            SurgingRainTotem(totem),
+            shared::components::Position {
+                x: center.position.x,
+                y: center.position.y,
+                z: center.position.z,
+            },
+            map,
+        ))
+        .id();
+    // INFERRED: WCL cqFgBM3zTvVrRa6j f35 a280 commonly has two 73921
+    // heals per target at 444995 casts. Retire on an authoritative pulse model.
+    cast_ground_pulse(world, field, &pulses);
+    cast_ground_pulse(world, field, &pulses);
 }
 
 fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
@@ -605,7 +644,10 @@ fn update_ground_pulse(world: &mut World, entity: Entity) {
     let now = crate::auras::aura_now(world);
     let same_map =
         world.get::<crate::maps::InMap>(pulses.caster) == world.get::<crate::maps::InMap>(entity);
-    if !targets::is_alive(world, pulses.caster) || !same_map {
+    let totem_alive = world
+        .get::<SurgingRainTotem>(entity)
+        .is_none_or(|totem| targets::is_alive(world, totem.0));
+    if !targets::is_alive(world, pulses.caster) || !same_map || !totem_alive {
         clear_consecration_targets(world, entity, pulses.caster);
         world.entity_mut(entity).despawn();
         return;
@@ -639,9 +681,18 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
     );
     if pulses.cap > 0 {
         units.retain(|&unit| {
-            world
-                .get::<Health>(unit)
-                .is_some_and(|health| health.current < health.max)
+            let eligible_rain_target = pulses.root != HEALING_RAIN
+                || (world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
+                    && world
+                        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+                        .is_none()
+                    && (world.get::<crate::followers::Follower>(unit).is_some()
+                        || world.get::<crate::zones::TempSummon>(unit).is_none()));
+            eligible_rain_target
+                && (world.get::<SurgingRainTotem>(entity).is_some()
+                    || world
+                        .get::<Health>(unit)
+                        .is_some_and(|health| health.current < health.max))
         });
         units.truncate(pulses.cap);
     }
