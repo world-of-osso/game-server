@@ -15,7 +15,6 @@ const GALVAZZT: u32 = 263658;
 const GUST: u32 = 1288457;
 const GALE_FORCE: u32 = 1289062;
 const TEMPEST_WINDS: u32 = 1288864;
-const THUNDER_LIGHTNING: u32 = 1288087;
 const OVERLOAD: u32 = 1288428;
 const LIGHTNING_BITE: u32 = 1290797;
 const KNOT_OF_SNAKES: u32 = 1290031;
@@ -57,8 +56,8 @@ impl BossScript for TempleBoss {
                 self.boss.events.repeat(3_640);
             }
             LIGHTNING_BITE => ctx.do_cast_victim(spell),
-            GALE_FORCE | TEMPEST_WINDS | THUNDER_LIGHTNING | OVERLOAD | KNOT_OF_SNAKES
-            | THUNDER_SPIT | SERPENTSTORM => ctx.do_cast_self(spell),
+            GALE_FORCE | TEMPEST_WINDS | OVERLOAD | KNOT_OF_SNAKES | THUNDER_SPIT
+            | SERPENTSTORM => ctx.do_cast_self(spell),
             INDUCTION => {
                 ctx.do_cast_self(spell);
                 self.boss.events.repeat(23_100);
@@ -75,7 +74,7 @@ impl CreatureAi for TempleBoss {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         let schedule: &[(u32, u64)] = match self.entry {
-            ADDERIS => &[(THUNDER_LIGHTNING, 9_470), (OVERLOAD, 43_440)],
+            ADDERIS => &[(OVERLOAD, 43_440)],
             ASPIX => &[(GUST, 2_170), (GALE_FORCE, 5_820), (TEMPEST_WINDS, 30_090)],
             MEREKTHA => &[
                 (LIGHTNING_BITE, 5_017),
