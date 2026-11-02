@@ -1635,6 +1635,14 @@ fn find_master(world: &World, caster: Entity) -> Option<Entity> {
     same_map(world, caster, owner).then_some(owner)
 }
 
+/// Class followers are party actors even though they carry summon components.
+pub fn is_non_follower_summon(world: &World, unit: Entity) -> bool {
+    world.get::<crate::followers::Follower>(unit).is_none()
+        && (world.get::<crate::hunter_pet::HunterPet>(unit).is_some()
+            || world.get::<super::summon::SummonedCreature>(unit).is_some()
+            || world.get::<crate::zones::TempSummon>(unit).is_some())
+}
+
 /// TC Spell.cpp:1760–1763: only a TempSummon supplies UNIT_SUMMONER.
 fn find_summoner(world: &World, caster: Entity) -> Option<Entity> {
     let summoner = world.get::<super::summon::SummonedCreature>(caster)?.owner;
