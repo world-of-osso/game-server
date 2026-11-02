@@ -122,7 +122,7 @@ Evidence under `/home/osso/.worktrees/murderrow-walk-run/`: `server16.log` conta
 
 On map 1762, the Council uses the TC entries Kula 135475, Aka'ali 135470 and Zanazal 135472. Journal 2170 links their displays to encounter 2140, bit 1. WCL `2L8BJvP1XcbtQ4jd/1/13` shows the corresponding Retail entries taking damage in that order, with successful encounter completion after the third. The first actor is active and later actors are dormant; lethal damage leaves each actor alive and activates the next. Only the third transition grants encounter credit. This cross-entry lifecycle is inferred from matching Journal displays and the log; exact Retail phase triggers are not established. On evade, restore all three and restart at Kula; this immediate wipe policy is inferred.
 
-Follower graph extraction orders multi-actor encounters by sourced activation order for the requested map and difficulty. It fails when that order is missing or does not match the bound actors. The Council sequence is sourced for difficulty 8; other difficulties and multi-actor encounters require their own evidence.
+Follower graph extraction orders sequential multi-actor encounters by sourced activation order. Simultaneous encounters retain their existing actor order without assigning that order to activation; M+ first-hit evidence is applied as an inferred policy across difficulties. Uldaman's Lost Dwarves and Brackenhide's War-Band retain `UNSOURCED_LEGACY` order with a warning because sampled WCL reports are archived; retire that policy when evidence is available. Extraction fails when an encounter has no policy or its bound actors differ from the policy.
 
 ## Living encounter completion
 

@@ -66,7 +66,7 @@ pub(super) fn read_source(
         FROM dungeon_encounter d LEFT JOIN raid_encounter_creature b
           ON b.encounter_id=d.ID AND b.map_id=d.MapID AND b.bit=d.Bit
         WHERE d.MapID=?1 AND (d.DifficultyID<=0 OR d.DifficultyID=?2)
-        ORDER BY d.OrderIndex, d.ID",
+        ORDER BY d.OrderIndex, d.ID, b.creature_entry",
         )
         .map_err(|error| format!("map{map} encounter definitions: {error}"))?;
     let rows = query
@@ -121,57 +121,72 @@ fn order_encounter_members(
                 .count();
         let members = &mut bosses[start..end];
         if members.len() > 1 {
-            let sequence = activation_sequence(map, encounter, difficulty)?;
-            if sequence.len() != members.len()
+            let (mode, entries) = activation_policy(map, encounter, difficulty)?;
+            if entries.len() != members.len()
                 || members
                     .iter()
-                    .any(|member| sequence.iter().filter(|entry| **entry == member.2).count() != 1)
+                    .any(|member| entries.iter().filter(|entry| **entry == member.2).count() != 1)
             {
                 return Err(format!(
-                    "map{map} encounter{encounter} difficulty{difficulty} activation sequence does not match bindings"
+                    "map{map} encounter{encounter} difficulty{difficulty} activation policy does not match bindings"
                 ));
             }
-            members.sort_by_key(|member| {
-                sequence
-                    .iter()
-                    .position(|entry| *entry == member.2)
-                    .unwrap()
-            });
+            match mode {
+                "sequential" => members.sort_by_key(|member| {
+                    entries.iter().position(|entry| *entry == member.2).unwrap()
+                }),
+                "simultaneous" => (),
+                "UNSOURCED_LEGACY" => eprintln!(
+                    "warning: map{map} encounter{encounter} uses UNSOURCED_LEGACY actor order; retire when WCL evidence is available"
+                ),
+                _ => return Err(format!("invalid activation mode {mode}")),
+            }
         }
         start = end;
     }
     Ok(())
 }
 
-fn activation_sequence(map: u32, encounter: u32, difficulty: u32) -> Result<Vec<u32>, String> {
+fn activation_policy(
+    map: u32,
+    encounter: u32,
+    difficulty: u32,
+) -> Result<(&'static str, Vec<u32>), String> {
     let mut found = None;
     for line in include_str!("activation_order.csv")
         .lines()
         .filter(|line| !line.starts_with('#') && !line.is_empty())
     {
-        let values = line
-            .split(',')
+        let mut fields = line.split(',');
+        let mut number = || {
+            fields
+                .next()
+                .ok_or("missing activation field")?
+                .parse::<u32>()
+                .map_err(|_| "invalid activation number")
+        };
+        let source_map = number()?;
+        let source_encounter = number()?;
+        let source_difficulty = number()?;
+        let mode = fields.next().ok_or("missing activation mode")?;
+        let entries = fields
             .map(str::parse::<u32>)
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| format!("invalid encounter activation sequence: {error}"))?;
-        let [
-            source_map,
-            source_encounter,
-            source_difficulty,
-            entries @ ..,
-        ] = values.as_slice()
-        else {
-            return Err("invalid encounter activation sequence row".into());
-        };
-        if (*source_map, *source_encounter, *source_difficulty) == (map, encounter, difficulty) {
-            if found.replace(entries.to_vec()).is_some() {
+            .map_err(|error| format!("invalid activation actor: {error}"))?;
+        if source_map == map
+            && source_encounter == encounter
+            && (source_difficulty == 0 || source_difficulty == difficulty)
+        {
+            if found.replace((mode, entries)).is_some() {
                 return Err(format!(
-                    "duplicate activation sequence for map{map} encounter{encounter} difficulty{difficulty}"
+                    "duplicate activation policy for map{map} encounter{encounter} difficulty{difficulty}"
                 ));
             }
         }
     }
-    found.ok_or_else(|| format!("map{map} encounter{encounter} difficulty{difficulty} missing sourced activation sequence"))
+    found.ok_or_else(|| {
+        format!("map{map} encounter{encounter} difficulty{difficulty} missing activation policy")
+    })
 }
 
 #[test]
@@ -201,7 +216,7 @@ fn source_uses_sourced_council_activation_order() {
     assert!(
         read_source(&db, 1762, Some(8))
             .unwrap_err()
-            .contains("activation sequence does not match bindings")
+            .contains("activation policy does not match bindings")
     );
     db.execute("UPDATE dungeon_encounter SET ID=9999 WHERE ID=2140", [])
         .unwrap();
@@ -213,7 +228,32 @@ fn source_uses_sourced_council_activation_order() {
     assert!(
         read_source(&db, 1762, Some(8))
             .unwrap_err()
-            .contains("missing sourced activation sequence")
+            .contains("missing activation policy")
+    );
+}
+
+#[test]
+fn source_preserves_simultaneous_and_named_legacy_encounters() {
+    let db = Connection::open_in_memory().unwrap();
+    db.execute_batch(
+        "CREATE TABLE map_difficulty(MapID INTEGER, DifficultyID INTEGER);
+         CREATE TABLE tdb_world_safe_locs(ID INTEGER, MapID INTEGER, LocX REAL, LocY REAL, LocZ REAL, Comment TEXT);
+         CREATE TABLE content_creature(map INTEGER);
+         CREATE TABLE raid_encounter_creature(map_id INTEGER, bit INTEGER, creature_entry INTEGER, encounter_id INTEGER);
+         CREATE TABLE dungeon_encounter(ID INTEGER, MapID INTEGER, DifficultyID INTEGER, Bit INTEGER, OrderIndex INTEGER, Name_lang TEXT);
+         INSERT INTO map_difficulty VALUES(2521,8),(2451,8);
+         INSERT INTO tdb_world_safe_locs VALUES(1,2521,10,20,30,'Entrance'),(2,2451,10,20,30,'Entrance');
+         INSERT INTO content_creature VALUES(2521),(2451);
+         INSERT INTO dungeon_encounter VALUES(2623,2521,0,2,0,'Kyrakka and Erkhart'),(2555,2451,0,0,0,'Lost Dwarves');
+         INSERT INTO raid_encounter_creature VALUES(2521,2,190485,2623),(2521,2,190484,2623),(2451,0,184582,2555),(2451,0,184580,2555),(2451,0,184581,2555);",
+    ).unwrap();
+    assert_eq!(
+        read_source(&db, 2521, Some(8)).unwrap().bosses,
+        [(2, 190484), (2, 190485)]
+    );
+    assert_eq!(
+        read_source(&db, 2451, Some(8)).unwrap().bosses,
+        [(0, 184580), (0, 184581), (0, 184582)]
     );
 }
 
