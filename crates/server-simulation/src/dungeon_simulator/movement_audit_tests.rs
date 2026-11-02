@@ -33,6 +33,8 @@ fn populated_pack_movement_matches_detour() {
         .collect();
     let mut compared = 0_u64;
     let mut both_unreachable = 0_u64;
+    let mut both_unprojectable = 0_u64;
+    let mut native_errors = Vec::new();
     let mut same_position = 0_u64;
     let mut mismatches = Vec::new();
     let mut max_error = 0.0_f32;
@@ -80,12 +82,14 @@ fn populated_pack_movement_matches_detour() {
                         mismatches.push(json!({"from": a.id, "to": b.id, "mover_yards": actual_yards, "detour_yards": expected_yards, "corners_match": corners_match}));
                     }
                 }
-                (Err(_), Err(_)) => both_unreachable += 1,
+                (Err(_), Err(error)) if error.starts_with("unreachable target") => both_unreachable += 1,
+                (Err(_), Err(error)) if error.starts_with("no walkable polygon") => both_unprojectable += 1,
+                (Err(_), Err(error)) => native_errors.push(json!({"from": a.id, "to": b.id, "error": error})),
                 (actual, expected) => mismatches.push(json!({"from": a.id, "to": b.id, "mover": format!("{actual:?}"), "detour": format!("{expected:?}")})),
             }
         }
     }
-    let summary = json!({"map": graph.map_id, "scope": "ordered populated-pack pairs", "packs": packs.len(), "compared": compared, "both_unreachable": both_unreachable, "same_position": same_position, "max_abs_error_yards": max_error, "mismatches": mismatches});
+    let summary = json!({"map": graph.map_id, "scope": "ordered populated-pack pairs", "packs": packs.len(), "compared": compared, "both_unreachable": both_unreachable, "both_unprojectable": both_unprojectable, "native_errors": native_errors, "same_position": same_position, "max_abs_error_yards": max_error, "mismatches": mismatches});
     let output = std::env::var_os("MOVEMENT_AUDIT_OUTPUT").expect("audit output path");
     std::fs::write(output, serde_json::to_vec_pretty(&summary).unwrap()).unwrap();
     assert_eq!(
