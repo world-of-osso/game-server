@@ -1,6 +1,59 @@
 use super::*;
 
 #[test]
+fn temple_pair_engages_together_and_completes_only_after_both_die() {
+    let (mut h, adderis, map) = bound_boss_at_difficulty(262530, 1877, 0, 8, None);
+    let inputs = prepared_inputs::encounter_inputs(262822, 1877, false);
+    let template = crate::test_data::world_data()
+        .templates
+        .get(&262822)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .resource_mut::<WorldData>()
+        .templates
+        .insert(262822, template);
+    let (aspix, _) = spawn_prepared_actor(&mut h.app, inputs.authored_spawn(8), map, 8);
+    h.advance(0.1);
+    h.engage(adderis);
+    h.advance(0.1);
+    let player = h.player();
+    for boss in [adderis, aspix] {
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::ThreatTable>(boss)
+                .is_some_and(|threat| threat
+                    .entries()
+                    .iter()
+                    .any(|entry| entry.entity == player.to_bits())),
+            "both bosses must enter the player's combat"
+        );
+    }
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, adderis, 1_000_000_000.0);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & 1,
+        0,
+        "the first death must not complete the pair"
+    );
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, aspix, 1_000_000_000.0);
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map)
+            & 1,
+        1,
+        "the second death completes the pair"
+    );
+}
+
+#[test]
 fn temple_keystone_bosses_cast_observed_openers() {
     for (entry, bit, spell, elapsed) in [
         (262822, 0, 1288457, 5.0),

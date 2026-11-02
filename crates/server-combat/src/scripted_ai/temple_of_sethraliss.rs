@@ -42,6 +42,25 @@ struct TempleBoss {
     boss: BossAi,
 }
 
+fn engage_partner(ctx: &mut Ctx, entry: u32) {
+    let partner = match entry {
+        ADDERIS => ASPIX,
+        ASPIX => ADDERIS,
+        _ => return,
+    };
+    let Some(map) = ctx.map() else { return };
+    let actor = ctx
+        .world
+        .query::<(Entity, &Npc, &crate::maps::InMap)>()
+        .iter(ctx.world)
+        .find_map(|(entity, npc, copy)| {
+            (*copy == map && npc.template_id == partner).then_some(entity)
+        });
+    if let Some(actor) = actor {
+        ctx.do_zone_in_combat(actor);
+    }
+}
+
 impl BossScript for TempleBoss {
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss
@@ -73,6 +92,8 @@ impl CreatureAi for TempleBoss {
     }
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        // Both bosses cast during the same WCL encounter pulls (sources above).
+        engage_partner(ctx, self.entry);
         let schedule: &[(u32, u64)] = match self.entry {
             ADDERIS => &[(OVERLOAD, 43_440)],
             ASPIX => &[(GUST, 2_170), (GALE_FORCE, 5_820), (TEMPEST_WINDS, 30_090)],
