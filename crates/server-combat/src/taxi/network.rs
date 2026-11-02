@@ -267,7 +267,7 @@ pub(crate) fn load_taxi_network(conn: &Connection) -> rusqlite::Result<TaxiNetwo
     let scripted_paths = points
         .into_iter()
         .filter_map(|(id, points)| {
-            ([9458, 11715].contains(&id)
+            ([9458, 11715, crate::npc_interaction::petalwing::PATH].contains(&id)
                 || crate::scripted_ai::dungeon_passage::PASSAGES
                     .iter()
                     .any(|passage| matches!(passage.kind, crate::scripted_ai::dungeon_passage::PassageKind::Taxi(path) if path == id)))
