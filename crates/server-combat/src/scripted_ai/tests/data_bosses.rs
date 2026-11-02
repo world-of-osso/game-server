@@ -746,6 +746,8 @@ fn mythic_follower_reconnect_keeps_copy_and_running_timer() {
     let definition = ::server::mythic_plus_catalog::load_azure(&db)
         .unwrap()
         .unwrap();
+    h.app
+        .insert_resource(crate::item_proc_data::load(&db).unwrap());
     let _weeks = crate::mythic_plus::fixture::start(
         h.app.world_mut(),
         connection,
