@@ -26,8 +26,8 @@ fn feral_follower_factor_capture_survives_tear_ticks() {
     let factors: serde_json::Value = stdout
         .lines()
         .find_map(|line| {
-            line.strip_prefix("FOLLOWER_FACTORS ")
-                .map(|value| serde_json::from_str(value).unwrap())
+            line.split_once("FOLLOWER_FACTORS ")
+                .map(|(_, value)| serde_json::from_str(value).unwrap())
         })
         .expect("full factor capture");
     let events = factors["events"]
