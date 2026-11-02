@@ -1013,14 +1013,14 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 #### Shadow follower measurement
 
-On implementation `fc340da63f50b7f30ce5510501eef9625514945f`, binary SHA-256 `047bd043b44c8306ced21a1cfea80616650cf8fc823e72a6b1012c984d854fd0`, using the derived C'Thun v3 world snapshot, pinned SimC76f8118, disabled temporary enchants, and ten matched seeds (70448, 1–9) at 120 s:
+On implementation `9c5b92f1e6ac04a73c6c4159b20c9386ab65761d`, binary SHA-256 `a4662aac51cb3fccc34936203d7a54e0147530023f48e378241b9efe6d2cabb5`, using the derived v3 world snapshot with C'Thun and Voidwraith guardian templates (SHA-256 `92634456aeca465aa746e33104b963ff1f319406f404dddd90a483113ef379f4`), pinned SimC76f8118, disabled temporary enchants, and ten matched seeds (70448, 1–9) at 120 s:
 
 | Level | Native DPS | SimC DPS | Paired mean delta | 95% t interval |
 | --- | ---: | ---: | ---: | ---: |
 | 70 | 6,083.15 | 6,128.52 | −0.60% | [−4.10%, +2.91%] |
-| 90 | 31,869.94 | 35,558.88 | −10.34% | [−12.21%, −8.47%] |
+| 90 | 34,238.02 | 35,558.88 | −3.68% | [−5.34%, −2.02%] |
 
-The L70 point estimate is within ±5%; the L90 point estimate is outside that margin. These results supersede the pre-correction L90 +4.82% estimate.
+Both point estimates are within ±5%; the L90 interval crosses −5%, so equivalence within that margin is not established. These results supersede the pre-correction L90 +4.82% estimate.
 
 #### L90 Void Apparitions investigation
 
