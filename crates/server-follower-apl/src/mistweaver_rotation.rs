@@ -76,7 +76,9 @@ pub(crate) fn program() -> Result<Program, String> {
         ("soothing_setup", "soothing_mist"),
         ("priority_damage", "rising_sun_kick"),
         ("damage", "rising_sun_kick"),
-        ("damage", "spinning_crane_kick,if=active_enemies>=2"),
+        // INFERRED_WCL: six is the population-median SCK proximity and the
+        // first count where the actor-median SCK share exceeds the other fillers.
+        ("damage", "spinning_crane_kick,if=active_enemies>=6"),
         ("damage", "blackout_kick"),
         ("damage", "tiger_palm"),
     ])

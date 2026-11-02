@@ -796,54 +796,6 @@ fn mistweaver_prioritizes_rising_sun_kick_and_accumulates_mana_tea() {
 }
 
 #[test]
-#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn mistweaver_uses_spinning_crane_kick_only_against_a_pack() {
-    use crate::spell_cast::test_harness::ObservedCombatEvents;
-    use shared::components::Health;
-    use shared::protocol::CombatLogKind;
-    let mut run = super::healer_simc_replay::snapshot_party(270, 90, 2);
-    super::healer_simc_replay::engage(&mut run);
-    let (tank, healer) = (run.tank, run.healer);
-    let enemy = run.sources[0];
-    let add = run.sources[1];
-    run.app
-        .world_mut()
-        .entity_mut(tank)
-        .insert(crate::networking::CombatTarget(Some(enemy)));
-    run.app.world_mut().get_mut::<Health>(add).unwrap().current = 0.0;
-    for _ in 0..150 {
-        run.app.update();
-    }
-    assert!(
-        !run.app
-            .world()
-            .resource::<ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|e| e.source == Some(healer.to_bits())
-                && e.spell_id == Some(101546)
-                && e.kind == CombatLogKind::CastSuccess)
-    );
-    {
-        let mut hp = run.app.world_mut().get_mut::<Health>(add).unwrap();
-        hp.current = hp.max;
-    }
-    for _ in 0..250 {
-        run.app.update();
-    }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0;
-    let casts: Vec<_> = events
-        .iter()
-        .filter(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
-        .map(|e| e.spell_id)
-        .collect();
-    assert!(
-        casts.contains(&Some(101546)),
-        "Mistweaver must use Spinning Crane Kick against a pack"
-    );
-}
-
-#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn mistweaver_uses_sheilun_on_party_damage() {
     let trace = std::env::var("HEALER_TANK_SIMC_TRACE").expect("HEALER_TANK_SIMC_TRACE required");
