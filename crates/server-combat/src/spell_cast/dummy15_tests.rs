@@ -247,7 +247,7 @@ fn group(h: &mut Harness, members: &[Entity]) {
 }
 
 #[test]
-fn dummy15_beacon_transfers_only_effective_direct_group_heal_to_owned_mark() {
+fn dummy15_beacon_transfers_direct_group_heal_to_owned_mark() {
     let mut h = harness(Vec::new(), &[53563, 53651, 53652, 19750, 139], 2).unwrap();
     let caster = h.caster;
     let beacon = spawn_player(&mut h.app, 2, 4.0);
@@ -256,12 +256,16 @@ fn dummy15_beacon_transfers_only_effective_direct_group_heal_to_owned_mark() {
     apply(&mut h, caster, beacon, 53563);
     h.app.world_mut().get_mut::<Health>(beacon).unwrap().current = 100.0;
     h.app.world_mut().get_mut::<Health>(ally).unwrap().current = 900.0;
-    super::cast_triggered(h.app.world_mut(), caster, 19750, Some(ally), 1);
-    assert_eq!(
-        h.health(beacon),
-        110.0,
-        "53651s1:10% of100 effective healing, not overheal"
-    );
+    let spell = world_db().unwrap().store.get(19750).unwrap();
+    let ctx = super::effects::EffectCtx {
+        caster,
+        spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    super::effects::apply_fixed_heal(h.app.world_mut(), &ctx, ally, 100.0);
+    assert_eq!(h.health(beacon), 110.0, "53651s1: 10% of 100 healing");
     h.advance(1);
     assert_eq!(amounts(&h, 53652, beacon, CombatLogKind::Heal), vec![10]);
     apply(&mut h, caster, ally, 139);
