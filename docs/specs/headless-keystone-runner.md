@@ -5,6 +5,7 @@ The runner executes a selected keystone dungeon and a five-spec class party in t
 ## What it must do
 
 - [ ] Accept a dungeon, keystone level and explicit tank, healer and three damage specialization IDs. Resolve the map's unique challenge and named challenge scenario from the imported catalog; reject unsupported or ambiguous maps, profiles, roles and levels explicitly.
+- [ ] When the simulator moves a follower along a Travel route, its APL reads the active Travel destination for `movement.distance`; a missing destination is not replaced with zero.
 - [ ] Form the class party at the Mythic copy's ContentTuning level cap with the selected key-band equipment and talents, including recorded permanent and temporary enchants and gems; enter the Mythic copy, activate the owned key at its Font and run the native APL and dungeon systems. Do not use the follower-dungeon level cap. The route controller must wait for the native countdown to finish before admitting pulls.
 - [ ] Emit a record with `schema_version`, dungeon map and challenge IDs, key level and affixes, party members' specialization IDs and native equipped item levels, and terminal status and reason.
 - [ ] Record the timer limit, elapsed time including configured death penalties, in-time result and awarded upgrade when a run completes. Use null when the result is not established; do not report a failed run as a completion.

@@ -7,6 +7,9 @@ use shared::components::PowerType;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+/// Destination supplied by a movement driver outside native navigation.
+#[derive(Resource)]
+pub struct MovementDestination(pub fn(&World, Entity) -> Option<Vec3>);
 /// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
 /// map-data fallback. Production worlds do not call this fixture setup.
 #[cfg(any(test, feature = "test-support"))]
@@ -585,6 +588,13 @@ impl<'a> NativeFacts<'a> {
             }
             let position = crate::spell_cast::targets::position(self.world, self.actor)
                 .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
+            if let Some(destination) = self
+                .world
+                .get_resource::<MovementDestination>()
+                .and_then(|provider| (provider.0)(self.world, self.actor))
+            {
+                return Ok(f64::from(position.distance(destination)));
+            }
             let navigation = self
                 .world
                 .get_resource::<crate::navigation::Navigation>()

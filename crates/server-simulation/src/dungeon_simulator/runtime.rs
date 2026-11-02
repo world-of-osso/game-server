@@ -226,6 +226,9 @@ fn build_runtime_app(
     }
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
+    app.insert_resource(server::simc_apl_native::MovementDestination(
+        super::movement::apl_destination,
+    ));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(TICK));
     app.insert_resource(Time::<Fixed>::from_duration(TICK));
