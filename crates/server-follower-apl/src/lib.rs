@@ -62,5 +62,5 @@ pub mod windwalker_rotation;
 
 pub use follower::{
     DirectedOwnerTarget, FollowerApl, FollowerAplFailed, FollowerAplPlugin, SpecRotation,
-    drive_followers, party_of, party_tank,
+    drive_followers, healing_party, party_of, party_tank,
 };

@@ -309,6 +309,12 @@ impl Mistweaver {
         }
         if lowest_ratio >= 0.65
             && let Some(enemy) = enemy
+            && self.interrupt_soothing_for_kick(world, healer, enemy)?
+        {
+            return Ok(());
+        }
+        if lowest_ratio >= 0.65
+            && let Some(enemy) = enemy
         {
             let enemies = [enemy];
             let action = NativeAction {
@@ -365,6 +371,56 @@ impl Mistweaver {
             self.select_damage(world, healer, enemy)?;
         }
         Ok(())
+    }
+
+    /// Honor the existing kick priority after a Soothing Mist tick, when its GCD is ready.
+    fn interrupt_soothing_for_kick(
+        &mut self,
+        world: &mut World,
+        healer: Entity,
+        enemy: Entity,
+    ) -> Result<bool, String> {
+        use shared::casting::{CastState, CastType};
+        let can_interrupt = world.get::<CastState>(healer).is_some_and(|cast| {
+            cast.spell_id == 115175
+                && cast.cast_type == CastType::Channel
+                && cast.elapsed >= cast.channel_tick_interval
+        });
+        if !can_interrupt {
+            return Ok(false);
+        }
+        let Some(kick_id) =
+            crate::literal_rotation::execution::resolve_action(world, healer, 107428)?
+        else {
+            return Ok(false);
+        };
+        let kick = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(kick_id)
+            .ok_or("Mistweaver Rising Sun Kick missing")?;
+        if crate::spell_cast::native_apl::gcd_value(world, healer, kick, "gcd.remains")? > 0.0 {
+            return Ok(false);
+        }
+        let targets = [enemy];
+        let action = NativeAction {
+            name: "rising_sun_kick",
+            spell: 107428,
+            self_target: false,
+            talent: None,
+        };
+        let prepared =
+            Prepared::read_after_channel(world, healer, &targets, &self.equipment, [action])?;
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
+            .with_targets(Some(enemy), &targets);
+        let Some((action, execution)) =
+            self.driver
+                .select("priority_damage", &facts, &prepared, &self.equipment)?
+        else {
+            return Ok(false);
+        };
+        crate::spell_cast::cancel_cast(world, healer);
+        self.driver.execute(world, healer, action, execution)?;
+        Ok(true)
     }
 
     /// Cast the damage list's first ready action at `enemy`; whether one was cast.
@@ -455,7 +511,7 @@ impl crate::follower::SpecRotation for Mistweaver {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        let party = crate::follower::party_of(world, actor);
+        let party = crate::follower::healing_party(world, actor);
         Mistweaver::drive(self, world, actor, &party, targets.first().copied())
     }
 }

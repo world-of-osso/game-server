@@ -511,6 +511,10 @@ pub fn spawn_creature(
             actor.world_scope(|world| crate::mythic_plus::scale_spawned_creature(world, creature));
         });
     }
+    entity.queue(|mut actor: EntityWorldMut| {
+        let unit = actor.id();
+        actor.world_scope(|world| crate::scripted_ai::heal_objective::initialize(world, unit));
+    });
     let source_guid = spawn.guid;
     entity.queue(move |actor: EntityWorldMut| {
         crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
@@ -1432,7 +1436,9 @@ mod tests {
         let path = dir.path().join("world.db");
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
+            "CREATE TABLE faction_template (ID INTEGER PRIMARY KEY);
+             INSERT INTO faction_template VALUES (1), (35);
+             CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
              CREATE TABLE tdb_jump_charge_params (
                 id INTEGER PRIMARY KEY, speed REAL NOT NULL,
                 treatSpeedAsMoveTimeSeconds INTEGER NOT NULL, unlimitedSpeed INTEGER NOT NULL,

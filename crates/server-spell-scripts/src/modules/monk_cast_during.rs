@@ -5,9 +5,43 @@ use combat::spell_info::SpellInfo;
 use shared::casting::{CastState, CastType};
 use shared::components::ActiveSpec;
 
-pub const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AllowCastDuringChannel(
-    allowed_during_monk_channel,
-)];
+pub const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AllowCastDuringChannel(allowed_during_monk_channel),
+    SpellScriptHook::InstantCastDuringChannel(soothing_mist_instant),
+    SpellScriptHook::CheckTarget(check_soothing_mist_target),
+];
+
+fn soothing_mist_instant(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 270)
+        && world
+            .get::<CastState>(caster)
+            .is_some_and(|cast| cast.cast_type == CastType::Channel && cast.spell_id == 115175)
+        && matches!(spell.id, 116670 | 124682 | 399491)
+}
+
+fn check_soothing_mist_target(
+    world: &World,
+    caster: Entity,
+    spell: u32,
+    target: Entity,
+) -> Result<(), combat::spell_cast::CastFailure> {
+    let Some(info) = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(spell)
+    else {
+        return Ok(());
+    };
+    if soothing_mist_instant(world, caster, info)
+        && world
+            .get::<CastState>(caster)
+            .is_some_and(|channel| channel.target != target.to_bits())
+    {
+        return Err(combat::spell_cast::CastFailure::InProgress);
+    }
+    Ok(())
+}
 
 fn allowed_during_monk_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     let Some(spec) = world.get::<ActiveSpec>(caster).map(|spec| spec.0) else {
@@ -22,6 +56,9 @@ fn allowed_during_monk_channel(world: &World, caster: Entity, spell: &SpellInfo)
     else {
         return false;
     };
+    if channel.spell_id == 115175 {
+        return soothing_mist_instant(world, caster, spell);
+    }
     if channel.spell_id == 443028 {
         return spell.name == "Zenith Stomp";
     }

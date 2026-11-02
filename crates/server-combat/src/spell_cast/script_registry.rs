@@ -45,6 +45,7 @@
 //! - `GuaranteesCrit`, `IgnoresCooldown`, `SnapshotsModifier`, `ArmorIgnoredSpells`:
 //!   pure native-readiness, launch snapshot and damage classification predicates.
 //! - `AllowCastDuringChannel`: source-qualified native cast admission during an active channel.
+//! - `InstantCastDuringChannel`: source-qualified instant execution during an active channel.
 //! - `PersistentCastMultiplier`: spell IDs whose existing cast factor is stored as periodic metadata.
 //! - `ResolvedDamage`: after actual direct/periodic damage, before Explosive tick callbacks.
 //! - `ResolvedHeal`: after health and combat log updates, with raw and effective healing.
@@ -416,6 +417,7 @@ pub enum SpellScriptHook {
     GuaranteesCrit(CastPredicate),
     IgnoresCooldown(CastPredicate),
     AllowCastDuringChannel(CastPredicate),
+    InstantCastDuringChannel(CastPredicate),
     SnapshotsModifier(OwnsProcLookup),
     /// These spells retain their existing cast damage factor as stored periodic metadata.
     PersistentCastMultiplier(&'static [u32]),
@@ -1333,6 +1335,14 @@ pub fn allows_cast_during_channel(world: &World, caster: Entity, spell: &SpellIn
         matches!(hook, SpellScriptHook::AllowCastDuringChannel(test) if test(world, caster, spell))
     })
         })
+}
+
+pub fn instant_cast_during_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
+    world.get_resource::<SpellScriptRegistry>().is_some_and(|registry| {
+        registry.hooks().any(|hook| {
+            matches!(hook, SpellScriptHook::InstantCastDuringChannel(test) if test(world, caster, spell))
+        })
+    })
 }
 
 pub fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {

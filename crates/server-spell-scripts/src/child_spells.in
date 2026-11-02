@@ -373,6 +373,9 @@ C	midnight_tendril.rs	1310414
 C	mistweaver_chiji.rs	343819
 C	mistweaver_chiji.rs	406220
 C	mistweaver_courage.rs	460127
+C	mistweaver_emperors_elixir.rs	1248815
+C	mistweaver_emperors_elixir.rs	115175
+C	mistweaver_emperors_elixir.rs	274062
 C	mistweaver_gust.rs	191894
 C	mistweaver_mana_tea.rs	115867
 C	mistweaver_rushing_wind.rs	1269159
@@ -832,3 +835,18 @@ D	resource_values.rs	apply_producers	cast_triggered	payload	1	trigger:1296589
 D	survival_boomstick.rs	emit_tick	cast_triggered	child	1	trigger:1261193
 C	feral_rip_and_tear.rs	391356
 C	feral_twin_claw.rs	1271636
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1288457
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1289062
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1288864
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1288428
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1290797
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1290031
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1289602
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1293048
+C	../../../server-combat/src/scripted_ai/temple_of_sethraliss.rs	1290531
+C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1300803
+C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1302153
+C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1302158
+C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1301199
+C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1301202
+D	temple_strikes.rs	apply_strike_debuff	try_cast_triggered	debuff	1	1303446,1308838

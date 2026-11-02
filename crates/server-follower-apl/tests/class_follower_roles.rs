@@ -216,6 +216,103 @@ impl Pull {
 }
 
 #[test]
+fn follower_healer_casts_on_nearby_heal_objective() {
+    use shared::components::{Npc, Position, UnitFactionTemplate};
+    let mut pull = spawn_at_map(257, 90, 2515);
+    let actor = pull.follower;
+    let owner = pull.harness.caster;
+    let world = pull.harness.app.world_mut();
+    let map = server_combat::maps::InMap {
+        map_id: 1877,
+        instance_id: 1,
+    };
+    world.entity_mut(actor).insert(map);
+    world.entity_mut(owner).insert(map);
+    let position = *world.get::<Position>(actor).unwrap();
+    // TDB 69497 Avatar faction and unit flags from the population candidate.
+    let faction = UnitFactionTemplate(1665);
+    let max = world.get::<Health>(actor).unwrap().max;
+    world.get_mut::<Health>(owner).unwrap().current = max;
+    let path = server_combat::test_data::world_db_path();
+    let db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut maps = server_combat::maps::store::load_map_store(&db).unwrap();
+    maps.encounter_heal_objectives.insert((1877, 133392), 25.0);
+    world.insert_resource(maps);
+    assert!(server_combat::scripted_ai::instance_script::set_boss_state(
+        world,
+        map,
+        3,
+        server_combat::scripted_ai::instance_script::EncounterState::InProgress
+    ));
+    let avatar = world
+        .spawn((
+            map,
+            position,
+            faction,
+            shared::components::UnitFlags(832),
+            Npc {
+                template_id: 133392,
+                name: "Avatar of Sethraliss".into(),
+            },
+            Health {
+                current: max * 0.25,
+                max,
+            },
+        ))
+        .id();
+    assert!(server_follower_apl::healing_party(world, actor).contains(&avatar));
+    world.get_mut::<Position>(avatar).unwrap().x += 100.0;
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "objectives outside the native spell range are not selected"
+    );
+    world.entity_mut(avatar).insert((
+        position,
+        server_combat::maps::InMap {
+            instance_id: map.instance_id + 1,
+            ..map
+        },
+    ));
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "another instance copy is not selected"
+    );
+    world.entity_mut(avatar).insert(map);
+    server_combat::auras::apply_aura(
+        world,
+        &server_combat::auras::AuraApplication {
+            caster: avatar,
+            target: avatar,
+            spell_id: 1301202,
+            effect_mask: 0b1110,
+            source: server_combat::auras::AuraSource::Cast,
+        },
+    );
+    assert!(
+        !server_follower_apl::healing_party(world, actor).contains(&avatar),
+        "a healer must not select the Taint-protected Avatar"
+    );
+    server_combat::auras::remove_auras(
+        world,
+        avatar,
+        server_combat::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1301202,
+    );
+    assert!(server_follower_apl::healing_party(world, actor).contains(&avatar));
+    pull.fight();
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<Health>(avatar)
+            .unwrap()
+            .current
+            > max * 0.25,
+        "follower must land an actual heal on the objective"
+    );
+}
+
+#[test]
 fn follower_weapon_action_fury_satisfies_both_levels() {
     for (level, map) in [(70, 2515), (90, 2813)] {
         let mut pull = spawn_at_map(72, level, map);

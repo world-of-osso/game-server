@@ -11,6 +11,60 @@ use crate::spell_cast::test_harness::{
     Harness, harness, harness_with_native_enemy_dodge_reduction, varied, world_db,
 };
 
+#[test]
+fn temple_storm_blessed_blocks_damage_without_general_school_immunity() {
+    let mut h = harness(Vec::new(), &[1289229, 133], 1).unwrap();
+    let actor = h.npc;
+    let attacker = h.caster;
+    let max = h.app.world().get::<Health>(actor).unwrap().max;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 1289229,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(is_damage_immune(h.app.world(), actor, 1));
+    assert!(is_damage_immune(h.app.world(), actor, 4));
+    assert!(
+        !is_immune(h.app.world(), actor, 4),
+        "damage-only immunity does not block non-damage spell effects"
+    );
+    crate::combat::deal_direct_damage(h.app.world_mut(), attacker, actor, max * 0.25);
+    assert_eq!(h.app.world().get::<Health>(actor).unwrap().current, max);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    let ctx = crate::spell_cast::effects::EffectCtx {
+        caster: attacker,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::deal_damage(
+        h.app.world_mut(),
+        &ctx,
+        actor,
+        max * 0.25,
+        false,
+        false,
+    );
+    assert_eq!(h.app.world().get::<Health>(actor).unwrap().current, max);
+    remove_auras(h.app.world_mut(), actor, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 1289229
+    });
+    crate::combat::deal_direct_damage(h.app.world_mut(), attacker, actor, max * 0.25);
+    assert!(h.app.world().get::<Health>(actor).unwrap().current < max);
+}
+
 const SHADOW_WORD_PAIN: u32 = 589;
 const RENEW: u32 = 139;
 const PURIFY: u32 = 527;

@@ -93,6 +93,8 @@ mod group_criteria;
 mod gulping_goliath;
 #[path = "gutshot.rs"]
 mod gutshot;
+#[path = "heal_objective.rs"]
+mod heal_objective;
 #[path = "health_threshold.rs"]
 mod health_threshold;
 #[path = "herald_call.rs"]
@@ -169,6 +171,8 @@ mod skarmorak;
 mod stonevault_doors;
 #[path = "talondras.rs"]
 mod talondras;
+#[path = "temple_of_sethraliss.rs"]
+mod temple_of_sethraliss;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
