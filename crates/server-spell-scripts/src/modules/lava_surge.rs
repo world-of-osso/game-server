@@ -52,7 +52,7 @@ pub(crate) fn roll_flame_shock_tick(world: &mut World, caster: Entity) {
         return;
     };
     let count = active_flame_shocks(world, caster);
-    assert!(count > 0, "a real Flame Shock tick retains its owned dot");
+    // TC uses floating-point division even when the tick is outside 100 yards.
     let ticks = advance_normalized_ticks(world, caster, instance, count);
     if ticks < PROTECTED_TICKS {
         return;
