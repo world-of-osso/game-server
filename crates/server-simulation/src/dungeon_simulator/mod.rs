@@ -38,6 +38,7 @@ mod mistweaver_mana_tea_tests;
 mod mistweaver_replay_tests;
 mod mistweaver_talent_tests;
 mod movement;
+mod native_movement;
 mod prayer_of_mending_follower_tests;
 mod preservation_empower_tests;
 mod preservation_evoker_replay_tests;
