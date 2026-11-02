@@ -8,6 +8,9 @@ use std::collections::VecDeque;
 /// Precombat setup bound, as in the parity fixture: 30s of 20Hz ticks.
 const PRECOMBAT_TICKS: u32 = 600;
 
+#[cfg(test)]
+mod lifecycle_tests;
+
 /// A spec's production APL driver over the shared literal `Driver`.
 pub trait SpecRotation: Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
@@ -40,14 +43,13 @@ enum Phase {
     Idle,
 }
 
-/// The follower's APL persists across pulls until death or a precombat buff expires.
+/// The follower's APL persists for the lifetime of the follower.
 #[derive(Component)]
 pub struct FollowerApl {
     rotation: Box<dyn SpecRotation>,
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
     combat_started_at: f64,
-    precombat_buffs: std::collections::BTreeMap<u32, f64>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -65,7 +67,6 @@ impl FollowerApl {
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
-            precombat_buffs: Default::default(),
         }
     }
 
@@ -79,7 +80,8 @@ impl FollowerApl {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        if matches!(self.phase, Phase::Idle) {
+        if !targets.is_empty() && !matches!(self.phase, Phase::Combat) {
+            self.plan.clear();
             self.combat_started_at = crate::spell_cast::now(world);
             self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
@@ -102,25 +104,13 @@ impl FollowerApl {
                     return self.execute_plan(world, actor, action, execution);
                 }
                 PrecombatPoll::Finished => {
-                    let actions = self.rotation.action_spells();
-                    self.precombat_buffs = world
-                        .get::<server::auras::ActiveAuras>(actor)
-                        .into_iter()
-                        .flat_map(|auras| auras.iter())
-                        .filter(|aura| {
-                            aura.caster == actor
-                                && !aura.passive
-                                && !aura.harmful
-                                && actions.contains(&aura.spell_id)
-                                && is_maintained_buff(world, aura.spell_id)
-                        })
-                        .filter_map(|aura| aura.expires_at.map(|at| (aura.spell_id, at)))
-                        .collect();
-                    self.combat_started_at = crate::spell_cast::now(world);
-                    self.rotation.start_combat_at(self.combat_started_at);
-                    self.phase = Phase::Combat;
+                    self.phase = Phase::Idle;
                 }
             }
+        }
+        if targets.is_empty() {
+            self.idle();
+            return Ok(());
         }
         let (gcd, cast) = literal_rotation::read_busy(world, actor);
         let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
@@ -135,26 +125,6 @@ impl FollowerApl {
         if matches!(self.phase, Phase::Combat) {
             self.phase = Phase::Idle;
         }
-    }
-
-    fn precombat_buff_expired(&mut self, world: &World, actor: Entity) -> bool {
-        let now = crate::spell_cast::now(world);
-        self.precombat_buffs.iter_mut().any(|(spell, deadline)| {
-            let current = world
-                .get::<server::auras::ActiveAuras>(actor)
-                .into_iter()
-                .flat_map(|auras| auras.iter())
-                .find(|aura| aura.caster == actor && aura.spell_id == *spell);
-            match current {
-                Some(aura) => {
-                    if let Some(at) = aura.expires_at {
-                        *deadline = at;
-                    }
-                    false
-                }
-                None => now >= *deadline,
-            }
-        })
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
@@ -181,21 +151,6 @@ impl FollowerApl {
     }
 }
 
-/// Cooldown-limited precombat effects are combat actions, not maintained buffs.
-fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
-    world
-        .resource::<server::spell_info::SpellStore>()
-        .get(spell_id)
-        .is_some_and(|spell| {
-            spell.cooldowns.as_ref().is_none_or(|cooldown| {
-                cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
-            }) && spell
-                .categories
-                .as_ref()
-                .is_none_or(|category| category.max_charges == 0)
-        })
-}
-
 /// Drive every APL-controlled follower after the follower brain positioned it.
 pub fn drive_followers(world: &mut World) {
     let units = server::system_states::entities_with::<With<AplControlled>>(world);
@@ -208,9 +163,6 @@ pub fn drive_followers(world: &mut World) {
 
 fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     if !crate::spell_cast::targets::is_alive(world, unit) {
-        world
-            .entity_mut(unit)
-            .remove::<(FollowerApl, FollowerAplFailed)>();
         return;
     }
     let targets = if let Some(target) = world.get::<DirectedOwnerTarget>(unit) {
@@ -242,12 +194,6 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         } else {
             world.entity_mut(unit).remove::<FollowerAplFailed>();
         }
-        return;
-    }
-    if let Some(mut apl) = world.entity_mut(unit).take::<FollowerApl>() {
-        if !apl.precombat_buff_expired(world, unit) {
-            world.entity_mut(unit).insert(apl);
-        }
     }
     if world.get::<FollowerAplFailed>(unit).is_some() {
         return;
@@ -256,20 +202,23 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         Some(apl) => Ok(apl),
         None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
     };
-    let result = apl.and_then(|mut apl| match apl.tick(world, unit, &targets) {
-        Ok(()) => Ok(apl),
-        Err(error) if server::simc_apl::is_not_ready(&error) => {
-            debug!(?unit, "follower APL waits one tick: {error}");
-            Ok(apl)
-        }
-        Err(error) => Err(error),
-    });
-    match result {
-        Ok(apl) => {
+    match apl {
+        Ok(mut apl) => {
+            let result = apl.tick(world, unit, &targets);
             world.entity_mut(unit).insert(apl);
+            match result {
+                Ok(()) => {}
+                Err(error) if server::simc_apl::is_not_ready(&error) => {
+                    debug!(?unit, "follower APL waits one tick: {error}");
+                }
+                Err(error) => {
+                    error!("Class follower {unit} spec{spec} APL stopped for this pull: {error}");
+                    world.entity_mut(unit).insert(FollowerAplFailed);
+                }
+            }
         }
         Err(error) => {
-            error!("Class follower {unit} spec{spec} APL stopped for this pull: {error}");
+            error!("Class follower {unit} spec{spec} APL failed to load: {error}");
             world.entity_mut(unit).insert(FollowerAplFailed);
         }
     }
