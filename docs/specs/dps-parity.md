@@ -30,6 +30,25 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Melee swings, melee-range spell admission, literal target readiness, threat selection and fixture return use the same native attacker and target combat reaches plus 4/3 yards, with a 5-yard minimum. Preserve native model data and range modifiers.
 - A fixture actor with native melee AutoAttack intent walks back into its actual melee range at its native run speed after movement abilities. Preserve forced movement ownership, native movement/cast restrictions and position=back; never suppress displacement, snap the actor or grant resources. This shared controller applies without specialization or spell-ID cases (SimC76f8118 sc_demon_hunter.cpp1559–1611).
 
+### Mage and Devastation follower measurements
+
+Snapshot v3 (`sha256:ba45df40453e81ca7c97d988acd147176a3b995e2044a8c4fe485e7845de7f4b`), SimC `76f8118`, 120-second 1T fights, seeds 70448 and 1–9, and `temporary_enchant=disabled`. Native casts one Bloodlust-family spell per fight; SimC uses matched Bloodlust. Values below are mean DPS and the mean of paired percentage differences with 95% t-interval half-widths. The gate applies to the paired mean, not the interval.
+
+| Spec | Level | Native DPS | SimC DPS | Paired difference | Mean gate | Native revision |
+|---|---:|---:|---:|---:|---|---|
+| Arcane | 70 | 5,036.04 | 4,842.59 | +4.72% ±6.44 pp | pass | `4bb0d9c573` |
+| Arcane | 90 | 45,408.96 | 42,554.42 | +6.78% ±5.41 pp | **open** | `4f58b5b468` |
+| Fire | 70 | 5,983.58 | 6,008.05 | −0.32% ±2.82 pp | pass | `4bb0d9c573` |
+| Fire | 90 | 44,177.40 | 45,992.56 | −3.82% ±5.16 pp | pass | `8379c88785` |
+| Frost | 70 | 4,999.02 | 5,071.29 | −1.18% ±5.50 pp | pass | `4bb0d9c573` |
+| Frost | 90 | 44,887.08 | 44,275.05 | +1.59% ±4.79 pp | pass | `4bb0d9c573` |
+| Devastation | 70 | 5,376.44 | 5,403.90 | −0.21% ±4.74 pp | pass | `4bb0d9c573` |
+| Devastation | 90 | 46,015.51 | 47,459.34 | −3.00% ±2.33 pp | pass | `4bb0d9c573` |
+
+These rows use different revisions and are not a single pinned table. `4bb0d9c573` binary SHA-256 is `b8be8d2ba26b096eccb7e276a97010d31afb497fe2da16698174b3ebf6da6766`; `4f58b5b468` is `20a12efd19ac618cd9c196addbe7756f4023a1d64d6147083bb53b69521dfabc`; `8379c88785` is `474c02ba23ef19bf00ad22688d1f78780b9e766c8f41d09da905caf24e729f7b`. They describe locally tested revisions, not proof of train landing. Level 70 Arcane, Fire and Devastation use tree-only references with the logged-keystone condition; Frost uses a tree-only Spellslinger reference. Level 90 uses ordinary references. Fire 90 matches three initial Spellfire Spheres on both sides, as observed on most sampled WCL boss pulls; fresh production followers do not receive free spheres. The old Fire 90 −5.75% row had mismatched initial sphere state and is superseded.
+
+Arcane 90 remains outside the mean gate. In ten diagnostic seeds, Augury had 81/838 native successes versus 71/785 SimC; the paired rate difference was +0.73 ±1.16 pp. Familiar had 449/885 versus 428/853, +0.56 ±7.59 pp. These intervals include zero and do not establish a proc-rate defect. SimC Familiar successes were attributed from executed child splinters, so end-of-fight callbacks can be missed; native and SimC random streams do not align. Augury creates eight splinters outside Surge and sixteen during Surge in both engines, and Familiar creates one or two respectively. The counts and rates are diagnostics, not proof of full Arcane parity.
+
 ### Unholy Magus
 
 - Without the MID2 two-piece1296654, Magi cast Frostbolt317792 and Shadow Bolt317791, and Lords cast Frostbolt1292107. Magus Frostbolt's cooldown uses its native slow duration. With the two-piece, they use the native Necrotic Bolt and Withering Grasp actions (SimC76f8118 `sc_death_knight.cpp4424–4434,4598–4607,4664–4670,15494–15502`).
