@@ -694,6 +694,15 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+Follower 120-second single-target measurements on snapshot v3, native DB2 70448, with temporary enchants disabled and SimC76f8118:
+
+| Level | Map | Matched seeds | Native DPS | SimC DPS | Mean paired delta, 95% t interval | Mean ±5% gate |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 70 | 2515 | 70448, 1–9 | 3,673.54 | 3,536.66 | +3.95% ±4.20 pp | Pass; condition-only reference |
+| 90 | 2813 | 70448, 1–19 | 34,464.50 | 36,294.65 | −4.52% ±5.62 pp | Pass; wide interval |
+
+The level-70 reference changes the `slayers_dominance` APL condition to `hero_tree.slayer`; it is not an unmodified reference. The intervals do not establish equivalence within ±5%. These measurements used native test binary SHA-256 `35f94c089e1d20d3ad87d046fe97146c5387f59207f108c33cdfad56c0eea710` from revision `80fae2c282935b246eafc1175b63994ffecde2ef`.
+
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
 - INFERRED_SIMC: Bladestorm uses its charge recovery without a separate spell cooldown (`sc_warrior.cpp:3241`; contrast `action.cpp:710–719`). A Sudden Death Execute with Unrelenting Onslaught reduces that recovery (`sc_warrior.cpp:4361–4365`, `4561–4565`).
 - Culling Cyclone increases Bladestorm tick damage by its native effect1 divided by the number of engaged living hostiles, including the current target (`sc_warrior.cpp:3202–3207`).
