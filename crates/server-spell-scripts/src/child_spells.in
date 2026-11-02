@@ -661,3 +661,5 @@ D	preservation_empower.rs	release_spirit	execute_cast	&heal	1	367230
 D	shadow_collapse.rs	burst	launch_planned_spell	&damage	1	448405
 D	shadow_apparitions.rs	launch_apparition	launch_planned_spell	&missile	1	148859,1264175
 D	shadow_apparitions.rs	launch_apparition	load_triggered_spell	parent	1	148859,1264175
+D	cast_relationships.rs	grant	try_cast_triggered	spell	1	194594,260242,269651,1253750,1301778
+D	cast_relationships.rs	grant_with_overrides	cast_triggered_with_overrides	spell	1	257622,389020
