@@ -7,7 +7,7 @@ const SMASH: u32 = 167105;
 const REND: u32 = 388539;
 
 fn enemies() -> (Harness, Vec<Entity>, Bindings) {
-    let mut h = harness(Vec::new(), &[SMASH, REND], 1).unwrap();
+    let mut h = harness(Vec::new(), &[SMASH, REND, 133, 116, 1230298], 1).unwrap();
     let secondary = spawn_npc(&mut h.app, 2.0);
     h.app
         .world_mut()
@@ -250,7 +250,7 @@ fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
             h.app.world_mut().flush();
         }
         let mut delays = Vec::new();
-        for spell in [1230298, 1253811] {
+        for spell in [133, 116] {
             h.app
                 .world_mut()
                 .entity_mut(target)
@@ -285,6 +285,44 @@ fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
     let seed = 7809098381633315392;
     assert_eq!(run(seed, false), run(seed, true));
     assert_ne!(run(seed, false).0, run(seed + 1, false).0);
+}
+
+#[test]
+fn casting_react_selects_interrupt_only_for_interruptible_native_casts() {
+    use shared::casting::CastState;
+    let (mut h, targets, bindings) = enemies();
+    let target = h.npc;
+    let actor = h.caster;
+    let program = crate::simc_apl::Program::parse(&[
+        ("default", "pummel,if=target.debuff.casting.react"),
+        ("default", "slam"),
+    ])
+    .unwrap();
+    for (spell, expected) in [(1230298, "slam"), (133, "pummel")] {
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .insert(CastState::normal(spell, actor.to_bits(), 3.0, true));
+        h.app.world_mut().flush();
+        h.app
+            .world_mut()
+            .get_mut::<CastState>(target)
+            .unwrap()
+            .elapsed = 2.0;
+        let world = h.app.world();
+        let facts = NativeFacts::new(world, actor, &bindings, encounter(world), targets.len())
+            .with_targets(Some(target), &targets);
+        let selected = program
+            .select("default", &facts, &mut program.state(), |_| Ok(true))
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.name, expected, "native cast {spell}");
+        assert_eq!(
+            crate::spell_cast::can_interrupt_cast(world, actor, target),
+            expected == "pummel"
+        );
+        h.app.world_mut().entity_mut(target).remove::<CastState>();
+    }
 }
 
 #[test]
