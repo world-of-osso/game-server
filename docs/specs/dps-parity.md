@@ -5,6 +5,9 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ## What it must do
 
 - Match Bloodlust-family effects across native and SimC runs. When the native actor or its pet casts one during the fight, enable `override.bloodlust=1` in the SimC reference and verify that both sides receive it. A reference with unmatched Bloodlust is not qualified.
+- INFERRED_WCL: a lust-capable follower uses one shared party policy for Bloodlust, Heroism, Time Warp and Fury of the Aspects. With no party lockout, use lust on a boss within the first 10 seconds, or after 7 seconds against at least three engaged enemies. Fixed-fight parity fixtures use lust immediately. Altar of Fangs reports `bVvgmyZ1FM6p9C8R` fight1 pulls1/5/8 and `aQmRLcMBKvAx91nY` fight23 pulls1/6/9, and Ruby Life Pools report `xtGY7CAgR2yJLPXd` fight7 pulls1/4/7 show lust on trash. Three targets is the smallest nearby damaged-target count observed, not a proven retail threshold. Retire this rule when a sourced party cooldown policy is available.
+- Bloodlust-family casts exclude recipients with Sated, Exhaustion, Temporal Displacement or Fatigued; each successful recipient gets the corresponding native ten-minute debuff.
+- [ ] Hunter follower selection of a Primal Rage-capable pet and use of its lust are deferred; do not change current pet choice.
 - Automatic Thistle Tea uses the same native charge pool as manual casts and triggers below its native energy threshold, not at equality (SimC `sc_rogue.cpp:2671–2676,6357–6380`). Assassination Blindside rolls on a landed Mutilate or Ambush, using its native higher chance below the native health threshold; a new proc survives consumption of the preceding Ambush buff (SimC `sc_rogue.cpp:3593–3596,5171–5178,8484–8496`).
 - Tank DPS comparisons with `DPS_PARITY_TANK_TRACE_DIR` replay the matching `<spec>.<targets>.<seed>.simc.log` through the existing tank replay. The recorded dummy level, armor coefficient, incoming attacks, pauses and external heals apply to the selected 1T or 3T fixture. Count damage to all fixture targets and preserve native incoming-hit resource and mitigation behavior.
 - Blood Boiling Point's delayed Blood Boil echo is mirrored by each active Dancing Rune Weapon, as is the foreground Blood Boil. An echo consumes an intervening Boiling Point proc and schedules another echo. A new empowered cast forces any pending echo while the same damage modifier applies to both casts and their weapon copies (SimC `sc_death_knight.cpp:9051–9079`). Blood Vampiric Strike earns Heartbreaker's runic power for each enemy hit, like Heart Strike (`sc_death_knight.cpp:11282–11289,11322–11325`).
@@ -221,7 +224,7 @@ Selected native155580 applies its owned155627 override aura, so ordinary Moonfir
 
 ### Feral Apex Predator's Craving
 
-Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
+Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`). Apex Bite or Ravage pays no Energy or combo points but uses maximum effective points and full extra-Energy effectiveness (`sc_druid.cpp4358–4372`).
 
 - L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
 - Tiger's Fury5217 increases the applied Rip's stored periodic amount and persistent multiplier by25% for the selected L90 follower; the snapshot remains after the buff ends (`sc_druid.cpp2021–2030`).
@@ -678,6 +681,7 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 - Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
 - INFERRED_SIMC: Bladestorm uses its charge recovery without a separate spell cooldown (`sc_warrior.cpp:3241`; contrast `action.cpp:710–719`). A Sudden Death Execute with Unrelenting Onslaught reduces that recovery (`sc_warrior.cpp:4361–4365`, `4561–4565`).
+- Culling Cyclone increases a single-target Bladestorm tick by its native effect1 (`sc_warrior.cpp:3202–3207`); the multi-target formula is not covered by this parity scope.
 
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
