@@ -3,6 +3,8 @@ use super::*;
 #[test]
 fn council_sequences_lethal_hits_before_credit() {
     let (mut h, kula, map) = bound_boss_at_difficulty(135475, 1762, 1, 8, None);
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (akaali, _) = spawn_authored_actor(&mut h.app, &conn, 135470, map, 8);
