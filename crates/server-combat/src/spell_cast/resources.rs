@@ -11,6 +11,7 @@ use crate::spell_info::{SpellDuration, SpellEffect, SpellInfo};
 pub(in crate::spell_cast) const EXECUTE_PARENTS: &[u32] = &[163201, 281000];
 const ROGUE_SPELL_FAMILY: u32 = 8;
 const FEROCIOUS_BITE: u32 = 22568;
+const RAVAGE: u32 = 441591;
 
 /// Optional, per-caster record of paid costs and actual passive mana regeneration.
 #[derive(Component, Default)]
@@ -195,7 +196,7 @@ pub(super) fn snapshot(
         }
         // SimC76f8118 sc_druid.cpp4358–4371,4400–4401: Bite's coefficient
         // already represents maximum CP; free casts retain that full coefficient.
-        FEROCIOUS_BITE if combo > 0.0 => {
+        FEROCIOUS_BITE | RAVAGE if combo > 0.0 => {
             let (_, maximum) = powers::power_value(world, caster, PowerType::ComboPoints)
                 .expect("native Bite requires a combo-point pool");
             combo / maximum
@@ -203,5 +204,8 @@ pub(super) fn snapshot(
         _ => return spell,
     };
     scale_effect(&mut spell, 0, multiplier);
+    if spell.id == RAVAGE {
+        scale_effect(&mut spell, 2, multiplier);
+    }
     spell
 }

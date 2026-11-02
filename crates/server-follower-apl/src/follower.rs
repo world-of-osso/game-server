@@ -46,6 +46,7 @@ pub struct FollowerApl {
     rotation: Box<dyn SpecRotation>,
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
+    combat_started_at: f64,
     precombat_buffs: std::collections::BTreeMap<u32, f64>,
 }
 
@@ -59,6 +60,7 @@ impl FollowerApl {
             rotation,
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
+            combat_started_at: 0.0,
             precombat_buffs: Default::default(),
         }
     }
@@ -74,7 +76,8 @@ impl FollowerApl {
         targets: &[Entity],
     ) -> Result<(), String> {
         if matches!(self.phase, Phase::Idle) {
-            self.rotation.start_combat_at(crate::spell_cast::now(world));
+            self.combat_started_at = crate::spell_cast::now(world);
+            self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
         }
         if let Phase::Precombat { ticks } = &mut self.phase {
@@ -109,10 +112,16 @@ impl FollowerApl {
                         })
                         .filter_map(|aura| aura.expires_at.map(|at| (aura.spell_id, at)))
                         .collect();
-                    self.rotation.start_combat_at(crate::spell_cast::now(world));
+                    self.combat_started_at = crate::spell_cast::now(world);
+                    self.rotation.start_combat_at(self.combat_started_at);
                     self.phase = Phase::Combat;
                 }
             }
+        }
+        let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
+        if !gcd && !cast && crate::lust_policy::try_lust(world, actor, targets, elapsed)? {
+            return Ok(());
         }
         let rotation = &mut self.rotation;
         literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, targets))

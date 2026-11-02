@@ -2973,7 +2973,8 @@ fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
     // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
     if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
         let gcd_ms = gcd_haste::ordinary_spell_ms(world, caster, spell, gcd_ms);
-        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
+        let gcd_ms = haste_regen_gcd_ms(world, caster, spell, gcd_ms);
+        gcd_haste::adrenaline_rush_ms(world, caster, spell, gcd_ms)
     } else {
         gcd_ms
     }
@@ -4542,6 +4543,10 @@ fn base_cooldowns(spell: &SpellInfo) -> (u32, u32) {
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
     let spell_ms = if spell.id == mobile_banking::MOBILE_BANKING {
         shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else if matches!(spell.id, 227847 | 446035) {
+        // INFERRED_SIMC: action.cpp:710–719 normally keeps recharge and internal
+        // cooldown separate; sc_warrior.cpp:3241 explicitly clears Bladestorm's.
+        0
     } else {
         spell_ms
     };

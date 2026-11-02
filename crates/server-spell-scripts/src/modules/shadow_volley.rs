@@ -16,6 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 const VOIDFORM: u32 = 228260;
 const VOIDFORM_BUFF: u32 = 194249;
+const SHADOWFORM: u32 = 232698;
 const VOLLEY: u32 = 1242173;
 const USES: u32 = 1242171;
 const CRUSHING_VOID: u32 = 1279437;
@@ -24,6 +25,9 @@ const FOUR_PIECE: u32 = 1296580;
 
 #[derive(Component, Default)]
 struct TierUses(u8);
+
+#[derive(Component)]
+struct RestoreShadowform;
 
 fn stacks(world: &World, caster: Entity, spell: u32) -> u8 {
     world
@@ -72,6 +76,13 @@ fn grant(world: &mut World, caster: Entity, spell: u32, count: u8) {
 }
 
 fn enter_voidform(world: &mut World, caster: Entity, _: &SpellInfo) {
+    // SimC1940–1973 suspends Shadowform until the actual Voidform expires.
+    if auras::has_aura(world, caster, SHADOWFORM) {
+        world.entity_mut(caster).insert(RestoreShadowform);
+        auras::remove_auras(world, caster, RemoveReason::Replaced, |aura| {
+            aura.spell_id == SHADOWFORM && aura.caster == caster
+        });
+    }
     // SimC1384–1393: Voidform aura precedes its E2 ordinary uses.
     auras::apply_aura(
         world,
@@ -152,6 +163,22 @@ fn crushing_selected(world: &World, caster: Entity) -> bool {
 }
 
 fn leave_voidform(world: &mut World, caster: Entity, _: &AuraInstance, _: RemoveReason) {
+    if world
+        .entity_mut(caster)
+        .take::<RestoreShadowform>()
+        .is_some()
+    {
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: SHADOWFORM,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
     let regular = stacks(world, caster, USES);
     let tier = world.get::<TierUses>(caster).map_or(0, |uses| uses.0);
     let transfer = regular.min(tier);
