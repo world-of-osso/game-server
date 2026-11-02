@@ -140,7 +140,21 @@ fn apply_slam_dots(world: &mut World, caster: Entity, mut units: Vec<Entity>, de
         units.truncate(cap);
     }
     for target in units {
-        spell_cast::cast_triggered(world, caster, VT, Some(target), depth);
+        // Retail WCL XDj6fvaqCN2n17V9/42: Slam applies VT without its direct effect.
+        let applied = spell_cast::cast_triggered_with_overrides(
+            world,
+            caster,
+            VT,
+            Some(target),
+            depth,
+            spell_cast::TriggeredSpellOverrides {
+                effect_mask: Some(!(1 << 3)),
+                ..Default::default()
+            },
+        );
+        if applied {
+            apply_misery(world, caster, target, depth);
+        }
     }
 }
 

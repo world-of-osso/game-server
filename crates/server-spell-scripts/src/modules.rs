@@ -457,6 +457,7 @@ register_modules! {
     shadow_haunting: (2589, "modules/shadow_haunting.rs"),
     shadow_horizon: (2588, "modules/shadow_horizon.rs"),
     shadow_insight: (2583, "modules/shadow_insight.rs"),
+    shadow_mind_devourer: (2900, "modules/shadow_mind_devourer.rs"),
     shadow_ire: (2591, "modules/shadow_ire.rs"),
     shadow_link: (2581, "modules/shadow_link.rs"),
     shadow_nzoth: (2590, "modules/shadow_nzoth.rs"),

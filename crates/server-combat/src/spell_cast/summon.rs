@@ -1070,6 +1070,13 @@ fn spawn_summon(
     crate::scripted_ai::dispatch(world, actor, crate::scripted_ai::Hook::IsSummonedBy(owner));
     crate::scripted_ai::dispatch(world, owner, crate::scripted_ai::Hook::JustSummoned(actor));
     super::log_summon(world, owner, actor, ctx.spell);
+    if ctx.spell.id == 444995
+        && world
+            .get::<shared::components::ActiveSpec>(owner)
+            .is_some_and(|spec| spec.0 == 264)
+    {
+        super::scripts::spawn_surging_rain(world, ctx, actor);
+    }
 }
 
 #[derive(Clone, Copy)]

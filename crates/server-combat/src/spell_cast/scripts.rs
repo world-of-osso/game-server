@@ -230,7 +230,7 @@ pub(crate) use batch3::{
 };
 pub use batch9::spawn_delayed_ground_pulses;
 pub(crate) use batch9::{hostile_ground_fields, hostile_ground_pulse_radius};
-pub(super) use batch9::{spawn_ravager_field, update_ground_pulses};
+pub(super) use batch9::{spawn_ravager_field, spawn_surging_rain, update_ground_pulses};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(super) use protection_items::snapshot_guillotine_health;
 pub(crate) use protection_items::{GUILLOTINE, cast_guillotine, check_guillotine_proc};

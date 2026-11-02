@@ -557,13 +557,17 @@ fn replay(
     )
 }
 
-fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {
+pub(super) fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {
     // SimC76f8118 raid_event.cpp:1814-1866: non-critical Shadow spell source roll.
     let spell = crate::spell_info::SpellInfo {
         misc: Some(crate::spell_info::SpellMisc {
             school_mask: 32,
             ..Default::default()
         }),
+        categories: Some(Box::new(crate::spell_info::SpellCategories {
+            defense_type: 1,
+            ..Default::default()
+        })),
         ..Default::default()
     };
     let ctx = crate::spell_cast::effects::EffectCtx {

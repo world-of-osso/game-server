@@ -54,6 +54,10 @@ pub struct FollowerApl {
 #[derive(Component)]
 pub struct FollowerAplFailed;
 
+/// The headless owner temporarily directs its existing APL at the next chain target.
+#[derive(Component)]
+pub struct DirectedOwnerTarget(pub Entity);
+
 impl FollowerApl {
     pub fn new(rotation: Box<dyn SpecRotation>) -> Self {
         Self {
@@ -217,7 +221,11 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
             .remove::<(FollowerApl, FollowerAplFailed)>();
         return;
     }
-    let targets = ordered_targets(world, unit);
+    let targets = if let Some(target) = world.get::<DirectedOwnerTarget>(unit) {
+        vec![target.0]
+    } else {
+        ordered_targets(world, unit)
+    };
     let recovering = targets.is_empty() && healer_has_injured_party(world, unit);
     if targets.is_empty() {
         if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
