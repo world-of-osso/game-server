@@ -3492,11 +3492,8 @@ fn spawn_run_mode_record(
                 &hostile_sources,
             )?;
             graph.route = plan.steps.clone();
-            chain_groups = super::keystone_route::wcl_chain_groups(
-                &graph,
-                &definition,
-                &hostile_sources,
-            )?;
+            chain_groups =
+                super::keystone_route::wcl_chain_groups(&graph, &definition, &hostile_sources)?;
             app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
