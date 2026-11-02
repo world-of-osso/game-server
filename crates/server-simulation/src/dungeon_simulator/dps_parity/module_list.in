@@ -235,6 +235,7 @@ mod feral_lunar_tests;
 mod feral_native_tests;
 mod feral_ravage_consumer_follower_tests;
 mod feral_ravage_follower_tests;
+mod feral_ravage_sabertooth_follower_tests;
 mod feral_ravage_splash_follower_tests;
 mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
