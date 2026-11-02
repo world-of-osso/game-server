@@ -1010,6 +1010,27 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 - Selected Idol of C'Thun377349 rolls its native RPPM on Mind Flay and Void Torrent ticks. An earned summon uses native377355 Tendril for one or two enemies or377357 Lasher for three or more, channels its native damage spell and grants native377358 Insanity on each actual tick (SimC76f8118 `sc_priest_shadow.cpp63–68/1463–1468`, `sc_priest.cpp4220–4230/4263–4282`, `sc_priest_pets.cpp903–1056`).
 - Selected Void Apparitions III1264107 makes Tentacle Slam activate one random Idol effect, including C'Thun without377349. INFERRED: use SimC76f8118's shuffled 17-card distribution of 3 Shadowfiend, 4 Horrific Vision, 1 Vision of N'Zoth, 2 Thing From Beyond and 7 C'Thun; native70448 describes the effects and chance but not their weights (`sc_priest_shadow.cpp1874–1876/2315–2320/2878–2920`).
 
+#### L90 Void Apparitions investigation
+
+On the ten matched 120 s seeds, before the Overwhelming Shadows correction, native versus SimC total procs and direct DPS were: Shadowfiend 11/17 and 5.8/73.1; Horrific Vision 61/93 and 254.0/393.8; Vision of N'Zoth 46/64 and 790.9/1115.1; Thing From Beyond 32/38 and 798.4/1037.8; C'Thun Tendril 33/38 and 254.5/376.2. Vision and Thing totals include ordinary idol activations as well as random-idol activations. The counts are aggregate, not matched outcomes. Ten traced replays reproduced the original native damage and cast receipts exactly.
+
+The five largest positive and negative mean per-spell native-minus-SimC DPS deltas, before and after Void Apparitions but before correcting Overwhelming Shadows, were:
+
+| Spell | Before VA | After VA |
+| --- | ---: | ---: |
+| Void Blast450983 | +3884.7 | +4041.7 |
+| Mind Blast8092 | +1369.3 | +1169.8 |
+| Entropic Rift447448/447445 | +361.0 | +331.6 |
+| Shadow Word: Death32379 | +109.5 | +80.6 |
+| Vampiric Touch34914 | −6.7 | +77.0 |
+| Shadow Word: Madness335467 | −1069.9 | −638.1 |
+| Void Apparition1264176 | −713.8 | −600.3 |
+| Mind Flay15407 | −393.5 | −408.2 |
+| Shadeburst1231479 | −741.8 | −406.4 |
+| Vision of N'Zoth1243106 | −471.3 | −324.2 |
+
+The Rift row groups native447448 with SimC447445. The largest native increases after VA were Thing From Beyond +518.5, Madness +431.8, Shadeburst +335.4, Shadowy Apparition +312.9 and C'Thun +254.5 DPS; all remained below their SimC counterparts. The pre-existing Void Blast excess included the non-Shadow Overwhelming Shadows modifier, as confirmed by the native conditional description and a native damage-factor trace.
+
 - Selected Psychic Link199484 copies its native effect0 fraction of eligible landed spell/tick damage to every other recipient with the caster's live Vampiric Touch. Native199486 supplies the damage payload; the echo cannot independently crit, hit its original recipient or use foreign VT. Actual caster-self damage, including native Death backlash sharing the offensive spell ID, is not a producer (SimC76f8118 `sc_priest_shadow.cpp1521–1619/2655–2669`, `sc_priest.cpp1430–1446`).
 
 - Voidform194249 suspends an active Shadowform232698 while it lasts, then restores Shadowform only when it was previously active (SimC76f8118 `sc_priest_shadow.cpp1940–1973`).
