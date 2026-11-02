@@ -113,7 +113,8 @@ fn distant_flame_shock_tick_still_grants_lava_surge() {
             assert!((actor_pos.x - target_pos.x).abs() > 100.0);
             assert!(
                 own_aura(&run, 77762).is_some(),
-                "TC's infinite normalized count guarantees a proc at nonzero chance: actor={actor_pos:?} target={target_pos:?} passive={:?}", own_aura(&run, 77756)
+                "TC's infinite normalized count guarantees a proc at nonzero chance: actor={actor_pos:?} target={target_pos:?} passive={:?}",
+                own_aura(&run, 77756)
             );
             return;
         }
