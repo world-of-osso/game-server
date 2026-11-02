@@ -40,6 +40,7 @@ mod assisted_wdp_tests;
 mod arms_battlelord_follower_tests;
 mod arms_chain_boundary_tests;
 mod arms_cooldown_tests;
+mod arms_culling_cyclone_follower_tests;
 mod arms_execute_bleed_follower_tests;
 mod arms_fatality_follower_tests;
 mod arms_imminent_follower_tests;
@@ -366,6 +367,8 @@ mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
 #[cfg(test)]
 mod outlaw_flickering_steel_follower_tests;
+#[cfg(test)]
+mod outlaw_find_opening_follower_tests;
 #[cfg(test)]
 mod outlaw_improved_adrenaline_follower_tests;
 mod outlaw_gravedigger_tests;
