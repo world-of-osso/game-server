@@ -91,7 +91,7 @@ class RubyPopulationTests(unittest.TestCase):
             self.assertTrue(placements_applied(db))
 
     def test_conflicting_difficulties_are_rejected(self):
-        with sqlite3.connect(':memory:') as db:
+        with closing(sqlite3.connect(':memory:')) as db:
             db.execute('CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, Comment TEXT, position_x REAL, position_y REAL, position_z REAL, spawnDifficulties TEXT)')
             db.execute(
                 'INSERT INTO content_creature VALUES(?,?,?,?,?,?,?,?)',
