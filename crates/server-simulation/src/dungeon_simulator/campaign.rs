@@ -479,9 +479,17 @@ fn den_each_node_first_party_damage_is_owner_controlled() {
                 .and_then(|summon| Entity::try_from_bits(summon.0))
                 .unwrap_or(source);
             if members.contains(&controller) && seen.insert(target) {
-                let source_detail = super::diagnostics::inspect_unit(world, None, source);
-                let target_detail = Entity::try_from_bits(target)
-                    .map(|target| super::diagnostics::inspect_unit(world, None, target));
+                let target_entity = Entity::try_from_bits(target).unwrap();
+                let source_detail = (
+                    world.get::<shared::components::Npc>(source),
+                    world.get::<shared::components::UnitFlags>(source),
+                    world.get::<shared::components::UnitSummonedBy>(source),
+                );
+                let target_detail = (
+                    world.get::<shared::components::Npc>(target_entity),
+                    world.get::<shared::components::UnitFlags>(target_entity),
+                    world.get::<Health>(target_entity),
+                );
                 assert_eq!(
                     controller,
                     owner,
