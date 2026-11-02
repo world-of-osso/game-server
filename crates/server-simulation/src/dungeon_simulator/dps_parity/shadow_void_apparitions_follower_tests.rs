@@ -1,6 +1,6 @@
 use super::follower_dps_diagnostic::*;
 use super::*;
-use shared::components::Level;
+use shared::components::UnitLevel;
 use shared::protocol::CombatLogKind;
 
 #[test]
@@ -34,7 +34,7 @@ fn follower_void_apparitions_slam_activates_idols_without_cthun_talent() {
                 app.update();
                 let world = app.world_mut();
                 let fiends: Vec<_> = world
-                    .query::<(&crate::spell_cast::summon::SummonedCreature, &Level)>()
+                    .query::<(&crate::spell_cast::summon::SummonedCreature, &UnitLevel)>()
                     .iter(world)
                     .filter(|(summon, _)| summon.owner == actor && summon.spell_id == 1280172)
                     .map(|(_, level)| level.0)
