@@ -13,7 +13,12 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
     let health = party.app.world_mut().get_mut::<Health>(follower).unwrap();
     let max = health.max;
     drop(health);
-    party.app.world_mut().get_mut::<Health>(follower).unwrap().current = max / 2.0;
+    party
+        .app
+        .world_mut()
+        .get_mut::<Health>(follower)
+        .unwrap()
+        .current = max / 2.0;
     crate::spell_cast::cast_for_player_with_targets(
         party.app.world_mut(),
         healer,
@@ -23,10 +28,16 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
             primary: Some(healer),
             destination: Some([position.x, position.y, position.z]),
         },
-    ).unwrap();
+    )
+    .unwrap();
     party.app.update();
-    let totem = party.app.world_mut()
-        .query::<(bevy::prelude::Entity, &crate::spell_cast::summon::SummonedCreature)>()
+    let totem = party
+        .app
+        .world_mut()
+        .query::<(
+            bevy::prelude::Entity,
+            &crate::spell_cast::summon::SummonedCreature,
+        )>()
         .iter(party.app.world())
         .find(|(_, summon)| summon.owner == healer && summon.spell_id == 444995)
         .map(|(entity, _)| entity)
@@ -34,9 +45,28 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
     let health = party.app.world_mut().get_mut::<Health>(totem).unwrap();
     let max = health.max;
     drop(health);
-    party.app.world_mut().get_mut::<Health>(totem).unwrap().current = max / 2.0;
-    for _ in 0..80 { party.app.update(); }
+    party
+        .app
+        .world_mut()
+        .get_mut::<Health>(totem)
+        .unwrap()
+        .current = max / 2.0;
+    for _ in 0..80 {
+        party.app.update();
+    }
     let events = &party.app.world().resource::<ObservedCombatEvents>().0;
-    assert!(events.iter().any(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(73921) && e.source == Some(healer.to_bits()) && e.target == Some(follower.to_bits()) && e.amount > 0), "rain must heal the follower: {events:?}");
-    assert!(!events.iter().any(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(73921) && e.target == Some(totem.to_bits())), "rain must exclude summoned totems: {events:?}");
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(73921)
+            && e.source == Some(healer.to_bits())
+            && e.target == Some(follower.to_bits())
+            && e.amount > 0),
+        "rain must heal the follower: {events:?}"
+    );
+    assert!(
+        !events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(73921)
+            && e.target == Some(totem.to_bits())),
+        "rain must exclude summoned totems: {events:?}"
+    );
 }
