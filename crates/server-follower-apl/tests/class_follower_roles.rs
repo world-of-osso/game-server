@@ -1192,6 +1192,51 @@ fn arms_casts_damage_beside_engaged_boss_with_pull_back_hold() {
 }
 
 #[test]
+fn restoration_shaman_maintains_shields_without_enemies() {
+    let mut pull = spawn(264);
+    let actor = pull.follower;
+    let owner = pull.harness.caster;
+    let dummy = pull.harness.npc;
+    let world = pull.harness.app.world_mut();
+    world
+        .entity_mut(dummy)
+        .insert(server_combat::networking::CombatTarget(None));
+    let max = world.get::<Health>(owner).unwrap().max;
+    world.entity_mut(owner).insert(Health { current: max, max });
+    for _ in 0..200 {
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    let world = pull.harness.app.world_mut();
+    assert!(!world.get::<FollowerAplFailed>(actor).is_some());
+    assert!(
+        server_combat::auras::has_aura(world, actor, 52127),
+        "Water Shield"
+    );
+    let party = server_follower_apl::healing_party(world, actor);
+    assert!(
+        party
+            .iter()
+            .any(|&unit| server_combat::auras::has_aura(world, unit, 974)),
+        "Earth Shield"
+    );
+    server_combat::auras::remove_auras(
+        world,
+        actor,
+        server_combat::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 52127,
+    );
+    for _ in 0..200 {
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+    }
+    assert!(
+        server_combat::auras::has_aura(pull.harness.app.world(), actor, 52127),
+        "expired Water Shield is refreshed"
+    );
+}
+
+#[test]
 fn follower_apl_retries_after_a_pending_navigation_destination() {
     use server_combat::navigation::{Goal, MoveRequest, Navigation, Step};
     use server_combat::simc_apl::{Action, Facts};

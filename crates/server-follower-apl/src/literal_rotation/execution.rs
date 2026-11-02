@@ -185,7 +185,7 @@ impl Prepared {
             .map(|upkeep| {
                 actions
                     .iter()
-                    .filter(|action| action.self_target && upkeep.spells.contains(&action.spell))
+                    .filter(|action| upkeep.spells.contains(&action.spell))
                     .map(|action| action.name.to_owned())
                     .collect()
             });

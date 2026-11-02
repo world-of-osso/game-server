@@ -16,6 +16,11 @@ pub trait SpecRotation: Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
     fn action_spells(&self) -> Vec<u32>;
 
+    /// Maintained buffs selected by the default list while out of combat.
+    fn upkeep_spells(&self) -> &'static [u32] {
+        &[]
+    }
+
     /// Next precombat decision. `Waiting` covers a row the adapter executed itself.
     fn poll_precombat(
         &mut self,
@@ -171,14 +176,20 @@ impl FollowerApl {
                     })
             })
             .collect::<std::collections::BTreeSet<_>>();
-        if spells.is_empty() {
-            return Ok(());
+        if !spells.is_empty() {
+            world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+            let decision = self.rotation.poll_precombat(world, actor, &[]);
+            world.remove_resource::<literal_rotation::BuffUpkeep>();
+            if let PrecombatPoll::Selected { action, execution } = decision? {
+                return self.execute_plan(world, actor, action, execution);
+            }
         }
-        world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
-        let decision = self.rotation.poll_precombat(world, actor, &[]);
-        world.remove_resource::<literal_rotation::BuffUpkeep>();
-        if let PrecombatPoll::Selected { action, execution } = decision? {
-            self.execute_plan(world, actor, action, execution)?;
+        let spells = self.rotation.upkeep_spells().iter().copied().collect();
+        if !self.rotation.upkeep_spells().is_empty() {
+            world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+            let result = self.rotation.drive(world, actor, &[]);
+            world.remove_resource::<literal_rotation::BuffUpkeep>();
+            result?;
         }
         Ok(())
     }

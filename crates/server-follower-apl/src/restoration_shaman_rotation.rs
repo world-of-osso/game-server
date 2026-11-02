@@ -292,6 +292,10 @@ impl crate::follower::SpecRotation for Restoration {
         self.driver.action_spells(&self.bindings)
     }
 
+    fn upkeep_spells(&self) -> &'static [u32] {
+        &[382021, 52127, 974]
+    }
+
     fn poll_precombat(
         &mut self,
         _world: &mut World,

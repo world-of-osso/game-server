@@ -293,6 +293,12 @@ impl Driver {
         };
         let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
+            if prepared
+                .upkeep_actions()
+                .is_some_and(|actions| !actions.contains(&action.name))
+            {
+                return Ok(false);
+            }
             candidate_ready(
                 action,
                 facts,

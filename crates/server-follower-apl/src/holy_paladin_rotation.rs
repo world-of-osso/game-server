@@ -50,10 +50,8 @@ pub(crate) fn bindings() -> Bindings {
 pub(crate) fn program() -> Result<Program, String> {
     // SimC has no default Holy healer APL; these are native triage thresholds.
     Program::parse(&[
-        (
-            "default",
-            "beacon_of_light,if=target.health.pct<95&target.beacon_up=0",
-        ),
+        // SimC76f8118 sc_paladin_holy.cpp:668–671 maintains Beacon before combat.
+        ("default", "beacon_of_light,if=target.beacon_up=0"),
         ("default", "lay_on_hands,if=target.health.pct<20"),
         ("default", "avenging_wrath"),
         ("default", "light_of_dawn,if=party.injured>=2"),
@@ -220,6 +218,10 @@ impl ActionFacts for PartyFacts<'_> {
 impl crate::follower::SpecRotation for HolyPaladin {
     fn action_spells(&self) -> Vec<u32> {
         self.driver.action_spells(&self.bindings)
+    }
+
+    fn upkeep_spells(&self) -> &'static [u32] {
+        &[53563]
     }
 
     fn poll_precombat(
