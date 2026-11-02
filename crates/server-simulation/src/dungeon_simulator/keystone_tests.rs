@@ -138,6 +138,35 @@ fn unsupported_dungeon_produces_an_explicit_incomplete_record() {
 }
 
 #[test]
+#[ignore = "explicit native headless keystone inputs; two 200 s runs of one seed"]
+fn same_seed_headless_keystones_produce_identical_records() {
+    const TICKS: usize = 4_000;
+    let options = Options::from_environment().expect("explicit keystone runner inputs");
+    let seed: u64 = std::env::var("KEYSTONE_SIMULATOR_SEED")
+        .expect("keystone seed")
+        .parse()
+        .expect("numeric keystone seed");
+    let run = || {
+        serde_json::to_value(super::super::campaign::run_keystone_ticks(
+            seed, options, TICKS,
+        ))
+        .expect("serialize keystone record")
+    };
+    let first = run();
+    assert!(
+        first["outcome"]["forces"]
+            .as_u64()
+            .is_some_and(|forces| forces > 0),
+        "the bounded run must reach combat: {}",
+        first["outcome"]
+    );
+    assert!(
+        first == run(),
+        "same seed and inputs produced different records"
+    );
+}
+
+#[test]
 #[ignore = "explicit full native headless keystone run; use scripts/run-keystone-simulator.py"]
 fn run_headless_keystone() {
     let options = Options::from_environment().expect("explicit keystone runner inputs");
