@@ -585,6 +585,50 @@ pub(crate) fn queue_character_selection(
 }
 
 #[test]
+fn selecting_another_accounts_character_does_not_retire_its_live_player() {
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 11, "Owner", 1, 1).unwrap();
+    let (mut app, connection) =
+        queue_character_selection(db, 11, character, crate::maps::MapStore::continents());
+    let player = finish_character_selection(&mut app, connection);
+    let attacker = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(999)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 12 },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(attacker)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter {
+            character_id: character,
+        });
+    for _ in 0..5 {
+        app.update();
+    }
+    assert!(app.world().get_entity(player).is_ok());
+    assert_eq!(
+        app.world()
+            .get::<crate::networking::PlayerLink>(connection)
+            .unwrap()
+            .0,
+        player
+    );
+    assert!(
+        app.world()
+            .get::<crate::networking::PlayerLink>(attacker)
+            .is_none()
+    );
+}
+
+#[test]
 fn reauthenticated_character_reuses_live_entity_before_old_transport_disconnects() {
     let db = test_db();
     let (character, _) = persistence::create_character(&db.db, 11, "Racing", 1, 1).unwrap();

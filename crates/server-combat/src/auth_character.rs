@@ -298,6 +298,10 @@ pub(crate) fn process_select_character(
         {
             continue;
         }
+        if !validate_ownership(&db.db, account_id, req.character_id) {
+            send_enter_error(entity, &mut enter_senders, "Character not found");
+            continue;
+        }
         let reconnect =
             live_reconnect_players
                 .iter()
@@ -311,8 +315,7 @@ pub(crate) fn process_select_character(
                     (disconnected || replaced.is_some())
                         .then_some((player, *position, *map, replaced))
                 });
-        if validate_ownership(&db.db, account_id, req.character_id)
-            && let Some((player, position, map, replaced)) = reconnect
+        if let Some((player, position, map, replaced)) = reconnect
             && let Some(place) = maps.place(map, position)
         {
             if let Some(session) = replaced {
