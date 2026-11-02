@@ -64,7 +64,9 @@ fn shadow_follower_recasts_mind_flay_after_two_ticks() {
                 event["event"]["spell_id"] == 15407 && event["event"]["kind"] == "Damage"
             })
             .count();
-        elapsed <= 40 && ticks == 2
+        // At this fixture's haste, two ticks take about 1.32s. Allow two
+        // 50ms simulation frames for quantization and immediate recasting.
+        elapsed <= 29 && ticks == 2
     });
     assert!(
         clipped,
