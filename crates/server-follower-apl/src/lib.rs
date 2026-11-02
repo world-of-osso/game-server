@@ -14,9 +14,9 @@ use server::{
 
 pub mod action_metadata;
 mod follower;
-mod lust_policy;
 pub mod hunter_facts;
 pub mod literal_rotation;
+mod lust_policy;
 pub mod profiles;
 pub mod registry;
 
