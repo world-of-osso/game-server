@@ -267,6 +267,7 @@ mod havoc_channels_tests;
 mod havoc_embers_refresh_tests;
 mod havoc_fact_tests;
 mod havoc_hunt_demon_hide_tests;
+mod havoc_hunt_follower_tests;
 mod havoc_immolation_fury_tests;
 mod havoc_tests;
 mod health_aura_state_tests;
