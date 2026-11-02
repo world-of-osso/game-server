@@ -68,7 +68,9 @@ fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
                     .any(|event| event.kind == CombatLogKind::CastSuccess
                         && event.spell_id == Some(124682)
                         && event.target == Some(target.to_bits())),
-                "ready Enveloping must follow the channel: {events:?}"
+                "ready Enveloping must follow the channel: health={:?}, cast={:?}, events={events:?}",
+                party.app.world().get::<Health>(target),
+                party.app.world().get::<CastState>(healer)
             );
         }
     }
