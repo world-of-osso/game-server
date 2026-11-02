@@ -1010,6 +1010,17 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 - Selected Idol of C'Thun377349 rolls its native RPPM on Mind Flay and Void Torrent ticks. An earned summon uses native377355 Tendril for one or two enemies or377357 Lasher for three or more, channels its native damage spell and grants native377358 Insanity on each actual tick (SimC76f8118 `sc_priest_shadow.cpp63–68/1463–1468`, `sc_priest.cpp4220–4230/4263–4282`, `sc_priest_pets.cpp903–1056`).
 - Selected Void Apparitions III1264107 makes Tentacle Slam activate one random Idol effect, including C'Thun without377349. INFERRED: use SimC76f8118's shuffled 17-card distribution of 3 Shadowfiend, 4 Horrific Vision, 1 Vision of N'Zoth, 2 Thing From Beyond and 7 C'Thun; native70448 describes the effects and chance but not their weights (`sc_priest_shadow.cpp1874–1876/2315–2320/2878–2920`).
 
+#### Shadow follower measurement
+
+On implementation `fc340da63f50b7f30ce5510501eef9625514945f`, binary SHA-256 `047bd043b44c8306ced21a1cfea80616650cf8fc823e72a6b1012c984d854fd0`, using the derived C'Thun v3 world snapshot, pinned SimC76f8118, disabled temporary enchants, and ten matched seeds (70448, 1–9) at 120 s:
+
+| Level | Native DPS | SimC DPS | Paired mean delta | 95% t interval |
+| --- | ---: | ---: | ---: | ---: |
+| 70 | 6,083.15 | 6,128.52 | −0.60% | [−4.10%, +2.91%] |
+| 90 | 31,869.94 | 35,558.88 | −10.34% | [−12.21%, −8.47%] |
+
+The L70 point estimate is within ±5%; the L90 point estimate is outside that margin. These results supersede the pre-correction L90 +4.82% estimate.
+
 #### L90 Void Apparitions investigation
 
 On the ten matched 120 s seeds, before the Overwhelming Shadows correction, native versus SimC total procs and direct DPS were: Shadowfiend 11/17 and 5.8/73.1; Horrific Vision 61/93 and 254.0/393.8; Vision of N'Zoth 46/64 and 790.9/1115.1; Thing From Beyond 32/38 and 798.4/1037.8; C'Thun Tendril 33/38 and 254.5/376.2. Vision and Thing totals include ordinary idol activations as well as random-idol activations. The counts are aggregate, not matched outcomes. Ten traced replays reproduced the original native damage and cast receipts exactly.
