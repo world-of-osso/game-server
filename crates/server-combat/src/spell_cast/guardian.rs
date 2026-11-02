@@ -419,6 +419,23 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 sc_priest_pets.cpp903–1056: C'Thun's guardians channel their native spells.
+    GuardianPolicy {
+        summons: &[377355],
+        entry: 192337,
+        spells: &[193473],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[377357],
+        entry: 198757,
+        spells: &[394976],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 sc_priest_pets.cpp75–86/1061–1134: native Thing From
     // Beyond repeats Void Spike with full owner SP; native cast time owns cadence.
     GuardianPolicy {
