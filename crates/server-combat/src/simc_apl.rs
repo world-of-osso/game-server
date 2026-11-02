@@ -11,6 +11,18 @@ pub trait Facts {
     fn value(&self, name: &str) -> Result<f64, String>;
 }
 
+/// A native fact the world cannot answer on this tick, such as a route still being
+/// planned. A condition reading it is not ready; invalid operands remain errors.
+pub const NOT_READY: &str = "APL_FACT_NOT_READY";
+
+pub fn not_ready(reason: &str) -> String {
+    format!("{NOT_READY}: {reason}")
+}
+
+pub fn is_not_ready(error: &str) -> bool {
+    error.starts_with(NOT_READY)
+}
+
 /// Program operands such as plain gcd/combo_strike belong to the current action.
 /// Native adapters must supply this explicitly; no actor-wide fallback is assumed.
 pub trait ActionFacts: Facts {
