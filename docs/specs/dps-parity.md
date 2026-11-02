@@ -228,7 +228,7 @@ Selected391881 grants native391882 only from an actual owned Rip tick. Its chanc
 - Landed primary Ferocious Bite applies caster-owned Sabertooth391722 when202031 is selected, adding the cast's paid combo points up to five stacks. Its native target masks use talent202031 effect2 per stack (`sc_druid.cpp4295–4304,13852–13854,14303–14305`).
 - Landed Ravage441591 applies the selected caster-owned Dreadful Wound441812 to each damaged target. Its native target vulnerability requires Exacerbating Wounds1271839 (`sc_druid.cpp2334–2343,2393–2397,14308–14310`).
 - Selected Feral Ravage441583 rolls a5% accumulated proc distribution on actual landed white swings, increased by selected Limb from Limb1271540 effect1; success grants441585 (`sc_druid.cpp9793–9800,9832–9836,12420–12434`).
-- Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, and apply excess Energy only to the primary hit (`sc_druid.cpp4358–4401,4418–4450`).
+- Ravage441585 replaces Ferocious Bite with441591; execution consumes the buff and pays native Bite-equivalent combo points and Energy. Scale both native damage coefficients by spent combo points, apply excess Energy only to the primary hit, and exclude that target from splash (`sc_druid.cpp4358–4401,4418–4450`).
 - [ ] Dreadful Wound's Tiger's Fury refresh retention is unqualified.
 
 ### Shared merged critical feedback
@@ -449,6 +449,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 - [x] Native execution preserves the selected action primary separately from the spell's cast unit. A self-target spell must keep its native self cast while forwarding the actual selected hostile primary to child relationships. Preserve that context across queued requests, cast bars, missile snapshots and periodic aura application/refresh/tick snapshots; an absent or unknown context must not select a substitute. Resolve caster-only targeting from the actual native endpoint after action replacement, not only the requested base action; ground destinations retain their declared targeting. Apply the same contract to Player and NPC actors without spell-ID branches, damage multipliers or mutable-target fallbacks. [Proof](../handoffs/hostile-primary-proof-ledger.md).
 
 ### Frost literal rotation
+
+- Hyperpyrexia rolls on actual Frost Strike impacts for either weapon configuration, including the native two-handed damage child325464, and banks the native fraction of damage (`sc_death_knight.cpp`10759–10795).
 
 - Successful native Frost Strike/Glacial Advance executions roll Rime using native59057 effect2. Actual Frost Strike/Glacial Advance/Howling Blast during Pillar with selected Obliteration grants Killing Machine and rolls native281238 effect2 for native281327 rune restoration. White critical swings use pinned accumulated KM PRD (0.3 dual wield;1.0 two-handed with Might of the Frozen Wastes); ordinary/noncritical hits do not roll. Native passive trigger effects supply the buff identities and payloads (`sc_death_knight.cpp`7716–7719,10889–10900,11177–11189,11614–11622,14824–14825,16163–16165).
 
