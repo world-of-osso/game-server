@@ -133,6 +133,11 @@ impl FollowerApl {
         }
     }
 
+    fn heal_out_of_combat(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let rotation = &mut self.rotation;
+        literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, &[]))
+    }
+
     fn precombat_buff_expired(&mut self, world: &World, actor: Entity) -> bool {
         let now = crate::spell_cast::now(world);
         self.precombat_buffs.iter_mut().any(|(spell, deadline)| {
@@ -213,12 +218,15 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         return;
     }
     let targets = ordered_targets(world, unit);
+    let recovering = targets.is_empty() && healer_has_injured_party(world, unit);
     if targets.is_empty() {
         if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
             apl.idle();
         }
-        world.entity_mut(unit).remove::<FollowerAplFailed>();
-        return;
+        if !recovering {
+            world.entity_mut(unit).remove::<FollowerAplFailed>();
+            return;
+        }
     }
     if let Some(mut apl) = world.entity_mut(unit).take::<FollowerApl>() {
         if !apl.precombat_buff_expired(world, unit) {
@@ -232,7 +240,14 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         Some(apl) => Ok(apl),
         None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
     };
-    let result = apl.and_then(|mut apl| apl.tick(world, unit, &targets).map(|()| apl));
+    let result = apl.and_then(|mut apl| {
+        if recovering {
+            apl.heal_out_of_combat(world, unit)?;
+        } else {
+            apl.tick(world, unit, &targets)?;
+        }
+        Ok(apl)
+    });
     match result {
         Ok(apl) => {
             world.entity_mut(unit).insert(apl);
@@ -242,6 +257,17 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
             world.entity_mut(unit).insert(FollowerAplFailed);
         }
     }
+}
+
+fn healer_has_injured_party(world: &mut World, unit: Entity) -> bool {
+    let is_healer = server::followers::acting_follower(world, unit)
+        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
+    is_healer
+        && party_of(world, unit).into_iter().any(|member| {
+            world
+                .get::<shared::components::Health>(member)
+                .is_some_and(|health| health.current > 0.0 && health.current < health.max)
+        })
 }
 
 /// The follower's party, owner included; empty for an actor that is not a follower.
