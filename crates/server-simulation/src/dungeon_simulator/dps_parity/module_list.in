@@ -252,6 +252,7 @@ mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
 mod feral_stalking_tests;
 mod feral_tests;
+mod feral_tear_factor_follower_tests;
 mod feral_tigers_fury_follower_tests;
 mod feral_twin_claw_follower_tests;
 mod feral_unseen_tests;
