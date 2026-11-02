@@ -204,6 +204,14 @@ fn apply_craving(world: &mut World, ctx: &EffectCtx<'_>) {
     let Some(mut buff) = spell_cast::load_triggered_spell(world, CRAVING, ctx.depth + 1) else {
         return;
     };
+    // SimC76f8118 sc_druid.cpp14251: the rank-scaled talent effect supplies
+    // each of the native Craving aura's direct, periodic and auto-attack modifiers.
+    let percent = spell_cast::scripts::script_effect_value(world, ctx.caster, CRAVING_TALENT, 0);
+    for effect in &mut buff.effects {
+        if matches!(effect.index, 0..=2) {
+            effect.base_points = percent;
+        }
+    }
     let duration = buff
         .misc
         .as_mut()

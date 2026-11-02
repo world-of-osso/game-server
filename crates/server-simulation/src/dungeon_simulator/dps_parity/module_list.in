@@ -255,6 +255,7 @@ mod feral_tests;
 mod feral_tear_factor_follower_tests;
 mod feral_tigers_fury_follower_tests;
 mod feral_twin_claw_follower_tests;
+mod feral_unseen_craving_value_follower_tests;
 mod feral_unseen_tests;
 mod fire_brainstorm_tests;
 mod fire_gap_tests;
