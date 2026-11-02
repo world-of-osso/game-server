@@ -3490,7 +3490,7 @@ fn spawn_run_mode_record(
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
-            app.insert_resource(server::navigation::Navigation::new(&nav));
+            server::test_support::install_navigation(&mut app, &nav);
             Some(start_with_recorded_route(planned_route, plan, |plan| {
                 super::keystone::start(&mut app, &party, plan, options)
             })?)
