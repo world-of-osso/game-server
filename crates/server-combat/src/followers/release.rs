@@ -33,6 +33,19 @@ pub(super) fn update(world: &mut World) {
     for unit in returned {
         world.entity_mut(unit).remove::<ReturningFromGraveyard>();
     }
+    let owners: std::collections::HashSet<_> = world
+        .query::<&Follower>()
+        .iter(world)
+        .map(|follower| follower.owner)
+        .collect();
+    for owner in owners {
+        if world
+            .get::<crate::death::PlayerDeathState>(owner)
+            .is_some_and(|state| state.state == shared::death::DeathState::Dead)
+        {
+            request_resurrection(world, owner, owner);
+        }
+    }
     let dead: Vec<_> = world
         .query::<(Entity, &Follower, &crate::combat::Corpse)>()
         .iter(world)
@@ -48,6 +61,12 @@ pub(super) fn update(world: &mut World) {
 }
 
 fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> bool {
+    if world
+        .get::<crate::death::resurrection::PendingResurrection>(target)
+        .is_some()
+    {
+        return true;
+    }
     let Some((map, members, _)) = party::read_admission(world, owner) else {
         return false;
     };

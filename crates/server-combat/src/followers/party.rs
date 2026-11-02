@@ -1619,6 +1619,53 @@ mod copy_tests {
     }
 
     #[test]
+    fn class_follower_offers_owner_resurrection() {
+        use lightyear::prelude::{MessageReceiver, MessageSender};
+        use shared::components::{Health, Position};
+        use shared::protocol::ResurrectionOffer;
+        let position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let max = h.app.world().get::<Health>(target).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+        h.app.world_mut().entity_mut(caster).insert((
+            super::super::AplControlled,
+            crate::class_progression::KnownSpells::fixture(vec![20484]),
+            position,
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<Health>(h.caster)
+            .unwrap()
+            .current = 0.0;
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::death::PlayerDeathState {
+                state: shared::death::DeathState::Dead,
+                corpse: None,
+                graveyard: None,
+            });
+        h.app.world_mut().entity_mut(h.connection).insert((
+            MessageSender::<ResurrectionOffer>::default(),
+            MessageReceiver::<ResurrectionOffer>::default(),
+        ));
+        super::super::release::update(h.app.world_mut());
+        h.advance(80);
+        let offers =
+            crate::spell_cast::test_harness::drain::<ResurrectionOffer>(&mut h.app, h.connection);
+        assert_eq!(offers.len(), 1);
+        assert_eq!(h.health(h.caster), 0.0);
+    }
+
+    #[test]
     fn follower_release_long_brackenhide_route_walks_back() {
         use shared::components::{Health, Position};
         let owner_position = Position {
