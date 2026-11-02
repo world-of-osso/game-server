@@ -26,6 +26,7 @@ mod healer_simc_replay;
 mod holy_paladin_replay_tests;
 mod holy_paladin_simc_tests;
 mod holy_priest_replay_tests;
+mod priest_piety_summon_tests;
 mod priest_piety_tests;
 mod keystone;
 mod keystone_record;
