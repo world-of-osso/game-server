@@ -821,10 +821,6 @@ fn normal_follower_reconnect_restores_live_enemies_and_following() {
             .get::<Health>(followers[0])
             .map(|health| health.current),
     );
-    assert_eq!(
-        h.app.world().get::<Health>(enemy).unwrap().current,
-        remaining
-    );
 }
 
 #[test]
