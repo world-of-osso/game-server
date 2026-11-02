@@ -317,6 +317,12 @@ impl State {
         Ok(run.phase == shared::protocol::ChallengePhase::Countdown)
     }
 
+    pub fn forces_complete(&self, world: &World) -> bool {
+        self.session
+            .snapshot(world)
+            .is_some_and(|run| run.forces >= run.forces_required)
+    }
+
     pub fn completed(&self, world: &World) -> bool {
         self.session
             .snapshot(world)
