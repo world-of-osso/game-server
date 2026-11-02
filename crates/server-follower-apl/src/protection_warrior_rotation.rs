@@ -151,18 +151,21 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
-        let prepared = self.read_prepared(world, actor, targets)?;
-        let facts = ProtectionWarriorFacts {
-            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
-                .with_targets(targets.first().copied(), targets),
-            equipment: &self.equipment,
-        };
         let selected = if precombat {
-            precombat_selection(
-                self.driver
-                    .poll_precombat(&facts, &prepared, &self.equipment)?,
-            )?
+            precombat_selection(self.poll_precombat(world, actor, targets)?)?
         } else {
+            let prepared = self.read_prepared(world, actor, targets)?;
+            let facts = ProtectionWarriorFacts {
+                native: NativeFacts::new(
+                    world,
+                    actor,
+                    &self.bindings,
+                    self.encounter,
+                    targets.len(),
+                )
+                .with_targets(targets.first().copied(), targets),
+                equipment: &self.equipment,
+            };
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
         };
@@ -171,6 +174,22 @@ impl Rotation {
         };
         self.driver.execute(world, actor, action, execution)?;
         Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<literal_rotation::PrecombatPoll, String> {
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = ProtectionWarriorFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn read_prepared(
@@ -255,11 +274,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        Rotation::poll_precombat(self, world, actor, targets)
     }
 
     fn execute(
