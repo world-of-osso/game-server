@@ -1,6 +1,7 @@
 // Child module declarations of dps_parity, one per line in alphabetical order.
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
+mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
 mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_blast_cost_tests;
@@ -82,6 +83,7 @@ mod channel_timing_tests;
 mod composite_precombat_tests;
 #[cfg(test)] mod demonology_doom_follower_tests;
 #[cfg(test)] mod demonology_dreadbite_follower_tests;
+#[cfg(test)] mod destruction_immolate_follower_tests;
 #[cfg(test)] mod demonology_doom_reach_follower_tests;
 #[cfg(test)] mod demonology_doomguard_cooldown_follower_tests;
 #[cfg(test)] mod demonology_infernal_presence_follower_tests;
@@ -122,6 +124,7 @@ mod devastation_gaze_tests;
 mod devastation_imminent_tests;
 mod devastation_infinity_tests;
 mod devastation_onslaught_tests;
+mod devastation_scarlet_immunity_tests;
 mod devastation_scarlet_tests;
 mod devastation_tests;
 mod devastation_verdant_tests;
@@ -224,16 +227,25 @@ mod evoker_ruby_embers_tests;
 mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod evoker_titanic_tests;
+mod feral_apex_follower_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
+mod feral_dreadful_wound_follower_tests;
 mod feral_growth_tests;
 mod feral_literal_tests;
 mod feral_lunar_tests;
 mod feral_native_tests;
+mod feral_ravage_consumer_follower_tests;
+mod feral_ravage_follower_tests;
+mod feral_ravage_sabertooth_follower_tests;
+mod feral_ravage_splash_follower_tests;
+mod feral_ravage_unseen_follower_tests;
+mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
 mod feral_stalking_tests;
 mod feral_tests;
+mod feral_tigers_fury_follower_tests;
 mod feral_unseen_tests;
 mod fire_brainstorm_tests;
 mod fire_gap_tests;
@@ -267,6 +279,7 @@ mod havoc_channels_tests;
 mod havoc_embers_refresh_tests;
 mod havoc_fact_tests;
 mod havoc_hunt_demon_hide_tests;
+mod havoc_hunt_follower_tests;
 mod havoc_immolation_fury_tests;
 mod havoc_tests;
 mod health_aura_state_tests;
@@ -339,10 +352,18 @@ mod multi_seed;
 mod named_action_cooldown_tests;
 mod native_pandemic_tests;
 mod outlaw_ace_tests;
+#[cfg(test)]
+mod outlaw_adrenaline_gcd_follower_tests;
+#[cfg(test)]
+mod outlaw_blade_rush_follower_tests;
 mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
 mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
+#[cfg(test)]
+mod outlaw_flickering_steel_follower_tests;
+#[cfg(test)]
+mod outlaw_improved_adrenaline_follower_tests;
 mod outlaw_gravedigger_tests;
 mod outlaw_main_gauche_tests;
 mod outlaw_opportunity_tests;
@@ -431,6 +452,7 @@ mod shadow_tests;
 mod shadow_torment_tests;
 mod shadow_void_blast_tests;
 mod shadow_void_bolt_tests;
+mod shadow_voidform_follower_tests;
 mod shadow_voidheart_tests;
 mod shadow_volley_tests;
 mod shadow_yogg_tests;
@@ -539,3 +561,4 @@ mod windwalker_player_tests;
 
 #[cfg(test)] mod brewmaster_stagger_tests;
 #[cfg(test)] mod brewmaster_empty_barrel_tests;
+#[cfg(test)] mod unholy_magus_follower_tests;

@@ -16,9 +16,24 @@ fn discipline_follower_channels_ultimate_penitence_at_the_enemy() {
             .is_some_and(|known| known.contains(421453)),
         "selected loadout entry 116182 must teach Ultimate Penitence"
     );
-    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
     super::healer_simc_replay::engage(&mut run);
-    super::healer_simc_replay::finish_precombat(&mut run.app, &[tank, healer]).unwrap();
+    let (_, cursor) = super::healer_simc_replay::start_recording_at_first_combat(
+        &mut run.app,
+        tank,
+        healer,
+        enemy,
+        &run.slots,
+    )
+    .unwrap();
+    let transition = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+    assert!(
+        transition
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && matches!(event.spell_id, Some(17 | 589))
+                && event.kind == CombatLogKind::CastSuccess),
+        "instant Discipline opener must be in the recorded transition: {transition:?}"
+    );
     // 40 s at 20 ticks per second.
     for _ in 0..800 {
         run.app.update();
@@ -39,7 +54,7 @@ fn discipline_follower_channels_ultimate_penitence_at_the_enemy() {
     assert_eq!(casts[0].target, Some(enemy.to_bits()));
     let bolts = from_healer(421543, CombatLogKind::Damage);
     assert!(
-        bolts.len() >= 20 && bolts.iter().all(|e| e.target == Some(enemy.to_bits())),
+        bolts.len() == 25 && bolts.iter().all(|e| e.target == Some(enemy.to_bits())),
         "actual channel bolts hit the enemy: {bolts:?}"
     );
 }

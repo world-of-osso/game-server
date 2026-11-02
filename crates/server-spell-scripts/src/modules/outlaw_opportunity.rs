@@ -12,6 +12,8 @@ const EXTRA_STRIKE: u32 = 197834;
 const TALENT: u32 = 279876;
 const OPPORTUNITY: u32 = 195627;
 const FAN_THE_HAMMER: u32 = 381846;
+const FLICKERING_STEEL: u32 = 1259492;
+const FLICKERING_STEEL_ENERGIZE: u32 = 1259493;
 const ROLL_THE_BONES: u32 = 1214909;
 const JACKPOT: u32 = 1214937;
 
@@ -74,5 +76,10 @@ fn grant_opportunity(world: &mut World, caster: Entity) {
     let mut spell =
         spell_cast::load_triggered_spell(world, OPPORTUNITY, 1).expect("native Opportunity buff");
     spell.cast_aura_stacks = Some(1 + extra);
-    spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1);
+    let applied = spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1);
+    // SimC 76f8118 sc_rogue.cpp8269–8272: an earned Opportunity restores
+    // Flickering Steel's native energy amount when the talent is selected.
+    if applied && auras::has_aura(world, caster, FLICKERING_STEEL) {
+        spell_cast::cast_triggered(world, caster, FLICKERING_STEEL_ENERGIZE, Some(caster), 1);
+    }
 }

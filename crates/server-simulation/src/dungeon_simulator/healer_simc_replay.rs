@@ -264,6 +264,7 @@ pub(super) fn equip_profile_item(party: &mut ClassParty, unit: Entity, spec: u32
 }
 
 /// Run the party's APL precombat until the tank and healer enter combat.
+#[cfg(test)]
 pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), String> {
     for _ in 0..MAX_PRECOMBAT_TICKS {
         app.update();
@@ -281,6 +282,48 @@ pub(super) fn finish_precombat(app: &mut App, actors: &[Entity]) -> Result<(), S
                 .is_some_and(|apl| apl.in_combat())
         }) {
             return Ok(());
+        }
+    }
+    Err("HEALER_REPLAY_PRECOMBAT_INCOMPLETE".into())
+}
+
+/// Capture the entire update in which the first actor enters combat.
+pub(super) fn start_recording_at_first_combat(
+    app: &mut App,
+    tank: Entity,
+    healer: Entity,
+    source: Entity,
+    slots: &[Entity],
+) -> Result<(Recorder, usize), String> {
+    for _ in 0..MAX_PRECOMBAT_TICKS {
+        app.insert_resource(Capture {
+            members: slots.to_vec(),
+            sources: [(source, (0, 0))].into(),
+            ..Default::default()
+        });
+        let mut recorder = Recorder::start(app.world(), healer, tank, slots.to_vec());
+        let cursor = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        recorder.observe_idle_gcd(app.world());
+        app.update();
+        let world = app.world();
+        for actor in [tank, healer] {
+            if world
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_some()
+            {
+                return Err(format!("HEALER_REPLAY_APL_FAILED:{actor}"));
+            }
+        }
+        if [tank, healer].into_iter().any(|actor| {
+            world
+                .get::<server_follower_apl::FollowerApl>(actor)
+                .is_some_and(|apl| apl.in_combat())
+        }) {
+            return Ok((recorder, cursor));
         }
     }
     Err("HEALER_REPLAY_PRECOMBAT_INCOMPLETE".into())
@@ -341,7 +384,8 @@ fn replay(
     for &extra in &sources[1..] {
         super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
     }
-    finish_precombat(&mut app, &[tank, healer])?;
+    let (mut recorder, mut event_cursor) =
+        start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
     let frozen_sources = sources
@@ -351,17 +395,6 @@ fn replay(
         .collect();
     super::healer_replay::freeze_sources(app.world_mut(), &frozen_sources);
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
-    app.insert_resource(Capture {
-        members: slots.to_vec(),
-        sources: [(source, (0, 0))].into(),
-        ..Default::default()
-    });
-    let mut recorder = Recorder::start(app.world(), healer, tank, slots.to_vec());
-    let mut event_cursor = app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .len();
     let mut tank_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut mitigation_ticks = 0_u32;
@@ -377,7 +410,7 @@ fn replay(
             .is_some_and(|health| health.current > 0.0)
     };
     for tick in 1..=ticks {
-        let elapsed_ms = u64::from(tick) * 50;
+        let elapsed_ms = u64::from(tick - 1) * 50;
         while let Some(hit) = hits.get(next).filter(|hit| hit.time_ms <= elapsed_ms) {
             if alive(app.world(), tank) {
                 deliver_hit(app.world_mut(), source, tank, hit, tick)?;
@@ -396,8 +429,10 @@ fn replay(
             }
             next_party += 1;
         }
-        recorder.observe_idle_gcd(app.world());
-        app.update();
+        if tick > 1 {
+            recorder.observe_idle_gcd(app.world());
+            app.update();
+        }
         #[cfg(test)]
         report_death_audit(&mut app, &slots);
         let world = app.world();
