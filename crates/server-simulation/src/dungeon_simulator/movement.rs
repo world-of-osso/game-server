@@ -302,6 +302,7 @@ fn move_one(
     let in_reach = server::test_support::within_reach(from, to, reach);
     let mut travel = world.entity_mut(unit).take::<Travel>().filter(|travel| {
         !travel.legs.is_empty()
+            && !(travel.legs.len() == 1 && travel.legs[0].1 <= reach + 0.0001)
             && travel.destination.distance(to) <= server_combat::navigation::REPATH_DISTANCE
             && !in_reach
     });
