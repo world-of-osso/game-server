@@ -20,6 +20,8 @@ const DECK_GRANT_SECONDS: f64 =
 mod azure_positioning_tests;
 #[path = "azure_throughput_tests.rs"]
 mod azure_throughput_tests;
+#[path = "kystia_pull_back_tests.rs"]
+mod kystia_pull_back_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 

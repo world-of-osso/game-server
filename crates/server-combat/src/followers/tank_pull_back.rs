@@ -122,6 +122,39 @@ fn clear(world: &mut World, tank: Entity, owner: Entity) {
     world.entity_mut(owner).remove::<WaitingForPullBack>();
 }
 
+fn party_has_engaged_enemy(
+    world: &World,
+    enemies: &[(Entity, Option<Entity>)],
+    party: &[Entity],
+) -> bool {
+    enemies.iter().any(|(enemy, _)| {
+        party.iter().copied().any(|member| {
+            crate::combat_refs::has_active_reference_to(world, *enemy, member)
+                || crate::hunter_pet::summoned_pet(world, member).is_some_and(|pet| {
+                    crate::combat_refs::has_active_reference_to(world, *enemy, pet)
+                })
+        })
+    })
+}
+
+#[cfg(test)]
+mod engagement_tests {
+    use super::*;
+
+    #[test]
+    fn enemy_engages_party_only_after_suppressed_reference_is_released() {
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let member = world.spawn_empty().id();
+        let enemy = world.spawn_empty().id();
+        let enemies = [(enemy, None)];
+        crate::combat_refs::set_in_combat_with_suppressed(&mut world, member, enemy);
+        assert!(!party_has_engaged_enemy(&world, &enemies, &[member]));
+        crate::combat_refs::set_in_combat_with(&mut world, member, enemy);
+        assert!(party_has_engaged_enemy(&world, &enemies, &[member]));
+    }
+}
+
 /// Called once per tank before party actions. `reach` comes from the party's native offensive abilities.
 pub(super) fn update(
     world: &mut World,
@@ -132,7 +165,14 @@ pub(super) fn update(
 ) {
     // A sessile enemy never follows the tank (TC CREATURE_STATIC_FLAG_SESSILE), so no
     // pull-back can bring it to a safe point; the party fights it where it stands.
-    let enemies: Vec<_> = ai::engaged_enemies(world, follower, tank, party)
+    let engaged = ai::engaged_enemies(world, follower, tank, party);
+    let party_in_fight = party_has_engaged_enemy(world, &engaged, party);
+    if party_in_fight {
+        world
+            .entity_mut(follower.owner)
+            .remove::<WaitingForPullBack>();
+    }
+    let enemies: Vec<_> = engaged
         .into_iter()
         .filter(|(enemy, _)| {
             !world
@@ -181,9 +221,11 @@ pub(super) fn update(
         Ok(exclusions) => exclusions,
         Err(error) => {
             warn!(?tank, %error, "Pull-back safety geometry unavailable");
-            world
-                .entity_mut(follower.owner)
-                .insert(WaitingForPullBack(tank));
+            if !party_in_fight {
+                world
+                    .entity_mut(follower.owner)
+                    .insert(WaitingForPullBack(tank));
+            }
             if world.get::<PullBack>(tank).is_none() {
                 world.entity_mut(tank).insert(PullBack {
                     target,
@@ -232,9 +274,11 @@ pub(super) fn update(
             owns_position: false,
             released: false,
         });
-        world
-            .entity_mut(follower.owner)
-            .insert(WaitingForPullBack(tank));
+        if !party_in_fight {
+            world
+                .entity_mut(follower.owner)
+                .insert(WaitingForPullBack(tank));
+        }
     }
     let Some(here) = targets::position(world, tank) else {
         return;
