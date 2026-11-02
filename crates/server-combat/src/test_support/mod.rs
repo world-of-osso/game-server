@@ -36,7 +36,10 @@ pub fn player_death_recorded(world: &bevy::prelude::World, player: bevy::prelude
 }
 
 /// Submit the native dungeon release for a dead headless player.
-pub fn accept_resurrection(world: &mut World, player: Entity) -> bool {
+pub fn accept_resurrection(
+    world: &mut bevy::prelude::World,
+    player: bevy::prelude::Entity,
+) -> bool {
     crate::death::resurrection::accept_pending(world, player)
 }
 

@@ -203,7 +203,7 @@ fn expire_offers(world: &mut World) {
     }
 }
 
-#[cfg(feature = "test-support")]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn accept_pending(world: &mut World, player: Entity) -> bool {
     let Some(offer) = world
         .get::<PendingResurrection>(player)
