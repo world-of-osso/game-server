@@ -5,12 +5,72 @@ use shared::components::{Health, Npc, Player, Position};
 
 const AURA_FEIGN_DEATH: u32 = 66;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared::threat::ThreatTable;
+
+    #[test]
+    fn random_not_top_skips_victim_before_applying_range_filter() {
+        let mut world = World::new();
+        let origin = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let alive = Health {
+            current: 100.0,
+            max: 100.0,
+        };
+        let victim = world.spawn((origin, alive)).id();
+        let outside = world.spawn((Position { x: 20.0, ..origin }, alive)).id();
+        let inside = world.spawn((Position { x: 3.0, ..origin }, alive)).id();
+        let mut threat = ThreatTable::default();
+        threat.add_threat(victim.to_bits(), 90.0);
+        threat.add_threat(outside.to_bits(), 100.0);
+        threat.add_threat(inside.to_bits(), 30.0);
+        let caster = world.spawn((origin, threat)).id();
+
+        for _ in 0..20 {
+            assert_eq!(
+                random_hostile(&world, caster, [10, 0, 0, 0], true, Some(victim)),
+                Some(inside)
+            );
+        }
+        assert_eq!(
+            random_hostile(&world, caster, [1, 0, 0, 0], true, Some(victim)),
+            None
+        );
+        assert_eq!(
+            random_hostile(&world, caster, [1, 0, 0, 0], false, None),
+            Some(victim)
+        );
+    }
+}
+
 /// TrinityCore a352b1fa GetTargets(SMART_TARGET_HOSTILE_RANDOM): threat-list
 /// selection, including the victim, with distance/player/primary-power filters.
-pub(super) fn random_hostile(world: &World, me: Entity, params: [u32; 4]) -> Option<Entity> {
+pub(super) fn random_hostile(
+    world: &World,
+    me: Entity,
+    params: [u32; 4],
+    skip_top: bool,
+    victim: Option<Entity>,
+) -> Option<Entity> {
     use rand::seq::SliceRandom;
     let [distance, player_only, power, _] = params;
     let threat = world.get::<shared::threat::ThreatTable>(me)?;
+    // TC UnitAI::PrepareTargetListSelection skips the current victim, or the
+    // highest threat entry if there is no victim, before target filtering.
+    let excluded = if skip_top {
+        victim.or_else(|| {
+            threat
+                .top_threat()
+                .and_then(|entry| Entity::try_from_bits(entry.entity))
+        })
+    } else {
+        None
+    };
     let origin = crate::spell_cast::targets::position(world, me)?;
     let map = world.get::<crate::maps::InMap>(me);
     let candidates: Vec<Entity> = threat
@@ -18,7 +78,8 @@ pub(super) fn random_hostile(world: &World, me: Entity, params: [u32; 4]) -> Opt
         .iter()
         .filter_map(|entry| Entity::try_from_bits(entry.entity))
         .filter(|&unit| {
-            crate::spell_cast::targets::is_alive(world, unit)
+            Some(unit) != excluded
+                && crate::spell_cast::targets::is_alive(world, unit)
                 && world.get::<crate::maps::InMap>(unit) == map
                 && (player_only == 0 || world.get::<Player>(unit).is_some())
                 && (distance == 0

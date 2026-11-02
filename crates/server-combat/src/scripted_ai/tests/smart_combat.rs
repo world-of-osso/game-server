@@ -5,6 +5,10 @@ const GEOMANCER: u32 = 476;
 const FIREBALL: u32 = 20793;
 
 fn geomancer() -> (Harness, Entity) {
+    geomancer_with_inferred(None)
+}
+
+fn geomancer_with_inferred(inferred: Option<Vec<smart_ai::SmartEvent>>) -> (Harness, Entity) {
     let data = data().expect("world.db fixture");
     let mut app = stockade_app(data);
     let path = world_db_path();
@@ -25,7 +29,14 @@ fn geomancer() -> (Harness, Entity) {
             .map(|id| all.store.get(*id).unwrap().clone())
             .collect(),
     ));
-    app.insert_resource(smart_ai::load_smart_scripts(&path).unwrap());
+    let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
+    if let Some(events) = inferred {
+        scripts.0.remove(&GEOMANCER);
+        scripts
+            .4
+            .insert((0, 0, GEOMANCER), std::sync::Arc::new(events));
+    }
+    app.insert_resource(scripts);
     let spawn = conn.query_row(
         "SELECT guid, position_x, position_y, position_z, orientation, spawntimesecs FROM content_creature WHERE id1 = 476 AND map = 0 ORDER BY guid LIMIT 1",
         [],
@@ -75,6 +86,39 @@ fn geomancer() -> (Harness, Entity) {
     };
     h.advance(0.05);
     (h, creature)
+}
+
+#[test]
+fn inferred_ability_casts_using_observed_timers() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("CREATE TABLE content_creature_template(entry INTEGER, AIName TEXT, ScriptName TEXT);
+        INSERT INTO content_creature_template VALUES (476, '', '');
+        CREATE TABLE content_inferred_creature_ability(map INTEGER, difficulty INTEGER, entry INTEGER, spell INTEGER, target_type INTEGER);
+        CREATE TABLE content_inferred_creature_ability_sample(map INTEGER, difficulty INTEGER, entry INTEGER, spell INTEGER, sample_id INTEGER, timing_kind TEXT, delay_ms INTEGER);
+        INSERT INTO content_inferred_creature_ability VALUES (0, 0, 476, 20793, 2);
+        INSERT INTO content_inferred_creature_ability_sample VALUES
+            (0, 0, 476, 20793, 1, 'first_activity_proxy', 250),
+            (0, 0, 476, 20793, 2, 'successive_cast', 7000);").unwrap();
+    let mut samples = smart_ai::inferred::load(&conn).unwrap();
+    let (mut h, creature) = geomancer_with_inferred(samples.remove(&(0, 0, GEOMANCER)));
+    h.engage(creature);
+    h.advance(0.15);
+    assert!(h.app.world().get::<CastState>(creature).is_none());
+    h.advance(0.2);
+    let first = h
+        .app
+        .world()
+        .get::<CastState>(creature)
+        .expect("first inferred cast")
+        .clone();
+    assert_eq!(first.spell_id, FIREBALL);
+    assert_eq!(first.target, h.player().to_bits());
+    h.advance(first.duration - first.elapsed + 0.1);
+    assert_eq!(h.casts(0, creature, FIREBALL), 1);
+    h.advance(6.0 - first.duration);
+    assert!(h.app.world().get::<CastState>(creature).is_none());
+    let second = wait_for_fireball(&mut h, creature);
+    assert_eq!(second.target, h.player().to_bits());
 }
 
 fn wait_for_fireball(h: &mut Harness, creature: Entity) -> CastState {

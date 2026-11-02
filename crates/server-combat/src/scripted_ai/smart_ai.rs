@@ -44,6 +44,9 @@ mod pose;
 #[path = "smart_targets.rs"]
 mod targets;
 
+#[path = "smart_inferred.rs"]
+pub(crate) mod inferred;
+
 #[path = "smart_lifetimes.rs"]
 pub(super) mod lifetimes;
 
@@ -116,6 +119,7 @@ const TARGET_NONE: u32 = 0;
 const TARGET_SELF: u32 = 1;
 const TARGET_VICTIM: u32 = 2;
 const TARGET_HOSTILE_RANDOM: u32 = 5;
+const TARGET_HOSTILE_RANDOM_NOT_TOP: u32 = 6;
 const TARGET_ACTION_INVOKER: u32 = 7;
 const TARGET_STORED: u32 = 12;
 const TARGET_INVOKER_PARTY: u32 = 16;
@@ -147,6 +151,7 @@ pub(crate) struct SmartEvent {
     pub target_type: u32,
     pub target_params: [u32; 4],
     pub target_position: [f32; 4],
+    pub inferred_timing: Option<inferred::TimingSamples>,
 }
 
 /// Creature entry -> its SmartAI rows, by id.
@@ -157,6 +162,7 @@ pub struct SmartScripts(
     HashMap<u32, Arc<Vec<SmartEvent>>>,
     HashMap<u32, Arc<paths::WaypointPath>>,
     HashMap<(u32, u32), Vec<summons::GroupMember>>,
+    pub(crate) HashMap<(u32, u32, u32), Arc<Vec<SmartEvent>>>,
 );
 
 const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.event_phase_mask, \
@@ -199,6 +205,7 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
                 target_type: int(20)?,
                 target_params: [int(22)?, int(23)?, int(24)?, int(25)?],
                 target_position: [row.get(26)?, row.get(27)?, row.get(28)?, row.get(29)?],
+                inferred_timing: None,
             },
         ))
     })?;
@@ -229,6 +236,10 @@ pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> 
             .collect(),
         paths::load_waypoint_paths(&conn)?,
         summons::load_summon_groups(&conn)?,
+        inferred::load(&conn)?
+            .into_iter()
+            .map(|(key, events)| (key, Arc::new(events)))
+            .collect(),
     ))
 }
 
@@ -301,6 +312,7 @@ fn supports_target(kind: u32) -> bool {
             | TARGET_SELF
             | TARGET_VICTIM
             | TARGET_HOSTILE_RANDOM
+            | TARGET_HOSTILE_RANDOM_NOT_TOP
             | TARGET_ACTION_INVOKER
             | TARGET_STORED
             | TARGET_INVOKER_PARTY
@@ -352,9 +364,9 @@ pub(crate) fn startup_load_smart_scripts(mut commands: Commands) {
 
 /// Whether `entry` runs SmartAI.
 pub(crate) fn has_script(world: &World, entry: u32) -> bool {
-    world
-        .get_resource::<SmartScripts>()
-        .is_some_and(|scripts| scripts.0.contains_key(&entry))
+    world.get_resource::<SmartScripts>().is_some_and(|scripts| {
+        scripts.0.contains_key(&entry) || scripts.4.keys().any(|key| key.2 == entry)
+    })
 }
 
 /// `SmartScriptHolder`'s runtime state.
@@ -392,9 +404,13 @@ struct TimedList {
 pub(crate) fn creature_ai(world: &World, creature: Entity) -> Option<Box<dyn CreatureAi>> {
     let entry = world.get::<shared::components::Npc>(creature)?.template_id;
     let boss = super::instance_script::bound_boss(world, creature);
-    let rows = world
-        .get_resource::<SmartScripts>()
-        .and_then(|scripts| scripts.0.get(&entry));
+    let rows = world.get_resource::<SmartScripts>().and_then(|scripts| {
+        scripts.0.get(&entry).or_else(|| {
+            let map = *world.get::<crate::maps::InMap>(creature)?;
+            let difficulty = crate::zones::map_difficulty_id(world, map);
+            scripts.4.get(&(map.map_id, difficulty, entry))
+        })
+    });
     if rows.is_none() && boss.is_none() {
         return None;
     }
@@ -460,6 +476,15 @@ impl SmartAi {
     fn init_timer(&mut self, index: usize) {
         self.states[index] = EventState::default();
         let event = &self.events[index];
+        if let Some(samples) = &event.inferred_timing {
+            use rand::seq::SliceRandom;
+            let delay = *samples
+                .first
+                .choose(&mut rand::thread_rng())
+                .expect("inferred initial samples");
+            self.recalc_timer(index, delay, delay);
+            return;
+        }
         let (min, max) = if event.event_type == EVENT_UPDATE_IC {
             (event.event_params[0], event.event_params[1])
         } else {
@@ -531,7 +556,17 @@ impl SmartAi {
             EVENT_RANGE => self.process_range_event(ctx, index),
             EVENT_UPDATE_IC => {
                 if ctx.is_engaged() {
-                    self.recalc_timer(index, event.event_params[2], event.event_params[3]);
+                    let (min, max) = if let Some(samples) = &event.inferred_timing {
+                        use rand::seq::SliceRandom;
+                        let delay = *samples
+                            .repeat
+                            .choose(&mut rand::thread_rng())
+                            .expect("inferred repeat samples");
+                        (delay, delay)
+                    } else {
+                        (event.event_params[2], event.event_params[3])
+                    };
+                    self.recalc_timer(index, min, max);
                     self.process_action(ctx, index, invoker);
                 }
             }
@@ -651,8 +686,10 @@ impl SmartAi {
         let targets = match event.target_type {
             TARGET_SELF => vec![ctx.me],
             TARGET_VICTIM => ctx.victim().into_iter().collect(),
-            TARGET_HOSTILE_RANDOM => {
-                targets::random_hostile(ctx.world, ctx.me, event.target_params)
+            TARGET_HOSTILE_RANDOM | TARGET_HOSTILE_RANDOM_NOT_TOP => {
+                let skip_top = event.target_type == TARGET_HOSTILE_RANDOM_NOT_TOP;
+                let victim = if skip_top { ctx.victim() } else { None };
+                targets::random_hostile(ctx.world, ctx.me, event.target_params, skip_top, victim)
                     .into_iter()
                     .collect()
             }
