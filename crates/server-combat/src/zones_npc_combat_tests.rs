@@ -642,7 +642,7 @@ fn a_creature_in_northshire_abbey_aggroes_a_player_through_the_doorway() {
 }
 
 #[test]
-fn sessile_meat_pile_stays_rooted_outside_melee_but_attacks_in_range() {
+fn meat_pile_does_not_attack_a_nearby_player() {
     let base = spawn_of(INFANTRY);
     let source = placed(base, 244041, 0.0);
     let mut app = fight_app(vec![source.clone()]).unwrap();
@@ -654,9 +654,14 @@ fn sessile_meat_pile_stays_rooted_outside_melee_but_attacks_in_range() {
     let start = *app.world().get::<Position>(creature).unwrap();
     let initial_health = health(&app, player).0;
     let template = world_data().template_for(244041, 205).unwrap();
-    assert_eq!(template.static_flags[0], 0x3000_0100);
+    // WCL +2 Hx64j9RrfnytB8cA/12, YaZ7RKjBnp6dyHTG/53 and
+    // BDjZ2QF6pNr8xV4W/1 have no Meat Pile actor or damage source.
+    assert_eq!(template.creature_type, 10);
+    assert_ne!(
+        template.unit_flags & shared::components::UnitFlags::NOT_SELECTABLE,
+        0
+    );
     run(&mut app, NOTIFY_TICKS * 8);
-    assert_eq!(state(&app, creature), pursuing(player));
     assert_eq!(*app.world().get::<Position>(creature).unwrap(), start);
     assert_eq!(health(&app, player).0, initial_health);
     app.world_mut().entity_mut(player).insert(Position {
@@ -665,8 +670,10 @@ fn sessile_meat_pile_stays_rooted_outside_melee_but_attacks_in_range() {
     });
     run(&mut app, NOTIFY_TICKS * 8);
     assert_eq!(*app.world().get::<Position>(creature).unwrap(), start);
-    assert!(
-        health(&app, player).0 < initial_health,
-        "root must not prevent melee"
+    assert_eq!(
+        health(&app, player).0,
+        initial_health,
+        "Meat Pile must not attack even at melee range"
     );
+    assert!(app.world().get::<AutoAttack>(creature).is_none());
 }

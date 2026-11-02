@@ -819,3 +819,38 @@ fn regenerative_heartwood_shares_rejuvenation_ticks_with_the_ironbark_target() {
         .collect();
     assert_eq!(shared, expected);
 }
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_druid_keeps_rejuvenation_on_a_healthy_party_before_wrath() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    super::healer_simc_replay::engage(&mut run);
+    let healer = run.healer;
+    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    for _ in 0..240 {
+        for unit in run.slots {
+            let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+            health.current = health.max;
+        }
+        run.app.update();
+    }
+    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let casts: Vec<(u32, u64)> = events
+        .iter()
+        .filter(|e| e.kind == CombatLogKind::CastSuccess && e.source == Some(healer.to_bits()))
+        .filter_map(|e| Some((e.spell_id?, e.target?)))
+        .collect();
+    let first_wrath = casts.iter().position(|(spell, _)| *spell == 5176);
+    let mut covered: Vec<u64> = casts[..first_wrath.unwrap_or(casts.len())]
+        .iter()
+        .filter(|(spell, _)| *spell == 774)
+        .map(|(_, target)| *target)
+        .collect();
+    covered.sort_unstable();
+    covered.dedup();
+    // Every party member gets Rejuvenation before the first Wrath.
+    assert_eq!(covered.len(), run.slots.len(), "{casts:?}");
+}

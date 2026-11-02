@@ -458,6 +458,149 @@ fn devourer_meta_fragment_heal_increments_collapsing_star() {
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn devourer_fragments_in_meta_grant_emptiness_haste() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .filter(|&spell| spell != 1261684 && spell != 1250094)
+        .collect();
+    spells.push(1242492);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1266301, Some(actor), 1);
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 1242504),
+        "outside Meta no Emptiness"
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..20 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), actor, 1217607) {
+            break;
+        }
+    }
+    for _ in 0..10 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1266301, Some(actor), 1);
+    }
+    run.app.update();
+    assert_eq!(stacks(run.app.world(), actor, 1242504), 10);
+    let with = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1242504,
+    );
+    run.app.update();
+    let without = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct;
+    let ratio = (1.0 + with / 100.0) / (1.0 + without / 100.0);
+    assert!(
+        (ratio - 1.025).abs() < 0.001,
+        "ten stacks grant 2.5% haste, ratio {ratio}"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn collapsing_star_spawns_selected_star_fragments() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let target = run.targets[0];
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.push(1240204);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1227702, Some(actor), 1);
+    }
+    let before = server::soul_fragments::total_count(
+        run.app.world(),
+        actor,
+        server::soul_fragments::FragmentFilter::Lesser,
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1221150, Some(target), 1);
+    let after = server::soul_fragments::total_count(
+        run.app.world(),
+        actor,
+        server::soul_fragments::FragmentFilter::Lesser,
+    );
+    assert_eq!(
+        after - before,
+        3,
+        "Star Fragments creates three actual fragments"
+    );
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
+fn midnight_grants_ready_star_and_fragments_on_meta_entry() {
+    let mut run = prepare(1480, 1).expect("native Devourer profile");
+    let actor = run.actor;
+    let mut spells: Vec<_> = run
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap()
+        .iter()
+        .collect();
+    spells.retain(|&spell| spell != 1261684);
+    spells.extend([1250094, 1221167]);
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::class_progression::KnownSpells::from_baseline(spells));
+    engage(&mut run);
+    let before = server::soul_fragments::total_count(
+        run.app.world(),
+        actor,
+        server::soul_fragments::FragmentFilter::Lesser,
+    );
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 1217605, Some(actor), 1);
+    for _ in 0..20 {
+        if crate::auras::has_aura(run.app.world(), actor, 1217607) {
+            break;
+        }
+        run.app.update();
+    }
+    assert_eq!(stacks(run.app.world(), actor, 1227702), 30);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1221171));
+    let after = server::soul_fragments::total_count(
+        run.app.world(),
+        actor,
+        server::soul_fragments::FragmentFilter::Lesser,
+    );
+    assert_eq!(after - before, 5, "Midnight creates five actual fragments");
+}
+
+#[test]
+#[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec1480 exact profile/traits"]
 fn devourer_full_soul_stacks_admit_real_metamorphosis() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare(1480, 1).expect("native Devourer profile");

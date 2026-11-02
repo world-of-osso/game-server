@@ -966,7 +966,7 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
     assert!(heals.iter().all(|event| event.crit));
     let expected = heals
         .iter()
-        .map(|event| (event.amount - event.overflow).max(0) as f32 * 0.30)
+        .map(|event| event.amount as f32 * 0.30)
         .sum::<f32>()
         .min(30_000.0);
     assert!(expected > 0.0);
@@ -1009,7 +1009,93 @@ fn divine_aegis_accumulates_critical_flash_heals_and_absorbs_damage() {
         });
     assert!(
         (hit.absorbed as f32 - expected).abs() <= 2.0,
-        "Aegis must accumulate 30% of effective critical heals: expected {expected}, got {hit:?}"
+        "Aegis must accumulate 30% of raw critical heals: expected {expected}, got {hit:?}"
+    );
+}
+
+#[test]
+fn divine_aegis_shields_a_fully_overhealed_critical_heal() {
+    let mut h = harness(
+        Vec::new(),
+        &[2061, 47515, 47753, 194384, 81749, 94472, 133],
+        5,
+    )
+    .unwrap();
+    h.app
+        .init_resource::<super::test_harness::ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(256));
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .crit_pct = 100.0;
+    let ally = spawn_player(&mut h.app, 5, 1.0);
+    *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 47515,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(2061, Some(ally));
+    h.advance(80);
+    let heal = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(2061)
+                && event.target == Some(ally.to_bits())
+        })
+        .unwrap();
+    assert!(
+        heal.crit && heal.amount > 0 && heal.amount == heal.overflow,
+        "{heal:?}"
+    );
+    let expected = heal.amount as f32 * 0.30;
+    let fire = world_db().unwrap().spell_store().get(133).unwrap().clone();
+    super::effects::deal_damage(
+        h.app.world_mut(),
+        &super::effects::EffectCtx {
+            caster: h.npc,
+            spell: &fire,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        ally,
+        expected + 100.0,
+        false,
+        false,
+    );
+    h.advance(2);
+    let hit = h
+        .app
+        .world()
+        .resource::<super::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .rev()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(133)
+                && event.target == Some(ally.to_bits())
+        })
+        .unwrap();
+    assert!(
+        (hit.absorbed as f32 - expected).abs() <= 2.0,
+        "full overheal must create 30% Aegis: expected {expected}, got {hit:?}"
     );
 }
 

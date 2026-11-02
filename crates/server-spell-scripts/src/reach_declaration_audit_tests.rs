@@ -18,6 +18,7 @@ type Sites = BTreeMap<Site, usize>;
 const DECLARED: &[(&str, &str, &str, usize)] = &[
     ("affliction_shared_agony.rs", "select_twin", "area", 1),
     ("demonology_pet_actions.rs", "felstorm", "query", 1),
+    ("demonology_doom.rs", "shorten_doom", "query", 1),
     ("destruction_roaring_blaze.rs", "nearby_enemies", "query", 1),
     (
         "discipline_atonement.rs",
