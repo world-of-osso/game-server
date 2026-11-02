@@ -15,7 +15,6 @@ fn council_wipe_restores_the_first_phase() {
     h.advance(0.1);
     h.engage(akaali);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), akaali);
-    h.advance(0.1);
     assert_eq!(
         instance_script::get_boss_state(h.app.world_mut(), map, 1),
         Some(EncounterState::NotStarted)
