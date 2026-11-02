@@ -682,3 +682,4 @@ D	fire_phoenix.rs	cast_next	cast_triggered	spell	1	449559,450421,450461,450462,4
 D	foreground_procs.rs	grant_buff_and_reset_actions	try_cast_triggered	buff	1	52437
 D	frost_followups.rs	apply_self_aura	AuraApplication	spell_id	1	205473,1222865
 D	frost_death_knight.rs	cast_buff_stacks	cast_triggered_with_overrides	spell	1	193486,194879,207062,211805,377101,377192,1230916,1233152
+D	blood_rune_weapon.rs	copy_weapon_actions	cast_triggered	spell.id	1	49998,50842,195182,195292,206930,433895
