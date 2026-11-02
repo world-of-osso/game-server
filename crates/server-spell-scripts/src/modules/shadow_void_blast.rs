@@ -10,6 +10,7 @@ use shared::components::ActiveSpec;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAuraApplication(earn_override),
     SpellScriptHook::ActionAvailable(available),
+    SpellScriptHook::EffectEnabled(overwhelming_shadows_effect),
 ];
 const TALENT: u32 = 450405;
 const OVERRIDE: u32 = 450404;
@@ -17,6 +18,18 @@ const RIFT: u32 = 459314;
 const TORRENT: u32 = 263165;
 const MIND_BLAST: u32 = 8092;
 const VOID_BLAST: u32 = 450983;
+const OVERWHELMING_SHADOWS: u32 = 1266883;
+
+fn overwhelming_shadows_effect(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    if spell != OVERWHELMING_SHADOWS {
+        return true;
+    }
+    match world.get::<ActiveSpec>(caster).map(|spec| spec.0) {
+        Some(258) => index != 1,
+        Some(256) => index != 0,
+        _ => true,
+    }
+}
 
 fn earn_override(world: &mut World, unit: Entity, aura: &AuraInstance) {
     if aura.spell_id != RIFT || aura.caster != unit {

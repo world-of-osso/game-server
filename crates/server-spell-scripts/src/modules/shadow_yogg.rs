@@ -55,7 +55,7 @@ pub(super) fn earn_cohort(world: &mut World, ctx: &EffectCtx<'_>) {
     });
 }
 
-fn spawn_thing(world: &mut World, ctx: &EffectCtx<'_>) {
+pub(super) fn spawn_thing(world: &mut World, ctx: &EffectCtx<'_>) {
     let depth = ctx.depth + 1;
     let mut summon =
         spell_cast::load_triggered_spell(world, SUMMON, depth).expect("native Thing summon");

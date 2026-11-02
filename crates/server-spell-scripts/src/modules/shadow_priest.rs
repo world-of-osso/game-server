@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use shared::components::{ActiveSpec, Position};
 
-use super::{combat, shadow_link};
+use super::{combat, shadow_link, shadow_void_apparitions};
 use combat::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, scripts::AuraScripts};
 use combat::class_progression::TraitLoadout;
 use combat::random as rand;
@@ -49,7 +49,7 @@ const DOTS: &[u32] = &[589, VT, MADNESS];
 // sc_priest.cpp194/1220; sc_priest_shadow.cpp40/561/756/835/1186/1435/1709.
 const WEAVING_PAYLOADS: &[u32] = &[
     589, 8092, 15407, 193473, 32379, VT, 263165, MADNESS, 373279, 391403, 394979, 413231, 447448,
-    448405, 450983, DAMAGE, 1231479, 1242189, 1243105, 1243106, 1264176, 1264177,
+    448405, 450983, 451435, DAMAGE, 1231479, 1242189, 1243105, 1243106, 1264176, 1264177,
 ];
 
 fn declared_reach(
@@ -105,6 +105,14 @@ pub(super) fn slam_impact(world: &mut World, caster: Entity, primary: Entity, de
         depth,
     );
     cast_maddening_tentacles(world, caster, primary, depth);
+    let ctx = EffectCtx {
+        caster,
+        spell: &damage,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    shadow_void_apparitions::trigger(world, &ctx, primary);
 }
 
 fn load_slam_damage(
