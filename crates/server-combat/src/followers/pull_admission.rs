@@ -179,8 +179,9 @@ fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>,
     // INFERRED_WCL: Hx64j9RrfnytB8cA/12 pull 11 starts with a hunter at 50.2% HP;
     // YaZ7RKjBnp6dyHTG/53 and BDjZ2QF6pNr8xV4W/1 supply comparison samples.
     const MIN_READY_HEALTH_FRACTION: f32 = 0.5;
-    // INFERRED_WCL: BDjZ2QF6pNr8xV4W/1 pull 5 healer mana is 93.97%.
-    const MIN_READY_HEALER_MANA_FRACTION: f32 = 0.93;
+    // INFERRED_WCL: zYdHKX7WTAMmjyaV/3 pull 7 healer mana is 81.23%
+    // 0.701s after the pull. Nearest-rank P1 across 35 samples rounds down to 81%.
+    const MIN_READY_HEALER_MANA_FRACTION: f32 = 0.81;
 
     if let Some(reason) = unavailable_party_member(world, run) {
         return Ok(Some(reason));

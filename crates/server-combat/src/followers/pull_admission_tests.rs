@@ -414,7 +414,7 @@ fn tank_pull_admission_accepts_half_health_but_waits_below_it_or_for_mana() {
         });
     }
     f.h.app.world_mut().entity_mut(f.healer).insert(Mana {
-        current: 93.0,
+        current: 81.0,
         max: 100.0,
     });
     assert!(matches!(
@@ -425,7 +425,7 @@ fn tank_pull_admission_accepts_half_health_but_waits_below_it_or_for_mana() {
         .world_mut()
         .get_mut::<Mana>(f.healer)
         .unwrap()
-        .current = 92.0;
+        .current = 80.0;
     assert_eq!(
         f.read(&[f.second]).unwrap(),
         Decision::Wait(Reason::Recovery)
