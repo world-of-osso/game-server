@@ -72,7 +72,7 @@ impl Progress {
         writer: &mut impl std::io::Write,
         sim_ms: u64,
         snapshot: &shared::protocol::ChallengeRun,
-        current_pack: Option<u32>,
+        current_pack: Option<u64>,
         route: &[super::graph::RouteStep],
         tank: TankProgress<'_>,
     ) -> std::io::Result<()> {
@@ -260,7 +260,7 @@ impl State {
         &self,
         reporter: &mut Progress,
         world: &World,
-        current_pack: Option<u32>,
+        current_pack: Option<u64>,
         tank: Entity,
     ) -> Result<(), String> {
         let elapsed = self.elapsed_ms(world);
