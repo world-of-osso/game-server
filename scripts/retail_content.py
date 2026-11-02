@@ -385,8 +385,8 @@ def declared_script_roots():
     children, dynamic = read_manifest(MANIFEST)
     roots = sorted({spell for spells in children.values() for spell in spells})
     enchant_sources = sorted({spell for _, _, sources in dynamic.values() for spell in sources})
-    if not roots or not enchant_sources:
-        raise ValueError('script child declarations require roots and enchant sources')
+    if not roots:
+        raise ValueError('script child declarations require roots')
     return roots, enchant_sources
 
 
