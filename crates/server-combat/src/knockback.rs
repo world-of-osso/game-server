@@ -260,9 +260,11 @@ fn apply_landing_damage(world: &mut World, target: Entity, distance: f32) {
     let Some(previous) = world.get::<Health>(target).copied() else {
         return;
     };
-    let damage = previous.max
-        * shared::movement::fall_damage_percent(distance)
-        * crate::networking::fall_damage_multiplier(world.get::<crate::auras::ActiveAuras>(target));
+    let auras = crate::networking::FallAuras::from_auras(
+        world.get::<crate::auras::ActiveAuras>(target),
+        false,
+    );
+    let damage = previous.max * auras.damage_fraction(distance);
     let log = crate::death::deal_environmental_damage(
         target,
         shared::protocol::EnvironmentalKind::Falling,
