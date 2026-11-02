@@ -19,7 +19,7 @@ fn surging_totem_heals_followers_and_not_its_summoned_totem() {
         .get_mut::<Health>(follower)
         .unwrap()
         .current = max / 2.0;
-    crate::spell_cast::cast_for_player_with_targets(
+    crate::spell_cast::creature_cast_with_targets(
         party.app.world_mut(),
         healer,
         444995,
