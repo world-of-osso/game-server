@@ -715,3 +715,8 @@ C	restoration_everbloom.rs	33778
 C	ret_damage.rs	1261160
 C	voltaic_blaze.rs	188389
 C	warlock_seed.rs	27285
+D	frost_runtime/frost_mage_procs.rs	apply_buff	AuraApplication	spell	1	44544,190446,455122,1247730
+D	frost_runtime/frost_mage_supply.rs	apply_buff	AuraApplication	spell_id	1	44544,461531
+D	guardian_impacts.rs	launch_child	try_cast_triggered	child	1	1292391
+D	guardian_rampant_thorn.rs	tick	launch_triggered_spell	&child	1	1301157
+D	guardian_wild_guardian.rs	wild_guardian_action	cast_triggered	override_aura	1	1269616,1270277
