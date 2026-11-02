@@ -1,10 +1,8 @@
-//! Avoid secondary spell hits on unrelated idle hostiles.
-use bevy::prelude::*;
-use shared::components::{CombatStatus, Npc};
-
-use crate::creature_ai::CreatureState;
+//! Avoid secondary spell hits on hostiles unrelated to the follower's party.
 use crate::maps::InMap;
 use crate::spell_cast::targets;
+use bevy::prelude::*;
+use shared::components::Npc;
 
 pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
     action_safe(world, caster, target, Some(spell))
@@ -163,15 +161,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                 && !planned.contains(&actor)
                 && targets::is_alive(world, actor)
                 && world.get::<Npc>(actor).is_some()
-                && world
-                    .get::<CreatureState>(actor)
-                    .is_some_and(CreatureState::is_idle)
-                && !world
-                    .get::<CombatStatus>(actor)
-                    .is_some_and(|status| status.0)
-                && crate::combat_refs::active_opponents(world, actor)
-                    .next()
-                    .is_none()
+                && !engaged_with_party(world, follower, actor)
                 && targets::relation_matches(world, caster, actor, targets::Relation::Enemy)
                 && targets::position(world, actor).is_none_or(|point| {
                     (caster_radius > 0.0 && caster_position.distance(point) <= caster_radius)
@@ -179,7 +169,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                 })
         });
     if let Some(outsider) = outsider {
-        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, caster_radius, target_radius, reason = "idle_outsider", "follower action refused");
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, caster_radius, target_radius, reason = "unengaged_outsider", "follower action refused");
         return false;
     }
     true
