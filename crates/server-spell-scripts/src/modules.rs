@@ -237,6 +237,7 @@ register_modules! {
     feral_lunar: (1030, "modules/feral_lunar.rs"),
     feral_lycaras: (1035, "modules/feral_lycaras.rs"),
     feral_omen: (1034, "modules/feral_omen.rs"),
+    feral_apex: (1034, "modules/feral_apex.rs"),
     feral_overflow: (1034, "modules/feral_overflow.rs"),
     feral_panthers_guile: (1034, "modules/feral_panthers_guile.rs"),
     feral_primal_fury: (1034, "modules/feral_primal_fury.rs"),

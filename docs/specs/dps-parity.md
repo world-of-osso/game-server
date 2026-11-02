@@ -216,6 +216,13 @@ Selected Cat Convoke391528 dispatches one native child per actual periodic-drive
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.
 
+### Feral Apex Predator's Craving
+
+Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
+
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
+- [ ] Missing Druid of the Claw finisher chain: Ravage441585/441591, Dreadful Wound441812 with its target damage effect, Sabertooth391722, and Rip's Tiger's Fury periodic snapshot.
+
 ### Shared merged critical feedback
 
 Native merged buff outcomes apply or clear the caster-owned aura after the hit batch, retaining native amounts, caps and duration. A grant is not another spell cast and must not emit cast/hit proc inputs or earn unrelated equipment buffs. Arcane/Frost Overflowing Energy and Fire feedback share this path (`sc_mage.cpp7272–7293/5585–5605`).
