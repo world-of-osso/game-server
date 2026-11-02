@@ -3940,8 +3940,8 @@ impl Run {
                 false
             } else {
                 let route = world
-                    .resource::<super::Space>()
-                    .walk_legs(from, to)
+                    .resource::<super::native_movement::NativeMovement>()
+                    .walk_legs(from, to, "cohesion")
                     .map_err(|error| format!("tank cannot follow leader: {error}"))?;
                 let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
                 yards > opening_range
@@ -3991,8 +3991,8 @@ impl Run {
         let route = self
             .app
             .world()
-            .resource::<super::Space>()
-            .walk_legs(from, target)
+            .resource::<super::native_movement::NativeMovement>()
+            .walk_legs(from, target, "reunion")
             .map_err(|error| format!("released leader cannot reach party: {error}"))?;
         let yards: f32 = route.iter().map(|(_, distance)| distance).sum();
         let (_, range) = crate::followers::simulator::opening_spell(self.app.world(), member);
@@ -4452,8 +4452,8 @@ impl Run {
         let center = Vec3::new(tank.x, tank.y, tank.z);
         let (_, range) = crate::followers::simulator::opening_spell(world, self.party.tank);
         let route = world
-            .resource::<super::Space>()
-            .walk_legs(origin, destination)?;
+            .resource::<super::native_movement::NativeMovement>()
+            .walk_legs(origin, destination, "chain")?;
         Ok(clip_route_to_tank_range(
             origin,
             center,

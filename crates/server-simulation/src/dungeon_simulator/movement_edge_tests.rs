@@ -1,5 +1,6 @@
 //! Recorded Azure endpoints on one actual frozen walk edge, not invented geometry.
 use super::*;
+use crate::dungeon_simulator::Space;
 use serde::Deserialize;
 
 const ROUNDING_YARDS: f32 = 0.01;
@@ -76,7 +77,7 @@ fn recorded_mid_edge_retarget_consumes_only_the_remaining_frozen_walk_time() {
     let remaining_yards = from.distance(to) / full_chord * edge.yards;
     let mut travel = Travel {
         destination: to,
-        legs: read_legs(Some(&space), from, to).unwrap(),
+        legs: space.walk_legs(from, to).unwrap(),
     };
     let after = advance(from, &mut travel, remaining_yards + ROUNDING_YARDS, 0.0);
     assert!(

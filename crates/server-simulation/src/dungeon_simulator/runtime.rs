@@ -226,6 +226,14 @@ fn build_runtime_app(
     }
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
+    let nav_root = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
+    let map_id = app.world().resource::<super::Space>().0.map_id;
+    app.insert_resource(
+        super::native_movement::NativeMovement::open(&nav_root, map_id)
+            .expect("open headless native movement"),
+    );
     app.insert_resource(server::simc_apl_native::MovementDestination(
         super::movement::apl_destination,
     ));
