@@ -53,6 +53,13 @@ impl Options {
     }
 }
 
+#[derive(Clone, Copy)]
+struct TankProgress<'a> {
+    position: Option<[f32; 3]>,
+    state: Option<&'a crate::creature_ai::CreatureState>,
+    follow_moving: Option<bool>,
+}
+
 /// Emits progress at the start and each simulated minute after the countdown.
 #[derive(Default)]
 pub(super) struct Progress {
@@ -67,6 +74,7 @@ impl Progress {
         snapshot: &shared::protocol::ChallengeRun,
         current_pack: Option<u32>,
         route: &[super::graph::RouteStep],
+        tank: TankProgress<'_>,
     ) -> std::io::Result<()> {
         if snapshot.phase != shared::protocol::ChallengePhase::Running || sim_ms < self.next_ms {
             return Ok(());
@@ -77,13 +85,16 @@ impl Progress {
             .map(|index| index + 1);
         writeln!(
             writer,
-            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{}",
+            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} tank_position={:?} tank_state={:?} tank_follow_moving={:?}",
             snapshot.forces,
             snapshot.forces_required,
             bosses,
             snapshot.bosses.len(),
             snapshot.deaths,
-            route.len()
+            route.len(),
+            tank.position,
+            tank.state,
+            tank.follow_moving
         )?;
         writer.flush()?;
         self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
@@ -250,6 +261,7 @@ impl State {
         reporter: &mut Progress,
         world: &World,
         current_pack: Option<u32>,
+        tank: Entity,
     ) -> Result<(), String> {
         let elapsed = self.elapsed_ms(world);
         if elapsed < self.countdown_ms || elapsed - self.countdown_ms < reporter.next_ms {
@@ -266,6 +278,15 @@ impl State {
                 &snapshot,
                 current_pack,
                 &self.route.steps,
+                TankProgress {
+                    position: world
+                        .get::<shared::components::Position>(tank)
+                        .map(|p| [p.x, p.y, p.z]),
+                    state: world.get::<crate::creature_ai::CreatureState>(tank),
+                    follow_moving: world
+                        .get::<crate::creature_ai::FollowOwner>(tank)
+                        .map(|follow| follow.moving),
+                },
             )
             .map_err(|error| format!("write keystone progress: {error}"))
     }

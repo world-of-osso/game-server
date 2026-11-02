@@ -2744,7 +2744,12 @@ pub(super) fn run_keystone(
                 run.healer_metrics.observe_frame(run.app.world());
                 let mut key = run.keystone.take().ok_or("keystone state disappeared")?;
                 let result = key.update(run.app.world_mut()).and_then(|()| {
-                    key.report_progress(&mut progress, run.app.world(), run.current_pack)
+                    key.report_progress(
+                        &mut progress,
+                        run.app.world(),
+                        run.current_pack,
+                        run.party.tank,
+                    )
                 });
                 run.keystone = Some(key);
                 result?;

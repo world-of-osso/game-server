@@ -52,31 +52,37 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
     ];
     let mut reporter = Progress::default();
     let mut output = Vec::new();
+    let idle = crate::creature_ai::CreatureState::Idle;
+    let tank = TankProgress {
+        position: Some([1.0, 2.0, 3.0]),
+        state: Some(&idle),
+        follow_moving: Some(false),
+    };
     reporter
-        .write(&mut output, 0, &snapshot, None, &route)
+        .write(&mut output, 0, &snapshot, None, &route, tank)
         .unwrap();
     assert!(output.is_empty(), "countdown is not running time");
     snapshot.phase = ChallengePhase::Running;
     reporter
-        .write(&mut output, 0, &snapshot, None, &route)
+        .write(&mut output, 0, &snapshot, None, &route, tank)
         .unwrap();
     reporter
-        .write(&mut output, 59_999, &snapshot, Some(10), &route)
+        .write(&mut output, 59_999, &snapshot, Some(10), &route, tank)
         .unwrap();
     snapshot.forces = 75;
     snapshot.deaths = 1;
     snapshot.bosses[0].defeated = true;
     reporter
-        .write(&mut output, 60_000, &snapshot, Some(42), &route)
+        .write(&mut output, 60_000, &snapshot, Some(42), &route, tank)
         .unwrap();
     reporter
-        .write(&mut output, 60_050, &snapshot, Some(42), &route)
+        .write(&mut output, 60_050, &snapshot, Some(42), &route, tank)
         .unwrap();
     assert_eq!(
         String::from_utf8(output).unwrap(),
         concat!(
-            "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2\n",
-            "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(42) route_step=Some(2)/2\n",
+            "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow_moving=Some(false)\n",
+            "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(42) route_step=Some(2)/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow_moving=Some(false)\n",
         )
     );
 }
