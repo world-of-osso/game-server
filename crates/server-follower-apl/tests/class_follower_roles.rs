@@ -1007,6 +1007,94 @@ fn class_healer_uses_apl_heals_without_damage_during_pull_back() {
 }
 
 #[test]
+fn arms_casts_damage_beside_engaged_boss_with_pull_back_hold() {
+    use shared::components::{Position, PowerType};
+
+    let mut pull = spawn(71);
+    let owner = pull.harness.caster;
+    let boss = pull.harness.npc;
+    let arms = pull.follower;
+    let profile = read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == 581)
+        .unwrap();
+    let tank = spawn_class(
+        pull.harness.app.world_mut(),
+        owner,
+        &profile,
+        1,
+        0,
+        GearSource::Journal,
+    )
+    .unwrap();
+    let boss_position = *pull.harness.app.world().get::<Position>(boss).unwrap();
+    let world = pull.harness.app.world_mut();
+    world.entity_mut(arms).insert(Position {
+        x: boss_position.x + 4.0,
+        ..boss_position
+    });
+    world.entity_mut(tank).insert(Position {
+        x: boss_position.x + 1.0,
+        ..boss_position
+    });
+    world
+        .entity_mut(boss)
+        .insert(server_combat::networking::CombatTarget(Some(tank)));
+    let mut pools = world
+        .get_mut::<server_combat::spell_cast::powers::PowerPools>(arms)
+        .unwrap();
+    let rage = pools.get_mut(PowerType::Rage).unwrap();
+    rage.current = rage.max;
+    server_combat::combat_refs::set_in_combat_with(world, boss, tank);
+    server_combat::combat_refs::set_in_combat_with(world, boss, arms);
+    server_combat::followers::set_test_pull_back(world, owner, tank);
+    assert!(server_combat::followers::holding_pull_damage(world, arms));
+    assert!(server_combat::combat_refs::has_active_reference_to(
+        world, boss, arms
+    ));
+    let damage_actions = pull.resolved(
+        server_follower_apl::arms_rotation::ACTIONS
+            .iter()
+            .filter(|(name, _, _)| {
+                matches!(
+                    *name,
+                    "mortal_strike"
+                        | "overpower"
+                        | "slam"
+                        | "rend"
+                        | "execute"
+                        | "demolish"
+                        | "colossus_smash"
+                        | "cleave"
+                        | "heroic_strike"
+                )
+            })
+            .map(|&(_, spell, _)| spell),
+    );
+    for _ in 0..100 {
+        server_combat::followers::update_ai(pull.harness.app.world_mut());
+        server_follower_apl::drive_followers(pull.harness.app.world_mut());
+        pull.harness.app.update();
+        if pull
+            .casts()
+            .iter()
+            .any(|spell| damage_actions.contains(spell))
+        {
+            assert!(!server_combat::followers::holding_pull_damage(
+                pull.harness.app.world(),
+                arms
+            ));
+            return;
+        }
+    }
+    panic!(
+        "Arms cast no damaging action within five seconds: {:?}",
+        pull.casts()
+    );
+}
+
+#[test]
 fn class_follower_dps_casts_arcane_apl_spells_on_dummy_pull() {
     let pull = pull(62);
     let table = server_follower_apl::arcane_rotation::ACTIONS;
