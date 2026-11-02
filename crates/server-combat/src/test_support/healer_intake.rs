@@ -15,7 +15,7 @@ pub enum HitKind {
     Spell {
         spell_id: u32,
         depth: u8,
-        bonus_source_guid: Option<u32>,
+        bonus_source_guid: Option<u64>,
         effect_index: Option<u32>,
         periodic: bool,
         crit: bool,
@@ -27,8 +27,8 @@ pub enum HitKind {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Hit {
     pub tick: u32,
-    pub source_guid: u32,
-    pub pack: u32,
+    pub source_guid: u64,
+    pub pack: u64,
     pub target_slot: usize,
     pub school: u32,
     /// Source bonuses/crit already applied; target reductions/armor/absorbs not applied.
@@ -47,8 +47,8 @@ pub struct SourceSnapshot {
 
 pub fn snapshot_sources(
     world: &World,
-    actors: &BTreeMap<u32, Entity>,
-) -> Result<BTreeMap<u32, SourceSnapshot>, String> {
+    actors: &BTreeMap<u64, Entity>,
+) -> Result<BTreeMap<u64, SourceSnapshot>, String> {
     actors
         .iter()
         .map(|(&guid, &unit)| {
@@ -76,8 +76,8 @@ pub fn snapshot_sources(
 
 pub fn apply_source_snapshots(
     world: &mut World,
-    sources: &BTreeMap<u32, SourceSnapshot>,
-    actors: &BTreeMap<u32, Entity>,
+    sources: &BTreeMap<u64, SourceSnapshot>,
+    actors: &BTreeMap<u64, Entity>,
 ) -> Result<(), String> {
     let current = snapshot_sources(world, actors)?;
     for (&guid, saved) in sources {
@@ -125,10 +125,10 @@ pub struct Intake {
     pub end_tick: u32,
     pub source_status: String,
     pub hits: Vec<Hit>,
-    pub sources: BTreeMap<u32, SourceSnapshot>,
+    pub sources: BTreeMap<u64, SourceSnapshot>,
     pub frames: Vec<Frame>,
     pub pulls: serde_json::Value,
-    pub source_deaths: Vec<(u32, u32)>,
+    pub source_deaths: Vec<(u32, u64)>,
     pub gaps: Vec<String>,
 }
 
@@ -148,14 +148,14 @@ pub fn non_unit_hits(hits: &[Hit]) -> usize {
 #[derive(Resource, Default)]
 pub struct Capture {
     pub members: Vec<Entity>,
-    pub sources: BTreeMap<Entity, (u32, u32)>,
+    pub sources: BTreeMap<Entity, (u64, u64)>,
     pub start_tick: u32,
     pub hits: Vec<Hit>,
     pub consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
     pub consumed_absorbs_by_spell: BTreeMap<(Entity, u32), f64>,
     pub melee_rage: BTreeMap<(Entity, &'static str), f64>,
     pub active_hit_scale: Option<(Entity, f32)>,
-    pub source_snapshots: BTreeMap<u32, SourceSnapshot>,
+    pub source_snapshots: BTreeMap<u64, SourceSnapshot>,
     pub gaps: Vec<String>,
 }
 
@@ -220,7 +220,7 @@ pub fn spell_bonus_source(
     source: Entity,
     bonus_caster: Entity,
     target: Entity,
-) -> Option<u32> {
+) -> Option<u64> {
     if source == bonus_caster {
         return None;
     }

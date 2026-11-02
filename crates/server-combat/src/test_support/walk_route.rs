@@ -7,13 +7,13 @@ use std::collections::{BTreeMap, BinaryHeap, VecDeque};
 // Recorded f32 mover positions differ from their frozen edge by up to 0.002yd.
 const EDGE_ROUNDING_YARDS: f32 = 0.01;
 type Legs = VecDeque<(Vec3, f32)>;
-type Adjacency = BTreeMap<u32, Vec<(u32, f32)>>;
-type Distances = BTreeMap<u32, f32>;
-type Previous = BTreeMap<u32, u32>;
+type Adjacency = BTreeMap<u64, Vec<(u64, f32)>>;
+type Distances = BTreeMap<u64, f32>;
+type Previous = BTreeMap<u64, u64>;
 
 struct Pending {
     yards: f32,
-    node: u32,
+    node: u64,
 }
 
 impl PartialEq for Pending {
@@ -42,7 +42,7 @@ impl PartialOrd for Pending {
 struct Endpoint {
     point: Vec3,
     offset: f32,
-    connections: Vec<(u32, f32)>,
+    connections: Vec<(u64, f32)>,
     edge: Option<(usize, f32)>,
 }
 
@@ -77,7 +77,7 @@ pub(super) fn read(graph: &Graph, from: Vec3, to: Vec3) -> Result<Legs, String> 
 
 fn locate_endpoint(
     graph: &Graph,
-    points: &BTreeMap<u32, Vec3>,
+    points: &BTreeMap<u64, Vec3>,
     position: Vec3,
 ) -> Result<Endpoint, String> {
     let (&id, &point) = points
@@ -114,7 +114,7 @@ fn locate_endpoint(
 }
 
 fn project_edge(
-    points: &BTreeMap<u32, Vec3>,
+    points: &BTreeMap<u64, Vec3>,
     index: usize,
     edge: &Edge,
     position: Vec3,
@@ -161,7 +161,7 @@ fn shortest_nodes(
     adjacency: &Adjacency,
     from: &Endpoint,
     to: &Endpoint,
-) -> Result<(Vec<u32>, f32), String> {
+) -> Result<(Vec<u64>, f32), String> {
     let (distances, previous) = solve_distances(adjacency, &from.connections);
     let (goal, yards) = to
         .connections
@@ -177,7 +177,7 @@ fn shortest_nodes(
     Ok((nodes, yards))
 }
 
-fn solve_distances(adjacency: &Adjacency, starts: &[(u32, f32)]) -> (Distances, Previous) {
+fn solve_distances(adjacency: &Adjacency, starts: &[(u64, f32)]) -> (Distances, Previous) {
     let mut distances: Distances = starts.iter().copied().collect();
     let mut previous = Previous::new();
     let mut pending: BinaryHeap<_> = starts
@@ -215,9 +215,9 @@ fn shared_edge_yards(graph: &Graph, from: &Endpoint, to: &Endpoint) -> Option<f3
 
 fn append_node_legs(
     legs: &mut Legs,
-    points: &BTreeMap<u32, Vec3>,
+    points: &BTreeMap<u64, Vec3>,
     adjacency: &Adjacency,
-    nodes: &[u32],
+    nodes: &[u64],
     from: &Endpoint,
     to: &Endpoint,
 ) {

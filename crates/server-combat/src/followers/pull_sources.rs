@@ -8,9 +8,9 @@ use crate::zones::CreatureOrigin;
 
 #[derive(Debug)]
 pub(super) struct Source {
-    pub guid: u32,
+    pub guid: u64,
     pub entry: u32,
-    pub pack_guid: u32,
+    pub pack_guid: u64,
     pub position: Vec3,
     pub actor: Option<Entity>,
 }
@@ -19,8 +19,8 @@ pub(super) fn read_present_sources(
     world: &mut World,
     map: InMap,
     difficulty: u32,
-    cleared: &BTreeSet<u32>,
-) -> Result<BTreeMap<u32, Source>, String> {
+    cleared: &BTreeSet<u64>,
+) -> Result<BTreeMap<u64, Source>, String> {
     let actors = read_source_actors(world, map)?;
     let data = world
         .get_resource::<WorldData>()
@@ -42,7 +42,7 @@ pub(super) fn read_present_sources(
 fn read_source_actors(
     world: &mut World,
     map: InMap,
-) -> Result<BTreeMap<u32, (Entity, u32)>, String> {
+) -> Result<BTreeMap<u64, (Entity, u32)>, String> {
     let mut actors = BTreeMap::new();
     let units = world
         .get_resource::<crate::maps::units::MapUnits>()
@@ -70,7 +70,7 @@ fn read_source_actors(
 fn read_source(
     data: &WorldData,
     spawn: &CreatureSpawn,
-    actors: &BTreeMap<u32, (Entity, u32)>,
+    actors: &BTreeMap<u64, (Entity, u32)>,
 ) -> Result<Source, String> {
     let actor = actors.get(&spawn.guid).copied();
     if actor.is_some_and(|(_, entry)| entry != spawn.template_entry) {

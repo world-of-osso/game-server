@@ -2,7 +2,7 @@
 use super::runtime::{build_app, create_copy, spawn_population};
 use shared::components::{Npc, Position};
 
-fn assert_native_spawn_and_return_addon(guid: u32, entry: u32, spell: u32) {
+fn assert_native_spawn_and_return_addon(guid: u64, entry: u32, spell: u32) {
     let mut app = build_app();
     let copy = create_copy(&mut app);
     let actors = spawn_population(&mut app, copy);

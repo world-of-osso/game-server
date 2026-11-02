@@ -518,14 +518,24 @@ const VENDOR_REAGENT_NPCFLAG: u32 = 0x0800;
 
 #[test]
 fn build_graveyard_registry_uses_spirit_healer_spawns() {
-    let registry = build_graveyard_registry(&world_data_with_one_spawn(SPIRIT_HEALER_6491_NPCFLAG));
+    let registry =
+        build_graveyard_registry(&world_data_with_one_spawn(SPIRIT_HEALER_6491_NPCFLAG)).unwrap();
 
     assert_eq!(registry.len(), 1);
 }
 
 #[test]
+fn build_graveyard_registry_rejects_guid_outside_protocol_range() {
+    let mut data = world_data_with_one_spawn(SPIRIT_HEALER_6491_NPCFLAG);
+    data.spawns[0].guid = 8_100_245_912;
+    let error = build_graveyard_registry(&data).unwrap_err();
+    assert!(error.contains("8100245912 exceeds u32"), "{error}");
+}
+
+#[test]
 fn build_graveyard_registry_ignores_reagent_vendor_spawns() {
-    let registry = build_graveyard_registry(&world_data_with_one_spawn(VENDOR_REAGENT_NPCFLAG));
+    let registry =
+        build_graveyard_registry(&world_data_with_one_spawn(VENDOR_REAGENT_NPCFLAG)).unwrap();
 
     assert_eq!(registry.len(), 0);
 }

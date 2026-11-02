@@ -48,7 +48,7 @@ pub(super) struct Sample {
 #[derive(Serialize)]
 pub(super) struct PullDecision {
     pub at: f64,
-    pub pack: u32,
+    pub pack: u64,
     pub decision: String,
 }
 
@@ -56,7 +56,7 @@ pub(super) struct PullDecision {
 pub(super) struct Report {
     pub seed: u64,
     pub status: String,
-    pub failed_pack: Option<u32>,
+    pub failed_pack: Option<u64>,
     pub bosses_killed: Vec<u32>,
     pub encounters_killed: usize,
     pub encounters_total: usize,
@@ -1704,7 +1704,7 @@ fn authored_route_skips_observed_accidental_deaths_without_reordering_the_rest()
     assert!(steps.len() >= 4);
     let ids: Vec<_> = steps
         .iter()
-        .map(|step| step["pack"].as_u64().unwrap() as u32)
+        .map(|step| step["pack"].as_u64().unwrap())
         .collect();
     let owner = run.party.owner;
     crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&ids[0]]);
@@ -2618,14 +2618,14 @@ struct Run {
     app: App,
     graph: Graph,
     party: crate::followers::simulator::Party,
-    actors: BTreeMap<u32, Entity>,
-    objects: BTreeMap<u32, Entity>,
+    actors: BTreeMap<u64, Entity>,
+    objects: BTreeMap<u64, Entity>,
     report: Report,
-    current_pack: Option<u32>,
-    waiting_objective: Option<(u32, f64)>,
+    current_pack: Option<u64>,
+    waiting_objective: Option<(u64, f64)>,
     deck_replay: Option<DeckReplay>,
     /// Packs whose frozen route anchor the owner reached without engaging them.
-    anchors_reached: std::collections::BTreeSet<u32>,
+    anchors_reached: std::collections::BTreeSet<u64>,
     last_progress: f64,
     event_cursor: usize,
     best_routes: BTreeMap<Entity, (super::movement::RouteGoal, f32)>,
@@ -2996,8 +2996,15 @@ fn spawn_run_mode_record(
                     | server::test_support::transport::Action::ObjectScript
             )
         })
-        .map(|transport| transport.source_guid)
-        .collect();
+        .map(|transport| {
+            u32::try_from(transport.source_guid).map_err(|_| {
+                format!(
+                    "transport object GUID {} exceeds u32",
+                    transport.source_guid
+                )
+            })
+        })
+        .collect::<Result<_, _>>()?;
     let objects = if object_guids.is_empty() {
         BTreeMap::new()
     } else {
@@ -3007,6 +3014,9 @@ fn spawn_run_mode_record(
         )
         .map_err(|error| format!("open transport objects: {error}"))?;
         server::test_support::transport::spawn_objects(app.world_mut(), &db, copy, &object_guids)?
+            .into_iter()
+            .map(|(guid, entity)| (u64::from(guid), entity))
+            .collect()
     };
     let missing: Vec<_> = graph
         .packs
@@ -3692,7 +3702,7 @@ impl Run {
     }
 
     /// Stops the party at a source that is not attackable yet; `stalled` reports it if it stays so.
-    fn hold_for_objective(&mut self, pack_id: u32) {
+    fn hold_for_objective(&mut self, pack_id: u64) {
         if self
             .waiting_objective
             .is_none_or(|(pack, _)| pack != pack_id)
@@ -3709,7 +3719,7 @@ impl Run {
     /// even when the source itself stands off-mesh; a moved source is approached where it is.
     /// A reached anchor that did not engage the source (its contact member may be dead) gives
     /// way to the live source.
-    fn approach_point(&mut self, pack_id: u32, target: Entity, live: Vec3) -> Vec3 {
+    fn approach_point(&mut self, pack_id: u64, target: Entity, live: Vec3) -> Vec3 {
         let unmoved = self.actors.get(&pack_id) == Some(&target)
             && self
                 .graph
@@ -3870,7 +3880,7 @@ impl Run {
         Err(format!("unregistered transport {source}->{destination}"))
     }
 
-    fn next_pack(&self) -> Option<(u32, Entity)> {
+    fn next_pack(&self) -> Option<(u64, Entity)> {
         let world = self.app.world();
         let completed = world
             .get::<crate::maps::InMap>(self.party.owner)
@@ -3938,7 +3948,7 @@ impl Run {
         })
     }
 
-    fn record_pull(&mut self, pack: u32, decision: String) {
+    fn record_pull(&mut self, pack: u64, decision: String) {
         if self
             .report
             .pulls

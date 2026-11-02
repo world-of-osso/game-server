@@ -222,7 +222,7 @@ fn native_overheat_authored_origin_refusal_enumeration() {
         if row["candidate"] != true {
             continue;
         }
-        let guid = row["origin_guid"].as_u64().unwrap() as u32;
+        let guid = row["origin_guid"].as_u64().unwrap();
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let CasterFixture { mut f, .. } = overheat_fixture(false, guid);
             observe_refusal_boundaries(&mut f)

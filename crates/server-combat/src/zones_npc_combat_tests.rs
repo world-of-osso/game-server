@@ -14,14 +14,14 @@ use crate::networking::CombatTarget;
 use crate::world_data::load_world_data;
 
 /// Retail spawns are TrinityCore guid + `RETAIL_GUID_OFFSET` (retail_content.py).
-const RETAIL: u32 = 20_000_000;
+const RETAIL: u64 = 20_000_000;
 /// Stormwind Infantry (49869, faction 2321, TrinityCore guid 279928) and the Blackrock
 /// Worg (49871, faction 32, civilian, guid 279929) spawned 1.3 yd from it.
-const INFANTRY: u32 = RETAIL + 279_928;
-const WORG_BY_INFANTRY: u32 = RETAIL + 279_929;
+const INFANTRY: u64 = RETAIL + 279_928;
+const WORG_BY_INFANTRY: u64 = RETAIL + 279_929;
 /// A Blackrock Invader (42937, faction 14) and a Northshire Guard (1642, faction 11,
 /// level 90: a 45 yd aggro radius against the invader).
-const INVADER: u32 = RETAIL + 279_831;
+const INVADER: u64 = RETAIL + 279_831;
 const NORTHSHIRE_GUARD_ENTRY: u32 = 1642;
 /// Ticks of one relocation notify period (1 s at 50 ms).
 const NOTIFY_TICKS: usize = 20;
@@ -31,7 +31,7 @@ fn world_data() -> &'static WorldData {
     DATA.get_or_init(|| load_world_data(&crate::test_data::world_db_path()))
 }
 
-fn spawn_of(guid: u32) -> &'static CreatureSpawn {
+fn spawn_of(guid: u64) -> &'static CreatureSpawn {
     world_data()
         .spawns
         .iter()

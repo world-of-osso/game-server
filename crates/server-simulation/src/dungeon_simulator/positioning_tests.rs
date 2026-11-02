@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 struct RecordedPositions {
     healer: [f32; 3],
     owner: [f32; 3],
-    idle_watchers: BTreeSet<u32>,
+    idle_watchers: BTreeSet<u64>,
 }
 
 fn segment_distance(center: Vec3, from: Vec3, to: Vec3) -> f32 {

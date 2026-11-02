@@ -62,7 +62,7 @@ pub(super) fn deliver_hits(world: &mut World) {
     }
 }
 
-pub(super) fn freeze_sources(world: &mut World, actors: &BTreeMap<u32, Entity>) {
+pub(super) fn freeze_sources(world: &mut World, actors: &BTreeMap<u64, Entity>) {
     for &source in actors.values() {
         // The recorded clock, not a second autonomous dungeon, owns enemy actions.
         // Keep native identity/scaling/armor/auras and all recipient damage handlers.
@@ -89,7 +89,7 @@ fn place_party(world: &mut World, members: &[Entity], positions: &[Option<[f32; 
     }
 }
 
-fn incoming_count(world: &World, members: &[Entity], actors: &BTreeMap<u32, Entity>) -> usize {
+fn incoming_count(world: &World, members: &[Entity], actors: &BTreeMap<u64, Entity>) -> usize {
     world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0

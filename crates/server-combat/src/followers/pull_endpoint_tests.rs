@@ -84,8 +84,8 @@ pub(super) fn eligible_target(f: &Fixture, actor: Entity) -> bool {
 
 pub(super) fn read_route_budget_row(
     f: &mut Fixture,
-    guid: u32,
-    cleared: &std::collections::BTreeSet<u32>,
+    guid: u64,
+    cleared: &std::collections::BTreeSet<u64>,
 ) -> Value {
     let route = match pull_route::inspect_route(
         f.h.app.world_mut(),
@@ -224,7 +224,7 @@ fn native_tank_endpoint_budget_lower_bound_enumeration() {
 
 #[test]
 fn native_tank_authored_routes_for20375689() {
-    const TARGET_GUID: u32 = 20375689;
+    const TARGET_GUID: u64 = 20375689;
     let mut f = measured_fixture();
     damage(&mut f.h, f.engaged, 1.0);
     pull_history::sample_all(f.h.app.world_mut());

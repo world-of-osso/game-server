@@ -10,20 +10,20 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 /// Retail spawns are TrinityCore guid + `RETAIL_GUID_OFFSET` (content_policy.py).
-const RETAIL: u32 = 20_000_000;
+const RETAIL: u64 = 20_000_000;
 /// Stormwind City Patroller (1976, TrinityCore guid 313806) walking path 25104480
 /// (creature_addon.PathId), 14 points, 12 s and 20 s pauses at points 7 and 14,
 /// spawntimesecs 300.
-const PATROLLER: u32 = RETAIL + 313_806;
+const PATROLLER: u64 = RETAIL + 313_806;
 const PATROLLER_PATH: u32 = 25_104_480;
 /// Stormwind Royal Guard (42218, TrinityCore guid 280010, path 2240080) leading
 /// 280023 (5 yd at 90°) and 280024 (5 yd at 360°), groupAI 515.
-const ROYAL_GUARD_LEADER: u32 = RETAIL + 280_010;
-const ROYAL_GUARD_MEMBERS: [(u32, f32, f32); 2] = [
+const ROYAL_GUARD_LEADER: u64 = RETAIL + 280_010;
+const ROYAL_GUARD_MEMBERS: [(u64, f32, f32); 2] = [
     (RETAIL + 280_023, 5.0, 90.0),
     (RETAIL + 280_024, 5.0, 360.0),
 ];
-const ROYAL_GUARD_ESCORTS: [u32; 3] = [
+const ROYAL_GUARD_ESCORTS: [u64; 3] = [
     ROYAL_GUARD_LEADER,
     ROYAL_GUARD_MEMBERS[0].0,
     ROYAL_GUARD_MEMBERS[1].0,
@@ -40,22 +40,22 @@ fn world_data() -> &'static WorldData {
 
 /// Spawn guid -> entity for the spawns a `patrol_app` created.
 #[derive(Resource)]
-struct Spawned(HashMap<u32, Entity>);
+struct Spawned(HashMap<u64, Entity>);
 
 /// App running the creature AI with only the spawns in `guids`.
-fn patrol_app(guids: &'static [u32]) -> App {
+fn patrol_app(guids: &'static [u64]) -> App {
     patrol_app_with(guids, |_| {})
 }
 
 /// `patrol_app` plus the NPC respawn timer.
-fn respawning_patrol_app(guids: &'static [u32]) -> App {
+fn respawning_patrol_app(guids: &'static [u64]) -> App {
     patrol_app_with(guids, |app| {
         app.init_resource::<crate::combat::CombatLog>();
         app.add_systems(FixedUpdate, crate::combat::respawn_system);
     })
 }
 
-fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
+fn patrol_app_with(guids: &'static [u64], extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     // One 20 Hz server tick per update, so every arrival is observed.
@@ -132,11 +132,11 @@ fn zephras_startup_spawns_imported_givers_on_the_hosted_continent() {
     }
 }
 
-fn entity_of(app: &App, guid: u32) -> Entity {
+fn entity_of(app: &App, guid: u64) -> Entity {
     app.world().resource::<Spawned>().0[&guid]
 }
 
-fn spawn_of(guid: u32) -> &'static CreatureSpawn {
+fn spawn_of(guid: u64) -> &'static CreatureSpawn {
     world_data()
         .spawns
         .iter()
@@ -168,7 +168,9 @@ fn stormwind_patroller_walks_addon_path_in_order_pausing_at_delays() {
         Some(PATROLLER_PATH)
     );
     assert!(
-        !world_data().waypoints.contains_key(&PATROLLER),
+        !world_data()
+            .waypoints
+            .contains_key(&u32::try_from(PATROLLER).unwrap()),
         "the path is keyed by path id, not guid"
     );
     let path = &world_data().waypoints[&PATROLLER_PATH];
@@ -297,8 +299,8 @@ fn royal_guard_escorts_hold_their_offsets_along_the_patrol() {
 fn addon_mounts_spawn_mounted_from_spawn_and_template_rows() {
     // TrinityCore 313610 Stormwind Harbor Guard: creature_addon.mount 2410.
     // TrinityCore 313914 General Marcus Jonathan: no spawn row; creature_template_addon.mount 2410.
-    const HARBOR_GUARD: u32 = RETAIL + 313_610;
-    const MARCUS: u32 = RETAIL + 313_914;
+    const HARBOR_GUARD: u64 = RETAIL + 313_610;
+    const MARCUS: u64 = RETAIL + 313_914;
     let harbor_guard = spawn_of(HARBOR_GUARD);
     let marcus = spawn_of(MARCUS);
     assert!(!world_data().addons.contains_key(&MARCUS));
@@ -320,7 +322,7 @@ fn addon_mounts_spawn_mounted_from_spawn_and_template_rows() {
 #[ignore]
 fn cenarion_hold_infantry_carries_its_addon_aura() {
     // TrinityCore 42766 Cenarion Hold Infantry (15184), Silithus: creature_addon.auras 18950.
-    const INFANTRY: u32 = RETAIL + 42_766;
+    const INFANTRY: u64 = RETAIL + 42_766;
     let spawn = spawn_of(INFANTRY);
     assert_eq!(world_data().addon_for(spawn).unwrap().auras, vec![18950]);
     let conn = rusqlite::Connection::open_with_flags(
@@ -464,7 +466,7 @@ fn killed_patroller_lies_still_then_respawns_at_spawn_and_restarts_its_path() {
 #[ignore]
 fn killed_idle_northshire_guard_respawns_at_its_spawn_after_its_timer() {
     // TrinityCore 280021: MovementType 0 Northshire Guard, spawntimesecs 120, normal rank.
-    const IDLE_GUARD: u32 = RETAIL + 280_021;
+    const IDLE_GUARD: u64 = RETAIL + 280_021;
     let spawn = spawn_of(IDLE_GUARD);
     assert_eq!(spawn.movement_type, 0);
     let (sx, sy, sz) =
@@ -579,7 +581,7 @@ fn escorts_hold_still_while_their_leader_is_dead_then_rejoin_it() {
 /// Stormwind's Retail Training Dummy (153292, TrinityCore guid 850239) and PvP
 /// Training Dummy (114832, 850247), TrinityCore-only templates with ScriptName
 /// `npc_training_dummy`, MovementType 0.
-const STORMWIND_DUMMIES: [u32; 2] = [RETAIL + 850_239, RETAIL + 850_247];
+const STORMWIND_DUMMIES: [u64; 2] = [RETAIL + 850_239, RETAIL + 850_247];
 
 #[test]
 #[ignore]
@@ -609,7 +611,7 @@ fn stormwind_training_dummies_get_their_script_and_stand_still() {
 
 /// Giant Moss Creeper (2349), Hillsbrad: AzerothCore display 6808 is Wrath-only;
 /// TrinityCore's Retail model for the entry is 520.
-const GIANT_MOSS_CREEPER: [u32; 1] = [RETAIL + 323_400];
+const GIANT_MOSS_CREEPER: [u64; 1] = [RETAIL + 323_400];
 
 #[test]
 #[ignore]
@@ -656,12 +658,12 @@ fn every_eastern_kingdoms_spawn_display_exists_in_retail() {
 
 /// Diseased Young Wolf (299, ContentTuning 73: levels 1-30, warrior,
 /// HealthScalingExpansion 0, HealthModifier 1).
-const DISEASED_YOUNG_WOLF: u32 = RETAIL + 280_052;
+const DISEASED_YOUNG_WOLF: u64 = RETAIL + 280_052;
 /// Hogger (448, ContentTuning 73, HealthModifier 3).
-const HOGGER: u32 = RETAIL + 280_348;
+const HOGGER: u64 = RETAIL + 280_348;
 /// Stormwind City Guard (68, ContentTuning 883: level 90, HealthScalingExpansion 11,
 /// warrior, HealthModifier 1.5).
-const STORMWIND_CITY_GUARD: u32 = RETAIL + 313_646;
+const STORMWIND_CITY_GUARD: u64 = RETAIL + 313_646;
 
 /// Creature::SelectLevel and GetMaxHealthByLevel: a tuned creature is its
 /// ContentTuning maximum, with ceil(ExpectedStat CreatureHealth × HealthModifier).
@@ -812,13 +814,13 @@ fn creaturelevel_higher_tuning_preserves_floor_and_player_scaling() {
 /// Riverpaw Outrunner (478, level 9, faction 20), Diseased Young Wolf (299,
 /// civilian), Forest Spider (30, level 5, faction 22) and Stormwind's Heroic
 /// Training Dummy (31146).
-const RIVERPAW_OUTRUNNER: u32 = RETAIL + 280_315;
-const CIVILIAN_WOLF: u32 = RETAIL + 280_055;
-const FOREST_SPIDER: u32 = RETAIL + 280_109;
-const HEROIC_TRAINING_DUMMY: u32 = RETAIL + 850_240;
+const RIVERPAW_OUTRUNNER: u64 = RETAIL + 280_315;
+const CIVILIAN_WOLF: u64 = RETAIL + 280_055;
+const FOREST_SPIDER: u64 = RETAIL + 280_109;
+const HEROIC_TRAINING_DUMMY: u64 = RETAIL + 850_240;
 
 /// A level 5 Human 4 yards east of `guid`'s spawn point.
-fn spawn_human_near(app: &mut App, guid: u32) -> Entity {
+fn spawn_human_near(app: &mut App, guid: u64) -> Entity {
     let spawn = spawn_of(guid);
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
@@ -863,7 +865,7 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
             ));
         },
     );
-    let players: Vec<(u32, Entity)> = [
+    let players: Vec<(u64, Entity)> = [
         RIVERPAW_OUTRUNNER,
         CIVILIAN_WOLF,
         FOREST_SPIDER,
@@ -880,7 +882,7 @@ fn world_spawns_aggro_by_template_hostile_attack_civilian_and_dummy_do_not() {
             .get::<crate::creature_ai::CreatureState>(entity_of(&app, guid))
             .cloned()
     };
-    let player_health = |guid: u32| {
+    let player_health = |guid: u64| {
         let player = players.iter().find(|(g, _)| *g == guid).unwrap().1;
         app.world().get::<Health>(player).unwrap().current
     };
@@ -954,7 +956,7 @@ fn retail_only_creature_spawns_from_its_trinitycore_template() {
         "ContentTuning 6"
     );
     assert!(!template.models.is_empty());
-    const CITIZEN: u32 = RETAIL + 224_152;
+    const CITIZEN: u64 = RETAIL + 224_152;
     assert!(citizens.iter().any(|spawn| spawn.guid == CITIZEN));
     let app = patrol_app(&[CITIZEN]);
     let display = app
@@ -989,8 +991,8 @@ fn spawned_creatures_carry_expected_stat_armor() {
 /// Summon Enabler Stalker (53488): models 169 (Probability 0) and 16925 (the invisible
 /// stalker, model file 124642), `CREATURE_FLAG_EXTRA_TRIGGER`, `UNIT_FLAG_NOT_SELECTABLE`.
 /// TrinityCore guid 276318 in Stormwind has no modelid; Stockade guid 375809 has modelid 16925.
-const STALKER_STORMWIND: u32 = RETAIL + 276_318;
-const STALKER_STOCKADE: u32 = RETAIL + 375_809;
+const STALKER_STORMWIND: u64 = RETAIL + 276_318;
+const STALKER_STOCKADE: u64 = RETAIL + 375_809;
 const INVISIBLE_STALKER_DISPLAY: u32 = 16_925;
 
 /// ObjectMgr::ChooseDisplayId: a trigger takes its first invisible model; a spawn's modelid wins
@@ -1089,7 +1091,7 @@ fn models_without_weights_are_chosen_uniformly() {
 #[ignore]
 fn stockade_spawns_take_their_addon_pose() {
     use shared::components::{SheathState, StandState, UnitPose};
-    const POSES: [(u32, StandState, u32); 6] = [
+    const POSES: [(u64, StandState, u32); 6] = [
         (RETAIL + 375_782, StandState::Stand, 333),
         (RETAIL + 375_779, StandState::Sleep, 0),
         (RETAIL + 375_776, StandState::Sit, 0),
@@ -1097,7 +1099,7 @@ fn stockade_spawns_take_their_addon_pose() {
         (RETAIL + 375_707, StandState::Sit, 0),
         (RETAIL + 375_708, StandState::Stand, 0),
     ];
-    const GUIDS: [u32; 6] = [
+    const GUIDS: [u64; 6] = [
         POSES[0].0, POSES[1].0, POSES[2].0, POSES[3].0, POSES[4].0, POSES[5].0,
     ];
     let app = patrol_app(&GUIDS);
@@ -1122,8 +1124,8 @@ fn stockade_spawns_take_their_addon_pose() {
 #[ignore]
 fn stockade_guard_wields_its_virtual_items() {
     use shared::components::{EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry};
-    const GUARD: u32 = RETAIL + 375_782;
-    const CRIMINAL: u32 = RETAIL + 375_706;
+    const GUARD: u64 = RETAIL + 375_782;
+    const CRIMINAL: u64 = RETAIL + 375_706;
     let app = patrol_app(&[GUARD, CRIMINAL]);
     let entry = |slot, item_id, display_info_id, inventory_type| EquippedAppearanceEntry {
         slot,
@@ -1152,7 +1154,7 @@ fn stockade_guard_wields_its_virtual_items() {
 
 /// Timber (1132, guid 305397, rank 4) and Hogger (448, rank 1) spawn with the
 /// `CreatureClassification` of their `creature_template.rank`.
-const TIMBER: u32 = RETAIL + 305_397;
+const TIMBER: u64 = RETAIL + 305_397;
 
 #[test]
 #[ignore]

@@ -6,8 +6,8 @@ const ROUNDING_YARDS: f32 = 0.01;
 
 #[derive(Deserialize)]
 struct RecordedPositions {
-    edge_from: u32,
-    edge_to: u32,
+    edge_from: u64,
+    edge_to: u64,
     healer: [f32; 3],
     owner: [f32; 3],
     sapling: [f32; 3],

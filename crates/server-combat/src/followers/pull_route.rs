@@ -18,15 +18,15 @@ type ReadPath =
 
 pub(super) struct Request<'a> {
     pub tank: Entity,
-    pub target_guid: u32,
+    pub target_guid: u64,
     pub difficulty: u32,
-    pub cleared: &'a BTreeSet<u32>,
+    pub cleared: &'a BTreeSet<u64>,
 }
 
 #[derive(Debug)]
 pub(super) struct PullRoute {
     pub points: Vec<Vec3>,
-    pub spawns: BTreeSet<u32>,
+    pub spawns: BTreeSet<u64>,
     pub pack_count: usize,
 }
 
@@ -132,10 +132,10 @@ fn read_source_actor(source: &Source) -> Result<Entity, String> {
 fn read_exposed_packs(
     world: &mut World,
     tank: Entity,
-    sources: &BTreeMap<u32, Source>,
+    sources: &BTreeMap<u64, Source>,
     points: &[Vec3],
-    target_pack: u32,
-) -> Result<BTreeSet<u32>, String> {
+    target_pack: u64,
+) -> Result<BTreeSet<u64>, String> {
     let mut packs = BTreeSet::from([target_pack]);
     let mut geometry = SystemState::<AggroDistance>::new(world);
     for source in sources.values() {

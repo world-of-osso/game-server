@@ -7,8 +7,8 @@ use shared::casting::CastState;
 use shared::components::Position;
 use std::collections::BTreeSet;
 
-const OVERHEAT_GUID: u32 = 20375719;
-const SELECTED_TRASH_GUID: u32 = 20375738;
+const OVERHEAT_GUID: u64 = 20375719;
+const SELECTED_TRASH_GUID: u64 = 20375738;
 // Actual boss_lord_overheat source spell, never granted to the selected trash.
 const OVERHEAT_FIREBALL: u32 = 12466;
 const REBUKE: u32 = 96231;
@@ -50,8 +50,8 @@ fn deal_native_tank_damage(f: &mut Fixture, enemy: Entity) {
 fn engage_caster_fixture_sources(
     f: &mut Fixture,
     whole_route: bool,
-    selected_guid: u32,
-) -> Vec<u32> {
+    selected_guid: u64,
+) -> Vec<u64> {
     let route = pull_route::inspect_route(
         f.h.app.world_mut(),
         &pull_route::Request {
@@ -82,7 +82,7 @@ struct CasterFixture {
     caster_point: Vec3,
 }
 
-fn overheat_fixture(whole_route: bool, selected_guid: u32) -> CasterFixture {
+fn overheat_fixture(whole_route: bool, selected_guid: u64) -> CasterFixture {
     let mut f = physical_fixture();
     let main = source(&mut f.h, f.tank, selected_guid);
     let caster = source(&mut f.h, f.tank, OVERHEAT_GUID);

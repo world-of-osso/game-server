@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 const IXIN: u32 = 217531;
-const TDB_GUID_OFFSET: u32 = 20_000_000;
+const TDB_GUID_OFFSET: u64 = 20_000_000;
 /// Creatures the party fought before Ixin, from the live combat log: entity ids were
 /// assigned in TDB GUID order at copy creation (entity 4294738999 is GUID 10003734).
-const KILLED_BEFORE_IXIN: &[u32] = &[
+const KILLED_BEFORE_IXIN: &[u64] = &[
     10003750, 10003781, 10003788, 10003789, 10003790, 10003792, 10003795, 10003797, 10003798,
     10003799, 10003800, 10003804, 10003805, 10003809, 10003810, 10003811, 10003815, 10003816,
     10003820, 10003847, 10003849, 10003851, 10003852, 10003855, 10003857, 10003858, 10003859,
@@ -29,7 +29,7 @@ pub(super) fn at(point: Vec3) -> Position {
 /// A Normal-difficulty Ara-Kara copy with real ground, line of sight and navmesh,
 /// populated by the source spawns `keep` selects by GUID and position.
 pub(super) fn ara_kara_copy(
-    keep: impl Fn(u32, Vec3) -> bool,
+    keep: impl Fn(u64, Vec3) -> bool,
 ) -> (crate::spell_cast::test_harness::Harness, InMap) {
     let (mut h, placeholder, _) =
         super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209057, |app| {

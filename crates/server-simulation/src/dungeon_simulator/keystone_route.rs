@@ -9,8 +9,8 @@ use serde::Serialize;
 pub(super) fn attackable_sources(
     world: &bevy::prelude::World,
     owner: bevy::prelude::Entity,
-    actors: &BTreeMap<u32, bevy::prelude::Entity>,
-) -> HashSet<u32> {
+    actors: &BTreeMap<u64, bevy::prelude::Entity>,
+) -> HashSet<u64> {
     actors
         .iter()
         .filter_map(|(&guid, &actor)| {
@@ -30,13 +30,13 @@ pub(super) fn attackable_sources(
 #[derive(Clone, Debug, Serialize)]
 pub(super) struct PlannedRoute {
     pub steps: Vec<RouteStep>,
-    pub added_packs: Vec<u32>,
+    pub added_packs: Vec<u64>,
     pub planned_forces: u64,
 }
 
 #[derive(Clone, Copy)]
 struct Pending {
-    node: u32,
+    node: u64,
     distance: f32,
 }
 impl PartialEq for Pending {
@@ -59,8 +59,8 @@ impl Ord for Pending {
     }
 }
 
-fn adjacency(graph: &Graph) -> Result<BTreeMap<u32, Vec<(u32, f32)>>, String> {
-    let mut paths = BTreeMap::<u32, Vec<(u32, f32)>>::new();
+fn adjacency(graph: &Graph) -> Result<BTreeMap<u64, Vec<(u64, f32)>>, String> {
+    let mut paths = BTreeMap::<u64, Vec<(u64, f32)>>::new();
     for edge in graph.edges.iter().chain(&graph.teleports) {
         if !edge.yards.is_finite() || edge.yards < 0.0 {
             return Err(format!("invalid route edge {} -> {}", edge.from, edge.to));
@@ -79,7 +79,7 @@ fn adjacency(graph: &Graph) -> Result<BTreeMap<u32, Vec<(u32, f32)>>, String> {
     Ok(paths)
 }
 
-fn distances(paths: &BTreeMap<u32, Vec<(u32, f32)>>, start: u32) -> BTreeMap<u32, f32> {
+fn distances(paths: &BTreeMap<u64, Vec<(u64, f32)>>, start: u64) -> BTreeMap<u64, f32> {
     let mut best = BTreeMap::from([(start, 0.0)]);
     let mut pending = BinaryHeap::from([Pending {
         node: start,
@@ -148,7 +148,7 @@ pub(super) fn plan(
     graph: &Graph,
     weights: &HashMap<u32, u64>,
     required: u64,
-    hostile_sources: &HashSet<u32>,
+    hostile_sources: &HashSet<u64>,
 ) -> Result<PlannedRoute, String> {
     let paths = adjacency(graph)?;
     let distances: BTreeMap<_, _> = graph
@@ -156,7 +156,7 @@ pub(super) fn plan(
         .iter()
         .map(|pack| (pack.id, distances(&paths, pack.id)))
         .collect();
-    let distance = |from: u32, to: u32| distances.get(&from)?.get(&to).copied();
+    let distance = |from: u64, to: u64| distances.get(&from)?.get(&to).copied();
     let points = |pack: &super::graph::Pack| {
         pack.spawns
             .iter()
@@ -190,7 +190,7 @@ pub(super) fn plan(
         .sum::<u64>();
     let mut added_packs = Vec::new();
     while total < required {
-        let mut best: Option<(f64, u32, usize, u64)> = None;
+        let mut best: Option<(f64, u64, usize, u64)> = None;
         for pack in graph
             .packs
             .iter()

@@ -7,7 +7,7 @@ use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
 use std::collections::BTreeSet;
 
-fn actor(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
+fn actor(h: &mut Harness, tank: Entity, guid: u64) -> Entity {
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     h.app
         .world_mut()

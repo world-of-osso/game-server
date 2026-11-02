@@ -362,7 +362,7 @@ fn replay(
     let frozen_sources = sources
         .iter()
         .enumerate()
-        .map(|(index, &source)| (index as u32, source))
+        .map(|(index, &source)| (index as u64, source))
         .collect();
     super::healer_replay::freeze_sources(app.world_mut(), &frozen_sources);
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();

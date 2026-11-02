@@ -74,7 +74,7 @@ pub(crate) fn read_entry_projection(
     ))
 }
 
-fn log_missing_context(entry: u32, guid: u32, context: &CreatureSpawnContext<'_>) {
+fn log_missing_context(entry: u32, guid: u64, context: &CreatureSpawnContext<'_>) {
     error!(
         "CREATURE_LEVEL_CONTEXT_GAP: refusing creature{} spawn{} map{} copy{} difficulty{}",
         entry, guid, context.map.map_id, context.map.instance_id, context.difficulty_id,
@@ -166,7 +166,7 @@ impl EntryProjection {
             addon: data
                 .addons
                 .get(&placement.guid)
-                .or_else(|| data.template_addons.get(&template.entry))
+                .or_else(|| data.template_addons.get(&u64::from(template.entry)))
                 .cloned(),
             equipment: roll_equipment_update(data, template.entry, placement, spawn_data, rng),
             mana: entry_mana(data, template, stats.level),

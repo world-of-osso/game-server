@@ -179,7 +179,7 @@ fn read_azure_books(db: &rusqlite::Connection) -> Result<Vec<Registration>, Stri
         } else {
             let target = spawns
                 .iter()
-                .find(|target| target.guid == link.destination && target.map == 2515)
+                .find(|target| target.guid == u64::from(link.destination) && target.map == 2515)
                 .ok_or_else(|| format!("Azure receiving book source{} absent", link.destination))?;
             position(target)
         };

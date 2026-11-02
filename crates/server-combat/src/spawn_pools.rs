@@ -39,7 +39,7 @@ const DESPAWN_ORDER: [Kind; 3] = [Kind::Creature, Kind::GameObject, Kind::Pool];
 /// `PoolObject`: a spawn guid (or child pool id) and its absolute chance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct PoolObject {
-    id: u32,
+    id: u64,
     chance: f32,
 }
 
@@ -89,37 +89,37 @@ struct PoolTemplate {
 /// Every pool of world.db (`PoolMgr` after `LoadFromDB`).
 #[derive(Debug, Clone, Default)]
 pub struct SpawnPools {
-    templates: BTreeMap<u32, PoolTemplate>,
+    templates: BTreeMap<u64, PoolTemplate>,
     /// `mCreatureSearchMap`, `mGameobjectSearchMap`, `mPoolSearchMap`: member -> its pool.
-    search: [HashMap<u32, u32>; 3],
+    search: [HashMap<u64, u64>; 3],
     /// `mAutoSpawnPoolsPerMap`.
-    auto_spawn: HashMap<u16, Vec<u32>>,
+    auto_spawn: HashMap<u16, Vec<u64>>,
 }
 
 /// `SpawnedPoolData`: the spawned members of one map copy.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SpawnedPoolData {
-    creatures: HashSet<u32>,
-    gameobjects: HashSet<u32>,
+    creatures: HashSet<u64>,
+    gameobjects: HashSet<u64>,
     /// `mSpawnedPools`: spawned member count per pool; a child pool's key exists while
     /// it is spawned.
-    pools: HashMap<u32, u32>,
+    pools: HashMap<u64, u32>,
 }
 
 /// Creature spawns a pool operation leaves the world and enters it, in order.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PoolChanges {
-    pub despawned: Vec<u32>,
-    pub spawned: Vec<u32>,
-    pub gameobjects_despawned: Vec<u32>,
-    pub gameobjects_spawned: Vec<u32>,
+    pub despawned: Vec<u64>,
+    pub spawned: Vec<u64>,
+    pub gameobjects_despawned: Vec<u64>,
+    pub gameobjects_spawned: Vec<u64>,
 }
 
 /// One `content_pool_members` row with the map of its spawn (none for a child pool).
 struct MemberRow {
     kind: Kind,
-    id: u32,
-    pool: u32,
+    id: u64,
+    pool: u64,
     chance: f32,
     map: Option<u16>,
 }
@@ -147,12 +147,12 @@ impl SpawnPools {
             pools.add_child_pool(member);
         }
         pools.propagate_child_maps();
-        let children: HashSet<u32> = members
+        let children: HashSet<u64> = members
             .iter()
             .filter(|m| m.kind == Kind::Pool)
             .map(|m| m.id)
             .collect();
-        let event_pools: HashSet<u32> = conn
+        let event_pools: HashSet<u64> = conn
             .prepare("SELECT pool_entry FROM content_game_event_pool")?
             .query_map([], |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
@@ -219,7 +219,7 @@ impl SpawnPools {
     /// A mother pool takes its children's map; children on another map or in a
     /// cycle lose their link (PoolMgr.cpp:632-662).
     fn propagate_child_maps(&mut self) {
-        let ids: Vec<u32> = self.templates.keys().copied().collect();
+        let ids: Vec<u64> = self.templates.keys().copied().collect();
         for id in ids {
             let mut checked = HashSet::new();
             let mut child = id;
@@ -249,7 +249,7 @@ impl SpawnPools {
     }
 
     /// `PoolGroup<Pool>::RemoveOneRelation` and the search map erase.
-    fn unlink_child(&mut self, child: u32, mother: u32) {
+    fn unlink_child(&mut self, child: u64, mother: u64) {
         let group =
             &mut self.templates.get_mut(&mother).expect("mother").groups[Kind::Pool as usize];
         group.explicitly_chanced.retain(|o| o.id != child);
@@ -259,7 +259,7 @@ impl SpawnPools {
 
     /// The pools `InitPoolsForMap` spawns: not empty, chances valid, not in a game
     /// event and not a child pool (PoolMgr.cpp:676-718).
-    fn select_auto_spawn(&mut self, children: &HashSet<u32>, event_pools: &HashSet<u32>) {
+    fn select_auto_spawn(&mut self, children: &HashSet<u64>, event_pools: &HashSet<u64>) {
         for (&id, template) in &self.templates {
             if event_pools.contains(&id) || self.is_empty(id) {
                 continue;
@@ -276,7 +276,7 @@ impl SpawnPools {
     }
 
     /// `PoolMgr::IsEmpty`: no spawn member in the pool or any child pool.
-    fn is_empty(&self, pool: u32) -> bool {
+    fn is_empty(&self, pool: u64) -> bool {
         let Some(template) = self.templates.get(&pool) else {
             return true;
         };
@@ -288,19 +288,21 @@ impl SpawnPools {
     }
 
     /// `PoolMgr::CheckPool`.
-    fn check_pool(&self, pool: u32) -> bool {
+    fn check_pool(&self, pool: u64) -> bool {
         self.templates
             .get(&pool)
             .is_none_or(|template| template.groups.iter().all(PoolGroup::check))
     }
 
     /// `PoolMgr::IsPartOfAPool<Creature>`: the pool of a creature spawn.
-    pub fn creature_pool(&self, guid: u32) -> Option<u32> {
+    pub fn creature_pool(&self, guid: u64) -> Option<u64> {
         self.search[Kind::Creature as usize].get(&guid).copied()
     }
 
-    pub fn gameobject_pool(&self, guid: u32) -> Option<u32> {
-        self.search[Kind::GameObject as usize].get(&guid).copied()
+    pub fn gameobject_pool(&self, guid: u32) -> Option<u64> {
+        self.search[Kind::GameObject as usize]
+            .get(&u64::from(guid))
+            .copied()
     }
 
     pub fn respawn_gameobject(
@@ -319,7 +321,7 @@ impl SpawnPools {
                 Kind::GameObject,
                 spawns,
                 pool,
-                Some(guid),
+                Some(u64::from(guid)),
                 &mut changes,
                 rng,
             ),
@@ -329,7 +331,7 @@ impl SpawnPools {
 
     /// `PoolMgr::InitPoolsForMap`: a new copy of `map` with its pools spawned; returns
     /// the creature spawns picked.
-    pub fn init_map(&self, map: u16, rng: &mut impl Rng) -> (SpawnedPoolData, Vec<u32>) {
+    pub fn init_map(&self, map: u16, rng: &mut impl Rng) -> (SpawnedPoolData, Vec<u64>) {
         let mut spawns = SpawnedPoolData::default();
         let mut changes = PoolChanges::default();
         for &pool in self.auto_spawn.get(&map).into_iter().flatten() {
@@ -342,7 +344,7 @@ impl SpawnPools {
     pub fn respawn_creature(
         &self,
         spawns: &mut SpawnedPoolData,
-        guid: u32,
+        guid: u64,
         rng: &mut impl Rng,
     ) -> PoolChanges {
         let mut changes = PoolChanges::default();
@@ -362,7 +364,7 @@ impl SpawnPools {
     fn spawn_pool(
         &self,
         spawns: &mut SpawnedPoolData,
-        pool: u32,
+        pool: u64,
         changes: &mut PoolChanges,
         rng: &mut impl Rng,
     ) {
@@ -376,8 +378,8 @@ impl SpawnPools {
         &self,
         kind: Kind,
         spawns: &mut SpawnedPoolData,
-        pool: u32,
-        trigger: Option<u32>,
+        pool: u64,
+        trigger: Option<u64>,
         changes: &mut PoolChanges,
         rng: &mut impl Rng,
     ) {
@@ -440,8 +442,8 @@ impl SpawnPools {
         &self,
         kind: Kind,
         spawns: &mut SpawnedPoolData,
-        pool: u32,
-        id: u32,
+        pool: u64,
+        id: u64,
         changes: &mut PoolChanges,
     ) {
         if !spawns.is_spawned(kind, id) {
@@ -456,7 +458,7 @@ impl SpawnPools {
     }
 
     /// `PoolMgr::DespawnPool`.
-    fn despawn_pool(&self, spawns: &mut SpawnedPoolData, pool: u32, changes: &mut PoolChanges) {
+    fn despawn_pool(&self, spawns: &mut SpawnedPoolData, pool: u64, changes: &mut PoolChanges) {
         let Some(template) = self.templates.get(&pool) else {
             return;
         };
@@ -469,17 +471,17 @@ impl SpawnPools {
 }
 
 impl SpawnedPoolData {
-    pub fn gameobject_spawned(&self, guid: u32) -> bool {
-        self.gameobjects.contains(&guid)
+    pub fn gameobject_spawned(&self, guid: impl Into<u64>) -> bool {
+        self.gameobjects.contains(&guid.into())
     }
 
     /// `SpawnedPoolData::GetSpawnedObjects`.
-    fn spawned_in(&self, pool: u32) -> u32 {
+    fn spawned_in(&self, pool: u64) -> u32 {
         self.pools.get(&pool).copied().unwrap_or(0)
     }
 
     /// `SpawnedPoolData::IsSpawnedObject<T>`.
-    fn is_spawned(&self, kind: Kind, id: u32) -> bool {
+    fn is_spawned(&self, kind: Kind, id: u64) -> bool {
         match kind {
             Kind::Creature => self.creatures.contains(&id),
             Kind::GameObject => self.gameobjects.contains(&id),
@@ -488,7 +490,7 @@ impl SpawnedPoolData {
     }
 
     /// `SpawnedPoolData::AddSpawn<T>`.
-    fn add(&mut self, kind: Kind, id: u32, pool: u32) {
+    fn add(&mut self, kind: Kind, id: u64, pool: u64) {
         match kind {
             Kind::Creature => {
                 self.creatures.insert(id);
@@ -504,7 +506,7 @@ impl SpawnedPoolData {
     }
 
     /// `SpawnedPoolData::RemoveSpawn<T>`.
-    fn remove(&mut self, kind: Kind, id: u32, pool: u32) {
+    fn remove(&mut self, kind: Kind, id: u64, pool: u64) {
         match kind {
             Kind::Creature => {
                 self.creatures.remove(&id);
@@ -553,14 +555,14 @@ fn load_member_rows(conn: &Connection) -> rusqlite::Result<Vec<MemberRow>> {
 
 /// A creature spawned by its pool: the spawn guid it is.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PooledSpawn(pub u32);
+pub struct PooledSpawn(pub u64);
 
 /// One map copy's pool state and the entity of each pooled creature it spawned.
 #[derive(Debug, Default)]
 pub(crate) struct MapPools {
     pub spawns: SpawnedPoolData,
-    pub entities: HashMap<u32, Entity>,
-    pub gameobjects: HashMap<u32, Entity>,
+    pub entities: HashMap<u64, Entity>,
+    pub gameobjects: HashMap<u64, Entity>,
     pub difficulty_id: u32,
     pub replicate: bool,
 }
@@ -643,13 +645,13 @@ fn apply_pool_changes(
         .resource::<crate::game_objects::GameObjectSpawns>()
         .0
         .iter()
-        .filter(|spawn| changes.gameobjects_spawned.contains(&spawn.guid))
+        .filter(|spawn| changes.gameobjects_spawned.contains(&u64::from(spawn.guid)))
         .cloned()
         .collect::<Vec<_>>();
     for spawn in nodes {
         match crate::gathering::spawn_node(world, &spawn, map) {
             Ok(entity) => {
-                map_pools.gameobjects.insert(spawn.guid, entity);
+                map_pools.gameobjects.insert(u64::from(spawn.guid), entity);
             }
             Err(gap) => warn!("{gap}"),
         }

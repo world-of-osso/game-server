@@ -77,7 +77,8 @@ fn spawn_imported_giver(app: &mut App, client: &Client, entry: u32) -> u64 {
             |row| row.get(0),
         )
         .expect("imported giver within 5 yards of approved start on map 2991");
-    let spawn = crate::world_data::load_spawn(&conn, guid).expect("runtime spawn loader");
+    let spawn =
+        crate::world_data::load_spawn(&conn, u64::from(guid)).expect("runtime spawn loader");
     assert_eq!(spawn.template_entry, entry);
     let (display_id, name): (u32, String) = conn
         .query_row(

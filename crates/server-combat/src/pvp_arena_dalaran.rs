@@ -38,7 +38,7 @@ struct PipeTrigger {
 }
 #[derive(Resource, Default)]
 pub(crate) struct Catalog {
-    spouts: BTreeMap<u32, WaterSpout>,
+    spouts: BTreeMap<u64, WaterSpout>,
     triggers: Vec<PipeTrigger>,
 }
 impl Catalog {
@@ -62,7 +62,7 @@ impl Catalog {
     }
 }
 
-pub(crate) fn tag_spout(mut actor: EntityWorldMut, guid: u32) {
+pub(crate) fn tag_spout(mut actor: EntityWorldMut, guid: u64) {
     if actor.get::<InMap>().is_none_or(|map| map.map_id != MAP)
         || actor
             .get::<Npc>()

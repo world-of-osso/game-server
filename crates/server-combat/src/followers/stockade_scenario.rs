@@ -15,9 +15,9 @@ use std::path::PathBuf;
 const PROTECTION_PALADIN: u32 = 66;
 const OWNER_LEVEL: u8 = 32;
 /// Riverpaw source the tank and owner engage from its floor.
-const RIVERPAW_GUID: u32 = 20375682;
+const RIVERPAW_GUID: u64 = 20375682;
 /// Source whose route crosses packs a healerless party has not engaged.
-const UNBUDGETED_GUID: u32 = 20375669;
+const UNBUDGETED_GUID: u64 = 20375669;
 
 pub struct Scenario {
     pub h: Harness,
@@ -174,7 +174,7 @@ fn place_on_riverpaw_floor(s: &mut Scenario) -> Position {
 }
 
 impl Scenario {
-    fn source(&mut self, guid: u32) -> Entity {
+    fn source(&mut self, guid: u64) -> Entity {
         let map = *self.h.app.world().get::<InMap>(self.tank).unwrap();
         self.h
             .app
@@ -524,7 +524,7 @@ fn describe_pull_back(s: &mut Scenario) -> Vec<String> {
     lines
 }
 
-fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u32) -> bool {
+fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u64) -> bool {
     let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
     let history = pull_history::snapshot(h.app.world(), follower.owner).unwrap();
     let map = *h.app.world().get::<InMap>(tank).unwrap();
@@ -637,7 +637,7 @@ pub fn assert_tank_reaches_moving_owner_attacker_without_pulling_nearby_idle_pac
     use bevy::ecs::system::SystemState;
     use shared::components::CombatStatus;
 
-    const IDLE_GUID: u32 = 20375688;
+    const IDLE_GUID: u64 = 20375688;
     let mut s = route(
         |app| {
             configure(app);

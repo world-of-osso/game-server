@@ -23,7 +23,7 @@ struct ManaSample {
 
 #[derive(Serialize)]
 struct PullEnd {
-    pack: u32,
+    pack: u64,
     engaged_at: f64,
     last_native_death_at: f64,
     healer_mana: Option<f32>,
@@ -35,8 +35,8 @@ pub(super) struct Recorder {
     healer: Entity,
     tank: Entity,
     members: Vec<Entity>,
-    actor_packs: BTreeMap<Entity, u32>,
-    packs: BTreeMap<u32, PackState>,
+    actor_packs: BTreeMap<Entity, u64>,
+    packs: BTreeMap<u64, PackState>,
     event_cursor: usize,
     last_frame: f64,
     combat_seconds: f64,
@@ -55,7 +55,7 @@ pub(super) struct Recorder {
     idle_gcds: f64,
     pull_ends: Vec<PullEnd>,
     frames: Vec<super::healer_intake::Frame>,
-    source_deaths: Vec<(u32, u32)>,
+    source_deaths: Vec<(u32, u64)>,
     map_id: u32,
     difficulty_id: u32,
     level: u8,
@@ -65,7 +65,7 @@ pub(super) fn start(
     world: &mut World,
     graph: &Graph,
     party: &crate::followers::simulator::Party,
-    actors: &BTreeMap<u32, Entity>,
+    actors: &BTreeMap<u64, Entity>,
 ) -> Recorder {
     let healer = *party
         .members
@@ -211,7 +211,7 @@ impl Recorder {
         &mut self,
         world: &mut World,
         graph: &Graph,
-        actors: &BTreeMap<u32, Entity>,
+        actors: &BTreeMap<u64, Entity>,
     ) {
         let mut added = BTreeMap::new();
         for pack in &graph.packs {

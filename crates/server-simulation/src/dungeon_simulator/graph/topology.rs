@@ -12,7 +12,7 @@ pub(super) fn source_packs(
         .spawns_by_map
         .get(&map)
         .ok_or_else(|| format!("map{map} missing population"))?;
-    let mut groups = BTreeMap::<u32, Vec<&crate::world_data::CreatureSpawn>>::new();
+    let mut groups = BTreeMap::<u64, Vec<&crate::world_data::CreatureSpawn>>::new();
     for &index in indexes {
         let spawn = &data.spawns[index];
         if spawn.spawns_at(difficulty) {
@@ -59,9 +59,9 @@ pub(super) fn append_entrance_route(
     packs: &mut Vec<Pack>,
     edges: &mut Vec<Edge>,
     entrance: Vec3,
-    opening: u32,
+    opening: u64,
     corners: Vec<Vec3>,
-) -> Result<u32, String> {
+) -> Result<u64, String> {
     let destination = packs
         .iter()
         .find(|pack| pack.id == opening)
@@ -115,7 +115,7 @@ pub(super) fn append_entrance_route(
     Ok(entrance_id)
 }
 
-fn root(roots: &BTreeMap<u32, u32>, mut id: u32) -> u32 {
+fn root(roots: &BTreeMap<u64, u64>, mut id: u64) -> u64 {
     while roots[&id] != id {
         id = roots[&id];
     }
@@ -135,7 +135,7 @@ where
     pairs.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
     let points: BTreeMap<_, _> = packs.iter().map(|pack| (pack.id, pack.point())).collect();
     let mut roots: BTreeMap<_, _> = points.keys().map(|id| (*id, *id)).collect();
-    let mut neighbours = BTreeMap::<u32, usize>::new();
+    let mut neighbours = BTreeMap::<u64, usize>::new();
     let mut next = packs
         .iter()
         .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
@@ -211,8 +211,8 @@ pub(super) fn unreachable(
     packs: &[Pack],
     edges: &[Edge],
     transports: &[Edge],
-    entrance: u32,
-) -> Vec<u32> {
+    entrance: u64,
+) -> Vec<u64> {
     let mut reached = BTreeSet::from([entrance]);
     loop {
         let size = reached.len();
