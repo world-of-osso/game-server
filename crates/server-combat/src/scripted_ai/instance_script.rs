@@ -304,6 +304,36 @@ pub(crate) fn complete_bound_entry(
     done
 }
 
+/// Living creatures in this copy bound to the same encounter, excluding `actor`.
+pub(super) fn bound_encounter_peers(
+    world: &mut World,
+    map: InMap,
+    boss_id: u32,
+    actor: Entity,
+) -> Vec<Entity> {
+    let entries: HashSet<_> = instance_script(world, map)
+        .into_iter()
+        .flat_map(|script| &script.boss_creatures)
+        .filter_map(|&(entry, id)| (id == boss_id).then_some(entry))
+        .collect();
+    world
+        .query::<(
+            Entity,
+            &shared::components::Npc,
+            &InMap,
+            &shared::components::Health,
+        )>()
+        .iter(world)
+        .filter_map(|(entity, npc, copy, health)| {
+            (entity != actor
+                && *copy == map
+                && health.current > 0.0
+                && entries.contains(&npc.template_id))
+            .then_some(entity)
+        })
+        .collect()
+}
+
 /// `InstanceScript::GetData`: unassigned source keys read zero.
 pub(super) fn get_data(world: &mut World, map: InMap, key: u32) -> u32 {
     instance_script(world, map)
