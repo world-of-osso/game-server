@@ -1813,14 +1813,7 @@ mod copy_tests {
                 source: crate::auras::AuraSource::Cast,
             },
         );
-        crate::spell_cast::effects::deal_damage(
-            h.app.world_mut(),
-            &ctx,
-            target,
-            max * 2.0,
-            false,
-            false,
-        );
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
         crate::auras::remove_on_death(h.app.world_mut(), target);
         assert!(crate::death::soulstone::available(h.app.world(), target));
         super::super::release::update(h.app.world_mut());
