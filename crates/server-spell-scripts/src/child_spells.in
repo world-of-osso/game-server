@@ -852,3 +852,5 @@ C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1302158
 C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1301199
 C	../../../server-combat/src/scripted_ai/temple_avatar.rs	1301202
 D	temple_strikes.rs	apply_strike_debuff	try_cast_triggered	debuff	1	1303446,1308838
+C	temple_thunder_spit.rs	1289588
+C	temple_thunder_spit.rs	1298329
