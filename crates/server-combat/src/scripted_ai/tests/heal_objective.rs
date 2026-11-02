@@ -156,6 +156,49 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
 }
 
 #[test]
+fn temple_avatar_wipe_resets_health_and_rearms_the_encounter() {
+    let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, 8, None);
+    h.app
+        .world_mut()
+        .resource_mut::<MapStore>()
+        .encounter_heal_objectives
+        .insert((1877, 133392), 25.0);
+    crate::scripted_ai::heal_objective::initialize(h.app.world_mut(), avatar);
+    let max = h.health(avatar).max;
+    crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    let player = h.player();
+    let ctx = EffectCtx {
+        caster: player,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max * 0.25);
+    assert!((h.health(avatar).current - max * 0.5).abs() < 1.0);
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
+    h.advance(0.1);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::NotStarted)
+    );
+    assert!((h.health(avatar).current - max * 0.25).abs() < 1.0);
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 100.0;
+    crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, 3),
+        Some(EncounterState::InProgress)
+    );
+}
+
+#[test]
 fn temple_avatar_add_delta_installs_sourced_templates_once() {
     let db = temple_add_database();
     let sql = include_str!(concat!(

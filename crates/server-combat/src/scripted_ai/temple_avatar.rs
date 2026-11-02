@@ -3,7 +3,7 @@
 //! ZgBCXQvcnhaAYT1r/5 pull10. First hit is an upper bound on spawn time,
 //! not a captured spawn; retire these proxies when authored spawns are known.
 use bevy::prelude::*;
-use shared::components::Npc;
+use shared::components::{Health, Npc, Player};
 
 use super::boss_ai::{BossAi, SummonList};
 use super::instance_script::{self, EncounterState};
@@ -47,6 +47,20 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     })
 }
 
+fn living_party_present(world: &mut World, map: crate::maps::InMap) -> bool {
+    world
+        .query::<(
+            &crate::maps::InMap,
+            &Health,
+            Option<&Player>,
+            Option<&crate::followers::Follower>,
+        )>()
+        .iter(world)
+        .any(|(copy, health, player, follower)| {
+            *copy == map && health.current > 0.0 && (player.is_some() || follower.is_some())
+        })
+}
+
 struct Avatar {
     boss: BossAi,
     summons: SummonList,
@@ -71,6 +85,27 @@ impl CreatureAi for Avatar {
                 self.started = false;
                 self.boss.events.reset();
             }
+            return;
+        }
+        // INFERRED_WIPE_POLICY: reset immediately when no party member in this copy is alive.
+        // The retail encounter's exact wipe delay is not available in the WCL samples.
+        if !living_party_present(ctx.world, map) {
+            instance_script::set_boss_state(
+                ctx.world,
+                map,
+                self.boss.boss_id,
+                EncounterState::Fail,
+            );
+            self.summons.despawn_all(ctx.world);
+            self.boss.events.reset();
+            self.started = false;
+            super::heal_objective::initialize(ctx.world, ctx.me);
+            instance_script::set_boss_state(
+                ctx.world,
+                map,
+                self.boss.boss_id,
+                EncounterState::NotStarted,
+            );
             return;
         }
         if !self.started {
