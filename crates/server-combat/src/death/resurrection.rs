@@ -15,6 +15,10 @@ pub(crate) const EFFECT_RESURRECT: u32 = 18;
 pub(crate) const EFFECT_RESURRECT_WITH_AURA: u32 = 172;
 const OFFER_TIMEOUT_MS: u32 = 60_000;
 
+#[cfg(any(test, feature = "test-support"))]
+#[derive(Component)]
+pub(crate) struct HeadlessResurrectionReceiver;
+
 #[derive(Component, Clone)]
 pub(crate) struct PendingResurrection {
     offer: ResurrectionOffer,
@@ -52,6 +56,11 @@ pub(crate) fn send_offer(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
     if pending.combat_res
         && crate::mythic_plus::combat_res_available(world, pending.map) == Some(false)
     {
+        return;
+    }
+    #[cfg(any(test, feature = "test-support"))]
+    if world.get::<HeadlessResurrectionReceiver>(target).is_some() {
+        world.entity_mut(target).insert(pending);
         return;
     }
     let Some(connection) = connection(world, target) else {
