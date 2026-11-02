@@ -37,7 +37,16 @@ fn route_legs(
     let mut result = Vec::new();
     loop {
         let leg = if follow {
-            nav.follow_path(start, end, &mut plan)?
+            match nav.follow_path(start, end, &mut plan) {
+                // Detour's closest point to `end` is `start` itself (query.rs project_partial_end).
+                Err(error) if error == "unreachable target (partial corridor made no progress)" => {
+                    if result.is_empty() {
+                        result.push(start);
+                    }
+                    return Ok((result, false));
+                }
+                leg => leg?,
+            }
         } else {
             nav.path_with_plan(start, end, &mut plan)?
         };
@@ -148,6 +157,13 @@ fn chain_route(graph: &mut Graph, from: u64, to: u64, corners: &[Vec3]) {
         });
         previous = corner;
         last = node;
+    }
+    if last != to {
+        graph.edges.push(Edge {
+            from: last,
+            to,
+            yards: previous.distance(target),
+        });
     }
 }
 
@@ -747,6 +763,17 @@ fn non_attackable_unreachable_boss_is_anchored_at_the_closest_reachable_point() 
         (graph.edges[0].from, graph.edges[0].to, graph.edges[0].yards),
         (1, 2, 13.0)
     );
+    assert!(graph.unreachable.is_empty());
+}
+
+#[test]
+fn objective_anchor_at_the_nearest_reachable_pack_still_connects_it() {
+    let mut graph = objective_graph();
+    let anchors =
+        anchor_objective_bosses(&mut graph, |_, _| Ok(false), |from, _| Ok(vec![from])).unwrap();
+    assert_eq!(anchors[0].anchor, [0.0, 0.0, 0.0]);
+    assert_eq!(anchors[0].horizontal_yards, 20.0);
+    assert_eq!((graph.edges[0].from, graph.edges[0].to), (1, 2));
     assert!(graph.unreachable.is_empty());
 }
 
