@@ -27,14 +27,17 @@ fn run(world: &mut World, target: Entity, child: u32) {
     launch_triggered_spell(world, target, &prepared, Some(target), 1);
     execute_cast(world, target, &prepared, Some(target));
     launch_planned_spell(world, target, &planned, plan, 1);
+    schedule_full_trigger(world, ctx, target, 112233, 100);
+    let request = ScaledTrigger { target, spell_id: child, delay_ms: 100, multiplier: 1.0 };
 }
 ''')
                 declared, unresolved = audit.inventory()
-                self.assertEqual(declared['example.rs'], {12345, 98765})
+                self.assertEqual(declared['example.rs'], {12345, 98765, 112233})
                 self.assertEqual(unresolved[('example.rs', 'run', 'try_cast_triggered', 'choose(child, other)')], 1)
                 self.assertEqual(unresolved[('example.rs', 'run', 'launch_triggered_spell', '&prepared')], 1)
                 self.assertEqual(unresolved[('example.rs', 'run', 'execute_cast', '&prepared')], 1)
                 self.assertEqual(unresolved[('example.rs', 'run', 'launch_planned_spell', '&planned')], 1)
+                self.assertEqual(unresolved[('example.rs', 'run', 'ScaledTrigger', 'child')], 1)
             finally:
                 audit.MODULES = original
 

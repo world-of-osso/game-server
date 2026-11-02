@@ -29,6 +29,9 @@ APIS = {
     'launch_triggered_spell_with_primary': 2,
     'launch_planned_spell': 2,
     'execute_cast': 2,
+    'schedule_full_trigger': 3,
+    'schedule_amount_full_trigger': 3,
+    'schedule_buff_outcome': 2,
     'creature_cast': 2,
 }
 
@@ -153,7 +156,7 @@ def scan():
             )
         }
     calls = re.compile(r'\b(' + '|'.join(sorted(APIS, key=len, reverse=True)) + r')\s*\(')
-    applications = re.compile(r'\bAuraApplication\s*\{')
+    applications = re.compile(r'\b(AuraApplication|DestinationTrigger|ScaledTrigger)\s*\{')
     functions = re.compile(r'\bfn\s+([A-Za-z_][A-Za-z_0-9]*)\s*(?:<[^;{}]*>)?\s*\(')
     for path, source in sources.items():
         names = list(functions.finditer(source))
@@ -175,14 +178,14 @@ def scan():
             fields = split_fields(source, match.end())
             spell_fields = [field for field in fields if re.match(r'^spell_id(?:\s*:|\s*$)', field)]
             if len(spell_fields) != 1:
-                raise ValueError(f'{path}: AuraApplication missing explicit spell_id')
+                raise ValueError(f'{path}: {match.group(1)} missing explicit spell_id')
             field = spell_fields[0]
             expr = ' '.join(field.split(':', 1)[1].split()) if ':' in field else 'spell_id'
             value = literal(expr)
             if value is None:
                 value = local_constants[path].get(expr)
             function = next((n.group(1) for n in reversed(names) if n.start() < match.start()), '<module>')
-            yield (str(path.relative_to(MODULES)), function, 'AuraApplication', expr, value)
+            yield (str(path.relative_to(MODULES)), function, match.group(1), expr, value)
 
 
 def inventory():
