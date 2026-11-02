@@ -25,9 +25,25 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
     for _ in 0..5 {
         app.update();
     }
+    app.world_mut()
+        .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
     start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+    let mut guardians = std::collections::BTreeSet::new();
     for _ in 0..2400 {
         app.update();
+        for (_, summon, npc) in app
+            .world_mut()
+            .query::<(
+                Entity,
+                &crate::spell_cast::summon::SummonedCreature,
+                &shared::components::Npc,
+            )>()
+            .iter(app.world())
+        {
+            if summon.owner == actor {
+                guardians.insert((summon.spell_id, npc.template_id));
+            }
+        }
     }
     let events = &app
         .world()
@@ -42,8 +58,21 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
                 && event.amount > 0
         })
         .collect();
+    let triggered = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0;
+    let relevant: Vec<_> = triggered
+        .iter()
+        .filter(|(_, spell, _)| {
+            matches!(
+                spell,
+                394235 | 387979 | 394243 | 434587 | 394238 | 387985 | 394246 | 434589
+            )
+        })
+        .collect();
     assert!(
         !rift_damage.is_empty(),
-        "selected Dimensional Rift must produce an actual damaging guardian"
+        "selected Dimensional Rift must produce an actual damaging guardian: guardians={guardians:?} triggered={relevant:?}"
     );
 }
