@@ -216,6 +216,49 @@ impl Pull {
 }
 
 #[test]
+fn follower_healer_casts_on_nearby_heal_objective() {
+    use shared::components::{Npc, Position, UnitFactionTemplate};
+    let mut pull = spawn_at_map(257, 90, 1877);
+    let actor = pull.follower;
+    let owner = pull.harness.caster;
+    let world = pull.harness.app.world_mut();
+    let map = *world.get::<server_combat::maps::InMap>(actor).unwrap();
+    let position = *world.get::<Position>(actor).unwrap();
+    let faction = *world.get::<UnitFactionTemplate>(actor).unwrap();
+    let max = world.get::<Health>(actor).unwrap().max;
+    world.get_mut::<Health>(owner).unwrap().current = max;
+    world
+        .init_resource::<server_combat::maps::MapStore>()
+        .encounter_heal_objectives
+        .insert((1877, 133392), 25.0);
+    let avatar = world
+        .spawn((
+            map,
+            position,
+            faction,
+            Npc {
+                template_id: 133392,
+            },
+            Health {
+                current: max * 0.25,
+                max,
+            },
+        ))
+        .id();
+    pull.fight();
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<Health>(avatar)
+            .unwrap()
+            .current
+            > max * 0.25,
+        "follower must land an actual heal on the objective"
+    );
+}
+
+#[test]
 fn follower_weapon_action_fury_satisfies_both_levels() {
     for (level, map) in [(70, 2515), (90, 2813)] {
         let mut pull = spawn_at_map(72, level, map);
