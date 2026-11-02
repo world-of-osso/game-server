@@ -395,7 +395,8 @@ fn distances(paths: &BTreeMap<u64, Vec<(u64, f32)>>, start: u64) -> BTreeMap<u64
     best
 }
 
-fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
+/// The boss route and its final boss pack.
+fn boss_route(graph: &Graph) -> Result<(Vec<RouteStep>, Option<u64>), String> {
     let entries = match wcl_first_damage_order(graph.map_id)? {
         Some(order) => order_bosses(graph.boss_entries(), &order)?,
         None => graph.boss_entries().to_vec(),
@@ -420,11 +421,12 @@ fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
             anchor: pack.point().to_array(),
         });
     }
+    let final_boss = bosses.last().map(|boss| boss.pack);
     if graph.route.is_empty() {
         if bosses.is_empty() {
             return Err("graph has no authored boss route or encounter bindings".into());
         }
-        return Ok(bosses);
+        return Ok((bosses, final_boss));
     }
     let mut remaining = graph.route.iter();
     for boss in bosses {
@@ -435,11 +437,12 @@ fn boss_route(graph: &Graph) -> Result<Vec<RouteStep>, String> {
             ));
         }
     }
-    Ok(graph.route.clone())
+    Ok((graph.route.clone(), final_boss))
 }
 
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
-/// A candidate may be inserted between boss-route steps or appended at the end.
+/// A candidate may be inserted between route steps, never after the final boss:
+/// retail parties finish forces before the end boss.
 pub(super) fn plan(
     graph: &Graph,
     weights: &HashMap<u32, u64>,
@@ -460,7 +463,7 @@ pub(super) fn plan(
             .map(|spawn| weights.get(&spawn.entry).copied().unwrap_or(0))
             .sum::<u64>()
     };
-    let mut steps = boss_route(graph)?;
+    let (mut steps, final_boss) = boss_route(graph)?;
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
@@ -487,6 +490,9 @@ pub(super) fn plan(
     let mut added_packs = Vec::new();
     while total < required {
         let mut best: Option<(f64, u64, usize, u64)> = None;
+        let last = final_boss
+            .and_then(|boss| steps.iter().position(|step| step.pack == boss))
+            .unwrap_or(steps.len());
         for pack in graph
             .packs
             .iter()
@@ -496,7 +502,7 @@ pub(super) fn plan(
             if force == 0 {
                 continue;
             }
-            for index in 0..=steps.len() {
+            for index in 0..=last {
                 let from = if index == 0 {
                     graph.entrance_pack
                 } else {
@@ -827,6 +833,32 @@ mod tests {
                 .collect::<Vec<_>>(),
             [2, 4, 3],
             "Erkhart must open the final encounter before Kyrakka"
+        );
+    }
+
+    #[test]
+    fn no_force_pack_follows_the_final_boss() {
+        let graph: Graph = serde_json::from_value(serde_json::json!({
+            "map_id": 1, "entrance": [0,0], "entrance_height": 0, "entrance_pack": 1,
+            "packs": [
+                {"id":1,"position":[0,0],"height":0,"spawns":[]},
+                {"id":2,"position":[10,0],"height":0,"spawns":[{"guid":2,"entry":100,"position":[10,0]}]},
+                {"id":3,"position":[11,0],"height":0,"spawns":[{"guid":3,"entry":30,"position":[11,0]}]}
+            ],
+            "edges":[{"from":1,"to":2,"yards":10},{"from":2,"to":3,"yards":1}],
+            "teleports":[],"unreachable":[],"route":[],"follower_boss_entries":[100]
+        }))
+        .unwrap();
+        // Appending after the boss costs 1 yd; going past the boss and back costs 2 yd.
+        let selected = plan(&graph, &HashMap::from([(30, 5)]), 5, &HashSet::from([3])).unwrap();
+        assert_eq!(
+            selected
+                .steps
+                .iter()
+                .map(|step| step.pack)
+                .collect::<Vec<_>>(),
+            [3, 2],
+            "the final boss must be the last route step"
         );
     }
 
