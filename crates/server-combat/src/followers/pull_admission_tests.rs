@@ -380,6 +380,27 @@ fn tank_pull_admission_native_bootstrap_is_one_source_pack_without_prior_rates()
 }
 
 #[test]
+fn tank_pull_admission_waits_for_returning_follower() {
+    let mut f = fixture();
+    f.h.app
+        .world_mut()
+        .entity_mut(f.healer)
+        .insert(super::release::ReturningFromGraveyard);
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::Recovery)
+    );
+    f.h.app
+        .world_mut()
+        .entity_mut(f.healer)
+        .remove::<super::release::ReturningFromGraveyard>();
+    assert!(matches!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Allow { .. }
+    ));
+}
+
+#[test]
 fn tank_pull_admission_native_measured_capacity_and_thirty_percent_reserve() {
     let mut f = measured_fixture();
     let decision = f.read(&[f.second]).unwrap();

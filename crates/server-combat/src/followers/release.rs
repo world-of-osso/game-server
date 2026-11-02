@@ -7,9 +7,22 @@ use crate::maps::{InMap, MapStore, WorldLocation};
 use crate::navigation::{Goal, Navigation};
 use ::navigation::worker::{Output, Query};
 
-const FOLLOWER_RELEASE_MAX_WALK_SECONDS: f32 = 120.0;
+/// A released follower must finish returning before the next pull.
+#[derive(Component)]
+pub(super) struct ReturningFromGraveyard;
 
 pub(super) fn update(world: &mut World) {
+    let returned: Vec<_> = world
+        .query_filtered::<(Entity, &Follower, &Position), With<ReturningFromGraveyard>>()
+        .iter(world)
+        .filter_map(|(unit, follower, position)| {
+            let owner = world.get::<Position>(follower.owner)?;
+            crate::creature_ai::within_follow_range(*position, *owner).then_some(unit)
+        })
+        .collect();
+    for unit in returned {
+        world.entity_mut(unit).remove::<ReturningFromGraveyard>();
+    }
     let dead: Vec<_> = world
         .query::<(Entity, &Follower, &crate::combat::Corpse)>()
         .iter(world)
@@ -88,9 +101,6 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
         return wait("run_speed_zero");
     }
     let walk_seconds = route.distance / speed;
-    if walk_seconds > FOLLOWER_RELEASE_MAX_WALK_SECONDS {
-        return ("wait", "route_too_long", Some(walk_seconds), None);
-    }
     world
         .resource_mut::<Navigation>()
         .cancel_query(unit, Goal::FollowerRelease);
@@ -124,6 +134,7 @@ fn revive_at_release(world: &mut World, unit: Entity, owner: Entity, destination
         .insert((
             crate::creature_ai::CreatureState::Idle,
             crate::creature_ai::FollowOwner::new(owner),
+            ReturningFromGraveyard,
         ));
     crate::spell_cast::mark_dirty(world, unit);
 }

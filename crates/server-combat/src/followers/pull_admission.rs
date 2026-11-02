@@ -152,6 +152,12 @@ fn read_cleared_single_pull(
 
 fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>, String> {
     for &unit in &run.party {
+        if world
+            .get::<super::release::ReturningFromGraveyard>(unit)
+            .is_some()
+        {
+            return Ok(Some(Reason::Recovery));
+        }
         if world.get::<InMap>(unit) != Some(&run.map) {
             return Ok(Some(Reason::Recovery));
         }

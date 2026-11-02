@@ -1598,14 +1598,14 @@ mod copy_tests {
     }
 
     #[test]
-    fn follower_release_long_brackenhide_route_waits_for_resurrection() {
+    fn follower_release_long_brackenhide_route_walks_back() {
         use shared::components::{Health, Position};
         let owner_position = Position {
             x: -3344.54,
             y: 111.17662,
             z: -3663.96,
         };
-        let (mut h, caster, target, entrance) = brackenhide_release_fixture(owner_position);
+        let (mut h, _, target, entrance) = brackenhide_release_fixture(owner_position);
         let copy = *h.app.world().get::<InMap>(h.caster).unwrap();
         let point = |position: Position| Vec3::new(position.x, position.y, position.z);
         let query = ::navigation::worker::Query::CompleteRoute {
@@ -1642,12 +1642,8 @@ mod copy_tests {
                 .map_or(1.0, |mods| mods.movement_speed);
         assert!(distance > speed * 120.0, "{distance} yards at {speed} yd/s");
         let log = capture_release_update(&mut h.app);
-        assert!(log.contains("route_too_long"), "{log}");
-        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
-        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
-            .unwrap();
-        h.advance(80);
+        assert!(log.contains("route_reachable"), "{log}");
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
         assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
         assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
     }
@@ -1684,7 +1680,7 @@ mod copy_tests {
     }
 
     #[test]
-    fn follower_release_distant_walkable_corpse_waits_for_real_resurrection() {
+    fn follower_release_distant_walkable_corpse_runs_back() {
         use shared::components::{CombatStatus, Health, Position};
         let (fixture_app, _, mut run) = fixture();
         let entrance = run.dungeon.entrance.bevy_position();
@@ -1767,14 +1763,10 @@ mod copy_tests {
             assert!(route.distance > 7.0 * 0.01 * 120.0);
         }
         let log = capture_release_update(&mut h.app);
-        assert!(log.contains("route_too_long"), "{log}");
-        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 20484, Some(target), false)
-            .unwrap();
-        h.advance(80);
+        assert!(log.contains("route_reachable"), "{log}");
         assert!(h.app.world().get::<Health>(target).unwrap().current > 0.0);
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
-        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), corpse);
+        assert_eq!(*h.app.world().get::<Position>(target).unwrap(), entrance);
     }
 
     #[test]
