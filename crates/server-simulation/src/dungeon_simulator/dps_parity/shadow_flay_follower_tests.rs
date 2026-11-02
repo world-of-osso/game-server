@@ -1,6 +1,8 @@
 use serde_json::Value;
 use std::process::Command;
 
+// WCL XDj6fvaqCN2n17V9 fight 42, actor 175: two Mind Flay damage ticks
+// between casts at 32.983s and 34.230s, with no intervening cast.
 #[test]
 #[ignore = "requires the follower DPS snapshot"]
 fn shadow_follower_recasts_mind_flay_after_two_ticks() {
