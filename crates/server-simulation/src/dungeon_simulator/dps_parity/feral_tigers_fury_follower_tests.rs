@@ -3,17 +3,16 @@ use super::follower_dps_diagnostic::*;
 use super::*;
 use shared::components::PowerType;
 
-#[test]
-#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
-fn feral_follower_rip_snapshots_tigers_fury() {
-    let _seed = crate::random::seed_scope(70448);
+fn rip_snapshot(empower: bool) -> (f32, f32) {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
     let copy = create_open_follower_copy(&mut app, 2813).unwrap();
     let (mut app, actor, target, _) = prepare_class_follower(app, copy, 103, 90);
     crate::spell_cast::cast_triggered(app.world_mut(), actor, 768, Some(actor), 1);
-    crate::spell_cast::cast_triggered(app.world_mut(), actor, 5217, Some(actor), 1);
-    assert!(crate::auras::has_aura(app.world(), actor, 5217));
+    if empower {
+        crate::spell_cast::cast_triggered(app.world_mut(), actor, 5217, Some(actor), 1);
+        assert!(crate::auras::has_aura(app.world(), actor, 5217));
+    }
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::ComboPoints, 5.0);
     crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
     crate::spell_cast::creature_cast(app.world_mut(), actor, 1079, Some(target), false).unwrap();
@@ -28,37 +27,35 @@ fn feral_follower_rip_snapshots_tigers_fury() {
         let effect = aura.effects.iter().find(|e| e.index == 0).unwrap();
         (effect.amount, effect.persistent_multiplier.unwrap())
     };
-    let empowered = read(&app);
-    crate::auras::remove_auras(
-        app.world_mut(),
-        actor,
-        crate::auras::RemoveReason::Expired,
-        |a| a.spell_id == 5217,
-    );
-    assert_eq!(
-        read(&app),
-        empowered,
-        "existing Rip retains its application snapshot"
-    );
-    crate::auras::remove_auras(
-        app.world_mut(),
-        target,
-        crate::auras::RemoveReason::Expired,
-        |a| a.spell_id == 1079 && a.caster == actor,
-    );
-    for _ in 0..40 {
-        app.update();
+    let snapshot = read(&app);
+    if empower {
+        crate::auras::remove_auras(
+            app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Expired,
+            |a| a.spell_id == 5217,
+        );
+        assert_eq!(
+            read(&app),
+            snapshot,
+            "existing Rip retains its application snapshot"
+        );
     }
-    crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::ComboPoints, 5.0);
-    crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
-    crate::spell_cast::creature_cast(app.world_mut(), actor, 1079, Some(target), false).unwrap();
-    let ordinary = read(&app);
+    snapshot
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn feral_follower_rip_snapshots_tigers_fury() {
+    let _seed = crate::random::seed_scope(70448);
+    let ordinary = rip_snapshot(false);
+    let empowered = rip_snapshot(true);
     assert!(
         (empowered.1 / ordinary.1 - 1.25).abs() < 0.001,
         "Tiger's Fury snapshot factor: {empowered:?} vs {ordinary:?}"
     );
     assert!(
         (empowered.0 / ordinary.0 - 1.25).abs() < 0.001,
-        "Tiger's Fury must increase actual Rip tick amount: {empowered:?} vs {ordinary:?}"
+        "Tiger's Fury must increase Rip tick amount: {empowered:?} vs {ordinary:?}"
     );
 }
