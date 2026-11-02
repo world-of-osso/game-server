@@ -106,10 +106,10 @@ pub(crate) fn combat_res_available(world: &mut World, map: InMap) -> Option<bool
     world.get_resource::<Challenges>()?;
     let now = now_ms(world);
     let mut challenges = world.resource_mut::<Challenges>();
-    challenges
-        .runs
-        .get_mut(&map)
-        .map(|active| active.run.combat_res_charges(now) > 0)
+    challenges.runs.get_mut(&map).and_then(|active| {
+        (active.run.snapshot.phase == ChallengePhase::Running)
+            .then(|| active.run.combat_res_charges(now) > 0)
+    })
 }
 
 pub(crate) fn consume_combat_res(world: &mut World, map: InMap) -> bool {
@@ -118,10 +118,9 @@ pub(crate) fn consume_combat_res(world: &mut World, map: InMap) -> bool {
     }
     let now = now_ms(world);
     let mut challenges = world.resource_mut::<Challenges>();
-    challenges
-        .runs
-        .get_mut(&map)
-        .is_none_or(|active| active.run.consume_combat_res(now))
+    challenges.runs.get_mut(&map).is_none_or(|active| {
+        active.run.snapshot.phase != ChallengePhase::Running || active.run.consume_combat_res(now)
+    })
 }
 
 fn now_ms(world: &World) -> u64 {

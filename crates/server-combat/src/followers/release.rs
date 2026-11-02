@@ -71,15 +71,17 @@ fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> boo
         return false;
     };
     let members = members.to_vec();
-    let in_combat = std::iter::once(owner)
-        .chain(members.iter().copied())
-        .any(|member| {
-            world
-                .get::<CombatStatus>(member)
-                .is_some_and(|status| status.0)
-        });
+    let boss_in_progress = crate::scripted_ai::instance_script::boss_in_progress(world, map);
+    let in_combat = boss_in_progress
+        || std::iter::once(owner)
+            .chain(members.iter().copied())
+            .any(|member| {
+                world
+                    .get::<CombatStatus>(member)
+                    .is_some_and(|status| status.0)
+            });
     if in_combat
-        && (!crate::scripted_ai::instance_script::boss_in_progress(world, map)
+        && (!boss_in_progress
             || crate::mythic_plus::combat_res_available(world, map) == Some(false))
     {
         return false;
@@ -168,7 +170,7 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
                 .get::<CombatStatus>(member)
                 .is_some_and(|status| status.0)
         });
-    if in_combat {
+    if in_combat || crate::scripted_ai::instance_script::boss_in_progress(world, map) {
         if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
             nav.cancel_query(unit, Goal::FollowerRelease);
         }
