@@ -12,25 +12,50 @@ fn cast_and_count_splinters(spell: u32) -> usize {
         .entity_mut(actor)
         .remove::<crate::followers::AplControlled>()
         .insert(server::test_support::LiteralParityFixture);
-    let known = app.world().get::<crate::class_progression::KnownSpells>(actor).unwrap();
+    let known = app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(actor)
+        .unwrap();
     assert!(known.contains(470021), "Signature Spell is selected");
     assert!(!known.contains(444675), "Shifting Shards is not selected");
-    for _ in 0..5 { app.update(); }
+    for _ in 0..5 {
+        app.update();
+    }
     if spell == 1295924 {
         crate::spell_cast::cast_triggered(app.world_mut(), actor, 1295942, Some(actor), 1);
     }
     crate::spell_cast::creature_cast(app.world_mut(), actor, spell, Some(target), false).unwrap();
-    for _ in 0..120 { app.update(); }
-    let events = &app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    assert!(events.iter().any(|event| event.source == Some(actor.to_bits())
-        && event.spell_id == Some(spell) && event.kind == CombatLogKind::Damage), "source spell hit the target");
-    events.iter().filter(|event| event.source == Some(actor.to_bits())
-        && event.spell_id == Some(443763) && event.kind == CombatLogKind::Damage).count()
+    for _ in 0..120 {
+        app.update();
+    }
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage),
+        "source spell hit the target"
+    );
+    events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.spell_id == Some(443763)
+                && event.kind == CombatLogKind::Damage
+        })
+        .count()
 }
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn follower_bolt_does_not_conjure_signature_splinters() {
     assert_eq!(cast_and_count_splinters(1295924), 0);
-    assert!(cast_and_count_splinters(30451) > 0, "Arcane Blast still conjures splinters");
+    assert!(
+        cast_and_count_splinters(30451) > 0,
+        "Arcane Blast still conjures splinters"
+    );
 }
