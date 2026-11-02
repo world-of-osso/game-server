@@ -135,7 +135,7 @@ fn disconnect(app: &mut App, connection: Entity, player: Entity) -> (u64, u64) {
         .entity_mut(connection)
         .insert(lightyear::prelude::server::ClientOf)
         .remove::<Connected>();
-    app.update();
+    app.world_mut().flush();
     assert!(
         app.world()
             .get::<crate::networking::DisconnectedPlayer>(player)
