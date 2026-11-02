@@ -79,6 +79,9 @@ impl Rotation {
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
             primary: targets.first().map(|target| target.to_bits()),
+            knows_wither: world
+                .get::<server::class_progression::KnownSpells>(actor)
+                .is_some_and(|known| known.contains(445465)),
         };
         let list = if precombat { "precombat" } else { "default" };
         let Some((action, execution)) =
@@ -125,6 +128,7 @@ pub struct DestructionFacts<'a> {
     native: NativeFacts<'a>,
     equipment: &'a Equipment,
     primary: Option<u64>,
+    knows_wither: bool,
 }
 
 impl Facts for DestructionFacts<'_> {
@@ -172,7 +176,8 @@ impl ActionFacts for DestructionFacts<'_> {
         match action.name.as_str() {
             "infernal_bolt" => Ok(self.native.value("buff.infernal_bolt.up")? != 0.0),
             "ruination" => Ok(self.native.value("buff.ruination.up")? != 0.0),
-            "immolate" => Ok(self.native.value("talent.wither")? == 0.0),
+            // The below-hero logged keystone is an APL condition, not a learned spell.
+            "immolate" => Ok(!self.knows_wither),
             _ => Ok(true),
         }
     }
