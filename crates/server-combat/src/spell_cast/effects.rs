@@ -2541,9 +2541,10 @@ fn push_damage_event(
             .spell
             .categories
             .as_ref()
-            .is_some_and(|category| category.defense_type == 2)
+            .is_some_and(|category| matches!(category.defense_type, 1 | 2))
     {
-        // SimC's ID-zero melee nuke bypasses a cast hit ledger but is still a melee ability.
+        // Classified ID-zero replay damage has no cast ledger but still lands
+        // as its authored hostile spell or melee ability.
         procs::spell_hit_masks(ctx.spell, true)
     } else {
         (0, 0)
