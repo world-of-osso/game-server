@@ -40,6 +40,18 @@ fn beacon_of_virtue_transfers_heals_between_marked_followers() {
             },
         ))
         .id();
+    let candidates = crate::spell_cast::targets::area_units(
+        party.app.world_mut(),
+        healer,
+        bevy::prelude::Vec3::new(position.x, position.y, position.z),
+        30.0,
+        crate::spell_cast::targets::Relation::Ally,
+        0,
+    );
+    assert!(
+        candidates.contains(&pet),
+        "pet must be an eligible area candidate before filtering"
+    );
     assert_eq!(
         crate::spell_cast::knowledge::resolve_actor_action(party.app.world(), healer, 53563)
             .unwrap(),
