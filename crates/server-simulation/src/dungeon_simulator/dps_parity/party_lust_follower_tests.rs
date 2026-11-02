@@ -48,3 +48,52 @@ fn two_lust_followers_cast_once_and_apply_a_party_lockout() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn mage_and_devastation_followers_use_native_lust_in_fixed_fights() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    for (spec, spell, lockout) in [
+        (62, 80353, 80354),
+        (63, 80353, 80354),
+        (64, 80353, 80354),
+        (1467, 390386, 390435),
+    ] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+        let copy = create_open_follower_copy(&mut app, 2813).unwrap();
+        let (mut app, actor, target, _) = prepare_class_follower(app, copy, spec, 90);
+        let owner = app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .unwrap()
+            .owner;
+        for _ in 0..5 {
+            app.update();
+        }
+        start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
+        for _ in 0..120 {
+            app.update();
+        }
+        assert!(
+            crate::auras::has_aura(app.world(), actor, spell),
+            "spec {spec} must gain actual lust"
+        );
+        assert!(
+            crate::auras::has_aura(app.world(), actor, lockout),
+            "spec {spec} must gain its native lockout"
+        );
+        let casts = app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.kind == CombatLogKind::CastSuccess
+                    && event.spell_id == Some(spell)
+            })
+            .count();
+        assert_eq!(casts, 1, "spec {spec} must cast its real lust exactly once");
+    }
+}
