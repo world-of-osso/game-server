@@ -11,11 +11,11 @@ fn spin(selected: bool, count: usize) -> Vec<i64> {
     for index in 1..count {
         enemies.push(spawn_level_dummy(&mut app, actor, 90, index).unwrap());
     }
-    for &enemy in &enemies {
-        crate::combat_refs::set_in_combat_with(app.world_mut(), actor, enemy);
-    }
     for _ in 0..5 {
         app.update();
+    }
+    for &enemy in &enemies {
+        crate::combat_refs::set_in_combat_with(app.world_mut(), actor, enemy);
     }
     assert!(crate::auras::has_aura(app.world(), actor, 444778));
     if !selected {
