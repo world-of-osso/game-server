@@ -795,7 +795,22 @@ fn normal_follower_reconnect_restores_live_enemies_and_following() {
     };
     assert!(
         distance(after) < distance(before),
-        "follower did not move toward reconnected owner: {before:?} -> {after:?}, owner {destination:?}"
+        "follower did not move toward reconnected owner: {before:?} -> {after:?}, owner {destination:?}, follow {:?}, target {:?}, state {:?}, health {:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(followers[0])
+            .is_some(),
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(followers[0])
+            .and_then(|target| target.0),
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(followers[0]),
+        h.app
+            .world()
+            .get::<Health>(followers[0])
+            .map(|health| health.current),
     );
     assert_eq!(
         h.app.world().get::<Health>(enemy).unwrap().current,
