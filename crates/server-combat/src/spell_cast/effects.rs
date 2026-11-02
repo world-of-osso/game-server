@@ -2796,6 +2796,9 @@ fn apply_resolved_heal(
     {
         return;
     }
+    if !crate::scripted_ai::heal_objective::accepts_healing(world, target) {
+        return;
+    }
     let absorbed =
         crate::auras::consume_heal_absorbs(world, target, ctx.spell.school_mask(), amount);
     let amount = amount - absorbed;

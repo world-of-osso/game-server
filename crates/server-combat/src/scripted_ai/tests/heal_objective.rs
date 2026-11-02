@@ -25,6 +25,12 @@ fn temple_avatar_healing_to_full_completes_bound_encounter() {
         dest: None,
         chain_multiplier: 1.0,
     };
+    crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max);
+    assert!(
+        (h.health(avatar).current - max * 0.25).abs() < 1.0,
+        "healing before the encounter cannot fill the objective"
+    );
+    crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
     crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max * 0.5);
     assert_eq!(
         h.app

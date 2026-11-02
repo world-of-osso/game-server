@@ -31,6 +31,41 @@ pub(crate) fn initialize(world: &mut World, unit: Entity) {
         .remove::<crate::spell_cast::powers::CreatureHealthRegenTimer>();
 }
 
+/// Start the bound objective after its encounter-specific interaction.
+pub(crate) fn start(world: &mut World, unit: Entity) {
+    if start_percent(world, unit).is_none() {
+        return;
+    }
+    let Some(map) = world.get::<InMap>(unit).copied() else {
+        return;
+    };
+    let Some(boss) = instance_script::bound_boss(world, unit) else {
+        return;
+    };
+    if instance_script::get_boss_state(world, map, boss.boss_id) == Some(EncounterState::NotStarted)
+        && instance_script::set_boss_state(world, map, boss.boss_id, EncounterState::InProgress)
+    {
+        instance_script::send_engage_unit(world, map, unit);
+    }
+}
+
+/// Objectives cannot be healed before their encounter starts.
+pub(crate) fn accepts_healing(world: &mut World, unit: Entity) -> bool {
+    if start_percent(world, unit).is_none() {
+        return true;
+    }
+    let Some(map) = world.get::<InMap>(unit).copied() else {
+        return false;
+    };
+    let Some(boss) = instance_script::bound_boss(world, unit) else {
+        return false;
+    };
+    matches!(
+        instance_script::get_boss_state(world, map, boss.boss_id),
+        Some(EncounterState::InProgress | EncounterState::Done)
+    )
+}
+
 /// Process actual healing, not overheal or changes to maximum health.
 pub(crate) fn healed(world: &mut World, unit: Entity, effective: f32) {
     if effective <= 0.0 || start_percent(world, unit).is_none() {
@@ -45,13 +80,6 @@ pub(crate) fn healed(world: &mut World, unit: Entity, effective: f32) {
     let Some(boss) = instance_script::bound_boss(world, unit) else {
         return;
     };
-    let state = instance_script::get_boss_state(world, map, boss.boss_id);
-    // INFERRED_WCL: the first effective heal starts this encounter; the logs do not
-    // expose the retail trigger (M4cdBNJkTjavYgQV/11, ax1vNFnfPdXrzRQ2/16, ZgBCXQvcnhaAYT1r/5).
-    if state == Some(EncounterState::NotStarted) {
-        instance_script::set_boss_state(world, map, boss.boss_id, EncounterState::InProgress);
-        instance_script::send_engage_unit(world, map, unit);
-    }
     if instance_script::get_boss_state(world, map, boss.boss_id) != Some(EncounterState::InProgress)
     {
         return;

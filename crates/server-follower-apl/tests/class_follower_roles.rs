@@ -233,11 +233,17 @@ fn follower_healer_casts_on_nearby_heal_objective() {
     let faction = UnitFactionTemplate(1665);
     let max = world.get::<Health>(actor).unwrap().max;
     world.get_mut::<Health>(owner).unwrap().current = max;
-    world.init_resource::<server_combat::maps::MapStore>();
-    world
-        .resource_mut::<server_combat::maps::MapStore>()
-        .encounter_heal_objectives
-        .insert((1877, 133392), 25.0);
+    let path = server_combat::test_data::world_db_path();
+    let db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let mut maps = server_combat::maps::store::load_map_store(&db).unwrap();
+    maps.encounter_heal_objectives.insert((1877, 133392), 25.0);
+    world.insert_resource(maps);
+    assert!(server_combat::scripted_ai::instance_script::set_boss_state(
+        world,
+        map,
+        3,
+        server_combat::scripted_ai::instance_script::EncounterState::InProgress
+    ));
     let avatar = world
         .spawn((
             map,

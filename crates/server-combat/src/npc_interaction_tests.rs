@@ -61,6 +61,8 @@ fn add_inbox<M: Message>(app: &mut App) {
 mod azure_book_tests;
 #[path = "npc_interaction/nalorakk_pyre_tests.rs"]
 mod nalorakk_pyre_tests;
+#[path = "npc_interaction/temple_avatar_tests.rs"]
+mod temple_avatar_tests;
 
 struct Harness {
     app: App,
