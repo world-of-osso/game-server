@@ -510,8 +510,12 @@ pub fn pull(
     tank: Entity,
     guids: &std::collections::BTreeSet<u64>,
 ) -> Result<(bool, String), String> {
+    let map = *world
+        .get::<crate::maps::InMap>(tank)
+        .ok_or("simulator tank lacks a map")?;
+    let difficulty = copy_difficulty(world, map)?.0;
     pull_history::sample_all(world);
-    let decision = pull_admission::read_pull_budget(world, tank, guids, 1)?;
+    let decision = pull_admission::read_pull_budget(world, tank, guids, difficulty)?;
     let allowed = matches!(decision, pull_budget::Decision::Allow { .. });
     Ok((allowed, format!("{decision:?}")))
 }

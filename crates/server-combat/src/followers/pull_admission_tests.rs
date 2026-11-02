@@ -1,5 +1,8 @@
 //! Native budget composition over a supplied route footprint; full route exposure has
 //! separate real-map coverage. Effects, deaths, resources and timing stay native.
+#[path = "simulator_difficulty_tests.rs"]
+mod simulator_difficulty_tests;
+
 use super::pull_budget::{Decision, Reason};
 use super::pull_forecast_tests::{
     add_native_healer, source_fixture_with_plugins, spawn_source_actor,
