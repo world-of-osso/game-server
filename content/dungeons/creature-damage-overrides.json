@@ -1,0 +1,2262 @@
+{
+  "season_id": 120,
+  "method": "All positive WCL melee unmitigatedAmount hits against players/pets, normalized to +2 by rounded Q(level)/Q(2); exclude known positive damage/attack-power and unknown source aura intervals. IQR is of normalized per-hit modifier values.",
+  "overrides": [
+    {
+      "map": 2521,
+      "entry": 187894,
+      "level": 90,
+      "name": "Infused Whelp",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.179642,
+      "n": 63,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 35
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 18
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 10
+        }
+      ],
+      "iqr": [
+        1.085707133423923,
+        1.2495588258575858
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 187897,
+      "level": 91,
+      "name": "Defier Draghar",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 4.376814,
+      "n": 34,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 12
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 12
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 10
+        }
+      ],
+      "iqr": [
+        2.462735080976444,
+        4.796885603530463
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 187969,
+      "level": 90,
+      "name": "Deepstone Earthshaper",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 2.043344,
+      "n": 168,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 59
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 49
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 60
+        }
+      ],
+      "iqr": [
+        1.9414005904325884,
+        2.189961979125534
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 188011,
+      "level": 90,
+      "name": "Earthbound Guardian",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 2.696413,
+      "n": 122,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 35
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 45
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 42
+        }
+      ],
+      "iqr": [
+        2.5415317618727356,
+        2.844974184231968
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 188067,
+      "level": 90,
+      "name": "Flashfrost Chillweaver",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 3.162888,
+      "n": 17,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 5
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 5
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 7
+        }
+      ],
+      "iqr": [
+        3.011745101368021,
+        3.278490652590435
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 188244,
+      "level": 91,
+      "name": "Primal Juggernaut",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 4.05025,
+      "n": 43,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 11
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 17
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 15
+        }
+      ],
+      "iqr": [
+        3.81162984604253,
+        4.2209182390622475
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 188252,
+      "level": 92,
+      "name": "Melidrussa Chillworn",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 4.70336,
+      "n": 35,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 11
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 13
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 11
+        }
+      ],
+      "iqr": [
+        4.403185443865154,
+        4.987103647839226
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 189232,
+      "level": 92,
+      "name": "Kokia Blazehoof",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          3,
+          1.0
+        ]
+      ],
+      "value": 4.736145,
+      "n": 51,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 18
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 19
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 14
+        }
+      ],
+      "iqr": [
+        4.4737845093797,
+        4.9682858374727354
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 190034,
+      "level": 91,
+      "name": "Blazebound Destroyer",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 3.254308,
+      "n": 94,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 17
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 41
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 36
+        }
+      ],
+      "iqr": [
+        3.1560149672771316,
+        3.4393636547840742
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 190205,
+      "level": 90,
+      "name": "Scorchling",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 0.797821,
+      "n": 285,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 98
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 110
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 77
+        }
+      ],
+      "iqr": [
+        0.7474410247143165,
+        0.840971320283495
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 190206,
+      "level": 90,
+      "name": "Ashseer Flamelasher",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.751794,
+      "n": 235,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 74
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 86
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 75
+        }
+      ],
+      "iqr": [
+        1.0632037621862718,
+        2.047745566905115
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 190207,
+      "level": 90,
+      "name": "Primalist Cinderweaver",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 2.063589,
+      "n": 49,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 23
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 13
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 13
+        }
+      ],
+      "iqr": [
+        1.929190984602799,
+        2.2392048169429346
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 197535,
+      "level": 91,
+      "name": "High Channeler Ryvati",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 2.548133,
+      "n": 44,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 13
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 17
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 14
+        }
+      ],
+      "iqr": [
+        2.343270932370563,
+        2.9378729891670656
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 197697,
+      "level": 91,
+      "name": "Flamegullet",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 3.199698,
+      "n": 21,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 4
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 9
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 8
+        }
+      ],
+      "iqr": [
+        3.0326357802496577,
+        3.4045271473218905
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 197982,
+      "level": 90,
+      "name": "Storm Warrior",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.834757,
+      "n": 410,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 119
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 171
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 120
+        }
+      ],
+      "iqr": [
+        1.0264562578332883,
+        2.0566386970761084
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2521,
+      "entry": 198047,
+      "level": 91,
+      "name": "Tempest Channeler",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 3.380278,
+      "n": 33,
+      "reports": [
+        {
+          "label": "ruby-djy",
+          "code": "DJY2fXRrZTALabPv",
+          "fight": 38,
+          "level": 3,
+          "n": 8
+        },
+        {
+          "label": "ruby-my",
+          "code": "MyKrABYWmxG9HhtR",
+          "fight": 1,
+          "level": 3,
+          "n": 11
+        },
+        {
+          "label": "ruby-wk",
+          "code": "wKpcfaj4MzDH9v8X",
+          "fight": 1,
+          "level": 2,
+          "n": 14
+        }
+      ],
+      "iqr": [
+        3.1627128381926184,
+        3.558469544894229
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241808,
+      "level": 90,
+      "name": "Territorial Matriarch",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 3.652402,
+      "n": 81,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 38
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 19
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 24
+        }
+      ],
+      "iqr": [
+        3.3858421880949194,
+        3.869685061377491
+      ],
+      "excluded_auras": [
+        {
+          "id": 1238053,
+          "name": "Mother's Wrath",
+          "excluded_hits": 228
+        }
+      ],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241809,
+      "level": 90,
+      "name": "Curious Yearling",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.110747,
+      "n": 200,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 88
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 40
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 72
+        }
+      ],
+      "iqr": [
+        1.0274121022451972,
+        1.2076073339756883
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241812,
+      "level": 92,
+      "name": "The Hoardmonger",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          3,
+          1.0
+        ]
+      ],
+      "value": 2.648116,
+      "n": 61,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 20
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 18
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 23
+        }
+      ],
+      "iqr": [
+        2.174982199105891,
+        4.7214630729451414
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241813,
+      "level": 90,
+      "name": "Thornclaw Gatherer",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.954043,
+      "n": 407,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 134
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 84
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 189
+        }
+      ],
+      "iqr": [
+        1.7677924796327102,
+        2.1637719073623383
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241814,
+      "level": 90,
+      "name": "Earthwhisper Tender",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 2.102895,
+      "n": 55,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 21
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 19
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 15
+        }
+      ],
+      "iqr": [
+        1.9615226538366874,
+        2.260952515920685
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 241816,
+      "level": 90,
+      "name": "Keen-Eyed Striker",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.986718,
+      "n": 274,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 94
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 56
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 124
+        }
+      ],
+      "iqr": [
+        1.8166008649184842,
+        2.188670262286139
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 244100,
+      "level": 92,
+      "name": "Sentinel of Winter",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          3,
+          1.0
+        ]
+      ],
+      "value": 4.657524,
+      "n": 50,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 17
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 18
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 15
+        }
+      ],
+      "iqr": [
+        4.291244927179224,
+        5.126476622373733
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 245139,
+      "level": 90,
+      "name": "Stormbound Mystic",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          2,
+          1.0
+        ]
+      ],
+      "value": 1.717736,
+      "n": 33,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 9
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 6
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 18
+        }
+      ],
+      "iqr": [
+        1.663095036378769,
+        1.8603330667740237
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 245143,
+      "level": 90,
+      "name": "Ruthless Totemcaller",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 1.243702,
+      "n": 314,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 95
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 40
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 179
+        }
+      ],
+      "iqr": [
+        0.9942962693918301,
+        2.009815996745171
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 245146,
+      "level": 91,
+      "name": "Grizzled Warbringer",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 2.295808,
+      "n": 106,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 33
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 20
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 53
+        }
+      ],
+      "iqr": [
+        2.1244570058958145,
+        2.509305022245979
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 245190,
+      "level": 90,
+      "name": "Loyal Saberfang",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 2.112676,
+      "n": 55,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 24
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 14
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 17
+        }
+      ],
+      "iqr": [
+        1.9537552579845736,
+        2.3498738863567126
+      ],
+      "excluded_auras": [
+        {
+          "id": 1246865,
+          "name": "Bestial Wrath",
+          "excluded_hits": 36
+        }
+      ],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 245855,
+      "level": 91,
+      "name": "Spirit of Hunger",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 3.213976,
+      "n": 85,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 29
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 14
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 42
+        }
+      ],
+      "iqr": [
+        2.9523713873156616,
+        3.479366459776644
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2825,
+      "entry": 246404,
+      "level": 92,
+      "name": "Nalorakk",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          3,
+          1.0
+        ]
+      ],
+      "value": 5.405291,
+      "n": 11,
+      "reports": [
+        {
+          "label": "den-bdj",
+          "code": "BDjZ2QF6pNr8xV4W",
+          "fight": 1,
+          "level": 2,
+          "n": 5
+        },
+        {
+          "label": "den-hx",
+          "code": "Hx64j9RrfnytB8cA",
+          "fight": 12,
+          "level": 2,
+          "n": 3
+        },
+        {
+          "label": "den-yaz",
+          "code": "YaZ7RKjBnp6dyHTG",
+          "fight": 53,
+          "level": 2,
+          "n": 3
+        }
+      ],
+      "iqr": [
+        5.162562068934002,
+        5.843494491926483
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace with sourced server DamageModifier when available"
+    }
+  ],
+  "skipped": [
+    {
+      "map": 2521,
+      "entry": 189893,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "ruby-djy",
+        "ruby-my",
+        "ruby-wk"
+      ],
+      "hits": 134
+    },
+    {
+      "map": 2521,
+      "entry": 190484,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "ruby-djy",
+        "ruby-my",
+        "ruby-wk"
+      ],
+      "hits": 15
+    },
+    {
+      "map": 2521,
+      "entry": 190485,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "ruby-djy",
+        "ruby-my",
+        "ruby-wk"
+      ],
+      "hits": 69
+    },
+    {
+      "map": 2521,
+      "entry": 197698,
+      "reason": "fewer than 3 reports",
+      "reports": [
+        "ruby-djy",
+        "ruby-my"
+      ],
+      "hits": 21
+    },
+    {
+      "map": 2825,
+      "entry": 241869,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "den-bdj",
+        "den-hx",
+        "den-yaz"
+      ],
+      "hits": 39
+    },
+    {
+      "map": 2825,
+      "entry": 241872,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "den-bdj",
+        "den-hx",
+        "den-yaz"
+      ],
+      "hits": 79
+    },
+    {
+      "map": 2825,
+      "entry": 241874,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "den-bdj",
+        "den-hx",
+        "den-yaz"
+      ],
+      "hits": 392
+    },
+    {
+      "map": 2825,
+      "entry": 241876,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "den-bdj",
+        "den-hx",
+        "den-yaz"
+      ],
+      "hits": 100
+    },
+    {
+      "map": 2825,
+      "entry": 241911,
+      "reason": "no difficulty-8 content row",
+      "reports": [
+        "den-bdj",
+        "den-hx",
+        "den-yaz"
+      ],
+      "hits": 118
+    },
+    {
+      "map": 2825,
+      "entry": 244889,
+      "reason": "fewer than 3 reports",
+      "reports": [
+        "den-bdj",
+        "den-hx"
+      ],
+      "hits": 6
+    },
+    {
+      "map": 2825,
+      "entry": 245752,
+      "reason": "fewer than 3 reports",
+      "reports": [
+        "den-bdj",
+        "den-yaz"
+      ],
+      "hits": 15
+    }
+  ],
+  "omissions": [
+    {
+      "report": "den-bdj",
+      "reason": "no positive unmitigatedAmount",
+      "count": 260
+    },
+    {
+      "report": "den-hx",
+      "reason": "no positive unmitigatedAmount",
+      "count": 177
+    },
+    {
+      "report": "den-yaz",
+      "reason": "no positive unmitigatedAmount",
+      "count": 486
+    },
+    {
+      "report": "ruby-djy",
+      "reason": "no positive unmitigatedAmount",
+      "count": 235
+    },
+    {
+      "report": "ruby-my",
+      "reason": "no positive unmitigatedAmount",
+      "count": 295
+    },
+    {
+      "report": "ruby-wk",
+      "reason": "no positive unmitigatedAmount",
+      "count": 213
+    }
+  ],
+  "damage_aura_ids": {
+    "1246865": "Bestial Wrath",
+    "1238053": "Mother's Wrath"
+  }
+}
