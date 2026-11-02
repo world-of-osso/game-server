@@ -181,6 +181,8 @@ pub const TRANSFORM: u32 = 56;
 /// TC a352b1fa SpellAuraDefines.h: SPELL_AURA_TRIGGER_SPELL_ON_EXPIRE.
 pub const TRIGGER_SPELL_ON_EXPIRE: u32 = 495;
 pub const SCHOOL_IMMUNITY: u32 = 39;
+/// TC SpellAuraDefines.h: damage immunity by school, without general spell immunity.
+pub const DAMAGE_IMMUNITY: u32 = 40;
 pub const PROC_TRIGGER_SPELL: u32 = 42;
 pub const MOD_PACIFY_SILENCE: u32 = 60;
 /// TC a352b1fa Unit::RecalculateObjectScale: sum percentage points, not products.
@@ -563,7 +565,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST | MOD_MANA_COST_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB | SCHOOL_HEAL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
-        SCHOOL_IMMUNITY => SchoolImmunity,
+        SCHOOL_IMMUNITY | DAMAGE_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER

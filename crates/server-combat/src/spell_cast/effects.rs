@@ -2289,7 +2289,7 @@ fn deal_source_damage_and_report(
             blocked: was_blocked,
         },
     );
-    if crate::auras::is_immune(world, target, school) {
+    if crate::auras::is_damage_immune(world, target, school) {
         let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
         event.periodic = periodic;
         log_event(world, event);

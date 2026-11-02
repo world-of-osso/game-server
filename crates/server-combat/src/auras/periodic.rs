@@ -449,7 +449,8 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
     match tick.aura_type {
         PERIODIC_DAMAGE => {
             let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
-            let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
+            let advance_agony =
+                agony_tick && !super::is_damage_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
             scripts::after_periodic_damage(
                 world,

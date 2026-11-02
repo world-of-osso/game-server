@@ -70,7 +70,7 @@ pub(crate) fn route(
         if split.recipient == victim
             || world.get::<InMap>(split.recipient) != world.get::<InMap>(victim)
             || !crate::spell_cast::targets::is_alive(world, split.recipient)
-            || super::is_immune(world, split.recipient, school)
+            || super::is_damage_immune(world, split.recipient, school)
         {
             continue;
         }
