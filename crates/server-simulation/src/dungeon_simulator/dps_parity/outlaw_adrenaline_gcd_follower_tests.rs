@@ -8,6 +8,9 @@ fn sinister_strike_interval(adrenaline: bool) -> f64 {
     let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
     let copy = create_open_follower_copy(&mut app, 2515).unwrap();
     let (mut app, actor, target, _) = prepare_class_follower(app, copy, 260, 70);
+    app.world_mut().entity_mut(actor)
+        .remove::<crate::followers::AplControlled>()
+        .insert(server::test_support::LiteralParityFixture);
     for _ in 0..5 { app.update(); }
     if adrenaline {
         crate::spell_cast::cast_triggered(app.world_mut(), actor, 13750, Some(actor), 0);
