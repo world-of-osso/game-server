@@ -54,7 +54,13 @@ fn two_mind_blast_procs_allow_two_void_shields() {
     assert_eq!(
         darkness_stacks(&h),
         2,
-        "second Mind Blast stores a second stack"
+        "second Mind Blast stores a second stack; failures {:?}; casts {:?}",
+        h.inbox.failed,
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::CastSuccess)
+            .collect::<Vec<_>>()
     );
     h.cast_and_deliver(17, Some(h.caster));
     h.advance(10);
