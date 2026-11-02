@@ -39,8 +39,7 @@ fn temple_add_database() -> Connection {
     db
 }
 
-#[test]
-fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
+fn avatar_with_adds() -> (Harness, Entity, InMap) {
     let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, 8, None);
     let db = temple_add_database();
     {
@@ -55,7 +54,6 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
         .encounter_heal_objectives
         .insert((1877, 133392), 25.0);
     crate::scripted_ai::heal_objective::initialize(h.app.world_mut(), avatar);
-    let max = h.health(avatar).max;
     let spells = crate::spell_cast::test_harness::world_db()
         .unwrap()
         .spell_store()
@@ -67,6 +65,14 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
         health.max = 1_000_000_000.0;
         health.current = health.max;
     }
+    (h, avatar, map)
+}
+
+#[test]
+fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
+    let (mut h, avatar, map) = avatar_with_adds();
+    let max = h.health(avatar).max;
+    let player = h.player();
     crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
     h.advance(4.3);
     let guardian = h
@@ -173,6 +179,44 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
             .iter()
             .all(|(entity, _)| h.app.world().get_entity(*entity).is_err()),
         "encounter adds leave when the Avatar is restored"
+    );
+}
+
+#[test]
+fn temple_avatar_defiler_death_starts_the_next_wave_clock() {
+    let (mut h, avatar, map) = avatar_with_adds();
+    let player = h.player();
+    crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
+    h.advance(16.0);
+    let first = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap)>()
+        .iter(h.app.world())
+        .find_map(|(entity, npc, copy)| {
+            (*copy == map && npc.template_id == 268427).then_some(entity)
+        })
+        .unwrap();
+    assert!(h.has_aura(avatar, 1301202));
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, first, 1_000_000_000.0);
+    assert!(!h.has_aura(avatar, 1301202));
+    h.advance(48.5);
+    let second = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::Npc, &InMap, &Health)>()
+        .iter(h.app.world())
+        .find_map(|(entity, npc, copy, health)| {
+            (*copy == map && npc.template_id == 268427 && entity != first && health.current > 0.0)
+                .then_some(entity)
+        });
+    assert!(
+        second.is_some(),
+        "next Defiler must spawn after the sourced intermission clock"
+    );
+    assert!(
+        h.has_aura(avatar, 1301202),
+        "next Defiler reapplies the healing block"
     );
 }
 

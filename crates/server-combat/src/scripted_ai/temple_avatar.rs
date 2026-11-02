@@ -18,6 +18,10 @@ const LATENT_HEX: u32 = 1302153;
 const FLAME_SHOCK: u32 = 1302158;
 const DEFILE_CHANNEL: u32 = 1301199;
 const DEFILE_IMMUNITY: u32 = 1301202;
+const NEXT_WAVE: i32 = 1;
+const LATER_GUARDIAN: u32 = 1;
+const LATER_DEFILER: u32 = 2;
+const LATER_HEXXER: u32 = 3;
 
 pub(super) fn healing_blocked(world: &World, target: Entity, caster: Entity) -> bool {
     caster != target && crate::auras::has_aura(world, target, DEFILE_IMMUNITY)
@@ -74,6 +78,17 @@ struct Avatar {
 }
 
 impl CreatureAi for Avatar {
+    fn do_action(&mut self, _ctx: &mut Ctx, action: i32) {
+        if action != NEXT_WAVE || !self.started {
+            return;
+        }
+        // INFERRED_WCL: median first hits after the preceding defiler dies;
+        // Defiling Taint recasts 48.253–48.282s after that death in all three pulls.
+        self.boss.events.schedule(LATER_GUARDIAN, 38_699);
+        self.boss.events.schedule(LATER_DEFILER, 48_272);
+        self.boss.events.schedule(LATER_HEXXER, 52_286);
+    }
+
     fn just_summoned(&mut self, _ctx: &mut Ctx, summon: Entity) {
         self.summons.summon(summon);
     }
@@ -124,13 +139,16 @@ impl CreatureAi for Avatar {
         }
         self.boss.events.update(u64::from(diff_ms));
         while let Some(entry) = self.boss.events.execute_event() {
-            let position = match entry {
-                GUARDIAN => [4147.04, 3676.64, -43.14379, 0.0],
-                DEFILER => [4156.81, 3650.39, -43.25317, 0.0],
-                HEXXER => [4173.58, 3654.79, -43.26488, 0.0],
+            let (creature, position) = match entry {
+                GUARDIAN => (GUARDIAN, [4147.04, 3676.64, -43.14379, 0.0]),
+                DEFILER => (DEFILER, [4156.81, 3650.39, -43.25317, 0.0]),
+                HEXXER => (HEXXER, [4173.58, 3654.79, -43.26488, 0.0]),
+                LATER_GUARDIAN => (GUARDIAN, [4165.49, 3686.09, -43.06176, 0.0]),
+                LATER_DEFILER => (DEFILER, [4166.97, 3696.24, -43.264885, 0.0]),
+                LATER_HEXXER => (HEXXER, [4149.97, 3691.10, -43.253166, 0.0]),
                 _ => continue,
             };
-            if let Some(summon) = ctx.summon_creature(entry, position) {
+            if let Some(summon) = ctx.summon_creature(creature, position) {
                 ctx.do_zone_in_combat(summon);
             }
         }
@@ -194,6 +212,7 @@ impl CreatureAi for Add {
                 aura.caster == caster && matches!(aura.spell_id, DEFILE_CHANNEL | DEFILE_IMMUNITY)
             },
         );
+        super::dispatch(ctx.world, avatar, super::Hook::DoAction(NEXT_WAVE));
     }
     fn reset(&mut self, _ctx: &mut Ctx) {
         self.events.reset();
