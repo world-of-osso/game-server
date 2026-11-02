@@ -6,7 +6,7 @@ use crate::maps::InMap;
 use crate::spell_cast::effects::EffectCtx;
 use bevy::prelude::*;
 use shared::components::Position;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 pub(super) const SPELL: u32 = 387149;
 pub(super) const CREATE_PROPERTIES: i32 = 26505;
@@ -55,7 +55,7 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
         depth: ctx.depth + 1,
         cast_item_level: ctx.spell.cast_item_level,
         cast_item_inventory_type: ctx.spell.cast_item_inventory_type,
-        inside: HashSet::new(),
+        inside: BTreeSet::new(),
     })
 }
 

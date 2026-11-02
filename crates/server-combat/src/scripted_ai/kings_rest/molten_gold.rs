@@ -1,6 +1,6 @@
 //! TC a352b1fa aura395 / at_kings_rest_molten_gold, source12928 sphere.
 //! Gameplay lifecycle only; native area-trigger visuals remain unconverted.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use bevy::prelude::*;
 use shared::components::{Player, Position, UnitScale};
@@ -18,13 +18,13 @@ const PLAYER_COMBAT_REACH: f32 = 1.5;
 #[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub(crate) struct MoltenGoldAreas {
     radius: f32,
-    active: HashMap<Entity, MoltenGoldArea>,
+    active: BTreeMap<Entity, MoltenGoldArea>,
 }
 
 #[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 struct MoltenGoldArea {
     aura_instance: u32,
-    members: HashSet<Entity>,
+    members: BTreeSet<Entity>,
 }
 
 /// Admit the actual static sphere, not a radius substituted for unknown geometry.
@@ -40,7 +40,7 @@ pub(crate) fn load_areas(connection: &rusqlite::Connection) -> rusqlite::Result<
     )?;
     Ok(MoltenGoldAreas {
         radius,
-        active: HashMap::new(),
+        active: BTreeMap::new(),
     })
 }
 
@@ -64,7 +64,7 @@ pub(super) fn apply(world: &mut World, target: Entity, aura: &AuraInstance) {
         target,
         MoltenGoldArea {
             aura_instance: aura.instance_id,
-            members: HashSet::new(),
+            members: BTreeSet::new(),
         },
     );
 }
@@ -106,7 +106,7 @@ fn area_origin(world: &World, target: Entity, instance: u32) -> Option<(Position
     ))
 }
 
-fn find_members(world: &mut World, center: Position, map: InMap, radius: f32) -> HashSet<Entity> {
+fn find_members(world: &mut World, center: Position, map: InMap, radius: f32) -> BTreeSet<Entity> {
     world
         .query_filtered::<(Entity, &Position, &InMap, Option<&UnitScale>), With<Player>>()
         .iter(world)
@@ -120,7 +120,7 @@ fn find_members(world: &mut World, center: Position, map: InMap, radius: f32) ->
         .collect()
 }
 
-fn update_area(world: &mut World, area: &mut MoltenGoldArea, members: HashSet<Entity>) {
+fn update_area(world: &mut World, area: &mut MoltenGoldArea, members: BTreeSet<Entity>) {
     for &player in members.difference(&area.members) {
         // Source OnUnitEnter casts on the entering Player with ordinary flags.
         if let Err(failure) = crate::spell_cast::creature_cast(world, player, DAMAGE, None, false) {
@@ -142,7 +142,7 @@ pub(crate) fn update_areas(world: &mut World) {
         let radius = areas.radius;
         areas.active.retain(|target, area| {
             let Some((center, map)) = area_origin(world, *target, area.aura_instance) else {
-                update_area(world, area, HashSet::new());
+                update_area(world, area, BTreeSet::new());
                 return false;
             };
             let members = find_members(world, center, map, radius);

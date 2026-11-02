@@ -3,7 +3,7 @@ use lightyear::prelude::*;
 use shared::protocol::{
     AuthChannel, ForcedDisconnect, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, mpsc};
 
 pub use crate::auth_character::*;
@@ -106,7 +106,7 @@ pub(crate) fn process_login_requests(
     mut connected: ResMut<ConnectedAccounts>,
     mut senders: Query<&mut MessageSender<LoginResponse>>,
     mut commands: Commands,
-    mut pending: Local<HashMap<Entity, PendingLogin>>,
+    mut pending: Local<BTreeMap<Entity, PendingLogin>>,
     verifier: Local<LoginVerifier>,
     active: Query<(), (With<Connected>, Without<PendingForcedDisconnect>)>,
 ) {

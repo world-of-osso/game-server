@@ -153,6 +153,7 @@ fn boss_timeline_smartai_phases_are_not_addon_alert_authority() {
         target_type: 0,
         target_params: [0; 4],
         target_position: [0.0; 4],
+        inferred_timing: None,
     };
     let (mut h, boss) =
         cobrahn_with_events(vec![phase_event(1001, 25, 1), phase_event(1002, 4, 2)]);

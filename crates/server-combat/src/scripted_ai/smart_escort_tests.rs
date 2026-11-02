@@ -1542,6 +1542,7 @@ fn tdb_action(entry: i64, source: u32, id: u32) -> SmartEvent {
                     row.get("target_z")?,
                     row.get("target_o")?,
                 ],
+                inferred_timing: None,
             })
         },
     )

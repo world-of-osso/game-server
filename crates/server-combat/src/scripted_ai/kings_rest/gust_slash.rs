@@ -3,7 +3,7 @@
 //! (AreaTrigger.cpp InitOrbit/CalculateLocalOrbitPositionAndRotation) whose entering
 //! players cast 269932 on themselves-as-caster (`unit->CastSpell(nullptr, .., true)`).
 //! Native area-trigger visuals remain unconverted.
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
@@ -84,7 +84,7 @@ pub(crate) struct GustSlashTrigger {
     pub(crate) center: [f32; 4],
     created_at: f64,
     expires_at: Option<f64>,
-    inside: HashSet<Entity>,
+    inside: BTreeSet<Entity>,
 }
 
 /// `Spell::EffectCreateAreaTrigger` for create properties 13339.
@@ -105,7 +105,7 @@ pub(crate) fn create(
         center: [x, y, z, orientation],
         created_at: now,
         expires_at: (duration_ms >= 0).then_some(now + f64::from(duration_ms) / 1000.0),
-        inside: HashSet::new(),
+        inside: BTreeSet::new(),
     };
     // Create computes the initial position; targets are first gathered on Update.
     let Some(&shape) = world.get_resource::<GustSlashShape>() else {
@@ -213,7 +213,7 @@ fn players_inside(
     shape: &GustSlashShape,
     at: &Position,
     map: InMap,
-) -> HashSet<Entity> {
+) -> BTreeSet<Entity> {
     world
         .query_filtered::<(Entity, &Position, &InMap, &Health, Option<&UnitFlags>), With<Player>>()
         .iter(world)

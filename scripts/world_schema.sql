@@ -1,3 +1,31 @@
+DROP TABLE IF EXISTS content_inferred_creature_ability_sample;
+DROP TABLE IF EXISTS content_inferred_creature_ability;
+CREATE TABLE content_inferred_creature_ability (
+  map INTEGER NOT NULL,
+  difficulty INTEGER NOT NULL,
+  entry INTEGER NOT NULL,
+  spell INTEGER NOT NULL,
+  target_type INTEGER NOT NULL,
+  provenance TEXT NOT NULL CHECK (provenance = 'INFERRED_WCL'),
+  retirement_condition TEXT NOT NULL,
+  PRIMARY KEY (map, difficulty, entry, spell)
+);
+CREATE TABLE content_inferred_creature_ability_sample (
+  map INTEGER NOT NULL,
+  difficulty INTEGER NOT NULL,
+  entry INTEGER NOT NULL,
+  spell INTEGER NOT NULL,
+  sample_id INTEGER NOT NULL,
+  timing_kind TEXT NOT NULL CHECK (timing_kind IN ('first_activity_proxy', 'successive_cast')),
+  delay_ms INTEGER NOT NULL CHECK (delay_ms >= 0),
+  report TEXT NOT NULL,
+  fight INTEGER NOT NULL,
+  source_actor INTEGER NOT NULL,
+  source_instance INTEGER NOT NULL,
+  PRIMARY KEY (map, difficulty, entry, spell, sample_id),
+  FOREIGN KEY (map, difficulty, entry, spell) REFERENCES content_inferred_creature_ability(map, difficulty, entry, spell)
+);
+
 DROP TABLE IF EXISTS game_event_creature;
 CREATE TABLE game_event_creature (
   eventEntry INTEGER NOT NULL,

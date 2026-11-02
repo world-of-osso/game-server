@@ -8,7 +8,10 @@ import unittest
 from contextlib import closing
 from pathlib import Path
 
-from ruby_population import ERKHART_XY, ERKHART_Z, KYRAKKA_XY, KYRAKKA_Z, POLICY, import_population
+from ruby_population import (
+    DIFFICULTIES, ERKHART_XY, ERKHART_Z, KYRAKKA_XY, KYRAKKA_Z, POLICY,
+    import_population, placements_applied,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -60,7 +63,10 @@ class RubyPopulationTests(unittest.TestCase):
                 import_population(db)
             self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone(), (*ERKHART_XY, ERKHART_Z))
             self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63521001').fetchone(), (*KYRAKKA_XY, KYRAKKA_Z))
-            self.assertEqual(db.execute('SELECT spawntimesecs FROM content_creature WHERE guid IN (63521000,63521001) ORDER BY guid').fetchall(), [(7200,), (7200,)])
+            self.assertEqual(
+                db.execute('SELECT spawntimesecs,spawnDifficulties FROM content_creature WHERE guid IN (63521000,63521001) ORDER BY guid').fetchall(),
+                [(7200, DIFFICULTIES), (7200, DIFFICULTIES)],
+            )
             comment = db.execute('SELECT Comment FROM content_creature WHERE guid=63521000').fetchone()[0]
             self.assertIn('LOG_DERIVED_POPULATION', comment)
             self.assertIn('FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP', comment)
@@ -78,6 +84,30 @@ class RubyPopulationTests(unittest.TestCase):
             with db:
                 import_population(db)
             self.assertEqual(ruby_rows(db), applied)
+
+    def test_canonical_placements_are_recognized_without_mutation(self):
+        uri = (ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro'
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            self.assertTrue(placements_applied(db))
+
+    def test_conflicting_difficulties_are_rejected(self):
+        with closing(sqlite3.connect(':memory:')) as db:
+            db.execute('CREATE TABLE content_creature (guid INTEGER, id1 INTEGER, map INTEGER, Comment TEXT, position_x REAL, position_y REAL, position_z REAL, spawnDifficulties TEXT)')
+            db.execute(
+                'INSERT INTO content_creature VALUES(?,?,?,?,?,?,?,?)',
+                (63521000, 190485, 2521, POLICY + '; FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP',
+                 *ERKHART_XY, ERKHART_Z, DIFFICULTIES),
+            )
+            db.execute(
+                'INSERT INTO content_creature VALUES(?,?,?,?,?,?,?,?)',
+                (63521001, 190484, 2521, POLICY, *KYRAKKA_XY, KYRAKKA_Z, DIFFICULTIES),
+            )
+            self.assertTrue(placements_applied(db))
+            for guid in (63521000, 63521001):
+                db.execute('UPDATE content_creature SET spawnDifficulties=? WHERE guid=?', ('1', guid))
+                with self.assertRaisesRegex(ValueError, 'partially applied or conflict'):
+                    placements_applied(db)
+                db.execute('UPDATE content_creature SET spawnDifficulties=? WHERE guid=?', (DIFFICULTIES, guid))
 
     def test_half_applied_placements_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory, closing(placeholder_copy(directory)) as db:

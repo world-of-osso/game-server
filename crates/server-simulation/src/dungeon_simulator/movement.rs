@@ -1,12 +1,19 @@
-//! Time along frozen edges replaces physical navigation, for every simulated mover.
-use super::{Space, campaign::MoveIntent};
+//! Simulated ground movers follow complete native navigation paths.
+use super::{campaign::MoveIntent, native_movement::NativeMovement};
 use bevy::prelude::*;
 use shared::components::{Health, Position, Rotation};
 
+#[path = "movement_audit_tests.rs"]
+mod audit_tests;
 #[path = "movement_edge_tests.rs"]
 mod edge_tests;
 #[path = "movement_reach_tests.rs"]
 mod reach_tests;
+
+#[derive(Component)]
+struct BlockedWalk {
+    reason: String,
+}
 
 #[derive(Component)]
 struct Travel {
@@ -124,7 +131,10 @@ pub(super) fn apl_destination(world: &World, unit: Entity) -> Option<Vec3> {
 
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
     let Some(travel) = world.get::<Travel>(unit) else {
-        return serde_json::Value::Null;
+        return world.get::<BlockedWalk>(unit).map_or(
+            serde_json::Value::Null,
+            |blocked| serde_json::json!({"blocked": blocked.reason}),
+        );
     };
     serde_json::json!({
         "destination": travel.destination.to_array(),
@@ -199,14 +209,18 @@ pub(super) fn can_move(world: &World, unit: Entity) -> bool {
         && world.get::<crate::auras::Feared>(unit).is_none()
 }
 
-fn read_legs(
-    space: Option<&Space>,
-    from: Vec3,
-    destination: Vec3,
-) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
-    match space {
-        Some(space) => space.walk_legs(from, destination),
-        None => Ok([(destination, from.distance(destination))].into()),
+fn movement_label(world: &World, unit: Entity) -> &'static str {
+    if world.get::<MoveIntent>(unit).is_some() {
+        "intent"
+    } else if matches!(
+        world.get::<crate::creature_ai::CreatureState>(unit),
+        Some(crate::creature_ai::CreatureState::Pursuing { .. })
+    ) {
+        "pursuit"
+    } else if world.get::<crate::creature_ai::FollowOwner>(unit).is_some() {
+        "follow"
+    } else {
+        "other"
     }
 }
 
@@ -255,17 +269,18 @@ fn handle_unreachable_movement(
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
     }
-    if world.get::<MoveIntent>(unit).is_none()
-        && world.get::<crate::creature_ai::FollowOwner>(unit).is_some()
+    if (world.get::<MoveIntent>(unit).is_none()
+        && world.get::<crate::creature_ai::FollowOwner>(unit).is_some())
+        || matches!(
+            world.get::<crate::creature_ai::PetMotion>(unit),
+            Some(crate::creature_ai::PetMotion::Chase(_))
+        )
     {
-        let position = *world.get::<Position>(unit).unwrap();
-        crate::creature_ai::move_follower(world, unit, position, 0.0);
-        return Ok(());
-    }
-    if matches!(
-        world.get::<crate::creature_ai::PetMotion>(unit),
-        Some(crate::creature_ai::PetMotion::Chase(_))
-    ) {
+        let reason = format!("{error}; from={from:?} to={to:?}");
+        if world.get::<BlockedWalk>(unit).is_none() {
+            eprintln!("NATIVE_WALK_BLOCKED actor={unit:?} {reason}");
+        }
+        world.entity_mut(unit).insert(BlockedWalk { reason });
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
         return Ok(());
@@ -294,6 +309,10 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     {
         follow.set_moving(false);
     }
+    if server::test_support::transport::in_progress(world, unit) {
+        world.entity_mut(unit).remove::<(Travel, MoveIntent)>();
+        return Ok(());
+    }
     if !can_move(world, unit) {
         return Ok(());
     }
@@ -312,7 +331,11 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         let legs = if in_reach {
             Default::default()
         } else {
-            match read_legs(world.get_resource::<Space>(), from, to) {
+            let label = movement_label(world, unit);
+            let walker = world
+                .get_resource::<NativeMovement>()
+                .ok_or("native movement map is not installed")?;
+            match walker.walk_legs(from, to, label) {
                 Ok(legs) => legs,
                 Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
             }
@@ -324,7 +347,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     world
         .entity_mut(unit)
-        .remove::<crate::creature_ai::CannotReachTarget>();
+        .remove::<(crate::creature_ai::CannotReachTarget, BlockedWalk)>();
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
     let next = advance(from, &mut travel, speed * dt, reach);
@@ -496,19 +519,22 @@ fn apl_reads_simulator_travel_destination_while_actor_moves() {
 fn travel_updates_follower_motion_flag_on_movement_and_stop() {
     use crate::creature_ai::FollowOwner;
     let mut world = World::new();
+    let walker = reach_tests::altar_walker();
+    let (from, to) = reach_tests::short_walk(&walker);
+    world.insert_resource(walker);
     let owner = world
         .spawn(Position {
-            x: 20.0,
-            y: 0.0,
-            z: 0.0,
+            x: to.x,
+            y: to.y,
+            z: to.z,
         })
         .id();
     let follower = world
         .spawn((
             Position {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
+                x: from.x,
+                y: from.y,
+                z: from.z,
             },
             Health {
                 current: 100.0,
@@ -518,7 +544,7 @@ fn travel_updates_follower_motion_flag_on_movement_and_stop() {
         ))
         .id();
     move_one(&mut world, follower, 0.5).unwrap();
-    assert!(world.get::<Position>(follower).unwrap().x > 0.0);
+    assert_ne!(point(world.get::<Position>(follower).unwrap()), from);
     assert!(world.get::<FollowOwner>(follower).unwrap().is_moving());
     let position = *world.get::<Position>(follower).unwrap();
     world.entity_mut(owner).insert(position);
