@@ -517,6 +517,7 @@ register_modules! {
     warlock_ritual: (2669, "modules/warlock_ritual.rs"),
     warlock_seed: (2659, "modules/warlock_seed.rs"),
     warrior: (40, "modules/warrior.rs"),
+    warrior_culling_cyclone: (715, "modules/warrior_culling_cyclone.rs"),
     warrior_imminent: (1000, "modules/warrior_imminent.rs"),
     warrior_pain_and_gain: (1001, "modules/warrior_pain_and_gain.rs"),
     windwalker_fof: (2690, "modules/windwalker_fof.rs"),
