@@ -15,6 +15,7 @@ from ruby_native_templates import import_templates
 KYRAKKA_XY = (1786.9, 27.945)
 ERKHART_XY = (1785.13, 20.495)
 POLICY = 'LOG_DERIVED_POPULATION; interim Z from authored_neighbor_anchor'
+DIFFICULTIES = '1,8,23'
 KYRAKKA_Z = 312.92258
 ERKHART_Z = 312.59048
 KYRAKKA_ANCHORS = 'tdb_creature:9001671,9001749;content_creature:29001671,29001749'
@@ -27,16 +28,16 @@ def placements_applied(db):
 
     Raises on anything else, including a half-applied import.
     """
-    erkhart = db.execute('SELECT id1,map,Comment,position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone()
+    erkhart = db.execute('SELECT id1,map,Comment,position_x,position_y,position_z,spawnDifficulties FROM content_creature WHERE guid=63521000').fetchone()
     if erkhart is None or erkhart[:2] != (190485, 2521) or not erkhart[2] or PLACEHOLDER not in erkhart[2]:
         raise ValueError('expected Erkhart journal placeholder not found')
     kyrakka = db.execute('SELECT id1,map,position_x,position_y,position_z,spawnDifficulties FROM content_creature WHERE guid=63521001').fetchone()
-    erkhart_placed = erkhart[2].startswith(POLICY) and erkhart[3:] == (*ERKHART_XY, ERKHART_Z)
-    if kyrakka is None and not erkhart_placed:
+    erkhart_placed = erkhart[2].startswith(POLICY) and erkhart[3:] == (*ERKHART_XY, ERKHART_Z, DIFFICULTIES)
+    if kyrakka is None and not erkhart[2].startswith(POLICY):
         if db.execute('SELECT 1 FROM content_creature WHERE id1=190484 AND map=2521').fetchone():
             raise ValueError('Kyrakka already has a placement')
         return False
-    if erkhart_placed and kyrakka == (190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, '1'):
+    if erkhart_placed and kyrakka == (190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, DIFFICULTIES):
         return True
     raise ValueError('Ruby placements are partially applied or conflict with GUID 63521000/63521001')
 
@@ -59,10 +60,10 @@ def import_population(db):
         db.execute("UPDATE content_creature_template SET ScriptName='boss_kyrakka_erkhart' WHERE entry=?", (entry,))
     if not applied:
         placeholder = db.execute('SELECT Comment,position_x,position_y,position_z FROM content_creature WHERE guid=63521000').fetchone()
-        db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,spawntimesecs=?,Comment=? WHERE guid=63521000',
-                   (*ERKHART_XY, ERKHART_Z, DUNGEON_RESPAWN_SECONDS, POLICY + f'; anchors={ERKHART_ANCHORS}; replaced xyz={placeholder[1:]}; ' + placeholder[0]))
+        db.execute('UPDATE content_creature SET position_x=?,position_y=?,position_z=?,spawntimesecs=?,spawnDifficulties=?,Comment=? WHERE guid=63521000',
+                   (*ERKHART_XY, ERKHART_Z, DUNGEON_RESPAWN_SECONDS, DIFFICULTIES, POLICY + f'; anchors={ERKHART_ANCHORS}; replaced xyz={placeholder[1:]}; ' + placeholder[0]))
         db.execute('INSERT INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawntimesecs,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?,?)',
-                   (63521001, 190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, DUNGEON_RESPAWN_SECONDS, '1', POLICY + f'; anchors={KYRAKKA_ANCHORS}'))
+                   (63521001, 190484, 2521, *KYRAKKA_XY, KYRAKKA_Z, DUNGEON_RESPAWN_SECONDS, DIFFICULTIES, POLICY + f'; anchors={KYRAKKA_ANCHORS}'))
     binding = (2521, 190484, 2623, 2, 2503, 5393, 107137)
     existing = db.execute('SELECT map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2521 AND creature_entry=190484').fetchone()
     if existing is not None and existing != binding:
