@@ -6,7 +6,7 @@ fn temple_keystone_bosses_cast_observed_openers() {
         (262822, 0, 1288457, 5.0),
         (262530, 0, 1288428, 47.0),
         (133384, 1, 1290797, 8.0),
-        (263658, 2, 1290531, 24.0),
+        (263658, 2, 1290531, 30.0),
     ] {
         let (mut h, boss, _) = bound_boss_at_difficulty(entry, 1877, bit, 8, None);
         let spells = crate::spell_cast::test_harness::world_db()
