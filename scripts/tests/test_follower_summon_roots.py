@@ -23,7 +23,7 @@ class FollowerSummonRootsTests(unittest.TestCase):
             wcl = path / 'wcl.json'
             wcl.write_text(json.dumps({'profiles': {'spec': {'gear': [
                 {'id': 104, 'gems': [{'id': '105'}], 'permanentEnchant': '201',
-                 'temporaryEnchant': '202'}]}}}))
+                 'temporaryEnchant': '202', 'bonusIDs': ['601']}]}}}))
             db.executescript('''
                 CREATE TABLE follower_lfg_dungeons(map_id,difficulty_id);
                 INSERT INTO follower_lfg_dungeons VALUES (34,205);
@@ -32,7 +32,9 @@ class FollowerSummonRootsTests(unittest.TestCase):
                 CREATE TABLE item_x_item_effect(ItemID,ItemEffectID);
                 INSERT INTO item_x_item_effect VALUES (101,1),(104,2),(102,3),(103,4);
                 CREATE TABLE item_effect(ID,SpellID);
-                INSERT INTO item_effect VALUES (1,501),(2,502),(3,503),(4,504);
+                INSERT INTO item_effect VALUES (1,501),(2,502),(3,503),(4,504),(5,509);
+                CREATE TABLE item_bonus(ParentItemBonusListID,Type,Value_0);
+                INSERT INTO item_bonus VALUES (601,23,5),(602,23,3);
                 CREATE TABLE item_set_spell(ItemSetID,SpellID);
                 INSERT INTO item_set_spell VALUES (301,505);
                 CREATE TABLE gem_properties(ID,Enchant_ID);
@@ -41,7 +43,7 @@ class FollowerSummonRootsTests(unittest.TestCase):
                 INSERT INTO spell_item_enchantment VALUES
                   (201,3,506,0,0,0,0),(202,0,0,3,507,0,0),(203,0,0,0,0,3,508);
             ''')
-            self.assertEqual(gear_spell_roots(db, path, wcl), {501, 502, 505, 506, 507, 508})
+            self.assertEqual(gear_spell_roots(db, path, wcl), {501, 502, 505, 506, 507, 508, 509})
 
 
 if __name__ == '__main__':

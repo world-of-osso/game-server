@@ -25,22 +25,24 @@ def read_journal_items(db2, maps):
 
 def read_wcl_items(path):
     catalog = json.loads(path.read_text())
-    items, gems, enchants = set(), set(), set()
+    items, gems, enchants, bonuses = set(), set(), set(), set()
     for profile in catalog['profiles'].values():
         for item in profile['gear']:
             items.add(int(item['id']))
             gems.update(int(gem['id']) for gem in item.get('gems', ()))
+            for key in ('bonusIDs', 'sourceBonusIDs'):
+                bonuses.update(int(bonus) for bonus in item.get(key, ()))
             for key in ('permanentEnchant', 'temporaryEnchant'):
                 if item.get(key):
                     enchants.add(int(item[key]))
-    return items, gems, enchants
+    return items, gems, enchants, bonuses
 
 
 def gear_spell_roots(conn, db2=DB2, wcl=WCL):
     """Conservatively include effects, set bonuses, gems and enchants of gear candidates."""
     maps = {row[0] for row in conn.execute(
         'SELECT map_id FROM follower_lfg_dungeons WHERE difficulty_id=205')}
-    items, gems, enchants = read_wcl_items(wcl)
+    items, gems, enchants, bonuses = read_wcl_items(wcl)
     items.update(read_journal_items(db2, maps))
     if not maps or not items:
         raise ValueError('follower Journal or WCL equipment roots are empty')
@@ -50,6 +52,9 @@ def gear_spell_roots(conn, db2=DB2, wcl=WCL):
     conn.execute('DROP TABLE IF EXISTS temp.follower_summon_enchant')
     conn.execute('CREATE TEMP TABLE follower_summon_enchant (id INTEGER PRIMARY KEY)')
     conn.executemany('INSERT INTO temp.follower_summon_enchant VALUES (?)', ((enchant,) for enchant in enchants))
+    conn.execute('DROP TABLE IF EXISTS temp.follower_summon_bonus')
+    conn.execute('CREATE TEMP TABLE follower_summon_bonus (id INTEGER PRIMARY KEY)')
+    conn.executemany('INSERT INTO temp.follower_summon_bonus VALUES (?)', ((bonus,) for bonus in bonuses))
     return {row[0] for row in conn.execute('''
         WITH enchant_ids(id) AS (
             SELECT id FROM temp.follower_summon_enchant
@@ -62,6 +67,9 @@ def gear_spell_roots(conn, db2=DB2, wcl=WCL):
             UNION SELECT b.SpellID FROM temp.follower_summon_item i
               JOIN item_sparse s ON s.ID=i.id JOIN item_set_spell b ON b.ItemSetID=s.ItemSet
               WHERE s.ItemSet>0 AND b.SpellID>0
+            UNION SELECT e.SpellID FROM temp.follower_summon_bonus i
+              JOIN item_bonus b ON b.ParentItemBonusListID=i.id AND b.Type=23
+              JOIN item_effect e ON e.ID=b.Value_0 WHERE e.SpellID>0
             UNION SELECT e.EffectArg_0 FROM enchant_ids i JOIN spell_item_enchantment e ON e.ID=i.id
               WHERE e.Effect_0=3 AND e.EffectArg_0>0
             UNION SELECT e.EffectArg_1 FROM enchant_ids i JOIN spell_item_enchantment e ON e.ID=i.id
