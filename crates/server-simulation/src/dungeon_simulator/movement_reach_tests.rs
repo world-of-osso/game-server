@@ -1,6 +1,7 @@
 //! Chase movement uses the native reach boundary without borrowing unrelated dungeon geometry.
 use super::*;
 use crate::creature_ai::PetMotion;
+use bevy::ecs::system::RunSystemOnce;
 use std::time::Duration;
 
 fn stockade_space() -> Space {
@@ -38,7 +39,7 @@ fn tick(world: &mut World) {
     world
         .resource_mut::<Time>()
         .advance_by(Duration::from_millis(50));
-    update(world);
+    world.run_system_once(update).unwrap();
 }
 
 #[test]
