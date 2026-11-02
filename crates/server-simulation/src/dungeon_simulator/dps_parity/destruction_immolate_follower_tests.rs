@@ -53,5 +53,20 @@ fn follower_destruction_without_wither_maintains_immolate() {
         })
         .count();
     assert!(casts >= 2, "follower must refresh Immolate: {casts} casts");
-    assert!(periodic > 0, "Immolate must deal periodic damage");
+    let relevant: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits()) && matches!(event.spell_id, Some(348 | 157736))
+        })
+        .map(|event| {
+            format!(
+                "{:?} {:?} periodic={} amount={}",
+                event.spell_id, event.kind, event.periodic, event.amount
+            )
+        })
+        .collect();
+    assert!(
+        periodic > 0,
+        "Immolate must deal periodic damage: {relevant:?}"
+    );
 }
