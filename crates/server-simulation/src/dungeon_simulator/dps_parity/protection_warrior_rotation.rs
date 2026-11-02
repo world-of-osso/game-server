@@ -1100,19 +1100,28 @@ mod tests {
             .get_mut(PowerType::Rage)
             .unwrap()
             .current = 1000.0;
+        // Shield Wall's cooldown is its charge-category recharge; its own 8 s
+        // RecoveryTime is a separate clock (SimC76f8118 action.cpp:711–719).
+        // `cooldown.remains` reads whichever clock gates the action.
+        let bindings = super::bindings();
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: 0.0,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
         let cooldown = |run: &super::super::Run, id| {
             let world = run.app.world();
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()
                 .get(id)
                 .unwrap();
-            world
-                .get::<crate::spell_cast::SpellHistory>(actor)
+            crate::simc_apl_native::NativeFacts::new(world, actor, &bindings, encounter, 1)
+                .cooldown_for_spell(spell, "remains")
                 .unwrap()
-                .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+                * 1000.0
         };
         let before = [cooldown(&run, 107574), cooldown(&run, 871)];
-        assert!(before.iter().all(|value| *value > 0));
+        assert!(before.iter().all(|value| *value > 0.0));
         execute(
             run.app.world_mut(),
             actor,
@@ -1140,7 +1149,7 @@ mod tests {
             .display_modifier;
         let expected_ms = f64::from(paid / units as f32 / divisor) * 1000.0;
         for (spell, previous) in [107574, 871].into_iter().zip(before) {
-            let reduction = previous as f64 - cooldown(&run, spell) as f64;
+            let reduction = previous - cooldown(&run, spell);
             assert!(
                 (reduction - expected_ms).abs() <= 1.0,
                 "spell={spell}: reduction={reduction}, expected={expected_ms}"
