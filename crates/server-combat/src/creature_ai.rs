@@ -1571,20 +1571,50 @@ fn advance_companion_route(
     }
 }
 
+type FollowerMoveParams = (
+    MoveQueues<'static, 'static>,
+    Query<
+        'static,
+        'static,
+        (
+            &'static mut Position,
+            Option<&'static mut Rotation>,
+            Option<&'static mut CreatureMotion>,
+            Option<&'static mut MovementSpeed>,
+        ),
+        ActiveUncontrolled,
+    >,
+);
+
+/// `move_follower` parameters an exclusive system keeps across calls, so each move
+/// does not rebuild its queries over every archetype.
+pub struct FollowerMoves(bevy::ecs::system::SystemState<FollowerMoveParams>);
+
+impl FromWorld for FollowerMoves {
+    fn from_world(world: &mut World) -> Self {
+        Self(bevy::ecs::system::SystemState::new(world))
+    }
+}
+
 /// Planned follower movement and hazard escape share the native movement/interest/replication writer.
 pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
-    let mut state = bevy::ecs::system::SystemState::<(
-        MoveQueues,
-        Query<
-            (
-                &mut Position,
-                Option<&mut Rotation>,
-                Option<&mut CreatureMotion>,
-                Option<&mut MovementSpeed>,
-            ),
-            ActiveUncontrolled,
-        >,
-    )>::new(world);
+    move_follower_with(
+        &mut FollowerMoves::from_world(world),
+        world,
+        entity,
+        to,
+        speed,
+    );
+}
+
+pub fn move_follower_with(
+    moves: &mut FollowerMoves,
+    world: &mut World,
+    entity: Entity,
+    to: Position,
+    speed: f32,
+) {
+    let state = &mut moves.0;
     let (queues, mut units) = state
         .get_mut(world)
         .expect("follower native movement system parameters");

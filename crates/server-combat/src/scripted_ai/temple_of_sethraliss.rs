@@ -5,8 +5,9 @@
 //! encounter-specific dummy spell children remain unported.
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx};
+use crate::random::seq::SliceRandom;
 use bevy::prelude::*;
-use shared::components::Npc;
+use shared::components::{Npc, Player, ThreatTable};
 
 const ADDERIS: u32 = 262530;
 const ASPIX: u32 = 262822;
@@ -18,6 +19,8 @@ const TEMPEST_WINDS: u32 = 1288864;
 const OVERLOAD: u32 = 1288428;
 const LIGHTNING_BITE: u32 = 1290797;
 const KNOT_OF_SNAKES: u32 = 1290031;
+const KNOT_TARGET_AURA: u32 = 1290030;
+const THUNDER_SPIT_MARK: u32 = 1289109;
 const THUNDER_SPIT: u32 = 1289602;
 const SERPENTSTORM: u32 = 1293048;
 const INDUCTION: u32 = 1290531;
@@ -61,6 +64,41 @@ fn engage_partner(ctx: &mut Ctx, entry: u32) {
     }
 }
 
+/// INFERRED_WCL: both mechanics mark two random party combatants; all three
+/// reports M4cdBNJkTjavYgQV/11, ax1vNFnfPdXrzRQ2/16 and ZgBCXQvcnhaAYT1r/5
+/// record two targets, but do not establish the selection algorithm.
+fn mark_party_targets(ctx: &mut Ctx, aura: u32) {
+    let Some(threat) = ctx.world.get::<ThreatTable>(ctx.me) else {
+        return;
+    };
+    let mut candidates: Vec<_> = threat
+        .entries()
+        .iter()
+        .filter_map(|entry| Entity::try_from_bits(entry.entity))
+        .filter(|&unit| crate::spell_cast::targets::is_alive(ctx.world, unit))
+        .filter(|&unit| {
+            ctx.world.get::<Player>(unit).is_some()
+                || ctx
+                    .world
+                    .get::<crate::followers::ClassCombatant>(unit)
+                    .is_some()
+        })
+        .collect();
+    candidates.shuffle(&mut crate::random::thread_rng());
+    for target in candidates.into_iter().take(2) {
+        crate::auras::apply_aura(
+            ctx.world,
+            &crate::auras::AuraApplication {
+                caster: ctx.me,
+                target,
+                spell_id: aura,
+                effect_mask: 1,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
 impl BossScript for TempleBoss {
     fn boss_ai(&mut self) -> &mut BossAi {
         &mut self.boss
@@ -75,8 +113,19 @@ impl BossScript for TempleBoss {
                 self.boss.events.repeat(3_640);
             }
             LIGHTNING_BITE => ctx.do_cast_victim(spell),
-            GALE_FORCE | TEMPEST_WINDS | OVERLOAD | KNOT_OF_SNAKES | THUNDER_SPIT
-            | SERPENTSTORM => ctx.do_cast_self(spell),
+            KNOT_OF_SNAKES | THUNDER_SPIT => {
+                if ctx.do_cast_at(Some(ctx.me), spell, false) {
+                    mark_party_targets(
+                        ctx,
+                        if spell == KNOT_OF_SNAKES {
+                            KNOT_TARGET_AURA
+                        } else {
+                            THUNDER_SPIT_MARK
+                        },
+                    );
+                }
+            }
+            GALE_FORCE | TEMPEST_WINDS | OVERLOAD | SERPENTSTORM => ctx.do_cast_self(spell),
             INDUCTION => {
                 ctx.do_cast_self(spell);
                 self.boss.events.repeat(23_100);

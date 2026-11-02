@@ -3493,13 +3493,8 @@ fn spawn_run_mode_record(
                 &hostile_sources,
             )?;
             graph.route = plan.steps.clone();
-            if graph.map_id == 2825 {
-                chain_groups = Some(super::keystone_route::den_chain_groups(
-                    &graph,
-                    &definition,
-                    &hostile_sources,
-                )?);
-            }
+            chain_groups =
+                super::keystone_route::wcl_chain_groups(&graph, &definition, &hostile_sources)?;
             app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
@@ -4037,8 +4032,6 @@ impl Run {
                     .insert(MoveIntent(Vec3::new(tank.x, tank.y, tank.z)));
                 return Ok(());
             }
-        } else if self.wait_for_tank()? {
-            return Ok(());
         }
         if self.chain_groups.is_none() && fighting {
             self.app
@@ -4188,6 +4181,9 @@ impl Run {
                 .world_mut()
                 .entity_mut(self.party.owner)
                 .insert(MoveIntent(destination));
+            return Ok(());
+        }
+        if !fighting && self.wait_for_tank()? {
             return Ok(());
         }
         self.app

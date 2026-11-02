@@ -133,8 +133,7 @@ fn deferred_dispatch_never_runs_superseded_requests() {
         opened_tx.send(()).unwrap();
         drop(pipe);
     });
-    let mut worker = Worker::new(temp.path().to_owned());
-    worker.defer_dispatch();
+    let mut worker = Worker::headless(temp.path().to_owned());
     worker.submit(request(1, 1, 12));
     worker.submit(request(1, 2, 99));
     let responses = drain(&mut worker);
@@ -182,6 +181,42 @@ fn worker_loads_graph_before_the_first_long_request() {
     std::fs::copy(source.join("portal-graph.json"), &graph).unwrap();
     let mut worker = Worker::new(temp.path().to_owned());
     std::fs::remove_file(graph).unwrap();
+    worker.submit(Request {
+        entity: 1,
+        id: 1,
+        map_id: 2519,
+        query: Query::Path {
+            from: Vec3::new(-257.87, 123.38, 489.73),
+            to: Vec3::new(-211.1, 99.34897, 932.7),
+        },
+    });
+    let response = drain_with_timeout(&mut worker, Duration::from_secs(60))
+        .pop()
+        .unwrap();
+    assert!(matches!(response.result, Ok(Some(Output::Path(_)))));
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_NAV_CANONICAL canonical2519 assets"]
+fn headless_worker_reads_the_graph_at_the_first_long_request() {
+    use std::os::unix::fs::symlink;
+    let source =
+        std::path::PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap()).join("2519");
+    let temp = tempfile::tempdir().unwrap();
+    let map = temp.path().join("2519");
+    std::fs::create_dir(&map).unwrap();
+    for entry in std::fs::read_dir(&source).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|ext| ext == "nav") {
+            symlink(&path, map.join(path.file_name().unwrap())).unwrap();
+        }
+    }
+    let mut worker = Worker::headless(temp.path().to_owned());
+    std::fs::copy(
+        source.join("portal-graph.json"),
+        map.join("portal-graph.json"),
+    )
+    .unwrap();
     worker.submit(Request {
         entity: 1,
         id: 1,
