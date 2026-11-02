@@ -888,4 +888,4 @@ pub fn spawn_player_entity(
 
 #[cfg(test)]
 #[path = "auth_character_tests.rs"]
-mod tests;
+pub(crate) mod tests;

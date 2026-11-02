@@ -520,7 +520,7 @@ fn select_character_in_world(
     )
 }
 
-fn queue_character_selection(
+pub(crate) fn queue_character_selection(
     db: GameDatabase,
     account_id: u64,
     character_id: u64,
@@ -710,7 +710,30 @@ fn select_character_with_maps(
     (app, player)
 }
 
-fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
+pub(crate) fn reconnect_character(app: &mut App, account_id: u64, character_id: u64) -> Entity {
+    let connection = app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(account_id + 1000)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id },
+            MessageSender::<SelectCharacter>::default(),
+            MessageReceiver::<SelectCharacter>::default(),
+            MessageSender::<EnterWorldResponse>::default(),
+            MessageReceiver::<EnterWorldResponse>::default(),
+            MessageSender::<LoadTerrain>::default(),
+            MessageReceiver::<LoadTerrain>::default(),
+        ))
+        .id();
+    app.world_mut()
+        .get_mut::<MessageSender<SelectCharacter>>(connection)
+        .unwrap()
+        .send::<AuthChannel>(SelectCharacter { character_id });
+    finish_character_selection(app, connection)
+}
+
+pub(crate) fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
     let player = crate::test_data::wait_for_selected_player(app, connection);
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);

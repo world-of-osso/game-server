@@ -816,6 +816,157 @@ mod copy_tests {
     }
 
     #[test]
+    fn follower_dungeon_real_selection_resumes_same_combat_copy() {
+        let (mut source, _, mut run) = fixture();
+        let store = source
+            .world_mut()
+            .remove_resource::<crate::maps::MapStore>()
+            .unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let db = redb::Database::create(file.path()).unwrap();
+        crate::persistence::create_tables(&db);
+        let (character, _) = crate::persistence::create_character(&db, 11, "Resume", 1, 1).unwrap();
+        let (mut app, connection) = crate::auth_character::tests::queue_character_selection(
+            crate::persistence::GameDatabase::new(db),
+            11,
+            character,
+            crate::maps::MapStore::continents(),
+        );
+        let owner = crate::auth_character::tests::finish_character_selection(&mut app, connection);
+        let mut instances = crate::maps::InstanceManager::default();
+        let map = instances
+            .create_map(
+                &store,
+                2521,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: character,
+                    group: None,
+                    leader: character,
+                    difficulty_id: 205,
+                    raid_difficulty: Default::default(),
+                    raid_group: false,
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 1_790_510_400,
+                },
+            )
+            .unwrap()
+            .map;
+        app.insert_resource(store)
+            .insert_resource(instances)
+            .init_resource::<GroupRegistry>();
+        let position = shared::components::Position {
+            x: 1403.56,
+            y: 128.0,
+            z: 173.39,
+        };
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((map, position, DungeonDifficulty(205)));
+        run.copy = Some(map);
+        run.members = run
+            .profiles
+            .iter()
+            .map(|profile| {
+                app.world_mut()
+                    .spawn((
+                        Follower {
+                            owner,
+                            profile: profile.clone(),
+                        },
+                        crate::zones::TempSummon { summoner: owner },
+                        shared::components::Health {
+                            current: 900.0,
+                            max: 1000.0,
+                        },
+                        shared::components::UnitLevel(12),
+                        shared::components::ModelDisplay { display_id: 1 },
+                        shared::components::Npc {
+                            template_id: profile.entry,
+                            name: profile.name.clone(),
+                        },
+                        position,
+                        map,
+                    ))
+                    .id()
+            })
+            .collect();
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        app.world_mut()
+            .entity_mut(owner)
+            .insert((run.clone(), crate::lfg::PlayerLfgState::default()));
+        let enemy = app
+            .world_mut()
+            .spawn((
+                shared::components::Health {
+                    current: 250.0,
+                    max: 500.0,
+                },
+                map,
+            ))
+            .id();
+        crate::combat_refs::set_in_combat_with(app.world_mut(), owner, enemy);
+        app.world_mut()
+            .entity_mut(run.members[0])
+            .insert(crate::combat::AutoAttack::new(enemy));
+        crate::networking::install_disconnect_fixture(&mut app);
+        app.world_mut()
+            .entity_mut(connection)
+            .insert(lightyear::prelude::server::ClientOf)
+            .remove::<Connected>();
+        app.world_mut().flush();
+        app.update();
+        super::super::update_ai(app.world_mut());
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        assert!(
+            app.world()
+                .get::<crate::combat::AutoAttack>(run.members[0])
+                .is_none()
+        );
+        assert!(crate::combat_refs::has_active_reference_to(
+            app.world(),
+            owner,
+            enemy
+        ));
+        let restored = crate::auth_character::tests::reconnect_character(&mut app, 11, character);
+        assert_eq!(restored, owner);
+        assert_eq!(*app.world().get::<InMap>(restored).unwrap(), map);
+        assert_eq!(
+            *app.world()
+                .get::<shared::components::Position>(restored)
+                .unwrap(),
+            position
+        );
+        assert_eq!(
+            app.world()
+                .get::<shared::components::Health>(enemy)
+                .unwrap()
+                .current,
+            250.0
+        );
+        assert!(crate::combat_refs::has_active_reference_to(
+            app.world(),
+            restored,
+            enemy
+        ));
+        assert!(run.members.iter().all(|member| {
+            app.world()
+                .get::<Follower>(*member)
+                .is_some_and(|f| f.owner == restored)
+                && app
+                    .world()
+                    .get::<shared::components::Health>(*member)
+                    .is_some_and(|health| health.current == 900.0)
+                && super::super::acting_follower(app.world(), *member).is_some()
+        }));
+    }
+
+    #[test]
     fn tank_pull_history_keeps_a_missing_admitted_member_in_health_coverage() {
         let (mut app, owner, run) = fixture();
         let missing = run.members[0];
