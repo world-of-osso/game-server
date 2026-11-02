@@ -136,3 +136,55 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_shadow_cthun_direct_summon_diagnostic() {
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").unwrap();
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, _, _) = prepare_class_follower(app, copy, 258, 70);
+    for _ in 0..4 {
+        app.update();
+    }
+    println!(
+        "CTHUN_TEMPLATE {}",
+        app.world()
+            .resource::<crate::world_data::WorldData>()
+            .templates
+            .contains_key(&192337)
+    );
+    println!(
+        "CTHUN_PROPS {:?}",
+        app.world()
+            .resource::<crate::spell_cast::summon::SummonPropertiesStore>()
+            .0
+            .get(&5395)
+    );
+    let mut spell = crate::spell_cast::load_triggered_spell(app.world(), 377355, 1).unwrap();
+    spell.cast_destination = Some(
+        crate::spell_cast::targets::position(app.world(), actor)
+            .unwrap()
+            .to_array(),
+    );
+    let launched =
+        crate::spell_cast::launch_triggered_spell(app.world_mut(), actor, &spell, Some(actor), 1);
+    for _ in 0..10 {
+        app.update();
+    }
+    let mut query = app.world_mut().query::<(
+        Entity,
+        &crate::spell_cast::summon::SummonedCreature,
+        &shared::components::Npc,
+    )>();
+    let pets: Vec<_> = query
+        .iter(app.world())
+        .filter(|(_, summon, _)| summon.owner == actor)
+        .map(|(_, summon, npc)| (summon.spell_id, npc.template_id))
+        .collect();
+    println!("CTHUN_DIRECT launched={launched} pets={pets:?}");
+    assert!(
+        pets.iter()
+            .any(|&(spell, npc)| spell == 377355 && npc == 192337)
+    );
+}
