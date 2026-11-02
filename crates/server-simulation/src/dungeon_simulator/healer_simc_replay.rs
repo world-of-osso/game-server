@@ -564,10 +564,10 @@ pub(super) fn deliver_party_hit(world: &mut World, source: Entity, target: Entit
             school_mask: 32,
             ..Default::default()
         }),
-        categories: Some(crate::spell_info::SpellCategories {
+        categories: Some(Box::new(crate::spell_info::SpellCategories {
             defense_type: 1,
             ..Default::default()
-        }),
+        })),
         ..Default::default()
     };
     let ctx = crate::spell_cast::effects::EffectCtx {
