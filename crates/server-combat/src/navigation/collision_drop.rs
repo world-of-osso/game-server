@@ -27,10 +27,7 @@ pub(crate) fn advance_collision_drops(world: &mut World) {
     for (unit, (map_id, drop)) in requests {
         start_departure(world, unit, map_id, drop);
     }
-    let units: Vec<_> = world
-        .query_filtered::<Entity, With<CollisionDropMovement>>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<With<CollisionDropMovement>>(world);
     for unit in units {
         advance_owned_drop(world, unit);
     }

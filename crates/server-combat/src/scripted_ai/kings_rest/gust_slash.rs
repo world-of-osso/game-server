@@ -171,10 +171,7 @@ fn contains(shape: &GustSlashShape, trigger_at: &Position, unit_at: &Position) -
 
 /// `AreaTrigger::Update`: move, expire, then the target list's enter hooks.
 pub(crate) fn update(world: &mut World) {
-    let triggers: Vec<Entity> = world
-        .query_filtered::<Entity, With<GustSlashTrigger>>()
-        .iter(world)
-        .collect();
+    let triggers = crate::system_states::entities_with::<With<GustSlashTrigger>>(world);
     if triggers.is_empty() {
         return;
     }

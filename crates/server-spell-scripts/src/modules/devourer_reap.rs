@@ -131,10 +131,7 @@ fn trigger_soulburst(world: &mut World, caster: Entity, consumed: usize) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingReaps>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingReaps>>(world);
     for caster in casters {
         let pending = {
             let mut queue = world

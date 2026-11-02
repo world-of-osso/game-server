@@ -95,10 +95,7 @@ fn roll_delay_seconds() -> f64 {
 
 pub(super) fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<Entity> = world
-        .query_filtered::<Entity, With<PendingFlurries>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingFlurries>>(world);
     for caster in casters {
         for pending in take_ready(world, caster, now) {
             execute(world, caster, pending);

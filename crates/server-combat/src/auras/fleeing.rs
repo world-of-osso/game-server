@@ -104,10 +104,7 @@ fn stop_motion(world: &mut World, unit: Entity) {
 
 pub(super) fn update(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
-    let units: Vec<_> = world
-        .query_filtered::<Entity, With<Feared>>()
-        .iter(world)
-        .collect();
+    let units = crate::system_states::entities_with::<With<Feared>>(world);
     for unit in units {
         advance(world, unit, dt);
     }

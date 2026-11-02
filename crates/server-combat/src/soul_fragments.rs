@@ -534,10 +534,7 @@ fn consume(state: &mut Fragments, index: usize, now: f64, speed: f32, owner_posi
 
 pub fn update(world: &mut World) {
     let now = combat::auras::aura_now(world);
-    let owners: Vec<Entity> = world
-        .query_filtered::<Entity, With<Fragments>>()
-        .iter(world)
-        .collect();
+    let owners = crate::system_states::entities_with::<With<Fragments>>(world);
     for owner in owners {
         if let Err(error) = update_owner(world, owner, now) {
             error!(?owner, %error, "Soul fragment update failed");

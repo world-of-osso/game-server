@@ -207,10 +207,7 @@ fn finish_meta(world: &mut World, ctx: &spell_cast::effects::EffectCtx) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingCleaves>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingCleaves>>(world);
     for caster in casters {
         let due = {
             let mut pending = world

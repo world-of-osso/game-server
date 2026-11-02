@@ -80,10 +80,7 @@ fn schedule_barrage(
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let casters: Vec<_> = world
-        .query_filtered::<Entity, With<PendingBarrages>>()
-        .iter(world)
-        .collect();
+    let casters = combat::system_states::entities_with::<With<PendingBarrages>>(world);
     for caster in casters {
         let due = {
             let mut pending = world.get_mut::<PendingBarrages>(caster).unwrap();

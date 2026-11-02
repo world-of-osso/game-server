@@ -71,10 +71,7 @@ fn replicate(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 /// Each unit holding `caster`'s Echo, with its instance and replication percent.
 fn echo_holders(world: &mut World, caster: Entity) -> Vec<(Entity, u32, f32)> {
-    let units: Vec<Entity> = world
-        .query_filtered::<Entity, With<ActiveAuras>>()
-        .iter(world)
-        .collect();
+    let units = combat::system_states::entities_with::<With<ActiveAuras>>(world);
     units
         .into_iter()
         .filter_map(|unit| {

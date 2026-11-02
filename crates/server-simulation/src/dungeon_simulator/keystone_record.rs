@@ -303,35 +303,42 @@ impl Tracker {
     }
 
     pub fn observe_world(&mut self, world: &mut bevy::prelude::World, elapsed_ms: u64) {
+        use bevy::prelude::Entity;
+        use server::system_states::with_query;
         use shared::components::{CombatStatus, Npc, UnitSummonedBy};
-        self.owners.extend(
-            world
-                .query::<(bevy::prelude::Entity, &UnitSummonedBy)>()
-                .iter(world)
-                .filter(|(unit, _)| !self.actor_indices.contains_key(&unit.to_bits()))
-                .map(|(unit, owner)| (unit.to_bits(), owner.0)),
+        // Keyed maps, so the reused queries' archetype order does not matter.
+        with_query::<(Entity, &UnitSummonedBy), (), _>(world, |world, query| {
+            self.owners.extend(
+                query
+                    .iter(world)
+                    .filter(|(unit, _)| !self.actor_indices.contains_key(&unit.to_bits()))
+                    .map(|(unit, owner)| (unit.to_bits(), owner.0)),
+            )
+        });
+        with_query::<(Entity, &crate::hunter_pet::HunterPet), (), _>(world, |world, query| {
+            self.owners.extend(
+                query
+                    .iter(world)
+                    .map(|(unit, pet)| (unit.to_bits(), pet.owner.to_bits())),
+            )
+        });
+        with_query::<(Entity, &crate::spell_cast::summon::SummonedCreature), (), _>(
+            world,
+            |world, query| {
+                self.owners.extend(
+                    query
+                        .iter(world)
+                        .map(|(unit, summon)| (unit.to_bits(), summon.owner.to_bits())),
+                )
+            },
         );
-        self.owners.extend(
-            world
-                .query::<(bevy::prelude::Entity, &crate::hunter_pet::HunterPet)>()
-                .iter(world)
-                .map(|(unit, pet)| (unit.to_bits(), pet.owner.to_bits())),
-        );
-        self.owners.extend(
-            world
-                .query::<(
-                    bevy::prelude::Entity,
-                    &crate::spell_cast::summon::SummonedCreature,
-                )>()
-                .iter(world)
-                .map(|(unit, summon)| (unit.to_bits(), summon.owner.to_bits())),
-        );
-        self.npc_entries.extend(
-            world
-                .query::<(bevy::prelude::Entity, &Npc)>()
-                .iter(world)
-                .map(|(unit, npc)| (unit.to_bits(), npc.template_id)),
-        );
+        with_query::<(Entity, &Npc), (), _>(world, |world, query| {
+            self.npc_entries.extend(
+                query
+                    .iter(world)
+                    .map(|(unit, npc)| (unit.to_bits(), npc.template_id)),
+            )
+        });
         let active_units = self
             .actor_indices
             .keys()

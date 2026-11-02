@@ -987,10 +987,7 @@ pub fn reset_action_cooldowns(world: &mut World, actor: Entity) {
 }
 
 pub(super) fn update(world: &mut World) {
-    let actors: Vec<_> = world
-        .query_filtered::<Entity, With<GuardianActor>>()
-        .iter(world)
-        .collect();
+    let actors = crate::system_states::entities_with::<With<GuardianActor>>(world);
     for actor in actors {
         if implosion::advance(world, actor) {
             continue;
