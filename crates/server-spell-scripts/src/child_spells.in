@@ -669,3 +669,10 @@ D	enhancement/enhancement_strikes.rs	after_crash	cast_triggered	buff	1	187878,12
 D	enhancement/enhancement_strikes.rs	invoke_thorim	launch_triggered_spell	&payload	1	188196,188443,452201
 D	enhancement/enhancement_tempest_buffs.rs	cast_discharge	launch_triggered_spell	&payload	1	188443,211094
 D	enhancement/enhancement_tempest_buffs.rs	grant	cast_triggered	buff	1	455089,470532
+D	evoker_command_squadron.rs	start_squadron	cast_triggered_with_overrides	summon	1	1235843,1237036
+D	evoker_echo.rs	replicate	cast_triggered_with_overrides	payload	1	355941,361195,361509,366155,367230,1256581
+D	evoker_temporal_anomaly.rs	apply_partial_echo	AuraApplication	ECHO	1	364343
+D	execution_counters.rs	cast_valued_execution	cast_triggered_with_overrides	payload	1	335082
+D	execution_counters.rs	grant_selected_counter	try_cast_triggered	consumer.counter	1	445606
+D	feral_convoke.rs	launch_child	launch_triggered_spell	&spell	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
+D	feral_convoke.rs	launch_child	load_triggered_spell	id	1	774,1822,5176,5221,8936,22568,155625,274837,1243807
