@@ -9,6 +9,7 @@ mod mistweaver_elixir_jadefire_tests;
 mod mistweaver_elixir_soothing_tests;
 mod mistweaver_soothing_channel_tests;
 mod mistweaver_soothing_priority_tests;
+mod mistweaver_tea_enveloping_tests;
 mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_bolt_splinter_follower_tests;
 #[cfg(test)] mod arcane_blast_cost_tests;
