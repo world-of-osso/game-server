@@ -14,6 +14,69 @@ fn position(point: Vec3) -> Position {
 
 #[test]
 #[ignore = "requires Altar native ground and navmesh"]
+fn leader_reaches_drop_from_the_observed_stall_position() {
+    let root = PathBuf::from("/home/osso/Projects/world-of-osso/game-engine/data");
+    let (mut h, _, _) = spawn_profile_fixture_with_plugins(209057, |app| {
+        app.insert_resource(crate::ground::GroundMap::new(
+            &root,
+            HashMap::from([(MAP, 7_213_439)]),
+        ));
+        crate::navigation::install_fixture(
+            app,
+            crate::navigation::Navigation::new(&root.join("navmesh")),
+        );
+        app.add_systems(
+            Update,
+            (
+                start_nearby,
+                advance,
+                super::super::fall_movement::advance_falls,
+                super::super::fall_movement::release_finished_falls,
+            )
+                .chain(),
+        );
+    });
+    let map = InMap::continent(MAP);
+    let owner = h.caster;
+    let initial = Vec3::new(1614.2029, 15.618515, -2126.5059);
+    h.app.world_mut().entity_mut(owner).insert((
+        map,
+        position(initial),
+        Health {
+            current: 1000.0,
+            max: 1000.0,
+        },
+    ));
+    let liadrin = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(liadrin).insert((
+        map,
+        position(SOURCE),
+        Npc {
+            template_id: LIADRIN,
+            name: "Lady Liadrin".into(),
+        },
+    ));
+    let mut protected = false;
+    for _ in 0..600 {
+        h.advance(1);
+        protected |= crate::auras::is_immune(h.app.world(), owner, 1);
+        if h.app.world().get::<Position>(owner).unwrap().y < -60.0 {
+            break;
+        }
+    }
+    let landed = h.app.world().get::<Position>(owner).unwrap();
+    assert!(
+        protected,
+        "Liadrin did not protect the leader; position={landed:?}"
+    );
+    assert!(
+        landed.y < -60.0,
+        "leader did not reach the lower component: {landed:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires Altar native ground and navmesh"]
 fn liadrin_protects_only_the_follower_using_the_drop() {
     let root = PathBuf::from("/home/osso/Projects/world-of-osso/game-engine/data");
     let (mut h, follower, _) = spawn_profile_fixture_with_plugins(209057, |app| {
