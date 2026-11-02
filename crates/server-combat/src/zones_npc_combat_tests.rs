@@ -1,6 +1,9 @@
 //! Northshire creatures fighting each other, spawned from the imported world.db
 //! (`cargo test -p server npc_combat_tests -- --ignored`).
 
+#[path = "infusion_pool_react_tests.rs"]
+mod infusion_pool_react_tests;
+
 use std::sync::OnceLock;
 
 use bevy::time::TimeUpdateStrategy;

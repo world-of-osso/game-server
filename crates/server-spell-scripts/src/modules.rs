@@ -416,6 +416,7 @@ register_modules! {
     resource_values: (350, "modules/resource_values.rs"),
     unholy_infected_claws: (2532, "modules/unholy_infected_claws.rs"),
     restoration_ancestral_awakening: (2640, "modules/restoration_ancestral_awakening.rs"),
+    restoration_earth_shield: (2640, "modules/restoration_earth_shield.rs"),
     restoration_earthliving: (2640, "modules/restoration_earthliving.rs"),
     restoration_bursting_growth: (1050, "modules/restoration_bursting_growth.rs"),
     restoration_everbloom: (1050, "modules/restoration_everbloom.rs"),

@@ -959,6 +959,7 @@ pub fn area_target_filter(
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
         (30745, 0) => Some(crate::scripted_ai::nethekurse::filter_target_fissures),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
+        (200025, 1 | 2) => Some(batch15::filter_virtue_targets),
         _ => None,
     }
 }

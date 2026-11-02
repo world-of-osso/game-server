@@ -11,6 +11,17 @@
     "retire_when": "The TC or DB2 creature data supplies the rune's passive react state."
   },
   {
+    "entry": 189162,
+    "react_state": "passive",
+    "evidence": [
+      "VERIFIED_WCL wKpcfaj4MzDH9v8X fight 1: no Infusion Pool actor or enemy damage",
+      "VERIFIED_WCL QnzJ1bP6y9CXLFDW fight 1: no Infusion Pool actor or enemy damage",
+      "VERIFIED_WCL kg249LYJ7rBfKCWH fight 1: no Infusion Pool actor or enemy damage"
+    ],
+    "source_gap": "TDB has no passive react state or AI script for the non-selectable Infusion Pool; absence from these logs supports a passive override but does not prove every encounter state.",
+    "retire_when": "Authentic creature data establishes the Infusion Pool's react state."
+  },
+  {
     "entry": 244041,
     "react_state": "passive",
     "evidence": [
