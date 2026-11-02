@@ -222,6 +222,7 @@ mod evoker_ruby_embers_tests;
 mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod evoker_titanic_tests;
+mod feral_apex_follower_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
 mod feral_growth_tests;
@@ -538,3 +539,4 @@ mod windwalker_player_tests;
 
 #[cfg(test)] mod brewmaster_stagger_tests;
 #[cfg(test)] mod brewmaster_empty_barrel_tests;
+#[cfg(test)] mod unholy_magus_follower_tests;
