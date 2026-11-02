@@ -231,7 +231,9 @@ C	evoker_temporal_anomaly.rs	373862
 C	evoker_tier.rs	1265871
 C	evoker_verdant.rs	361195
 C	feral_apex.rs	391882
+C	feral_claw_rampage.rs	441585
 C	feral_dreadful_wound.rs	441812
+C	feral_frantic_momentum.rs	391876
 C	feral_frenzy.rs	274838
 C	feral_frenzy.rs	1278969
 C	feral_growth.rs	439531
@@ -560,6 +562,7 @@ C	warlock_ritual.rs	1269800
 C	windwalker_tigereye.rs	1261724
 C	zathatek_breath.rs	1305391
 C	zathatek_breath.rs	1305395
+C	warrior_overwhelming_blades.rs	445836
 D	arms_concussive_slam.rs	cast_after_slam	launch_triggered_spell_with_primary	&child	1	1300660
 D	arms_fatality.rs	cast_mark_damage	launch_triggered_spell	&payload	1	383706
 D	assassination_runtime/rogue_children.rs	grant_regicide	launch_triggered_spell	&buff	1	1250331

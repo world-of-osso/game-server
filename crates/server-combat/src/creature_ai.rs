@@ -369,7 +369,8 @@ pub(crate) fn follower_footprint_ground(
     {
         let top = shared::movement::swim_top(liquid.level);
         if liquid.depth_level <= top && to.y <= top + navigation::AGENT_CLIMB {
-            return Some(to.y.max(liquid.depth_level));
+            let height = to.y.max(liquid.depth_level);
+            return ((height - from.y).abs() <= navigation::AGENT_CLIMB).then_some(height);
         }
     }
     if direction == Vec2::ZERO {
@@ -411,7 +412,8 @@ pub(crate) fn follower_footprint_ground(
     // step along that floor is still real movement toward the route.
     let own_floor_step =
         supported.is_some_and(|support| (support - from.y).abs() <= navigation::AGENT_CLIMB);
-    (height >= to.y - navigation::AGENT_CLIMB || own_floor_step).then_some(height)
+    let within_step = (height - from.y).abs() <= navigation::AGENT_CLIMB;
+    (within_step && (height >= to.y - navigation::AGENT_CLIMB || own_floor_step)).then_some(height)
 }
 
 /// A floor in step reach of `from` (at `to`'s x/z) that stands out of the water, such as a

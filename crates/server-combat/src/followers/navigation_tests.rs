@@ -265,6 +265,219 @@ fn wmo_surface_halls_follower_walks_tsunami_ramp_over_the_pool() {
 }
 
 #[test]
+#[ignore = "requires Halls of Infusion collision and navigation assets"]
+fn halls_recorded_safe_regroup_does_not_drop_to_pool() {
+    use crate::creature_ai::FollowOwner;
+    use shared::components::Rotation;
+
+    let (mut h, unit, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209072, |_| {});
+    h.app.world_mut().despawn(h.npc);
+    let map = InMap::continent(2527);
+    let start = Position {
+        x: 16.2,
+        y: -23.1,
+        z: -81.3,
+    };
+    let owner = Position {
+        x: -0.370431,
+        y: 20.81611,
+        z: -228.269,
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((
+        owner,
+        map,
+        Rotation {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::PartyFollowSlot>()
+        .insert((start, map, FollowOwner::new(h.caster)));
+    h.app.insert_resource(GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2527, 4290690)]),
+    ));
+    let nav = std::env::var_os("GAME_SERVER_NAV_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh")
+        });
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
+    install_movement_only_actions(&mut h.app);
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut lowest = start.y;
+    let mut travelled = 0.0_f32;
+    let mut previous = start;
+    for _ in 0..1200 {
+        h.advance(1);
+        let current = *h.app.world().get::<Position>(unit).unwrap();
+        lowest = lowest.min(current.y);
+        travelled += point(current).distance(point(previous));
+        previous = current;
+    }
+    assert!(lowest > -60.0, "follower dropped into lower pool: {lowest}");
+    assert!(travelled > 5.0, "follower did not follow: {previous:?}");
+}
+
+#[test]
+#[ignore = "requires Ara-Kara extracted WMO assets"]
+fn follower_ground_resolution_uses_creature_floor_on_recorded_owner_trail() {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+
+    let (mut h, unit, _) = spawn_profile_fixture(209072);
+    h.app.world_mut().despawn(h.npc);
+    let map = InMap::continent(2660);
+    let from = Position {
+        x: -285.53516,
+        y: 142.01108,
+        z: -396.19623,
+    };
+    let to = Position {
+        x: -285.37012,
+        y: 141.98491,
+        z: -396.2041,
+    };
+    let mut ground = GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        HashMap::from([(2660, 5280631)]),
+    );
+    let GroundProbe::Supported(player_floor) = ground.ground_at(map.map_id, point(to)) else {
+        panic!("player floor missing")
+    };
+    let GroundProbe::Supported(creature_floor) = ground.creature_ground_at(map.map_id, point(to))
+    else {
+        panic!("creature floor missing")
+    };
+    assert!(
+        (player_floor - 139.28827).abs() < 0.05,
+        "player floor {player_floor}"
+    );
+    assert!(
+        (creature_floor - 141.91756).abs() < 0.05,
+        "creature floor {creature_floor}"
+    );
+    h.app.world_mut().entity_mut(unit).insert((from, map));
+    h.app.insert_resource(ground);
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let goal = Goal::OwnerTrail(h.caster.to_bits());
+    nav.adopt_candidate_route(
+        unit,
+        MoveRequest {
+            map_id: map.map_id,
+            goal,
+            from,
+            to,
+            distance: 0.0,
+            reach: 0.0,
+        },
+        vec![point(from), point(to)],
+    );
+    h.app.insert_resource(nav);
+    h.advance(1);
+    super::hazards::advance_escape(h.app.world_mut(), unit, map, from, to, goal);
+    let after = *h.app.world().get::<Position>(unit).unwrap();
+    assert!(after.x > from.x, "follower did not advance: {after:?}");
+    assert!(
+        (after.y - creature_floor).abs() < 0.05,
+        "follower used lower floor: {after:?}"
+    );
+}
+
+#[test]
+fn follower_ground_resolution_rejects_lower_floor_during_routed_moves() {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+
+    for owner_trail in [true, false] {
+        for floor in [142.7596, 139.79475] {
+            let (mut h, unit, _) = spawn_profile_fixture(209072);
+            h.app.world_mut().despawn(h.npc);
+            let map = InMap::continent(2660);
+            let from = Position {
+                x: -289.69067,
+                y: 142.7596,
+                z: -394.4901,
+            };
+            let to = Position {
+                x: -285.21,
+                y: 142.7596,
+                z: -396.21,
+            };
+            h.app.world_mut().entity_mut(unit).insert((from, map));
+            h.app.insert_resource(GroundMap::flat_arena(floor));
+            let dir = tempfile::tempdir().unwrap();
+            let mut nav = Navigation::new(dir.path());
+            let goal = if owner_trail {
+                Goal::OwnerTrail(h.caster.to_bits())
+            } else {
+                Goal::Point
+            };
+            nav.adopt_candidate_route(
+                unit,
+                MoveRequest {
+                    map_id: map.map_id,
+                    goal,
+                    from,
+                    to,
+                    distance: 0.0,
+                    reach: 0.0,
+                },
+                vec![point(from), point(to)],
+            );
+            h.app.insert_resource(nav);
+            h.advance(1);
+            if owner_trail {
+                super::hazards::advance_escape(h.app.world_mut(), unit, map, from, to, goal);
+            } else {
+                super::hazards::advance_grounded_route(
+                    h.app.world_mut(),
+                    unit,
+                    map,
+                    from,
+                    to,
+                    goal,
+                );
+            }
+            let after = *h.app.world().get::<Position>(unit).unwrap();
+            if floor == from.y {
+                assert!(
+                    point(after).distance(point(from)) > 0.01,
+                    "upper floor must allow movement: {after:?}"
+                );
+            } else {
+                assert_eq!(after, from, "follower must not snap to the lower floor");
+            }
+        }
+    }
+}
+
+#[test]
+fn follower_ground_resolution_rejects_a_lower_navigation_corner() {
+    let mut ground = GroundMap::flat_arena(139.79475);
+    let map = InMap::continent(2660);
+    let from = Position {
+        x: -289.69067,
+        y: 142.7596,
+        z: -394.4901,
+    };
+    let to = Position {
+        x: -289.5,
+        y: 141.3,
+        z: -394.4,
+    };
+    assert_eq!(
+        crate::creature_ai::follower_footprint_ground(Some(&mut ground), Some(&map), from, to),
+        None
+    );
+}
+
+#[test]
 fn halls_follower_repaths_instead_of_snapping_to_unrelated_lower_floor() {
     use crate::navigation::{Goal, MoveRequest, Navigation};
     for (floor, should_move) in [(-23.1, true), (-130.65, false)] {
