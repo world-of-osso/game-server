@@ -746,6 +746,18 @@ mod frontal_tests;
 mod copy_tests {
     use super::*;
 
+    #[derive(Resource, Default)]
+    struct RosterReplies(Vec<shared::protocol::GroupRosterSnapshot>);
+
+    fn collect_rosters(
+        mut receivers: Query<&mut MessageReceiver<shared::protocol::GroupRosterSnapshot>>,
+        mut replies: ResMut<RosterReplies>,
+    ) {
+        for mut receiver in &mut receivers {
+            replies.0.extend(receiver.receive());
+        }
+    }
+
     pub(super) fn fixture() -> (App, Entity, FollowerRun) {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),
@@ -913,7 +925,9 @@ mod copy_tests {
             .map;
         app.insert_resource(store)
             .insert_resource(instances)
-            .init_resource::<GroupRegistry>();
+            .init_resource::<GroupRegistry>()
+            .init_resource::<RosterReplies>()
+            .add_systems(Last, collect_rosters);
         let position = shared::components::Position {
             x: 1403.56,
             y: 128.0,
@@ -1000,22 +1014,13 @@ mod copy_tests {
             assert!(app.world().get_entity(owner).is_err());
         }
         let restored = crate::auth_character::tests::reconnect_character(&mut app, 11, character);
-        let new_connection = app
-            .world_mut()
-            .query::<(Entity, &crate::networking::PlayerLink)>()
-            .iter(app.world())
-            .find(|(_, link)| link.0 == restored)
-            .unwrap()
-            .0;
         app.update();
-        let rosters: Vec<_> = app
-            .world_mut()
-            .get_mut::<MessageReceiver<shared::protocol::GroupRosterSnapshot>>(new_connection)
-            .unwrap()
-            .receive()
-            .collect();
         assert!(
-            rosters.iter().any(|roster| roster.members.len() == 5),
+            app.world()
+                .resource::<RosterReplies>()
+                .0
+                .iter()
+                .any(|roster| roster.members.len() == 5),
             "reconnected owner receives the follower party roster"
         );
         assert_eq!(restored == owner, !after_grace);
