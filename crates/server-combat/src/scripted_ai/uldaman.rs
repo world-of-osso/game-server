@@ -58,12 +58,18 @@ pub(super) fn on_boss_state_changed(
 
 /// DEIOS_WARMUP_LITTLEWIGS_TIMER: Temporal Theft succeeds before the 16.9s bar.
 pub(super) fn update_deios_warmup(world: &mut World) {
-    let bosses: Vec<_> = world
-        .query::<(Entity, &Npc, &InMap, &Position)>()
-        .iter(world)
-        .filter(|(_, npc, map, _)| npc.template_id == DEIOS && map.map_id == ULDAMAN)
-        .map(|(entity, _, map, position)| (entity, *map, *position))
-        .collect();
+    let mut bosses: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Npc, &InMap, &Position),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .filter(|(_, npc, map, _)| npc.template_id == DEIOS && map.map_id == ULDAMAN)
+            .map(|(entity, _, map, position)| (entity, *map, *position))
+            .collect()
+    });
+    bosses.sort_unstable_by_key(|(boss, ..)| *boss);
     for (boss, map, position) in bosses {
         update_deios_copy(world, boss, map, position);
     }

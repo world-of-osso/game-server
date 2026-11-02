@@ -95,25 +95,36 @@ pub(crate) fn advance(world: &mut World) {
 }
 
 pub(crate) fn start_nearby(world: &mut World) {
-    let players: Vec<_> = world
-        .query_filtered::<(Entity, &Position, &InMap), With<Player>>()
-        .iter(world)
-        .filter_map(|(unit, position, map)| {
-            (map.map_id == MAP
-                && world.get::<AltarDrop>(unit).is_none()
-                && crate::spell_cast::targets::is_alive(world, unit)
-                && Vec3::new(position.x, position.y, position.z).distance(SOURCE)
-                    <= crate::npc_interaction::INTERACTION_DISTANCE)
-                .then_some((unit, *map))
-        })
-        .collect();
-    for (unit, map) in players {
-        let caster = world
-            .query::<(Entity, &Npc, &InMap)>()
+    let mut players: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Position, &InMap),
+        With<Player>,
+        _,
+    >(world, |world, players| {
+        players
             .iter(world)
-            .find_map(|(entity, npc, copy)| {
-                (npc.template_id == LIADRIN && *copy == map).then_some(entity)
-            });
+            .filter_map(|(unit, position, map)| {
+                (map.map_id == MAP
+                    && world.get::<AltarDrop>(unit).is_none()
+                    && crate::spell_cast::targets::is_alive(world, unit)
+                    && Vec3::new(position.x, position.y, position.z).distance(SOURCE)
+                        <= crate::npc_interaction::INTERACTION_DISTANCE)
+                    .then_some((unit, *map))
+            })
+            .collect()
+    });
+    players.sort_unstable_by_key(|(unit, _)| *unit);
+    for (unit, map) in players {
+        let caster = crate::system_states::with_query::<(Entity, &Npc, &InMap), (), _>(
+            world,
+            |world, units| {
+                units
+                    .iter(world)
+                    .filter_map(|(entity, npc, copy)| {
+                        (npc.template_id == LIADRIN && *copy == map).then_some(entity)
+                    })
+                    .min()
+            },
+        );
         if let Some(caster) = caster {
             if let Err(error) = traverse(world, unit, caster) {
                 error!(?unit, %error, "Altar drop failed");

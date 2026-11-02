@@ -33,13 +33,18 @@ fn initialize_summon(world: &mut World, pet: Entity) {
 }
 
 fn initialize_controlled_ghoul(world: &mut World) {
-    let pets: Vec<_> = world
-        .query::<(Entity, &combat::hunter_pet::HunterPet, &Npc)>()
-        .iter(world)
-        .filter_map(|(pet, relation, npc)| {
-            (npc.template_id == 26125).then_some((pet, relation.owner))
-        })
-        .collect();
+    let mut pets: Vec<_> = combat::system_states::with_query::<
+        (Entity, &combat::hunter_pet::HunterPet, &Npc),
+        (),
+        _,
+    >(world, |world, pets| {
+        pets.iter(world)
+            .filter_map(|(pet, relation, npc)| {
+                (npc.template_id == 26125).then_some((pet, relation.owner))
+            })
+            .collect()
+    });
+    pets.sort_unstable_by_key(|(pet, _)| *pet);
     for (pet, owner) in pets {
         apply_mastery(world, owner, pet);
     }

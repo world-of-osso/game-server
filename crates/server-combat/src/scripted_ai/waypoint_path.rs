@@ -571,122 +571,130 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let mut moved = Vec::new();
     let mut changed = Vec::new();
     let mut walking_modes = Vec::new();
-    let mut movers = world.query_filtered::<(
-        Entity,
-        &mut Position,
-        &mut PathMovement,
-        &SpawnPoint,
-        &crate::maps::InMap,
-        Option<&crate::creature_ai::CreatureState>,
-        Has<Walking>,
-        Has<GravityDisabled>,
-        Option<&crate::creature_static::CreatureStaticFlags>,
-        Option<&mut Rotation>,
-        Option<&mut CreatureMotion>,
-        Option<&mut MovementSpeed>,
-    ), (
-        Without<DeathState>,
-        Without<super::jump_movement::JumpMovement>,
-        Without<crate::scripted_ai::fall_movement::FallMovement>,
-        Without<crate::spell_cast::charge::ChargeMovement>,
-    )>();
-    for (
-        entity,
-        mut position,
-        mut movement,
-        spawn,
-        map,
-        state,
-        walking,
-        flying,
-        static_flags,
-        rotation,
-        motion,
-        speed,
-    ) in movers.iter_mut(world)
-    {
-        if static_flags.is_some_and(|flags| flags.sessile()) {
-            continue;
-        }
-        if movement.finalized {
-            retired.push(entity);
-            continue;
-        }
-        // MotionMaster updates only its top generator: active chase/home wins
-        // over this default-slot MovePath; route generation is not changed.
-        let reset = match state {
-            Some(
-                crate::creature_ai::CreatureState::Pursuing { .. }
-                | crate::creature_ai::CreatureState::Returning,
-            ) => {
-                if let Some(nav) = navigation.as_mut() {
-                    nav.cancel_query(entity, movement.query_goal());
-                }
-                movement.deactivate();
+    crate::system_states::with_query::<
+        (
+            Entity,
+            &mut Position,
+            &mut PathMovement,
+            &SpawnPoint,
+            &crate::maps::InMap,
+            Option<&crate::creature_ai::CreatureState>,
+            Has<Walking>,
+            Has<GravityDisabled>,
+            Option<&crate::creature_static::CreatureStaticFlags>,
+            Option<&mut Rotation>,
+            Option<&mut CreatureMotion>,
+            Option<&mut MovementSpeed>,
+        ),
+        (
+            Without<DeathState>,
+            Without<super::jump_movement::JumpMovement>,
+            Without<crate::scripted_ai::fall_movement::FallMovement>,
+            Without<crate::spell_cast::charge::ChargeMovement>,
+        ),
+        _,
+    >(world, |world, movers| {
+        let mut listed: Vec<Entity> = movers.iter(world).map(|mover| mover.0).collect();
+        listed.sort_unstable();
+        for listed in listed {
+            let (
+                entity,
+                mut position,
+                mut movement,
+                spawn,
+                map,
+                state,
+                walking,
+                flying,
+                static_flags,
+                rotation,
+                motion,
+                speed,
+            ) = movers.get_mut(world, listed).expect("listed path mover");
+            if static_flags.is_some_and(|flags| flags.sessile()) {
                 continue;
             }
-            _ => movement.reactivate(),
-        };
-        // A reset top generator receives diff0 on its initialization update.
-        let update_ms = if reset { 0 } else { dt_ms };
-        // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
-        let before = *position;
-        let launch_from = Launch {
-            entity,
-            map: *map,
-            position: wow(&position),
-            orientation: rotation
-                .as_ref()
-                .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
-            spawn,
-            walking,
-            flying,
-        };
-        match advance_path_generator(
-            &mut movement,
-            &mut position,
-            &launch_from,
-            update_ms,
-            navigation.as_mut(),
-            ground.as_mut(),
-        ) {
-            Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
-            Ok(None) => {}
-            Err(error) => {
-                failed.push((entity, movement.path.id, error));
-                movement.spline = None;
+            if movement.finalized {
+                retired.push(entity);
+                continue;
+            }
+            // MotionMaster updates only its top generator: active chase/home wins
+            // over this default-slot MovePath; route generation is not changed.
+            let reset = match state {
+                Some(
+                    crate::creature_ai::CreatureState::Pursuing { .. }
+                    | crate::creature_ai::CreatureState::Returning,
+                ) => {
+                    if let Some(nav) = navigation.as_mut() {
+                        nav.cancel_query(entity, movement.query_goal());
+                    }
+                    movement.deactivate();
+                    continue;
+                }
+                _ => movement.reactivate(),
+            };
+            // A reset top generator receives diff0 on its initialization update.
+            let update_ms = if reset { 0 } else { dt_ms };
+            // `Unit::Update`: `UpdateSplineMovement`, then the generator's `DoUpdate`.
+            let before = *position;
+            let launch_from = Launch {
+                entity,
+                map: *map,
+                position: wow(&position),
+                orientation: rotation
+                    .as_ref()
+                    .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2),
+                spawn,
+                walking,
+                flying,
+            };
+            match advance_path_generator(
+                &mut movement,
+                &mut position,
+                &launch_from,
+                update_ms,
+                navigation.as_mut(),
+                ground.as_mut(),
+            ) {
+                Ok(Some(node_id)) => ended.push((entity, node_id, movement.path.id, *position)),
+                Ok(None) => {}
+                Err(error) => {
+                    failed.push((entity, movement.path.id, error));
+                    movement.spline = None;
+                }
+            }
+            let path_walk = path_walk_mode(&movement.path, walking);
+            if movement.spline.is_some() && path_walk != walking {
+                walking_modes.push((entity, path_walk));
+            }
+            let gait = match (&movement.spline, path_walk) {
+                (None, _) => CreatureMotion::Still,
+                (Some(_), true) => CreatureMotion::Walk,
+                (Some(_), false) => CreatureMotion::Run,
+            };
+            if *position != before {
+                moved.push(entity);
+            }
+            let facing =
+                crate::creature_ai::facing_along(position.x - before.x, position.z - before.z);
+            let mut dirty = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
+            if let Some(mut speed) = speed
+                && gait != CreatureMotion::Still
+            {
+                let velocity = path_velocity(&movement.path, spawn, walking, flying);
+                dirty |= speed.set_if_neq(MovementSpeed(velocity));
+            }
+            if let (Some(mut rotation), Some(facing)) = (rotation, facing)
+                && rotation.y != facing
+            {
+                rotation.y = facing;
+                dirty = true;
+            }
+            if dirty {
+                changed.push(entity);
             }
         }
-        let path_walk = path_walk_mode(&movement.path, walking);
-        if movement.spline.is_some() && path_walk != walking {
-            walking_modes.push((entity, path_walk));
-        }
-        let gait = match (&movement.spline, path_walk) {
-            (None, _) => CreatureMotion::Still,
-            (Some(_), true) => CreatureMotion::Walk,
-            (Some(_), false) => CreatureMotion::Run,
-        };
-        if *position != before {
-            moved.push(entity);
-        }
-        let facing = crate::creature_ai::facing_along(position.x - before.x, position.z - before.z);
-        let mut dirty = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
-        if let Some(mut speed) = speed
-            && gait != CreatureMotion::Still
-        {
-            let velocity = path_velocity(&movement.path, spawn, walking, flying);
-            dirty |= speed.set_if_neq(MovementSpeed(velocity));
-        }
-        if let (Some(mut rotation), Some(facing)) = (rotation, facing)
-            && rotation.y != facing
-        {
-            rotation.y = facing;
-            dirty = true;
-        }
-        if dirty {
-            changed.push(entity);
-        }
-    }
+    });
     if let Some(navigation) = navigation {
         world.insert_resource(navigation);
     }

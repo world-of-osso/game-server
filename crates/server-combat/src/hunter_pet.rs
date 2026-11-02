@@ -1175,11 +1175,11 @@ pub(crate) fn persist_current_pet_health(world: &mut World, owner: Entity) {
 }
 
 fn persist_changed_pet_health(world: &mut World) {
-    let owners: Vec<_> = world
-        .query_filtered::<&HunterPet, Changed<Health>>()
-        .iter(world)
-        .map(|pet| pet.owner)
-        .collect();
+    let mut owners: Vec<_> =
+        crate::system_states::with_query::<&HunterPet, Changed<Health>, _>(world, |world, pets| {
+            pets.iter(world).map(|pet| pet.owner).collect()
+        });
+    owners.sort_unstable();
     for owner in owners {
         persist_current_pet_health(world, owner);
     }
@@ -1273,15 +1273,21 @@ fn remove_ownerless_pets(
 /// Pet::Update: a non-hunter corpse is removed with PET_SAVE_NOT_IN_SLOT.
 /// Keep the record for another explicit summon, but never restore it at login.
 fn remove_dead_summoned_pets(world: &mut World) {
-    let dead: Vec<Entity> = world
-        .query_filtered::<(Entity, &Health, Option<&HunterPet>, Option<&SummonedDemon>), Or<(With<HunterPet>, With<SummonedDemon>)>>()
-        .iter(world)
-        .filter(|(_, health, pet, demon)| {
-            let summoned = demon.is_some() || pet.is_some_and(|pet| is_summoned_pet_owner(world, pet.owner));
-            health.current <= 0.0 && summoned
-        })
-        .map(|(pet, ..)| pet)
-        .collect();
+    let mut dead: Vec<Entity> = crate::system_states::with_query::<
+        (Entity, &Health, Option<&HunterPet>, Option<&SummonedDemon>),
+        Or<(With<HunterPet>, With<SummonedDemon>)>,
+        _,
+    >(world, |world, pets| {
+        pets.iter(world)
+            .filter(|(_, health, pet, demon)| {
+                let summoned = demon.is_some()
+                    || pet.is_some_and(|pet| is_summoned_pet_owner(world, pet.owner));
+                health.current <= 0.0 && summoned
+            })
+            .map(|(pet, ..)| pet)
+            .collect()
+    });
+    dead.sort_unstable();
     for pet in dead {
         remove_pet(world, pet);
     }

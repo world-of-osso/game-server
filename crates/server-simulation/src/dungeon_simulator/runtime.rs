@@ -472,11 +472,21 @@ pub(super) fn live_population(
     world: &mut World,
     copy: crate::maps::InMap,
 ) -> std::collections::BTreeMap<u64, Entity> {
-    world
-        .query::<(Entity, &crate::zones::CreatureOrigin, &crate::maps::InMap)>()
-        .iter(world)
-        .filter(|(_, source, map)| **map == copy && source.guid != 0)
-        .map(|(actor, source, _)| (source.guid, actor))
+    let mut actors: Vec<_> = server::system_states::with_query::<
+        (Entity, &crate::zones::CreatureOrigin, &crate::maps::InMap),
+        (),
+        _,
+    >(world, |world, actors| {
+        actors
+            .iter(world)
+            .filter(|(_, source, map)| **map == copy && source.guid != 0)
+            .map(|(actor, source, _)| (actor, source.guid))
+            .collect()
+    });
+    actors.sort_unstable();
+    actors
+        .into_iter()
+        .map(|(actor, guid)| (guid, actor))
         .collect()
 }
 

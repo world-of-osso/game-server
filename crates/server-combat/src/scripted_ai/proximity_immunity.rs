@@ -36,19 +36,22 @@ const RELEASES: &[Release] = &[
 
 pub(super) fn update(world: &mut World) {
     let immunity = UnitFlags::IMMUNE_TO_PC | UnitFlags::IMMUNE_TO_NPC;
-    let creatures: Vec<_> = world
-        .query_filtered::<
-            (Entity, &Npc, &InMap, &Position, &UnitFlags),
-            Without<crate::grid_activity::GridDormant>,
-        >()
-        .iter(world)
-        .filter_map(|(entity, npc, map, position, flags)| {
-            let release = RELEASES
-                .iter()
-                .find(|release| release.map == map.map_id && release.entry == npc.template_id)?;
-            (flags.0 & immunity != 0).then_some((entity, *map, *position, release))
-        })
-        .collect();
+    let mut creatures: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Npc, &InMap, &Position, &UnitFlags),
+        Without<crate::grid_activity::GridDormant>,
+        _,
+    >(world, |world, creatures| {
+        creatures
+            .iter(world)
+            .filter_map(|(entity, npc, map, position, flags)| {
+                let release = RELEASES.iter().find(|release| {
+                    release.map == map.map_id && release.entry == npc.template_id
+                })?;
+                (flags.0 & immunity != 0).then_some((entity, *map, *position, release))
+            })
+            .collect()
+    });
+    creatures.sort_unstable_by_key(|creature| creature.0);
     for (creature, map, position, release) in creatures {
         if let Some(aura) = release.aura
             && !crate::auras::has_aura(world, creature, aura)

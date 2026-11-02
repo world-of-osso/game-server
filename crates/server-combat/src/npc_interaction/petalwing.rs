@@ -19,13 +19,16 @@ fn unlocked(world: &mut World, map: InMap) -> bool {
 }
 
 pub(crate) fn update_visibility(world: &mut World) {
-    let birds: Vec<_> = world
-        .query::<(Entity, &Npc, &InMap)>()
-        .iter(world)
-        .filter_map(|(entity, npc, map)| {
-            (map.map_id == MAP && npc.template_id == ENTRY).then_some((entity, *map))
-        })
-        .collect();
+    let mut birds: Vec<_> =
+        crate::system_states::with_query::<(Entity, &Npc, &InMap), (), _>(world, |world, units| {
+            units
+                .iter(world)
+                .filter_map(|(entity, npc, map)| {
+                    (map.map_id == MAP && npc.template_id == ENTRY).then_some((entity, *map))
+                })
+                .collect()
+        });
+    birds.sort_unstable_by_key(|(bird, _)| *bird);
     for (bird, map) in birds {
         let hidden = !unlocked(world, map);
         crate::interest::set_hidden(world, bird, hidden);

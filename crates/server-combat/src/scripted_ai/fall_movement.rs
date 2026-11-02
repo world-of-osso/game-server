@@ -165,33 +165,38 @@ fn update_fall_positions(
     delta_ms: u32,
 ) -> Vec<(Entity, Option<(u32, f32)>)> {
     let mut updates = Vec::new();
-    let mut query =
-        world.query_filtered::<(Entity, &mut FallMovement, &mut Position), Without<DeathState>>();
-    for (unit, mut fall, mut position) in query.iter_mut(world) {
-        // Launch initializes at t=0, never reuses the point-arrival tick's delta.
-        if fall.started == now || fall.elapsed_ms == fall.duration_ms {
-            continue;
+    crate::system_states::with_query::<
+        (Entity, &mut FallMovement, &mut Position),
+        Without<DeathState>,
+        _,
+    >(world, |world, falls| {
+        for (unit, mut fall, mut position) in falls.iter_mut(world) {
+            // Launch initializes at t=0, never reuses the point-arrival tick's delta.
+            if fall.started == now || fall.elapsed_ms == fall.duration_ms {
+                continue;
+            }
+            fall.elapsed_ms = (fall.elapsed_ms + delta_ms).min(fall.duration_ms);
+            let arrived = fall.elapsed_ms == fall.duration_ms;
+            let seconds = fall.elapsed_ms as f32 / 1000.0;
+            let fraction = if fall.horizontal_duration > 0.0 {
+                (seconds / fall.horizontal_duration).min(1.0)
+            } else {
+                0.0
+            };
+            let target =
+                fall.horizontal_target
+                    .unwrap_or(Vec3::new(fall.from.x, fall.from.y, fall.from.z));
+            *position = Position {
+                x: fall.from.x + (target.x - fall.from.x) * fraction,
+                // TC computes elevation even when Done; integer-ms truncation can
+                // leave the last sample slightly above the floor. Never force a snap.
+                y: (fall.from.y - fall_elevation(seconds)).max(fall.floor),
+                z: fall.from.z + (target.z - fall.from.z) * fraction,
+            };
+            updates.push((unit, arrived.then_some((fall.id, fall.from.y - fall.floor))));
         }
-        fall.elapsed_ms = (fall.elapsed_ms + delta_ms).min(fall.duration_ms);
-        let arrived = fall.elapsed_ms == fall.duration_ms;
-        let seconds = fall.elapsed_ms as f32 / 1000.0;
-        let fraction = if fall.horizontal_duration > 0.0 {
-            (seconds / fall.horizontal_duration).min(1.0)
-        } else {
-            0.0
-        };
-        let target =
-            fall.horizontal_target
-                .unwrap_or(Vec3::new(fall.from.x, fall.from.y, fall.from.z));
-        *position = Position {
-            x: fall.from.x + (target.x - fall.from.x) * fraction,
-            // TC computes elevation even when Done; integer-ms truncation can
-            // leave the last sample slightly above the floor. Never force a snap.
-            y: (fall.from.y - fall_elevation(seconds)).max(fall.floor),
-            z: fall.from.z + (target.z - fall.from.z) * fraction,
-        };
-        updates.push((unit, arrived.then_some((fall.id, fall.from.y - fall.floor))));
-    }
+    });
+    updates.sort_unstable_by_key(|(unit, _)| *unit);
     updates
 }
 

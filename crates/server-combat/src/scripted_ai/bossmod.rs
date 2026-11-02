@@ -322,11 +322,17 @@ fn advance_schedule(schedule: &mut Schedule, diff_ms: u32, pct: f64) -> (bool, V
 
 pub fn advance_schedules(world: &mut World) {
     let diff_ms = world.resource::<Time>().delta().as_millis() as u32;
-    let units: Vec<_> = world
-        .query_filtered::<(Entity, &InMap, &shared::components::Health), With<Schedule>>()
-        .iter(world)
-        .map(|(unit, map, health)| (unit, *map, f64::from(health.current / health.max * 100.0)))
-        .collect();
+    let mut units: Vec<_> = crate::system_states::with_query::<
+        (Entity, &InMap, &shared::components::Health),
+        With<Schedule>,
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .map(|(unit, map, health)| (unit, *map, f64::from(health.current / health.max * 100.0)))
+            .collect()
+    });
+    units.sort_unstable_by_key(|(unit, ..)| *unit);
     for (unit, map, pct) in units {
         let mut schedule = world
             .get_mut::<Schedule>(unit)

@@ -26,33 +26,45 @@ pub(crate) fn landing() -> WorldLocation {
 }
 
 pub(crate) fn update(world: &mut World) {
-    let candidates: Vec<_> = world
-        .query_filtered::<(Entity, &Position, &InMap, Option<&MovementControl>), With<Player>>()
-        .iter(world)
-        .filter_map(|(entity, position, map, control)| {
-            (map.map_id == MAP
-                && Vec3::new(position.x, position.y, position.z).distance(SOURCE) <= RADIUS
-                && control.is_none_or(|control| !control.controlled)
-                && crate::spell_cast::targets::is_alive(world, entity))
-            .then_some((entity, *map))
-        })
-        .collect();
+    let mut candidates: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Position, &InMap, Option<&MovementControl>),
+        With<Player>,
+        _,
+    >(world, |world, players| {
+        players
+            .iter(world)
+            .filter_map(|(entity, position, map, control)| {
+                (map.map_id == MAP
+                    && Vec3::new(position.x, position.y, position.z).distance(SOURCE) <= RADIUS
+                    && control.is_none_or(|control| !control.controlled)
+                    && crate::spell_cast::targets::is_alive(world, entity))
+                .then_some((entity, *map))
+            })
+            .collect()
+    });
+    candidates.sort_unstable_by_key(|(entity, _)| *entity);
     for (owner, map) in candidates {
         let done = instance_script::boss_id_for_encounter(world, map, ZAEN_ENCOUNTER)
             .and_then(|id| instance_script::get_boss_state(world, map, id));
         if done != Some(EncounterState::Done) {
             continue;
         }
-        let followers: Vec<_> = world
-            .query::<(Entity, &crate::followers::Follower, &InMap)>()
-            .iter(world)
-            .filter_map(|(unit, follower, current)| {
-                (follower.owner == owner
-                    && *current == map
-                    && crate::spell_cast::targets::is_alive(world, unit))
-                .then_some(unit)
-            })
-            .collect();
+        let mut followers: Vec<_> = crate::system_states::with_query::<
+            (Entity, &crate::followers::Follower, &InMap),
+            (),
+            _,
+        >(world, |world, followers| {
+            followers
+                .iter(world)
+                .filter_map(|(unit, follower, current)| {
+                    (follower.owner == owner
+                        && *current == map
+                        && crate::spell_cast::targets::is_alive(world, unit))
+                    .then_some(unit)
+                })
+                .collect()
+        });
+        followers.sort_unstable();
         let destination = landing();
         if !crate::maps::teleport_to(world, owner, destination, TeleportOptions::default()) {
             error!(

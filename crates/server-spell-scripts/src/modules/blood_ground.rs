@@ -150,16 +150,22 @@ fn expire_decay(world: &mut World, caster: Entity, spell: u32, center: Vec3) {
 // four seconds when the last Death and Decay field expires.
 fn sync_fields(world: &mut World) {
     let now = spell_cast::now(world);
-    let fields: Vec<_> = world
-        .query::<(Entity, &SpellAreaTrigger, &Position, Option<&DecayPulse>)>()
-        .iter(world)
-        .filter(|(_, field, _, _)| {
-            field.spell_id == DECAY && field.expires_at.is_none_or(|end| end > now)
-        })
-        .map(|(entity, field, position, pulse)| {
-            (entity, field.caster, *position, pulse.map(|pulse| pulse.0))
-        })
-        .collect();
+    let mut fields: Vec<_> = combat::system_states::with_query::<
+        (Entity, &SpellAreaTrigger, &Position, Option<&DecayPulse>),
+        (),
+        _,
+    >(world, |world, fields| {
+        fields
+            .iter(world)
+            .filter(|(_, field, _, _)| {
+                field.spell_id == DECAY && field.expires_at.is_none_or(|end| end > now)
+            })
+            .map(|(entity, field, position, pulse)| {
+                (entity, field.caster, *position, pulse.map(|pulse| pulse.0))
+            })
+            .collect()
+    });
+    fields.sort_unstable_by_key(|field| field.0);
     for &(entity, caster, position, next) in &fields {
         if world
             .get::<ActiveSpec>(caster)
@@ -181,12 +187,18 @@ fn sync_fields(world: &mut World) {
                 .insert(DecayPulse(next.unwrap_or(now) + f64::from(period) / 1000.0));
         }
     }
-    let actors: Vec<_> = world
-        .query::<(Entity, &ActiveSpec, &Position)>()
-        .iter(world)
-        .filter(|(_, spec, _)| spec.0 == 250)
-        .map(|(actor, _, position)| (actor, *position))
-        .collect();
+    let mut actors: Vec<_> = combat::system_states::with_query::<
+        (Entity, &ActiveSpec, &Position),
+        (),
+        _,
+    >(world, |world, actors| {
+        actors
+            .iter(world)
+            .filter(|(_, spec, _)| spec.0 == 250)
+            .map(|(actor, _, position)| (actor, *position))
+            .collect()
+    });
+    actors.sort_unstable_by_key(|actor| actor.0);
     if actors.is_empty() {
         return;
     }

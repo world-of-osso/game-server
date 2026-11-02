@@ -887,17 +887,23 @@ fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
 /// Refresh existing category clocks/maxima, never discover known spells here.
 /// Initial full states belong to the character spellbook snapshot, not recovery.
 fn sync_charge_recovery(world: &mut World) {
-    let pending: Vec<(Entity, u32)> = world
-        .query::<(Entity, &SpellHistory)>()
-        .iter(world)
-        .flat_map(|(unit, history)| {
-            history
-                .charges
-                .values()
-                .chain(history.rwk_charges.iter())
-                .map(move |state| (unit, state.spell_id))
-        })
-        .collect();
+    let mut pending: Vec<(Entity, u32)> = crate::system_states::with_query::<
+        (Entity, &SpellHistory),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .flat_map(|(unit, history)| {
+                history
+                    .charges
+                    .values()
+                    .chain(history.rwk_charges.iter())
+                    .map(move |state| (unit, state.spell_id))
+            })
+            .collect()
+    });
+    pending.sort_by_key(|(unit, _)| *unit);
     for (unit, spell_id) in pending {
         refresh_charge_recovery(world, unit, spell_id);
     }

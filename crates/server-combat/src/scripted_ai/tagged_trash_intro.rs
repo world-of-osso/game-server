@@ -139,21 +139,33 @@ fn record_avanoxx_death(world: &mut World, creature: Entity, map: InMap) {
 /// Advance the source 3 s pre-walk and 1 s post-arrival tasks, and Avanoxx's inferred delay.
 pub(super) fn advance(world: &mut World) {
     let now = world.resource::<Time>().elapsed_secs_f64();
-    let ready: Vec<_> = world
-        .query::<(Entity, &InMap, &AvanoxxIntro)>()
-        .iter(world)
-        .filter_map(|(boss, map, intro)| (now >= intro.0).then_some((boss, *map)))
-        .collect();
+    let mut ready: Vec<_> = crate::system_states::with_query::<
+        (Entity, &InMap, &AvanoxxIntro),
+        (),
+        _,
+    >(world, |world, bosses| {
+        bosses
+            .iter(world)
+            .filter_map(|(boss, map, intro)| (now >= intro.0).then_some((boss, *map)))
+            .collect()
+    });
+    ready.sort_unstable_by_key(|(boss, _)| *boss);
     for (boss, map) in ready {
         release_avanoxx(world, boss);
         instance_script::set_data(world, map, AVANOXX_STATE_KEY, INTRO_DONE);
         world.entity_mut(boss).remove::<AvanoxxIntro>();
     }
-    let pending: Vec<_> = world
-        .query::<(Entity, &InMap, &IntroMovement)>()
-        .iter(world)
-        .map(|(entity, map, phase)| (entity, *map, *phase))
-        .collect();
+    let mut pending: Vec<_> = crate::system_states::with_query::<
+        (Entity, &InMap, &IntroMovement),
+        (),
+        _,
+    >(world, |world, bosses| {
+        bosses
+            .iter(world)
+            .map(|(entity, map, phase)| (entity, *map, *phase))
+            .collect()
+    });
+    pending.sort_unstable_by_key(|(boss, ..)| *boss);
     for (boss, map, phase) in pending {
         match phase {
             IntroMovement::Waiting { rule, until } if now >= until => {

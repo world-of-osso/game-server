@@ -363,22 +363,28 @@ pub fn healing_party(world: &mut World, actor: Entity) -> Vec<Entity> {
         .get_resource::<server::maps::MapStore>()
         .map(|store| store.encounter_heal_objectives.clone())
         .unwrap_or_default();
-    let candidates: Vec<Entity> = world
-        .query::<(
+    let mut candidates: Vec<Entity> = server::system_states::with_query::<
+        (
             Entity,
             &server::maps::InMap,
             &shared::components::Npc,
             &shared::components::Health,
-        )>()
-        .iter(world)
-        .filter(|(_, candidate_map, npc, health)| {
-            **candidate_map == map
-                && health.current > 0.0
-                && health.current < health.max
-                && objectives.contains_key(&(map.map_id, npc.template_id))
-        })
-        .map(|(entity, _, _, _)| entity)
-        .collect();
+        ),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .filter(|(_, candidate_map, npc, health)| {
+                **candidate_map == map
+                    && health.current > 0.0
+                    && health.current < health.max
+                    && objectives.contains_key(&(map.map_id, npc.template_id))
+            })
+            .map(|(entity, _, _, _)| entity)
+            .collect()
+    });
+    candidates.sort_unstable();
     for target in candidates {
         let in_range = server::spell_cast::targets::position(world, target)
             .is_some_and(|position| position.distance(origin) <= range);

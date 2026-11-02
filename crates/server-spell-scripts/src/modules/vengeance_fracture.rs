@@ -70,19 +70,22 @@ fn on_impact(world: &mut World, caster: Entity, main: bool) {
 fn spawn_meta_fragments(world: &mut World) {
     let now = combat::auras::aura_now(world);
     let mut due = Vec::new();
-    for (caster, mut pending) in world
-        .query::<(Entity, &mut PendingMetaFragments)>()
-        .iter_mut(world)
-    {
-        pending.0.retain(|deadline| {
-            if *deadline <= now {
-                due.push(caster);
-                false
-            } else {
-                true
+    combat::system_states::with_query::<(Entity, &mut PendingMetaFragments), (), _>(
+        world,
+        |world, casters| {
+            for (caster, mut pending) in casters.iter_mut(world) {
+                pending.0.retain(|deadline| {
+                    if *deadline <= now {
+                        due.push(caster);
+                        false
+                    } else {
+                        true
+                    }
+                });
             }
-        });
-    }
+        },
+    );
+    due.sort_unstable();
     for caster in due {
         if let Err(reason) = soul_fragments::spawn(world, caster, FragmentKind::Lesser, false) {
             error!(%reason, "Metamorphosis Fracture fragment spawn failed");

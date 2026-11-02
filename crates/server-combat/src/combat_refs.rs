@@ -246,23 +246,26 @@ pub(crate) fn sanctuary(world: &mut World, unit: Entity) {
 /// end, as do references to units that left the world.
 pub(crate) fn expire_combat_refs_system(world: &mut World) {
     let now = world.resource::<Time>().elapsed_secs_f64();
-    let mut units = world.query::<(Entity, &CombatRefs)>();
-    let expired: Vec<(Entity, Vec<Entity>)> = units
-        .iter(world)
-        .map(|(unit, refs)| {
-            let gone: Vec<Entity> = refs
-                .0
-                .iter()
-                .filter(|&(&other, reference)| {
-                    reference.expires_at.is_some_and(|at| now >= at)
-                        || world.get_entity(other).is_err()
+    let mut expired: Vec<(Entity, Vec<Entity>)> =
+        crate::system_states::with_query::<(Entity, &CombatRefs), (), _>(world, |world, units| {
+            units
+                .iter(world)
+                .map(|(unit, refs)| {
+                    let gone: Vec<Entity> = refs
+                        .0
+                        .iter()
+                        .filter(|&(&other, reference)| {
+                            reference.expires_at.is_some_and(|at| now >= at)
+                                || world.get_entity(other).is_err()
+                        })
+                        .map(|(&other, _)| other)
+                        .collect();
+                    (unit, gone)
                 })
-                .map(|(&other, _)| other)
-                .collect();
-            (unit, gone)
-        })
-        .filter(|(_, gone)| !gone.is_empty())
-        .collect();
+                .filter(|(_, gone)| !gone.is_empty())
+                .collect()
+        });
+    expired.sort_unstable_by_key(|(unit, _)| *unit);
     for (unit, gone) in expired {
         for other in gone {
             for (endpoint, opponent) in [(unit, other), (other, unit)] {

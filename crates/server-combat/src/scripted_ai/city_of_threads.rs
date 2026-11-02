@@ -17,12 +17,18 @@ const WARMUP_SECS: f64 = 25.7;
 struct WarmupDeadline(f64);
 
 pub(super) fn update_fangs_warmup(world: &mut World) {
-    let anchors: Vec<_> = world
-        .query::<(Entity, &Npc, &InMap, &Position)>()
-        .iter(world)
-        .filter(|(_, npc, map, _)| npc.template_id == NX && map.map_id == MAP)
-        .map(|(entity, _, map, position)| (entity, *map, *position))
-        .collect();
+    let mut anchors: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Npc, &InMap, &Position),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .filter(|(_, npc, map, _)| npc.template_id == NX && map.map_id == MAP)
+            .map(|(entity, _, map, position)| (entity, *map, *position))
+            .collect()
+    });
+    anchors.sort_unstable_by_key(|anchor| anchor.0);
     for (nx, map, position) in anchors {
         update_copy(world, nx, map, position);
     }

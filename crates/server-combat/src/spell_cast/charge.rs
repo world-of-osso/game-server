@@ -148,18 +148,24 @@ pub(super) fn release_finished(
 
 pub(super) fn advance(world: &mut World) {
     let clock = now(world);
-    let moved: Vec<_> = world
-        .query_filtered::<(
+    let mut moved: Vec<_> = crate::system_states::with_query::<
+        (
             Entity,
             &mut ChargeMovement,
             &mut Position,
             Option<&mut Rotation>,
-        ), Without<crate::combat::DeathState>>()
-        .iter_mut(world)
-        .filter_map(|(unit, mut movement, mut position, rotation)| {
-            step_charge(&mut movement, &mut position, rotation, clock).then_some(unit)
-        })
-        .collect();
+        ),
+        Without<crate::combat::DeathState>,
+        _,
+    >(world, |world, charges| {
+        charges
+            .iter_mut(world)
+            .filter_map(|(unit, mut movement, mut position, rotation)| {
+                step_charge(&mut movement, &mut position, rotation, clock).then_some(unit)
+            })
+            .collect()
+    });
+    moved.sort_unstable();
     for unit in moved {
         publish_position(world, unit);
     }

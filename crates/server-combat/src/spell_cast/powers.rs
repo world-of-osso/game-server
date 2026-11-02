@@ -1237,26 +1237,32 @@ pub(super) fn player_health_regen(inputs: &HealthRegenInputs) -> f32 {
 /// negative tick adds nothing and keeps the fraction.
 pub(crate) fn regenerate_player_health(world: &mut World) {
     let dt_ms = world.resource::<Time>().delta().as_millis() as u32;
-    let mut players = world.query_filtered::<(
-        Entity,
-        &mut PlayerHealthRegen,
-        &Health,
-        Option<&crate::death::PlayerDeathState>,
-    ), Without<GridDormant>>();
-    let due: Vec<Entity> = players
-        .iter_mut(world)
-        .filter(|(_, _, health, death)| {
-            health.current > 0.0
-                && death.is_none_or(|death| death.state == shared::death::DeathState::Alive)
-        })
-        .filter_map(|(entity, mut regen, ..)| {
-            regen.timer_ms += dt_ms;
-            (regen.timer_ms >= PLAYER_HEALTH_REGEN_INTERVAL_MS).then(|| {
-                regen.timer_ms -= PLAYER_HEALTH_REGEN_INTERVAL_MS;
-                entity
+    let mut due: Vec<Entity> = crate::system_states::with_query::<
+        (
+            Entity,
+            &mut PlayerHealthRegen,
+            &Health,
+            Option<&crate::death::PlayerDeathState>,
+        ),
+        Without<GridDormant>,
+        _,
+    >(world, |world, players| {
+        players
+            .iter_mut(world)
+            .filter(|(_, _, health, death)| {
+                health.current > 0.0
+                    && death.is_none_or(|death| death.state == shared::death::DeathState::Alive)
             })
-        })
-        .collect();
+            .filter_map(|(entity, mut regen, ..)| {
+                regen.timer_ms += dt_ms;
+                (regen.timer_ms >= PLAYER_HEALTH_REGEN_INTERVAL_MS).then(|| {
+                    regen.timer_ms -= PLAYER_HEALTH_REGEN_INTERVAL_MS;
+                    entity
+                })
+            })
+            .collect()
+    });
+    due.sort_unstable();
     for player in due {
         let Some(health) = world.get::<Health>(player).copied() else {
             continue;

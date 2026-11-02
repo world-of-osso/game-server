@@ -94,12 +94,18 @@ fn apply_self(world: &mut World, caster: Entity, spell: u32) {
 }
 
 fn begin_combat(world: &mut World) {
-    let actors: Vec<_> = world
-        .query::<(Entity, &CombatStatus, &ActiveAuras)>()
-        .iter(world)
-        .filter(|(_, status, auras)| status.0 && auras.has_spell(HOWL))
-        .map(|(unit, _, _)| unit)
-        .collect();
+    let mut actors: Vec<_> = combat::system_states::with_query::<
+        (Entity, &CombatStatus, &ActiveAuras),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .filter(|(_, status, auras)| status.0 && auras.has_spell(HOWL))
+            .map(|(unit, _, _)| unit)
+            .collect()
+    });
+    actors.sort_unstable();
     for actor in actors {
         if world.get::<HowlCombatStarted>(actor).is_none() {
             if world.get::<NextBeast>(actor).is_none() {

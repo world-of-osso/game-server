@@ -441,8 +441,9 @@ pub(crate) struct Fixate(pub Entity);
 
 /// Select through the server-owned threat reference, then project active attacks.
 pub fn update_victim_system(world: &mut World) {
-    let creatures: Vec<_> = world
-        .query_filtered::<(Entity, &CreatureState), (
+    let mut creatures: Vec<_> = crate::system_states::with_query::<
+        (Entity, &CreatureState),
+        (
             With<ThreatTable>,
             With<Position>,
             With<UnitFactionTemplate>,
@@ -450,11 +451,16 @@ pub fn update_victim_system(world: &mut World) {
             Without<DeathState>,
             Without<GridDormant>,
             Without<crate::followers::Follower>,
-        )>()
-        .iter(world)
-        .filter(|(_, state)| matches!(state, CreatureState::Pursuing { .. }))
-        .map(|(creature, _)| creature)
-        .collect();
+        ),
+        _,
+    >(world, |world, creatures| {
+        creatures
+            .iter(world)
+            .filter(|(_, state)| matches!(state, CreatureState::Pursuing { .. }))
+            .map(|(creature, _)| creature)
+            .collect()
+    });
+    creatures.sort_unstable();
     for creature in creatures {
         // ThreatManager updates independently of AI/react state (TC:216–230).
         victim::update_reference_when_due(world, creature);

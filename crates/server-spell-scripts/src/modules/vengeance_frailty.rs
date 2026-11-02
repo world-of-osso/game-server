@@ -121,12 +121,15 @@ fn apply_frailty(world: &mut World, caster: Entity, target: Entity) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query::<(Entity, &FrailtyPool)>()
-        .iter(world)
-        .filter(|(_, pool)| pool.next <= now)
-        .map(|(actor, _)| actor)
-        .collect();
+    let mut actors: Vec<_> =
+        combat::system_states::with_query::<(Entity, &FrailtyPool), (), _>(world, |world, pools| {
+            pools
+                .iter(world)
+                .filter(|(_, pool)| pool.next <= now)
+                .map(|(actor, _)| actor)
+                .collect()
+        });
+    actors.sort_unstable();
     for actor in actors {
         let amount = {
             let mut pool = world.get_mut::<FrailtyPool>(actor).expect("Frailty pool");

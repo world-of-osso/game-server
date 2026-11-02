@@ -53,38 +53,62 @@ pub(crate) struct AcademyPadFlight {
 
 /// Use each real pad NPC and its project-authored proximity boundary as the trigger.
 pub(super) fn launch_entrance_pad(world: &mut World) {
-    let pads: Vec<_> = world
-        .query::<(&Npc, &Position, &InMap)>()
-        .iter(world)
-        .filter_map(|(npc, pos, map)| {
-            if map.map_id != MAP {
-                return None;
-            }
-            PADS.iter()
-                .find(|(entry, start, _, _)| {
-                    npc.template_id == *entry
-                        && Vec3::new(pos.x, pos.y, pos.z).distance(*start) < 1.0
-                })
-                .map(|(_, _, target, radius)| (*pos, *map, *target, *radius))
-        })
-        .collect();
+    let mut pads: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Npc, &Position, &InMap),
+        (),
+        _,
+    >(world, |world, units| {
+        units
+            .iter(world)
+            .filter_map(|(entity, npc, pos, map)| {
+                if map.map_id != MAP {
+                    return None;
+                }
+                PADS.iter()
+                    .find(|(entry, start, _, _)| {
+                        npc.template_id == *entry
+                            && Vec3::new(pos.x, pos.y, pos.z).distance(*start) < 1.0
+                    })
+                    .map(|(_, _, target, radius)| (entity, *pos, *map, *target, *radius))
+            })
+            .collect()
+    });
+    pads.sort_unstable_by_key(|(entity, ..)| *entity);
     let mut owners = Vec::new();
-    for (pad, map, target, radius) in pads {
-        owners.extend(world.query_filtered::<(Entity, &Position, &InMap, &MovementControl), (With<Player>, Without<AcademyPadFlight>)>()
-            .iter(world).filter_map(|(entity, pos, current, control)| {
-                (*current == map && !control.controlled
-                    && Vec3::new(pos.x, pos.y, pos.z).distance(Vec3::new(pad.x, pad.y, pad.z)) <= radius)
-                    .then_some((entity, map, target))
-            }));
+    for (_, pad, map, target, radius) in pads {
+        let mut boarding: Vec<_> = crate::system_states::with_query::<
+            (Entity, &Position, &InMap, &MovementControl),
+            (With<Player>, Without<AcademyPadFlight>),
+            _,
+        >(world, |world, players| {
+            players
+                .iter(world)
+                .filter_map(|(entity, pos, current, control)| {
+                    (*current == map
+                        && !control.controlled
+                        && Vec3::new(pos.x, pos.y, pos.z).distance(Vec3::new(pad.x, pad.y, pad.z))
+                            <= radius)
+                        .then_some((entity, map, target))
+                })
+                .collect()
+        });
+        boarding.sort_unstable_by_key(|(entity, ..)| *entity);
+        owners.extend(boarding);
     }
     for (owner, map, target) in owners {
-        let followers: Vec<Entity> = world
-            .query::<(Entity, &crate::followers::Follower, &InMap)>()
-            .iter(world)
-            .filter_map(|(entity, follower, current)| {
-                (follower.owner == owner && *current == map).then_some(entity)
-            })
-            .collect();
+        let mut followers: Vec<Entity> = crate::system_states::with_query::<
+            (Entity, &crate::followers::Follower, &InMap),
+            (),
+            _,
+        >(world, |world, followers| {
+            followers
+                .iter(world)
+                .filter_map(|(entity, follower, current)| {
+                    (follower.owner == owner && *current == map).then_some(entity)
+                })
+                .collect()
+        });
+        followers.sort_unstable();
         let mut riders = vec![owner];
         riders.extend(followers);
         let companions: Vec<_> = riders

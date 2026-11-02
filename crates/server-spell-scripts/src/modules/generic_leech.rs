@@ -62,12 +62,15 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
 
 fn update(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query::<(Entity, &LeechPool)>()
-        .iter(world)
-        .filter(|(_, pool)| pool.next <= now)
-        .map(|(actor, _)| actor)
-        .collect();
+    let mut actors: Vec<_> =
+        combat::system_states::with_query::<(Entity, &LeechPool), (), _>(world, |world, pools| {
+            pools
+                .iter(world)
+                .filter(|(_, pool)| pool.next <= now)
+                .map(|(actor, _)| actor)
+                .collect()
+        });
+    actors.sort_unstable();
     for actor in actors {
         let next = now + interval(world, actor);
         let amount = {

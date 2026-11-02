@@ -505,11 +505,11 @@ fn frozen_edge_time_is_not_straight_line_distance() {
 
 pub(super) fn update(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
-    let units: Vec<_> = world
-        .query::<(Entity, &Position, &Health)>()
-        .iter(world)
-        .map(|(unit, _, _)| unit)
-        .collect();
+    let mut units: Vec<_> = server::system_states::with_query::<(Entity, &Position, &Health), (), _>(
+        world,
+        |world, units| units.iter(world).map(|(unit, _, _)| unit).collect(),
+    );
+    units.sort_unstable();
     for unit in units {
         move_one(world, unit, dt)
             .unwrap_or_else(|error| panic!("simulated movement {unit:?}: {error}"));

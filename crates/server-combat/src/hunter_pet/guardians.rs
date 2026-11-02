@@ -66,14 +66,20 @@ fn spawn_stabled_guardian(
 
 pub(super) fn remove_expired_guardians(world: &mut World) {
     let now = crate::auras::aura_now(world);
-    let expired: Vec<_> = world
-        .query::<(Entity, &StabledPetGuardian, &Health)>()
-        .iter(world)
-        .filter(|(_, guardian, health)| {
-            health.current <= 0.0 || guardian.expires_at.is_some_and(|expires| expires <= now)
-        })
-        .map(|(pet, _, _)| pet)
-        .collect();
+    let mut expired: Vec<_> = crate::system_states::with_query::<
+        (Entity, &StabledPetGuardian, &Health),
+        (),
+        _,
+    >(world, |world, guardians| {
+        guardians
+            .iter(world)
+            .filter(|(_, guardian, health)| {
+                health.current <= 0.0 || guardian.expires_at.is_some_and(|expires| expires <= now)
+            })
+            .map(|(pet, _, _)| pet)
+            .collect()
+    });
+    expired.sort_unstable();
     for pet in expired {
         // A guardian is not PetStable.summoned: do not use remove_pet, which
         // persists/dismisses the owner's actual current stable pet.

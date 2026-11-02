@@ -78,90 +78,98 @@ pub(crate) fn point_movement_system(world: &mut World) {
     let mut arrived = Vec::new();
     let mut moved = Vec::new();
     let mut bearing_changed = Vec::new();
-    let mut movers = world.query_filtered::<(
-        Entity,
-        &mut Position,
-        &PointMovement,
-        Option<&SpawnPoint>,
-        Has<shared::components::Player>,
-        Has<crate::hunter_pet::HunterPet>,
-        Option<&crate::creature_ai::CreatureState>,
-        Option<&mut ScriptedPath>,
-        Has<Walking>,
-        Option<&mut Rotation>,
-        Option<&mut CreatureMotion>,
-        Option<&mut MovementSpeed>,
-    ), (
-        Without<DeathState>,
-        Without<super::jump_movement::JumpMovement>,
-        Without<crate::scripted_ai::fall_movement::FallMovement>,
-        Without<crate::spell_cast::charge::ChargeMovement>,
-    )>();
-    for (
-        entity,
-        mut position,
-        movement,
-        spawn,
-        player,
-        pet,
-        state,
-        escort,
-        walking,
-        rotation,
-        motion,
-        replicated_speed,
-    ) in movers.iter_mut(world)
-    {
-        if escort.is_some() && state.is_some_and(|state| !state.is_idle()) {
-            bevy::log::debug!(
-                ?entity,
-                ?state,
-                ?movement,
-                driver = "point_suspended",
-                "combat or home movement owns the tick"
-            );
-            continue;
-        }
-        let (walk_multiplier, run_multiplier) = match spawn {
-            Some(spawn) => (spawn.speed_walk, spawn.speed_run),
-            None if player || pet => (1.0, 1.0),
-            None => continue,
-        };
-        let (speed, gait) = if walking {
-            (walk_multiplier * BASE_WALK_SPEED, CreatureMotion::Walk)
-        } else {
-            (run_multiplier * BASE_RUN_SPEED, CreatureMotion::Run)
-        };
-        let (next, reached) = step_toward(*position, movement.target, speed * dt);
-        bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, ?state, reached, driver = "point", "scripted movement");
-        let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
-        if *position != next {
-            *position = next;
-            moved.push(entity);
-        }
-        if let Some(mut escort) = escort {
-            escort.home = next;
-        }
-        if reached {
-            arrived.push((entity, movement.id));
-        }
-        let gait = if reached { CreatureMotion::Still } else { gait };
-        let mut changed = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
-        if let Some(mut replicated_speed) = replicated_speed
-            && gait != CreatureMotion::Still
+    crate::system_states::with_query::<
+        (
+            Entity,
+            &mut Position,
+            &PointMovement,
+            Option<&SpawnPoint>,
+            Has<shared::components::Player>,
+            Has<crate::hunter_pet::HunterPet>,
+            Option<&crate::creature_ai::CreatureState>,
+            Option<&mut ScriptedPath>,
+            Has<Walking>,
+            Option<&mut Rotation>,
+            Option<&mut CreatureMotion>,
+            Option<&mut MovementSpeed>,
+        ),
+        (
+            Without<DeathState>,
+            Without<super::jump_movement::JumpMovement>,
+            Without<crate::scripted_ai::fall_movement::FallMovement>,
+            Without<crate::spell_cast::charge::ChargeMovement>,
+        ),
+        _,
+    >(world, |world, movers| {
+        for (
+            entity,
+            mut position,
+            movement,
+            spawn,
+            player,
+            pet,
+            state,
+            escort,
+            walking,
+            rotation,
+            motion,
+            replicated_speed,
+        ) in movers.iter_mut(world)
         {
-            changed |= replicated_speed.set_if_neq(MovementSpeed(speed));
+            if escort.is_some() && state.is_some_and(|state| !state.is_idle()) {
+                bevy::log::debug!(
+                    ?entity,
+                    ?state,
+                    ?movement,
+                    driver = "point_suspended",
+                    "combat or home movement owns the tick"
+                );
+                continue;
+            }
+            let (walk_multiplier, run_multiplier) = match spawn {
+                Some(spawn) => (spawn.speed_walk, spawn.speed_run),
+                None if player || pet => (1.0, 1.0),
+                None => continue,
+            };
+            let (speed, gait) = if walking {
+                (walk_multiplier * BASE_WALK_SPEED, CreatureMotion::Walk)
+            } else {
+                (run_multiplier * BASE_RUN_SPEED, CreatureMotion::Run)
+            };
+            let (next, reached) = step_toward(*position, movement.target, speed * dt);
+            bevy::log::debug!(?entity, from = ?*position, to = ?next, ?movement, ?state, reached, driver = "point", "scripted movement");
+            let facing = crate::creature_ai::facing_along(next.x - position.x, next.z - position.z);
+            if *position != next {
+                *position = next;
+                moved.push(entity);
+            }
+            if let Some(mut escort) = escort {
+                escort.home = next;
+            }
+            if reached {
+                arrived.push((entity, movement.id));
+            }
+            let gait = if reached { CreatureMotion::Still } else { gait };
+            let mut changed = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
+            if let Some(mut replicated_speed) = replicated_speed
+                && gait != CreatureMotion::Still
+            {
+                changed |= replicated_speed.set_if_neq(MovementSpeed(speed));
+            }
+            if let (Some(mut rotation), Some(facing)) = (rotation, facing)
+                && rotation.y != facing
+            {
+                rotation.y = facing;
+                changed = true;
+            }
+            if changed {
+                bearing_changed.push(entity);
+            }
         }
-        if let (Some(mut rotation), Some(facing)) = (rotation, facing)
-            && rotation.y != facing
-        {
-            rotation.y = facing;
-            changed = true;
-        }
-        if changed {
-            bearing_changed.push(entity);
-        }
-    }
+    });
+    arrived.sort_unstable_by_key(|(entity, _)| *entity);
+    moved.sort_unstable();
+    bearing_changed.sort_unstable();
     if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
         for &entity in &bearing_changed {
             queue.mark(entity);

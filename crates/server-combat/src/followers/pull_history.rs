@@ -149,11 +149,13 @@ fn party_healthy(world: &World, members: &[Entity], map: InMap) -> bool {
 }
 
 pub(super) fn sample_all(world: &mut World) {
-    let mut owners: Vec<_> = world
-        .query::<&super::Follower>()
-        .iter(world)
-        .map(|follower| follower.owner)
-        .collect();
+    let mut owners: Vec<_> =
+        crate::system_states::with_query::<&super::Follower, (), _>(world, |world, followers| {
+            followers
+                .iter(world)
+                .map(|follower| follower.owner)
+                .collect()
+        });
     owners.sort_by_key(|owner| owner.to_bits());
     owners.dedup();
     for owner in owners {

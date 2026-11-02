@@ -255,17 +255,23 @@ pub struct SummonArrival {
 }
 
 pub(super) fn dispatch_arrivals(world: &mut World) {
-    let arrivals: Vec<_> = world
-        .query::<(Entity, &Position, &SummonArrival)>()
-        .iter(world)
-        .filter_map(|(actor, position, arrival)| {
-            let target = world.get::<Position>(arrival.target)?;
-            let from = Vec3::new(position.x, position.y, position.z);
-            let victim = Vec3::new(target.x, target.y, target.z);
-            crate::navigation::within_reach(from, victim, crate::creature_ai::CHASE_REACH)
-                .then_some((actor, arrival.target, arrival.on_arrival))
-        })
-        .collect();
+    let mut arrivals: Vec<_> = crate::system_states::with_query::<
+        (Entity, &Position, &SummonArrival),
+        (),
+        _,
+    >(world, |world, summons| {
+        summons
+            .iter(world)
+            .filter_map(|(actor, position, arrival)| {
+                let target = world.get::<Position>(arrival.target)?;
+                let from = Vec3::new(position.x, position.y, position.z);
+                let victim = Vec3::new(target.x, target.y, target.z);
+                crate::navigation::within_reach(from, victim, crate::creature_ai::CHASE_REACH)
+                    .then_some((actor, arrival.target, arrival.on_arrival))
+            })
+            .collect()
+    });
+    arrivals.sort_unstable_by_key(|(actor, ..)| *actor);
     for (actor, target, on_arrival) in arrivals {
         world.entity_mut(actor).remove::<SummonArrival>();
         on_arrival(world, actor, target);

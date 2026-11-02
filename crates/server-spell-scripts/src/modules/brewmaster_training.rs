@@ -20,16 +20,19 @@ fn after_aura(world: &mut World, target: Entity, aura: &AuraInstance) {
 }
 
 fn update(world: &mut World) {
-    let actors: Vec<_> = world
-        .query::<(Entity, &ActiveAuras)>()
-        .iter(world)
-        .filter(|(actor, auras)| {
-            auras
-                .iter()
-                .any(|aura| aura.spell_id == TRAINING && aura.caster == *actor)
-        })
-        .map(|(actor, _)| actor)
-        .collect();
+    let mut actors: Vec<_> =
+        combat::system_states::with_query::<(Entity, &ActiveAuras), (), _>(world, |world, units| {
+            units
+                .iter(world)
+                .filter(|(actor, auras)| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == TRAINING && aura.caster == *actor)
+                })
+                .map(|(actor, _)| actor)
+                .collect()
+        });
+    actors.sort_unstable();
     for actor in actors {
         refresh(world, actor);
     }

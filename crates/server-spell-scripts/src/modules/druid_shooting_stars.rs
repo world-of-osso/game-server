@@ -20,13 +20,17 @@ struct ShootingStarsTimers([f64; 2]);
 
 fn update_drivers(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
-        .query::<(
+    let mut actors: Vec<_> = combat::system_states::with_query::<
+        (
             Entity,
             &ActiveAuras,
             Option<&CombatStatus>,
             Option<&ShootingStarsTimers>,
-        )>()
+        ),
+        (),
+        _,
+    >(world, |world, units| {
+        units
         .iter(world)
         .filter_map(|(actor, auras, combat, timers)| {
             let talent = auras
@@ -52,7 +56,9 @@ fn update_drivers(world: &mut World) {
                 timers.map(|timer| timer.0),
             ))
         })
-        .collect();
+        .collect()
+    });
+    actors.sort_unstable_by_key(|(actor, ..)| *actor);
     for (actor, config, previous) in actors {
         let Some((chance, period)) = config else {
             world.entity_mut(actor).remove::<ShootingStarsTimers>();

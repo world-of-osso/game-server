@@ -294,12 +294,17 @@ pub fn engaged_targets(world: &mut World, unit: Entity) -> Vec<Entity> {
 
 /// The owner and every follower in the owner's party.
 pub fn party_units(world: &mut World, owner: Entity) -> Vec<Entity> {
-    let mut units: Vec<_> = world
-        .query::<(Entity, &Follower)>()
-        .iter(world)
-        .filter(|(_, follower)| follower.owner == owner)
-        .map(|(entity, _)| entity)
-        .collect();
+    let mut units: Vec<_> = crate::system_states::with_query::<(Entity, &Follower), (), _>(
+        world,
+        |world, followers| {
+            followers
+                .iter(world)
+                .filter(|(_, follower)| follower.owner == owner)
+                .map(|(entity, _)| entity)
+                .collect()
+        },
+    );
+    units.sort_unstable();
     units.push(owner);
     units
 }
