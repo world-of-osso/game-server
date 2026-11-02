@@ -10,10 +10,11 @@ pub use crate::line_of_sight::LineOfSight;
 pub use crate::navigation::within_reach;
 pub use graph::Space;
 
-/// Install the live navigation worker and its result publication in a headless app.
+/// Install the live navigation worker in a headless app. Each fixed tick publishes
+/// every route requested on the previous tick, so worker timing cannot change a run.
 pub fn install_navigation(app: &mut bevy::prelude::App, root: &std::path::Path) {
     app.insert_resource(crate::navigation::Navigation::new(root));
-    crate::navigation::install_publication(app);
+    crate::navigation::install_headless_publication(app);
 }
 
 /// Whether a creature has scheduled a delayed assistance wave.
