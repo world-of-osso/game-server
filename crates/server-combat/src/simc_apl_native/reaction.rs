@@ -33,6 +33,26 @@ impl ReactionSettings {
     }
 }
 
+/// The target's pinned SimC player defaults, sampled once when its cast starts.
+#[derive(Component)]
+pub(super) struct CastingReactionDelay(pub(super) f32);
+
+pub(crate) fn record_cast_reaction(
+    trigger: On<Insert, shared::casting::CastState>,
+    mut commands: Commands,
+) {
+    let settings = ReactionSettings {
+        mean: 0.250,
+        stddev: 0.0,
+        offset: 0.100,
+        nu: 0.150,
+        maximum: 1.4,
+    };
+    commands
+        .entity(trigger.entity)
+        .insert(CastingReactionDelay(settings.sample() as f32));
+}
+
 fn sample_nonnegative_normal(mean: f64, stddev: f64) -> f64 {
     if stddev == 0.0 {
         return mean;

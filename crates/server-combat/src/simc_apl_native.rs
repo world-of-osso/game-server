@@ -404,16 +404,14 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn casting_reaction(&self, target: Entity) -> Result<f64, String> {
-        if self
+        let Some(cast) = self.world.get::<shared::casting::CastState>(target) else {
+            return Ok(0.0);
+        };
+        let reaction = self
             .world
-            .get::<shared::casting::CastState>(target)
-            .is_some()
-        {
-            return Err(server::simc_apl::not_ready(
-                "NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot",
-            ));
-        }
-        Ok(0.0)
+            .get::<reaction::CastingReactionDelay>(target)
+            .ok_or_else(|| server::simc_apl::not_ready("NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot"))?;
+        Ok(bool_value(cast.elapsed >= reaction.0))
     }
 
     fn read_owned_auras(&self, target: Entity, spell: u32) -> Vec<&crate::auras::AuraInstance> {

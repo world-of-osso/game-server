@@ -352,6 +352,7 @@ pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
     fn build(&self, app: &mut App) {
+        app.add_observer(crate::simc_apl_native::reaction::record_cast_reaction);
         crate::maps::units::install(app);
         app.init_resource::<script_registry::SpellScriptRegistry>();
         #[cfg(any(test, feature = "test-support"))]
