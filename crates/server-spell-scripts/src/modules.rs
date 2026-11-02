@@ -233,6 +233,7 @@ register_modules! {
     feral_berserk: (1000, "modules/feral_berserk.rs"),
     feral_convoke: (1033, "modules/feral_convoke.rs"),
     feral_frenzy: (260, "modules/feral_frenzy.rs"),
+    feral_dreadful_wound: (1031, "modules/feral_dreadful_wound.rs"),
     feral_growth: (1031, "modules/feral_growth.rs"),
     feral_lunar: (1030, "modules/feral_lunar.rs"),
     feral_lycaras: (1035, "modules/feral_lycaras.rs"),
