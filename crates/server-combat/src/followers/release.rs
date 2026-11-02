@@ -57,7 +57,7 @@ pub(super) fn update(world: &mut World) {
     for owner in returned_owners {
         world.entity_mut(owner).remove::<ReturningFromGraveyard>();
     }
-    let owners: std::collections::HashSet<_> = world
+    let owners: std::collections::BTreeSet<_> = world
         .query::<&Follower>()
         .iter(world)
         .map(|follower| follower.owner)

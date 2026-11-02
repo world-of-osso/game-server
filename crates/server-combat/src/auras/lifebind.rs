@@ -1,5 +1,5 @@
 //! Preservation Lifebind: 70448 spell 373270 and periodic aura 373267.
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 
@@ -12,7 +12,7 @@ const BOND: u32 = 373267;
 const TRANSFER: u32 = 373268;
 
 #[derive(Component, Default)]
-struct PendingTransfers(HashMap<Entity, HashMap<Entity, f32>>);
+struct PendingTransfers(BTreeMap<Entity, BTreeMap<Entity, f32>>);
 
 pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(

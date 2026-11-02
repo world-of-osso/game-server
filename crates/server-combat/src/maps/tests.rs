@@ -4243,3 +4243,44 @@ fn housing_finder_visit_ports_to_authored_plot_without_payment_or_grant() {
         20_000_000
     );
 }
+
+#[test]
+fn owned_companions_are_listed_in_entity_order() {
+    let mut world = World::new();
+    let map = InMap::continent(0);
+    let alive = Health {
+        current: 1.0,
+        max: 1.0,
+    };
+    let owner = world.spawn((map, alive)).id();
+    let mut companions: Vec<_> = (0..8)
+        .map(|index| {
+            let unit = world.spawn((map, alive)).id();
+            if index % 2 == 0 {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::hunter_pet::HunterPet { owner, slot: 1 });
+            } else {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::spell_cast::summon::SummonedCreature {
+                        owner,
+                        spell_id: 104316,
+                        properties_id: 61,
+                        properties: crate::spell_cast::summon::SummonProperties {
+                            control: 0,
+                            faction: 0,
+                            title: 2,
+                            slot: 0,
+                            flags: 0,
+                        },
+                        display_scale: 1.0,
+                        expires_at: None,
+                    });
+            }
+            unit
+        })
+        .collect();
+    companions.sort_unstable();
+    assert_eq!(transfer::owned_companions(&mut world, owner), companions);
+}

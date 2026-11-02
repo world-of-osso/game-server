@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use bevy::ecs::system::SystemParam;
 
@@ -46,7 +46,7 @@ pub(crate) fn process_player_death_transitions(
     let processed_players = transitions
         .read()
         .map(|transition| transition.player)
-        .collect::<HashSet<_>>();
+        .collect::<BTreeSet<_>>();
     for player_entity in processed_players {
         #[cfg(any(test, feature = "test-support"))]
         {
