@@ -744,6 +744,10 @@ mod copy_tests {
                 ClientId(30),
                 shared::components::Level(12),
                 UnitLevel(12),
+                shared::components::Health {
+                    current: 1000.0,
+                    max: 1000.0,
+                },
                 dungeon.entrance.bevy_position(),
                 shared::components::Rotation {
                     x: 0.0,
@@ -928,7 +932,7 @@ mod copy_tests {
         app.world_mut()
             .resource_mut::<Time>()
             .advance_by(std::time::Duration::from_secs(60));
-        app.update();
+        app.world_mut().run_schedule(PreUpdate);
         assert!(app.world().get_entity(owner).is_err());
         advance_runs(app.world_mut());
         super::super::update_ai(app.world_mut());
@@ -1085,7 +1089,7 @@ mod copy_tests {
             .world_mut()
             .resource_mut::<Time>()
             .advance_by(std::time::Duration::from_secs(60));
-        h.app.update();
+        h.app.world_mut().run_schedule(PreUpdate);
         assert!(h.app.world().get_entity(old_owner).is_err());
 
         let owner = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
@@ -1143,7 +1147,7 @@ mod copy_tests {
         app.world_mut()
             .resource_mut::<Time>()
             .advance_by(std::time::Duration::from_secs(60));
-        app.update();
+        app.world_mut().run_schedule(PreUpdate);
         assert!(app.world().get_entity(owner).is_err());
         app.world_mut()
             .resource_mut::<Time>()
