@@ -7,6 +7,20 @@ use shared::protocol::CombatLogKind;
 fn surging_totem_heals_followers_and_not_its_summoned_totem() {
     let mut party = super::super::healer_simc_replay::snapshot_party(264, 90, 1);
     let healer = party.healer;
+    // Snapshot v3 omits 225409 from content templates. This test-only totem
+    // fixture exercises the spell lifecycle; it does not qualify the snapshot.
+    let mut data = party
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>();
+    let mut template = data
+        .templates
+        .get(&3527)
+        .expect("Healing Stream Totem fixture")
+        .clone();
+    template.entry = 225409;
+    data.templates.insert(225409, template);
+    drop(data);
     let follower = party.slots[0];
     let position = *party.app.world().get::<Position>(healer).unwrap();
     *party.app.world_mut().get_mut::<Position>(follower).unwrap() = position;

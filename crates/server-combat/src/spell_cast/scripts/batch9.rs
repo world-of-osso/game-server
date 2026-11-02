@@ -9,7 +9,6 @@ use shared::components::Health;
 use std::collections::HashSet;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
-const SURGING_TOTEM: u32 = 444995;
 const RAVAGER: u32 = 228920;
 const RAVAGER_DAMAGE: u32 = 156287;
 const VOLLEY: u32 = 260243;
@@ -42,7 +41,6 @@ pub(in crate::spell_cast) fn cast_effect(spell_id: u32, index: u8) -> Option<Cas
         | (RAIN_OF_FIRE, 1)
         | (SIGIL_OF_FLAME, 0)
         | (VOLLEY, 0) => Some(spawn_ground_pulses),
-        (SURGING_TOTEM, 1) => Some(spawn_surging_rain),
         (VOID_STEP, 0) => Some(teleport_void_step),
         _ => None,
     }
@@ -261,18 +259,8 @@ fn spawn_ground_pulses(
     }
 }
 
-fn spawn_surging_rain(
-    world: &mut World,
-    ctx: &EffectCtx,
-    _effect: &crate::spell_info::SpellEffect,
-) {
+pub(super) fn spawn_surging_rain(world: &mut World, ctx: &EffectCtx, totem: Entity) {
     let center = ctx.dest.expect("Surging Totem requires a destination");
-    let totem = world
-        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
-        .iter(world)
-        .find(|(_, summon)| summon.owner == ctx.caster && summon.spell_id == SURGING_TOTEM)
-        .map(|(entity, _)| entity)
-        .expect("Surging Totem summon must exist before its rain");
     let rain = world
         .resource::<SpellStore>()
         .get(HEALING_RAIN)
