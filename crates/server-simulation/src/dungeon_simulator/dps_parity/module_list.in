@@ -1,6 +1,7 @@
 // Child module declarations of dps_parity, one per line in alphabetical order.
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
+mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
 mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_blast_cost_tests;
@@ -14,6 +15,7 @@ mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_familiar_tests;
 #[cfg(test)] mod arcane_orb_order_tests;
 #[cfg(test)] mod arcane_tests;
+#[cfg(test)] mod arcane_surge_mana_follower_tests;
 mod affliction_darkglare_dots_tests;
 mod affliction_darkglare_tests;
 mod affliction_embrace_tests;
@@ -38,12 +40,14 @@ mod assisted_wdp_tests;
 mod arms_battlelord_follower_tests;
 mod arms_chain_boundary_tests;
 mod arms_cooldown_tests;
+mod arms_culling_cyclone_follower_tests;
 mod arms_execute_bleed_follower_tests;
 mod arms_fatality_follower_tests;
 mod arms_imminent_follower_tests;
 mod arms_precision_follower_tests;
 mod arms_followup_relationship_tests;
 mod arms_massacre_sudden_death_tests;
+mod arms_onslaught_follower_tests;
 mod arms_missing_relationship_tests;
 mod arms_reap_cleave_tests;
 mod arms_reap_tests;
@@ -122,6 +126,7 @@ mod devastation_gaze_tests;
 mod devastation_imminent_tests;
 mod devastation_infinity_tests;
 mod devastation_onslaught_tests;
+mod devastation_scarlet_immunity_tests;
 mod devastation_scarlet_tests;
 mod devastation_tests;
 mod devastation_verdant_tests;
@@ -225,12 +230,19 @@ mod evoker_siege_tests;
 mod evoker_sweep_burst_tests;
 mod evoker_titanic_tests;
 mod feral_apex_follower_tests;
+mod feral_apex_spender_follower_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
+mod feral_dreadful_wound_follower_tests;
 mod feral_growth_tests;
 mod feral_literal_tests;
 mod feral_lunar_tests;
 mod feral_native_tests;
+mod feral_ravage_consumer_follower_tests;
+mod feral_ravage_follower_tests;
+mod feral_ravage_sabertooth_follower_tests;
+mod feral_ravage_splash_follower_tests;
+mod feral_ravage_unseen_follower_tests;
 mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
@@ -244,6 +256,7 @@ mod fire_literal_tests;
 mod fire_nova_native_tests;
 mod firestarter_tests;
 mod fixture_facing_tests;
+mod party_lust_follower_tests;
 mod frost_mage_feedback_tests;
 mod frost_mage_reaction_start_tests;
 mod frost_mage_lance_cdr_tests;
@@ -344,6 +357,8 @@ mod named_action_cooldown_tests;
 mod native_pandemic_tests;
 mod outlaw_ace_tests;
 #[cfg(test)]
+mod outlaw_adrenaline_gcd_follower_tests;
+#[cfg(test)]
 mod outlaw_blade_rush_follower_tests;
 mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
@@ -351,6 +366,10 @@ mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
 #[cfg(test)]
 mod outlaw_flickering_steel_follower_tests;
+#[cfg(test)]
+mod outlaw_find_opening_follower_tests;
+#[cfg(test)]
+mod outlaw_improved_adrenaline_follower_tests;
 mod outlaw_gravedigger_tests;
 mod outlaw_main_gauche_tests;
 mod outlaw_opportunity_tests;
@@ -439,6 +458,7 @@ mod shadow_tests;
 mod shadow_torment_tests;
 mod shadow_void_blast_tests;
 mod shadow_void_bolt_tests;
+mod shadow_voidform_follower_tests;
 mod shadow_voidheart_tests;
 mod shadow_volley_tests;
 mod shadow_yogg_tests;

@@ -17,8 +17,23 @@ fn discipline_follower_channels_ultimate_penitence_at_the_enemy() {
         "selected loadout entry 116182 must teach Ultimate Penitence"
     );
     super::healer_simc_replay::engage(&mut run);
-    super::healer_simc_replay::start_at_first_combat(&mut run.app, &[tank, healer]).unwrap();
-    let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    let (_, cursor) = super::healer_simc_replay::start_recording_at_first_combat(
+        &mut run.app,
+        tank,
+        healer,
+        enemy,
+        &run.slots,
+    )
+    .unwrap();
+    let transition = &run.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+    assert!(
+        transition
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && matches!(event.spell_id, Some(17 | 589))
+                && event.kind == CombatLogKind::CastSuccess),
+        "instant Discipline opener must be in the recorded transition: {transition:?}"
+    );
     // 40 s at 20 ticks per second.
     for _ in 0..800 {
         run.app.update();

@@ -206,7 +206,7 @@ fn hyperpyrexia_impact(
     damage: f32,
 ) {
     if damage <= 0.0
-        || !matches!(ctx.spell.id, 222026 | 66196 | 195975 | 155166)
+        || !matches!(ctx.spell.id, 222026 | 66196 | 325464 | 195975 | 155166)
         || !is_frost(world, ctx.caster)
         || !auras::has_aura(world, ctx.caster, 456238)
     {
