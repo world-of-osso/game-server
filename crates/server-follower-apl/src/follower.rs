@@ -326,7 +326,9 @@ impl Plugin for FollowerAplPlugin {
         crate::action_metadata::install_provider(app);
         app.add_systems(
             FixedUpdate,
-            drive_followers.after(server::followers::update_ai),
+            drive_followers
+                .after(server::followers::update_ai)
+                .after(server::auras::AuraTickSet),
         );
     }
 }
