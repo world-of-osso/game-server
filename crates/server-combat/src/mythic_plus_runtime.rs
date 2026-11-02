@@ -20,6 +20,8 @@ pub struct Run {
     pub definition: ChallengeDefinition,
     pub policy: ChallengePolicy,
     start_ms: u64,
+    combat_res_charges: u8,
+    combat_res_next_ms: u64,
     killed: HashSet<u64>,
     scenario_events: HashSet<u64>,
 }
@@ -48,6 +50,8 @@ impl Run {
             definition,
             policy: ChallengePolicy::retail(),
             start_ms: 0,
+            combat_res_charges: 1,
+            combat_res_next_ms: 0,
             killed: HashSet::new(),
             scenario_events: HashSet::new(),
         }
@@ -57,6 +61,7 @@ impl Run {
             return Err("This keystone run has already started");
         }
         self.start_ms = now.saturating_add(self.policy.countdown_ms.value);
+        self.combat_res_next_ms = self.start_ms.saturating_add(600_000);
         self.snapshot.phase = ChallengePhase::Countdown;
         self.tick(now);
         Ok(())
@@ -81,6 +86,29 @@ impl Run {
             self.complete();
         }
     }
+    /// Shared Mythic+ battle-resurrection pool; Wowhead Mythic Keystone guide.
+    pub fn combat_res_charges(&mut self, now: u64) -> u8 {
+        if self.snapshot.phase != ChallengePhase::Running {
+            return 0;
+        }
+        if now >= self.combat_res_next_ms {
+            let earned = 1 + (now - self.combat_res_next_ms) / 600_000;
+            self.combat_res_charges = (u64::from(self.combat_res_charges) + earned).min(5) as u8;
+            self.combat_res_next_ms = self
+                .combat_res_next_ms
+                .saturating_add(earned.saturating_mul(600_000));
+        }
+        self.combat_res_charges
+    }
+
+    pub fn consume_combat_res(&mut self, now: u64) -> bool {
+        if self.combat_res_charges(now) == 0 {
+            return false;
+        }
+        self.combat_res_charges -= 1;
+        true
+    }
+
     pub fn kill(&mut self, spawn: u64, entry: u32) {
         if self.snapshot.phase != ChallengePhase::Running || !self.killed.insert(spawn) {
             return;
@@ -191,6 +219,19 @@ mod tests {
         for id in [2582, 2585, 2583, 2584] {
             run.boss(id);
         }
+    }
+    #[test]
+    fn mythic_runtime_combat_res_charges_regenerate_and_cap() {
+        let mut r = run();
+        r.start(1000).unwrap();
+        assert!(r.consume_combat_res(1000));
+        assert!(!r.consume_combat_res(600999));
+        assert!(r.consume_combat_res(601000));
+        assert_eq!(r.combat_res_charges(4_201_000), 5);
+        for _ in 0..5 {
+            assert!(r.consume_combat_res(4_201_000));
+        }
+        assert!(!r.consume_combat_res(4_201_000));
     }
     #[test]
     fn mythic_runtime_weighted_forces_and_boss_completion() {

@@ -129,6 +129,34 @@ fn follower_utility_policy_native_resurrection_from_follower_retains_player_acce
 }
 
 #[test]
+fn follower_headless_owner_accepts_native_resurrection_offer() {
+    let (mut h, unit) = level32(209072);
+    h.stop_attack();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Dead,
+            corpse: None,
+            graveyard: None,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 0.0;
+    crate::test_support::enable_headless_resurrection(h.app.world_mut(), h.caster);
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 20484, Some(h.caster), false)
+        .unwrap();
+    h.advance(80);
+    assert!(crate::test_support::accept_resurrection(
+        h.app.world_mut(),
+        h.caster
+    ));
+    assert!(h.health(h.caster) > 0.0);
+}
+
+#[test]
 fn follower_utility_policy_no_damage_into_someone_elses_cc() {
     let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = 32;

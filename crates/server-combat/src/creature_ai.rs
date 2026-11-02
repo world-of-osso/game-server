@@ -1307,6 +1307,15 @@ const FOLLOW_COMBAT_REACH: f32 = 1.5;
 /// `FOLLOW_RANGE_TOLERANCE` (FollowMovementGenerator.cpp).
 const FOLLOW_RANGE_TOLERANCE: f32 = 1.0;
 
+pub(crate) fn within_follow_range(position: Position, owner: Position) -> bool {
+    let gap = Vec3::new(
+        position.x - owner.x,
+        position.y - owner.y,
+        position.z - owner.z,
+    );
+    gap.length() <= 2.0 * FOLLOW_COMBAT_REACH + PET_FOLLOW_DIST + FOLLOW_RANGE_TOLERANCE
+}
+
 type Follower = (
     Entity,
     &'static mut Position,

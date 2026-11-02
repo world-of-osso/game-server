@@ -7,18 +7,177 @@ use crate::maps::{InMap, MapStore, WorldLocation};
 use crate::navigation::{Goal, Navigation};
 use ::navigation::worker::{Output, Query};
 
-const FOLLOWER_RELEASE_MAX_WALK_SECONDS: f32 = 120.0;
+/// A released follower must finish returning before the next pull.
+#[derive(Component)]
+pub(super) struct ReturningFromGraveyard;
+
+#[derive(Component)]
+pub(super) struct ResurrectionApproach;
 
 pub(super) fn update(world: &mut World) {
+    let approaching: Vec<_> = world
+        .query_filtered::<Entity, With<ResurrectionApproach>>()
+        .iter(world)
+        .collect();
+    for unit in approaching {
+        world.entity_mut(unit).remove::<ResurrectionApproach>();
+    }
+    let returned: Vec<_> = world
+        .query_filtered::<(Entity, &Follower, &Position), With<ReturningFromGraveyard>>()
+        .iter(world)
+        .filter_map(|(unit, follower, position)| {
+            let owner = world.get::<Position>(follower.owner)?;
+            crate::creature_ai::within_follow_range(*position, *owner).then_some(unit)
+        })
+        .collect();
+    for unit in returned {
+        world.entity_mut(unit).remove::<ReturningFromGraveyard>();
+    }
+    let returned_owners: Vec<_> = world
+        .query_filtered::<(Entity, &Position), (
+            With<ReturningFromGraveyard>,
+            With<shared::components::Player>,
+        )>()
+        .iter(world)
+        .filter_map(|(owner, position)| {
+            let (_, members, _) = party::read_admission(world, owner)?;
+            members
+                .iter()
+                .any(|member| {
+                    crate::spell_cast::targets::is_alive(world, *member)
+                        && world
+                            .get::<Position>(*member)
+                            .is_some_and(|member_position| {
+                                crate::creature_ai::within_follow_range(*position, *member_position)
+                            })
+                })
+                .then_some(owner)
+        })
+        .collect();
+    for owner in returned_owners {
+        world.entity_mut(owner).remove::<ReturningFromGraveyard>();
+    }
+    let owners: std::collections::HashSet<_> = world
+        .query::<&Follower>()
+        .iter(world)
+        .map(|follower| follower.owner)
+        .collect();
+    for owner in owners {
+        if world
+            .get::<crate::death::PlayerDeathState>(owner)
+            .is_some_and(|state| state.state == shared::death::DeathState::Dead)
+        {
+            request_resurrection(world, owner, owner);
+        }
+    }
     let dead: Vec<_> = world
         .query::<(Entity, &Follower, &crate::combat::Corpse)>()
         .iter(world)
         .map(|(unit, follower, _)| (unit, follower.owner))
         .collect();
     for (unit, owner) in dead {
+        if request_resurrection(world, unit, owner) {
+            continue;
+        }
         let (decision, reason, walk_seconds, error) = release_if_reachable(world, unit, owner);
         info!(follower = ?unit, owner = ?owner, decision, reason, walk_seconds = ?walk_seconds, error = ?error, "Follower release evaluation");
     }
+}
+
+fn request_resurrection(world: &mut World, target: Entity, owner: Entity) -> bool {
+    if world
+        .get::<crate::death::resurrection::PendingResurrection>(target)
+        .is_some()
+    {
+        return true;
+    }
+    let Some((map, members, _)) = party::read_admission(world, owner) else {
+        return false;
+    };
+    let members = members.to_vec();
+    let boss_in_progress = crate::scripted_ai::instance_script::boss_in_progress(world, map);
+    let in_combat = boss_in_progress
+        || std::iter::once(owner)
+            .chain(members.iter().copied())
+            .any(|member| {
+                world
+                    .get::<CombatStatus>(member)
+                    .is_some_and(|status| status.0)
+            });
+    if in_combat
+        && (!boss_in_progress
+            || crate::mythic_plus::combat_res_available(world, map) == Some(false))
+    {
+        return false;
+    }
+    let casters: Vec<_> = members
+        .iter()
+        .copied()
+        .filter(|&unit| {
+            unit != target
+                && world.get::<super::AplControlled>(unit).is_some()
+                && world.get::<InMap>(unit) == Some(&map)
+                && crate::spell_cast::targets::is_alive(world, unit)
+        })
+        .collect();
+    if casters.is_empty() {
+        return false;
+    }
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let candidates: Vec<_> = casters
+        .into_iter()
+        .flat_map(|unit| {
+            world
+                .get::<crate::class_progression::KnownSpells>(unit)
+                .into_iter()
+                .flat_map(move |known| {
+                    known.iter().filter_map(move |spell| {
+                        store
+                            .get(spell)
+                            .filter(|info| {
+                                (!in_combat
+                                    || info
+                                        .misc
+                                        .as_ref()
+                                        .is_some_and(|misc| misc.attributes[0] & 0x1000_0000 == 0))
+                                    && info
+                                        .effects
+                                        .iter()
+                                        .any(crate::death::resurrection::is_resurrection)
+                            })
+                            .map(|_| (unit, spell))
+                    })
+                })
+        })
+        .collect();
+    for (caster, spell) in candidates {
+        match crate::spell_cast::creature_cast(world, caster, spell, Some(target), false) {
+            Ok(())
+            | Err(
+                crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::Moving,
+            ) => {
+                world.entity_mut(caster).insert(ResurrectionApproach);
+                return true;
+            }
+            Err(crate::spell_cast::CastFailure::OutOfRange) => {
+                world.entity_mut(caster).insert((
+                    ResurrectionApproach,
+                    crate::creature_ai::FollowOwner::new(target),
+                ));
+                return true;
+            }
+            Err(error) => debug!(
+                ?caster,
+                ?target,
+                spell,
+                ?error,
+                "Follower resurrection unavailable"
+            ),
+        }
+    }
+    false
 }
 
 type Evaluation = (&'static str, &'static str, Option<f32>, Option<String>);
@@ -41,7 +200,7 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
                 .get::<CombatStatus>(member)
                 .is_some_and(|status| status.0)
         });
-    if in_combat {
+    if in_combat || crate::scripted_ai::instance_script::boss_in_progress(world, map) {
         if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
             nav.cancel_query(unit, Goal::FollowerRelease);
         }
@@ -88,9 +247,6 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
         return wait("run_speed_zero");
     }
     let walk_seconds = route.distance / speed;
-    if walk_seconds > FOLLOWER_RELEASE_MAX_WALK_SECONDS {
-        return ("wait", "route_too_long", Some(walk_seconds), None);
-    }
     world
         .resource_mut::<Navigation>()
         .cancel_query(unit, Goal::FollowerRelease);
@@ -124,6 +280,7 @@ fn revive_at_release(world: &mut World, unit: Entity, owner: Entity, destination
         .insert((
             crate::creature_ai::CreatureState::Idle,
             crate::creature_ai::FollowOwner::new(owner),
+            ReturningFromGraveyard,
         ));
     crate::spell_cast::mark_dirty(world, unit);
 }

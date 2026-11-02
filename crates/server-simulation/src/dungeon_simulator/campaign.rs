@@ -3403,6 +3403,7 @@ fn spawn_run_mode_record(
         (None, None) => crate::followers::simulator::spawn_party(app.world_mut(), copy, entrance)?,
         _ => return Err("keystone planning state is inconsistent".into()),
     };
+    server::test_support::enable_headless_resurrection(app.world_mut(), party.owner);
     if !graph.flights.is_empty() {
         server::test_support::flight::configure_leader(app.world_mut(), party.owner)?;
     }
@@ -3961,6 +3962,19 @@ impl Run {
                 .entity_mut(self.party.owner)
                 .remove::<server_follower_apl::DirectedOwnerTarget>();
             if server::test_support::player_death_recorded(self.app.world(), self.party.owner) {
+                if server::test_support::accept_resurrection(self.app.world_mut(), self.party.owner)
+                {
+                    return Ok(());
+                }
+                if crate::followers::simulator::has_uncleared_fight(
+                    self.app.world(),
+                    self.party.owner,
+                ) || crate::followers::resurrection_pending(
+                    self.app.world_mut(),
+                    self.party.owner,
+                ) {
+                    return Ok(());
+                }
                 server::test_support::release_dungeon_player(
                     self.app.world_mut(),
                     self.party.owner,
