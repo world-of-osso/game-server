@@ -268,6 +268,7 @@ pub(super) fn append_serverside_spells(
             .expect_err("serverside spell IDs were checked against existing definitions");
         store.spells.insert(index, spell.into());
     }
+    store.rebuild_index();
     Ok(count)
 }
 

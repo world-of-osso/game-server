@@ -20,6 +20,7 @@ mod proc_definition;
 mod trait_data;
 mod trait_effect_points;
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Instant;
 
@@ -481,12 +482,12 @@ pub struct EmpowerStage {
     pub duration_ms: u32,
 }
 
-/// Every spell in world.db, sorted by spell ID (binary-searched; a `HashMap`
-/// of 360-byte values costs ~40% more memory at this load factor).
+/// Every spell in world.db, sorted by spell ID, with a separate lookup index.
 #[derive(Resource, Debug, Default)]
 #[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
 pub struct SpellStore {
     spells: crate::catalog_data::CatalogData<Vec<crate::catalog_data::CatalogData<SpellInfo>>>,
+    index: crate::catalog_data::CatalogData<HashMap<u32, usize>>,
     trait_effect_points: crate::catalog_data::CatalogData<trait_effect_points::TraitEffectPoints>,
 }
 
@@ -527,16 +528,44 @@ impl SpellInfo {
 
 impl SpellStore {
     fn from_spells(spells: Vec<SpellInfo>) -> Self {
+        let index = spells
+            .iter()
+            .map(|spell| {
+                let position = spells
+                    .binary_search_by_key(&spell.id, |item| item.id)
+                    .unwrap();
+                (spell.id, position)
+            })
+            .collect::<HashMap<_, _>>()
+            .into();
         #[cfg(any(test, feature = "test-support"))]
         return Self {
             spells: spells.into_iter().map(Into::into).collect(),
+            index,
             trait_effect_points: Default::default(),
         };
         #[cfg(not(any(test, feature = "test-support")))]
         Self {
             spells,
+            index,
             trait_effect_points: Default::default(),
         }
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    fn rebuild_index(&mut self) {
+        self.index = self
+            .spells
+            .iter()
+            .map(|spell| {
+                let position = self
+                    .spells
+                    .binary_search_by_key(&spell.id, |item| item.id)
+                    .unwrap();
+                (spell.id, position)
+            })
+            .collect::<HashMap<_, _>>()
+            .into();
     }
 
     #[cfg(any(test, feature = "test-support"))]
@@ -587,16 +616,32 @@ impl SpellStore {
     }
 
     pub fn get(&self, spell_id: u32) -> Option<&SpellInfo> {
-        let index = self
-            .spells
-            .binary_search_by_key(&spell_id, |spell| spell.id)
-            .ok()?;
+        let &index = self.index.get(&spell_id)?;
         Some(&self.spells[index])
     }
 
     pub fn len(&self) -> usize {
         self.spells.len()
     }
+}
+
+#[test]
+fn spell_index_resolves_sparse_ids_and_missing_spells() {
+    let store = SpellStore::fixture(vec![
+        SpellInfo {
+            id: u32::MAX,
+            name: "Last".into(),
+            ..Default::default()
+        },
+        SpellInfo {
+            id: 7,
+            name: "First".into(),
+            ..Default::default()
+        },
+    ]);
+    assert_eq!(store.get(7).unwrap().name, "First");
+    assert_eq!(store.get(u32::MAX).unwrap().name, "Last");
+    assert!(store.get(8).is_none());
 }
 
 #[test]
@@ -623,6 +668,7 @@ fn fixture_spell_edits_and_insertions_leave_retained_and_sibling_stores_unchange
         }
         .into(),
     );
+    local.rebuild_index();
     for unchanged in [&retained, &sibling] {
         assert_eq!(unchanged.len(), 1);
         assert_eq!(unchanged.get(133).unwrap().name, "Fireball");
