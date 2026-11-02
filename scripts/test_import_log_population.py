@@ -307,6 +307,45 @@ class ImportTest(unittest.TestCase):
             with sqlite3.connect(source) as db:
                 self.assertEqual(db.execute('SELECT COUNT(*) FROM content_creature').fetchone()[0], 1)
 
+    def test_cross_run_observations_of_one_spawn_keep_one_row(self):
+        # Real Altar of Fangs rows: one spawn point imported once per combat-log run.
+        oct3 = ('WoWCombatLog-100326_031300.txt', '10/3/2026 03:13:00.925-5')
+        oct4 = ('WoWCombatLog-100426_204334.txt', '10/4/2026 20:50:13.555-5')
+        oct5 = ('WoWCombatLog-100526_202005.txt', '10/5/2026 22:03:43.503-5')
+        rows = [
+            (3276417196, 262011, 1382.87, 2105.72, -64.80088, 0.4777, oct4),
+            (3276417199, 262011, 1382.87, 2105.72, -64.80088, 0.4777, oct5),
+            (3276417203, 264798, 1396.89, 2071.06, -64.39957, 2.8289, oct3),
+            (3276417206, 264798, 1396.89, 2071.06, -64.39957, 2.8289, oct4),
+            (3276417204, 264798, 1375.97, 2102.69, -63.663338, 1.03, oct4),
+            (3276417208, 264798, 1375.97, 2102.69, -63.663338, 1.03, oct5),
+            (3276417214, 272104, 1382.99, 2055.45, -64.66518, 4.1827, oct3),
+            (3276417215, 272104, 1382.99, 2055.45, -64.66518, 4.1827, oct5),
+            (3276417179, 261552, 1367.98, 2085.19, -64.486176, 0.9959,
+             ('WoWCombatLog-101126_203026.txt', '10/11/2026 20:32:26.561-5')),
+            # Two units stacked on one point in a single run stay distinct.
+            (1, 264798, 1396.89, 2071.06, -64.39957, 2.8289, oct5),
+            (2, 264798, 1396.89, 2071.06, -64.39957, 2.8289, oct5),
+        ]
+        with closing(sqlite3.connect(':memory:')) as db, db:
+            db.executescript('''
+                CREATE TABLE content_creature(guid INTEGER PRIMARY KEY,id1 INTEGER,map INTEGER,position_x REAL,
+                    position_y REAL,position_z REAL,orientation REAL,Comment TEXT);
+                CREATE TABLE log_derived_population(guid INTEGER PRIMARY KEY,observation_json TEXT);''')
+            for guid, entry, x, y, z, facing, (source, run) in rows:
+                db.execute('INSERT INTO content_creature VALUES (?,?,2993,?,?,?,?,?)',
+                           (guid, entry, x, y, z, facing, module.POLICY))
+                db.execute('INSERT INTO log_derived_population VALUES (?,?)', (guid, json.dumps(
+                    {'source_file': source, 'source_run_start': run})))
+            retired = module.retire_cross_run_duplicates(db, {2993})
+            self.assertEqual(retired, [(2993, 262011, 3276417199), (2993, 264798, 3276417203),
+                                       (2993, 264798, 3276417206), (2993, 264798, 3276417208),
+                                       (2993, 272104, 3276417215)])
+            self.assertEqual([row[0] for row in db.execute('SELECT guid FROM content_creature ORDER BY guid')],
+                             [1, 2, 3276417179, 3276417196, 3276417204, 3276417214])
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM log_derived_population').fetchone()[0], 6)
+            self.assertEqual(module.retire_cross_run_duplicates(db, {2993}), [])
+
 
 if __name__ == '__main__':
     unittest.main()
