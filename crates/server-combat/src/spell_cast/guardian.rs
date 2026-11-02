@@ -369,6 +369,32 @@ const GUARDIAN_POLICIES: &[GuardianPolicy] = &[
         owner_spell_share: Some(1.0),
         owner_attack_share: None,
     },
+    // SimC76f8118 pets.cpp19/2162–2345: each Rift casts one native action,
+    // with base inherited owner SP1.0.
+    GuardianPolicy {
+        summons: &[394235],
+        entry: 198547,
+        spells: &[394237],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[387979],
+        entry: 196280,
+        spells: &[387984],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
+    GuardianPolicy {
+        summons: &[394243],
+        entry: 198555,
+        spells: &[394246],
+        repeat_gcd: None,
+        owner_spell_share: Some(1.0),
+        owner_attack_share: None,
+    },
     // SimC76f8118 pets.cpp19/2358–2407: actual Overfiend repeatedly
     // casts its native Chaos Bolt with base owner SP1.0; no guessed AP share.
     GuardianPolicy {

@@ -177,6 +177,7 @@ register_modules! {
     destruction_mastery: (2672, "modules/destruction_mastery.rs"),
     destruction_overfiend: (2674, "modules/destruction_overfiend.rs"),
     destruction_periodic: (2670, "modules/destruction_periodic.rs"),
+    destruction_rift: (2679, "modules/destruction_rift.rs"),
     destruction_roaring_blaze: (2678, "modules/destruction_roaring_blaze.rs"),
     devastation: (10, "modules/devastation.rs"),
     devourer_void_ray: (1480, "modules/devourer_void_ray.rs"),
