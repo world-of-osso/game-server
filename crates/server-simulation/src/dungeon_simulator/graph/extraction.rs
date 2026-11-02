@@ -5,29 +5,230 @@ use navigation::{NavigationMap, NavigationPlan};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-fn complete_route(
+/// Furthest horizontal re-anchor of a boss players cannot attack. Temple of Sethraliss
+/// (map 1877) Avatar: player and enemy samples stand 13-31 yd from the healed boss in
+/// WCL M4cdBNJkTjavYgQV/11 pull 12, ax1vNFnfPdXrzRQ2/16 pull 9, ZgBCXQvcnhaAYT1r/5 pull 10.
+const OBJECTIVE_ANCHOR_MAX_YARDS: f32 = 35.0;
+/// `ChrRaces.FactionID` templates of Human (Alliance) and Orc (Horde).
+const PLAYER_FACTION_TEMPLATES: [u32; 2] = [1, 2];
+
+/// Audit record of a boss source pack moved off its unreachable spawn point.
+#[derive(Debug, serde::Serialize)]
+struct BossAnchor {
+    entry: u32,
+    pack: u64,
+    original: [f32; 3],
+    anchor: [f32; 3],
+    horizontal_yards: f32,
+    via_pack: u64,
+    reason: &'static str,
+}
+
+/// Walk navigation legs until arrival or until a leg repeats; `follow` ends a proven
+/// disconnect at the polygon closest to `end` instead of failing.
+fn route_legs(
     nav: &mut NavigationMap,
     mut start: Vec3,
     end: Vec3,
-) -> Result<Vec<Vec3>, String> {
+    follow: bool,
+) -> Result<(Vec<Vec3>, bool), String> {
     let mut plan = NavigationPlan::default();
     let mut seen = BTreeSet::new();
     let mut result = Vec::new();
     loop {
-        let leg = nav.path_with_plan(start, end, &mut plan)?;
+        let leg = if follow {
+            nav.follow_path(start, end, &mut plan)?
+        } else {
+            nav.path_with_plan(start, end, &mut plan)?
+        };
         if leg.collision_drop.is_some() {
             return Err("navigation path requires a registered collision drop".into());
         }
         let endpoint = *leg.points.last().ok_or("empty navigation segment")?;
         result.extend(leg.points);
         if leg.complete {
-            return Ok(result);
+            return Ok((result, true));
         }
         if endpoint == start || !seen.insert(endpoint.to_array().map(f32::to_bits)) {
-            return Err("navigation segment repeated without reaching destination".into());
+            return Ok((result, false));
         }
         start = endpoint;
     }
+}
+
+fn complete_route(nav: &mut NavigationMap, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+    match route_legs(nav, start, end, false)? {
+        (points, true) => Ok(points),
+        _ => Err("navigation segment repeated without reaching destination".into()),
+    }
+}
+
+/// The walk from `start` to the reachable point closest to `end`.
+fn closest_route(nav: &mut NavigationMap, start: Vec3, end: Vec3) -> Result<Vec<Vec3>, String> {
+    route_legs(nav, start, end, true).map(|(points, _)| points)
+}
+
+/// Whether players can attack the spawn: runtime faction reaction and immunity flags
+/// (TC Object.cpp `IsValidAttackTarget`).
+fn player_can_attack(
+    data: &crate::world_data::WorldData,
+    factions: &server::faction::FactionTemplates,
+    difficulty: u32,
+    guid: u64,
+    entry: u32,
+) -> Result<bool, String> {
+    use shared::components::UnitFlags;
+    let template = data
+        .template_for(entry, difficulty)
+        .ok_or_else(|| format!("boss{entry} has no creature template"))?;
+    let flags = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == guid)
+        .and_then(|spawn| spawn.unit_flags)
+        .unwrap_or(template.unit_flags);
+    let immune = UnitFlags::NON_ATTACKABLE
+        | UnitFlags::NON_ATTACKABLE_2
+        | UnitFlags::IMMUNE_TO_PC
+        | UnitFlags::NOT_SELECTABLE;
+    if flags & immune != 0 {
+        return Ok(false);
+    }
+    let creature = server::faction::UnitFaction {
+        template: u32::from(template.faction),
+        is_player: false,
+    };
+    Ok(PLAYER_FACTION_TEMPLATES.iter().any(|&template| {
+        let player = server::faction::UnitFaction {
+            template,
+            is_player: true,
+        };
+        factions.can_attack(player, creature)
+    }))
+}
+
+/// Append `corners` from pack `from` to pack `to` as walking edges.
+fn chain_route(graph: &mut Graph, from: u64, to: u64, corners: &[Vec3]) {
+    let point = |id| {
+        graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == id)
+            .unwrap()
+            .point()
+    };
+    let (mut previous, target) = (point(from), point(to));
+    let mut next = graph
+        .packs
+        .iter()
+        .flat_map(|pack| std::iter::once(pack.id).chain(pack.spawns.iter().map(|spawn| spawn.guid)))
+        .max()
+        .unwrap_or(0);
+    let mut last = from;
+    for &corner in corners.iter().chain([&target]) {
+        if corner.distance_squared(previous) < 0.000001 {
+            continue;
+        }
+        let node = if corner == target {
+            to
+        } else {
+            next += 1;
+            graph.packs.push(Pack {
+                id: next,
+                position: [corner.x, corner.z],
+                height: corner.y,
+                spawns: Vec::new(),
+            });
+            next
+        };
+        graph.edges.push(Edge {
+            from: last,
+            to: node,
+            yards: previous.distance(corner),
+        });
+        previous = corner;
+        last = node;
+    }
+}
+
+/// Move each unreachable boss source pack whose boss players cannot attack (a healed or
+/// protected encounter objective) to the reachable point closest to its spawn. Spawn,
+/// encounter binding and credit are unchanged. An attackable unreachable boss, or a
+/// closest point beyond `OBJECTIVE_ANCHOR_MAX_YARDS`, is a data error.
+fn anchor_objective_bosses(
+    graph: &mut Graph,
+    mut attackable: impl FnMut(u64, u32) -> Result<bool, String>,
+    mut closest: impl FnMut(Vec3, Vec3) -> Result<Vec<Vec3>, String>,
+) -> Result<Vec<BossAnchor>, String> {
+    let sources: BTreeSet<_> = graph.follower_boss_sources.values().copied().collect();
+    let mut anchors = Vec::new();
+    for source in sources {
+        let packs: Vec<_> = graph
+            .packs
+            .iter()
+            .filter_map(|pack| {
+                let spawn = pack.spawns.iter().find(|spawn| spawn.entry == source)?;
+                Some((pack.id, pack.point(), spawn.guid))
+            })
+            .collect();
+        let [(id, original, guid)] = packs[..] else {
+            continue;
+        };
+        if !graph.unreachable.contains(&id) {
+            continue;
+        }
+        if attackable(guid, source)? {
+            return Err(format!(
+                "attackable boss{source} source pack{id} is unreachable from the entrance"
+            ));
+        }
+        let via = graph
+            .packs
+            .iter()
+            .filter(|pack| !graph.unreachable.contains(&pack.id))
+            .min_by(|a, b| {
+                (a.point().distance_squared(original), a.id)
+                    .partial_cmp(&(b.point().distance_squared(original), b.id))
+                    .unwrap()
+            })
+            .map(|pack| (pack.id, pack.point()))
+            .ok_or("no reachable pack")?;
+        let corners = closest(via.1, original)?;
+        let anchor = *corners.last().ok_or("empty closest route")?;
+        let horizontal = (anchor - original).with_y(0.0).length();
+        if horizontal > OBJECTIVE_ANCHOR_MAX_YARDS {
+            return Err(format!(
+                "boss{source} closest reachable point is {horizontal:.1} yd from its spawn, over {OBJECTIVE_ANCHOR_MAX_YARDS} yd"
+            ));
+        }
+        let back = closest(anchor, via.1)?;
+        if back.last().is_none_or(|end| end.distance(via.1) > 0.01) {
+            return Err(format!(
+                "boss{source} anchor {anchor:?} cannot walk back to pack{}",
+                via.0
+            ));
+        }
+        let pack = graph.packs.iter_mut().find(|pack| pack.id == id).unwrap();
+        pack.position = [anchor.x, anchor.z];
+        pack.height = anchor.y;
+        chain_route(graph, via.0, id, &corners);
+        anchors.push(BossAnchor {
+            entry: source,
+            pack: id,
+            original: original.to_array(),
+            anchor: anchor.to_array(),
+            horizontal_yards: horizontal,
+            via_pack: via.0,
+            reason: "boss not attackable by players; spawn off the entrance navmesh component",
+        });
+        graph.unreachable = topology::unreachable(
+            &graph.packs,
+            &graph.edges,
+            &graph.teleports,
+            graph.entrance_pack,
+        );
+    }
+    Ok(anchors)
 }
 
 pub(crate) fn asset_root() -> std::path::PathBuf {
@@ -170,7 +371,7 @@ fn extract(
     db: &rusqlite::Connection,
     nav_dir: &Path,
     difficulty: Option<u32>,
-) -> Result<(Graph, Vec<u32>), String> {
+) -> Result<(Graph, Vec<u32>, Vec<BossAnchor>), String> {
     let source = source::read_source(db, map, difficulty)?;
     navigation::hierarchy::PortalGraph::read_artifact(nav_dir)
         .map_err(|error| format!("map{map} invalid navmesh portal graph: {error}"))?;
@@ -269,7 +470,17 @@ fn extract(
             graph.entrance_pack,
         );
     }
-    Ok((graph, route_bosses))
+    let factions = server::faction::load_faction_templates(db)
+        .map_err(|error| format!("map{map} faction templates: {error}"))?;
+    let data = crate::test_data::world_data();
+    let difficulty = graph.follower_difficulty;
+    let anchors = anchor_objective_bosses(
+        &mut graph,
+        |guid, entry| player_can_attack(data, &factions, difficulty, guid, entry),
+        |from, to| closest_route(&mut nav, from, to),
+    )
+    .map_err(|error| format!("map{map} {error}"))?;
+    Ok((graph, route_bosses, anchors))
 }
 
 fn append_dawnbreaker_deck(graph: &mut Graph, start: Vec3, end: Vec3) -> Result<u64, String> {
@@ -477,6 +688,102 @@ fn windrunner_taxi_proximity_extracts_an_actor_free_passage() {
     assert_eq!(transports[0].action, Action::TaxiProximity);
 }
 
+#[cfg(test)]
+fn objective_graph() -> Graph {
+    let pack = |id, x, y, spawns| Pack {
+        id,
+        position: [x, 0.0],
+        height: y,
+        spawns,
+    };
+    let boss = super::Spawn {
+        guid: 2,
+        entry: 500,
+        position: [20.0, 0.0],
+    };
+    Graph {
+        map_id: 1877,
+        entrance: [0.0, 0.0],
+        entrance_height: 0.0,
+        entrance_pack: 1,
+        packs: vec![pack(1, 0.0, 0.0, vec![]), pack(2, 20.0, 8.0, vec![boss])],
+        edges: vec![],
+        teleports: vec![],
+        transports: vec![],
+        flights: vec![],
+        unreachable: vec![2],
+        route: vec![],
+        follower_difficulty: 8,
+        follower_boss_entries: vec![500],
+        follower_boss_sources: BTreeMap::from([(500, 500)]),
+        follower_boss_bits: Default::default(),
+        follower_encounter_actor_bits: Default::default(),
+    }
+}
+
+/// Detour's closest reachable point to the boss is `edge`; walks back to start are complete.
+#[cfg(test)]
+fn closest_at(edge: Vec3) -> impl FnMut(Vec3, Vec3) -> Result<Vec<Vec3>, String> {
+    move |from, to| Ok(vec![from, if to == Vec3::ZERO { to } else { edge }])
+}
+
+#[test]
+fn non_attackable_unreachable_boss_is_anchored_at_the_closest_reachable_point() {
+    let mut graph = objective_graph();
+    let anchors = anchor_objective_bosses(
+        &mut graph,
+        |_, _| Ok(false),
+        closest_at(Vec3::new(13.0, 0.0, 0.0)),
+    )
+    .unwrap();
+    assert_eq!(anchors.len(), 1);
+    assert_eq!(anchors[0].original, [20.0, 8.0, 0.0]);
+    assert_eq!(anchors[0].anchor, [13.0, 0.0, 0.0]);
+    assert_eq!(anchors[0].horizontal_yards, 7.0);
+    assert_eq!(anchors[0].via_pack, 1);
+    assert_eq!(graph.packs[1].point(), Vec3::new(13.0, 0.0, 0.0));
+    assert_eq!(graph.packs[1].spawns[0].position, [20.0, 0.0]);
+    assert_eq!(
+        (graph.edges[0].from, graph.edges[0].to, graph.edges[0].yards),
+        (1, 2, 13.0)
+    );
+    assert!(graph.unreachable.is_empty());
+}
+
+#[test]
+fn attackable_unreachable_boss_stays_an_error() {
+    let mut graph = objective_graph();
+    let error = anchor_objective_bosses(
+        &mut graph,
+        |_, _| Ok(true),
+        closest_at(Vec3::new(13.0, 0.0, 0.0)),
+    )
+    .unwrap_err();
+    assert!(
+        error.contains("attackable boss500 source pack2 is unreachable"),
+        "{error}"
+    );
+    assert_eq!(graph.packs[1].point(), Vec3::new(20.0, 8.0, 0.0));
+    assert_eq!(graph.unreachable, vec![2]);
+}
+
+#[test]
+fn objective_boss_beyond_the_anchor_bound_stays_an_error() {
+    let mut graph = objective_graph();
+    let error = anchor_objective_bosses(
+        &mut graph,
+        |_, _| Ok(false),
+        closest_at(Vec3::new(-16.0, 0.0, 0.0)),
+    )
+    .unwrap_err();
+    assert!(
+        error.contains("36.0 yd from its spawn, over 35 yd"),
+        "{error}"
+    );
+    assert_eq!(graph.packs[1].point(), Vec3::new(20.0, 8.0, 0.0));
+    assert_eq!(graph.unreachable, vec![2]);
+}
+
 #[test]
 fn boss_source_uses_the_spawned_vehicle_for_its_bound_accessory() {
     let packs = vec![super::Pack {
@@ -536,7 +843,7 @@ fn extract_follower_topology() {
     let difficulty = std::env::var("DUNGEON_SIMULATOR_DIFFICULTY")
         .ok()
         .map(|value| value.parse().expect("numeric difficulty id"));
-    let (graph, bosses) = extract(
+    let (graph, bosses, anchors) = extract(
         map,
         &db,
         &Path::new(&nav_root).join(map.to_string()),
@@ -544,7 +851,12 @@ fn extract_follower_topology() {
     )
     .expect("follower topology inputs");
     let graph_path = super::graph_path();
-    std::fs::write(&graph_path, serde_json::to_vec_pretty(&graph).unwrap()).unwrap();
+    let mut json = serde_json::to_value(&graph).unwrap();
+    json["boss_anchors"] = serde_json::to_value(&anchors).unwrap();
+    std::fs::write(&graph_path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
+    for anchor in &anchors {
+        println!("BOSS_ANCHOR {}", serde_json::to_string(anchor).unwrap());
+    }
     let gates = server::test_support::objectives::boss_gate_entries(map);
     let requirements =
         serde_json::json!({(map.to_string()): {"boss_order": bosses, "gate_entries": gates}});
