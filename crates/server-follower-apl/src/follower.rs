@@ -99,6 +99,10 @@ impl FollowerApl {
         matches!(self.phase, Phase::Combat)
     }
 
+    pub fn in_precombat(&self) -> bool {
+        matches!(self.phase, Phase::Precombat { .. })
+    }
+
     pub fn tick(
         &mut self,
         world: &mut World,
