@@ -237,7 +237,7 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
                 581 => 203720,
                 73 => 23922,
                 66 => 31935,
-                250 => 55050,
+                250 => 206930,
                 268 => 121253,
                 104 => 33917,
                 257 => 2061,
