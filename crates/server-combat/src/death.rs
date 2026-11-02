@@ -27,6 +27,7 @@ pub(crate) const GHOST_RESURRECT_MANA_PCT: f32 = 0.5;
 mod instrument_of_retribution;
 #[path = "death/resurrection.rs"]
 pub(crate) mod resurrection;
+pub(crate) mod soulstone;
 #[path = "death_support.rs"]
 mod support;
 #[path = "death/transitions.rs"]

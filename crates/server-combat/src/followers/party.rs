@@ -1726,6 +1726,71 @@ mod copy_tests {
     }
 
     #[test]
+    fn soulstoned_follower_self_resurrects_after_lethal_damage() {
+        use shared::components::{Health, Position};
+        let position = Position {
+            x: -3217.9695,
+            y: 34.78784,
+            z: -4078.9055,
+        };
+        let (mut h, caster, target, _) = brackenhide_release_fixture(position);
+        let max = h.app.world().get::<Health>(target).unwrap().max;
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .remove::<(crate::combat::DeathState, crate::combat::Corpse)>();
+        let soulstone = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(20707)
+            .unwrap()
+            .clone();
+        let mask = crate::auras::aura_effect_mask(&soulstone);
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster,
+                target,
+                spell_id: 20707,
+                effect_mask: mask,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(h.app.world(), target, 20707));
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(5)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            target,
+            max * 2.0,
+            false,
+            false,
+        );
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+        super::super::release::update(h.app.world_mut());
+        assert_eq!(
+            h.app.world().get::<Health>(target).unwrap().current,
+            (max * 0.2).floor()
+        );
+        assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+    }
+
+    #[test]
     fn class_follower_casts_resurrection_before_release() {
         use shared::components::{Health, Position};
         let owner_position = Position {

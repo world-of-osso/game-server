@@ -76,6 +76,9 @@ pub(super) fn update(world: &mut World) {
         .map(|(unit, follower, _)| (unit, follower.owner))
         .collect();
     for (unit, owner) in dead {
+        if crate::death::soulstone::use_follower_soulstone(world, unit) {
+            continue;
+        }
         if request_resurrection(world, unit, owner) {
             continue;
         }
@@ -268,6 +271,7 @@ fn release_location(world: &World, unit: Entity, map: InMap) -> Option<WorldLoca
 
 fn revive_at_release(world: &mut World, unit: Entity, owner: Entity, destination: &WorldLocation) {
     crate::maps::transfer::teleport_creature_with_companions(world, unit, destination);
+    crate::death::soulstone::clear_available(world, unit);
     if let Some(mut health) = world.get_mut::<Health>(unit) {
         health.current = (health.max * crate::death::GHOST_RESURRECT_HEALTH_PCT).max(1.0);
     }
