@@ -1,4 +1,5 @@
 //! Resolve dungeon loot levels from the active DB2 bonus trees, without an ilvl table.
+mod selection;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
@@ -45,6 +46,8 @@ struct Node {
     selector: u32,
     #[serde(rename = "ChildItemBonusListGroupID")]
     group: u32,
+    #[serde(rename = "IblGroupPointsModSetID")]
+    group_points: u32,
     #[serde(rename = "ItemCreationContextGroupID")]
     context_group: u32,
     #[serde(rename = "MinMythicPlusLevel")]
@@ -79,6 +82,7 @@ pub struct DungeonItemLevels {
     item_trees: HashMap<u32, Vec<u32>>,
     trees: HashMap<u32, Tree>,
     nodes: HashMap<u32, Vec<Node>>,
+    selection: selection::Selection,
     pickers: HashMap<u32, Vec<PickerEntry>>,
     expressions: crate::world_state_expression::WorldStateExpressions,
 }
@@ -107,6 +111,7 @@ impl DungeonItemLevels {
             item_trees,
             trees,
             nodes,
+            selection: selection::Selection::read(db2)?,
             pickers,
             expressions: crate::world_state_expression::WorldStateExpressions::read(db2)?,
         })
@@ -203,7 +208,8 @@ impl DungeonItemLevels {
         let mut pending = roots.clone();
         let mut visited = HashSet::new();
         let mut lists = Vec::new();
-        while let Some(id) = pending.pop() {
+        while let Some(source_id) = pending.pop() {
+            let id = self.selection.tree(source_id, context)?;
             if !visited.insert(id) {
                 continue;
             }
@@ -242,17 +248,23 @@ impl DungeonItemLevels {
                 if node.context != 0 && matches == (node.flags & 1 != 0) {
                     continue;
                 }
-                if node.context_group != 0 || node.selector != 0 || node.group != 0 {
+                if node.context_group != 0 || node.selector != 0 {
                     return Err(format!("FOLLOWER_ITEM_BONUS_TREE_UNRESOLVED tree{id}"));
                 }
                 if node.child != 0 {
                     pending.push(node.child);
                 }
-                if node.list != 0 {
+                let list = if node.group != 0 {
+                    self.selection
+                        .group_list(node.group, node.group_points, context)?
+                } else {
+                    (node.list != 0).then_some(node.list)
+                };
+                if let Some(list) = list {
                     let rows = bonuses
                         .entries
-                        .get(&node.list)
-                        .ok_or_else(|| format!("item bonus list{} unavailable", node.list))?;
+                        .get(&list)
+                        .ok_or_else(|| format!("item bonus list{list} unavailable"))?;
                     if rows.iter().any(|row| row.kind == 53) {
                         return Err("FOLLOWER_SCALING_ITEM_LEVEL_BONUS_UNSUPPORTED".into());
                     }
@@ -260,7 +272,7 @@ impl DungeonItemLevels {
                         .iter()
                         .any(|row| matches!(row.kind, 1 | 42 | 49 | 51 | 52))
                     {
-                        lists.push(node.list);
+                        lists.push(list);
                     }
                 }
             }
@@ -302,6 +314,27 @@ mod tests {
                 .resolve(&db, 2515, 8, 70, 193633, item, &bonuses, &stats)
                 .unwrap_err()
                 .contains("FOLLOWER_MYTHIC_PLUS_SEASON_ITEM_LEVEL_UNSOURCED")
+        );
+    }
+
+    #[test]
+    fn follower_mythic_gear_uses_season_two_group_for_murder_row_flask() {
+        let path = crate::test_data::world_db_path();
+        let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+        let db2 = path.parent().unwrap().join("db2/active");
+        let source = DungeonItemLevels::read(&db2).unwrap();
+        let items = crate::item_templates::load_item_templates(&path).unwrap();
+        let item = items.get(ItemDefinitionSource::Retail, 250215).unwrap();
+        let bonuses = crate::item_instance::load::load_bonus_tables(&db).unwrap();
+        let stats = crate::item_stats::load_item_scaling_tables(&path).unwrap();
+        // INFERRED active event1552: 5960 -> 5943 -> 5942; context23 node28972
+        // selects group616 sequence1/list12833, whose scaling config310 is 292.
+        // Retail Mythic 0: https://gamgem.com/world-of-warcraft/items/freightrunners-flask
+        assert_eq!(
+            source
+                .resolve(&db, 2813, 23, 90, 250215, item, &bonuses, &stats)
+                .unwrap(),
+            292
         );
     }
 

@@ -4,11 +4,41 @@ use bevy::prelude::*;
 use combat::random as rand;
 use combat::spell_cast::effects::{EffectCtx, energize_unit};
 use combat::spell_cast::powers::PowerTypeTable;
-use combat::spell_cast::script_registry::SpellScriptHook;
+use combat::spell_cast::script_registry::{ScriptReach, SpellScriptHook};
 use combat::spell_cast::scripts::script_effect_value;
+use combat::spell_info::SpellInfo;
 use shared::components::{ActiveSpec, PowerType};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::PeriodicPrimaryDamage(after_tick)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::DeclaredReach(immolate_reach),
+    SpellScriptHook::ResolvedDamage(apply_immolate),
+    SpellScriptHook::PeriodicPrimaryDamage(after_tick),
+];
+
+fn immolate_reach(_: &World, _: Entity, spell: &SpellInfo) -> ScriptReach {
+    if spell.id == 348 {
+        ScriptReach::Child(157736)
+    } else {
+        ScriptReach::None
+    }
+}
+
+// SimC76f8118 sc_warlock_actions.cpp4033–4080: a landed Immolate
+// executes its periodic child on the same target.
+fn apply_immolate(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, amount: f32) {
+    if ctx.spell.id == 348
+        && amount > 0.0
+        && !combat::spell_cast::try_cast_triggered(
+            world,
+            ctx.caster,
+            157736,
+            Some(target),
+            ctx.depth + 1,
+        )
+    {
+        warn!(caster = ?ctx.caster, ?target, "Immolate periodic child refused");
+    }
+}
 
 fn after_tick(world: &mut World, ctx: &EffectCtx<'_>, _target: Entity, _amount: f32, crit: bool) {
     if world

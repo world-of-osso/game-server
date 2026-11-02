@@ -12,8 +12,11 @@ const EXTRA_STRIKE: u32 = 197834;
 const TALENT: u32 = 279876;
 const OPPORTUNITY: u32 = 195627;
 const FAN_THE_HAMMER: u32 = 381846;
+const FLICKERING_STEEL: u32 = 1259492;
+const FLICKERING_STEEL_ENERGIZE: u32 = 1259493;
 const ROLL_THE_BONES: u32 = 1214909;
 const JACKPOT: u32 = 1214937;
+const FIND_AN_OPENING: u32 = 1259457;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(after_hit),
@@ -62,7 +65,15 @@ fn read_proc_chance(world: &World, caster: Entity) -> Option<f32> {
     } else {
         0.0
     };
-    Some(chance(TALENT) + bonus)
+    // Find an Opening's native label modifier applies to Opportunity's
+    // effect 1. SimC76f8118 sc_rogue.cpp1286–1292 includes it in the
+    // selected talent's base chance, in addition to the Roll the Bones bonus.
+    let opening = if auras::has_aura(world, caster, FIND_AN_OPENING) {
+        script_effect_value(world, caster, FIND_AN_OPENING, 0)
+    } else {
+        0.0
+    };
+    Some(chance(TALENT) + opening + bonus)
 }
 
 fn grant_opportunity(world: &mut World, caster: Entity) {
@@ -74,5 +85,10 @@ fn grant_opportunity(world: &mut World, caster: Entity) {
     let mut spell =
         spell_cast::load_triggered_spell(world, OPPORTUNITY, 1).expect("native Opportunity buff");
     spell.cast_aura_stacks = Some(1 + extra);
-    spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1);
+    let applied = spell_cast::launch_triggered_spell(world, caster, &spell, Some(caster), 1);
+    // SimC 76f8118 sc_rogue.cpp8269–8272: an earned Opportunity restores
+    // Flickering Steel's native energy amount when the talent is selected.
+    if applied && auras::has_aura(world, caster, FLICKERING_STEEL) {
+        spell_cast::cast_triggered(world, caster, FLICKERING_STEEL_ENERGIZE, Some(caster), 1);
+    }
 }

@@ -109,7 +109,10 @@ fn record_scarlet_heal(world: &mut World, ctx: &spell_cast::effects::EffectCtx<'
             },
         );
     }
-    let (instance, current) = scarlet_value(world, caster).expect("native Scarlet Adaptation aura");
+    let Some((instance, current)) = scarlet_value(world, caster) else {
+        warn!(?caster, "Scarlet Adaptation aura was not applied");
+        return;
+    };
     assert!(combat::auras::set_effect_amount(
         world,
         caster,
