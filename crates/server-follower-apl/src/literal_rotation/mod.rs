@@ -244,19 +244,25 @@ impl Driver {
             // not the new default target selected after the previous one died.
             let mut queued_action = action.clone();
             if let Execution::Spell(_, unit, primary) = &execution {
+                if primary.is_some_and(|target| !prepared.has_live_target(target)) {
+                    return Ok(None);
+                }
                 queued_action.target = Some(primary.unwrap_or(*unit).to_bits());
             }
-            let ready =
-                prepared.permits_row(&queued_action)? && facts.target_ready(&queued_action)?;
+            if !facts.target_ready(&queued_action)? {
+                return Ok(None);
+            }
+            let ready = prepared.permits_row(&queued_action)?;
             let current = if ready {
                 prepared.execution_in(&queued_action, equipment, &self.program)?
             } else {
                 None
             };
             match current {
-                Some(Execution::Queue(_, delay)) => {
-                    self.queued = Some((action, execution, prepared.now() + delay));
+                Some(Execution::Queue(_, _)) if prepared.now() < deadline => {
+                    self.queued = Some((action, execution, deadline));
                 }
+                Some(Execution::Queue(_, _)) => {}
                 Some(_) => return Ok(Some((action, execution))),
                 None if prepared.now() < deadline => {
                     self.queued = Some((action, execution, deadline));

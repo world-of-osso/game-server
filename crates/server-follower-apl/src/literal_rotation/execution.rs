@@ -50,6 +50,7 @@ struct NativeReadiness {
 pub struct Prepared {
     now: f64,
     ready: ReadyActions,
+    live_targets: BTreeSet<Entity>,
     limits: BTreeMap<ActionKey, PowerType>,
     pickups: BTreeMap<
         (
@@ -184,6 +185,11 @@ impl Prepared {
                 .map_or(0, |spec| spec.0),
             after_channel,
             ready: BTreeMap::new(),
+            live_targets: targets
+                .iter()
+                .copied()
+                .filter(|target| server::spell_cast::targets::is_alive(world, *target))
+                .collect(),
             limits: BTreeMap::new(),
             pickups: fragment_pickup_plans(world, actor, targets.first().copied())?,
             declared: [
@@ -271,6 +277,10 @@ impl Prepared {
 
     pub fn now(&self) -> f64 {
         self.now
+    }
+
+    pub fn has_live_target(&self, target: Entity) -> bool {
+        self.live_targets.contains(&target)
     }
 
     pub fn setup_pending(&self) -> bool {
