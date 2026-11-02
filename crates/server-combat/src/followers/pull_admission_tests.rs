@@ -380,6 +380,47 @@ fn tank_pull_admission_native_bootstrap_is_one_source_pack_without_prior_rates()
 }
 
 #[test]
+fn tank_pull_admission_waits_for_dead_or_ghost_member() {
+    let mut f = fixture();
+    let owner = f.h.caster;
+    let current = f.h.health(f.healer);
+    f.h.app
+        .world_mut()
+        .get_mut::<Health>(f.healer)
+        .unwrap()
+        .current = 0.0;
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::DeadMember)
+    );
+    f.h.app
+        .world_mut()
+        .get_mut::<Health>(f.healer)
+        .unwrap()
+        .current = current;
+    f.h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Ghost,
+            corpse: None,
+            graveyard: None,
+        });
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::DeadMember)
+    );
+    f.h.app
+        .world_mut()
+        .entity_mut(owner)
+        .remove::<crate::death::PlayerDeathState>();
+    assert!(matches!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Allow { .. }
+    ));
+}
+
+#[test]
 fn tank_pull_admission_waits_for_returning_follower() {
     let mut f = fixture();
     f.h.app
