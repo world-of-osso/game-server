@@ -206,7 +206,8 @@ Spec103 captures the native actor before setup and executes all74 pinned76f8118 
 
 Feral `buff.clearcasting.react` observes actual135700 acquisition through the shared reaction clocks configured before precombat. Use the exact pinned103 player's0.25s mean,0.05s deviation,0.1s offset,0.15s exponential term and1.4s maximum; neither buff presence nor query time substitutes for the earned reaction deadline.
 
-- L90 follower, snapshot v3, map2813, 120 seconds, ten matched seeds and temporary enchants disabled, on tested candidate `ee3ea8e199`: native 31,559.9 DPS versus SimC 32,825.3; mean paired difference −3.60% ±5.31 pp (95% t interval). The point estimate meets the ±5% mean gate; the interval extends outside ±5%.
+- L70 follower, snapshot v3, map2515, 120 seconds, ten matched seeds and temporary enchants disabled, after the Frantic Momentum fix: native 4,649.2 DPS versus SimC 4,669.5; paired difference −0.37% ±3.69 pp (95% t interval). Both point estimate and interval meet ±5%. The independently checked logged Druid of the Claw condition-only reference gives the same results without hero talents.
+- L90 follower, snapshot v3, map2813 and the same seeds and settings, after the Frantic Momentum fix: native 29,068.4 DPS versus SimC 32,825.3; paired difference −11.20% ±5.11 pp. Both point estimate and interval are outside the ±5% mean gate. The earlier −3.60% ±5.31 pp included incorrectly permanent Frantic Momentum.
 
 ### Feral Thriving Growth
 
