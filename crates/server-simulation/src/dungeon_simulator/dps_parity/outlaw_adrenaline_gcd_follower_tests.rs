@@ -21,13 +21,15 @@ fn sinister_strike_interval(adrenaline: bool) -> f64 {
     };
     cast(&mut app).unwrap();
     let start = app.world().resource::<bevy::prelude::Time>().elapsed_secs_f64();
+    let mut last_failure = None;
     for _ in 0..30 {
         app.update();
-        if cast(&mut app).is_ok() {
-            return app.world().resource::<bevy::prelude::Time>().elapsed_secs_f64() - start;
+        match cast(&mut app) {
+            Ok(()) => return app.world().resource::<bevy::prelude::Time>().elapsed_secs_f64() - start,
+            Err(error) => last_failure = Some(error),
         }
     }
-    panic!("second Sinister Strike did not become ready");
+    panic!("second Sinister Strike did not become ready: {last_failure:?}");
 }
 
 #[test]
