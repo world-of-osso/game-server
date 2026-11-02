@@ -34,19 +34,16 @@ pub(crate) fn load_spellclick_catalog(conn: &Connection) -> rusqlite::Result<Spe
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) fn has_npc_targeted_spell(world: &World, entry: u32) -> bool {
+pub(crate) fn has_usable_offering_spell(world: &World, entry: u32) -> bool {
     let catalog = world.resource::<SpellClickCatalog>();
     let spells = world.resource::<crate::spell_info::SpellStore>();
     catalog.0.get(&entry).is_some_and(|clicks| {
         clicks.iter().any(|click| {
             click.cast_flags == 1
                 && click.user_type == 0
-                && spells.get(click.spell_id).is_some_and(|spell| {
-                    !spell
-                        .effects
-                        .iter()
-                        .any(crate::spell_cast::open_lock::is_item_effect)
-                })
+                && spells
+                    .get(click.spell_id)
+                    .is_some_and(|spell| !crate::gathering::is_gathering(spell))
         })
     })
 }

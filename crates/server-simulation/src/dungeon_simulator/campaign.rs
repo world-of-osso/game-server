@@ -431,10 +431,9 @@ fn den_objective_chooses_a_castable_npc_offering() {
     let apple = run.actors[&31000492];
     let at = *run.app.world().get::<Position>(apple).unwrap();
     run.app.world_mut().entity_mut(owner).insert(at);
-    let Some(InteractionStep::Approach { target }) =
-        server::test_support::objectives::next(run.app.world_mut(), owner, boss).unwrap()
-    else {
-        panic!("the nearest apple NPC cannot receive its gameobject-targeted spell");
+    let step = server::test_support::objectives::next(run.app.world_mut(), owner, boss).unwrap();
+    let Some(InteractionStep::Approach { target }) = step else {
+        panic!("the nearest apple NPC cannot receive its gameobject-targeted spell: {step:?}");
     };
     assert_ne!(target, apple);
     let source = run
