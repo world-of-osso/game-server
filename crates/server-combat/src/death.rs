@@ -352,13 +352,13 @@ pub(crate) fn release_spirit_in_dungeon(
     commands.queue(move |world: &mut World| {
         // BuildPlayerRepop sets DEAD before the graveyard teleport/revival.
         crate::spell_cast::cancel_cast(world, player);
+        crate::followers::mark_owner_returning(world, player);
         crate::maps::teleport_to(
             world,
             player,
             grave,
             crate::maps::TeleportOptions { revive: true },
         );
-        crate::followers::mark_owner_returning(world, player);
     });
     Ok("released spirit".into())
 }

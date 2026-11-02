@@ -1626,10 +1626,15 @@ mod copy_tests {
             .unwrap()
             .map;
         h.app.insert_resource(instances);
-        h.app
-            .world_mut()
-            .entity_mut(h.caster)
-            .insert((copy, crate::persistence::ClientId(1)));
+        h.app.world_mut().entity_mut(h.caster).insert((
+            copy,
+            crate::persistence::ClientId(1),
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        ));
         h.app
             .world_mut()
             .get_mut::<FollowerRun>(h.caster)
@@ -1658,7 +1663,7 @@ mod copy_tests {
                 .get::<super::super::release::ReturningFromGraveyard>(h.caster)
                 .is_some()
         );
-        h.app.world_mut().entity_mut(h.caster).insert(far);
+        h.app.world_mut().entity_mut(h.caster).insert((far, copy));
         super::super::release::update(h.app.world_mut());
         assert!(
             h.app
