@@ -35,11 +35,13 @@ fn temple_keystone_bosses_cast_observed_openers() {
                 .spell_gos
                 .iter()
                 .any(|go| go.caster == boss.to_bits() && go.spell_id == spell),
-            "creature {entry} did not cast {spell}: {:?}",
+            "creature {entry} did not cast {spell}: admissions={:?} cast={:?} gos={:?}",
             h.app
                 .world()
                 .resource::<crate::scripted_ai::tests::cast_admission::CastAdmissions>()
-                .entries
+                .entries,
+            h.app.world().get::<shared::casting::CastState>(boss),
+            h.inbox(0).spell_gos
         );
     }
 }
