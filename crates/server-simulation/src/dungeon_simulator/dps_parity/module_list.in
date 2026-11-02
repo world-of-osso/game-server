@@ -1,6 +1,7 @@
 // Child module declarations of dps_parity, one per line in alphabetical order.
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
+mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
 mod assisted_wdp_producer_tests;
 #[cfg(test)] mod arcane_blast_cost_tests;
@@ -235,6 +236,9 @@ mod feral_lunar_tests;
 mod feral_native_tests;
 mod feral_ravage_consumer_follower_tests;
 mod feral_ravage_follower_tests;
+mod feral_ravage_sabertooth_follower_tests;
+mod feral_ravage_splash_follower_tests;
+mod feral_ravage_unseen_follower_tests;
 mod feral_sabertooth_follower_tests;
 mod feral_snapshot_tests;
 mod feral_stalking_consumer_tests;
@@ -347,6 +351,8 @@ mod multi_seed;
 mod named_action_cooldown_tests;
 mod native_pandemic_tests;
 mod outlaw_ace_tests;
+#[cfg(test)]
+mod outlaw_adrenaline_gcd_follower_tests;
 #[cfg(test)]
 mod outlaw_blade_rush_follower_tests;
 mod outlaw_cleave_tests;
