@@ -2,7 +2,31 @@ use super::follower_dps_diagnostic::*;
 use super::*;
 use crate::auras::{self, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_cast::{summon::SummonedCreature, test_harness::ObservedCombatEvents};
-use shared::components::{Level, PowerType, UnitLevel};
+use shared::components::{Health, Level, PowerType, UnitLevel};
+
+fn void_flay_damage(
+    app: &mut bevy::prelude::App,
+    pet: bevy::prelude::Entity,
+    target: bevy::prelude::Entity,
+) -> i32 {
+    let _seed = crate::random::seed_scope(70448);
+    app.world_mut()
+        .resource_mut::<ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(app.world_mut(), pet, 451435, Some(target), 0);
+    app.world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.source == Some(pet.to_bits())
+                && event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(451435)
+        })
+        .expect("actual Void Flay damage")
+        .amount
+}
 use shared::protocol::CombatLogKind;
 
 #[test]
@@ -82,6 +106,29 @@ fn follower_rift_end_spawns_a_damaging_insanity_generating_voidwraith() {
                         && event.spell_id == Some(262485)
                         && event.amount > 0),
                 "Void Flay must grant its owner Insanity"
+            );
+            let max = app.world().get::<Health>(target).unwrap().max;
+            app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+            app.world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .spell_power = 1000.0;
+            let full = void_flay_damage(&mut app, pet, target);
+            app.world_mut().get_mut::<Health>(target).unwrap().current = max / 2.0;
+            let half = void_flay_damage(&mut app, pet, target);
+            assert!(
+                (full as f32 / half as f32 - 1.5 / 1.25).abs() < 0.02,
+                "health scaling: full={full} half={half}"
+            );
+            app.world_mut().get_mut::<Health>(target).unwrap().current = max;
+            app.world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .spell_power = 2000.0;
+            let doubled = void_flay_damage(&mut app, pet, target);
+            assert!(
+                (doubled as f32 / full as f32 - 2.0).abs() < 0.02,
+                "owner power scaling: base={full} doubled={doubled}"
             );
         }
     }
