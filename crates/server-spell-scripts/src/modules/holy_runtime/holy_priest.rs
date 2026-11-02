@@ -188,8 +188,11 @@ pub(super) fn piety(
     if ctx.spell.id == HEAL || raw <= effective || !has_aura(world, ctx.caster, TALENT) {
         return;
     }
-    let percent = super::script_effect_value(world, ctx.caster, TALENT, 0) / 100.0;
-    let amount = (raw - effective) * percent;
+    // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: four isolated pools yield 15%
+    // (14513->2177, 20233->3035, 103057->15458, 227668->34150).
+    // DB2 70448 says 20%; this is probably a hotfix. Remove the override
+    // when a newer DB2 or hotfix value matches retail.
+    let amount = (raw - effective) * 0.15;
     if let Some(mut pool) = world.get_mut::<PietyPool>(ctx.caster) {
         pool.0 += amount;
     } else {
