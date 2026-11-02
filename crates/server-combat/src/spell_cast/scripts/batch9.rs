@@ -686,7 +686,8 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
                     && world
                         .get::<crate::spell_cast::summon::SummonedCreature>(unit)
                         .is_none()
-                    && world.get::<crate::zones::TempSummon>(unit).is_none());
+                    && (world.get::<crate::followers::Follower>(unit).is_some()
+                        || world.get::<crate::zones::TempSummon>(unit).is_none()));
             eligible_rain_target
                 && (world.get::<SurgingRainTotem>(entity).is_some()
                     || world
