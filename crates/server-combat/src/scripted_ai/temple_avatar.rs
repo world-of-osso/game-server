@@ -237,7 +237,13 @@ impl CreatureAi for Add {
         }
         while let Some(spell) = self.events.execute_event() {
             match spell {
-                TAINTED_STRIKE | FLAME_SHOCK => ctx.do_cast_victim(spell),
+                TAINTED_STRIKE => {
+                    ctx.do_cast_victim(spell);
+                    // WCL M4cdBNJkTjavYgQV/11 pull12: second Guardian starts
+                    // successive Tainted Strikes 10.097s apart.
+                    self.events.repeat(10_097);
+                }
+                FLAME_SHOCK => ctx.do_cast_victim(spell),
                 LATENT_HEX => ctx.do_cast_self(spell),
                 _ => {}
             }

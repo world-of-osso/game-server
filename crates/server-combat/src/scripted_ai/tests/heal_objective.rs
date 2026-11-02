@@ -94,8 +94,10 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
         h.inbox(0)
             .spell_gos
             .iter()
-            .any(|go| go.caster == guardian.to_bits() && go.spell_id == 1300803),
-        "Guardian must cast Tainted Strike"
+            .filter(|go| go.caster == guardian.to_bits() && go.spell_id == 1300803)
+            .count()
+            >= 2,
+        "Guardian must repeat Tainted Strike"
     );
     let mut actors: Vec<_> = h
         .app
