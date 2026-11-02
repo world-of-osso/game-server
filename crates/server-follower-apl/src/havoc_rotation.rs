@@ -70,18 +70,7 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
-        let prepared = self.prepare(world, actor, targets)?;
-        let facts = HavocFacts {
-            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
-                .with_targets(targets.first().copied(), targets),
-            equipment: &self.equipment,
-            world,
-            actor,
-        };
-        match self
-            .driver
-            .poll_precombat(&facts, &prepared, &self.equipment)?
-        {
+        match self.poll_precombat(world, actor, targets)? {
             PrecombatPoll::Waiting => {
                 Err("Havoc precombat polled before native setup finished".into())
             }
@@ -91,6 +80,24 @@ impl Rotation {
                 Ok(true)
             }
         }
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        let prepared = self.prepare(world, actor, targets)?;
+        let facts = HavocFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+            world,
+            actor,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn prepare(
@@ -190,11 +197,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.precombat_step(world, actor, targets)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        Rotation::poll_precombat(self, world, actor, targets)
     }
 
     fn execute(
