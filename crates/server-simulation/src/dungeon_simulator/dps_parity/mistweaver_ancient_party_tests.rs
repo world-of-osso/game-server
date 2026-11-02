@@ -1,4 +1,4 @@
-use crate::spell_cast::test_harness::{ObservedCombatEvents, spawn_player};
+use crate::spell_cast::test_harness::{ObservedCombatEvents, spawn_npc, spawn_player};
 use shared::components::{Health, Position, UnitFactionTemplate, UnitIsPet};
 use shared::protocol::CombatLogKind;
 
@@ -50,14 +50,15 @@ fn ancient_teachings_heals_followers_but_not_pets_or_spell_summons() {
     );
 
     let pet = spawn_player(&mut party.app, 3, position.x);
-    let summon = spawn_player(&mut party.app, 10, position.x);
+    let summon = spawn_npc(&mut party.app, position.x);
+    let map = *party.app.world().get::<crate::maps::InMap>(healer).unwrap();
     for unit in [pet, summon] {
         party.app.world_mut().entity_mut(unit).remove::<Position>();
         party
             .app
             .world_mut()
             .entity_mut(unit)
-            .insert((position, faction.clone()));
+            .insert((position, faction.clone(), map));
         party
             .app
             .world_mut()
