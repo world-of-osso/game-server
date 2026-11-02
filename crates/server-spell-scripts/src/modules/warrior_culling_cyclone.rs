@@ -1,6 +1,6 @@
 //! Culling Cyclone's single-target Bladestorm bonus.
-use bevy::prelude::*;
 use super::combat;
+use bevy::prelude::*;
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::SpellScriptHook};
 
 pub(super) const HOOKS: &[SpellScriptHook] =

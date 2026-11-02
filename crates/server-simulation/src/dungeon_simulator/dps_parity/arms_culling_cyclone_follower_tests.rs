@@ -22,9 +22,10 @@ fn follower_arms_culling_cyclone_increases_single_target_bladestorm() {
                 |aura| aura.spell_id == 444778,
             );
         }
-        let action = crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 227847)
+        let action =
+            crate::spell_cast::knowledge::resolve_actor_action(app.world(), actor, 227847).unwrap();
+        crate::spell_cast::creature_cast(app.world_mut(), actor, action, Some(actor), false)
             .unwrap();
-        crate::spell_cast::creature_cast(app.world_mut(), actor, action, Some(actor), false).unwrap();
         for _ in 0..500 {
             app.update();
             if !crate::auras::has_aura(app.world(), actor, action) {
@@ -51,5 +52,8 @@ fn follower_arms_culling_cyclone_increases_single_target_bladestorm() {
     let plain: i64 = base.iter().sum();
     let buffed: i64 = enhanced.iter().sum();
     let ratio = buffed as f64 / plain as f64;
-    assert!((ratio - 1.2).abs() < 0.002, "Bladestorm damage ratio {ratio}");
+    assert!(
+        (ratio - 1.2).abs() < 0.002,
+        "Bladestorm damage ratio {ratio}"
+    );
 }
