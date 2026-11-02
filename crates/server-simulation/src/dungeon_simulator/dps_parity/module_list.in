@@ -233,6 +233,7 @@ mod feral_aggravate_wounds_follower_tests;
 mod feral_apex_follower_tests;
 mod feral_apex_spender_follower_tests;
 mod feral_burst_tests;
+mod feral_claw_rampage_follower_tests;
 mod feral_convoke_tests;
 mod feral_dreadful_wound_follower_tests;
 mod feral_frantic_momentum_follower_tests;
