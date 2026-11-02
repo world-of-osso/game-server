@@ -27,6 +27,7 @@ pub(crate) mod aura_state;
 pub(crate) mod base_armor;
 mod binding_heals;
 mod charred_warblades;
+pub mod bloodlust;
 pub mod combat_stats;
 pub(crate) mod consume_flame;
 pub(crate) mod damage_shield;

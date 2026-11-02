@@ -219,6 +219,25 @@ fn spawn_configured_party(
     )
 }
 
+/// Spawn the simulator's ordinary selected party at an explicit level.
+#[cfg(any(test, feature = "test-support"))]
+pub fn spawn_test_party(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    specs: [u32; 5],
+) -> Result<Party, String> {
+    spawn_profiled_party(
+        world,
+        copy,
+        at,
+        level,
+        read_party_profiles(specs)?,
+        GearSource::Journal,
+    )
+}
+
 /// Spawn an explicitly selected class party using the qualified key-band builds.
 pub fn spawn_keystone_party(
     world: &mut World,
