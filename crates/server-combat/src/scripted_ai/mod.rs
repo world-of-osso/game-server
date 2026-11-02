@@ -77,6 +77,7 @@ mod skarmorak;
 pub mod smart_ai;
 pub(crate) mod tagged_trash_intro;
 mod talondras;
+mod temple_of_sethraliss;
 pub mod the_stockade;
 mod treemouth;
 pub(crate) mod tww_rookery;
@@ -421,6 +422,9 @@ pub struct CreatureAiState {
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names
 /// without a ported script.
 fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<dyn CreatureAi>> {
+    if let Some(ai) = temple_of_sethraliss::creature_ai(world, creature) {
+        return Some(ai);
+    }
     if darkness::is_darkness(world, creature) {
         return darkness::creature_ai(world, creature);
     }

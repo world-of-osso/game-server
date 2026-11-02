@@ -171,6 +171,8 @@ mod skarmorak;
 mod stonevault_doors;
 #[path = "talondras.rs"]
 mod talondras;
+#[path = "temple_of_sethraliss.rs"]
+mod temple_of_sethraliss;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
