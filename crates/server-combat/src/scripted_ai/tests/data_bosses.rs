@@ -752,6 +752,10 @@ fn exercise_mythic_follower_reconnect(after_grace: bool) {
         key.clone(),
     )
     .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::lfg::PlayerLfgState::default());
     let definition = ::server::mythic_plus_catalog::load_azure(&db)
         .unwrap()
         .unwrap();
