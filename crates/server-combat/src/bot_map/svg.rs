@@ -80,7 +80,7 @@ fn heading(trace: &Trace, left: f32, top: f32) -> String {
 }
 
 fn spawns(trace: &Trace, scene: &Scene) -> String {
-    let states: BTreeMap<u32, bool> = trace
+    let states: BTreeMap<u64, bool> = trace
         .rows
         .iter()
         .filter(|row| row.event == "spawn_state")

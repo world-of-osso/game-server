@@ -12,7 +12,7 @@ pub struct Row {
     pub revision: Option<String>,
     pub map_id: Option<u32>,
     pub capture_gaps: Option<Vec<String>>,
-    pub spawn_guid: Option<u32>,
+    pub spawn_guid: Option<u64>,
     pub alive: Option<bool>,
 }
 
