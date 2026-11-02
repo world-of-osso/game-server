@@ -597,6 +597,32 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
         })
         .id();
     crate::combat_refs::set_in_combat_with(app.world_mut(), player, enemy);
+    let follower = app
+        .world_mut()
+        .spawn((
+            crate::followers::Follower {
+                owner: player,
+                profile: crate::followers::Profile {
+                    entry: 1,
+                    name: "Guardian".into(),
+                    class_id: 1,
+                    spec_id: 73,
+                    role: shared::group::GroupRole::Tank,
+                    attack_spell: 0,
+                    cooldown_spell: 0,
+                    heal_spell: 0,
+                    taunt_spell: 0,
+                    form_spell: 0,
+                    melee: true,
+                },
+            },
+            Health {
+                current: 900.0,
+                max: 1000.0,
+            },
+            crate::combat::AutoAttack::new(enemy),
+        ))
+        .id();
     crate::networking::install_disconnect_fixture(&mut app);
     app.world_mut()
         .entity_mut(connection)
@@ -614,6 +640,13 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
         player,
         enemy
     ));
+    crate::followers::update_ai(app.world_mut());
+    assert!(
+        app.world()
+            .get::<crate::combat::AutoAttack>(follower)
+            .is_none()
+    );
+    assert!(crate::followers::acting_follower(app.world(), follower).is_none());
     assert_eq!(app.world().get::<Health>(enemy).unwrap().current, 250.0);
     let position = *app
         .world()
@@ -640,6 +673,13 @@ fn disconnected_character_reconnects_to_live_entity_during_grace() {
         .send::<AuthChannel>(SelectCharacter { character_id });
     let restored = finish_character_selection(&mut app, replacement);
     assert_eq!(restored, player);
+    assert_eq!(
+        crate::followers::acting_follower(app.world(), follower)
+            .unwrap()
+            .owner,
+        player
+    );
+    assert_eq!(app.world().get::<Health>(follower).unwrap().current, 900.0);
     assert!(crate::combat_refs::has_active_reference_to(
         app.world(),
         restored,
