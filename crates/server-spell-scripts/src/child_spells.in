@@ -779,3 +779,9 @@ D	subtlety_clone.rs	launch_due	launch_triggered_spell	&clone.spell	1	1269205,126
 D	subtlety_finishers.rs	dispatch_shadow_finisher	launch_triggered_spell	&child	1	319190,328082
 D	subtlety_secret.rs	launch_due_clones	launch_triggered_spell	&spell	1	282449
 D	subtlety_secret.rs	launch_player	launch_triggered_spell	&spell	1	280720
+D	survival.rs	apply_self	AuraApplication	spell_id	1	260286,1273155
+D	survival_buffs.rs	grant_self_buff	try_cast_triggered	spell	1	259388,1253750,1280140,1292687
+D	survival_wildfire.rs	apply_periodic_payload	launch_triggered_spell	&spell	1	269747,1253171
+D	survival_wildfire.rs	apply_periodic_payload	load_triggered_spell	payload	1	269747,1253171
+D	unholy_apocalypse_rune.rs	on_hit	try_cast_triggered	spell	1	327092,327093,327095,327096
+D	unholy_army.rs	summon_apocalypse_now_riders	try_cast_triggered	spell	1	444248,444251,444252,444254
