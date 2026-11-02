@@ -35,6 +35,7 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
         app.world_mut()
             .entity_mut(actor)
             .insert(crate::networking::CombatTarget(Some(target)));
+        let mut observed = Vec::new();
         for _ in 0..32 {
             crate::spell_cast::powers::change_power(
                 app.world_mut(),
@@ -47,7 +48,32 @@ fn follower_shadow_cthun_summons_channeling_guardians_and_earns_insanity() {
             for _ in 0..100 {
                 app.update();
             }
+            let mut query = app.world_mut().query::<(
+                Entity,
+                &crate::spell_cast::summon::SummonedCreature,
+                &shared::components::Npc,
+            )>();
+            let pets: Vec<_> = query
+                .iter(app.world())
+                .filter(|(_, summon, _)| {
+                    summon.owner == actor && matches!(summon.spell_id, 377355 | 377357)
+                })
+                .map(|(pet, summon, npc)| {
+                    (
+                        pet,
+                        summon.spell_id,
+                        npc.template_id,
+                        app.world()
+                            .get::<shared::casting::CastState>(pet)
+                            .map(|cast| cast.spell_id),
+                    )
+                })
+                .collect();
+            if !pets.is_empty() {
+                observed.push(pets);
+            }
         }
+        println!("CTHUN_PETS {observed:?}");
         let timers = app
             .world()
             .get::<crate::auras::ActiveAuras>(actor)
