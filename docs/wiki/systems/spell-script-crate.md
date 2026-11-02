@@ -8,7 +8,7 @@ Each downstream module exports a const `HOOKS` slice. Add a new file and one alp
 
 Run `python3 scripts/format-spell-scripts.py` to format, or add `--check` to verify formatting. Cargo's formatter does not discover declarations inside `register_modules!`; this command runs Cargo formatting plus an explicit rustfmt pass over leaf and nested module sources. `run-tests.sh` enforces the check before running tests.
 
-The registry carries static slices and function pointers, not a dependency from combat to script implementations. Iterators copy static registrations out of the resource before callbacks mutate the World. Relationship execution remains in combat; all 37 former `policies.rs` rows live in downstream per-module tables.
+The registry carries static slices and function pointers, not a dependency from combat to script implementations. It lists hooks by kind once per module list, in module order, so dispatch reads only one kind's hooks. Iterators copy static registrations out of the resource before callbacks mutate the World. Relationship execution remains in combat; all 37 former `policies.rs` rows live in downstream per-module tables.
 
 ## First slice
 

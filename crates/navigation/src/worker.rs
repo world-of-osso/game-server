@@ -136,8 +136,30 @@ pub struct Worker {
 }
 
 impl Worker {
+    /// Each baked map's hierarchy is read and verified before requests are processed.
     pub fn new(root: PathBuf) -> Self {
-        let (lanes, failure) = match preload_maps(&root) {
+        Self::start(&root, true)
+    }
+
+    /// Headless simulation: submissions and cancels wait for `poll`, so each entity's
+    /// latest request reaches its map worker once, after any cancel; superseded requests
+    /// never update a retained plan and results do not depend on worker-thread timing.
+    /// A map's hierarchy is read on its first hierarchy route instead of at startup, so
+    /// a run verifies only the maps it routes on.
+    pub fn headless(root: PathBuf) -> Self {
+        let mut worker = Self::start(&root, false);
+        for lane in worker
+            .lanes
+            .values_mut()
+            .chain(std::iter::once(&mut worker.unbaked))
+        {
+            lane.defer = true;
+        }
+        worker
+    }
+
+    fn start(root: &Path, preload_hierarchy: bool) -> Self {
+        let (lanes, failure) = match preload_maps(root, preload_hierarchy) {
             Ok(maps) => (
                 maps.into_iter()
                     .map(|(id, map)| (id, WorkerLane::new(BTreeMap::from([(id, map)]))))
@@ -156,19 +178,6 @@ impl Worker {
             current: BTreeMap::new(),
             pending: BTreeMap::new(),
             failure,
-        }
-    }
-
-    /// Hold submissions and cancels until `poll`. Each entity's latest request then
-    /// reaches its map worker once, after any cancel, so superseded requests never
-    /// update a retained plan and results do not depend on worker-thread timing.
-    pub fn defer_dispatch(&mut self) {
-        for lane in self
-            .lanes
-            .values_mut()
-            .chain(std::iter::once(&mut self.unbaked))
-        {
-            lane.defer = true;
         }
     }
 
@@ -436,7 +445,7 @@ impl Drop for WorkerLane {
 
 type MapCache = BTreeMap<u32, Result<Option<NavigationMap>, String>>;
 
-fn preload_maps(root: &Path) -> Result<MapCache, String> {
+fn preload_maps(root: &Path, preload_hierarchy: bool) -> Result<MapCache, String> {
     let entries = match std::fs::read_dir(root) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(BTreeMap::new()),
@@ -454,7 +463,9 @@ fn preload_maps(root: &Path) -> Result<MapCache, String> {
         };
         let result = open_baked_map(&entry.path()).map(|map| {
             map.map(|mut map| {
-                map.preload_hierarchy();
+                if preload_hierarchy {
+                    map.preload_hierarchy();
+                }
                 map
             })
         });

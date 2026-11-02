@@ -1,3 +1,4 @@
+- 2026-11-02: Recorded [headless simulation performance](investigations/headless-simulation-performance.md): override, navigation-startup, hook-index and movement-state speedups with byte-identical keystone and parity output.
 - 2026-11-01: Updated [Mythic Keystone runtime](systems/mythic-plus.md) for cited timing, observed US affix weeks, refreshable runtime data and qualified scaling; runtime verification pending.
 - 2026-10-31: Recorded [Elemental class-follower DPS parity](systems/dungeon-simulator.md#elemental-class-follower-dps-parity--2026-10-31), landed fixes and 10-seed confidence intervals.
 - 2026-10-31: Added [encounter boss immunity](systems/encounter-boss-immunity.md) from retail log counts.
