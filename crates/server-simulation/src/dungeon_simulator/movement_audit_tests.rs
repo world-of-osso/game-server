@@ -36,8 +36,11 @@ fn populated_pack_movement_matches_detour() {
     let mut same_position = 0_u64;
     let mut mismatches = Vec::new();
     let mut max_error = 0.0_f32;
-    for (index, a) in packs.iter().enumerate() {
-        for b in &packs[index + 1..] {
+    for a in &packs {
+        for b in &packs {
+            if a.id == b.id {
+                continue;
+            }
             let from = a.point();
             let to = b.point();
             if from == to {
@@ -82,7 +85,7 @@ fn populated_pack_movement_matches_detour() {
             }
         }
     }
-    let summary = json!({"map": graph.map_id, "scope": "unordered populated-pack pairs", "packs": packs.len(), "compared": compared, "both_unreachable": both_unreachable, "same_position": same_position, "max_abs_error_yards": max_error, "mismatches": mismatches});
+    let summary = json!({"map": graph.map_id, "scope": "ordered populated-pack pairs", "packs": packs.len(), "compared": compared, "both_unreachable": both_unreachable, "same_position": same_position, "max_abs_error_yards": max_error, "mismatches": mismatches});
     let output = std::env::var_os("MOVEMENT_AUDIT_OUTPUT").expect("audit output path");
     std::fs::write(output, serde_json::to_vec_pretty(&summary).unwrap()).unwrap();
     assert_eq!(
