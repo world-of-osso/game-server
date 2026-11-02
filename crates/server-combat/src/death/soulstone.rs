@@ -23,9 +23,10 @@ pub(crate) fn remember_on_death(world: &mut World, unit: Entity) {
     let Some(auras) = world.get::<crate::auras::ActiveAuras>(unit) else {
         return;
     };
-    let Some(store) = world.get_resource::<SpellStore>() else {
+    if auras.iter().next().is_none() {
         return;
-    };
+    }
+    let store = world.resource::<SpellStore>();
     let found = auras.iter().find_map(|aura| {
         store
             .get(aura.spell_id)
