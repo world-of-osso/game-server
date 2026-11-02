@@ -1,6 +1,6 @@
 //! Thin literal266 adapter. Production followers retain their native kit.
 use crate::literal_rotation::{
-    self, Driver,
+    self, Driver, PrecombatPoll,
     default_pet::ConfiguredPet,
     equipment::Equipment,
     execution::{NativeAction, Prepared},
@@ -60,16 +60,42 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
-        if !precombat {
-            command_minions(world, actor, targets);
+        if precombat {
+            return match self.poll_precombat(world, actor, targets)? {
+                PrecombatPoll::Waiting => Ok(true),
+                PrecombatPoll::Finished => Ok(false),
+                PrecombatPoll::Selected { action, execution } => {
+                    self.driver.execute(world, actor, action, execution)?;
+                    Ok(true)
+                }
+            };
         }
+        command_minions(world, actor, targets);
         let prepared = self.read_prepared(world, actor, targets)?;
-        let Some((action, execution)) = self.select(world, actor, targets, precombat, &prepared)?
-        else {
+        let Some((action, execution)) = self.select(world, actor, targets, &prepared)? else {
             return Ok(false);
         };
         self.driver.execute(world, actor, action, execution)?;
         Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let summons = read_summons(world, actor);
+        let facts = DemoFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+            summons,
+            precombat: true,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn read_prepared(
@@ -100,7 +126,6 @@ impl Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-        precombat: bool,
         prepared: &Prepared,
     ) -> Result<Option<(Action, literal_rotation::execution::Execution)>, String> {
         let summons = read_summons(world, actor);
@@ -109,10 +134,10 @@ impl Rotation {
                 .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
             summons,
-            precombat,
+            precombat: false,
         };
-        let list = if precombat { "precombat" } else { "default" };
-        self.driver.select(list, &facts, prepared, &self.equipment)
+        self.driver
+            .select("default", &facts, prepared, &self.equipment)
     }
 
     pub fn report(&self) -> Value {
@@ -274,12 +299,8 @@ impl crate::follower::SpecRotation for Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+    ) -> Result<PrecombatPoll, String> {
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(
