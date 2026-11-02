@@ -35,15 +35,26 @@ fn spin(selected: bool, count: usize) -> Vec<i64> {
             break;
         }
     }
-    let events = &app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-    let hits: Vec<_> = events.iter().filter(|event| {
-        event.source == Some(actor.to_bits())
-            && enemies.iter().any(|enemy| event.target == Some(enemy.to_bits()))
-            && event.spell_id == Some(50622)
-            && event.amount > 0
-    }).collect();
+    let events = &app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let hits: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && enemies
+                    .iter()
+                    .any(|enemy| event.target == Some(enemy.to_bits()))
+                && event.spell_id == Some(50622)
+                && event.amount > 0
+        })
+        .collect();
     for enemy in &enemies {
-        assert!(hits.iter().any(|event| event.target == Some(enemy.to_bits())));
+        assert!(
+            hits.iter()
+                .any(|event| event.target == Some(enemy.to_bits()))
+        );
     }
     hits.iter().map(|event| i64::from(event.amount)).collect()
 }
@@ -56,7 +67,10 @@ fn assert_multiplier(count: usize, expected: f64) {
     let plain: i64 = base.iter().sum();
     let buffed: i64 = enhanced.iter().sum();
     let ratio = buffed as f64 / plain as f64;
-    assert!((ratio - expected).abs() < 0.002, "Bladestorm damage ratio {ratio}");
+    assert!(
+        (ratio - expected).abs() < 0.002,
+        "Bladestorm damage ratio {ratio}"
+    );
 }
 
 #[test]
