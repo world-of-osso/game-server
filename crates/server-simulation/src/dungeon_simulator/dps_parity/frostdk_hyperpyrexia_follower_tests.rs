@@ -16,6 +16,10 @@ fn frost_two_hand_strikes_produce_hyperpyrexia() {
     for _ in 0..30 {
         crate::spell_cast::cast_triggered(app.world_mut(), actor, 49143, Some(target), 1);
     }
+    assert!(
+        crate::auras::has_aura(app.world(), target, 458169),
+        "Frost Strike impacts must apply the residual before the follower AI runs"
+    );
     for _ in 0..200 {
         app.update();
     }
