@@ -243,6 +243,16 @@ impl FollowOwner {
             moving: false,
         }
     }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn set_moving(&mut self, moving: bool) {
+        self.moving = moving;
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn is_moving(&self) -> bool {
+        self.moving
+    }
 }
 
 /// FOLLOWER_PARTY_FOLLOW_SLOTS: project spacing policy, not Retail-authored angles.
