@@ -650,3 +650,14 @@ D	druid_eclipse.rs	apply_eclipse	cast_triggered_with_overrides	spell	1	48517,485
 D	druid_fluid_form.rs	shift	cast_triggered	form	1	768,5487
 D	druid_fury_of_elune.rs	update_fields	launch_triggered_spell_with_primary	&spell	1	211545,394111
 D	druid_fury_of_elune.rs	update_fields	load_triggered_spell	damage	1	211545,394111
+D	echo_policies.rs	queue_echo	launch_triggered_spell	&child	1	24275,53385
+D	echo_policies.rs	queue_echo	load_triggered_spell	policy.payload	1	24275,53385
+D	elemental.rs	grant_blast_buff	try_cast_triggered	buff	1	118522,173183,173184
+D	elemental_primals.rs	summon_elemental	try_cast_triggered	root	1	118291,157299,157319,188592
+D	empower_evoker.rs	grant_empower_buffs	try_cast_triggered	buff	1	376850,436336
+D	empower_evoker.rs	release	execute_cast	&child	1	357209,359077
+D	preservation_empower.rs	release_dream	execute_cast	&heal	1	355941
+D	preservation_empower.rs	release_spirit	execute_cast	&heal	1	367230
+D	shadow_collapse.rs	burst	launch_planned_spell	&damage	1	448405
+D	shadow_apparitions.rs	launch_apparition	launch_planned_spell	&missile	1	148859,1264175
+D	shadow_apparitions.rs	launch_apparition	load_triggered_spell	parent	1	148859,1264175
