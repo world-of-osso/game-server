@@ -22,6 +22,8 @@ mod azure_positioning_tests;
 mod azure_throughput_tests;
 #[path = "keystone_cohesion_tests.rs"]
 mod keystone_cohesion_tests;
+#[path = "recovery_admission_tests.rs"]
+mod recovery_admission_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 
