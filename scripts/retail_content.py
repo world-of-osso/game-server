@@ -334,6 +334,9 @@ CLASS_SUMMON_POLICY_CHILDREN = (
     # SimC76f8118 sc_priest_shadow.cpp2206–2214: full Yogg counter summons
     # native373277, whose effect28 supplies authentic Thing From Beyond189988.
     (373276, 373277),
+    # SimC76f8118 sc_priest.cpp4263–4276: C'Thun's native summon spells;
+    # their Effect28 supplies the creature entries.
+    (377349, 377355), (377349, 377357),
     # SimC76f8118 sc_priest.cpp3463–3464: Voidwraith talent uses native summon 451235.
     (451234, 451235),
     # SimC76f8118 sc_shaman.cpp8638–8640/8752–8755; native Effect28
