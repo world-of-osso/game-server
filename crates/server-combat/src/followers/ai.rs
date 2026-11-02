@@ -53,7 +53,7 @@ pub(super) fn update(world: &mut World) {
         .map(|(unit, _)| unit)
         .collect();
     for unit in holding {
-        crate::spell_cast::cancel_cast(world, unit);
+        crate::spell_cast::stop_all_casts(world, unit);
         crate::combat::attack_stop(world, unit);
         hold_combat(world, unit);
     }
