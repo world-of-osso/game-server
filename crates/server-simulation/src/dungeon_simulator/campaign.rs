@@ -242,6 +242,91 @@ fn keystone_owner_opens_first_hostile_pack() {
 
 #[test]
 #[ignore = "requires extracted Den Mythic graph and native navigation"]
+fn den_owner_tags_each_pack_while_previous_pack_is_alive() {
+    use shared::protocol::CombatLogKind;
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2825,
+            level: 2,
+            specs: [66, 105, 262, 63, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let group = run.chain_groups.as_ref().unwrap()[0].clone();
+    assert!(group.len() >= 2);
+    let actor_packs: std::collections::HashMap<_, _> = run
+        .graph
+        .packs
+        .iter()
+        .filter(|pack| group.contains(&pack.id))
+        .flat_map(|pack| {
+            pack.spawns.iter().filter_map(|spawn| {
+                run.actors
+                    .get(&spawn.guid)
+                    .map(|unit| (unit.to_bits(), pack.id))
+            })
+        })
+        .collect();
+    let mut first_hits = std::collections::HashMap::new();
+    let mut cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..10000 {
+        run.control().unwrap();
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        for event in &events[cursor..] {
+            if event.kind != CombatLogKind::Damage || event.amount <= 0 {
+                continue;
+            }
+            let Some(pack) = event
+                .target
+                .and_then(|target| actor_packs.get(&target))
+                .copied()
+            else {
+                continue;
+            };
+            if let std::collections::hash_map::Entry::Vacant(entry) = first_hits.entry(pack) {
+                assert_eq!(
+                    event.source,
+                    Some(owner.to_bits()),
+                    "pack {pack} must be tagged by the owner"
+                );
+                entry.insert(event.target.unwrap());
+                if first_hits.len() == 2 {
+                    assert!(
+                        first_hits.values().any(|target| {
+                            Entity::try_from_bits(*target).is_some_and(|unit| {
+                                unit.to_bits() != event.target.unwrap()
+                                    && crate::spell_cast::targets::is_alive(run.app.world(), unit)
+                            })
+                        }),
+                        "the first pack must still be alive when the owner tags the next"
+                    );
+                    return;
+                }
+            }
+        }
+        cursor = events.len();
+    }
+    panic!("owner did not tag two live chain packs");
+}
+
+#[test]
+#[ignore = "requires extracted Den Mythic graph and native navigation"]
 fn den_pyre_cohesion_waits_for_tank_to_use_transport() {
     let mut run = spawn_run_mode(
         1,
@@ -2688,6 +2773,8 @@ struct Run {
     healer_metrics: super::healer_metrics::Recorder,
     pet_recorder: super::diagnostics::PetRecorder,
     keystone: Option<super::keystone::State>,
+    chain_groups: Option<Vec<Vec<u32>>>,
+    chain_group: usize,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -3101,6 +3188,7 @@ fn spawn_run_mode_record(
             ));
         }
     }
+    let mut chain_groups = None;
     let keystone = match (options, planned) {
         (Some(options), Some((definition, _))) => {
             let hostile_sources =
@@ -3112,6 +3200,13 @@ fn spawn_run_mode_record(
                 &hostile_sources,
             )?;
             graph.route = plan.steps.clone();
+            if graph.map_id == 2825 {
+                chain_groups = Some(super::keystone_route::den_chain_groups(
+                    &graph,
+                    &definition,
+                    &hostile_sources,
+                )?);
+            }
             app.insert_resource(super::Space(graph.clone()));
             let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
                 .map(std::path::PathBuf::from)
@@ -3146,6 +3241,8 @@ fn spawn_run_mode_record(
         healer_metrics,
         pet_recorder: Default::default(),
         keystone,
+        chain_groups,
+        chain_group: 0,
         report: Report {
             seed,
             status: "running".into(),
@@ -3562,17 +3659,31 @@ impl Run {
         if self.return_to_party()? {
             return Ok(());
         }
-        if self.wait_for_tank()? {
+        let fighting =
+            crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner);
+        if !(self.chain_groups.is_some() && fighting) && self.wait_for_tank()? {
             return Ok(());
         }
-        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
+        if self.chain_groups.is_none() && fighting {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
                 .remove::<MoveIntent>();
             return Ok(());
         }
-        let Some((pack_id, target)) = self.next_pack() else {
+        let next = if self.chain_groups.is_some() {
+            self.next_chain_pack(fighting)
+        } else {
+            self.next_pack()
+        };
+        if next.is_none() && fighting {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(());
+        }
+        let Some((pack_id, target)) = next else {
             if self.has_living_required_boss() {
                 self.app
                     .world_mut()
@@ -3708,6 +3819,10 @@ impl Run {
             })
             .map(|spawn| spawn.guid)
             .collect();
+        if self.chain_groups.is_some() && fighting {
+            self.record_pull(pack_id, "Owner chain pull".into());
+            return self.drive_owner_opening(target);
+        }
         let (allowed, decision) = match crate::followers::simulator::pull(
             self.app.world_mut(),
             self.party.tank,
@@ -3960,8 +4075,30 @@ impl Run {
         Err(format!("unregistered transport {source}->{destination}"))
     }
 
+    fn next_chain_pack(&mut self, fighting: bool) -> Option<(u32, Entity)> {
+        loop {
+            let group = self.chain_groups.as_ref()?.get(self.chain_group)?;
+            if let Some(next) = self.next_pack_in(Some(group), true) {
+                return Some(next);
+            }
+            if fighting || self.next_pack_in(Some(group), false).is_some() {
+                return None;
+            }
+            self.chain_group += 1;
+        }
+    }
+
     fn next_pack(&self) -> Option<(u32, Entity)> {
+        self.next_pack_in(None, false)
+    }
+
+    fn next_pack_in(&self, group: Option<&[u32]>, skip_engaged: bool) -> Option<(u32, Entity)> {
         let world = self.app.world();
+        let engaged = if skip_engaged {
+            crate::followers::simulator::active_enemies(world, self.party.owner)
+        } else {
+            Vec::new()
+        };
         let completed = world
             .get::<crate::maps::InMap>(self.party.owner)
             .map(|map| {
@@ -3971,6 +4108,9 @@ impl Run {
             })
             .unwrap_or(0);
         self.graph.route.iter().find_map(|step| {
+            if group.is_some_and(|group| !group.contains(&step.pack)) {
+                return None;
+            }
             let pack = self.graph.packs.iter().find(|pack| pack.id == step.pack)?;
             let target = pack
                 .spawns
@@ -4000,6 +4140,7 @@ impl Run {
                             .get(&spawn.entry)
                             .is_none_or(|bit| completed & (1 << *bit) == 0);
                     pending
+                        && !engaged.contains(actor)
                         && crate::spell_cast::targets::is_alive(world, *actor)
                         && (self.graph.boss_entries().contains(&spawn.entry)
                             || self
