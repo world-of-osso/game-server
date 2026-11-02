@@ -174,6 +174,16 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<Decision>, String> {
+        if channel.spell == 15407 && std::env::var_os("FOLLOWER_DEBUG_FLAY_CLOCK").is_some() {
+            eprintln!(
+                "FLAY_CLOCK elapsed={:.3} interval={:.3} timer={:.3} last={} paid={:?}",
+                cast.elapsed,
+                cast.channel_tick_interval,
+                cast.channel_tick_timer,
+                channel.last_tick,
+                facts.value_for(&channel.action, "ticks")
+            );
+        }
         if !channel.observe_tick(cast)? {
             return Ok(None);
         }
