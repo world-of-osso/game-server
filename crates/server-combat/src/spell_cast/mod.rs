@@ -4542,6 +4542,10 @@ fn base_cooldowns(spell: &SpellInfo) -> (u32, u32) {
         .map_or((0, 0), |cd| (cd.recovery_ms, cd.category_recovery_ms));
     let spell_ms = if spell.id == mobile_banking::MOBILE_BANKING {
         shared::guild_perks::MOBILE_BANKING_COOLDOWN_2H
+    } else if matches!(spell.id, 227847 | 446035) {
+        // INFERRED_SIMC: action.cpp:710–719 normally keeps recharge and internal
+        // cooldown separate; sc_warrior.cpp:3241 explicitly clears Bladestorm's.
+        0
     } else {
         spell_ms
     };
