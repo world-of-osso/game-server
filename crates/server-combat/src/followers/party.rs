@@ -920,6 +920,15 @@ mod copy_tests {
         app.world_mut().entity_mut(connection).remove::<Connected>();
         app.world_mut().flush();
         app.update();
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        app.update();
         assert!(app.world().get_entity(owner).is_err());
         advance_runs(app.world_mut());
         super::super::update_ai(app.world_mut());
@@ -1066,6 +1075,17 @@ mod copy_tests {
             .remove::<Connected>();
         h.app.world_mut().flush();
         h.app.update();
+        assert!(
+            h.app
+                .world()
+                .get::<crate::networking::DisconnectedPlayer>(old_owner)
+                .is_some()
+        );
+        h.app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
+        h.app.update();
         assert!(h.app.world().get_entity(old_owner).is_err());
 
         let owner = crate::spell_cast::test_harness::spawn_player(&mut h.app, 8, 0.0);
@@ -1114,6 +1134,15 @@ mod copy_tests {
             .id();
         app.world_mut().entity_mut(connection).remove::<Connected>();
         app.world_mut().flush();
+        app.update();
+        assert!(
+            app.world()
+                .get::<crate::networking::DisconnectedPlayer>(owner)
+                .is_some()
+        );
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(60));
         app.update();
         assert!(app.world().get_entity(owner).is_err());
         app.world_mut()
