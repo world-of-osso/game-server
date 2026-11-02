@@ -1003,14 +1003,15 @@ fn divine_aegis(
 ) {
     // VERIFIED_WCL KWw69CqBnf3Tpk8L f4 a4: at 4502520, a fully
     // overhealed 99550 Radiance yields 30760 Aegis; at 4465960, a 734133
-    // raw Shadow Mend yields 226337 Aegis. SimC76f8118 uses effective healing.
+    // raw Shadow Mend yields 226337 Aegis. The same log has 1097 isolated
+    // critical Contrition 281469 heals without Aegis. SimC76f8118 uses effective healing.
     if !is_discipline(world, ctx.caster)
         || !crit
         || raw <= 0.0
         || !auras::has_aura(world, ctx.caster, 47515)
         || !matches!(
             ctx.spell.id,
-            2061 | 186263 | 47750 | 1232567 | 281469 | 270501 | 194509 | 421544
+            2061 | 186263 | 47750 | 1232567 | 194509 | 421544
         )
     {
         return;
