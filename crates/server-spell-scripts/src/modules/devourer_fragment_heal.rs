@@ -76,9 +76,27 @@ fn on_fragment_heal(world: &mut World, caster: Entity, target: Entity, depth: u8
     {
         error!(?caster, "native Feast of Souls was refused");
     }
+    let in_meta = combat::auras::has_aura(world, caster, 1217607);
+    // SimC76f8118 cpp3697–3700,12755: each fragment in Meta grants
+    // one Emptiness stack worth one hundredth of the native talent percent.
+    if in_meta
+        && world
+            .get::<KnownSpells>(caster)
+            .is_some_and(|known| known.contains(1242492))
+    {
+        let amount = spell_cast::scripts::script_effect_value(world, caster, 1242492, 0) / 100.0;
+        spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            caster,
+            1242504,
+            Some(caster),
+            depth + 1,
+            amount,
+        );
+    }
     // SimC76f8118 sc_demon_hunter.cpp3678–3698 selects the Meta stack
     // outside Meta and the selected Collapsing Star stack inside Meta.
-    let stack = if !combat::auras::has_aura(world, caster, 1217607) {
+    let stack = if !in_meta {
         1225789
     } else if world
         .get::<KnownSpells>(caster)

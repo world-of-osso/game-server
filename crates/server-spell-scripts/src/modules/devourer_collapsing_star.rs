@@ -134,4 +134,20 @@ fn after_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
             "native Collapsing Star damage 1221162 was refused"
         );
     }
+    // SimC76f8118 cpp6504–6509: Star Fragments spawns its native count per Star.
+    if world
+        .get::<KnownSpells>(caster)
+        .is_some_and(|known| known.contains(1240204))
+    {
+        let count = script_effect_value(world, caster, 1240204, 0) as usize;
+        for _ in 0..count {
+            combat::soul_fragments::spawn(
+                world,
+                caster,
+                combat::soul_fragments::FragmentKind::Lesser,
+                false,
+            )
+            .expect("native Star Fragment");
+        }
+    }
 }

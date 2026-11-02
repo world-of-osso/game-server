@@ -123,6 +123,9 @@ pub struct SpellInfo {
     /// Read-only to hit scripts; never inferred from an effect's self/area recipients.
     #[serde(skip)]
     pub cast_primary_target: Option<Entity>,
+    /// Number of projectiles emitted in the source cohort, retained through flight.
+    #[serde(skip)]
+    pub cast_projectile_cohort_size: Option<u32>,
     /// Validated explicit unit for this execution, distinct from controller metadata.
     #[serde(skip)]
     pub cast_executed_target: Option<Entity>,

@@ -7,9 +7,14 @@ const DEMONIAC: u32 = 426115;
 const CORE_CHANCE: u32 = 267102;
 const CORE_BUFF: u32 = 264173;
 const FADE_CAP: u32 = 21;
+const SPITEFUL_RECONSTITUTION: u32 = 428394;
+const ALTERNATE_IMP: u32 = 279910;
 
 #[derive(Component, Default)]
 struct FadeAttempts(u32);
+
+#[derive(Component, Default)]
+struct SpitefulAttempts(u32);
 
 pub(crate) fn on_natural_fade(world: &mut World, owner: Entity) {
     let Some(chance) = read_native_chance(world, owner, 0) else {
@@ -85,21 +90,45 @@ fn read_native_chance(world: &World, owner: Entity, index: u8) -> Option<f64> {
 }
 
 fn roll_energy_fade(world: &mut World, owner: Entity, chance: f64) -> bool {
-    let coefficient = calculate_fade_coefficient(chance);
-    if world.get::<FadeAttempts>(owner).is_none() {
-        world.entity_mut(owner).insert(FadeAttempts::default());
+    let mut entity = world.entity_mut(owner);
+    let mut attempts = entity.entry::<FadeAttempts>().or_default();
+    roll_accumulated(chance, &mut attempts.get_mut().0)
+}
+
+/// SimC76f8118 actions.cpp2939–2944: Core-powered Demonbolt can summon
+/// one alternate Wild Imp using a separate 21-attempt accumulated proc.
+pub(crate) fn on_core_demonbolt(world: &mut World, owner: Entity) {
+    if !crate::auras::has_aura(world, owner, SPITEFUL_RECONSTITUTION) {
+        return;
     }
-    let mut attempts = world.get_mut::<FadeAttempts>(owner).unwrap();
-    attempts.0 += 1;
-    let proc_chance = if attempts.0 >= FADE_CAP {
+    let chance = f64::from(crate::spell_cast::scripts::script_effect_value(
+        world,
+        owner,
+        SPITEFUL_RECONSTITUTION,
+        0,
+    )) / 100.0;
+    let won = {
+        let mut entity = world.entity_mut(owner);
+        let mut attempts = entity.entry::<SpitefulAttempts>().or_default();
+        roll_accumulated(chance, &mut attempts.get_mut().0)
+    };
+    if won {
+        crate::spell_cast::cast_triggered(world, owner, ALTERNATE_IMP, Some(owner), 1);
+    }
+}
+
+fn roll_accumulated(chance: f64, attempts: &mut u32) -> bool {
+    let coefficient = calculate_fade_coefficient(chance);
+    *attempts += 1;
+    let proc_chance = if *attempts >= FADE_CAP {
         1.0
     } else {
-        coefficient * f64::from(attempts.0)
+        coefficient * f64::from(*attempts)
     };
     if !crate::random::thread_rng().gen_bool(proc_chance.min(1.0)) {
         return false;
     }
-    attempts.0 = 0;
+    *attempts = 0;
     true
 }
 
