@@ -161,6 +161,76 @@ mod tests {
     use super::*;
 
     #[test]
+    fn world_creature_damage_overrides_have_matching_wcl_provenance() {
+        use std::collections::{BTreeMap, BTreeSet};
+
+        let data: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../content/dungeons/creature-damage-overrides.json"
+        ))
+        .unwrap();
+        let entries = data["overrides"].as_array().unwrap();
+        assert!(!entries.is_empty());
+        let mut expected = BTreeMap::new();
+        let mut maps = BTreeSet::new();
+        for entry in entries {
+            let map = entry["map"].as_u64().unwrap();
+            let id = entry["entry"].as_u64().unwrap();
+            assert_eq!(entry["provenance"], "INFERRED_WCL");
+            assert!(entry["n"].as_u64().unwrap() > 0);
+            assert!(entry["reports"].as_array().unwrap().len() >= 3);
+            assert_eq!(entry["iqr"].as_array().unwrap().len(), 2);
+            assert!(!entry["retire_when"].as_str().unwrap().is_empty());
+            assert!(
+                expected
+                    .insert((map, id), entry["value"].as_f64().unwrap())
+                    .is_none()
+            );
+            maps.insert(map);
+        }
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let mut actual = BTreeMap::new();
+        for map in maps {
+            let mut statement = db
+                .prepare(
+                    "SELECT DISTINCT d.entry,d.DamageModifier, \
+                 (SELECT t.DamageModifier FROM tdb_creature_template_difficulty t \
+                  WHERE t.Entry=d.entry AND t.DifficultyID IN (8,23,2,1,0) \
+                  ORDER BY CASE t.DifficultyID WHEN 8 THEN 0 WHEN 23 THEN 1 \
+                  WHEN 2 THEN 2 WHEN 1 THEN 3 ELSE 4 END LIMIT 1) \
+                 FROM content_creature_template_difficulty d \
+                 JOIN content_creature s ON s.id1=d.entry \
+                 WHERE s.map=?1 AND d.DifficultyID=8",
+                )
+                .unwrap();
+            let rows = statement
+                .query_map([map], |row| {
+                    Ok((
+                        row.get::<_, u64>(0)?,
+                        row.get::<_, f64>(1)?,
+                        row.get::<_, Option<f64>>(2)?,
+                    ))
+                })
+                .unwrap();
+            for row in rows {
+                let (id, value, baseline) = row.unwrap();
+                let baseline =
+                    baseline.unwrap_or_else(|| panic!("missing TDB baseline for {map}/{id}"));
+                if (value - baseline).abs() > 1e-6 {
+                    actual.insert((map, id), value);
+                }
+            }
+        }
+        assert_eq!(
+            actual, expected,
+            "world.db overrides must match the WCL sidecar"
+        );
+    }
+
+    #[test]
     fn mythic_scaling_existing_and_later_creatures_keep_health_proportion() {
         let mut world = World::new();
         world.insert_resource(crate::world_data::WorldData::default());
