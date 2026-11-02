@@ -92,6 +92,46 @@ fn dormant(app: &App, entity: Entity) -> bool {
 }
 
 #[test]
+fn grids_woken_together_wake_their_creatures_in_grid_order() {
+    let mut app = grid_app(HashMap::new());
+    let centre = |grid: i32| grid as f32 * SIZE_OF_GRIDS + SIZE_OF_GRIDS / 2.0;
+    for gx in (4..=6).rev() {
+        for gy in (4..=6).rev() {
+            let position = bevy_position(centre(gx), centre(gy));
+            app.world_mut()
+                .spawn((position, InMap::continent(0), spawn_point(position)));
+        }
+    }
+    advance(&mut app, 2);
+    let mut sleeping = app
+        .world_mut()
+        .query_filtered::<Entity, (With<SpawnPoint>, With<GridDormant>)>();
+    assert_eq!(sleeping.iter(app.world()).count(), 9);
+    app.world_mut().spawn((
+        InMap::continent(0),
+        Player {
+            name: "Walker".into(),
+            race: 1,
+            class: 1,
+            appearance: default(),
+        },
+        bevy_position(centre(5), centre(5)),
+    ));
+    advance(&mut app, 2);
+    let mut awake = app
+        .world_mut()
+        .query_filtered::<(&Position, &InMap), (With<SpawnPoint>, Without<GridDormant>)>();
+    let grids: Vec<GridCoord> = awake
+        .iter(app.world())
+        .map(|(position, &map)| grid_of(map, position.x, position.z))
+        .collect();
+    let mut ordered = grids.clone();
+    ordered.sort_unstable();
+    assert_eq!(grids.len(), 9);
+    assert_eq!(grids, ordered, "creatures must wake in grid order");
+}
+
+#[test]
 fn grid_of_matches_azerothcore_grid_boundaries() {
     let map = InMap::continent(0);
     let (x, _, z) = wow_to_bevy(533.0, -1.0, 0.0);
