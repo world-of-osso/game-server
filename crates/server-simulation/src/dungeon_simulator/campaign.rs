@@ -479,9 +479,14 @@ fn den_each_node_first_party_damage_is_owner_controlled() {
                 .and_then(|summon| Entity::try_from_bits(summon.0))
                 .unwrap_or(source);
             if members.contains(&controller) && seen.insert(target) {
+                let source_detail = super::diagnostics::inspect_unit(world, None, source);
+                let target_detail = Entity::try_from_bits(target)
+                    .map(|target| super::diagnostics::inspect_unit(world, None, target));
                 assert_eq!(
-                    controller, owner,
-                    "a follower initiated damage on graph node {target}: {event:?}"
+                    controller,
+                    owner,
+                    "a follower initiated damage on graph node {target} at {}: {event:?}; source={source_detail:?}; target={target_detail:?}",
+                    run.now()
                 );
             }
         }
