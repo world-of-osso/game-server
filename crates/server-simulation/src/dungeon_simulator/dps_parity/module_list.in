@@ -346,6 +346,8 @@ mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
 mod outlaw_coup_tests;
 mod outlaw_flurry_activation_tests;
+#[cfg(test)]
+mod outlaw_flickering_steel_follower_tests;
 mod outlaw_gravedigger_tests;
 mod outlaw_main_gauche_tests;
 mod outlaw_opportunity_tests;
