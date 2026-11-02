@@ -353,6 +353,8 @@ mod named_action_cooldown_tests;
 mod native_pandemic_tests;
 mod outlaw_ace_tests;
 #[cfg(test)]
+mod outlaw_adrenaline_gcd_follower_tests;
+#[cfg(test)]
 mod outlaw_blade_rush_follower_tests;
 mod outlaw_cleave_tests;
 mod outlaw_cloud_cover_tests;
