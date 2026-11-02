@@ -3,7 +3,125 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet};
 
 use super::graph::{Graph, RouteStep};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize)]
+struct PullSamples {
+    map_id: u32,
+    segments: Vec<PullSegment>,
+}
+
+#[derive(Deserialize)]
+struct PullSegment {
+    before_encounter: u32,
+    samples: Vec<PullSample>,
+}
+
+#[derive(Deserialize)]
+struct PullSample {
+    targets: usize,
+}
+
+/// Partition consecutive route packs by the sourced median for each boss-relative segment.
+pub(super) fn den_chain_groups(
+    graph: &Graph,
+    definition: &server::mythic_plus_runtime::ChallengeDefinition,
+    hostile_sources: &HashSet<u32>,
+) -> Result<Vec<Vec<u32>>, String> {
+    let samples: PullSamples = serde_json::from_str(include_str!(
+        "../../../../content/dungeons/den-wcl-pulls.json"
+    ))
+    .map_err(|error| format!("parse Den WCL pull evidence: {error}"))?;
+    if graph.map_id != samples.map_id || definition.map_id != samples.map_id {
+        return Err("Den pull evidence does not match challenge map".into());
+    }
+    if samples.segments.len() != definition.bosses.len()
+        || samples
+            .segments
+            .iter()
+            .zip(&definition.bosses)
+            .any(|(segment, boss)| segment.before_encounter != boss.encounter_id)
+    {
+        return Err("Den pull evidence does not match ordered challenge encounters".into());
+    }
+    let targets: Vec<_> = samples
+        .segments
+        .iter()
+        .map(|segment| {
+            let mut counts: Vec<_> = segment
+                .samples
+                .iter()
+                .map(|sample| sample.targets)
+                .collect();
+            counts.sort_unstable();
+            match counts.as_slice() {
+                [] => Err("Den pull segment has no samples".to_string()),
+                [..] if counts.iter().any(|count| *count == 0) => {
+                    Err("Den pull sample has zero targets".to_string())
+                }
+                _ => Ok((counts[(counts.len() - 1) / 2] + counts[counts.len() / 2]).div_ceil(2)),
+            }
+        })
+        .collect::<Result<_, _>>()?;
+    let mut steps = Vec::new();
+    for step in &graph.route {
+        let pack = graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == step.pack)
+            .ok_or_else(|| format!("route references absent pack {}", step.pack))?;
+        let boss = graph.boss_entries().iter().find(|entry| {
+            let source = graph
+                .follower_boss_sources
+                .get(entry)
+                .copied()
+                .unwrap_or(**entry);
+            pack.spawns.iter().any(|spawn| spawn.entry == source)
+        });
+        let count = pack
+            .spawns
+            .iter()
+            .filter(|spawn| hostile_sources.contains(&spawn.guid))
+            .count();
+        steps.push((step.pack, count, boss.is_some()));
+    }
+    group_chain_steps(&steps, &targets)
+}
+
+fn group_chain_steps(
+    steps: &[(u32, usize, bool)],
+    targets: &[usize],
+) -> Result<Vec<Vec<u32>>, String> {
+    if targets.is_empty() {
+        return Err("no WCL chain targets".into());
+    }
+    let mut groups = Vec::new();
+    let mut pending = Vec::new();
+    let mut count = 0;
+    let mut segment = 0;
+    for &(pack, units, boss) in steps {
+        if boss {
+            if !pending.is_empty() {
+                groups.push(std::mem::take(&mut pending));
+            }
+            groups.push(vec![pack]);
+            count = 0;
+            segment += 1;
+            continue;
+        }
+        pending.push(pack);
+        count += units;
+        let target = targets[segment.min(targets.len() - 1)];
+        if count >= target {
+            groups.push(std::mem::take(&mut pending));
+            count = 0;
+        }
+    }
+    if !pending.is_empty() {
+        groups.push(pending);
+    }
+    Ok(groups)
+}
 
 /// Count only living hostile sources the owner can attack when planning starts.
 pub(super) fn attackable_sources(
@@ -263,6 +381,54 @@ pub(super) fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chain_groups_keep_consecutive_packs_and_isolate_bosses() {
+        let steps = [
+            (10, 2, false),
+            (11, 1, false),
+            (12, 1, false),
+            (20, 1, true),
+            (21, 2, false),
+            (22, 2, false),
+            (23, 1, false),
+            (30, 1, true),
+        ];
+        assert_eq!(
+            group_chain_steps(&steps, &[3, 4]).unwrap(),
+            vec![
+                vec![10, 11],
+                vec![12],
+                vec![20],
+                vec![21, 22],
+                vec![23],
+                vec![30]
+            ]
+        );
+    }
+
+    #[test]
+    fn den_wcl_source_contains_the_observed_segment_medians() {
+        let evidence: PullSamples = serde_json::from_str(include_str!(
+            "../../../../content/dungeons/den-wcl-pulls.json"
+        ))
+        .unwrap();
+        let actual: Vec<_> = evidence
+            .segments
+            .iter()
+            .map(|segment| {
+                let mut counts: Vec<_> = segment
+                    .samples
+                    .iter()
+                    .map(|sample| sample.targets)
+                    .collect();
+                counts.sort_unstable();
+                (segment.before_encounter, counts[counts.len() / 2])
+            })
+            .collect();
+        assert_eq!(actual, [(3207, 18), (3208, 7), (3209, 16)]);
+    }
+
     #[test]
     fn azure_route_selects_enough_authored_forces() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

@@ -1,5 +1,4 @@
 //! Owned movement to a supported edge followed by ballistic MoveFall.
-//! FOLLOWER_NPC_FALL_DAMAGE_UNMODELED: native NPC MoveFall applies no landing damage.
 use super::{Goal, MoveRequest, Navigation, Step, point, position};
 use crate::maps::InMap;
 use crate::scripted_ai::{fall_movement, movement};
