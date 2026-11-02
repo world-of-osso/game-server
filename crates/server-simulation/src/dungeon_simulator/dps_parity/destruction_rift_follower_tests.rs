@@ -41,7 +41,7 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
     let mut guardians = std::collections::BTreeSet::new();
     for _ in 0..2400 {
         app.update();
-        for (_, summon, npc) in app
+        for (unit, summon, npc) in app
             .world_mut()
             .query::<(
                 Entity,
@@ -51,7 +51,7 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
             .iter(app.world())
         {
             if summon.owner == actor {
-                guardians.insert((summon.spell_id, npc.template_id));
+                guardians.insert((summon.spell_id, npc.template_id, unit.to_bits()));
             }
         }
     }
@@ -81,8 +81,17 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
             )
         })
         .collect();
+    let actions: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event
+                .source
+                .is_some_and(|source| guardians.iter().any(|entry| entry.2 == source))
+        })
+        .map(|event| (event.source, event.spell_id, &event.kind, event.target))
+        .collect();
     assert!(
         !rift_damage.is_empty(),
-        "selected Dimensional Rift must produce an actual damaging guardian: guardians={guardians:?} triggered={relevant:?}"
+        "selected Dimensional Rift must produce an actual damaging guardian: guardians={guardians:?} triggered={relevant:?} actions={actions:?}"
     );
 }
