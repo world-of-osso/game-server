@@ -27,6 +27,8 @@ APIS = {
     'load_triggered_spell': 1,
     'launch_triggered_spell': 2,
     'launch_triggered_spell_with_primary': 2,
+    'launch_planned_spell': 2,
+    'execute_cast': 2,
     'creature_cast': 2,
 }
 
