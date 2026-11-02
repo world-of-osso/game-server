@@ -97,6 +97,29 @@ fn ancient_teachings_heals_followers_but_not_pets_or_spell_summons() {
             crate::spell_cast::targets::Relation::Ally
         ));
     }
+    let heal_spell = party
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(388024)
+        .unwrap()
+        .clone();
+    let radius = crate::spell_cast::targets::radius(&heal_spell.effects[0], 1);
+    let center = crate::spell_cast::targets::position(party.app.world(), healer).unwrap();
+    let candidates = crate::spell_cast::targets::area_units(
+        party.app.world_mut(),
+        healer,
+        center,
+        radius,
+        crate::spell_cast::targets::Relation::Ally,
+        0,
+    );
+    for unit in [follower, pet, summon] {
+        assert!(
+            candidates.contains(&unit),
+            "fixture recipient must be in range"
+        );
+    }
     crate::auras::apply_aura(
         party.app.world_mut(),
         &crate::auras::AuraApplication {
