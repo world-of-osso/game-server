@@ -1,7 +1,8 @@
 //! Dimensional Rift's accumulated proc and native guardian actions.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::AuraStatMods;
+use combat::auras::scripts::AuraScripts;
+use combat::auras::{AuraInstance, AuraStatMods};
 use combat::class_progression::TraitLoadout;
 use combat::random::{self as rand, Rng, seq::SliceRandom};
 use combat::spell_cast::effects::EffectCtx;
@@ -26,12 +27,17 @@ struct RiftState {
     deck: Vec<u32>,
 }
 
+#[derive(Component)]
+struct BarrageTarget(Entity);
+
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::DeclaredReach(shadowy_reach),
     SpellScriptHook::DeclaredReach(unstable_reach),
     SpellScriptHook::DeclaredReach(chaos_reach),
     SpellScriptHook::DeclaredReach(overfiend_reach),
-    SpellScriptHook::BeforeDamageSnapshot(unstable_barrage_child),
+    SpellScriptHook::DeclaredReach(barrage_reach),
+    SpellScriptHook::LateAuraRegistration(register_barrages),
+    SpellScriptHook::OnCast(snapshot_barrage_target),
     SpellScriptHook::ResolvedDamage(roll_rift),
     SpellScriptHook::DamageAmount(damage_lookup),
     SpellScriptHook::CriticalChance(chaos_crit),
@@ -59,6 +65,14 @@ fn chaos_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptReach 
 }
 fn overfiend_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptReach {
     reach(world, caster, spell, OVERFIEND)
+}
+
+fn barrage_reach(_: &World, _: Entity, spell: &SpellInfo) -> ScriptReach {
+    match spell.id {
+        394237 => ScriptReach::Child(394238),
+        387984 => ScriptReach::Child(387985),
+        _ => ScriptReach::None,
+    }
 }
 
 fn selected(world: &World, caster: Entity, talent: u32) -> bool {
@@ -111,16 +125,40 @@ fn roll_rift(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, am
     }
 }
 
-// SimC76f8118 pets.cpp2232–2263 uses 387985 for every Chaos Barrage tick;
-// the 387984 native periodic row does not contain that trigger id.
-fn unstable_barrage_child(_: &World, _: Entity, spell: &mut SpellInfo) {
-    if spell.id == 387984 {
-        spell
-            .effects
-            .iter_mut()
-            .find(|effect| effect.index == 0)
-            .expect("native Chaos Barrage effect")
-            .trigger_spell = 387985;
+// SimC76f8118 pets.cpp2170–2205/2232–2263: each barrage tick hits its
+// selected enemy, not the Rift's self-applied periodic aura.
+fn register_barrages(scripts: &mut AuraScripts) {
+    for spell in [394237, 387984] {
+        scripts.0.entry(spell).or_default().on_periodic = Some(barrage_tick);
+    }
+}
+
+fn snapshot_barrage_target(world: &mut World, caster: Entity, spell: u32, _: u8) {
+    if !matches!(spell, 394237 | 387984) {
+        return;
+    }
+    let target = world
+        .get::<combat::networking::CombatTarget>(caster)
+        .and_then(|target| target.0)
+        .expect("Rift barrage requires its selected enemy");
+    world.entity_mut(caster).insert(BarrageTarget(target));
+}
+
+fn barrage_tick(world: &mut World, unit: Entity, aura: &AuraInstance, effect: u8) {
+    if effect != 0 {
+        return;
+    }
+    let target = world
+        .get::<BarrageTarget>(aura.caster)
+        .expect("Rift barrage target was snapshotted")
+        .0;
+    let child = if aura.spell_id == 394237 {
+        394238
+    } else {
+        387985
+    };
+    if !spell_cast::try_cast_triggered(world, aura.caster, child, Some(target), 1) {
+        warn!(caster = ?aura.caster, ?unit, ?target, child, "Rift barrage tick refused");
     }
 }
 
