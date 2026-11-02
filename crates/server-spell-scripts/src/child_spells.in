@@ -766,3 +766,8 @@ D	ret_tier.rs	after_foreground_spender	cast_triggered	kind	1	1306161,1306162,131
 D	ret_toll.rs	cast_child	launch_triggered_spell	&child	1	406957,1279408
 D	rogue_supercharger.rs	grant_counters	cast_triggered	counter	1	470398,470406,470409,470412,470414,470415,470416
 D	shadow_bolts.rs	launch_bolts	schedule_full_trigger	bolt.id	1	1242189
+D	shadow_nzoth.rs	apply_owned	AuraApplication	spell_id	1	1243069,1243113,1243114
+D	shadow_priest.rs	slam_impact	launch_triggered_spell_with_primary	&damage	1	1227621
+D	shadow_volley.rs	grant	AuraApplication	spell	1	1242171,1279437
+D	soul_of_the_forest.rs	recast_on_nearby_allies	cast_triggered	spell	1	774,8936
+D	spellslinger.rs	conjure	schedule_full_trigger	spec.payload	1	443722,443763
