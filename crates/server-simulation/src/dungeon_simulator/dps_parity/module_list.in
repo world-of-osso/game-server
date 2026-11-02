@@ -226,6 +226,7 @@ mod evoker_titanic_tests;
 mod feral_apex_follower_tests;
 mod feral_burst_tests;
 mod feral_convoke_tests;
+mod feral_dreadful_wound_follower_tests;
 mod feral_growth_tests;
 mod feral_literal_tests;
 mod feral_lunar_tests;
