@@ -116,7 +116,9 @@ impl FriendSnapshotIndex {
     }
 
     fn take_dirty_owners(&mut self) -> Vec<Entity> {
-        self.dirty_owners.drain().collect()
+        let mut owners: Vec<_> = self.dirty_owners.drain().collect();
+        owners.sort_unstable_by_key(|owner| owner.to_bits());
+        owners
     }
 
     fn mark_owners_for_friend(&mut self, name: &str) {

@@ -200,8 +200,8 @@ pub(crate) fn process_select_character(
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
-    mut pending: Local<std::collections::HashMap<Entity, PendingCharacterHydration>>,
-    mut pending_ground: Local<std::collections::HashMap<Entity, PendingGroundSelection>>,
+    mut pending: Local<std::collections::BTreeMap<Entity, PendingCharacterHydration>>,
+    mut pending_ground: Local<std::collections::BTreeMap<Entity, PendingGroundSelection>>,
     active: Query<
         &Authenticated,
         (

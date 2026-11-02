@@ -4,7 +4,7 @@ use crate::auras::{ActiveAuras, RemoveReason};
 use crate::maps::{InMap, InstanceManager};
 use bevy::prelude::*;
 use shared::components::{Health, Player, Position, UnitFlags};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 pub(super) const SCRIPT_NAME: &str = "at_telash_greywing_vault_rune";
 pub(super) const CREATE_PROPERTIES: u32 = 26586;
@@ -25,7 +25,7 @@ pub(super) fn update(world: &mut World, field: Entity, previous: &SpellAreaTrigg
     }
 }
 
-fn collect_members(world: &mut World, field: Entity) -> HashSet<Entity> {
+fn collect_members(world: &mut World, field: Entity) -> BTreeSet<Entity> {
     let center = *world.get::<Position>(field).expect("Rune field position");
     let map = *world.get::<InMap>(field).expect("Rune field copy");
     // Native SearchUnits sets reqAlive=false; dead NPCs are not Player corpses.

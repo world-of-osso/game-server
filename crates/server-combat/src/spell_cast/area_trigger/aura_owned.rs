@@ -6,7 +6,7 @@ use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, handlers};
 use crate::maps::InMap;
 use bevy::prelude::*;
 use shared::components::{Health, Position};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 #[derive(Component, Clone)]
 pub(super) struct AuraAreaTrigger {
@@ -79,7 +79,7 @@ fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition, now: f64) ->
         depth: 1,
         cast_item_level: aura.cast_item_level,
         cast_item_inventory_type: aura.cast_item_inventory_type,
-        inside: HashSet::new(),
+        inside: BTreeSet::new(),
     }
 }
 
@@ -194,7 +194,7 @@ fn eligible_units(
     world: &mut World,
     entity: Entity,
     trigger: &SpellAreaTrigger,
-) -> HashSet<Entity> {
+) -> BTreeSet<Entity> {
     let center = *world
         .get::<Position>(entity)
         .expect("attached field position");

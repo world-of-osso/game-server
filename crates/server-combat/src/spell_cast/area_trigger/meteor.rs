@@ -134,3 +134,65 @@ fn find_owned_burn_instances(world: &World, unit: Entity, caster: Entity) -> Vec
         .map(|aura| aura.instance_id)
         .collect()
 }
+
+#[cfg(test)]
+mod order_tests {
+    use super::*;
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_npc};
+    use shared::protocol::CombatLogKind;
+
+    #[test]
+    fn simultaneous_burn_exits_emit_aura_removals_in_entity_order() {
+        let mut h = harness(Vec::new(), &[BURN_DAMAGE], 8).expect("real spell fixture");
+        h.app.init_resource::<ObservedCombatEvents>();
+        let mut units = vec![h.npc];
+        units.extend((1..7).map(|i| spawn_npc(&mut h.app, i as f32)));
+        for &target in &units {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target,
+                    spell_id: BURN_DAMAGE,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+            assert!(crate::auras::has_aura(h.app.world(), target, BURN_DAMAGE));
+        }
+        h.app
+            .world_mut()
+            .resource_mut::<ObservedCombatEvents>()
+            .0
+            .clear();
+        let trigger = SpellAreaTrigger {
+            caster: h.caster,
+            primary_target: None,
+            spell_id: BURN_FIELD,
+            trigger_spell: BURN_DAMAGE,
+            radius: 5.0,
+            expires_at: None,
+            period_ms: 0,
+            next_tick_at: 0.0,
+            relation: Relation::Enemy,
+            depth: 0,
+            cast_item_level: None,
+            cast_item_inventory_type: None,
+            inside: units.iter().copied().collect(),
+        };
+        remove_exited(h.app.world_mut(), &trigger, &[]);
+        let removed: Vec<_> = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::AuraRemoved && event.spell_id == Some(BURN_DAMAGE)
+            })
+            .filter_map(|event| event.target.and_then(Entity::try_from_bits))
+            .collect();
+        units.sort_unstable();
+        assert_eq!(removed, units);
+    }
+}
