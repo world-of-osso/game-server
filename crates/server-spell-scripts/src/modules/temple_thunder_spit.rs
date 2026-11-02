@@ -28,5 +28,7 @@ fn initial_strike(world: &mut World, target: Entity, aura: &AuraInstance) {
 }
 
 fn periodic_strike(world: &mut World, target: Entity, aura: &AuraInstance, effect: u8) {
-    if effect == 0 { initial_strike(world, target, aura); }
+    if effect == 0 {
+        initial_strike(world, target, aura);
+    }
 }
