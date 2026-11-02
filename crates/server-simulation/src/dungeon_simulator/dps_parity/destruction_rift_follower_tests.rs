@@ -17,6 +17,10 @@ fn follower_destruction_dimensional_rift_summons_a_damaging_guardian() {
             .unwrap()
             .contains(1280868)
     );
+    let templates = &app.world().resource::<crate::world_data::WorldData>().templates;
+    for entry in [198547, 196280, 198555] {
+        assert!(templates.contains_key(&entry), "rift template {entry} missing from loaded world");
+    }
     let owner = app
         .world()
         .get::<crate::followers::Follower>(actor)
