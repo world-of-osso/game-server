@@ -681,13 +681,8 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
     );
     if pulses.cap > 0 {
         units.retain(|&unit| {
-            let eligible_rain_target = pulses.root != HEALING_RAIN
-                || (world.get::<crate::hunter_pet::HunterPet>(unit).is_none()
-                    && world
-                        .get::<crate::spell_cast::summon::SummonedCreature>(unit)
-                        .is_none()
-                    && (world.get::<crate::followers::Follower>(unit).is_some()
-                        || world.get::<crate::zones::TempSummon>(unit).is_none()));
+            let eligible_rain_target =
+                pulses.root != HEALING_RAIN || !targets::is_non_follower_summon(world, unit);
             eligible_rain_target
                 && (world.get::<SurgingRainTotem>(entity).is_some()
                     || world
