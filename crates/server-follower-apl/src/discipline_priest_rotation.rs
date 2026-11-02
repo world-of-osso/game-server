@@ -18,6 +18,7 @@ pub const SPELLS: &[(&str, u32, bool)] = &[
     ("void_shield", 17, false),
     ("shield", 17, false),
     ("evangelism", 472433, false),
+    ("uppies", 421453, false),
     ("penance", 47540, false),
     ("flash_heal", 2061, false),
     ("shadow_word_pain", 589, false),
@@ -62,6 +63,10 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "pain_suppression,if=target.health.pct<35"),
         ("default", "barrier,if=party.injured>=3"),
         ("ramp", "evangelism"),
+        // SimC76f8118 apl_priest.cpp:245 places uppies after Evangelism. VERIFIED_WCL
+        // KWw69CqBnf3Tpk8L f4 a4: no Void Shield inside any of 5 channels, so the
+        // nested_action=void_shield gate and cast-while-casting are omitted.
+        ("ultimate", "uppies"),
         ("ramp", "radiance,if=cooldown.mind_blast.remains<=gcd.max*2"),
         ("radiance_fallback", "radiance"),
         (
@@ -390,7 +395,33 @@ impl Discipline {
                 injured,
                 active_atonements,
                 "ramp",
-                &["evangelism", "radiance"],
+                &["evangelism"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(enemy) = enemy
+            && self.select(
+                world,
+                healer,
+                enemy,
+                injured,
+                active_atonements,
+                "ultimate",
+                &["uppies"],
+            )?
+        {
+            return Ok(());
+        }
+        if let Some(target) = ramp_target
+            && self.select(
+                world,
+                healer,
+                target,
+                injured,
+                active_atonements,
+                "ramp",
+                &["radiance"],
             )?
         {
             return Ok(());

@@ -1,5 +1,5 @@
-use super::*;
 use super::follower_dps_diagnostic::*;
+use super::*;
 use shared::protocol::CombatLogKind;
 
 #[test]
@@ -37,4 +37,3 @@ fn follower_shadow_hallucinations_restricts_insanity_to_listed_combat_casts() {
         "Power Word: Shield grants native Hallucinations Insanity"
     );
 }
-

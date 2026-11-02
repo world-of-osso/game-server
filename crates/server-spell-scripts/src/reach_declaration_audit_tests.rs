@@ -18,6 +18,7 @@ type Sites = BTreeMap<Site, usize>;
 const DECLARED: &[(&str, &str, &str, usize)] = &[
     ("affliction_shared_agony.rs", "select_twin", "area", 1),
     ("demonology_pet_actions.rs", "felstorm", "query", 1),
+    ("demonology_doom.rs", "shorten_doom", "query", 1),
     ("destruction_roaring_blaze.rs", "nearby_enemies", "query", 1),
     (
         "discipline_atonement.rs",
@@ -78,6 +79,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // Exceptions are explicit and site-specific. Counts make new calls in the same
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
+    (
+        "feral_apex.rs",
+        "count_owned_rips",
+        "query",
+        1,
+        "counts the caster's own active Rips for the proc chance; selects no target",
+    ),
     (
         "unholy_doomed_bidding.rs",
         "command_ghouls",

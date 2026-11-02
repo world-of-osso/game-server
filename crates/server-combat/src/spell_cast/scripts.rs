@@ -663,6 +663,7 @@ pub fn on_effect_hit(
         (RAMPAGE, 0) => Some(rampage),
         (HOLY_SHOCK, 0) => Some(holy_shock),
         (PENANCE, 0) => Some(penance),
+        (421453, 0) => Some(ultimate_penitence),
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
         (crate::auras::augmentation::PRESCIENCE, 1) => {
@@ -1495,6 +1496,21 @@ fn penance(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     super::cast_triggered(world, caster, child, Some(target), depth + 1);
 }
 
+/// SimC76f8118 sc_priest_discipline.cpp:662–744 starts 421434 on impact.
+fn ultimate_penitence(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(421434)
+        .expect("Ultimate Penitence requires its channel")
+        .clone();
+    if depth >= super::effects::MAX_TRIGGER_DEPTH {
+        warn!("Ultimate Penitence channel skipped: trigger depth {depth} exhausted");
+        return;
+    }
+    super::start_channel(world, caster, &spell, Some(target));
+    super::cast_triggered(world, caster, 421434, Some(target), depth + 1);
+}
+
 /// TC a352b1fa spell_paladin.cpp:1261-1311, spell_pal_holy_shock:
 /// DUMMY 0 casts 25914 on a friendly target, otherwise 25912. The Retail
 /// 20473 tooltip references each child's $s1; its ENERGIZE 1 remains generic.
@@ -1761,6 +1777,9 @@ pub(super) fn on_enemy_damage_hit_with_context(
 ) -> Option<script_registry::EnemyContextHitHook> {
     if let Some(hook) = script_registry::before_enemy_context_hit(world, spell_id) {
         return Some(hook);
+    }
+    if spell_id == windwalker::WINDLORD_OFF_HAND {
+        return Some(windwalker::grant_windlord_thunderfist);
     }
     // SimC76f8118 monk883–889: only the enemy impact earns Teachings.
     // Native TP also hits its caster with Energize; that is not another impact.

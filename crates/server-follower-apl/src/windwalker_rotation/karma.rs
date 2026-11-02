@@ -1,4 +1,4 @@
-//! SimC's modeled incoming-damage option applies only to player actors; followers take real damage.
+//! SimC's modeled absorption applies to players and explicitly marked parity fixtures.
 use bevy::prelude::*;
 use shared::components::{Health, Player};
 
@@ -14,8 +14,16 @@ pub const REDIRECT: u32 = 124280;
 pub const INTERVAL: f64 = 100.0;
 pub const DEFAULT_HEALTH_FRACTION: f32 = 0.5;
 
+/// Marks a follower in a fixed-fight fixture, not a production dungeon follower.
+#[derive(Component)]
+pub struct ModeledKarmaFixture;
+
+fn models_absorption(world: &World, actor: Entity) -> bool {
+    world.get::<Player>(actor).is_some() || world.get::<ModeledKarmaFixture>(actor).is_some()
+}
+
 pub fn suppress_during_interval(world: &World, actor: Entity, prepared: &mut Prepared) {
-    if world.get::<Player>(actor).is_none() {
+    if !models_absorption(world, actor) {
         return;
     }
     let last = world
@@ -31,16 +39,16 @@ pub fn apply_modeled_absorption(
     actor: Entity,
     target: Entity,
 ) -> Result<(), String> {
-    if world.get::<Player>(actor).is_none() {
+    if !models_absorption(world, actor) {
         return Ok(());
     }
     let health = world
         .get::<Health>(actor)
-        .ok_or("Karma player lacks health")?
+        .ok_or("Karma actor lacks health")?
         .max;
     let versatility = world
         .get::<CharacterStats>(actor)
-        .ok_or("Karma player lacks stats")?
+        .ok_or("Karma actor lacks stats")?
         .versatility_pct;
     let maximum = spell_cast::scripts::script_effect_value(world, actor, KARMA, 2) / 100.0;
     let redirect = spell_cast::scripts::script_effect_value(world, actor, KARMA, 3) / 100.0;

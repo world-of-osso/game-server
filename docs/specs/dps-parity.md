@@ -28,6 +28,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 ### Unholy Magus
 
+- Without the MID2 two-piece1296654, Magi cast Frostbolt317792 and Shadow Bolt317791, and Lords cast Frostbolt1292107. Magus Frostbolt's cooldown uses its native slow duration. With the two-piece, they use the native Necrotic Bolt and Withering Grasp actions (SimC76f8118 `sc_death_knight.cpp4424–4434,4598–4607,4664–4670,15494–15502`).
+- Unholy252 follower, snapshot v3, 120 seconds, seeds70448 and 1–9, temporary enchants disabled: L70 map2515 against the qualified tree-only reference: native 3,925 DPS, SimC 3,906; mean paired difference +0.50% ±1.57 pp (95% t interval). L90 map2813: native 31,516 DPS, SimC 32,030; −1.39% ±4.35 pp. Both point estimates are within ±5%; the L90 interval extends outside it.
 - The real Magus's Withering Grasp periodic damage can critically strike with its owner's live critical chance and its own critical damage modifiers (SimC76f8118 `sc_death_knight.cpp3070–3079/4505–4511`).
 ### Unholy Commander of the Dead
 
@@ -57,6 +59,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ### Umbrelskul's Fractured Heart
 
 - The equipped Heart's native proc applies item-level-scaled Crystal Sickness. Each tick raises its stack up to ten; on a non-boss at or below the native threshold, it executes that target and jumps to another enemy, subject to the native jump-counter cap (SimC76f8118 `unique_gear_dragonflight.cpp:7575–7685`).
+
+### Tome of Unstable Power
+
+- Each proc of the equipped Tome's native driver432777 fires one Unstable Barrage434021 at the proc recipient after the native channel434070 duration. Barrage deals the driver's item-scaled effect1 budget times 0.9, 1.0 or 1.1 (uniform), only its damage effect executes, and area damage uses SimC's reduced AoE target count of8 (SimC76f8118 `unique_gear_dragonflight.cpp:7404–7467`).
 
 ### Fire Spontaneous Combustion
 
@@ -146,7 +152,10 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - Each Reap1226019 executes the delayed damage child1225823 once, without an additional Eradicate1225827 hit (SimC76f8118 `sc_demon_hunter.cpp`5982–5999,6081–6107).
 - Eradicate1225826 requires and consumes its ready buff, consumes actual lesser fragments, and delivers delayed1225827 outside Meta or1279200 in Meta. Reap and Cull are not selected while that buff is active (SimC76f8118 `sc_demon_hunter.cpp`6110–6296).
 - Selected Annihilator Voidfall builds from Consume/Devour, completed Void Ray with Meteoric Rise, and Meta with Mass Acceleration. Reap-family spenders launch meteors, spending one stack per launch; Meteoric Fall can launch the full stack, with selected World Killer replacing the last meteor and spawning its native fragment count (SimC76f8118 `sc_demon_hunter.cpp`2977–3085,3141–3168,6392–6415,6570–6635,9336–9379).
-- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled: native 30,832 DPS, SimC 31,152; mean paired percentage difference −0.81% ±5.23 pp (95% t interval). The point estimate is within ±5%; its interval is not. L70 remains unqualified because pinned SimC has no unique logged Annihilator keystone.
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled: native 30,832 DPS, SimC 31,152; mean paired percentage difference −0.81% ±5.23 pp (95% t interval). The point estimate is within ±5%; its interval is not.
+- L70 follower, map2515, same seeds and settings, CONDITION-ONLY reference: no hero talents are selected, matching native below hero level, and the pinned literal APL substitutes `hero_tree.annihilator=1` and `hero_tree.voidscarred=0` because native reads the logged Annihilator tree for those predicates. After Scythe's Embrace and Tome of Unstable Power: native 6,380 DPS, SimC 6,262; +2.26% ±6.22 pp. The point estimate is within ±5%; its interval is not.
+- Selected Scythe's Embrace1246558 (L70 only) makes Reap, Cull and Eradicate execute native energize1261679 (10 Fury) (SimC76f8118 `sc_demon_hunter.cpp`6003–6007,6145–6149).
+- Reference gap: the pinned SimC Devourer APL has no `auto_attack` (`apl_demon_hunter.cpp`75–196), so SimC Devourer never swings. Native follower Devourers do (about 22 DPS at L70), as retail Devourers do (WCL 2qmYJj8M9CT7cnP4 fight44: the Devourer lands 206 Melee events). Native keeps the retail behavior.
 ### Devourer Singular Strikes
 
 - Selected Singular Strikes1272770 amplifies only the primary Hungering Slash or Reaper's Toll damage hit1239127 by native effect2; secondary hits remain unchanged (SimC76f8118 `sc_demon_hunter.cpp`6697–6728).
@@ -208,6 +217,13 @@ Selected Cat Convoke391528 dispatches one native child per actual periodic-drive
 ### Feral Lunar Inspiration
 
 Selected native155580 applies its owned155627 override aura, so ordinary Moonfire8921 resolves to Cat Moonfire155625. Removing the talent removes only its owned override; reapplication restores it without changing learned spells. Native Cat Form must admit the resolved ordinary cast. SimC76f8118 `sc_druid.cpp4457–4465` supplies selected155625 behavior; TC `spell_dru_lunar_inspiration1543–1567` supplies the native aura lifecycle.
+
+### Feral Apex Predator's Craving
+
+Selected391881 grants native391882 only from an actual owned Rip tick. Its chance is native effect1 in tenths of a percent divided by the caster's active Rips raised to native effect2 percent. Other periodic ticks never grant it, even though native ProcTypeMask admits every harmful periodic event (`sc_druid.cpp4655–4656,4727–4733`).
+
+- L90 follower, snapshot v3, map2813, 120 s, ten matched seeds and temporary enchants disabled, after this fix: native 25,452 DPS, SimC 32,825; −22.28% ±3.76 pp (95% t interval). Before the fix, native granted a free Bite on almost every periodic tick (89 Bites versus SimC's 12 in seed 70448); its −11.78% ±4.66 included that inflated damage and was not parity.
+- [ ] Missing Druid of the Claw finisher chain: Ravage441585/441591, Dreadful Wound441812 with its target damage effect, Sabertooth391722, and Rip's Tiger's Fury periodic snapshot.
 
 ### Shared merged critical feedback
 
@@ -347,6 +363,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Subtlety literal fixture
 
+- L70 follower, map 2515, 120 seconds, seeds 70448 and 1–9, temporary enchants disabled: native averages 4,606 DPS versus tree-only plus logged-keystone-condition SimC 4,635; mean paired delta is −0.50% ± 3.92 percentage points (95% t interval). The point estimate and interval are within ±5%.
+- Selected Danse Macabre triggers native Lashe Macabre once per distinct foreground combo-point generator or spender during each Shadow Dance. A new Dance clears the tracked abilities; off-GCD and triggered actions do not qualify. Source: SimC 76f8118 `sc_rogue.cpp:7482–7505,8579–8599`.
 - Deepening Shadows extends earned Shadow Dance duration using the caster's raw haste-rating fraction and native effect value (`sc_rogue.cpp7457–7475`).
 - Selected Lingering Darkness457056 grants native457273 when Shadow Blades expires. Subtlety keeps its effect2/effect4 Shadow mods, label and Dark Brew effects; Assassination's poison effect1/effect3 never apply (`sc_rogue.cpp10924–10932,10982–11010`).
 - Selected Shadow Focus108209 grants native112942 when Stealth, Vanish or Shadow Dance applies and removes it once none remain (`sc_rogue.cpp7345–7362,7381–7390`).
@@ -650,6 +668,8 @@ Spec63 measurements use the exact profile action rows with shared `Program`, `Dr
 
 ### Arms literal controller
 
+- Wild Strikes is triggered only by a critical auto-attack, using its native proc cooldown and buff (`sc_warrior.cpp:2123–2125`).
+
 - Selected Fatality rolls its native effect1 chance on each Mortal Strike impact to apply the caster-owned Fatal Mark; Execute consumes the mark for its native damage (`sc_warrior.cpp:3119–3120,4251–4252,4404–4423`).
 - Mortal Strike consumes the owner's earned Executioner's Precision after its damage snapshot, including background strikes (`sc_warrior.cpp:3102`).
 - Selected Battlelord rolls its native proc chance on Overpower execution, resets Mortal Strike's cooldown and grants its native buff; only a foreground Mortal Strike consumes that buff (`sc_warrior.cpp:3108–3109,5478–5487`).
@@ -849,6 +869,9 @@ Selected411165 applies its native effect0 to the primary recipient of ordinary a
 
 ### Demonology literal execution and alternative Tyrant
 
+- Selected Spiteful Reconstitution rolls its native chance with the pinned 21-attempt accumulated-proc cap on each Core-powered Demonbolt, summoning an actual alternate Wild Imp on success. It uses a separate accumulator from natural Imp-fade Core procs. Source: SimC 76f8118 `sc_warlock_actions.cpp:2939–2944`, `sc_warlock_init.cpp:1287–1291`.
+- Each actual Hand of Gul'dan draws selected Demonic Knowledge's shuffled 80-card deck, granting native Demonic Core on 6 cards at rank 1 or 12 at rank 2; reshuffle on exhaustion. Source: SimC 76f8118 `sc_warlock_actions.cpp:2856–2860`, `sc_warlock_init.cpp:1294–1305`.
+- A Core-powered Demonbolt applies the selected native Doom to its actual target if absent. Each Hand of Gul'dan shortens owned Doom by the native effect1 time; expiration causes native Doom damage. Source: SimC 76f8118 `sc_warlock_actions.cpp:2847–2853,2975–2976`, `sc_warlock.cpp:53–59`.
 - Selected Mark of F'harg gives each actual Charhound its native Infernal Presence aura; its periodic damage belongs to that pet and ends with its lifetime. Source: SimC 76f8118 `sc_warlock_pets.cpp:1430–1485`.
 - The actual Doomguard summoned by native1276672 repeatedly casts native1251989 with owner spell-power inheritance until its authored lifetime ends. A Demonbolt that consumes Demonic Core reduces the running Doomguard cooldown by native1276672 effect2 seconds; an ordinary hardcast does not. Source: SimC 76f8118 `sc_warlock_pets.cpp:1613–1643`, `sc_warlock_actions.cpp:2960–2961`.
 
@@ -1433,7 +1456,8 @@ Selected Insidious Ire earns its temporary channel bonus when one target has all
 - Specialization Raise Dead46584 creates native26125 through the controlled-pet path, retaining the actual current-pet relationship and permanent lifetime. Native Dark Transformation must see the pet through UNIT_PET. DK inherits source-qualified owner melee AP/crit/haste, and ordinary owner casts order the real pet against the selected hostile primary. Hunter, Warlock and Mage pet policies remain unchanged.
 
 - Spec269 executes the pinned Windwalker action rows on native player and follower fixtures. Player measurements retain player identity and use the literal driver rather than AssistedCombat diagnostics.
-- In the 269 player-literal fixture only, Touch of Karma uses SimC's default 100-second interval and modeled absorbed-health fraction; the real player health and native spell values supply the redirected periodic damage (`sc_monk.cpp2735–2753,2757–2850`).
+- In the 269 player-literal and fixed-fight follower fixtures only, Touch of Karma uses SimC's default 100-second interval and modeled absorbed-health fraction; the actor's health and native spell values supply the redirected periodic damage. Ordinary followers use actual incoming damage (`sc_monk.cpp2735–2753,2757–2850`).
+- Selected Thunderfist gains its native stacks on landed Strike of the Windlord off-hand impacts and spends one per landed white swing to deal its native child damage (`sc_monk.cpp1971–1983,2171–2210`).
 - Rushing Wind Kick and Rising Sun Kick use separate action recharge clocks in gameplay and literal simulation; both retain native charge recovery and haste rules (`action.cpp474`, `sc_monk.cpp1143–1204`).
 
 - Windwalker Tigereye Brew starts combat with its native initial stacks, earns one stack per native Chi threshold from qualifying casts, and transfers up to the native cap into Zenith critical chance (`sc_monk.cpp393–406,4583–4595,7170–7183`). Out-of-combat regeneration remains unimplemented.
