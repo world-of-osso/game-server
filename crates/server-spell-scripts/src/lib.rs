@@ -19,7 +19,7 @@ impl Plugin for SpellScriptsPlugin {
     }
 }
 
-pub const fn registry() -> SpellScriptRegistry {
+pub fn registry() -> SpellScriptRegistry {
     SpellScriptRegistry::new(modules::MODULES)
 }
 

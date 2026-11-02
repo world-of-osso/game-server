@@ -336,8 +336,32 @@ pub fn reach_source_selected(world: &World, caster: Entity, spell: u32) -> bool 
 
 pub type DeclaredReachHook = fn(&World, Entity, &SpellInfo) -> ScriptReach;
 
-#[derive(Clone, Copy)]
-pub enum SpellScriptHook {
+macro_rules! spell_script_hooks {
+    ($($(#[$meta:meta])* $kind:ident($hook:ty),)*) => {
+        #[derive(Clone, Copy)]
+        pub enum SpellScriptHook {
+            $($(#[$meta])* $kind($hook),)*
+        }
+
+        /// The variant of a `SpellScriptHook`; the registry lists hooks by it.
+        #[derive(Clone, Copy)]
+        enum HookKind {
+            $($kind,)*
+        }
+
+        const HOOK_KINDS: usize = [$(HookKind::$kind),*].len();
+
+        impl SpellScriptHook {
+            fn kind(&self) -> HookKind {
+                match self {
+                    $(Self::$kind(_) => HookKind::$kind,)*
+                }
+            }
+        }
+    };
+}
+
+spell_script_hooks! {
     DeclaredReach(DeclaredReachHook),
     /// Autonomous actions used by this unit outside its ordinary spellbook.
     AdditionalReachActions(fn(&World, Entity) -> Vec<u32>),
@@ -520,22 +544,28 @@ pub enum SpellScriptHook {
     BeforePeriodicItemDamage(BeforePeriodicItemDamageHook),
 }
 
+type HookIndex = &'static [Vec<&'static SpellScriptHook>];
+
+/// Registered hooks of each kind, in module order. Dispatch reads one kind's hooks
+/// instead of scanning every module.
 #[derive(Clone, Copy, Resource)]
 pub struct SpellScriptRegistry {
-    modules: &'static [&'static [SpellScriptHook]],
+    by_kind: HookIndex,
 }
 
 impl SpellScriptRegistry {
-    pub const fn new(modules: &'static [&'static [SpellScriptHook]]) -> Self {
-        Self { modules }
+    pub fn new(modules: &'static [&'static [SpellScriptHook]]) -> Self {
+        Self {
+            by_kind: index_hooks(modules),
+        }
     }
 
-    fn hooks(self) -> impl Iterator<Item = &'static SpellScriptHook> {
-        self.modules.iter().flat_map(|module| module.iter())
+    fn hooks(self, kind: HookKind) -> impl Iterator<Item = &'static SpellScriptHook> {
+        self.by_kind[kind as usize].iter().copied()
     }
 
     pub fn declared_children(self, world: &World, caster: Entity, spell: &SpellInfo) -> Vec<u32> {
-        self.hooks()
+        self.hooks(HookKind::DeclaredReach)
             .filter_map(|hook| match hook {
                 SpellScriptHook::DeclaredReach(declare) => match declare(world, caster, spell) {
                     ScriptReach::Child(child) => Some(child),
@@ -547,7 +577,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn declared_reach(self, world: &World, caster: Entity, spell: &SpellInfo) -> DeclaredReach {
-        self.hooks()
+        self.hooks(HookKind::DeclaredReach)
             .fold(DeclaredReach::default(), |mut reach, hook| {
                 if let SpellScriptHook::DeclaredReach(declare) = hook
                     && let ScriptReach::Area(declared) = declare(world, caster, spell)
@@ -560,7 +590,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn additional_reach_actions(self, world: &World, unit: Entity) -> Vec<u32> {
-        self.hooks()
+        self.hooks(HookKind::AdditionalReachActions)
             .filter_map(|hook| match hook {
                 SpellScriptHook::AdditionalReachActions(actions) => Some(actions(world, unit)),
                 _ => None,
@@ -570,17 +600,19 @@ impl SpellScriptRegistry {
     }
 
     pub fn lethal_absorb(self, spell: u32) -> Option<LethalAbsorbHook> {
-        self.hooks().find_map(|hook| match hook {
-            SpellScriptHook::LethalAbsorb(lookup) => lookup(spell),
-            _ => None,
-        })
+        self.hooks(HookKind::LethalAbsorb)
+            .find_map(|hook| match hook {
+                SpellScriptHook::LethalAbsorb(lookup) => lookup(spell),
+                _ => None,
+            })
     }
 
     pub fn effect_handler(self, spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
-        self.hooks().find_map(|hook| match hook {
-            SpellScriptHook::EffectHandler(lookup) => lookup(spell, index),
-            _ => None,
-        })
+        self.hooks(HookKind::EffectHandler)
+            .find_map(|hook| match hook {
+                SpellScriptHook::EffectHandler(lookup) => lookup(spell, index),
+                _ => None,
+            })
     }
 
     pub fn filter_targets(
@@ -592,7 +624,7 @@ impl SpellScriptRegistry {
         primary: Option<Entity>,
         units: &mut Vec<Entity>,
     ) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::TargetFilter) {
             if let SpellScriptHook::TargetFilter(run) = hook {
                 run(world, caster, spell, effect, primary, units);
             }
@@ -600,14 +632,14 @@ impl SpellScriptRegistry {
     }
 
     pub fn effect_hit(self, spell: u32, index: u8) -> Option<HitHook> {
-        self.hooks().find_map(|hook| match hook {
+        self.hooks(HookKind::EffectHit).find_map(|hook| match hook {
             SpellScriptHook::EffectHit(lookup) => lookup(spell, index),
             _ => None,
         })
     }
 
     pub fn combat_status_changed(self, world: &mut World, unit: Entity, active: bool) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::CombatStatusChanged) {
             if let SpellScriptHook::CombatStatusChanged(run) = hook {
                 run(world, unit, active);
             }
@@ -615,7 +647,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn summon_initialized(self, world: &mut World, actor: Entity) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::SummonInitialized) {
             if let SpellScriptHook::SummonInitialized(run) = hook {
                 run(world, actor);
             }
@@ -623,7 +655,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn summon_expired(self, world: &mut World, actor: Entity) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::SummonExpired) {
             if let SpellScriptHook::SummonExpired(run) = hook {
                 run(world, actor);
             }
@@ -631,7 +663,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn summon_removed(self, world: &mut World, actor: Entity) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::SummonRemoved) {
             if let SpellScriptHook::SummonRemoved(run) = hook {
                 run(world, actor);
             }
@@ -639,7 +671,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_early_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::EarlyAuraRegistration) {
             if let SpellScriptHook::EarlyAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -647,7 +679,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_rogue_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::RogueAuraRegistration) {
             if let SpellScriptHook::RogueAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -655,7 +687,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_support_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::SupportAuraRegistration) {
             if let SpellScriptHook::SupportAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -663,21 +695,23 @@ impl SpellScriptRegistry {
     }
 
     pub fn consumes_named_aura_field(self, spell: u32, index: u8) -> bool {
-        self.hooks().any(|hook| match hook {
-            SpellScriptHook::NamedAuraFields(values) => values.contains(&(spell, index)),
-            _ => false,
-        })
+        self.hooks(HookKind::NamedAuraFields)
+            .any(|hook| match hook {
+                SpellScriptHook::NamedAuraFields(values) => values.contains(&(spell, index)),
+                _ => false,
+            })
     }
 
     pub fn preserves_periodic_phase(self, spell: u32) -> bool {
-        self.hooks().any(|hook| match hook {
-            SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
-            _ => false,
-        })
+        self.hooks(HookKind::PreservePeriodicPhase)
+            .any(|hook| match hook {
+                SpellScriptHook::PreservePeriodicPhase(spells) => spells.contains(&spell),
+                _ => false,
+            })
     }
 
     pub fn register_weapon_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::WeaponAuraRegistration) {
             if let SpellScriptHook::WeaponAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -685,21 +719,23 @@ impl SpellScriptRegistry {
     }
 
     pub fn counter_only_dot_stacks(self, spell: u32) -> bool {
-        self.hooks().any(|hook| match hook {
-            SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
-            _ => false,
-        })
+        self.hooks(HookKind::CounterOnlyDotStacks)
+            .any(|hook| match hook {
+                SpellScriptHook::CounterOnlyDotStacks(spells) => spells.contains(&spell),
+                _ => false,
+            })
     }
 
     pub fn consumes_effect_value(self, spell: u32, index: u8) -> bool {
-        self.hooks().any(|hook| match hook {
-            SpellScriptHook::ConsumedEffectValues(values) => values.contains(&(spell, index)),
-            _ => false,
-        })
+        self.hooks(HookKind::ConsumedEffectValues)
+            .any(|hook| match hook {
+                SpellScriptHook::ConsumedEffectValues(values) => values.contains(&(spell, index)),
+                _ => false,
+            })
     }
 
     pub fn is_cast_time_proc(self, spell: u32) -> bool {
-        self.hooks().any(|hook| match hook {
+        self.hooks(HookKind::CastTimeProcs).any(|hook| match hook {
             SpellScriptHook::CastTimeProcs(spells) => spells.contains(&spell),
             _ => false,
         })
@@ -711,21 +747,25 @@ impl SpellScriptRegistry {
         aura: &crate::auras::AuraInstance,
     ) -> bool {
         !spell.cast_proc_mods.contains(&aura.instance_id)
-            && self.hooks().any(|hook| match hook {
-                SpellScriptHook::PreserveUnadmittedProcs(spells) => spells.contains(&aura.spell_id),
-                _ => false,
-            })
+            && self
+                .hooks(HookKind::PreserveUnadmittedProcs)
+                .any(|hook| match hook {
+                    SpellScriptHook::PreserveUnadmittedProcs(spells) => {
+                        spells.contains(&aura.spell_id)
+                    }
+                    _ => false,
+                })
     }
 
     pub fn owns_policy_proc(self, spell: u32) -> bool {
-        self.hooks().any(|hook| match hook {
+        self.hooks(HookKind::OwnsPolicyProc).any(|hook| match hook {
             SpellScriptHook::OwnsPolicyProc(lookup) => lookup(spell),
             _ => false,
         })
     }
 
     pub fn register_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::LateAuraRegistration) {
             if let SpellScriptHook::LateAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -733,7 +773,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_before_late_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::BeforeLateAuraRegistration) {
             if let SpellScriptHook::BeforeLateAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -741,7 +781,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_mid_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::MidAuraRegistration) {
             if let SpellScriptHook::MidAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -749,7 +789,7 @@ impl SpellScriptRegistry {
     }
 
     pub fn register_fire_auras(self, scripts: &mut crate::auras::scripts::AuraScripts) {
-        for hook in self.hooks() {
+        for hook in self.hooks(HookKind::FireAuraRegistration) {
             if let SpellScriptHook::FireAuraRegistration(register) = hook {
                 register(scripts);
             }
@@ -757,11 +797,30 @@ impl SpellScriptRegistry {
     }
 
     pub fn policies(self) -> impl Iterator<Item = &'static Policy> {
-        self.hooks().flat_map(|hook| match hook {
+        self.hooks(HookKind::Policies).flat_map(|hook| match hook {
             SpellScriptHook::Policies(policies) => *policies,
             _ => &[],
         })
     }
+}
+
+/// One index per distinct static module list, built on first use and kept for the
+/// process; the registry stays `Copy`.
+fn index_hooks(modules: &'static [&'static [SpellScriptHook]]) -> HookIndex {
+    static INDEXES: std::sync::Mutex<std::collections::BTreeMap<(usize, usize), HookIndex>> =
+        std::sync::Mutex::new(std::collections::BTreeMap::new());
+    let key = (modules.as_ptr() as usize, modules.len());
+    *INDEXES
+        .lock()
+        .expect("spell script hook index lock")
+        .entry(key)
+        .or_insert_with(|| {
+            let mut by_kind = vec![Vec::new(); HOOK_KINDS];
+            for hook in modules.iter().flat_map(|module| module.iter()) {
+                by_kind[hook.kind() as usize].push(hook);
+            }
+            Box::leak(by_kind.into_boxed_slice())
+        })
 }
 
 impl Default for SpellScriptRegistry {
@@ -782,17 +841,24 @@ pub(crate) fn scripted_channel(world: &World, caster: Entity, spell: &SpellInfo)
     world
         .get_resource::<SpellScriptRegistry>()
         .is_some_and(|registry| {
-            registry.hooks().any(|hook| match hook {
-                SpellScriptHook::ScriptedChannel(test) => test(world, caster, spell),
-                _ => false,
-            })
+            registry
+                .hooks(HookKind::ScriptedChannel)
+                .any(|hook| match hook {
+                    SpellScriptHook::ScriptedChannel(test) => test(world, caster, spell),
+                    _ => false,
+                })
         })
 }
 
 pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ResourceContext)
+        .chain(
+            world
+                .resource::<SpellScriptRegistry>()
+                .hooks(HookKind::ResourceOnlyContext),
+        )
         .any(|hook| match hook {
             SpellScriptHook::ResourceContext(spells)
             | SpellScriptHook::ResourceOnlyContext(spells) => spells.contains(&spell),
@@ -803,7 +869,7 @@ pub(crate) fn requires_resource_context(world: &World, spell: u32) -> bool {
 pub(crate) fn requires_target_context(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ResourceContext)
         .any(|hook| match hook {
             SpellScriptHook::ResourceContext(spells) => spells.contains(&spell),
             _ => false,
@@ -813,7 +879,7 @@ pub(crate) fn requires_target_context(world: &World, spell: u32) -> bool {
 pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AsynchronousAuras)
         .any(|hook| match hook {
             SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
             _ => false,
@@ -824,17 +890,22 @@ pub(crate) fn incoming_aura_ignores_stacks(world: &World, spell: u32) -> bool {
     world
         .get_resource::<SpellScriptRegistry>()
         .is_some_and(|registry| {
-            registry.hooks().any(|hook| match hook {
-                SpellScriptHook::NonStackingIncomingAuras(spells) => spells.contains(&spell),
-                _ => false,
-            })
+            registry
+                .hooks(HookKind::NonStackingIncomingAuras)
+                .any(|hook| match hook {
+                    SpellScriptHook::NonStackingIncomingAuras(spells) => spells.contains(&spell),
+                    _ => false,
+                })
         })
 }
 
 /// Actual unresolved spell damage only; prediction never calls sampling hooks.
 pub fn actual_damage_multiplier(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) -> f32 {
     let mut multiplier = 1.0;
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ActualDamageMultiplier)
+    {
         if let SpellScriptHook::ActualDamageMultiplier(run) = hook {
             multiplier *= run(world, ctx, target);
         }
@@ -851,7 +922,7 @@ pub fn expected_damage_multiplier(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ExpectedDamageMultiplier)
         .map(|hook| match hook {
             SpellScriptHook::ExpectedDamageMultiplier(run) => run(world, caster, target, spell),
             _ => 1.0,
@@ -866,7 +937,7 @@ pub fn policies(world: &World) -> impl Iterator<Item = &'static Policy> + use<> 
 pub fn native_after_cast(world: &World, spell: u32) -> Option<AfterCastHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::NativeAfterCast)
         .find_map(|hook| match hook {
             SpellScriptHook::NativeAfterCast(lookup) => lookup(spell),
             _ => None,
@@ -879,7 +950,7 @@ pub fn aura_roll_after_cast(
 ) -> impl Iterator<Item = AfterCastHook> + use<> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AuraRollAfterCast)
         .filter_map(move |hook| match hook {
             SpellScriptHook::AuraRollAfterCast(lookup) => lookup(spell),
             _ => None,
@@ -887,7 +958,10 @@ pub fn aura_roll_after_cast(
 }
 
 pub fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::OnCast)
+    {
         if let SpellScriptHook::OnCast(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -895,7 +969,10 @@ pub fn on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
 }
 
 pub fn after_payment(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterPayment)
+    {
         if let SpellScriptHook::AfterPayment(run) = hook {
             run(world, caster, costs);
         }
@@ -908,7 +985,7 @@ pub fn after_resource_values(
 ) -> impl Iterator<Item = AfterCastHook> + use<> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AfterResourceValues)
         .filter_map(move |hook| match hook {
             SpellScriptHook::AfterResourceValues(lookup) => lookup(spell),
             _ => None,
@@ -918,7 +995,7 @@ pub fn after_resource_values(
 pub fn target_plan(world: &World, spell: u32) -> Option<(Relation, TargetPlanHook)> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::TargetPlan)
         .find_map(|hook| match hook {
             SpellScriptHook::TargetPlan(lookup) => lookup(spell),
             _ => None,
@@ -932,7 +1009,10 @@ pub fn periodic_primary_damage(
     amount: f32,
     crit: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::PeriodicPrimaryDamage)
+    {
         if let SpellScriptHook::PeriodicPrimaryDamage(run) = hook {
             run(world, ctx, target, amount, crit);
         }
@@ -942,7 +1022,7 @@ pub fn periodic_primary_damage(
 pub fn periodic_tick_rate(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::PeriodicTickRate)
         .filter_map(|hook| match hook {
             SpellScriptHook::PeriodicTickRate(run) => Some(run(world, caster, target, spell)),
             _ => None,
@@ -958,7 +1038,7 @@ pub fn target_damage_multiplier(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::TargetDamageMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::TargetDamageMultiplier(run) => Some(run(world, caster, target, spell)),
             _ => None,
@@ -967,7 +1047,10 @@ pub fn target_damage_multiplier(
 }
 
 pub fn after_spender_stacks(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterSpenderStacks)
+    {
         if let SpellScriptHook::AfterSpenderStacks(run) = hook {
             run(world, caster, spell);
         }
@@ -983,7 +1066,7 @@ pub fn aura_redirect(
 ) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AuraRedirect)
         .any(|hook| match hook {
             SpellScriptHook::AuraRedirect(run) => run(world, caster, target, spell, depth),
             _ => false,
@@ -993,7 +1076,7 @@ pub fn aura_redirect(
 pub fn hit(world: &World, spell: u32) -> Option<HitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::Hit)
         .find_map(|hook| match hook {
             SpellScriptHook::Hit(lookup) => lookup(spell),
             _ => None,
@@ -1003,7 +1086,7 @@ pub fn hit(world: &World, spell: u32) -> Option<HitHook> {
 pub fn context_hit(world: &World, spell: u32) -> Option<ContextHitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ContextHit)
         .find_map(|hook| match hook {
             SpellScriptHook::ContextHit(lookup) => lookup(spell),
             _ => None,
@@ -1013,7 +1096,7 @@ pub fn context_hit(world: &World, spell: u32) -> Option<ContextHitHook> {
 pub fn area_filter(world: &World, spell: u32, index: u8) -> Option<AreaTargetFilter> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AreaFilter)
         .find_map(|hook| match hook {
             SpellScriptHook::AreaFilter(lookup) => lookup(spell, index),
             _ => None,
@@ -1026,7 +1109,10 @@ pub fn check_target(
     spell: u32,
     target: Entity,
 ) -> Result<(), super::CastFailure> {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::CheckTarget)
+    {
         if let SpellScriptHook::CheckTarget(run) = hook {
             run(world, caster, spell, target)?;
         }
@@ -1037,7 +1123,7 @@ pub fn check_target(
 pub fn damage_amount(world: &World, spell: u32) -> Option<DamageAmountHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::DamageAmount)
         .find_map(|hook| match hook {
             SpellScriptHook::DamageAmount(lookup) => lookup(spell),
             _ => None,
@@ -1045,7 +1131,10 @@ pub fn damage_amount(world: &World, spell: u32) -> Option<DamageAmountHook> {
 }
 
 pub fn auto_repeat(world: &mut World, caster: Entity, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AutoRepeat)
+    {
         if let SpellScriptHook::AutoRepeat(run) = hook {
             run(world, caster, target);
         }
@@ -1056,7 +1145,7 @@ pub fn auto_repeat(world: &mut World, caster: Entity, target: Entity) {
 pub fn actual_critical_damage_multiplier(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ActualCriticalDamageMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::ActualCriticalDamageMultiplier(run) => Some(run(world, caster, spell)),
             _ => None,
@@ -1074,7 +1163,7 @@ pub fn actual_critical_chance_bonus(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ActualCriticalChanceBonus)
         .filter_map(|hook| match hook {
             SpellScriptHook::ActualCriticalChanceBonus(run) => {
                 Some(run(world, caster, target, spell, chance))
@@ -1087,7 +1176,7 @@ pub fn actual_critical_chance_bonus(
 pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32) -> Option<f32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::CriticalChance)
         .find_map(|hook| match hook {
             SpellScriptHook::CriticalChance(run) => run(world, caster, target, spell),
             _ => None,
@@ -1097,7 +1186,7 @@ pub fn critical_chance(world: &World, caster: Entity, target: Entity, spell: u32
 pub fn launch_delay(world: &World, spell: u32, native: f32) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::LaunchDelay)
         .find_map(|hook| match hook {
             SpellScriptHook::LaunchDelay(lookup) => lookup(spell),
             _ => None,
@@ -1108,7 +1197,7 @@ pub fn launch_delay(world: &World, spell: u32, native: f32) -> f32 {
 pub fn dot_mastery_multiplier(world: &World, caster: Entity, target: Entity, spell: u32) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::DotMasteryMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::DotMasteryMultiplier(run) => Some(run(world, caster, target, spell)),
             _ => None,
@@ -1117,7 +1206,10 @@ pub fn dot_mastery_multiplier(world: &World, caster: Entity, target: Entity, spe
 }
 
 pub fn periodic_damage_finished(world: &mut World, ctx: &EffectCtx<'_>) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::PeriodicDamageFinished)
+    {
         if let SpellScriptHook::PeriodicDamageFinished(run) = hook {
             run(world, ctx);
         }
@@ -1125,7 +1217,10 @@ pub fn periodic_damage_finished(world: &mut World, ctx: &EffectCtx<'_>) {
 }
 
 pub fn after_foreground_special(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterForegroundSpecial)
+    {
         if let SpellScriptHook::AfterForegroundSpecial(run) = hook {
             run(world, caster, spell);
         }
@@ -1133,7 +1228,10 @@ pub fn after_foreground_special(world: &mut World, caster: Entity, spell: &Spell
 }
 
 pub fn after_counter_launch(world: &mut World, caster: Entity, spell: u32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterCounterLaunch)
+    {
         if let SpellScriptHook::AfterCounterLaunch(run) = hook {
             run(world, caster, spell);
         }
@@ -1141,7 +1239,10 @@ pub fn after_counter_launch(world: &mut World, caster: Entity, spell: u32) {
 }
 
 pub fn impact_proc_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ImpactProcDamage)
+    {
         if let SpellScriptHook::ImpactProcDamage(run) = hook {
             run(world, ctx, target);
         }
@@ -1151,7 +1252,10 @@ pub fn impact_proc_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity
 /// Every resolved white impact, including avoided or immune outcomes.
 /// Existing landed-hit producers retain their separate stage.
 pub fn after_white_impact(world: &mut World, caster: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterWhiteImpact)
+    {
         if let SpellScriptHook::AfterWhiteImpact(run) = hook {
             run(world, caster);
         }
@@ -1159,7 +1263,10 @@ pub fn after_white_impact(world: &mut World, caster: Entity) {
 }
 
 pub fn combo_point_gain(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ComboPointGain)
+    {
         if let SpellScriptHook::ComboPointGain(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -1172,7 +1279,10 @@ pub fn after_white_hand_hit(
     hand: crate::melee::Hand,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterWhiteHandHit)
+    {
         if let SpellScriptHook::AfterWhiteHandHit(run) = hook {
             run(world, caster, hand, critical);
         }
@@ -1180,7 +1290,10 @@ pub fn after_white_hand_hit(
 }
 
 pub fn after_white_hit(world: &mut World, caster: Entity, critical: bool) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterWhiteHit)
+    {
         if let SpellScriptHook::AfterWhiteHit(run) = hook {
             run(world, caster, critical);
         }
@@ -1193,7 +1306,10 @@ pub fn replacement_direct_damage(
     target: Entity,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ReplacementDirectDamage)
+    {
         if let SpellScriptHook::ReplacementDirectDamage(run) = hook {
             run(world, ctx, target, critical);
         }
@@ -1206,7 +1322,7 @@ pub fn resource_value_after_cast(
 ) -> impl Iterator<Item = AfterCastHook> + use<> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ResourceValueAfterCast)
         .filter_map(move |hook| match hook {
             SpellScriptHook::ResourceValueAfterCast(lookup) => lookup(spell),
             _ => None,
@@ -1214,7 +1330,10 @@ pub fn resource_value_after_cast(
 }
 
 pub fn triggered_resource_producer(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::TriggeredResourceProducer)
+    {
         if let SpellScriptHook::TriggeredResourceProducer(run) = hook {
             run(world, caster, spell);
         }
@@ -1232,7 +1351,7 @@ pub fn power_cost(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::PowerCost)
         .fold(amount, |cost, hook| match hook {
             SpellScriptHook::PowerCost(run) => run(world, caster, spell, pool, cost),
             _ => cost,
@@ -1248,7 +1367,7 @@ pub fn effective_resource_value(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EffectiveResourceValue)
         .fold(paid, |value, hook| match hook {
             SpellScriptHook::EffectiveResourceValue(run) => {
                 run(world, caster, spell, resource, value)
@@ -1258,7 +1377,10 @@ pub fn effective_resource_value(
 }
 
 pub fn consume_resource_value_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ConsumeResourceValueSources)
+    {
         if let SpellScriptHook::ConsumeResourceValueSources(run) = hook {
             run(world, caster, spell);
         }
@@ -1266,7 +1388,10 @@ pub fn consume_resource_value_sources(world: &mut World, caster: Entity, spell: 
 }
 
 pub fn spell_residual(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::SpellResidual)
+    {
         if let SpellScriptHook::SpellResidual(run) = hook {
             run(world, ctx, target, amount);
         }
@@ -1274,7 +1399,10 @@ pub fn spell_residual(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, am
 }
 
 pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount: f32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::MeleeResidual)
+    {
         if let SpellScriptHook::MeleeResidual(run) = hook {
             run(world, caster, target, amount);
         }
@@ -1284,7 +1412,7 @@ pub fn melee_residual(world: &mut World, caster: Entity, target: Entity, amount:
 pub fn avoidance_proc_hit_mask(world: &World, spell: u32) -> Option<u32> {
     world
         .get_resource::<SpellScriptRegistry>()?
-        .hooks()
+        .hooks(HookKind::AvoidanceProcHitMask)
         .find_map(|hook| match hook {
             SpellScriptHook::AvoidanceProcHitMask(run) => run(spell),
             _ => None,
@@ -1302,7 +1430,7 @@ pub fn after_absorb_consumed(
     let Some(registry) = world.get_resource::<SpellScriptRegistry>().copied() else {
         return;
     };
-    for hook in registry.hooks() {
+    for hook in registry.hooks(HookKind::AfterAbsorbConsumed) {
         if let SpellScriptHook::AfterAbsorbConsumed(run) = hook {
             run(world, caster, victim, attacker, spell, amount);
         }
@@ -1310,7 +1438,10 @@ pub fn after_absorb_consumed(
 }
 
 pub fn successful_cast_relationships(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::SuccessfulCastRelationships)
+    {
         if let SpellScriptHook::SuccessfulCastRelationships(run) = hook {
             run(world, caster, spell);
         }
@@ -1320,7 +1451,7 @@ pub fn successful_cast_relationships(world: &mut World, caster: Entity, spell: &
 pub fn guarantees_crit(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::GuaranteesCrit)
         .any(|hook| match hook {
             SpellScriptHook::GuaranteesCrit(test) => test(world, caster, spell),
             _ => false,
@@ -1331,7 +1462,7 @@ pub fn allows_cast_during_channel(world: &World, caster: Entity, spell: &SpellIn
     world
         .get_resource::<SpellScriptRegistry>()
         .is_some_and(|registry| {
-            registry.hooks().any(|hook| {
+            registry.hooks(HookKind::AllowCastDuringChannel).any(|hook| {
         matches!(hook, SpellScriptHook::AllowCastDuringChannel(test) if test(world, caster, spell))
     })
         })
@@ -1339,7 +1470,7 @@ pub fn allows_cast_during_channel(world: &World, caster: Entity, spell: &SpellIn
 
 pub fn instant_cast_during_channel(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     world.get_resource::<SpellScriptRegistry>().is_some_and(|registry| {
-        registry.hooks().any(|hook| {
+        registry.hooks(HookKind::InstantCastDuringChannel).any(|hook| {
             matches!(hook, SpellScriptHook::InstantCastDuringChannel(test) if test(world, caster, spell))
         })
     })
@@ -1348,7 +1479,7 @@ pub fn instant_cast_during_channel(world: &World, caster: Entity, spell: &SpellI
 pub fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::IgnoresCooldown)
         .any(|hook| match hook {
             SpellScriptHook::IgnoresCooldown(test) => test(world, caster, spell),
             _ => false,
@@ -1358,7 +1489,7 @@ pub fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> boo
 pub fn snapshots_modifier(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::SnapshotsModifier)
         .any(|hook| match hook {
             SpellScriptHook::SnapshotsModifier(test) => test(spell),
             _ => false,
@@ -1369,17 +1500,19 @@ pub fn uses_persistent_cast_multiplier(world: &World, spell: u32) -> bool {
     world
         .get_resource::<SpellScriptRegistry>()
         .is_some_and(|registry| {
-            registry.hooks().any(|hook| match hook {
-                SpellScriptHook::PersistentCastMultiplier(spells) => spells.contains(&spell),
-                _ => false,
-            })
+            registry
+                .hooks(HookKind::PersistentCastMultiplier)
+                .any(|hook| match hook {
+                    SpellScriptHook::PersistentCastMultiplier(spells) => spells.contains(&spell),
+                    _ => false,
+                })
         })
 }
 
 pub fn ignores_armor(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ArmorIgnoredSpells)
         .any(|hook| match hook {
             SpellScriptHook::ArmorIgnoredSpells(spells) => spells.contains(&spell),
             _ => false,
@@ -1393,7 +1526,10 @@ pub fn melee_raw_resolved(
     amount: f32,
     crit: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::MeleeRawResolved)
+    {
         if let SpellScriptHook::MeleeRawResolved(run) = hook {
             run(world, attacker, target, amount, crit);
         }
@@ -1407,7 +1543,10 @@ pub fn raw_resolved_damage(
     critical: bool,
     amount: f32,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::RawResolvedDamage)
+    {
         if let SpellScriptHook::RawResolvedDamage(run) = hook {
             run(world, ctx, target, critical, amount);
         }
@@ -1423,7 +1562,10 @@ pub fn resolved_heal(
     critical: bool,
     periodic: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ResolvedHeal)
+    {
         if let SpellScriptHook::ResolvedHeal(run) = hook {
             run(world, ctx, target, raw, effective, critical, periodic);
         }
@@ -1437,7 +1579,10 @@ pub fn resolved_damage(
     critical: bool,
     amount: f32,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ResolvedDamage)
+    {
         if let SpellScriptHook::ResolvedDamage(run) = hook {
             run(world, ctx, target, critical, amount);
         }
@@ -1445,7 +1590,10 @@ pub fn resolved_damage(
 }
 
 pub fn after_direct_damage_before_items(world: &mut World, ctx: &EffectCtx<'_>) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterDirectDamageBeforeItems)
+    {
         if let SpellScriptHook::AfterDirectDamageBeforeItems(run) = hook {
             run(world, ctx);
         }
@@ -1457,7 +1605,10 @@ pub fn after_aura_application(
     target: Entity,
     aura: &crate::auras::AuraInstance,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterAuraApplication)
+    {
         if let SpellScriptHook::AfterAuraApplication(run) = hook {
             run(world, target, aura);
         }
@@ -1472,7 +1623,10 @@ pub fn landed_damage_policies(
     amount: f32,
     periodic: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::LandedDamagePolicy)
+    {
         if let SpellScriptHook::LandedDamagePolicy(run) = hook {
             run(world, caster, target, spell, amount, periodic);
         }
@@ -1482,7 +1636,7 @@ pub fn landed_damage_policies(
 pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ActionAvailable)
         .all(|hook| match hook {
             SpellScriptHook::ActionAvailable(test) => test(world, caster, spell),
             _ => true,
@@ -1492,7 +1646,7 @@ pub fn action_available(world: &World, caster: Entity, spell: u32) -> bool {
 pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AbilityUseAvailable)
         .any(|hook| match hook {
             SpellScriptHook::AbilityUseAvailable(test) => test(world, caster, spell),
             _ => false,
@@ -1502,7 +1656,7 @@ pub fn ability_use_available(world: &World, caster: Entity, spell: u32) -> bool 
 pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextHitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ChannelPeriodic)
         .find_map(|hook| match hook {
             SpellScriptHook::ChannelPeriodic(lookup) => lookup(spell, index),
             _ => None,
@@ -1510,7 +1664,10 @@ pub fn channel_periodic(world: &World, spell: u32, index: u8) -> Option<ContextH
 }
 
 pub fn after_periodic_energize(world: &mut World, unit: Entity, spell: u32, effect: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterPeriodicEnergize)
+    {
         if let SpellScriptHook::AfterPeriodicEnergize(run) = hook {
             run(world, unit, spell, effect);
         }
@@ -1518,7 +1675,10 @@ pub fn after_periodic_energize(world: &mut World, unit: Entity, spell: u32, effe
 }
 
 pub fn before_native_on_cast(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeNativeOnCast)
+    {
         if let SpellScriptHook::BeforeNativeOnCast(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -1526,7 +1686,10 @@ pub fn before_native_on_cast(world: &mut World, caster: Entity, spell: &SpellInf
 }
 
 pub fn prepare_stored_damage(world: &World, spell: &mut SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::PrepareStoredDamage)
+    {
         if let SpellScriptHook::PrepareStoredDamage(run) = hook {
             run(spell);
         }
@@ -1536,7 +1699,7 @@ pub fn prepare_stored_damage(world: &World, spell: &mut SpellInfo) {
 pub fn enemy_context_hit(world: &World, spell: u32) -> Option<EnemyContextHitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EnemyContextHit)
         .find_map(|hook| match hook {
             SpellScriptHook::EnemyContextHit(lookup) => lookup(spell),
             _ => None,
@@ -1549,7 +1712,10 @@ pub fn after_policy_direct_damage(
     target: Entity,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterPolicyDirectDamage)
+    {
         if let SpellScriptHook::AfterPolicyDirectDamage(run) = hook {
             run(world, ctx, target, critical);
         }
@@ -1562,7 +1728,10 @@ pub fn after_policy_periodic_damage(
     target: Entity,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterPolicyPeriodicDamage)
+    {
         if let SpellScriptHook::AfterPolicyPeriodicDamage(run) = hook {
             run(world, ctx, target, critical);
         }
@@ -1577,7 +1746,7 @@ pub fn target_context_damage_multiplier(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::TargetContextDamageMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::TargetContextDamageMultiplier(run) => {
                 Some(run(world, ctx, target, periodic))
@@ -1590,7 +1759,7 @@ pub fn target_context_damage_multiplier(
 pub fn after_combo_overflow(world: &mut World, target: Entity, overflow: f32) {
     let hooks: Vec<_> = world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AfterComboOverflow)
         .filter_map(|hook| match hook {
             SpellScriptHook::AfterComboOverflow(run) => Some(run),
             _ => None,
@@ -1604,7 +1773,7 @@ pub fn after_combo_overflow(world: &mut World, target: Entity, overflow: f32) {
 pub fn after_combo_gain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, gained: f32) {
     let hooks: Vec<_> = world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AfterComboGain)
         .filter_map(|hook| match hook {
             SpellScriptHook::AfterComboGain(run) => Some(run),
             _ => None,
@@ -1616,7 +1785,10 @@ pub fn after_combo_gain(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, 
 }
 
 pub fn after_native_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterNativeOnCast)
+    {
         if let SpellScriptHook::AfterNativeOnCast(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -1624,7 +1796,10 @@ pub fn after_native_on_cast(world: &mut World, caster: Entity, spell: u32, depth
 }
 
 pub fn after_modifier_consumption(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterModifierConsumption)
+    {
         if let SpellScriptHook::AfterModifierConsumption(run) = hook {
             run(world, caster, spell);
         }
@@ -1637,7 +1812,10 @@ pub fn after_foreground_spender(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterForegroundSpender)
+    {
         if let SpellScriptHook::AfterForegroundSpender(run) = hook {
             run(world, caster, spell, target);
         }
@@ -1650,7 +1828,10 @@ pub fn after_spender_proc(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterSpenderProc)
+    {
         if let SpellScriptHook::AfterSpenderProc(run) = hook {
             run(world, caster, spell, target);
         }
@@ -1663,7 +1844,10 @@ pub fn after_elemental_launch(
     spell: &SpellInfo,
     foreground: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterElementalLaunch)
+    {
         if let SpellScriptHook::AfterElementalLaunch(run) = hook {
             run(world, caster, spell, foreground);
         }
@@ -1676,7 +1860,10 @@ pub fn before_direct_damage_policies(
     target: Entity,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeDirectDamagePolicies)
+    {
         if let SpellScriptHook::BeforeDirectDamagePolicies(run) = hook {
             run(world, ctx, target, critical);
         }
@@ -1684,7 +1871,10 @@ pub fn before_direct_damage_policies(
 }
 
 pub fn after_periodic_damage_policies(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterPeriodicDamagePolicies)
+    {
         if let SpellScriptHook::AfterPeriodicDamagePolicies(run) = hook {
             run(world, ctx, target);
         }
@@ -1694,7 +1884,7 @@ pub fn after_periodic_damage_policies(world: &mut World, ctx: &EffectCtx<'_>, ta
 pub fn empower_completion(world: &World, spell: u32) -> Option<EmpowerCompleteHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EmpowerCompletion)
         .find_map(|hook| match hook {
             SpellScriptHook::EmpowerCompletion(lookup) => lookup(spell),
             _ => None,
@@ -1704,7 +1894,7 @@ pub fn empower_completion(world: &World, spell: u32) -> Option<EmpowerCompleteHo
 pub fn empower_damage_bonus(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EmpowerDamageBonus)
         .filter_map(|hook| match hook {
             SpellScriptHook::EmpowerDamageBonus(run) => Some(run(world, caster, spell)),
             _ => None,
@@ -1720,7 +1910,7 @@ pub fn empower_release_preview(
 ) -> Option<SpellInfo> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EmpowerReleasePreview)
         .find_map(|hook| match hook {
             SpellScriptHook::EmpowerReleasePreview(run) => run(world, caster, spell, rank),
             _ => None,
@@ -1735,7 +1925,7 @@ pub fn capture_consumed_damage_modifier(
 ) -> Option<u32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::CaptureConsumedDamageModifier)
         .find_map(|hook| match hook {
             SpellScriptHook::CaptureConsumedDamageModifier(capture) => {
                 capture(world, caster, spell, foreground)
@@ -1752,7 +1942,10 @@ pub fn finish_consumed_damage_modifier(
     depth: u8,
     foreground: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::FinishConsumedDamageModifier)
+    {
         if let SpellScriptHook::FinishConsumedDamageModifier(run) = hook {
             run(world, caster, spell, consumed, depth, foreground);
         }
@@ -1760,7 +1953,10 @@ pub fn finish_consumed_damage_modifier(
 }
 
 pub fn before_judgment_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeJudgmentOnCast)
+    {
         if let SpellScriptHook::BeforeJudgmentOnCast(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -1770,7 +1966,7 @@ pub fn before_judgment_on_cast(world: &mut World, caster: Entity, spell: u32, de
 pub fn leech_heal_override(world: &World, ctx: &EffectCtx<'_>, damage: f32) -> Option<f32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::LeechHealOverride)
         .find_map(|hook| match hook {
             SpellScriptHook::LeechHealOverride(run) => run(world, ctx, damage),
             _ => None,
@@ -1780,7 +1976,7 @@ pub fn leech_heal_override(world: &World, ctx: &EffectCtx<'_>, damage: f32) -> O
 pub fn healing_multiplier(world: &World, caster: Entity, spell: &SpellInfo, periodic: bool) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::HealingMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::HealingMultiplier(run) => Some(run(world, caster, spell, periodic)),
             _ => None,
@@ -1797,7 +1993,7 @@ pub fn snapshot_healing_aura(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::SnapshotHealingAura)
         .fold(amount, |value, hook| match hook {
             SpellScriptHook::SnapshotHealingAura(run) => run(world, caster, spell, effect, value),
             _ => value,
@@ -1807,7 +2003,7 @@ pub fn snapshot_healing_aura(
 pub fn triggers_hot_streak(world: &World, spell: u32) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::HotStreakProducers)
         .any(|hook| match hook {
             SpellScriptHook::HotStreakProducers(spells) => spells.contains(&spell),
             _ => false,
@@ -1815,7 +2011,10 @@ pub fn triggers_hot_streak(world: &World, spell: u32) -> bool {
 }
 
 pub fn before_proc_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeProcLaunch)
+    {
         if let SpellScriptHook::BeforeProcLaunch(run) = hook {
             run(world, caster, spell);
         }
@@ -1828,7 +2027,10 @@ pub fn after_fire_direct_hit(
     target: Entity,
     critical: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterFireDirectHit)
+    {
         if let SpellScriptHook::AfterFireDirectHit(run) = hook {
             run(world, ctx, target, critical);
         }
@@ -1836,7 +2038,10 @@ pub fn after_fire_direct_hit(
 }
 
 pub fn after_fire_outcome_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterFireOutcomeHit)
+    {
         if let SpellScriptHook::AfterFireOutcomeHit(run) = hook {
             run(world, ctx, target);
         }
@@ -1850,7 +2055,10 @@ pub fn record_fire_outcome(
     critical: bool,
     guaranteed: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::RecordFireOutcome)
+    {
         if let SpellScriptHook::RecordFireOutcome(run) = hook {
             run(world, caster, spell, critical, guaranteed);
         }
@@ -1865,7 +2073,7 @@ pub fn cast_hit_proc_chance(
 ) -> Option<f32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::CastHitProcChance)
         .find_map(|hook| match hook {
             SpellScriptHook::CastHitProcChance(run) => run(world, caster, spell, hit),
             _ => None,
@@ -1873,7 +2081,10 @@ pub fn cast_hit_proc_chance(
 }
 
 pub fn roll_cast_hit_proc(world: &mut World, caster: Entity, chance: f32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::RollCastHitProc)
+    {
         if let SpellScriptHook::RollCastHitProc(run) = hook {
             run(world, caster, chance);
         }
@@ -1887,7 +2098,7 @@ pub fn launch_damage_modifiers<'a>(
 ) -> impl Iterator<Item = crate::spell_info::ChargedSpellModifier> + 'a {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::LaunchDamageModifier)
         .filter_map(move |hook| match hook {
             SpellScriptHook::LaunchDamageModifier(run) => run(world, caster, spell),
             _ => None,
@@ -1895,7 +2106,10 @@ pub fn launch_damage_modifiers<'a>(
 }
 
 pub fn after_queued_triggers(world: &mut World) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterQueuedTriggers)
+    {
         if let SpellScriptHook::AfterQueuedTriggers(run) = hook {
             run(world);
         }
@@ -1908,7 +2122,10 @@ pub fn after_spell_payment(
     spell: &SpellInfo,
     costs: &[(CostPool, f32)],
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterSpellPayment)
+    {
         if let SpellScriptHook::AfterSpellPayment(run) = hook {
             run(world, caster, spell, costs);
         }
@@ -1916,7 +2133,10 @@ pub fn after_spell_payment(
 }
 
 pub fn before_damage_snapshot(world: &World, caster: Entity, spell: &mut SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeDamageSnapshot)
+    {
         if let SpellScriptHook::BeforeDamageSnapshot(run) = hook {
             run(world, caster, spell);
         }
@@ -1924,7 +2144,10 @@ pub fn before_damage_snapshot(world: &World, caster: Entity, spell: &mut SpellIn
 }
 
 pub fn before_execution_counter_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeExecutionCounterLaunch)
+    {
         if let SpellScriptHook::BeforeExecutionCounterLaunch(run) = hook {
             run(world, caster, spell);
         }
@@ -1934,7 +2157,7 @@ pub fn before_execution_counter_launch(world: &mut World, caster: Entity, spell:
 pub fn policy_tail_cast(world: &World, spell: u32) -> Option<PolicyTailCastHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::PolicyTailCast)
         .find_map(|hook| match hook {
             SpellScriptHook::PolicyTailCast(lookup) => lookup(spell),
             _ => None,
@@ -1944,7 +2167,7 @@ pub fn policy_tail_cast(world: &World, spell: u32) -> Option<PolicyTailCastHook>
 pub fn policy_tail_hit(world: &World, spell: u32) -> Option<PolicyTailHitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::PolicyTailHit)
         .find_map(|hook| match hook {
             SpellScriptHook::PolicyTailHit(lookup) => lookup(spell),
             _ => None,
@@ -1954,7 +2177,7 @@ pub fn policy_tail_hit(world: &World, spell: u32) -> Option<PolicyTailHitHook> {
 pub fn proc_charges(world: &World, caster: Entity, spell: &SpellInfo, native: f32) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ProcCharges)
         .fold(native, |amount, hook| match hook {
             SpellScriptHook::ProcCharges(run) => run(world, caster, spell, amount),
             _ => amount,
@@ -1964,7 +2187,7 @@ pub fn proc_charges(world: &World, caster: Entity, spell: &SpellInfo, native: f3
 pub fn extra_combo_points(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ExtraComboPoints)
         .filter_map(|hook| match hook {
             SpellScriptHook::ExtraComboPoints(run) => Some(run(world, caster, spell)),
             _ => None,
@@ -1980,7 +2203,7 @@ pub fn named_healing_multiplier(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::NamedHealingMultiplier)
         .filter_map(|hook| match hook {
             SpellScriptHook::NamedHealingMultiplier(run) => Some(run(world, caster, target, spell)),
             _ => None,
@@ -1991,7 +2214,7 @@ pub fn named_healing_multiplier(
 pub fn guardian_action_eligible(world: &World, actor: Entity, spell: u32, target: Entity) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::GuardianActionEligible)
         .all(|hook| match hook {
             SpellScriptHook::GuardianActionEligible(run) => run(world, actor, spell, target),
             _ => true,
@@ -2001,7 +2224,7 @@ pub fn guardian_action_eligible(world: &World, actor: Entity, spell: u32, target
 pub fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::EffectEnabled)
         .all(|hook| match hook {
             SpellScriptHook::EffectEnabled(run) => run(world, caster, spell, index),
             _ => true,
@@ -2013,7 +2236,10 @@ pub fn check_native_spell(
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), super::CastFailure> {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::CheckNativeSpell)
+    {
         if let SpellScriptHook::CheckNativeSpell(run) = hook {
             run(world, caster, spell)?;
         }
@@ -2022,7 +2248,10 @@ pub fn check_native_spell(
 }
 
 pub fn after_resolved_hits(world: &mut World, ctx: &EffectCtx<'_>) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterResolvedHits)
+    {
         if let SpellScriptHook::AfterResolvedHits(run) = hook {
             run(world, ctx);
         }
@@ -2037,7 +2266,7 @@ pub fn snapshot_native_aura_amount(
 ) -> f32 {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::SnapshotNativeAuraAmount)
         .fold(native, |amount, hook| match hook {
             SpellScriptHook::SnapshotNativeAuraAmount(run) => run(world, spell, index, amount),
             _ => amount,
@@ -2045,7 +2274,10 @@ pub fn snapshot_native_aura_amount(
 }
 
 pub fn area_trigger_expired(world: &mut World, caster: Entity, spell: u32, position: Vec3) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AreaTriggerExpired)
+    {
         if let SpellScriptHook::AreaTriggerExpired(run) = hook {
             run(world, caster, spell, position);
         }
@@ -2053,7 +2285,10 @@ pub fn area_trigger_expired(world: &mut World, caster: Entity, spell: u32, posit
 }
 
 pub fn after_cast_update(world: &mut World) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterCastUpdate)
+    {
         if let SpellScriptHook::AfterCastUpdate(run) = hook {
             run(world);
         }
@@ -2061,7 +2296,10 @@ pub fn after_cast_update(world: &mut World) {
 }
 
 pub fn consume_cast_modifiers(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ConsumeCastModifiers)
+    {
         if let SpellScriptHook::ConsumeCastModifiers(run) = hook {
             run(world, caster, spell);
         }
@@ -2069,7 +2307,10 @@ pub fn consume_cast_modifiers(world: &mut World, caster: Entity, spell: &SpellIn
 }
 
 pub fn after_weapon_launch(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterWeaponLaunch)
+    {
         if let SpellScriptHook::AfterWeaponLaunch(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -2079,7 +2320,7 @@ pub fn after_weapon_launch(world: &mut World, caster: Entity, spell: &SpellInfo,
 pub fn after_policy_cast(world: &World, spell: u32) -> Option<AfterPolicyCastHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::AfterPolicyCast)
         .find_map(|hook| match hook {
             SpellScriptHook::AfterPolicyCast(lookup) => lookup(spell),
             _ => None,
@@ -2087,7 +2328,10 @@ pub fn after_policy_cast(world: &World, spell: u32) -> Option<AfterPolicyCastHoo
 }
 
 pub fn before_melee_combo_damage(world: &mut World, ctx: &EffectCtx<'_>) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeMeleeComboDamage)
+    {
         if let SpellScriptHook::BeforeMeleeComboDamage(run) = hook {
             run(world, ctx);
         }
@@ -2095,7 +2339,10 @@ pub fn before_melee_combo_damage(world: &mut World, ctx: &EffectCtx<'_>) {
 }
 
 pub fn before_periodic_item_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforePeriodicItemDamage)
+    {
         if let SpellScriptHook::BeforePeriodicItemDamage(run) = hook {
             run(world, ctx, target);
         }
@@ -2103,7 +2350,10 @@ pub fn before_periodic_item_damage(world: &mut World, ctx: &EffectCtx<'_>, targe
 }
 
 pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ConjureCount)
+    {
         if let SpellScriptHook::ConjureCount(run) = hook {
             run(world, caster, target, count);
         }
@@ -2114,7 +2364,7 @@ pub fn conjure_count(world: &mut World, caster: Entity, target: Entity, count: u
 pub fn policy_context_required(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::PolicyContextRequired)
         .any(|hook| match hook {
             SpellScriptHook::PolicyContextRequired(run) => run(world, caster, spell),
             _ => false,
@@ -2123,7 +2373,10 @@ pub fn policy_context_required(world: &World, caster: Entity, spell: &SpellInfo)
 
 /// Script snapshots follow captured policy context and precede ordinary aura preparation.
 pub fn prepare_policy_spell(world: &World, caster: Entity, spell: &mut SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::PreparePolicySpell)
+    {
         if let SpellScriptHook::PreparePolicySpell(run) = hook {
             run(world, caster, spell);
         }
@@ -2132,7 +2385,10 @@ pub fn prepare_policy_spell(world: &World, caster: Entity, spell: &mut SpellInfo
 
 /// The policy dispatcher has already checked the original primary before this slot.
 pub fn before_policy_primary_hit(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforePolicyPrimaryHit)
+    {
         if let SpellScriptHook::BeforePolicyPrimaryHit(run) = hook {
             run(world, ctx, target);
         }
@@ -2143,7 +2399,7 @@ pub fn before_policy_primary_hit(world: &mut World, ctx: &EffectCtx<'_>, target:
 pub fn before_enemy_context_hit(world: &World, spell: u32) -> Option<BeforeEnemyContextHitHook> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::BeforeEnemyContextHit)
         .find_map(|hook| match hook {
             SpellScriptHook::BeforeEnemyContextHit(lookup) => lookup(spell),
             _ => None,
@@ -2160,7 +2416,7 @@ pub fn heal_received(
     percent_based: bool,
 ) {
     let registry = *world.resource::<SpellScriptRegistry>();
-    for hook in registry.hooks() {
+    for hook in registry.hooks(HookKind::HealReceived) {
         if let SpellScriptHook::HealReceived(run) = hook {
             run(world, target, spell, raw, effective, percent_based);
         }
@@ -2178,7 +2434,7 @@ pub fn incoming_damage_before_mitigation(
         return;
     }
     let registry = *world.resource::<SpellScriptRegistry>();
-    for hook in registry.hooks() {
+    for hook in registry.hooks(HookKind::IncomingDamageBeforeMitigation) {
         if let SpellScriptHook::IncomingDamageBeforeMitigation(run) = hook {
             run(world, target, spell, amount);
         }
@@ -2189,7 +2445,7 @@ pub fn incoming_damage_before_mitigation(
 pub fn expel_harm_heal(world: &mut World, caster: Entity) -> f32 {
     let registry = *world.resource::<SpellScriptRegistry>();
     registry
-        .hooks()
+        .hooks(HookKind::ExpelHarmHeal)
         .filter_map(|hook| match hook {
             SpellScriptHook::ExpelHarmHeal(run) => Some(run(world, caster)),
             _ => None,
@@ -2199,7 +2455,10 @@ pub fn expel_harm_heal(world: &mut World, caster: Entity) -> f32 {
 
 /// Observe healing after source and target multipliers but before critical and partial-tick scaling.
 pub fn raw_heal(world: &mut World, ctx: &EffectCtx<'_>, amount: f32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::RawHeal)
+    {
         if let SpellScriptHook::RawHeal(run) = hook {
             run(world, ctx, amount);
         }
@@ -2207,7 +2466,10 @@ pub fn raw_heal(world: &mut World, ctx: &EffectCtx<'_>, amount: f32) {
 }
 
 pub fn aura_event(world: &mut World, event: &crate::auras::procs::AuraEvent) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AuraEvent)
+    {
         if let SpellScriptHook::AuraEvent(run) = hook {
             run(world, event);
         }
@@ -2222,7 +2484,10 @@ pub fn spell_health_impact(
     before: f32,
     healing: bool,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::SpellHealthImpact)
+    {
         if let SpellScriptHook::SpellHealthImpact(run) = hook {
             run(world, ctx, target, before, healing);
         }
@@ -2231,7 +2496,10 @@ pub fn spell_health_impact(
 
 /// Health history observes the emitted event after meters and arena bookkeeping.
 pub fn health_change_observed(world: &mut World, event: &shared::protocol::CombatLogEvent) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::HealthChangeObserved)
+    {
         if let SpellScriptHook::HealthChangeObserved(run) = hook {
             run(world, event);
         }
@@ -2240,7 +2508,10 @@ pub fn health_change_observed(world: &mut World, event: &shared::protocol::Comba
 
 /// Admission-time proc markers, before payment and missile flight.
 pub fn snapshot_launch_auras(world: &World, caster: Entity, spell: &mut SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::SnapshotLaunchAuras)
+    {
         if let SpellScriptHook::SnapshotLaunchAuras(run) = hook {
             run(world, caster, spell);
         }
@@ -2256,7 +2527,7 @@ pub fn triggered_child_damage_multiplier(
 ) -> Option<f32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::TriggeredChildDamageMultiplier)
         .find_map(|hook| match hook {
             SpellScriptHook::TriggeredChildDamageMultiplier(run) => {
                 run(world, caster, parent, child)
@@ -2269,7 +2540,7 @@ pub fn triggered_child_damage_multiplier(
 pub fn proc_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::ProcAfterCast)
         .filter_map(move |hook| match hook {
             SpellScriptHook::ProcAfterCast(lookup) => lookup(spell),
             _ => None,
@@ -2280,7 +2551,7 @@ pub fn proc_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterC
 pub fn supply_after_cast(world: &World, spell: u32) -> impl Iterator<Item = AfterCastHook> + use<> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::SupplyAfterCast)
         .filter_map(move |hook| match hook {
             SpellScriptHook::SupplyAfterCast(lookup) => lookup(spell),
             _ => None,
@@ -2289,7 +2560,10 @@ pub fn supply_after_cast(world: &World, spell: u32) -> impl Iterator<Item = Afte
 
 /// Resolve script-owned delays after queued triggers and before their cleanup.
 pub fn resolve_pending_script_events(world: &mut World) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ResolvePendingScriptEvents)
+    {
         if let SpellScriptHook::ResolvePendingScriptEvents(run) = hook {
             run(world);
         }
@@ -2298,7 +2572,10 @@ pub fn resolve_pending_script_events(world: &mut World) {
 
 /// Launch supply follows modifier consumption and precedes execution counters.
 pub fn after_launch_proc_supply(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterLaunchProcSupply)
+    {
         if let SpellScriptHook::AfterLaunchProcSupply(run) = hook {
             run(world, caster, spell);
         }
@@ -2313,7 +2590,10 @@ pub fn conjure_from_spell(
     target: Entity,
     count: u32,
 ) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::ConjureFromSpell)
+    {
         if let SpellScriptHook::ConjureFromSpell(run) = hook {
             run(world, caster, spell, target, count);
         }
@@ -2322,7 +2602,10 @@ pub fn conjure_from_spell(
 
 /// Native root snapshot before the ordinary on-cast registry.
 pub fn before_script_on_cast(world: &mut World, caster: Entity, spell: u32, depth: u8) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforeScriptOnCast)
+    {
         if let SpellScriptHook::BeforeScriptOnCast(run) = hook {
             run(world, caster, spell, depth);
         }
@@ -2331,7 +2614,10 @@ pub fn before_script_on_cast(world: &mut World, caster: Entity, spell: u32, dept
 
 /// Actual weapon impact at the original pre-policy position.
 pub fn after_weapon_damage(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, amount: f32) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterWeaponDamage)
+    {
         if let SpellScriptHook::AfterWeaponDamage(run) = hook {
             run(world, ctx, target, amount);
         }
@@ -2346,7 +2632,7 @@ pub fn native_weapon_multiplier(
 ) -> Option<f32> {
     world
         .resource::<SpellScriptRegistry>()
-        .hooks()
+        .hooks(HookKind::NativeWeaponMultiplier)
         .find_map(|hook| match hook {
             SpellScriptHook::NativeWeaponMultiplier(run) => run(world, caster, parent, child),
             _ => None,
@@ -2355,7 +2641,10 @@ pub fn native_weapon_multiplier(
 
 /// Native repeated launch after the upstream Arcane launch callback.
 pub fn after_native_launch(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterNativeLaunch)
+    {
         if let SpellScriptHook::AfterNativeLaunch(run) = hook {
             run(world, caster, spell);
         }
@@ -2364,7 +2653,10 @@ pub fn after_native_launch(world: &mut World, caster: Entity, spell: &SpellInfo)
 
 /// Independent scheduler retains its own after-advance_casts system boundary.
 pub fn after_native_cast_update(world: &mut World) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterNativeCastUpdate)
+    {
         if let SpellScriptHook::AfterNativeCastUpdate(run) = hook {
             run(world);
         }
@@ -2373,7 +2665,10 @@ pub fn after_native_cast_update(world: &mut World) {
 
 /// Actual chain recipients are still captured before the resolving frame is removed.
 pub fn after_chain_resolved(world: &mut World, ctx: &EffectCtx<'_>) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterChainResolved)
+    {
         if let SpellScriptHook::AfterChainResolved(run) = hook {
             run(world, ctx);
         }
@@ -2382,7 +2677,10 @@ pub fn after_chain_resolved(world: &mut World, ctx: &EffectCtx<'_>) {
 
 /// Retain native discharge resolution before Frost and generic queued events.
 pub fn before_pending_script_events(world: &mut World) {
-    for hook in world.resource::<SpellScriptRegistry>().hooks() {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::BeforePendingScriptEvents)
+    {
         if let SpellScriptHook::BeforePendingScriptEvents(run) = hook {
             run(world);
         }
