@@ -50,9 +50,12 @@ pub(crate) fn start(world: &mut World, unit: Entity) {
 }
 
 /// Objectives cannot be healed before their encounter starts.
-pub(crate) fn accepts_healing(world: &mut World, unit: Entity) -> bool {
+pub(crate) fn accepts_healing(world: &mut World, unit: Entity, caster: Entity) -> bool {
     if start_percent(world, unit).is_none() {
         return true;
+    }
+    if super::temple_avatar::healing_blocked(world, unit, caster) {
+        return false;
     }
     let Some(map) = world.get::<InMap>(unit).copied() else {
         return false;

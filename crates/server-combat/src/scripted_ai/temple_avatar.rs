@@ -16,6 +16,12 @@ const HEXXER: u32 = 268491;
 const TAINTED_STRIKE: u32 = 1300803;
 const LATENT_HEX: u32 = 1302153;
 const FLAME_SHOCK: u32 = 1302158;
+const DEFILE_CHANNEL: u32 = 1301199;
+const DEFILE_IMMUNITY: u32 = 1301202;
+
+pub(super) fn healing_blocked(world: &World, target: Entity, caster: Entity) -> bool {
+    caster != target && crate::auras::has_aura(world, target, DEFILE_IMMUNITY)
+}
 
 pub(super) fn is_encounter_add(world: &World, actor: Entity) -> bool {
     world
@@ -112,7 +118,8 @@ impl CreatureAi for Avatar {
             self.started = true;
             // Median first-hit times; positions are the repeated first-hit samples.
             self.boss.events.schedule(GUARDIAN, 4_118);
-            self.boss.events.schedule(DEFILER, 15_889);
+            // Defiler's observed channel starts at 15.257–15.270s in the three pulls.
+            self.boss.events.schedule(DEFILER, 15_257);
             self.boss.events.schedule(HEXXER, 18_724);
         }
         self.boss.events.update(u64::from(diff_ms));
@@ -135,6 +142,47 @@ struct Add {
     events: EventMap,
 }
 impl CreatureAi for Add {
+    fn is_summoned_by(&mut self, ctx: &mut Ctx, summoner: Entity) {
+        if self.entry != DEFILER {
+            return;
+        }
+        // WCL M4cdBNJkTjavYgQV/11 pull12: Defiling Taint begins at 15.270s;
+        // it is removed four milliseconds after the defiler dies. DB2 1301202
+        // supplies the healing immunity referenced by the channel's description.
+        if ctx.do_cast_at(Some(summoner), DEFILE_CHANNEL, true) {
+            crate::auras::apply_aura(
+                ctx.world,
+                &crate::auras::AuraApplication {
+                    caster: ctx.me,
+                    target: summoner,
+                    spell_id: DEFILE_IMMUNITY,
+                    effect_mask: 0b1110,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+    }
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        if self.entry != DEFILER {
+            return;
+        }
+        let Some(avatar) = ctx
+            .world
+            .get::<crate::zones::TempSummon>(ctx.me)
+            .map(|summon| summon.summoner)
+        else {
+            return;
+        };
+        let caster = ctx.me;
+        crate::auras::remove_auras(
+            ctx.world,
+            avatar,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| {
+                aura.caster == caster && matches!(aura.spell_id, DEFILE_CHANNEL | DEFILE_IMMUNITY)
+            },
+        );
+    }
     fn reset(&mut self, _ctx: &mut Ctx) {
         self.events.reset();
     }

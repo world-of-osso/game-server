@@ -145,6 +145,27 @@ fn temple_avatar_first_wave_spawns_and_despawns_with_encounter() {
         dest: None,
         chain_multiplier: 1.0,
     };
+    assert!(
+        h.has_aura(avatar, 1301199),
+        "Defiler channels Taint on the Avatar"
+    );
+    assert!(
+        h.has_aura(avatar, 1301202),
+        "Taint applies its native healing immunity"
+    );
+    let before = h.health(avatar).current;
+    crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max);
+    assert_eq!(
+        h.health(avatar).current,
+        before,
+        "Taint prevents external healing"
+    );
+    let defiler = actors.iter().find(|(_, entry)| *entry == 268427).unwrap().0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, defiler, 1_000_000_000.0);
+    assert!(
+        !h.has_aura(avatar, 1301202),
+        "Defiler death removes the immunity"
+    );
     crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &ctx, avatar, max);
     h.advance(0.1);
     assert!(

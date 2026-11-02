@@ -2796,7 +2796,7 @@ fn apply_resolved_heal(
     {
         return;
     }
-    if !crate::scripted_ai::heal_objective::accepts_healing(world, target) {
+    if !crate::scripted_ai::heal_objective::accepts_healing(world, target, ctx.caster) {
         return;
     }
     let absorbed =
