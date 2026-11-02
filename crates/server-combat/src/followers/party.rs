@@ -1813,6 +1813,10 @@ mod copy_tests {
                 source: crate::auras::AuraSource::Cast,
             },
         );
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<crate::auth::InWorld>();
         crate::combat::kill_unit(h.app.world_mut(), h.npc, target);
         crate::auras::remove_on_death(h.app.world_mut(), target);
         assert!(crate::death::soulstone::available(h.app.world(), target));
