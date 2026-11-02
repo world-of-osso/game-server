@@ -13,16 +13,18 @@ pub(super) fn read_source(
     map: u32,
     requested_difficulty: Option<u32>,
 ) -> Result<Source, String> {
-    let follower_difficulty = db
-        .query_row(
-            "SELECT difficulty_id FROM follower_lfg_dungeons WHERE map_id=?1 ORDER BY id LIMIT 1",
-            [map],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(|error| format!("map{map} catalog: {error}"))?
-        .ok_or_else(|| format!("map{map} missing follower catalog entry"))?;
-    let difficulty = requested_difficulty.unwrap_or(follower_difficulty);
+    let difficulty = match requested_difficulty {
+        Some(difficulty) => difficulty,
+        None => db
+            .query_row(
+                "SELECT difficulty_id FROM follower_lfg_dungeons WHERE map_id=?1 ORDER BY id LIMIT 1",
+                [map],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| format!("map{map} catalog: {error}"))?
+            .ok_or_else(|| format!("map{map} missing follower catalog entry"))?,
+    };
     if requested_difficulty.is_some() {
         let supported: bool = db
             .query_row(
@@ -151,6 +153,14 @@ fn source_requires_real_entrance_population_and_bindings() {
     )
     .unwrap();
     assert_eq!(read_source(&db, 2451, Some(23)).unwrap().difficulty, 23);
+    db.execute("DELETE FROM follower_lfg_dungeons WHERE map_id=2451", [])
+        .unwrap();
+    assert_eq!(read_source(&db, 2451, Some(23)).unwrap().difficulty, 23);
+    assert!(
+        read_source(&db, 2451, None)
+            .unwrap_err()
+            .contains("missing follower catalog entry")
+    );
     assert!(
         read_source(&db, 2451, Some(99))
             .unwrap_err()
