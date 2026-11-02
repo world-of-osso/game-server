@@ -235,6 +235,59 @@ fn native_target_context_no_actual_cast_is_not_a_casting_debuff() {
 }
 
 #[test]
+fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
+    use shared::casting::CastState;
+    fn run(seed: u64, extra_cast: bool) -> (Vec<f32>, u64) {
+        let _seed = crate::random::seed_scope(seed);
+        let (mut h, targets, bindings) = enemies();
+        let target = h.npc;
+        let caster = h.caster;
+        if extra_cast {
+            h.app
+                .world_mut()
+                .entity_mut(targets[0])
+                .insert(CastState::normal(1230298, caster.to_bits(), 3.0, true));
+            h.app.world_mut().flush();
+        }
+        let mut delays = Vec::new();
+        for spell in [1230298, 1253811] {
+            h.app
+                .world_mut()
+                .entity_mut(target)
+                .insert(CastState::normal(spell, caster.to_bits(), 3.0, true));
+            h.app.world_mut().flush();
+            let delay = h
+                .app
+                .world()
+                .get::<reaction::CastingReactionDelay>(target)
+                .unwrap()
+                .0;
+            assert!((0.350..=1.4).contains(&delay));
+            let read = |world: &World| {
+                NativeFacts::new(world, caster, &bindings, encounter(world), targets.len())
+                    .with_targets(Some(target), &targets)
+                    .value("target.debuff.casting.react")
+                    .unwrap()
+            };
+            assert_eq!(read(h.app.world()), 0.0);
+            h.app
+                .world_mut()
+                .get_mut::<CastState>(target)
+                .unwrap()
+                .elapsed = delay;
+            assert_eq!(read(h.app.world()), 1.0);
+            h.app.world_mut().entity_mut(target).remove::<CastState>();
+            assert_eq!(read(h.app.world()), 0.0);
+            delays.push(delay);
+        }
+        (delays, crate::random::random::<u64>())
+    }
+    let seed = 7809098381633315392;
+    assert_eq!(run(seed, false), run(seed, true));
+    assert_ne!(run(seed, false).0, run(seed + 1, false).0);
+}
+
+#[test]
 fn native_dungeon_target_is_boss_reads_the_creature_boss_flag() {
     let (mut h, targets, b) = enemies();
     // Kresh (3653), a Wailing Caverns boss with the native dungeon-boss flag.
