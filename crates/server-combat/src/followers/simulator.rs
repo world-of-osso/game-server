@@ -524,6 +524,7 @@ pub fn pull(
     let difficulty = copy_difficulty(world, map)?.0;
     pull_history::sample_all(world);
     let decision = pull_admission::read_pull_budget(world, tank, guids, difficulty)?;
+    super::recovery_drink::on_decision(world, tank, &decision);
     let allowed = matches!(decision, pull_budget::Decision::Allow { .. });
     Ok((allowed, format!("{decision:?}")))
 }

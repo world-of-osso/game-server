@@ -270,10 +270,9 @@ fn read_route_admission(
     }) {
         return Ok(Some((true, Vec::new())));
     }
-    let allowed = matches!(
-        super::pull_admission::read_pull_budget(world, tank, &projected, difficulty)?,
-        super::pull_budget::Decision::Allow { .. }
-    );
+    let decision = super::pull_admission::read_pull_budget(world, tank, &projected, difficulty)?;
+    super::recovery_drink::on_decision(world, tank, &decision);
+    let allowed = matches!(decision, super::pull_budget::Decision::Allow { .. });
     let mut targets = vec![target];
     if allowed {
         for guid in projected {
