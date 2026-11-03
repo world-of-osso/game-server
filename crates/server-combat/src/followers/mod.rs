@@ -9,6 +9,7 @@ mod cast_while_casting_tests;
 mod catalog;
 pub mod class_profiles;
 pub mod class_spawn;
+pub mod consumables;
 #[cfg(test)]
 mod darkflame_drop_tests;
 #[cfg(test)]

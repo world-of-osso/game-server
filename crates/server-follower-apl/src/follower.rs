@@ -151,6 +151,9 @@ impl FollowerApl {
         }
         let (gcd, cast) = literal_rotation::read_busy(world, actor);
         let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
+        if !gcd && !cast && server::consumables::use_wcl_potion(world, actor)? {
+            return Ok(());
+        }
         if !gcd && !cast && crate::lust_policy::try_lust(world, actor, targets, elapsed)? {
             return Ok(());
         }

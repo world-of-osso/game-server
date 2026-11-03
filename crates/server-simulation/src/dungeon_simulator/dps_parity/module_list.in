@@ -436,7 +436,6 @@ mod precombat_tests;
 mod preparation;
 mod profile_effects;
 mod profile_initialization;
-mod profile_oils;
 mod rake_stealth_tests;
 mod report;
 mod restoration_shaman_earth_shield_follower_tests;

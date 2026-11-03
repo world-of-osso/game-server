@@ -104,6 +104,7 @@ fn simc_profile_and_journal_install_identical_loadouts() {
             items,
             traits,
             pet: None,
+            consumables: super::super::consumables::wcl(profile.spec_id).unwrap(),
         },
     )
     .unwrap();
@@ -135,6 +136,11 @@ fn simc_profile_and_journal_install_identical_loadouts() {
     assert!(spells(journal).contains(&59752));
     assert!(spells(journal).contains(&20598));
     assert_eq!(spells(journal), spells(simc));
+    for unit in [journal, simc] {
+        assert!(crate::auras::has_aura(world, unit, 1235110));
+        assert!(crate::auras::has_aura(world, unit, 1233724));
+        assert!(world.get::<crate::consumables::Potion>(unit).is_some());
+    }
     let auras = |unit| {
         world
             .get::<crate::auras::ActiveAuras>(unit)
@@ -218,6 +224,27 @@ fn journal_wcl_baseline_snapshots() {
         ("wcl", GearSource::KeystoneBand(11)),
     ] {
         let unit = spawn_class(h.app.world_mut(), h.caster, &profile, 0, 0, gear).unwrap();
+        // Compare the original equipment snapshots after removing the newly selected consumables.
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            unit,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| matches!(aura.spell_id, 1235110 | 1233724),
+        );
+        let original_enchants = match gear {
+            GearSource::Journal => Vec::new(),
+            GearSource::KeystoneBand(level) => {
+                super::super::gear::wcl::select_instances(profile.spec_id, level)
+                    .unwrap()
+                    .modifiers
+                    .temporary_enchants
+            }
+        };
+        h.app
+            .world_mut()
+            .get_mut::<EquippedItemModifiers>(unit)
+            .unwrap()
+            .temporary_enchants = original_enchants;
         for _ in 0..10 {
             h.app.update();
         }
@@ -350,6 +377,7 @@ fn same_simc_loadout_installs_same_pet_for_spawn_and_install() {
             items: items.clone(),
             traits: traits.clone(),
             pet: Some(174884),
+            consumables: super::super::consumables::wcl(profile.spec_id).unwrap(),
         },
     )
     .unwrap();
@@ -373,6 +401,7 @@ fn same_simc_loadout_installs_same_pet_for_spawn_and_install() {
             items,
             traits,
             pet: Some(174884),
+            consumables: super::super::consumables::wcl(profile.spec_id).unwrap(),
         },
     )
     .unwrap();
@@ -391,4 +420,109 @@ fn same_simc_loadout_installs_same_pet_for_spawn_and_install() {
     assert_eq!(pet(wcl), 154);
     assert_eq!(pet(spawned), 174884);
     assert_eq!(pet(installed), pet(spawned));
+    for spell in [1235108, 1232585] {
+        assert!(crate::auras::has_aura(world, spawned, spell));
+        assert!(crate::auras::has_aura(world, installed, spell));
+    }
+    assert_eq!(
+        world
+            .get::<crate::consumables::Potion>(spawned)
+            .unwrap()
+            .0
+            .item_id,
+        world
+            .get::<crate::consumables::Potion>(installed)
+            .unwrap()
+            .0
+            .item_id
+    );
+}
+
+#[test]
+fn wcl_potion_waits_for_combat_and_native_cooldown() {
+    let (mut h, _, _) = spawn_profile_fixture_with_plugins(209057, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
+    let source = crate::test_data::world_data();
+    let mut world_data = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>();
+    world_data.class_level_base_hp = source.class_level_base_hp.clone();
+    world_data.class_level_base_mana = source.class_level_base_mana.clone();
+    drop(world_data);
+    let path = crate::test_data::world_db_path();
+    let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(super::super::catalog::load_catalog(&db).unwrap());
+    h.app.insert_resource(
+        super::super::gear::load_source(&path, &path.parent().unwrap().join("db2/active")).unwrap(),
+    );
+    h.app
+        .insert_resource(crate::item_templates::load_item_templates(&path).unwrap());
+    h.app
+        .insert_resource(crate::item_stats::load_item_scaling_tables(&path).unwrap());
+    h.app.insert_resource(NativeItemInstances {
+        bonuses: crate::item_instance::load::load_bonus_tables(&db).unwrap(),
+        enchants: crate::item_instance::load::load_enchantment_tables(&db).unwrap(),
+        effects: crate::item_instance::load::load_item_effect_tables(&db).unwrap(),
+    });
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    let mut instances = crate::maps::InstanceManager::default();
+    let copy = instances
+        .create_map(
+            &maps,
+            2515,
+            crate::maps::instances::InstanceEntrant {
+                character_id: 1,
+                leader: 1,
+                difficulty_id: 205,
+                ..default()
+            },
+            crate::maps::instances::Now {
+                elapsed: 0.0,
+                unix: 1_792_454_400,
+            },
+        )
+        .unwrap()
+        .map;
+    h.app.insert_resource(instances);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((copy, Level(90)));
+    h.app.insert_resource(super::super::FollowerActionProvider {
+        before_passives: |_, _, _| Ok(()),
+        source_actions: |_, _, _| Ok(vec![30451]),
+        equipped_actions: |_, _, _| Ok(Vec::new()),
+    });
+    let profile = super::super::class_profiles::read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == 62)
+        .unwrap();
+    let unit = spawn_class(
+        h.app.world_mut(),
+        h.caster,
+        &profile,
+        0,
+        0,
+        LoadoutSource::Journal,
+    )
+    .unwrap();
+    assert!(!crate::consumables::use_wcl_potion(h.app.world_mut(), unit).unwrap());
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), unit, h.npc);
+    assert!(crate::consumables::use_wcl_potion(h.app.world_mut(), unit).unwrap());
+    assert!(crate::auras::has_aura(h.app.world(), unit, 1236616));
+    assert!(!crate::consumables::use_wcl_potion(h.app.world_mut(), unit).unwrap());
+    h.app
+        .world_mut()
+        .resource_mut::<bevy::time::Time<bevy::time::Real>>()
+        .advance_by(std::time::Duration::from_secs(299));
+    assert!(!crate::consumables::use_wcl_potion(h.app.world_mut(), unit).unwrap());
+    h.app
+        .world_mut()
+        .resource_mut::<bevy::time::Time<bevy::time::Real>>()
+        .advance_by(std::time::Duration::from_secs(1));
+    assert!(crate::consumables::use_wcl_potion(h.app.world_mut(), unit).unwrap());
 }

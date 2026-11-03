@@ -102,12 +102,13 @@ fn shared_liquid_luster_native_use_stacks_rating_and_expires_with_driver() {
 #[test]
 #[ignore = "native70448 item and spell catalogs"]
 fn shared_liquid_luster_profile_prepot_preserves_native_stacks_and_cooldown() {
-    let mut run = prepare();
-    let actor = run.actor;
-    run.profile
+    let (mut profile, traits) = super::read_reference(70).unwrap();
+    profile
         .consumables
         .insert("potion".into(), "liquid_luster_2".into());
-    super::profile_effects::install(run.app.world_mut(), actor, &run.profile).unwrap();
+    let identity = super::inputs::read_actor(&profile).unwrap();
+    let mut run = super::prepare_literal_reference(profile, &traits, 1, identity).unwrap();
+    let actor = run.actor;
     let item = run
         .app
         .world()
