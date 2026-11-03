@@ -66,6 +66,17 @@ fn fire_follower_includes_fire_blast_ignite_spread() {
 #[test]
 fn protection_warrior_follower_includes_melee_cleave() {
     let (mut harness, unit) = follower(215517, 1);
+    assert_eq!(
+        party_unintended_reach(harness.app.world_mut(), &[unit])[0].1,
+        0.0
+    );
+    harness
+        .app
+        .world_mut()
+        .get_mut::<combat::followers::FollowerActionSpells>(unit)
+        .unwrap()
+        .0
+        .push(6343);
     let store = harness
         .app
         .world()
@@ -80,6 +91,17 @@ fn protection_warrior_follower_includes_melee_cleave() {
 #[test]
 fn elemental_follower_includes_accumulated_chain_lightning_jumps() {
     let (mut harness, unit) = follower(209053, 7);
+    assert_eq!(
+        party_unintended_reach(harness.app.world_mut(), &[unit])[0].2,
+        0.0
+    );
+    harness
+        .app
+        .world_mut()
+        .get_mut::<combat::followers::FollowerActionSpells>(unit)
+        .unwrap()
+        .0
+        .push(188443);
     let world = harness.app.world();
     let chain = world
         .resource::<combat::spell_info::SpellStore>()

@@ -16,6 +16,19 @@ fn native_ret(targets: usize) -> Run {
     run
 }
 
+fn native_ret_player() -> Run {
+    let (profile, traits) = read_reference(70).unwrap();
+    let race = inputs::read_reference_race(&profile.race).unwrap();
+    prepare_measurement_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race },
+        |_| Ok(()),
+    )
+    .unwrap()
+}
+
 fn damage(run: &Run, spell: u32) -> i64 {
     run.app
         .world()
@@ -532,7 +545,7 @@ fn ret_damage_sentence_explosion_applies_normal_outgoing_modifiers_to_stored_dam
 fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_measurement(70, 1).unwrap();
+    let mut run = native_ret_player();
     let owner = run.actor;
     let target = run.targets[0];
     assert!(
@@ -646,7 +659,7 @@ fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
 fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
     fn blade_damage(buff: Option<u32>, triggered_blade: bool) -> i64 {
         let _seed = crate::random::seed_scope(70_448);
-        let mut run = prepare_measurement(70, 1).unwrap();
+        let mut run = native_ret_player();
         assert!(
             run.app
                 .world()
@@ -657,10 +670,20 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
         engage(&mut run);
         run.app
             .world_mut()
+            .entity_mut(run.actor)
+            .remove::<crate::combat::AutoAttack>();
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.actor,
+            crate::auras::RemoveReason::Cancelled,
+            |a| matches!(a.spell_id, 406086 | 402916),
+        );
+        run.app
+            .world_mut()
             .get_mut::<crate::stats::CharacterStats>(run.actor)
             .unwrap()
             .crit_pct = 0.0;
-        if let Some(id) = buff {
+        let buff_instance = if let Some(id) = buff {
             crate::spell_cast::cast_triggered(
                 run.app.world_mut(),
                 run.actor,
@@ -680,7 +703,10 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
                 aura.effects[0].amount, 80.0,
                 "native Light Within modifies the buff effect"
             );
-        }
+            Some(aura.instance_id)
+        } else {
+            None
+        };
         run.app
             .world_mut()
             .resource_mut::<ObservedCombatEvents>()
@@ -699,10 +725,17 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
             .unwrap();
         }
         ticks(&mut run, 30);
-        assert!(
-            !crate::auras::has_aura(run.app.world(), run.actor, buff.unwrap_or(406086)),
-            "the actual Blade consumed the buff"
-        );
+        if let Some(instance) = buff_instance {
+            assert!(
+                !run.app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(run.actor)
+                    .unwrap()
+                    .iter()
+                    .any(|aura| aura.instance_id == instance),
+                "the actual Blade consumed the original buff {buff:?}, triggered={triggered_blade}"
+            );
+        }
         damage(&run, 184575)
     }
     for triggered_blade in [false, true] {
