@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use super::{SpellAreaTrigger, catalog::AuraFieldCatalog, targets::Relation};
-use crate::auras::{ActiveAuras, RemoveReason};
 use crate::spell_cast::effects::EffectCtx;
 use crate::spell_info::SpellEffect;
 
@@ -113,28 +112,6 @@ pub(super) fn cast_burn_on_entry(world: &mut World, trigger: &SpellAreaTrigger, 
     }
 }
 
-pub(super) fn remove_exited(world: &mut World, trigger: &SpellAreaTrigger, inside: &[Entity]) {
-    if trigger.spell_id != BURN_FIELD {
-        return;
-    }
-    for unit in trigger.inside.iter().filter(|unit| !inside.contains(unit)) {
-        for instance in find_owned_burn_instances(world, *unit, trigger.caster) {
-            crate::auras::remove_instance(world, *unit, instance, RemoveReason::Expired);
-        }
-    }
-}
-
-fn find_owned_burn_instances(world: &World, unit: Entity, caster: Entity) -> Vec<u32> {
-    let Some(auras) = world.get::<ActiveAuras>(unit) else {
-        return Vec::new();
-    };
-    auras
-        .iter()
-        .filter(|aura| aura.spell_id == BURN_DAMAGE && aura.caster == caster)
-        .map(|aura| aura.instance_id)
-        .collect()
-}
-
 #[cfg(test)]
 mod order_tests {
     use super::*;
@@ -180,7 +157,7 @@ mod order_tests {
             cast_item_inventory_type: None,
             inside: units.iter().copied().collect(),
         };
-        remove_exited(h.app.world_mut(), &trigger, &[]);
+        super::super::remove_exited(h.app.world_mut(), &trigger, &[]);
         let removed: Vec<_> = h
             .app
             .world()

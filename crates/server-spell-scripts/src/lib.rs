@@ -29,6 +29,8 @@ pub mod test_support;
 #[cfg(test)]
 mod den_cryo_surge_tests;
 #[cfg(test)]
+mod den_rotten_ground_tests;
+#[cfg(test)]
 mod lethal_absorb_tests;
 #[cfg(test)]
 mod party_reach_tests;
