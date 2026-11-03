@@ -16,12 +16,20 @@ fn havoc_retreat_setup_completes_during_real_follower_combat() {
             + std::time::Duration::from_millis(50);
         advance_fixture_step(&mut run, end).unwrap();
         drive_player(&mut run).unwrap();
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        if events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(198793) && event.kind == CombatLogKind::CastSuccess)
-        {
-            assert!(crate::auras::has_aura(run.app.world(), run.actor, 208628),
-                "the actual Retreat cast must grant Exergy");
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(198793)
+                && event.kind == CombatLogKind::CastSuccess
+        }) {
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, 208628),
+                "the actual Retreat cast must grant Exergy"
+            );
             return;
         }
     }
