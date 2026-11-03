@@ -18,6 +18,65 @@ fn owned_damage_hits(run: &Run, spell: u32) -> usize {
         .count()
 }
 
+#[test]
+#[ignore = "requires native Affliction spell data and profile"]
+fn siphon_life_heals_from_owned_wither_ticks_only_when_selected() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use shared::components::Health;
+    let mut run = prepare_literal(265, 1).unwrap();
+    engage(&mut run);
+    let (caster, target) = (run.actor, run.targets[0]);
+    remove_owned_aura(&mut run, 452999);
+    let max = run.app.world().get::<Health>(caster).unwrap().max;
+    run.app
+        .world_mut()
+        .get_mut::<Health>(caster)
+        .unwrap()
+        .current = max * 0.5;
+    crate::spell_cast::cast_triggered(run.app.world_mut(), caster, 445474, Some(target), 0);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| is_owned_damage(event, caster, 445474))
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(453000))
+    );
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 452999,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::Heal
+        && event.source == Some(caster.to_bits())
+        && event.target == Some(caster.to_bits())
+        && event.spell_id == Some(453000)
+        && event.amount > 0));
+}
+
 fn remove_owned_aura(run: &mut Run, spell: u32) {
     let actor = run.actor;
     crate::auras::remove_auras(

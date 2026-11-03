@@ -28,6 +28,8 @@ Gate normalized WCL intake for each party member in 15-second windows up to the 
 
 Opening auras with a recorded full removal are removed at that WCL timestamp, at the next replay tick, from the exact applied instance. A later native reapplication is not removed. **VERIFIED_WCL:** in `mHcDYRVyprndwjFC` fight 2 pull 2 (report start 2026-10-31), the Shaman's opening Ghost Wolf 2645 is removed at 2.535 seconds.
 
+**VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2 (2026-10-31): the matched Affliction actor selects Siphon Life 452999 and receives 453000 heals after Wither 445474 ticks. DB2 70448 effect 1 supplies 5% of eligible periodic damage; the effect 0 class mask identifies eligible spells.
+
 ## Equal-health healer target ties
 
 Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:
