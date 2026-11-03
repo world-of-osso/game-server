@@ -115,7 +115,13 @@ pub fn slot(name: &str) -> Result<EquipmentSlot, String> {
     }
 }
 
-pub fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Result<(), String> {
+#[derive(Clone, Debug)]
+pub struct ItemInstances {
+    pub items: Vec<(EquipmentSlot, shared::item_data::ItemDefinitionSource, u32)>,
+    pub modifiers: crate::stats::EquippedItemModifiers,
+}
+
+pub fn profile_instances(world: &World, profile: &Profile) -> Result<ItemInstances, String> {
     let items = profile
         .equipment
         .iter()
@@ -137,16 +143,19 @@ pub fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Result<(), S
         .iter()
         .filter_map(|item| item.stat_redirect(world).transpose())
         .collect::<Result<Vec<_>, _>>()?;
-    equip_instances(
-        world,
-        unit,
+    Ok(ItemInstances {
         items,
-        crate::stats::EquippedItemModifiers {
+        modifiers: crate::stats::EquippedItemModifiers {
             items: modifiers,
             base_stat_redirects,
             ..Default::default()
         },
-    );
+    })
+}
+
+pub fn equip(world: &mut World, unit: Entity, profile: &Profile) -> Result<(), String> {
+    let instances = profile_instances(world, profile)?;
+    equip_instances(world, unit, instances.items, instances.modifiers);
     Ok(())
 }
 

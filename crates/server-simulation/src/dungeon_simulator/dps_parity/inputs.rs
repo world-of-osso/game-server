@@ -391,28 +391,23 @@ pub(super) fn install_traits(
         let follower = world
             .get::<crate::followers::Follower>(unit)
             .ok_or("reference actor is neither player nor follower")?;
-        let evaluated = if let Some(race) = world.get::<server::test_support::ReferenceRace>(unit) {
-            let identity = shared::components::Player {
-                name: String::new(),
-                class: follower.profile.class_id,
-                race: race.0,
-                appearance: Default::default(),
-            };
-            crate::class_progression::evaluate_player_reference_traits(
-                classes,
-                &identity,
-                follower.profile.spec_id,
-                level,
-                &purchases,
-            )
-        } else {
-            crate::class_progression::evaluate_reference_traits(
-                classes,
-                &follower.profile,
-                level,
-                &purchases,
-            )
+        let race = world
+            .get::<shared::components::CharacterVisual>(unit)
+            .ok_or("reference follower lacks a race")?
+            .race;
+        let identity = shared::components::Player {
+            name: String::new(),
+            class: follower.profile.class_id,
+            race,
+            appearance: Default::default(),
         };
+        let evaluated = crate::class_progression::evaluate_player_reference_traits(
+            classes,
+            &identity,
+            follower.profile.spec_id,
+            level,
+            &purchases,
+        );
         (follower.profile.spec_id, evaluated)
     };
     let (known, traits) =

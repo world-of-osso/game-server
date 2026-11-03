@@ -340,12 +340,18 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
     let mut app = super::runtime::build_app();
     let graph = app.world().resource::<super::Space>().0.clone();
     let copy = super::runtime::create_copy(&mut app);
+    let race = crate::followers::class_profiles::read_profiles()?
+        .into_iter()
+        .find(|profile| profile.spec_id == 66)
+        .ok_or("follower spec66 absent")?
+        .race;
     let tank = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         66,
         intake.level,
         copy,
         crate::followers::simulator::ParityActor::Follower,
+        race,
     )?;
     let actors = super::runtime::spawn_population(&mut app, copy);
     super::healer_intake::apply_source_snapshots(app.world_mut(), &intake.sources, &actors)?;

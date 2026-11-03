@@ -247,6 +247,17 @@ pub fn equip(
     profile: &super::Profile,
     actions: &[u32],
 ) -> Result<(), String> {
+    let instances = select_instances(world, actor, profile, actions)?;
+    super::parity_profile::equip_instances(world, actor, instances.items, instances.modifiers);
+    Ok(())
+}
+
+pub(super) fn select_instances(
+    world: &World,
+    actor: Entity,
+    profile: &super::Profile,
+    actions: &[u32],
+) -> Result<super::parity_profile::ItemInstances, String> {
     let source = world
         .get_resource::<FollowerGearSource>()
         .ok_or("FOLLOWER_GEAR_SOURCE_UNAVAILABLE")?;
@@ -340,16 +351,13 @@ pub fn equip(
             )
         })
         .collect();
-    super::parity_profile::equip_instances(
-        world,
-        actor,
-        selection.items,
-        crate::stats::EquippedItemModifiers {
+    Ok(super::parity_profile::ItemInstances {
+        items: selection.items,
+        modifiers: crate::stats::EquippedItemModifiers {
             items: modifiers,
             ..Default::default()
         },
-    );
-    Ok(())
+    })
 }
 
 /// Publish the native appearance of the follower's equipped Journal items.
