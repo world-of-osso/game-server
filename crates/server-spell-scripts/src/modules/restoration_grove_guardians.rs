@@ -16,7 +16,7 @@ const NOURISH: u32 = 422_090;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(after_cast),
     SpellScriptHook::AreaFilter(area_filter),
-    SpellScriptHook::NamedHealingMultiplier(nourish_harmony),
+    SpellScriptHook::NamedHealingMultiplier(restoration_harmony),
 ];
 
 fn after_cast(spell: u32) -> Option<AfterCastHook> {
@@ -40,17 +40,24 @@ fn summon_treant(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-fn nourish_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
-    if spell.id != NOURISH {
+fn restoration_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
+    // Percent-health and other modifier-immune heals must not gain mastery.
+    if spell.misc.as_ref().is_some_and(|misc| misc.attributes[6] & 0x0800_0000 != 0) {
         return 1.0;
     }
-    let Some(owner) = world
-        .get::<combat::spell_cast::summon::SummonedCreature>(caster)
-        .filter(|summon| summon.spell_id == SUMMON)
-        .map(|summon| summon.owner)
-    else {
-        return 1.0;
+    let guardian = if spell.id == NOURISH {
+        world.get::<combat::spell_cast::summon::SummonedCreature>(caster)
+            .filter(|summon| summon.spell_id == SUMMON)
+            .map(|summon| summon.owner)
+    } else {
+        None
     };
+    let owner = guardian.unwrap_or(caster);
+    if !combat::auras::has_aura(world, owner, 77495)
+        || spell.class_options.as_ref().is_none_or(|class| class.spell_class_set != 7)
+    {
+        return 1.0;
+    }
     let Some(stats) = world.get::<combat::stats::CharacterStats>(owner) else {
         return 1.0;
     };
@@ -75,9 +82,12 @@ fn nourish_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellI
         0.0
     };
     let count = hots + if lifebloom { 1.0 + bonus_blooms } else { 0.0 };
-    // Spell422090 effect1 grants 100% of the owner's Harmony bonus.
-    let effectiveness =
-        combat::spell_cast::scripts::script_effect_value(world, owner, NOURISH, 1) / 100.0;
+    // Spell422090 effect1 grants the guardian 100% of its owner's Harmony.
+    let effectiveness = if guardian.is_some() {
+        combat::spell_cast::scripts::script_effect_value(world, owner, NOURISH, 1) / 100.0
+    } else {
+        1.0
+    };
     1.0 + count * stats.mastery_pct / 100.0 * effectiveness
 }
 
