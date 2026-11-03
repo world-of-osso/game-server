@@ -156,6 +156,9 @@ pub(super) fn on_strike(world: &mut World, ctx: &EffectCtx, target: Entity) {
     if invoke && !super::enhancement_flurry::is_executing(world, ctx.caster) {
         invoke_thorim(world, ctx.caster, target, ctx.depth);
     }
+    if matches!(ctx.spell.id, 17364 | 115356 | 60103) {
+        super::maelstrom_weapon::refund_lightning_strikes(world, ctx.caster);
+    }
     super::enhancement_spending::consume_for_strike(world, ctx);
     super::enhancement_unleashed::schedule_for_landed_root(world, ctx, target);
 }

@@ -14,6 +14,8 @@ const PASSIVE: u32 = 187880;
 const COUNTER: u32 = 344179;
 pub(super) const MODIFIER: u32 = 187881;
 const GHOST_WOLF: u32 = 2645;
+const LIGHTNING_STRIKES: u32 = 384450;
+const LIGHTNING_STRIKES_BUFF: u32 = 384451;
 
 pub(super) fn register(scripts: &mut AuraScripts) {
     scripts.0.insert(
@@ -38,6 +40,17 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             ..Default::default()
         },
     );
+    scripts.0.insert(
+        LIGHTNING_STRIKES_BUFF,
+        AuraScript {
+            check_proc: Some(defer_lightning_strikes_proc),
+            ..Default::default()
+        },
+    );
+}
+
+fn defer_lightning_strikes_proc(_world: &World, _aura: &AuraInstance, _event: &AuraEvent) -> bool {
+    false
 }
 
 fn check_melee(world: &World, aura: &AuraInstance, event: &AuraEvent) -> bool {
@@ -122,10 +135,28 @@ pub(crate) fn consume(world: &mut World, caster: Entity, spell: &SpellInfo) {
     } else {
         retain_stacks(world, caster, remaining);
     }
+    grant_lightning_strikes(world, caster, spent);
     combat::auras::enhancement_power::grant_for_spending(world, caster, spent);
     reduce_tempo_recharge(world, caster, spent);
     super::enhancement_spending::grant_for_spending(world, caster, spent);
     super::enhancement_thunder_capacitor::refund(world, caster, spell, spent);
+}
+
+fn grant_lightning_strikes(world: &mut World, caster: Entity, spent: u8) {
+    // Retail WCL NtPg8RanqBcb62T4/50: consuming ten stacks grants the buff;
+    // SimC76f8118 sc_shaman.cpp11790–11804 notes retail does not accumulate partial spends.
+    if auras::has_aura(world, caster, LIGHTNING_STRIKES)
+        && spent == super::script_effect_value(world, caster, LIGHTNING_STRIKES, 1) as u8
+    {
+        spell_cast::cast_triggered(world, caster, LIGHTNING_STRIKES_BUFF, Some(caster), 1);
+    }
+}
+
+pub(super) fn refund_lightning_strikes(world: &mut World, caster: Entity) {
+    if auras::has_aura(world, caster, LIGHTNING_STRIKES_BUFF) {
+        // The native charged spell modifier consumes its own use after this strike.
+        generate(world, caster, 1);
+    }
 }
 
 fn reduce_tempo_recharge(world: &mut World, caster: Entity, spent: u8) {
