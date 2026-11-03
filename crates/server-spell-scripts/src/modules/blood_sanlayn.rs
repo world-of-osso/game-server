@@ -1,4 +1,7 @@
 //! Blood San'layn's cooldown-driven Gift of the San'layn.
+#[cfg(test)]
+#[path = "../blood_sanlayn_proc_tests.rs"]
+mod proc_tests;
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, RemoveReason};
@@ -461,7 +464,10 @@ fn vampiric_proc(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .expect("Sanlayn effect")
             .base_points
     };
-    let mut chance = effect(433901, 0);
+    // VERIFIED_WCL: post-70448 Blood logs show 115/334 eligible procs (34.4%);
+    // Blood passive 137008 adds 10 points to 433901's native 25 via label 4242.
+    // SimC76f8118 sc_death_knight.cpp:13836–13843 reads the unmodified value.
+    let mut chance = spell_cast::scripts::script_effect_value(world, caster, 433901, 0);
     // SimC76f8118 sc_death_knight.cpp:13842–13843: Blood-soaked Ground
     // adds the selected talent's second effect to the proc chance.
     if auras::has_aura(world, caster, 434034) {
