@@ -1442,6 +1442,78 @@ fn demonology_dreadstalker_melee_earns_extra_dreadbites() {
     );
 }
 
+#[test]
+#[ignore = "requires private266 inputs; follower Dreadstalker melee"]
+fn follower_dreadstalkers_keep_meleeing() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(266, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 193331, Some(actor), true)
+        .unwrap();
+    let dogs: Vec<_> = run
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+        .iter(run.app.world())
+        .filter(|(_, summon)| summon.owner == actor && summon.spell_id == 193331)
+        .map(|(dog, _)| dog)
+        .collect();
+    assert!(!dogs.is_empty());
+    for _ in 0..100 {
+        engage_fixture_opponents(&mut run);
+        run.app.update();
+    }
+    // Drive the follower target directly for the retarget check.
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::followers::Follower>();
+    let other = spawn_level_dummy(&mut run.app, actor, 90, 1).unwrap();
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(other)
+        .unwrap()
+        .x = 9.0;
+    run.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(actor)
+        .unwrap()
+        .0 = Some(other);
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), actor, other);
+    for _ in 0..100 {
+        run.app
+            .world_mut()
+            .get_mut::<crate::networking::CombatTarget>(actor)
+            .unwrap()
+            .0 = Some(other);
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    for victim in [target, other] {
+        let swings = events
+            .iter()
+            .filter(|event| {
+                event.source.is_some_and(|source| dogs.iter().any(|dog| dog.to_bits() == source))
+                    && event.target == Some(victim.to_bits())
+                    && event.spell_id.is_none()
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert!(swings > 0, "follower Dreadstalkers must melee target {victim:?}");
+    }
+}
+
 fn summon_native_dreadstalker(run: &mut Run) -> Entity {
     summon_native_guardian(run, 193331)
 }

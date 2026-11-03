@@ -1049,7 +1049,10 @@ fn spawn_summon(
     if properties.is_pet() {
         entity.insert(shared::components::UnitIsPet(true));
     }
-    if properties.follows_owner() {
+    let pursuing = entity
+        .get::<crate::creature_ai::CreatureState>()
+        .is_some_and(|state| matches!(state, crate::creature_ai::CreatureState::Pursuing { .. }));
+    if properties.follows_owner() && !pursuing {
         entity.insert(crate::creature_ai::FollowOwner::new(owner));
     }
 
