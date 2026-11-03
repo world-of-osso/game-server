@@ -13,6 +13,10 @@ def evaluate(trace, report):
         raise ValueError('duration must contain complete 15-second windows')
     first_death = report['metrics']['first_death_seconds']
     cutoff_ms = min(duration_ms, int(first_death * 1000)) if first_death is not None else duration_ms
+    fatal_hits = [hit['time_ms'] for hit in report['wcl_intake']['health_samples']
+                  if hit['time_ms'] <= cutoff_ms and hit['native_hp_pct'] <= 0]
+    if fatal_hits:
+        cutoff_ms = min(cutoff_ms, min(fatal_hits))
     expected = collections.defaultdict(float)
     actual = collections.defaultdict(float)
     for hit in trace['hits']:
