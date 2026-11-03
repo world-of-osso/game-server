@@ -689,7 +689,7 @@ Follower-owned combat pets may attack the party's admitted pull or a target dire
 
 ### Boss sight pull units
 
-A pack joins a boss pull unit when the boss's native sight-aggro radius and line of sight cover the point on the segment from a pack member's home toward the boss at the attacker's native melee range from that home. Approach, action safety and admission use the same unit. The boss and merged packs count in a numerical forecast when all sources support one; the explicit scripted-unit decision above does not invent a forecast.
+A pack joins a boss pull unit when the boss's native sight-aggro radius and line of sight cover the point on the segment from a pack member's home toward the boss at the attacker's native melee range from that home. Approach, action safety and admission use the same unit. Merging a pack accounts for it in safety decisions; it does not force its members into combat. Charonus's Siphoids may remain idle during the boss fight. The boss and merged packs count in a numerical forecast when all sources support one; the explicit scripted-unit decision above does not invent a forecast.
 
 **INFERRED_WCL:** In the private `WoWCombatLog-100826_030339.txt`, Charonus starts at line 286878. Siphoids `Creature-0-3134-2923-17877-252508-000A474ED5`, `000AC74ED5`, `000B474ED5`, `000D474ED5` and `000E474ED5` first take positioned damage during that encounter (lines 289281 and 290311–290329) and die during it (lines 303895–305767). WCL `hALrgaFVTkfJty1w/45` records 60 Siphoid deaths during Charonus. These observations support a combined fight, not authored spawn positions or a summon mechanism. Retire this inference when authoritative spawn or encounter-mechanic evidence establishes the actors' placement and activation.
 
