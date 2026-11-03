@@ -16,6 +16,19 @@ fn native_ret(targets: usize) -> Run {
     run
 }
 
+fn native_ret_player() -> Run {
+    let (profile, traits) = read_reference(70).unwrap();
+    let race = inputs::read_reference_race(&profile.race).unwrap();
+    prepare_measurement_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Player { race },
+        |_| Ok(()),
+    )
+    .unwrap()
+}
+
 fn damage(run: &Run, spell: u32) -> i64 {
     run.app
         .world()
@@ -532,7 +545,7 @@ fn ret_damage_sentence_explosion_applies_normal_outgoing_modifiers_to_stored_dam
 fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_measurement(70, 1).unwrap();
+    let mut run = native_ret_player();
     let owner = run.actor;
     let target = run.targets[0];
     assert!(
@@ -646,7 +659,7 @@ fn ret_truths_wake_does_not_apply_its_dot_bonus_to_itself() {
 fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
     fn blade_damage(buff: Option<u32>, triggered_blade: bool) -> i64 {
         let _seed = crate::random::seed_scope(70_448);
-        let mut run = prepare_measurement(70, 1).unwrap();
+        let mut run = native_ret_player();
         assert!(
             run.app
                 .world()

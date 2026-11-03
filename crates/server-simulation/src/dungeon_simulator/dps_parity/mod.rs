@@ -750,9 +750,20 @@ fn prepare_measurement_with(
 ) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
+    prepare_measurement_reference(profile, &traits, count, identity, before_prepare)
+}
+
+fn prepare_measurement_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+    before_prepare: impl FnOnce(&mut Run) -> Result<(), String>,
+) -> Result<Run, String> {
+    let spec_id = profile.spec_id;
     let driver = measurement_driver(spec_id, &identity)
         .ok_or_else(|| format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"))?;
-    let mut run = spawn_literal_reference(profile, &traits, count, identity)?;
+    let mut run = spawn_literal_reference(profile, traits, count, identity)?;
     if spec_id == 64 {
         frost_mage_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
     } else if spec_id == 1480 {
