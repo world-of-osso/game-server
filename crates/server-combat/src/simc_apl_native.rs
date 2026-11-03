@@ -54,6 +54,14 @@ pub struct FixtureMovement {
     pub distance_to_move: f64,
 }
 
+/// The owner's known next pull and estimated tank travel time along its route.
+#[derive(Component, Clone, Debug)]
+pub struct PlannedNextPull {
+    pub enemies: Vec<Entity>,
+    pub has_boss: bool,
+    pub travel_seconds: f64,
+}
+
 /// Source profile identity bound to the actual native consumable use metadata.
 #[derive(Component)]
 pub struct ConfiguredPotion {
@@ -556,9 +564,62 @@ impl<'a> NativeFacts<'a> {
         }
     }
 
+    fn dungeon_event(&self, property: &str) -> Result<f64, String> {
+        let active = self
+            .world
+            .get::<shared::components::CombatStatus>(self.actor)
+            .is_some_and(|status| status.0);
+        let targets = self.ordered_targets()?;
+        let living: Vec<_> = targets
+            .iter()
+            .copied()
+            .filter(|target| crate::spell_cast::targets::is_alive(self.world, *target))
+            .collect();
+        let active = active && !living.is_empty();
+        let owner = self
+            .world
+            .get::<crate::followers::Follower>(self.actor)
+            .map_or(self.actor, |follower| follower.owner);
+        let next = self.world.get::<PlannedNextPull>(owner);
+        let never = i64::MAX as f64 / 1000.0;
+        match property {
+            "exists" | "up" => Ok(bool_value(active)),
+            "count" => Ok(if active { living.len() as f64 } else { 0.0 }),
+            "has_boss" => Ok(bool_value(
+                active
+                    && living
+                        .iter()
+                        .any(|&target| crate::followers::is_boss(self.world, target)),
+            )),
+            // SimC raid_event.cpp:1257–1268 estimates the whole pull. The
+            // mean of the per-target wave estimates has the same health/DPS
+            // ratio and uses the same native estimator as target.time_to_die.
+            "remains" => {
+                if let (true, Encounter::Dungeon { pulled_at, .. }) = (active, self.encounter) {
+                    let total = living.iter().try_fold(0.0, |sum, &target| {
+                        self.wave_time_to_die(target, pulled_at)
+                            .map(|ttd| sum + ttd)
+                    })?;
+                    Ok(total / living.len() as f64)
+                } else {
+                    Ok(0.0)
+                }
+            }
+            // raid_event.cpp:3068–3077: an unconfigured event has no next time.
+            // The owner estimates the next pull as the current wave's remaining
+            // lifetime plus the tank's Detour travel time; this is not a schedule.
+            "in" => match next {
+                Some(pull) => Ok(self.dungeon_event("remains")? + pull.travel_seconds),
+                None => Ok(never),
+            },
+            "duration" => Ok(0.0),
+            _ => Err(format!("unknown native dungeon-event property {property}")),
+        }
+    }
+
     fn adds(&self, property: &str) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
-            return fixture_add_value(None, property, self.world.resource::<Time>().elapsed());
+            return self.dungeon_event(property);
         }
         fixture_add_value(
             self.world.get::<FixtureAdds>(self.actor),
@@ -1215,7 +1276,9 @@ impl Facts for NativeFacts<'_> {
             return self.previous_gcd(operand);
         }
         if let Some(property) = name.strip_prefix("raid_event.pull.") {
-            // SimC76f8118 raid_event.cpp3068–3141: no configured event.
+            if matches!(self.encounter, Encounter::Dungeon { .. }) {
+                return self.dungeon_event(property);
+            }
             return fixture_add_value(None, property, self.world.resource::<Time>().elapsed());
         }
         if let Some(property) = name.strip_prefix("raid_event.adds.") {

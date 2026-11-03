@@ -34,6 +34,112 @@ fn pull(health: &[f32], now: u64) -> (World, Entity, Vec<Entity>, Encounter) {
     (world, actor, adds, encounter)
 }
 
+#[test]
+fn class_follower_dungeon_event_tracks_live_pull_and_owner_schedule() {
+    let (mut world, actor, adds, encounter) = pull(&[500.0, 1000.0, 0.0], 20);
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CombatStatus(true));
+    let bindings = Bindings::default();
+    let read = |world: &World, name| {
+        NativeFacts::new(world, actor, &bindings, encounter, 3)
+            .with_targets(Some(adds[0]), &adds)
+            .value(name)
+            .unwrap()
+    };
+    assert_eq!(read(&world, "raid_event.pull.exists"), 1.0);
+    assert_eq!(read(&world, "raid_event.adds.up"), 1.0);
+    assert_eq!(read(&world, "raid_event.adds.count"), 2.0);
+    assert_eq!(
+        read(&world, "raid_event.pull.remains"),
+        (target_ttd(&world, actor, &adds, adds[0], encounter)
+            + target_ttd(&world, actor, &adds, adds[1], encounter))
+            / 2.0
+    );
+    assert_eq!(read(&world, "raid_event.pull.in"), i64::MAX as f64 / 1000.0);
+    world.entity_mut(actor).insert(PlannedNextPull {
+        enemies: vec![adds[1]],
+        has_boss: false,
+        travel_seconds: 14.0,
+    });
+    assert_eq!(
+        read(&world, "raid_event.adds.in"),
+        read(&world, "raid_event.pull.remains") + 14.0
+    );
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CombatStatus(false));
+    assert_eq!(read(&world, "raid_event.pull.exists"), 0.0);
+    assert_eq!(read(&world, "raid_event.adds.count"), 0.0);
+}
+
+#[test]
+fn class_follower_active_pull_boss_flag_follows_live_creature() {
+    let (mut world, actor, adds, encounter) = pull(&[500.0, 1000.0], 20);
+    world.insert_resource(crate::test_data::world_data().clone());
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CombatStatus(true));
+    world.entity_mut(adds[0]).insert(shared::components::Npc {
+        template_id: 3653,
+        name: "Kresh".into(),
+    });
+    let bindings = Bindings::default();
+    let facts = NativeFacts::new(&world, actor, &bindings, encounter, adds.len())
+        .with_targets(Some(adds[0]), &adds);
+    assert_eq!(facts.value("raid_event.pull.has_boss").unwrap(), 1.0);
+    assert_eq!(facts.value("raid_event.adds.has_boss").unwrap(), 1.0);
+}
+
+#[test]
+fn class_follower_route_fact_is_private_to_the_owner_and_changes_a_real_apl_row() {
+    let (mut world, actor, adds, encounter) = pull(&[100.0, 100.0], 20);
+    let owner = world.spawn_empty().id();
+    let other_owner = world.spawn_empty().id();
+    let profile = crate::followers::Profile {
+        entry: 1,
+        name: "follower".into(),
+        class_id: 9,
+        spec_id: 267,
+        role: shared::group::GroupRole::Dps,
+        attack_spell: 0,
+        cooldown_spell: 0,
+        heal_spell: 0,
+        taunt_spell: 0,
+        form_spell: 0,
+        melee: false,
+    };
+    world.entity_mut(actor).insert((
+        shared::components::CombatStatus(true),
+        crate::followers::Follower { owner, profile },
+    ));
+    world.entity_mut(other_owner).insert(PlannedNextPull {
+        enemies: adds.clone(),
+        has_boss: true,
+        travel_seconds: 1.0,
+    });
+    let bindings = Bindings::default();
+    // Destruction267: cataclysm,if=raid_event.adds.in>15 (profile row).
+    let program = Program::parse(&[("default", "cataclysm,if=raid_event.adds.in>15")]).unwrap();
+    let select = |world: &World| {
+        let facts = NativeFacts::new(world, actor, &bindings, encounter, adds.len())
+            .with_targets(Some(adds[0]), &adds);
+        program
+            .select("default", &facts, &mut program.state(), |_| Ok(true))
+            .unwrap()
+            .map(|action| action.name)
+    };
+    assert_eq!(select(&world).as_deref(), Some("cataclysm"));
+    world.entity_mut(owner).insert(PlannedNextPull {
+        enemies: adds.clone(),
+        has_boss: true,
+        travel_seconds: 1.0,
+    });
+    assert_eq!(select(&world), None);
+    world.entity_mut(owner).remove::<PlannedNextPull>();
+    assert_eq!(select(&world).as_deref(), Some("cataclysm"));
+}
+
 fn target_ttd(world: &World, actor: Entity, adds: &[Entity], add: Entity, pull: Encounter) -> f64 {
     let bindings = Bindings::default();
     NativeFacts::new(world, actor, &bindings, pull, adds.len())

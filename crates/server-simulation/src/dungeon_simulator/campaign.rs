@@ -2348,6 +2348,51 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+fn planned_next_pull_tracks_route_deaths_and_boss_metadata() {
+    use crate::simc_apl_native::PlannedNextPull;
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let owner = run.party.owner;
+    let first = run.next_pack().unwrap().0;
+    run.publish_next_pull().unwrap();
+    let published = run.app.world().get::<PlannedNextPull>(owner).unwrap();
+    assert!(!published.enemies.is_empty());
+    assert!(published.travel_seconds.is_finite() && published.travel_seconds >= 0.0);
+    let first_actors = published.enemies.clone();
+    for actor in first_actors {
+        crate::combat::kill_unit(run.app.world_mut(), owner, actor);
+    }
+    let second = run.next_pack().unwrap().0;
+    assert_ne!(first, second);
+    run.publish_next_pull().unwrap();
+    let published = run.app.world().get::<PlannedNextPull>(owner).unwrap();
+    assert!(
+        published
+            .enemies
+            .iter()
+            .all(|actor| crate::spell_cast::targets::is_alive(run.app.world(), *actor))
+    );
+    let boss_pack = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.spawns.iter().any(|spawn| spawn.guid == 20375720))
+        .unwrap()
+        .id;
+    run.graph.route.retain(|step| step.pack == boss_pack);
+    run.publish_next_pull().unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<PlannedNextPull>(owner)
+            .unwrap()
+            .has_boss
+    );
+    run.graph.route.clear();
+    run.publish_next_pull().unwrap();
+    assert!(run.app.world().get::<PlannedNextPull>(owner).is_none());
+}
+
+#[test]
 fn authored_route_order_does_not_change_when_the_tank_is_nearer_another_pack() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let elsewhere = *run
@@ -4936,6 +4981,9 @@ impl Run {
             return Ok(());
         }
         self.refresh_population();
+        if self.keystone.is_some() {
+            self.publish_next_pull()?;
+        }
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
@@ -5661,6 +5709,82 @@ impl Run {
             }
             self.chain_group += 1;
         }
+    }
+
+    /// Publish what the bot owner knows, not a scheduled pull time. Exclude
+    /// the whole current pack, even if only part of it has entered combat.
+    fn publish_next_pull(&mut self) -> Result<(), String> {
+        use crate::simc_apl_native::PlannedNextPull;
+        let world = self.app.world();
+        let engaged = crate::followers::simulator::active_enemies(world, self.party.owner);
+        let future: Vec<_> = self
+            .graph
+            .packs
+            .iter()
+            .filter(|pack| {
+                !pack
+                    .spawns
+                    .iter()
+                    .filter_map(|spawn| self.actors.get(&spawn.guid))
+                    .any(|actor| engaged.contains(actor))
+            })
+            .map(|pack| pack.id)
+            .collect();
+        let Some((pack_id, target)) = self.next_pack_in(Some(&future), true) else {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<PlannedNextPull>();
+            return Ok(());
+        };
+        let pack = self
+            .graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == pack_id)
+            .ok_or("next route pack disappeared")?;
+        let enemies: Vec<_> = pack
+            .spawns
+            .iter()
+            .filter_map(|spawn| self.actors.get(&spawn.guid).copied())
+            .filter(|&actor| crate::spell_cast::targets::is_alive(world, actor))
+            .collect();
+        let has_boss = enemies
+            .iter()
+            .any(|&actor| crate::followers::is_boss(world, actor));
+        let position = |actor| {
+            world
+                .get::<Position>(actor)
+                .map(|p| Vec3::new(p.x, p.y, p.z))
+                .ok_or_else(|| format!("next pull actor {actor:?} lacks position"))
+        };
+        let legs = world
+            .resource::<super::native_movement::NativeMovement>()
+            .walk_legs(
+                position(self.party.tank)?,
+                position(target)?,
+                "next-pull-estimate",
+            )?;
+        let speed = world
+            .get::<crate::creature_ai::SpawnPoint>(self.party.tank)
+            .map_or(1.0, |spawn| spawn.speed_run)
+            * world
+                .get::<crate::auras::AuraStatMods>(self.party.tank)
+                .map_or(1.0, |mods| mods.movement_speed)
+            * crate::creature_ai::BASE_RUN_SPEED;
+        if !speed.is_finite() || speed <= 0.0 {
+            return Err("next pull tank run speed is not positive and finite".into());
+        }
+        let travel_seconds = f64::from(legs.iter().map(|(_, length)| length).sum::<f32>() / speed);
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .insert(PlannedNextPull {
+                enemies,
+                has_boss,
+                travel_seconds,
+            });
+        Ok(())
     }
 
     fn next_pack(&self) -> Option<(u64, Entity)> {
