@@ -353,15 +353,24 @@ impl<'a> NativeFacts<'a> {
             }
         }
         match property {
-            // SimC76f8118 action.cpp4030–4032 exposes target.distance.
-            // Native evaluation uses the selected entities' actual geometry,
-            // not the reference profile's synthetic base-distance option.
+            // SimC76f8118 action.cpp4030–4032 reads the configured base distance.
+            // For live geometry use the distance between the units' reach boundaries.
             "distance" => {
-                let from = crate::spell_cast::targets::position(self.world, self.actor)
+                crate::spell_cast::targets::position(self.world, self.actor)
                     .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
-                let to = crate::spell_cast::targets::position(self.world, target)
-                    .ok_or_else(|| format!("target.distance: target {target:?} lacks position"))?;
-                Ok(f64::from(from.distance(to)))
+                crate::spell_cast::targets::position(self.world, target).ok_or_else(|| {
+                    format!("NATIVE_APL_POSITION_UNAVAILABLE: target {target:?} lacks position")
+                })?;
+                let distance = crate::scripted_ai::model_reach::distance(
+                    self.world, self.actor, target,
+                )
+                .ok_or_else(|| {
+                    format!(
+                        "target.distance: missing combat reach for actor {:?} or target {target:?}",
+                        self.actor
+                    )
+                })?;
+                Ok(f64::from(distance))
             }
             // SimC76f8118 hunter_marksmanship.simc18 scores target.health;
             // the native candidate supplies its actual current pool.

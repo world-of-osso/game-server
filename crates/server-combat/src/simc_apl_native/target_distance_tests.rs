@@ -1,5 +1,13 @@
 use super::*;
-use shared::components::Position;
+use shared::components::{CharacterAppearance, CharacterVisual, Position};
+
+fn visual() -> CharacterVisual {
+    CharacterVisual {
+        race: 1,
+        class: 1,
+        appearance: CharacterAppearance::default(),
+    }
+}
 
 #[test]
 fn native_apl_target_distance_reads_selected_live_positions() {
@@ -25,6 +33,9 @@ fn native_apl_target_distance_reads_selected_live_positions() {
             z: 12.0,
         })
         .id();
+    for unit in [actor, primary, candidate] {
+        world.entity_mut(unit).insert(visual());
+    }
     let bindings = Bindings::default();
     let encounter = Encounter::dungeon(0.0);
     let action = Action {
@@ -43,13 +54,13 @@ fn native_apl_target_distance_reads_selected_live_positions() {
         }
         .unwrap()
     };
-    assert_eq!(read(&world, None), 5.0);
-    assert_eq!(read(&world, Some(&action)), 12.0);
-    world.get_mut::<Position>(candidate).unwrap().z = 9.0;
+    assert_eq!(read(&world, None), 2.0);
     assert_eq!(read(&world, Some(&action)), 9.0);
-    world.get_mut::<Position>(actor).unwrap().z = 3.0;
+    world.get_mut::<Position>(candidate).unwrap().z = 9.0;
     assert_eq!(read(&world, Some(&action)), 6.0);
-    assert!((read(&world, None) - 34.0_f64.sqrt()).abs() < 0.000_001);
+    world.get_mut::<Position>(actor).unwrap().z = 3.0;
+    assert_eq!(read(&world, Some(&action)), 3.0);
+    assert!((read(&world, None) - (34.0_f64.sqrt() - 3.0)).abs() < 0.000_001);
 }
 
 #[test]
@@ -63,6 +74,8 @@ fn native_apl_target_distance_does_not_invent_missing_positions() {
         })
         .id();
     let target = world.spawn_empty().id();
+    world.entity_mut(actor).insert(visual());
+    world.entity_mut(target).insert(visual());
     let bindings = Bindings::default();
     let read = |world: &World| {
         NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
