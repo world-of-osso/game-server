@@ -1693,3 +1693,220 @@ fn class_follower_at_hero_level_reads_its_selected_hero_tree() {
         .insert(server_combat::followers::class_spawn::LoggedHeroTree(other));
     assert_eq!(hero_facts(&pull, &DEMONOLOGY_HERO), selected);
 }
+
+/// Raid-haste casts and their lockouts (TC spell_gen_bloodlust).
+const LUSTS: [u32; 5] = [2825, 32182, 80353, 390386, 264667];
+const ELEMENTAL: u32 = 262;
+/// lust_policy.rs INFERRED_WCL constants: p10 live engaged enemies and p10 seconds into the
+/// pull at 110 retail trash lusts (lust-audit/report.md).
+const TRASH_ENGAGED: usize = 8;
+const TRASH_DELAY: f64 = 7.7;
+/// Azure Vault 2515 encounter_compat.csv: Leymor, Azureblade, Telash Greywing, Umbrelskul.
+const AZURE_BOSSES: [(u32, u32); 4] = [(186644, 0), (186739, 1), (186737, 2), (186738, 3)];
+
+impl Pull {
+    fn step(&mut self) {
+        server_combat::followers::update_ai(self.harness.app.world_mut());
+        server_follower_apl::drive_followers(self.harness.app.world_mut());
+        self.harness.app.update();
+    }
+
+    fn lusts(&self) -> usize {
+        self.casts()
+            .iter()
+            .filter(|spell| LUSTS.contains(spell))
+            .count()
+    }
+
+    fn in_combat(&self) -> bool {
+        self.harness
+            .app
+            .world()
+            .get::<FollowerApl>(self.follower)
+            .is_some_and(FollowerApl::in_combat)
+    }
+
+    fn copy(&self) -> server_combat::maps::InMap {
+        *self
+            .harness
+            .app
+            .world()
+            .get::<server_combat::maps::InMap>(self.harness.caster)
+            .unwrap()
+    }
+
+    /// A durable enemy of `entry` fighting the owner, beside the harness dummy.
+    fn spawn_enemy(&mut self, entry: u32, x: f32) -> Entity {
+        let (owner, copy) = (self.harness.caster, self.copy());
+        let template = self
+            .harness
+            .app
+            .world()
+            .resource::<server_combat::world_data::WorldData>()
+            .templates[&entry]
+            .clone();
+        let enemy = server_combat::spell_cast::test_harness::spawn_npc(&mut self.harness.app, x);
+        let world = self.harness.app.world_mut();
+        world.entity_mut(enemy).insert((
+            shared::components::Npc {
+                template_id: entry,
+                name: template.name.clone(),
+            },
+            server_combat::zones::CreatureFlagsExtra(template.flags_extra),
+            copy,
+            Health {
+                current: 10_000_000.0,
+                max: 10_000_000.0,
+            },
+            server_combat::networking::CombatTarget(Some(owner)),
+        ));
+        server_combat::combat_refs::set_in_combat_with(world, enemy, owner);
+        enemy
+    }
+
+    /// The harness dummy plus `count - 1` Kobold Vermin, all fighting the owner.
+    fn engage_pack(&mut self, count: usize) -> Vec<Entity> {
+        let mut pack = vec![self.harness.npc];
+        for index in 1..count {
+            pack.push(self.spawn_enemy(6, 1.0 + index as f32 * 0.5));
+        }
+        pack
+    }
+
+    /// End the pull: remove `enemies` and step until the follower leaves combat.
+    fn end_pull(&mut self, enemies: &[Entity]) {
+        for &enemy in enemies {
+            self.harness.app.world_mut().despawn(enemy);
+        }
+        for _ in 0..100 {
+            self.step();
+            if !self.in_combat() {
+                return;
+            }
+        }
+        panic!("follower stayed in combat after its enemies were removed");
+    }
+
+    /// Advance 600 s out of combat in one frame: the Sated/Exhaustion lockouts and the 300 s
+    /// lust cooldown lapse.
+    fn wait_out_lust_lockouts(&mut self) {
+        use std::time::Duration;
+        let app = &mut self.harness.app;
+        let step = Duration::from_secs(600);
+        app.world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(step);
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(step));
+        app.update();
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            Duration::from_millis(50),
+        ));
+        let world = app.world_mut();
+        let party = server_combat::followers::party_units(world, self.harness.caster);
+        assert!(
+            !party
+                .into_iter()
+                .any(|member| server_combat::auras::bloodlust::has_lockout(world, member))
+        );
+    }
+
+    fn now(&self) -> f64 {
+        server_combat::spell_cast::now(self.harness.app.world())
+    }
+
+    /// Step until the follower lusts or `frames` pass; the world time of the lust.
+    fn run_until_lust(&mut self, frames: usize) -> Option<f64> {
+        let before = self.lusts();
+        for _ in 0..frames {
+            self.step();
+            if self.lusts() > before {
+                return Some(self.now());
+            }
+        }
+        None
+    }
+}
+
+fn lust_pull() -> Pull {
+    let mut pull = spawn(ELEMENTAL);
+    let path = server_combat::test_data::world_db_path();
+    let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    // The copy's instance script reads its boss bindings from the map store.
+    let maps = server_combat::maps::store::load_map_store(&db).unwrap();
+    pull.harness.app.insert_resource(maps);
+    pull
+}
+
+#[test]
+fn follower_lust_skips_trash_below_retail_engaged_count() {
+    let mut pull = lust_pull();
+    pull.engage_pack(TRASH_ENGAGED - 1);
+    assert_eq!(pull.run_until_lust(400), None, "casts {:?}", pull.casts());
+    assert!(pull.in_combat());
+}
+
+#[test]
+fn follower_lusts_large_trash_after_retail_delay() {
+    let mut pull = lust_pull();
+    pull.engage_pack(TRASH_ENGAGED);
+    let pulled = pull.now();
+    let into = pull
+        .run_until_lust(400)
+        .unwrap_or_else(|| panic!("no lust on a large pull: {:?}", pull.casts()))
+        - pulled;
+    // The follower's combat clock starts on its first engaged frame.
+    assert!(
+        (TRASH_DELAY - 0.1..TRASH_DELAY + 1.0).contains(&into),
+        "lust {into} s into the pull"
+    );
+}
+
+#[test]
+fn follower_holds_its_next_lust_for_the_final_boss() {
+    let mut pull = lust_pull();
+    let pack = pull.engage_pack(TRASH_ENGAGED);
+    assert!(pull.run_until_lust(400).is_some(), "first lust on trash");
+    pull.end_pull(&pack);
+    pull.wait_out_lust_lockouts();
+    // A later large trash pull after the lockout ends keeps the lust.
+    let pack = (0..TRASH_ENGAGED)
+        .map(|index| pull.spawn_enemy(6, 1.0 + index as f32 * 0.5))
+        .collect::<Vec<_>>();
+    assert_eq!(pull.run_until_lust(400), None, "trash after expiry");
+    pull.end_pull(&pack);
+    // Umbrelskul is not the final boss while another Azure Vault boss is alive; its
+    // template carries no creature boss flag, only the copy's encounter binding.
+    let copy = pull.copy();
+    let boss = pull.spawn_enemy(AZURE_BOSSES[3].0, 2.0);
+    let pulled = pull.now();
+    assert_eq!(pull.run_until_lust(300), None, "non-final boss");
+    for &(_, boss_id) in &AZURE_BOSSES[..3] {
+        assert!(server_combat::scripted_ai::instance_script::set_boss_state(
+            pull.harness.app.world_mut(),
+            copy,
+            boss_id,
+            server_combat::scripted_ai::instance_script::EncounterState::Done,
+        ));
+    }
+    // The final boss lusts within the same pull, past 10 s (no early-pull cap).
+    let into = pull
+        .run_until_lust(40)
+        .unwrap_or_else(|| panic!("no final-boss lust: {:?}", pull.casts()))
+        - pulled;
+    assert!(into > 10.0, "boss lust {into} s into the pull");
+    assert!(pull.harness.app.world().get_entity(boss).is_ok());
+}
+
+#[test]
+fn fixed_length_fight_lusts_a_single_dummy_at_start() {
+    let mut pull = lust_pull();
+    pull.harness
+        .app
+        .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 300.0 });
+    let pulled = pull.now();
+    let into = pull
+        .run_until_lust(200)
+        .unwrap_or_else(|| panic!("fixed fight lacks its opening lust: {:?}", pull.casts()))
+        - pulled;
+    assert!(into < 2.0, "lust {into} s into the fight");
+}
