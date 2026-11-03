@@ -469,6 +469,31 @@ fn cast_damage_spell(
 }
 
 #[test]
+fn class_follower_weapon_spell_block_uses_equipped_shield_amount() {
+    let (mut h, defender) = shield_duel(0.0);
+    h.app
+        .world_mut()
+        .entity_mut(defender)
+        .remove::<shared::components::Player>()
+        .insert((
+            crate::followers::ClassCombatant,
+            shared::components::Npc {
+                template_id: 31146,
+                name: "Class follower".into(),
+            },
+        ));
+    let hits = cast_damage_spell(&mut h, defender, 1464, 3);
+    assert_eq!(hits.len(), 1);
+    let total = hits[0].amount + hits[0].blocked;
+    assert!(total > 0);
+    assert_eq!(
+        hits[0].blocked,
+        (total as f32 * 0.5).trunc() as i32,
+        "{hits:?}"
+    );
+}
+
+#[test]
 fn class_completeness_native_player_spell_block_requires_frontal_direction() {
     let (mut h, defender) = shield_duel(100.0);
     apply_mastery(&mut h, defender);

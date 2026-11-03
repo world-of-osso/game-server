@@ -1842,7 +1842,7 @@ fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f3
 }
 
 fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
-    if world.get::<shared::components::Player>(target).is_none() {
+    if !crate::followers::is_player_like_combatant(world, target) {
         assert!(
             world.get::<shared::components::Npc>(target).is_some(),
             "blocked creature retains native NPC identity"
