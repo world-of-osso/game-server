@@ -22,6 +22,16 @@ impl ObservedEvents {
             .map(|(_, _, event)| event);
         (events, self.next)
     }
+
+    /// Whether recent observed damage, including absorbed damage, matches a school.
+    pub fn took_school_damage_since(&self, since: f64, school_mask: u32) -> bool {
+        self.events.iter().any(|(_, at, event)| {
+            *at >= since
+                && event.kind == CombatLogKind::Damage
+                && event.school_mask & school_mask != 0
+                && (event.amount > 0 || event.absorbed > 0)
+        })
+    }
 }
 
 /// Start collecting the events that land on `unit`; existing history is kept.
