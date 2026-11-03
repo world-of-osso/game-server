@@ -97,6 +97,8 @@ struct NativeReadiness {
 #[derive(Clone)]
 pub struct Prepared {
     now: f64,
+    actor: Entity,
+    fact_errors: server::simc_apl::FactErrors,
     ready: ReadyActions,
     live_targets: BTreeSet<Entity>,
     ordered_targets: Vec<Entity>,
@@ -173,6 +175,10 @@ fn intrinsic_off_gcd(spec: u32, name: &str) -> bool {
 }
 
 impl Prepared {
+    pub(super) fn fact_errors(&self) -> (&server::simc_apl::FactErrors, Entity, Option<Entity>) {
+        (&self.fact_errors, self.actor, self.first_target())
+    }
+
     pub(super) fn upkeep_actions(&self) -> Option<&BTreeSet<String>> {
         self.upkeep_actions.as_ref()
     }
@@ -267,6 +273,15 @@ impl Prepared {
         let gcd_active = world
             .get::<crate::spell_cast::SpellHistory>(actor)
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
+        if world.get::<server::simc_apl::FactErrors>(actor).is_none() {
+            world
+                .entity_mut(actor)
+                .insert(server::simc_apl::FactErrors::default());
+        }
+        let fact_errors = world
+            .get::<server::simc_apl::FactErrors>(actor)
+            .expect("actor fact ledger installed")
+            .clone();
         let targets = native_targets(world, actor, targets);
         let actions: Vec<_> = actions.into_iter().collect();
         let upkeep_actions = world
@@ -281,6 +296,8 @@ impl Prepared {
             });
         let mut prepared = Self {
             now: crate::spell_cast::history_now(world),
+            actor,
+            fact_errors,
             moving,
             cast_active: cast_active && !after_channel,
             pickup_cast_usable,
