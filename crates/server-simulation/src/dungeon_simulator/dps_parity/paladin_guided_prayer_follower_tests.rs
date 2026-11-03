@@ -165,27 +165,16 @@ fn guided_prayer_uses_wcl_projected_health_after_a_real_hit() {
 }
 
 #[test]
-#[ignore = "requires canonical Holy profile and world database"]
+#[ignore = "requires canonical Retribution profile and world database"]
 fn guided_prayer_uses_selected_eternal_flame_override() {
     let _seed = crate::random::seed_scope(70448);
-    let mut run = prepare_registered_player(65, 1).unwrap();
+    let mut run = prepare_registered_player(70, 1).unwrap();
     let actor = run.actor;
     let attacker = run.targets[0];
-    run.app
-        .world_mut()
-        .get_mut::<crate::class_progression::TraitLoadout>(actor)
-        .unwrap()
-        .overrides
-        .push((85673, 156322));
-    crate::auras::apply_aura(
-        run.app.world_mut(),
-        &AuraApplication {
-            caster: actor,
-            target: actor,
-            spell_id: 404357,
-            effect_mask: u32::MAX,
-            source: AuraSource::Cast,
-        },
+    assert!(crate::auras::has_aura(run.app.world(), actor, 404357));
+    assert_eq!(
+        crate::spell_cast::knowledge::resolve_actor_action(run.app.world(), actor, 85673).unwrap(),
+        156322
     );
     let max = run.app.world().get::<Health>(actor).unwrap().max;
     run.app
