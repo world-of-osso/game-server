@@ -101,6 +101,13 @@ class WclIntakeTest(unittest.TestCase):
         report['wcl_intake']['health_samples'][0]['native_loss_pct'] = 12
         report['wcl_intake']['events_on_dead_targets_not_replayed'] = 1
         self.assertFalse(gate.evaluate(trace, report)['passed'])
+        report['metrics']['first_death_seconds'] = 10
+        trace['hits'].append({'time_ms': 11000, 'slot': 0, 'amount': 10, 'absorbed': 0, 'max_hp': 100})
+        result = gate.evaluate(trace, report)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['cutoff_ms'], 10000)
+        self.assertEqual(result['rows'][0]['end_ms'], 10000)
+        self.assertEqual(result['dead_target_events'], 1)
 
 
 if __name__ == '__main__':
