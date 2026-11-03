@@ -1064,6 +1064,22 @@ fn refused_admission(
     }
 }
 
+/// Recheck a remaining composite spell against current native target and cast state.
+pub(crate) fn composite_step_ready(
+    world: &mut World,
+    actor: Entity,
+    execution: &Execution,
+) -> Result<bool, String> {
+    let Execution::Spell(spell, target, primary) = execution else {
+        return Err("native composite contains a non-spell step".into());
+    };
+    if primary.is_some_and(|target| !server::spell_cast::targets::is_alive(world, target)) {
+        return Ok(false);
+    }
+    let readiness = native_readiness(world, actor, *spell, *target, None, false)?;
+    Ok(readiness.ready && readiness.queue_delay.is_none())
+}
+
 pub fn execute_row(
     world: &mut World,
     actor: Entity,

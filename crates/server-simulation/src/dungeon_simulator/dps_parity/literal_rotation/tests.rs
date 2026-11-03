@@ -134,6 +134,86 @@ fn palm_driver(targeted: bool) -> Driver {
     )
 }
 
+fn queue_palm(driver: &mut Driver, run: &mut Run, target: Entity) {
+    let action = Action {
+        source_row: None,
+        name: "queued_palm".into(),
+        target: Some(target.to_bits()),
+        options: Default::default(),
+    };
+    driver
+        .execute(
+            run.app.world_mut(),
+            run.actor,
+            action,
+            Execution::Queue(
+                Box::new(Execution::Spell(100780, target, Some(target))),
+                0.2,
+            ),
+        )
+        .unwrap();
+}
+
+fn select_fresh_palm(
+    run: &mut Run,
+    driver: &mut Driver,
+    equipment: &Equipment,
+) -> Option<(Action, Execution)> {
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        equipment,
+        [NativeAction {
+            name: "fresh_palm",
+            spell: 100780,
+            talent: None,
+            self_target: false,
+        }],
+        false,
+    )
+    .unwrap();
+    let facts = TargetFacts {
+        world: run.app.world(),
+        targets: &run.targets,
+    };
+    driver
+        .select("default", &facts, &prepared, equipment)
+        .unwrap()
+}
+
+#[test]
+#[ignore = "requires native269 profile inputs"]
+fn literal_reselect_dead_queued_target_in_the_same_decision() {
+    let (mut run, equipment) = human(2);
+    let old = run.targets[0];
+    let live = run.targets[1];
+    let mut driver = Driver::new(Program::parse(&[("default", "fresh_palm")]).unwrap());
+    queue_palm(&mut driver, &mut run, old);
+    run.app.world_mut().get_mut::<Health>(old).unwrap().current = 0.0;
+    run.targets = vec![live];
+    let (action, execution) = select_fresh_palm(&mut run, &mut driver, &equipment)
+        .expect("live target selected in same tick");
+    assert_eq!(action.name, "fresh_palm");
+    assert!(matches!(execution, Execution::Spell(100780, target, _) if target == live));
+}
+
+#[test]
+#[ignore = "requires native269 profile inputs"]
+fn literal_reselect_expired_spell_queue_in_the_same_decision() {
+    let (mut run, equipment) = human(1);
+    let target = run.targets[0];
+    let mut driver = Driver::new(Program::parse(&[("default", "fresh_palm")]).unwrap());
+    queue_palm(&mut driver, &mut run, target);
+    run.app
+        .world_mut()
+        .resource_mut::<Time<Real>>()
+        .advance_by(Duration::from_millis(251));
+    let (action, _) = select_fresh_palm(&mut run, &mut driver, &equipment)
+        .expect("priority rescanned in same tick");
+    assert_eq!(action.name, "fresh_palm");
+}
+
 #[test]
 #[ignore = "actual native Player fixture; requires frozen parity inputs"]
 fn literal_queues_nearly_ready_cooldown_before_lower_priority_cast() {

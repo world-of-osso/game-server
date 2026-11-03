@@ -53,6 +53,7 @@ enum Phase {
 pub struct FollowerApl {
     rotation: Box<dyn SpecRotation>,
     plan: VecDeque<(Action, Execution)>,
+    pending_plan_cast: Option<(u32, Option<u64>)>,
     phase: Phase,
     combat_started_at: f64,
     maintained_buffs: Option<std::collections::BTreeSet<u32>>,
@@ -71,6 +72,7 @@ impl FollowerApl {
         Self {
             rotation,
             plan: VecDeque::new(),
+            pending_plan_cast: None,
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
             maintained_buffs: None,
@@ -111,6 +113,7 @@ impl FollowerApl {
         }
         if !targets.is_empty() && !matches!(self.phase, Phase::Combat) {
             self.plan.clear();
+            self.pending_plan_cast = None;
             self.combat_started_at = crate::spell_cast::now(world);
             self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
@@ -124,8 +127,8 @@ impl FollowerApl {
             if gcd || cast {
                 return Ok(());
             }
-            if let Some((action, execution)) = self.plan.pop_front() {
-                return self.rotation.execute(world, actor, action, execution);
+            if self.advance_plan(world, actor)? {
+                return Ok(());
             }
             match self.rotation.poll_precombat(world, actor, targets)? {
                 PrecombatPoll::Waiting => return Ok(()),
@@ -160,8 +163,8 @@ impl FollowerApl {
         if gcd || cast {
             return Ok(());
         }
-        if let Some((action, execution)) = self.plan.pop_front() {
-            return self.rotation.execute(world, actor, action, execution);
+        if self.advance_plan(world, actor)? {
+            return Ok(());
         }
         let now = crate::spell_cast::now(world);
         let spells = self
@@ -197,6 +200,42 @@ impl FollowerApl {
         result
     }
 
+    fn advance_plan(&mut self, world: &mut World, actor: Entity) -> Result<bool, String> {
+        if let Some((spell, previous)) = self.pending_plan_cast.take() {
+            if successful_cast_sequence(world, actor, spell) == previous {
+                self.plan.clear();
+                return Ok(false);
+            }
+        }
+        let Some((action, execution)) = self.plan.pop_front() else {
+            return Ok(false);
+        };
+        if !literal_rotation::execution::composite_step_ready(world, actor, &execution)? {
+            self.plan.clear();
+            return Ok(false);
+        }
+        self.execute_plan_step(world, actor, action, execution)?;
+        Ok(true)
+    }
+
+    fn execute_plan_step(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        action: Action,
+        execution: Execution,
+    ) -> Result<(), String> {
+        let marker = match &execution {
+            Execution::Spell(spell, _, _) if !self.plan.is_empty() => {
+                Some((*spell, successful_cast_sequence(world, actor, *spell)))
+            }
+            _ => None,
+        };
+        self.rotation.execute(world, actor, action, execution)?;
+        self.pending_plan_cast = marker;
+        Ok(())
+    }
+
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
     pub fn execute_plan(
         &mut self,
@@ -217,8 +256,14 @@ impl FollowerApl {
             .plan
             .pop_front()
             .ok_or("selected native composite plan is empty")?;
-        self.rotation.execute(world, actor, action, step)
+        self.execute_plan_step(world, actor, action, step)
     }
+}
+
+fn successful_cast_sequence(world: &World, actor: Entity, spell: u32) -> Option<u64> {
+    world
+        .get::<server::spell_cast::SpellHistory>(actor)
+        .and_then(|history| history.successful_cast_sequence(spell))
 }
 
 /// Only positive self/ally aura actions without a cooldown are maintained.
