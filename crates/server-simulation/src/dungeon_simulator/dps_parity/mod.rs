@@ -41,6 +41,10 @@ mod vengeful_wrath_tests;
 mod warlock_pet_interrupt_tests;
 
 const DUMMY_ENTRY: u32 = 31_146;
+// SimC 76f8118 sc_enemy.cpp:59: the default enemy has combat_reach = 4.0.
+const SIMC_SOURCED_TARGET_REACH: f32 = 4.0;
+// The snapshot's creature_model_info gives this display a 4.0 combat reach.
+const SIMC_SOURCED_TARGET_DISPLAY: u32 = 137_886;
 const DUMMY_LATERAL_STEP: f32 = 0.5;
 const FIGHT_DURATION: Duration = Duration::from_secs(300);
 const ADD_LIFETIME: Duration = Duration::from_secs(30);
@@ -244,6 +248,15 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
         .is_none()
     {
         return Err("native31146 lacks its actual training-dummy script".into());
+    }
+    app.world_mut()
+        .get_mut::<shared::components::ModelDisplay>(target)
+        .ok_or("parity dummy has no model display")?
+        .display_id = SIMC_SOURCED_TARGET_DISPLAY;
+    if crate::scripted_ai::model_reach::combat_reach(app.world(), target)
+        != Some(SIMC_SOURCED_TARGET_REACH)
+    {
+        return Err("parity dummy display does not have SimC's target reach".into());
     }
     face_dummy_away_from_actor(app.world_mut(), actor, target);
     // SIMC_FIXED_TIME_TARGET_HEALTH owns this fixture's current health. Source31146
