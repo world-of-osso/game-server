@@ -93,6 +93,7 @@ register_modules! {
     brewmaster_cellar: (1000, "modules/brewmaster_cellar.rs"),
     brewmaster_dragonfire: (1000, "modules/brewmaster_dragonfire.rs"),
     brewmaster_purify: (1000, "modules/brewmaster_purify.rs"),
+    brewmaster_balanced_stratagem: (9807, "modules/brewmaster_balanced_stratagem.rs"),
     brewmaster_black_ox: (1000, "modules/brewmaster_black_ox.rs"),
     brewmaster_blackout_combo: (1000, "modules/brewmaster_blackout_combo.rs"),
     brewmaster_empty_barrel: (1000, "modules/brewmaster_empty_barrel.rs"),

@@ -647,6 +647,7 @@ D	assassination_runtime/rogue_children.rs	tick_implacable	cast_triggered	child	1
 D	aura_rolls.rs	apply_roll	AuraApplication	payload	1	1214933,1214934,1214935,1214937
 D	blood_ground.rs	apply	AuraApplication	spell	1	188290,391459,434034
 D	bloodlust_lockout.rs	apply_lockout	AuraApplication	lockout	1	57723,57724,80354,264689,390435
+D	brewmaster_balanced_stratagem.rs	after_launch	AuraApplication	grant	1	451508,451514
 D	brewmaster_empty_barrel.rs	grant_empty_barrel	AuraApplication	spell_id	1	1265140,1265307
 D	brewmaster_harmonic_surge.rs	launch_surge	launch_triggered_spell	&spell	1	1271011,1271045
 D	brewmaster_harmonic_surge.rs	launch_surge	load_triggered_spell	id	1	1271011,1271045
