@@ -90,7 +90,7 @@ fn enter_voidform(world: &mut World, caster: Entity, _: &SpellInfo) {
             caster,
             target: caster,
             spell_id: VOIDFORM_BUFF,
-            effect_mask: 3,
+            effect_mask: u32::MAX,
             source: AuraSource::Cast,
         },
     );
