@@ -1,5 +1,7 @@
 # Preservation: recorded Altar pull
 
+**Historical methodology only:** The source report started on 2026-08-18 UTC, before the 2026-10-16 build-70448 cutoff. Its spell shares and healing outcomes are not current-build retail parity evidence.
+
 The replay uses WCL `pPFDbkfQK7MACtmY` fight 41 pull 1, actor 221, first 75 seconds. Its party specs match the log: Brewmaster 268, Preservation 1468, Arcane 62 and two Elemental 262. Equipment and talent selections are native profiles, not exact copies of the logged characters. NPC lifetimes use first-to-last damage windows and are **INFERRED_WCL**. WCL deferred absorption receipts are removed from their source hit before the recorded Stagger and Time Dilation ticks are replayed. The specific attacker of pooled deferred damage is not observable and is represented by an engaged enemy.
 
 Five native seeds passed the predeclared intake gate: each party member's normalized effective damage plus absorbs was within 10% of WCL in each 15-second window; no recorded events were dropped because a target was dead. The gate proves that the normalized input was delivered; it does not independently prove WCL's reported max-HP normalization or match all combat behavior. No party member died. Tank post-hit HP mean absolute difference across paired WCL observations was 19.55, 18.57, 19.10, 17.62 and 15.35 percentage points for seeds 1–5. HP difference is an outcome, not an intake gate.

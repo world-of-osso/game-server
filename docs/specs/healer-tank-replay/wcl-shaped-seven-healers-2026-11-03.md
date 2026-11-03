@@ -1,5 +1,7 @@
 # Seven healers: WCL-shaped pull with synthetic intake
 
+Historical methodology only: the 65, 105, 270 and 1468 source reports predate the 2026-10-16 build-70448 cutoff. Do not use their spell shares or rotations as current retail evidence.
+
 Five seeds per spec replay the same 75-second interval profile and binary, with the synthetic SimC tank and party-pulse intake. The profile is INFERRED_WCL from `pPFDbkfQK7MACtmY` fight 41 pull 1, using first-to-last observed player damage to each NPC instance, not confirmed spawn/death times. These results are diagnostic only: incoming damage, target placement, healing targets, talents, gear and enemy timelines do not match the named WCL actors. **Do not classify class defects from these shares alone.**
 
 WCL references below use the first 75 seconds of one similar-size Altar of Fangs pull, except 1468 uses the profile's source pull and its actual healer. Counts are distinct NPC instances hit during the complete pull. The peak and time with at least six enemies are inferred from damage windows; percentages are sampled over the first 75 seconds. The native profile peaks at 15 and has at least six for 59.3%. Different occupancy makes even these similar pulls imperfect comparisons.
