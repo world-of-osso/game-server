@@ -114,6 +114,66 @@ fn tank_pull_forecast_uses_native_front_arc_after_master_facing_integration() {
 }
 
 #[test]
+fn tank_pull_forecast_uses_player_defenses_for_class_followers() {
+    let (mut h, tank, enemy) = source_fixture(46249);
+    let target_position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(tank)
+        .unwrap();
+    let source_position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(enemy)
+        .unwrap();
+    let angle =
+        (target_position.z - source_position.z).atan2(source_position.x - target_position.x);
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(shared::components::Rotation {
+            x: 0.0,
+            y: angle + std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        });
+    let mut stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .clone();
+    stats.defense.dodge = 60.0;
+    h.app.world_mut().entity_mut(tank).insert(stats);
+    let npc = h.app.world().get::<Npc>(tank).unwrap().clone();
+    let player = h
+        .app
+        .world()
+        .get::<shared::components::Player>(h.caster)
+        .unwrap()
+        .clone();
+    let creature = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<Npc>()
+        .insert(player);
+    let player = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .remove::<shared::components::Player>()
+        .insert((npc, super::ClassCombatant));
+    let follower = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert_ne!(
+        creature.expected_hit, player.expected_hit,
+        "the fixture must exercise player defense"
+    );
+    assert_eq!(follower.expected_hit, player.expected_hit);
+    assert_eq!(follower.largest_hit, player.largest_hit);
+    assert_eq!(follower.interval_secs, player.interval_secs);
+}
+
+#[test]
 fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_mutation() {
     let (mut h, tank, enemy) = source_fixture(46249);
     let mut attack = AutoAttack::new(tank);

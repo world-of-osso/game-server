@@ -190,7 +190,8 @@ fn read_swing_projection(
         .get::<shared::components::PlayerStandState>(tank)
         .is_some_and(|state| !state.0.is_stand());
     let victim = swing_victim(
-        world.get::<Npc>(tank).is_some(),
+        world.get::<Npc>(tank).is_some()
+            && !crate::followers::is_player_like_combatant(world, tank),
         world.get::<CharacterStats>(tank),
         level_difference,
         sitting,
