@@ -868,7 +868,7 @@ mod admin_npc_combat_tests {
         use shared::components::{CharacterAppearance, ModelDisplay, Player, UnitLevel};
         let mut world = World::new();
         world.insert_resource(crate::test_data::world_data().clone());
-        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches::new(
             Default::default(),
         ));
         let npc = spawn_npc(&mut world);
@@ -915,7 +915,7 @@ mod admin_npc_combat_tests {
         const CLASS_FOLLOWER_ENTRY: u32 = u32::MAX - 1;
         let mut world = World::new();
         world.insert_resource(crate::test_data::world_data().clone());
-        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+        world.insert_resource(crate::scripted_ai::model_reach::ModelReaches::new(
             Default::default(),
         ));
         let ara_kara = InMap {
