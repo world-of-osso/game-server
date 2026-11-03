@@ -171,6 +171,8 @@ mod ferocious_bite;
 mod gcd_haste;
 #[cfg(test)]
 mod gcd_haste_tests;
+#[cfg(test)]
+mod periodic_cost_tests;
 pub use ferocious_bite::{
     read_extra_energy_modifier as read_ferocious_bite_extra_energy_modifier,
     read_maximum_energy as read_ferocious_bite_maximum_energy,
