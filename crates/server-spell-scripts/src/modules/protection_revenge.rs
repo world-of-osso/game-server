@@ -2,7 +2,7 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{
-    ActiveAuras, AuraInstance,
+    self, ActiveAuras, AuraApplication, AuraInstance, AuraSource, RemoveReason,
     procs::{self, AuraEvent, PROC_HIT_DODGE, PROC_HIT_PARRY},
     scripts::AuraScripts,
 };
@@ -10,11 +10,15 @@ use combat::spell_cast::{self, script_registry::SpellScriptHook};
 
 const TRIGGER: u32 = 5301;
 const BUFF: u32 = 5302;
+const TWO_PIECE: u32 = 1296647;
+const VENGEFUL_SHIELD: u32 = 1300681;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::OwnsPolicyProc(|spell| spell == TRIGGER),
     SpellScriptHook::LateAuraRegistration(register_frothing),
     SpellScriptHook::AfterSpellPayment(refund_frothing_berserker),
+    SpellScriptHook::AfterSpellPayment(grant_vengeful_shield),
+    SpellScriptHook::AfterForegroundSpecial(consume_vengeful_shield),
     SpellScriptHook::AfterWhiteImpact(on_white_impact),
     SpellScriptHook::AuraEvent(on_incoming_event),
 ];
@@ -71,6 +75,43 @@ fn refund_frothing_berserker(
             1,
             paid * percent / 100.0,
         );
+    }
+}
+
+fn grant_vengeful_shield(
+    world: &mut World,
+    actor: Entity,
+    spell: &combat::spell_info::SpellInfo,
+    _: &[(spell_cast::CostPool, f32)],
+) {
+    if spell.id != 6572 || !auras::has_aura(world, actor, BUFF) {
+        return;
+    }
+    let equipped = world.get::<ActiveAuras>(actor).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            aura.spell_id == TWO_PIECE
+                && aura.caster == actor
+                && matches!(aura.source, AuraSource::ItemSet(_))
+        })
+    });
+    if equipped {
+        // SimC76f8118 sc_warrior.cpp6021–6030: free Revenge earns the 2pc buff.
+        auras::apply_aura(world, &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: VENGEFUL_SHIELD,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        });
+    }
+}
+
+fn consume_vengeful_shield(world: &mut World, actor: Entity, spell: &combat::spell_info::SpellInfo) {
+    if spell.id == 23922 {
+        // SimC76f8118 sc_warrior.cpp6306: expire after Shield Slam executes.
+        auras::remove_auras(world, actor, RemoveReason::Consumed, |aura| {
+            aura.spell_id == VENGEFUL_SHIELD && aura.caster == actor
+        });
     }
 }
 
