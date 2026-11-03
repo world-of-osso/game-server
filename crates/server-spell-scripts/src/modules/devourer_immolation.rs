@@ -48,12 +48,13 @@ fn schedule_undying(world: &mut World, unit: Entity, aura: &AuraInstance) {
 
 fn retrigger_undying(world: &mut World) {
     let now = spell_cast::now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &PendingUndying)>()
         .iter(world)
         .filter(|(_, pending)| pending.0 <= now)
         .map(|(unit, _)| unit)
         .collect();
+    due.sort_unstable_by_key(|unit| unit.to_bits());
     for unit in due {
         world.entity_mut(unit).remove::<PendingUndying>();
         if !spell_cast::try_cast_triggered(world, unit, SOUL_IMMOLATION, Some(unit), 1) {

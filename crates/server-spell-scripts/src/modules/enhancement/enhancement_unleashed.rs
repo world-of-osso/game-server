@@ -88,6 +88,7 @@ pub(super) fn update(world: &mut World) {
             pulse.remaining > 0
         });
     }
+    due.sort_by_key(|(caster, _, _, _)| caster.to_bits());
     for (caster, primary, multiplier, depth) in due {
         cast_pack_pulse(world, caster, primary, multiplier, depth);
     }

@@ -61,12 +61,13 @@ fn initial_tick(world: &mut World, actor: Entity, spell: u32, depth: u8) {
 
 fn repeat_casts(world: &mut World) {
     let now = combat::spell_cast::now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &NextMindSear)>()
         .iter(world)
         .filter(|(_, cast)| cast.due <= now)
         .map(|(actor, cast)| (actor, cast.target))
         .collect();
+    due.sort_unstable_by_key(|(actor, _)| actor.to_bits());
     for (actor, target) in due {
         world.entity_mut(actor).remove::<NextMindSear>();
         if !combat::spell_cast::try_cast_triggered(world, actor, 1280457, Some(target), 1) {

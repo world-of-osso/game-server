@@ -59,7 +59,7 @@ fn order_army(world: &mut World, caster: Entity) {
         .count();
     let spell = if extra + 1 >= 3 { 1300330 } else { 1294264 };
     let now = combat::auras::aura_now(world);
-    let actors: Vec<_> = world
+    let mut actors: Vec<_> = world
         .query::<(Entity, &SummonedCreature)>()
         .iter(world)
         .filter_map(|(actor, summon)| {
@@ -69,6 +69,7 @@ fn order_army(world: &mut World, caster: Entity) {
             .then_some(actor)
         })
         .collect();
+    actors.sort_unstable_by_key(|actor| actor.to_bits());
     for actor in actors {
         if !super::unholy_eruption::cast_army_order(world, actor, spell, target) {
             warn!(?actor, spell, "Soul Reaper Army order refused");

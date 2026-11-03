@@ -39,7 +39,7 @@ fn command_ghouls(world: &mut World, caster: Entity, spell: &SpellInfo) {
         1294264
     };
     let now = combat::auras::aura_now(world);
-    let ghouls: Vec<_> = world
+    let mut ghouls: Vec<_> = world
         .query::<(Entity, &SummonedCreature)>()
         .iter(world)
         .filter_map(|(entity, summon)| {
@@ -49,6 +49,7 @@ fn command_ghouls(world: &mut World, caster: Entity, spell: &SpellInfo) {
             .then_some(entity)
         })
         .collect();
+    ghouls.sort_unstable_by_key(|ghoul| ghoul.to_bits());
     for ghoul in ghouls {
         if !super::unholy_eruption::cast_army_order(world, ghoul, order, target) {
             warn!(?ghoul, order, "Doomed Bidding Army order refused");

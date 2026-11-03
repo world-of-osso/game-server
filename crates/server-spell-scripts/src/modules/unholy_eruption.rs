@@ -75,7 +75,7 @@ fn command_army(world: &mut World, caster: Entity) {
     enemies.dedup();
     let order = if enemies.len() >= 3 { 1300330 } else { 1294264 };
     let now = combat::auras::aura_now(world);
-    let ghouls: Vec<_> = world
+    let mut ghouls: Vec<_> = world
         .query::<(Entity, &spell_cast::summon::SummonedCreature)>()
         .iter(world)
         .filter_map(|(actor, summon)| {
@@ -85,6 +85,7 @@ fn command_army(world: &mut World, caster: Entity) {
             .then_some(actor)
         })
         .collect();
+    ghouls.sort_unstable_by_key(|ghoul| ghoul.to_bits());
     // SimC76f8118 sc_death_knight.cpp6766–6771: actual Army ghouls
     // execute Death Order or Epidemic Order, not a synthetic owner hit.
     for ghoul in ghouls {
