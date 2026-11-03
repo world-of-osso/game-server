@@ -87,7 +87,7 @@ pub(super) fn advance(
             return true;
         }
         let goal = Goal::OwnerTrail(owner.to_bits());
-        super::hazards::advance_escape(
+        let result = super::hazards::advance_escape(
             world,
             unit,
             map,
@@ -99,21 +99,22 @@ pub(super) fn advance(
             },
             goal,
         );
-        if world
-            .get::<Position>(unit)
-            .is_some_and(|after| *after != from)
-        {
-            world
-                .get_mut::<TrailFollow>(unit)
-                .expect("trail state")
-                .since = now;
-        } else {
-            world
-                .get_mut::<TrailFollow>(unit)
-                .expect("trail state")
-                .destination = None;
-            world.resource_mut::<Navigation>().cancel_route(unit);
-            log_hold(world, unit, owner, now, "trail step refused");
+        match result {
+            super::hazards::EscapeAdvance::Pending => {}
+            super::hazards::EscapeAdvance::Moved => {
+                world
+                    .get_mut::<TrailFollow>(unit)
+                    .expect("trail state")
+                    .since = now;
+            }
+            super::hazards::EscapeAdvance::Refused(reason) => {
+                world
+                    .get_mut::<TrailFollow>(unit)
+                    .expect("trail state")
+                    .destination = None;
+                world.resource_mut::<Navigation>().cancel_route(unit);
+                log_hold(world, unit, owner, now, reason);
+            }
         }
         return true;
     }

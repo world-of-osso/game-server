@@ -35,13 +35,6 @@ struct MappedPull {
 }
 
 #[derive(Deserialize)]
-struct PrebossPrerequisites {
-    map_id: u32,
-    boss_entry: u32,
-    source_guids: Vec<u64>,
-}
-
-#[derive(Deserialize)]
 struct FirstDamageEvidence {
     maps: Vec<MapFirstDamage>,
 }
@@ -609,74 +602,6 @@ fn boss_route(graph: &Graph) -> Result<(Vec<RouteStep>, Option<u64>), String> {
     Ok((graph.route.clone(), final_boss))
 }
 
-/// Keep WCL-observed prerequisite sources directly before their boss. The Voidscar
-/// source GUIDs are inferred from the ramp geometry, not mapped WCL instances.
-fn enforce_preboss_sources(
-    graph: &Graph,
-    steps: &mut Vec<RouteStep>,
-    hostile_sources: &HashSet<u64>,
-) -> Result<Vec<u64>, String> {
-    let required: PrebossPrerequisites = serde_json::from_str(include_str!(
-        "../../../../content/dungeons/voidscar-route-prerequisites.json"
-    ))
-    .map_err(|error| format!("parse preboss route prerequisites: {error}"))?;
-    if graph.map_id != required.map_id {
-        return Ok(Vec::new());
-    }
-    let source = graph
-        .follower_boss_sources
-        .get(&required.boss_entry)
-        .copied()
-        .unwrap_or(required.boss_entry);
-    let boss = graph
-        .packs
-        .iter()
-        .find(|pack| pack.spawns.iter().any(|spawn| spawn.entry == source))
-        .ok_or_else(|| format!("required route boss {} missing", required.boss_entry))?;
-    let mut added = Vec::new();
-    let mut packs = Vec::new();
-    for guid in required.source_guids {
-        if !hostile_sources.contains(&guid) {
-            return Err(format!("required preboss source {guid} is not hostile"));
-        }
-        let pack = graph
-            .packs
-            .iter()
-            .find(|pack| pack.spawns.iter().any(|spawn| spawn.guid == guid))
-            .ok_or_else(|| format!("required preboss source {guid} missing"))?;
-        if !packs.contains(&pack.id) {
-            packs.push(pack.id);
-        }
-    }
-    for pack_id in packs {
-        let step = if let Some(index) = steps.iter().position(|step| step.pack == pack_id) {
-            steps.remove(index)
-        } else {
-            let pack = graph
-                .packs
-                .iter()
-                .find(|pack| pack.id == pack_id)
-                .expect("resolved prerequisite pack");
-            added.push(pack_id);
-            RouteStep {
-                pack: pack_id,
-                anchor: pack.point().to_array(),
-            }
-        };
-        let index = steps
-            .iter()
-            .position(|step| step.pack == boss.id)
-            .ok_or_else(|| {
-                format!(
-                    "required route boss {} absent from route",
-                    required.boss_entry
-                )
-            })?;
-        steps.insert(index, step);
-    }
-    Ok(added)
-}
-
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
 /// A candidate may be inserted between route steps, never inside or after the final
 /// encounter: retail parties finish forces before the end boss.
@@ -701,7 +626,7 @@ pub(super) fn plan(
             .sum::<u64>()
     };
     let (mut steps, final_boss) = boss_route(graph)?;
-    let mut added_packs = enforce_preboss_sources(graph, &mut steps, hostile_sources)?;
+    let mut added_packs = Vec::new();
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
@@ -800,7 +725,6 @@ pub(super) fn plan(
     ))
     .map_err(|error| format!("parse transport route gates: {error}"))?;
     steps = enforce_transport_prerequisites(graph, steps, &gates.gates)?;
-    enforce_preboss_sources(graph, &mut steps, hostile_sources)?;
     Ok(PlannedRoute {
         steps,
         added_packs,
@@ -851,60 +775,6 @@ mod tests {
             follower_boss_bits: BTreeMap::new(),
             follower_encounter_actor_bits: BTreeMap::new(),
         }
-    }
-
-    #[test]
-    fn voidscar_planner_places_ramp_sources_before_charonus() {
-        let required = [3276417129, 3276417130, 3276417131, 3276417132, 3276417133];
-        let boss = 3276417029;
-        let mut sources = required.to_vec();
-        sources.push(boss);
-        let mut graph = single_spawn_route(2923, &sources);
-        graph
-            .packs
-            .iter_mut()
-            .find(|pack| pack.id == boss)
-            .unwrap()
-            .spawns[0]
-            .entry = 239167;
-        let mut steps = vec![RouteStep {
-            pack: boss,
-            anchor: [0.0; 3],
-        }];
-        let hostile = required.into_iter().collect();
-        assert_eq!(
-            enforce_preboss_sources(&graph, &mut steps, &hostile).unwrap(),
-            required
-        );
-        assert_eq!(
-            steps.iter().map(|step| step.pack).collect::<Vec<_>>(),
-            required.into_iter().chain([boss]).collect::<Vec<_>>()
-        );
-        assert!(
-            enforce_preboss_sources(&graph, &mut steps, &hostile)
-                .unwrap()
-                .is_empty()
-        );
-        assert_eq!(steps.len(), 6, "reordering must not duplicate pulls");
-    }
-
-    #[test]
-    #[ignore = "requires the extracted Voidscar navigation graph"]
-    fn voidscar_full_graph_plans_ramp_sources_before_charonus() {
-        let path = std::env::var_os("DUNGEON_SIMULATOR_GRAPH").expect("extracted graph");
-        let graph: Graph = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
-        let sources = graph
-            .packs
-            .iter()
-            .flat_map(|pack| pack.spawns.iter().map(|spawn| spawn.guid))
-            .collect();
-        let plan = plan(&graph, &HashMap::new(), 0, &sources).unwrap();
-        let ids: Vec<_> = plan.steps.iter().map(|step| step.pack).collect();
-        let boss = ids.iter().position(|&pack| pack == 3276417029).unwrap();
-        assert_eq!(
-            &ids[boss - 5..boss],
-            &[3276417129, 3276417130, 3276417131, 3276417132, 3276417133]
-        );
     }
 
     fn challenge(map_id: u32) -> server::mythic_plus_runtime::ChallengeDefinition {

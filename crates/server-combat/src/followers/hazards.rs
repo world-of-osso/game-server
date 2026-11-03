@@ -395,7 +395,9 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         return true;
     }
     match destination {
-        EscapeDestination::Ready(to) => advance_escape(world, unit, map, from, position(to), goal),
+        EscapeDestination::Ready(to) => {
+            advance_escape(world, unit, map, from, position(to), goal);
+        }
         EscapeDestination::Pending => hold_escape(world, unit, from, "pending"),
         EscapeDestination::Blocked => {
             warn!(
@@ -587,6 +589,12 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     })
 }
 
+pub(super) enum EscapeAdvance {
+    Pending,
+    Moved,
+    Refused(&'static str),
+}
+
 pub(super) fn advance_escape(
     world: &mut World,
     unit: Entity,
@@ -594,7 +602,7 @@ pub(super) fn advance_escape(
     from: Position,
     to: Position,
     goal: Goal,
-) {
+) -> EscapeAdvance {
     let scale = world
         .get::<crate::auras::AuraStatMods>(unit)
         .map_or(1.0, |mods| mods.movement_speed);
@@ -610,7 +618,7 @@ pub(super) fn advance_escape(
             "hold",
             || serde_json::json!({"reason": "zero_movement_budget"}),
         );
-        return;
+        return EscapeAdvance::Pending;
     }
     let step = world.resource_mut::<Navigation>().advance(
         unit,
@@ -633,7 +641,7 @@ pub(super) fn advance_escape(
                 "hold",
                 || serde_json::json!({"reason": "ground_missing"}),
             );
-            return;
+            return EscapeAdvance::Refused("ground missing");
         };
         crate::creature_ai::move_follower(world, unit, position, speed);
         let after = world.get::<Position>(unit).copied();
@@ -644,6 +652,7 @@ pub(super) fn advance_escape(
                     "speed": speed,
                 })
             });
+            return EscapeAdvance::Moved;
         } else {
             trace_escape_event(
                 world,
@@ -651,6 +660,7 @@ pub(super) fn advance_escape(
                 "hold",
                 || serde_json::json!({"reason": "no_displacement"}),
             );
+            return EscapeAdvance::Refused("movement refused");
         }
     } else {
         let reason = match step {
@@ -665,6 +675,12 @@ pub(super) fn advance_escape(
             "hold",
             || serde_json::json!({"reason": reason}),
         );
+        match step {
+            Step::Pending => EscapeAdvance::Pending,
+            Step::Unbaked => EscapeAdvance::Refused("navigation unbaked"),
+            Step::Blocked => EscapeAdvance::Refused("navigation blocked"),
+            Step::Moved { .. } => unreachable!(),
+        }
     }
 }
 

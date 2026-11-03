@@ -120,7 +120,21 @@ fn note_hold(
     if previous
         .is_none_or(|hold| hold.reason != reason || now - hold.last >= HOLD_LOG_INTERVAL_SECONDS)
     {
-        warn!(?unit, ?target, reason, ?blockers, "Follower approach held");
+        let sim_ms = (now * 1000.0) as u64;
+        let owner_exposure = world
+            .get::<super::Follower>(unit)
+            .filter(|follower| follower.owner == target)
+            .and_then(|_| targets::position(world, target))
+            .map(|point| blockers_on_path(world, target, &[point, point], blockers.to_vec()));
+        warn!(
+            ?unit,
+            ?target,
+            sim_ms,
+            reason,
+            ?blockers,
+            ?owner_exposure,
+            "Follower approach held"
+        );
         world.entity_mut(unit).insert(HoldLog {
             target,
             last: now,
@@ -183,7 +197,7 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
     true
 }
 
-fn approach_enters_unpulled_sight(
+pub(super) fn approach_enters_unpulled_sight(
     world: &mut World,
     unit: Entity,
     target: Entity,
