@@ -29,7 +29,7 @@ pub(crate) fn load(
         "SELECT map, difficulty, entry, spell, target_type FROM content_inferred_creature_ability ORDER BY map, difficulty, entry, spell",
     )?;
     let mut sample_query = conn.prepare(
-        "SELECT timing_kind, delay_ms FROM content_inferred_creature_ability_sample WHERE map=?1 AND difficulty=?2 AND entry=?3 AND spell=?4 ORDER BY sample_id",
+        "SELECT sample_id, timing_kind, delay_ms FROM content_inferred_creature_ability_sample WHERE map=?1 AND difficulty=?2 AND entry=?3 AND spell=?4 ORDER BY sample_id",
     )?;
     let mut result: HashMap<(u32, u32, u32), Vec<SmartEvent>> = HashMap::new();
     let mut rows = query.query([])?;
@@ -40,7 +40,9 @@ pub(crate) fn load(
         let spell: u32 = row.get(3)?;
         let target_type: u32 = row.get(4)?;
         if !matches!(target_type, 1 | 2 | 5 | 6) {
-            return Err(rusqlite::Error::InvalidQuery);
+            return Err(invalid_data(format!(
+                "content_inferred_creature_ability map={map} difficulty={difficulty} entry={entry} spell={spell}: unsupported target_type={target_type}"
+            )));
         }
         let template: Option<(String, String)> = conn
             .query_row(
@@ -61,16 +63,24 @@ pub(crate) fn load(
         };
         let mut sample_rows = sample_query.query([map, difficulty, entry, spell])?;
         while let Some(sample) = sample_rows.next()? {
-            let kind: String = sample.get(0)?;
-            let delay: u32 = sample.get(1)?;
-            match kind.as_str() {
-                "first_activity_proxy" => samples.first.push(delay),
-                "successive_cast" if delay > 0 => samples.repeat.push(delay),
-                _ => return Err(rusqlite::Error::InvalidQuery),
+            let sample_id: i64 = sample.get(0)?;
+            let kind: String = sample.get(1)?;
+            let raw_delay: i64 = sample.get(2)?;
+            let delay = u32::try_from(raw_delay).ok();
+            match (kind.as_str(), delay) {
+                ("first_activity_proxy", Some(delay)) => samples.first.push(delay),
+                ("successive_cast", Some(delay)) if delay > 0 => samples.repeat.push(delay),
+                _ => {
+                    return Err(invalid_data(format!(
+                        "content_inferred_creature_ability_sample map={map} difficulty={difficulty} entry={entry} spell={spell} sample_id={sample_id}: invalid timing_kind={kind:?} delay_ms={raw_delay}; first delay must be nonnegative and successive delay must be positive"
+                    )));
+                }
             }
         }
         if samples.first.is_empty() || samples.repeat.is_empty() {
-            return Err(rusqlite::Error::InvalidQuery);
+            return Err(invalid_data(format!(
+                "content_inferred_creature_ability_sample map={map} difficulty={difficulty} entry={entry} spell={spell}: requires first_activity_proxy and successive_cast samples"
+            )));
         }
         result
             .entry((map, difficulty, entry))
@@ -92,6 +102,50 @@ pub(crate) fn load(
             });
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inferred_loader_reports_the_invalid_sample_and_reason() {
+        let db = Connection::open_in_memory().unwrap();
+        db.execute_batch("CREATE TABLE content_creature_template(entry INTEGER, AIName TEXT, ScriptName TEXT);
+            INSERT INTO content_creature_template VALUES(241813,'','');
+            CREATE TABLE content_inferred_creature_ability(map INTEGER, difficulty INTEGER, entry INTEGER, spell INTEGER, target_type INTEGER);
+            INSERT INTO content_inferred_creature_ability VALUES(2825,8,241813,1297701,5);
+            CREATE TABLE content_inferred_creature_ability_sample(map INTEGER,difficulty INTEGER,entry INTEGER,spell INTEGER,sample_id INTEGER,timing_kind TEXT,delay_ms INTEGER);
+            INSERT INTO content_inferred_creature_ability_sample VALUES(2825,8,241813,1297701,42,'successive_cast',0);").unwrap();
+        let error = load(&db).unwrap_err().to_string();
+        for expected in [
+            "content_inferred_creature_ability_sample",
+            "map=2825",
+            "difficulty=8",
+            "entry=241813",
+            "spell=1297701",
+            "sample_id=42",
+            "successive_cast",
+            "delay_ms=0",
+            "must be positive",
+        ] {
+            assert!(error.contains(expected), "missing {expected} in {error}");
+        }
+    }
+
+    #[test]
+    fn inferred_loader_loads_the_canonical_world_database() {
+        let scripts = super::super::load_smart_scripts(&crate::test_data::world_db_path())
+            .expect("canonical world.db inferred ability rows must load");
+        assert!(scripts.4.contains_key(&(2825, 8, 241813)));
+    }
+}
+
+fn invalid_data(message: String) -> rusqlite::Error {
+    rusqlite::Error::SqliteFailure(
+        rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT_CHECK),
+        Some(message),
+    )
 }
 
 /// TC SmartAI::IsSummonedBy dispatches SMART_EVENT_JUST_SUMMONED. These

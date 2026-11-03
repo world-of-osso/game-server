@@ -29,7 +29,7 @@ CREATE TABLE content_inferred_creature_ability_sample (
   spell INTEGER NOT NULL,
   sample_id INTEGER NOT NULL,
   timing_kind TEXT NOT NULL CHECK (timing_kind IN ('first_activity_proxy', 'successive_cast')),
-  delay_ms INTEGER NOT NULL CHECK (delay_ms >= 0),
+  delay_ms INTEGER NOT NULL CHECK (typeof(delay_ms) = 'integer' AND delay_ms BETWEEN 0 AND 4294967295 AND (timing_kind != 'successive_cast' OR delay_ms > 0)),
   report TEXT NOT NULL,
   fight INTEGER NOT NULL,
   source_actor INTEGER NOT NULL,
