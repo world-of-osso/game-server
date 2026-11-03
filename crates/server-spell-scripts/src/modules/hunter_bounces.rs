@@ -22,7 +22,6 @@ struct BouncePolicy {
     dispatch_effect: u8,
     count_effect: u8,
     ramp_talent: u32,
-    ramp_effect: u8,
     single_delay_ms: u32,
     multi_delay_ms: u32,
     finisher_talent: u32,
@@ -40,7 +39,6 @@ const POLICIES: &[BouncePolicy] = &[BouncePolicy {
     dispatch_effect: 0,
     count_effect: 1,
     ramp_talent: 1264903,
-    ramp_effect: 0,
     single_delay_ms: 640,
     multi_delay_ms: 130,
     finisher_talent: 1264904,
@@ -166,8 +164,9 @@ fn read_impacts(
         return Vec::new();
     }
     let ramp = if has_talent(world, caster, policy.ramp_talent) {
-        let native = script_effect_value(world, caster, policy.ramp_talent, policy.ramp_effect);
-        super::survival::radiant_edge_percent(world, caster, native) / 100.0
+        // VERIFIED_WCL pmP7qMARzJWFfjZy f9; SimC sc_hunter.cpp9039–9046.
+        // Retire this hotfix when the DB2 snapshot carries effect1276513's hotfix.
+        0.25_f32
     } else {
         0.0
     };
