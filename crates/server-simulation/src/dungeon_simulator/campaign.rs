@@ -2942,12 +2942,18 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     let mut run = spawn_run(2, &mut None).unwrap();
     let member = run.party.members[1];
     crate::combat::kill_unit(run.app.world_mut(), run.party.owner, member);
+    // Active followers now receive resurrection/release handling; detach this
+    // dead summon so native corpse decay can exercise the missing-member sample.
+    run.app
+        .world_mut()
+        .entity_mut(member)
+        .remove::<crate::followers::Follower>();
     for _ in 0..1202 {
         run.app.update();
     }
     assert!(
         run.app.world().get_entity(member).is_err(),
-        "native corpse decay must actually despawn the dead follower"
+        "native corpse decay must actually despawn the dead summon"
     );
     assert!(
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run.sample())).is_ok(),
