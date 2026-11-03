@@ -62,14 +62,13 @@ pub(super) fn begin_flight(
         .windows(2)
         .map(|pair| (pair[1], pair[0].distance(pair[1])))
         .collect();
+    let destination = *positions.last().unwrap();
     world.entity_mut(owner).remove::<(Travel, MoveIntent)>();
     world.entity_mut(owner).insert(FlightTravel {
         phase: FlightPhase::Mounting,
-        travel: Travel {
-            destination: *positions.last().unwrap(),
-            legs,
-        },
+        travel: Travel { destination, legs },
     });
+    crate::creature_ai::publish_planned_destination(world, owner, Some(destination));
     Ok(())
 }
 
@@ -470,6 +469,7 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
                 .iter(world)
                 .any(|(follower, _)| follower.owner == owner);
             if !flying {
+                crate::creature_ai::publish_planned_destination(world, owner, None);
                 return Ok(());
             }
         }
@@ -605,6 +605,43 @@ fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
     let (goal, remaining) = remaining_route(&world, leader).unwrap();
     assert!(goal == RouteGoal::Point(Vec3::new(5.0, 3.0, 0.0)));
     assert_eq!(remaining, 7.0);
+}
+
+#[test]
+fn flight_publishes_its_landing_point_until_the_party_has_landed() {
+    use server::simc_apl_native::MovementDestination;
+    use shared::components::CreatureMotion;
+    let mut world = World::new();
+    let leader = world
+        .spawn((
+            Position {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            CreatureMotion::Still,
+        ))
+        .id();
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 0.0, "idle");
+    let path = [[1.0, 0.0, 0.0], [1.0, 3.0, 0.0], [5.0, 3.0, 0.0]];
+    begin_flight(&mut world, leader, &path).unwrap();
+    let landing = Vec3::new(5.0, 3.0, 0.0);
+    assert_eq!(
+        world.get::<MovementDestination>(leader),
+        Some(&MovementDestination(landing))
+    );
+    world.entity_mut(leader).insert(CreatureMotion::Run);
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 5.0);
+    world.get_mut::<FlightTravel>(leader).unwrap().phase = FlightPhase::Landing;
+    world.entity_mut(leader).insert(CreatureMotion::Still);
+    advance_flight(&mut world, leader, 0.1).unwrap();
+    assert!(!flight_in_progress(&world, leader));
+    assert!(world.get::<MovementDestination>(leader).is_none());
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 0.0);
 }
 
 #[test]
