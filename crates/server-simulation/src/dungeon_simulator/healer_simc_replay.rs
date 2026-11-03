@@ -588,6 +588,15 @@ fn replay_profile(
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
     let profile_start = app.world().resource::<bevy::prelude::Time>().elapsed();
+    let party_max_hp: Vec<f32> = slots
+        .iter()
+        .map(|&unit| {
+            app.world()
+                .get::<Health>(unit)
+                .map(|health| health.max)
+                .ok_or_else(|| format!("HEALER_REPLAY_PARTY_HEALTH_MISSING:{unit}"))
+        })
+        .collect::<Result<_, _>>()?;
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
     let frozen_sources = sources
@@ -834,7 +843,7 @@ fn replay_profile(
         event_cursor = events.len();
     }
     let mut report = json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
-        "world_db_sha256":snapshot_sha256,
+        "world_db_sha256":snapshot_sha256,"party_initial_max_hp":party_max_hp,
         "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":tank_spec,
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),

@@ -587,6 +587,9 @@ fn wcl_intake_replays_hostile_and_deferred_pressure() {
         68
     );
     assert_eq!(report["tank_spec"], 268);
+    let max_hp = report["party_initial_max_hp"].as_array().unwrap();
+    assert_eq!(max_hp.len(), 5);
+    assert!(max_hp.iter().all(|hp| hp.as_f64().unwrap() > 0.0));
     assert_eq!(report["wcl_intake"]["matches_recorded_party"], true);
     assert_eq!(
         report["wcl_intake"]["party_specs"],
