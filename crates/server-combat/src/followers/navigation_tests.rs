@@ -1413,3 +1413,84 @@ fn position(point: Vec3) -> Position {
         z: point.z,
     }
 }
+
+#[test]
+fn follower_hazard_escape_route_reads_its_goal_through_navigation() {
+    use crate::navigation::{Goal, MoveRequest, Navigation};
+    use crate::simc_apl::Facts;
+    use crate::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
+    use shared::components::CreatureMotion;
+
+    let (mut h, unit, _) = spawn_profile_fixture(209072);
+    h.app.world_mut().despawn(h.npc);
+    let map = InMap::continent(2660);
+    let from = Position {
+        x: -289.69067,
+        y: 142.7596,
+        z: -394.4901,
+    };
+    let to = Position {
+        x: -285.21,
+        y: 142.7596,
+        z: -396.21,
+    };
+    h.app.world_mut().entity_mut(unit).insert((
+        from,
+        map,
+        CreatureMotion::Still,
+        crate::networking::Moving(false),
+    ));
+    let read = |h: &Harness| {
+        NativeFacts::new(
+            h.app.world(),
+            unit,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    };
+    assert_eq!(read(&h).unwrap(), 0.0, "idle");
+    h.app.insert_resource(GroundMap::flat_arena(from.y));
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let goal = Goal::Hazard(7);
+    nav.adopt_candidate_route(
+        unit,
+        MoveRequest {
+            map_id: map.map_id,
+            goal,
+            from,
+            to,
+            distance: 0.0,
+            reach: 0.0,
+        },
+        vec![point(from), point(to)],
+    );
+    h.app.insert_resource(nav);
+    h.advance(1);
+    super::hazards::advance_escape(h.app.world_mut(), unit, map, from, to, goal);
+    let after = *h.app.world().get::<Position>(unit).unwrap();
+    assert!(
+        point(after).distance(point(from)) > 0.01,
+        "escape stepped: {after:?}"
+    );
+    assert_ne!(
+        h.app.world().get::<CreatureMotion>(unit),
+        Some(&CreatureMotion::Still)
+    );
+    assert!(
+        h.app.world().get::<MovementDestination>(unit).is_none(),
+        "the navigation route is the only destination"
+    );
+    let route = h
+        .app
+        .world()
+        .resource::<Navigation>()
+        .route_destination(unit, goal);
+    assert_eq!(route, Some(point(to)));
+    assert_eq!(
+        read(&h).unwrap(),
+        f64::from(point(after).distance(point(to)))
+    );
+}
