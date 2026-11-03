@@ -33,7 +33,7 @@ pub fn owner(world: &World, actor: Entity) -> Option<Entity> {
 
 fn actors(world: &mut World, owner: Entity) -> Vec<Entity> {
     let now = super::super::now(world);
-    world
+    let mut actors: Vec<_> = world
         .query::<(Entity, &SummonedCreature, &Npc)>()
         .iter(world)
         .filter(|(_, summon, npc)| {
@@ -43,7 +43,9 @@ fn actors(world: &mut World, owner: Entity) -> Vec<Entity> {
                 && summon.expires_at.is_some_and(|expiry| expiry > now)
         })
         .map(|(actor, _, _)| actor)
-        .collect()
+        .collect();
+    actors.sort_unstable();
+    actors
 }
 
 pub fn summon(world: &mut World, owner: Entity, depth: u8) {

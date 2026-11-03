@@ -104,7 +104,7 @@ fn nearby_enemies(world: &mut World, caster: Entity, primary: Entity) -> Vec<Ent
     let Some(origin) = targets::position(world, primary) else {
         return Vec::new();
     };
-    world
+    let mut enemies: Vec<_> = world
         .query::<(Entity, &Position)>()
         .iter(world)
         .filter_map(|(candidate, _)| {
@@ -116,5 +116,7 @@ fn nearby_enemies(world: &mut World, caster: Entity, primary: Entity) -> Vec<Ent
                     .is_some_and(|position| position.distance(origin) <= SPREAD_RADIUS))
             .then_some(candidate)
         })
-        .collect()
+        .collect();
+    enemies.sort_unstable();
+    enemies
 }

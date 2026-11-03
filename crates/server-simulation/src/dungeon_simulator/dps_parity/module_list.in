@@ -11,6 +11,7 @@
 #[cfg(test)] mod hunter_loadout_tests;
 mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
+mod rng_target_order_follower_tests;
 mod blood_bloody_demise_follower_tests;
 mod protection_hammer_anvil_follower_tests;
 mod protection_divine_guidance_follower_tests;
