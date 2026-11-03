@@ -1798,6 +1798,31 @@ mod copy_tests {
     }
 
     #[test]
+    fn replay_without_release_keeps_corpse_without_navigation_errors() {
+        use shared::components::Health;
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        app.world_mut().entity_mut(owner).insert(run);
+        app.world_mut().entity_mut(member).insert((
+            Health {
+                current: 0.0,
+                max: 1000.0,
+            },
+            crate::combat::Corpse { remaining: 0.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
+        app.insert_resource(super::super::simulator::DisableFollowerRelease);
+        super::super::release::update(app.world_mut());
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
+        assert_eq!(app.world().get::<Health>(member).unwrap().current, 0.0);
+        assert!(
+            app.world()
+                .get::<crate::simc_apl::FactErrors>(member)
+                .is_none()
+        );
+    }
+
+    #[test]
     fn follower_release_keeps_a_corpse_when_the_route_is_unreachable() {
         use shared::components::{Health, Position};
         let (mut app, owner, run) = fixture();
