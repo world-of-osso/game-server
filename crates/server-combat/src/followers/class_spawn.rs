@@ -479,6 +479,7 @@ pub fn install_class(
         None => world.entity_mut(entity).remove::<LoggedHeroTree>(),
     };
     crate::spell_cast::powers::install_class_powers(world, entity, pools);
+    super::recovery_drink::install(world, entity);
     let pet = match &loadout {
         // INFERRED_WCL: Ferocity with Primal Rage and Mortal Wounds; species unobserved.
         // Entry 154 is a native tameable Carrion Bird; retire when family data is available.

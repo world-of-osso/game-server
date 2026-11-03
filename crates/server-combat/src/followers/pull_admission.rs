@@ -11,6 +11,8 @@ use super::{Follower, ai, party, pull_history, pull_readiness, pull_sources};
 use crate::combat::forecast::{self, MeleeEstimate};
 use crate::maps::InMap;
 
+pub(super) const MIN_READY_HEALER_MANA_FRACTION: f32 = 0.81;
+
 struct RunBudget {
     follower: Follower,
     map: InMap,
@@ -181,7 +183,6 @@ fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>,
     const MIN_READY_HEALTH_FRACTION: f32 = 0.5;
     // INFERRED_WCL: zYdHKX7WTAMmjyaV/3 pull 7 healer mana is 81.23%
     // 0.701s after the pull. Nearest-rank P1 across 35 samples rounds down to 81%.
-    const MIN_READY_HEALER_MANA_FRACTION: f32 = 0.81;
 
     if let Some(reason) = unavailable_party_member(world, run) {
         return Ok(Some(reason));

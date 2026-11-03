@@ -2745,6 +2745,134 @@ fn native_mana_recovery_is_party_progress_without_damage_or_movement() {
 }
 
 #[test]
+fn recovery_wait_drinks_native_item_and_reaches_healer_mana_gate() {
+    use shared::components::{Mana, PlayerStandState, StandState};
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let healer = run.party.members[1];
+    let tank = run.party.tank;
+    let pack = std::collections::BTreeSet::from([20375766]);
+    let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+    mana.current = mana.max * 0.30;
+    let (allowed, reason) =
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+    assert!(!allowed && reason.contains("Recovery"), "{reason}");
+    let mut saw_drink = false;
+    for _ in 0..260 {
+        run.app.update();
+        let world = run.app.world_mut();
+        let _ = crate::followers::simulator::pull(world, tank, &pack).unwrap();
+        if crate::auras::has_aura(world, healer, 1291791) {
+            saw_drink = true;
+            assert_eq!(
+                world.get::<PlayerStandState>(healer).unwrap().0,
+                StandState::Sit
+            );
+        }
+        let mana = world.get::<Mana>(healer).unwrap();
+        if mana.current >= mana.max * 0.81 {
+            break;
+        }
+    }
+    let mana = run.app.world().get::<Mana>(healer).unwrap();
+    assert!(saw_drink, "native drink aura was never applied");
+    assert!(mana.current >= mana.max * 0.81, "healer mana: {mana:?}");
+}
+
+#[test]
+fn recovery_drink_is_interrupted_by_follower_movement() {
+    use shared::components::{Mana, PlayerStandState, StandState};
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let healer = run.party.members[1];
+    let tank = run.party.tank;
+    let pack = std::collections::BTreeSet::from([20375766]);
+    let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+    mana.current = mana.max * 0.30;
+    for _ in 0..100 {
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+        if crate::auras::has_aura(run.app.world(), healer, 1291791) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 1291791));
+    let mut to = *run.app.world().get::<Position>(healer).unwrap();
+    to.x += 1.0;
+    crate::creature_ai::move_follower(run.app.world_mut(), healer, to, 3.0);
+    assert_eq!(*run.app.world().get::<Position>(healer).unwrap(), to);
+    run.app.update();
+    assert!(!crate::auras::has_aura(run.app.world(), healer, 1291791));
+    assert_eq!(
+        run.app.world().get::<PlayerStandState>(healer).unwrap().0,
+        StandState::Stand
+    );
+}
+
+#[test]
+fn recovery_drink_retries_and_interrupts_on_cast_and_combat() {
+    use shared::components::{CombatStatus, Mana};
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let healer = run.party.members[1];
+    let tank = run.party.tank;
+    let pack = std::collections::BTreeSet::from([20375766]);
+    let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+    mana.current = mana.max * 0.30;
+    for _ in 0..100 {
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+        if crate::auras::has_aura(run.app.world(), healer, 1291791) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 1291791));
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        healer,
+        774,
+        crate::spell_cast::CastTargets {
+            unit: healer,
+            primary: Some(healer),
+            destination: None,
+        },
+    )
+    .unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "casting must interrupt drinking"
+    );
+    for _ in 0..100 {
+        run.app.update();
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+        if crate::auras::has_aura(run.app.world(), healer, 1291791) {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "remaining low mana must trigger another item use"
+    );
+    let enemy = run.actors[&20375766];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), healer, enemy);
+    assert!(run.app.world().get::<CombatStatus>(healer).unwrap().0);
+    crate::followers::update_ai(run.app.world_mut());
+    assert!(
+        !crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "combat must interrupt drinking"
+    );
+}
+
+#[test]
 fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
     let _rng_scope = crate::random::seed_scope(3);
     let mut run = spawn_run(3, &mut None).unwrap();

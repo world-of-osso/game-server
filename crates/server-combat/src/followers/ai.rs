@@ -41,6 +41,7 @@ pub fn acting_follower(world: &World, unit: Entity) -> Option<Follower> {
 pub(super) const MELEE_REACH: f32 = 2.0;
 
 pub(super) fn update(world: &mut World) {
+    super::recovery_drink::update(world);
     super::pull_history::sample_all(world);
     let holding: Vec<_> = world
         .query::<(Entity, &Follower)>()
