@@ -5,7 +5,10 @@ use combat::auras::{self, ActiveAuras, AuraApplication, AuraSource, RemoveReason
 use combat::spell_cast::{self, script_registry::SpellScriptHook};
 use combat::spell_info::{SpellInfo, SpellStore};
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterForegroundSpecial(on_cast)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterForegroundSpecial(on_cast),
+    SpellScriptHook::AreaFilter(bloody_demise_area_filter),
+];
 
 const TWO: u32 = 1296650;
 const FOUR: u32 = 1296651;
@@ -66,6 +69,23 @@ fn add_debt(world: &mut World, caster: Entity) {
         .entity_mut(caster)
         .insert(DebtCooldown(now + f64::from(cooldown) / 1000.0));
     spell_cast::cast_triggered_with_effect0_amount(world, caster, DEBT, Some(caster), 1, amount);
+}
+
+fn bloody_demise_area_filter(
+    spell: u32,
+    effect: u8,
+) -> Option<spell_cast::script_registry::AreaTargetFilter> {
+    (spell == DEMISE && effect == 1).then_some(exclude_bloody_demise_primary)
+}
+
+fn exclude_bloody_demise_primary(
+    _: &World,
+    spell: &SpellInfo,
+    _: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    // SimC76f8118 sc_death_knight.cpp11683–11692: effect 1 hits secondary targets only.
+    targets.retain(|target| Some(*target) != spell.cast_primary_target);
 }
 
 fn cast_bloody_demise(world: &mut World, caster: Entity, target: Entity) {
