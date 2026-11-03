@@ -20,6 +20,11 @@ pub struct FixedLengthFight {
 
 /// Load the spec's driver for a pull starting now.
 pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecRotation>, String> {
+    if world.get::<server::simc_apl::FactErrors>(actor).is_none() {
+        world
+            .entity_mut(actor)
+            .insert(server::simc_apl::FactErrors::default());
+    }
     let started_at = crate::spell_cast::now(world);
     let encounter = match world.get_resource::<FixedLengthFight>() {
         Some(fight) => Encounter::Fixture {

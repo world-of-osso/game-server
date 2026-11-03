@@ -1,6 +1,7 @@
 //! Shared native APL driver; source rows and spec facts belong to adapters.
 mod channel;
 mod excluded_facts;
+mod fact_context;
 pub use channel::Decision as ChannelDecision;
 pub mod default_pet;
 pub mod equipment;
@@ -272,6 +273,14 @@ impl Driver {
             })
         };
         let facts: &dyn ActionFacts = excluded_facts.as_ref().map_or(facts, |facts| facts);
+        let (errors, actor, default_target) = prepared.fact_errors();
+        let recording = fact_context::FactContext {
+            inner: facts,
+            errors,
+            actor,
+            default_target,
+        };
+        let facts: &dyn ActionFacts = &recording;
         if let Some((action, execution, deadline)) = self.queued.take() {
             // Revalidate the original target; never transfer a queued cast to a new target.
             let mut queued_action = action.clone();
