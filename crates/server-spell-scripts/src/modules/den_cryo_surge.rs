@@ -4,7 +4,10 @@
 //! Retire this inferred link when authoritative current-build behavior is verified.
 use super::combat;
 use bevy::prelude::*;
-use combat::auras::{AuraInstance, scripts::{AuraScript, AuraScripts}};
+use combat::auras::{
+    AuraInstance,
+    scripts::{AuraScript, AuraScripts},
+};
 use combat::spell_cast::{self, script_registry::SpellScriptHook, targets};
 
 const CRYO_SURGE: u32 = 1239860;
@@ -13,10 +16,13 @@ const CRYO_SURGE_DAMAGE: u32 = 1239871;
 pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::SupportAuraRegistration(register)];
 
 fn register(scripts: &mut AuraScripts) {
-    scripts.0.insert(CRYO_SURGE, AuraScript {
-        on_periodic: Some(cast_cryo_surge_tick),
-        ..Default::default()
-    });
+    scripts.0.insert(
+        CRYO_SURGE,
+        AuraScript {
+            on_periodic: Some(cast_cryo_surge_tick),
+            ..Default::default()
+        },
+    );
 }
 
 fn cast_cryo_surge_tick(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
