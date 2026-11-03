@@ -5051,3 +5051,20 @@ fn unrelenting_edict_impacts_can_earn_divine_inspiration() {
     );
     assert!(applications.windows(2).all(|pair| pair[0] != pair[1]));
 }
+
+/// The pinned Guardian trace carries all six `optimal_raid` raid buffs; a solo
+/// Guardian provides only Mark of the Wild, so the replay refuses the trace.
+#[test]
+#[ignore = "requires the pinned Guardian trace and DPS_PARITY_WORLD_DB"]
+fn tank_replay_rejects_trace_buffs_beyond_its_composition() {
+    let trace = std::path::Path::new(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay/104.simc-trace.log",
+    );
+    let error = super::tank_replay::replay_simc_with_targets(104, trace, 1, 300, 70448, true, 1.0)
+        .unwrap_err();
+    assert!(
+        error.starts_with("SIMC_TRACE_RAID_BUFFS_NOT_COMPOSITION:"),
+        "{error}"
+    );
+    assert!(error.ends_with("provided{\"mark_of_the_wild\"}"), "{error}");
+}

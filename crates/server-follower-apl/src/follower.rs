@@ -91,8 +91,7 @@ impl FollowerApl {
                 .action_spells()
                 .into_iter()
                 .filter(|&spell| {
-                    is_maintained_buff(world, spell)
-                        && !crate::party_buffs::PARTY_BUFFS.contains(&spell)
+                    is_maintained_buff(world, spell) && !crate::party_buffs::is_party_buff(spell)
                 })
                 .collect(),
         );

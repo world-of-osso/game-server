@@ -8,9 +8,48 @@ use bevy::prelude::*;
 use server::spell_cast::CastFailure;
 use shared::components::{CombatStatus, Position};
 
-/// Arcane Intellect, Battle Shout, Mark of the Wild, Power Word: Fortitude,
-/// Skyfury and Blessing of the Bronze. This step alone restores them.
-pub const PARTY_BUFFS: [u32; 6] = [1459, 6673, 1126, 21562, 462854, 364342];
+/// Each buff with its SimC override name. This step alone restores them; a parity
+/// reference sets `override.<name>=1` for exactly the buffs its composition provides.
+pub const PARTY_BUFFS: [(u32, &str); 6] = [
+    (1459, "arcane_intellect"),
+    (6673, "battle_shout"),
+    (1126, "mark_of_the_wild"),
+    (21562, "power_word_fortitude"),
+    (462854, "skyfury"),
+    (364342, "blessing_of_the_bronze"),
+];
+
+pub fn is_party_buff(spell: u32) -> bool {
+    PARTY_BUFFS.iter().any(|&(buff, _)| buff == spell)
+}
+
+/// The party buffs any of `units` knows: the set this composition provides.
+pub fn provided_buffs(world: &World, units: &[Entity]) -> Vec<(u32, &'static str)> {
+    PARTY_BUFFS
+        .into_iter()
+        .filter(|&(spell, _)| units.iter().any(|&unit| knows(world, unit, spell)))
+        .collect()
+}
+
+/// `unit` holds one of the auras the party buff `spell` grants.
+pub fn holds_buff(world: &World, unit: Entity, spell: u32) -> Result<bool, String> {
+    Ok(read_buff(world, spell)?
+        .results
+        .iter()
+        .any(|&aura| server::auras::has_aura(world, unit, aura)))
+}
+
+/// The first buff `caster` provides that a recipient it reaches lacks.
+pub fn own_lost_buff(world: &mut World, caster: Entity) -> Result<Option<u32>, String> {
+    let party = crate::party_of(world, caster);
+    for (spell, _) in PARTY_BUFFS {
+        if knows(world, caster, spell) && lacking(world, caster, &party, &read_buff(world, spell)?)
+        {
+            return Ok(Some(spell));
+        }
+    }
+    Ok(None)
+}
 
 /// Cast at most one lost party buff; true when `actor` started a cast.
 /// The caller has already checked that `actor` is off its GCD and not casting.
@@ -19,7 +58,7 @@ pub(crate) fn cast_lost_party_buff(world: &mut World, actor: Entity) -> Result<b
         return Ok(false);
     }
     let party = crate::party_of(world, actor);
-    for spell in PARTY_BUFFS {
+    for (spell, _) in PARTY_BUFFS {
         if chosen_caster(world, actor, &party, spell) != Some(actor) {
             continue;
         }
@@ -92,9 +131,7 @@ fn chosen_caster(world: &World, actor: Entity, party: &[Entity], spell: u32) -> 
                     .is_some()
                 && server::spell_cast::targets::is_alive(world, unit)
                 && !in_combat(world, unit)
-                && world
-                    .get::<server::class_progression::KnownSpells>(unit)
-                    .is_some_and(|known| known.contains(spell))
+                && knows(world, unit, spell)
         })
         .min_by_key(|unit| unit.to_bits())
 }
@@ -118,6 +155,12 @@ fn lacking(world: &World, caster: Entity, party: &[Entity], buff: &PartyBuff) ->
                 .iter()
                 .any(|&aura| server::auras::has_aura(world, member, aura))
     })
+}
+
+fn knows(world: &World, unit: Entity, spell: u32) -> bool {
+    world
+        .get::<server::class_progression::KnownSpells>(unit)
+        .is_some_and(|known| known.contains(spell))
 }
 
 fn in_combat(world: &World, unit: Entity) -> bool {

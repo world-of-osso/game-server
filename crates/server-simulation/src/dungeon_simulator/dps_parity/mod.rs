@@ -534,6 +534,7 @@ fn prepare_measurement_with(
             devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
         }
         preparation::consume_profile_food(&mut run)?;
+        preparation::cast_provided_party_buffs(&mut run)?;
         before_prepare(&mut run)?;
         run.spec_driver = Some((driver.prepare)(&mut run)?);
         Ok(run)
