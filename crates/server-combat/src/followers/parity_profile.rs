@@ -31,6 +31,22 @@ pub struct Equipment {
     pub options: BTreeMap<String, String>,
 }
 
+/// SimC76f8118 sc_hunter.cpp1052 defaults `summon_pet` to duck.
+pub fn simc_hunter_pet(profile: &Profile) -> Result<Option<u32>, String> {
+    if !matches!(profile.spec_id, 253..=255) {
+        return Ok(None);
+    }
+    let Some(value) = profile.options.get("summon_pet") else {
+        return Ok(Some(174884));
+    };
+    let alias = value.as_str().ok_or("SimC summon_pet must be a string")?;
+    match alias {
+        "duck" => Ok(Some(174884)),
+        "none" => Ok(None),
+        _ => Err(format!("unsupported SimC summon_pet alias {alias:?}")),
+    }
+}
+
 // SimC76f8118 item.cpp2090–2111 resolves explicit names through the pinned
 // embellishment table; native ItemBonus then resolves the equipped effect.
 pub fn embellishment_bonus(name: &str) -> Option<u32> {
@@ -175,6 +191,29 @@ pub fn equip_instances(
 mod tests {
     use super::*;
     use shared::item_data::ItemDefinitionSource;
+
+    #[test]
+    fn simc_hunter_pet_resolves_explicit_and_default_aliases() {
+        let mut profile: Profile = serde_json::from_str(
+            r#"{ "spec_id": 253, "level": "90", "race": "human", "equipment": [], "consumables": {} }"#,
+        ).unwrap();
+        assert_eq!(simc_hunter_pet(&profile).unwrap(), Some(174884));
+        profile
+            .options
+            .insert("summon_pet".into(), serde_json::json!("duck"));
+        assert_eq!(simc_hunter_pet(&profile).unwrap(), Some(174884));
+        profile
+            .options
+            .insert("summon_pet".into(), serde_json::json!("none"));
+        assert_eq!(simc_hunter_pet(&profile).unwrap(), None);
+        profile
+            .options
+            .insert("summon_pet".into(), serde_json::json!("wolf"));
+        assert_eq!(
+            simc_hunter_pet(&profile).unwrap_err(),
+            "unsupported SimC summon_pet alias \"wolf\""
+        );
+    }
 
     #[test]
     fn class_follower_profile_equips_real_item_and_modifiers() {

@@ -31,7 +31,7 @@ fn survival_native_pet_weapon_spells_inherit_owner_expertise_against_dodge() {
 fn read_pet_spell_outcomes(seed: u64) -> Vec<(u64, u32, CombatLogKind)> {
     let _seed = crate::random::seed_scope(seed);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);

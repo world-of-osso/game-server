@@ -39,6 +39,7 @@ fn spawn_peer(run: &mut Run) -> bevy::prelude::Entity {
         copy,
         identity,
         super::inputs::read_reference_race(&profile.race).unwrap(),
+        crate::followers::class_spawn::GearSource::Journal,
     )
     .expect("second native Fire player");
     super::inputs::equip(run.app.world_mut(), actor, &profile).expect("native Fire equipment");

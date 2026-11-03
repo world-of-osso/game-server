@@ -10,7 +10,7 @@ fn survival_native_chakram_bounces_once_per_cast_across_pack() {
     // initial hit plus native1264949 effect1 bounces, round-robin over enemies.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 3).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     cast(&mut run, 1250646, false);
@@ -63,7 +63,7 @@ fn survival_native_chakram_final_bounce_executes_twilight_requiem_area() {
     // selected Twilight Requiem executes native1266096 once around the primary.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 3).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     cast(&mut run, 1250646, false);

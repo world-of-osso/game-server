@@ -352,6 +352,7 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         copy,
         crate::followers::simulator::ParityActor::Follower,
         race,
+        crate::followers::class_spawn::GearSource::Journal,
     )?;
     let actors = super::runtime::spawn_population(&mut app, copy);
     super::healer_intake::apply_source_snapshots(app.world_mut(), &intake.sources, &actors)?;

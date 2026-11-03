@@ -231,6 +231,7 @@ fn feral() -> (App, Entity, Bindings) {
         copy,
         crate::followers::simulator::ParityActor::Follower,
         1,
+        crate::followers::class_spawn::GearSource::Journal,
     )
     .unwrap();
     let clock = encounter(app.world());

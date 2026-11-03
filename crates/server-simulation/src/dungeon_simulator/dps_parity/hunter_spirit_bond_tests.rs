@@ -8,7 +8,7 @@ fn native_spirit_bond_selected_payload_includes_native_mastery_dependency() {
     // SimC76f8118 sc_hunter.cpp1392–1395/7900: the actual selected
     // mastery contribution includes459722's native percentage, not guessed stats.
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     for _ in 0..4 {

@@ -828,6 +828,23 @@ fn spawn_reference_actor(
         .parse()
         .map_err(|error| format!("reference level: {error}"))?;
     let race = inputs::read_reference_race(&profile.race)?;
+    if traits.iter().any(|entry| entry.active_ranks > entry.ranks) {
+        return Err("active trait ranks exceed exported allocations".into());
+    }
+    let purchases = traits
+        .iter()
+        .filter(|entry| entry.active_ranks > 0)
+        .map(|entry| crate::trait_config::Purchase {
+            node_id: entry.node_id,
+            entry_id: entry.entry_id,
+            ranks: entry.active_ranks,
+        })
+        .collect();
+    let loadout = crate::followers::class_spawn::LoadoutSource::SimcProfile {
+        items: crate::followers::parity_profile::profile_instances(app.world(), profile)?,
+        traits: purchases,
+        pet: crate::followers::parity_profile::simc_hunter_pet(profile)?,
+    };
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         profile.spec_id,
@@ -835,6 +852,7 @@ fn spawn_reference_actor(
         copy,
         identity,
         race,
+        loadout,
     )?;
     // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
     app.world_mut()
@@ -842,8 +860,6 @@ fn spawn_reference_actor(
         .insert(crate::simc_apl_native::FixtureMovement {
             distance_to_move: 0.0,
         });
-    inputs::equip(app.world_mut(), actor, profile)?;
-    inputs::install_traits(app.world_mut(), actor, traits)?;
     profile_initialization::initialize_declared_powers(app.world_mut(), actor, profile)?;
     profile_effects::install(app.world_mut(), actor, profile)?;
     Ok(actor)
