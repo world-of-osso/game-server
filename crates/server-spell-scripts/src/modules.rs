@@ -101,6 +101,7 @@ register_modules! {
     brewmaster_harmonic_surge: (1000, "modules/brewmaster_harmonic_surge.rs"),
     brewmaster_elusive_brawler: (1000, "modules/brewmaster_elusive_brawler.rs"),
     brewmaster_keg_reset: (1000, "modules/brewmaster_keg_reset.rs"),
+    brewmaster_mid2: (1000, "modules/brewmaster_mid2.rs"),
     brewmaster_overwhelming_force: (1000, "modules/brewmaster_overwhelming_force.rs"),
     brewmaster_niuzao: (1000, "modules/brewmaster_niuzao.rs"),
     brewmaster_shuffle: (1000, "modules/brewmaster_shuffle.rs"),
