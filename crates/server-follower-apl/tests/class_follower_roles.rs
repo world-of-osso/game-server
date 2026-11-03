@@ -1566,7 +1566,7 @@ const LUSTS: [u32; 5] = [2825, 32182, 80353, 390386, 264667];
 const ELEMENTAL: u32 = 262;
 /// lust_policy.rs INFERRED_WCL constants: p10 live engaged enemies and p10 seconds into the
 /// pull at 110 retail trash lusts (lust-audit/report.md).
-const TRASH_ENGAGED: usize = 11;
+const TRASH_ENGAGED: usize = 8;
 const TRASH_DELAY: f64 = 7.7;
 /// Azure Vault 2515 encounter_compat.csv: Leymor, Azureblade, Telash Greywing, Umbrelskul.
 const AZURE_BOSSES: [(u32, u32); 4] = [(186644, 0), (186739, 1), (186737, 2), (186738, 3)];

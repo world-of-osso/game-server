@@ -4,7 +4,8 @@
 //! lust applications; audit, sample and derivations in /home/osso/.worktrees/lust-audit/report.md).
 //! Retail spends the first lust on an early large trash pull (pull 1 in 85/123 keys) and
 //! holds the next for the key's final boss (66/85 second lusts). A lockout ending mid-run is
-//! not spent on trash: only 14/85 second lusts land on trash, with no repeated pull pattern.
+//! not spent on trash: 12/81 keys whose lockout ended before the final boss did, a share that
+//! does not grow with the distance to that boss; no trash pack recurs more than twice.
 //! Retire this inferred rule when a sourced party cooldown policy is available.
 use bevy::prelude::*;
 use server::class_progression::KnownSpells;
@@ -14,10 +15,10 @@ use server::scripted_ai::instance_script::{self, EncounterState, InstanceScripts
 
 use crate::literal_rotation::execution::{self, Execution};
 
-/// p10 of live engaged enemies at 110 retail trash lusts: distinct enemy instances the party
-/// damaged within 5 s of the lust.
-const TRASH_ENGAGED: usize = 11;
-/// p10 of seconds into the pull at the same 110 retail trash lusts.
+/// Nearest-rank p10 of live engaged enemies at 110 retail trash lusts: distinct enemy
+/// instances the party damaged within 5 s of the lust (deciles 8, 10, 11, 13, 15; min 5).
+const TRASH_ENGAGED: usize = 8;
+/// Nearest-rank p10 of seconds into the pull at the same 110 trash lusts (median 19.6 s).
 const TRASH_DELAY: f64 = 7.7;
 
 /// The owner's party has spent its first lust in this instance copy.
