@@ -196,6 +196,33 @@ Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing,
 
 Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. The Protection Paladin native replay has no Solidarity, so its reference is the solo SimC run; the default reference adds fictional allied effects. Its absorb drop from 3.13M to 2.85M between runs is random Bulwark-application variation, and the remaining gap was missing Lightsmith armament rules; see [Protection Paladin](healer-tank-replay/66.md#mitigation-decomposition-and-lightsmith-fix-2026-10-29). The Guardian reference corrects SimC's Ursoc's Fury shield size; see [Guardian](healer-tank-replay/104.md#ursocs-fury-counterfactual-reference).
 
+### Party-buff composition remeasure (2026-11-02)
+
+Old = SHA 1 `c7bd39f512` with the pinned traces and fixed-buff references; both carry all six raid buffs. New = branch `party-buffs-parity` with composition traces, where each tank holds only its own class buff; references are in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank/`. Healed replays, seeds 70448–70457. SimC is the mean `dtps` over ten measured iterations, with the corrected binary where the table above uses it. The old SimC column reruns the pinned options on that binary and reproduces the table above.
+
+| Tank | Old native / SimC | Old Δ | New native / SimC | New Δ |
+|---|---:|---:|---:|---:|
+| 66 | 3,282,031 / 3,249,867 | +1.0% | 3,573,562 / 3,547,720 | +0.7% |
+| 73 | 2,869,731 / 2,951,770 | −2.8% | 2,967,994 / 3,186,502 | −6.9% |
+| 250 | 59,300 / 88,144 | −32.7% | 71,333 / 69,035 | +3.3% |
+| 268 | 3,518,570 / 3,471,015 | +1.4% | 3,512,976 / 3,815,658 | −7.9% |
+| 581 | 5,805,206 / 5,812,546 | −0.1% | 6,001,571 / 5,790,554 | +3.6% |
+
+104 is blocked on both binaries: its top-character trace fails `parse_trace` with `invalid parry in SimC attack table … parry=-0.03`. After this change, 73 and 268 are outside ±5%. SimC takes 8.0% and 9.9% more damage without the lost buffs; native takes 3.4% and −0.2% more. Both are open for investigation and were not tuned. Blood's ±5% gate is not meaningful (see above).
+
+Seven-healer party pulse, same inputs as the [recheck](healer-tank-replay/seven-healer-recheck-2026-11-02.md). Old = SHA 1, which applies the hardcoded Arcane Intellect and Mark of the Wild to the party. New = the party 66/healer/262/63/253 casts its own set before the pull: Arcane Intellect and Skyfury, plus Fortitude with a Priest healer. Difference is native/Holy against WCL/Holy.
+
+| Healer | Old /Holy | Old diff | New /Holy | New diff |
+|---|---:|---:|---:|---:|
+| 256 | 1.0428 | +14.04% | 0.9896 | +8.22% |
+| 264 | 0.9872 | +10.32% | 0.9650 | +7.84% |
+| 65 | 1.0240 | +9.41% | 0.9857 | +5.31% |
+| 1468 | 0.9852 | +13.74% | 0.9915 | +14.46% |
+| 270 | 1.0500 | +18.34% | 1.0388 | +17.09% |
+| 105 | 1.0639 | +17.13% | 0.9974 | +9.81% |
+
+Holy Priest means are 34,088 (old) and 32,715 (new). Old SHA 1 values differ from the recheck table measured on `7cd700375a` (for example Discipline +14.04% vs +2.54%). The cause is not attributed. Reports: `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/native/{old,new}/`.
+
 ### Midnight Season 2 boss-pressure calibration (2026-10-29; provisional)
 
 Warcraft Logs extracts are in `game-engine/data/diagnostics/mplus-calibration-2026-10-29/`. They include report metadata and affixes, boss-pull lists, resource-bearing damage events, and selected Guardian buff streams. The current-season Altar of Fangs sample has one run each at +2, +4, +6, +8, +10, +12, +15, +22, +23 and +24; three bosses provide health observations in each run. Den of Nalorakk and Ruby Life Pools each have +22 and +24 runs. These are convenience samples, not population-weighted estimates.
