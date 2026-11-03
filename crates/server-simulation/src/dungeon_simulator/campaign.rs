@@ -2798,6 +2798,11 @@ fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
             .entity_mut(watcher)
             .insert((react, CreatureState::Idle));
         crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        if react == ReactState::Passive {
+            // The first update clears the previous aggressive watcher's trail;
+            // the next update resumes ordinary following.
+            crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        }
         assert_eq!(
             run.app.world().get::<FollowOwner>(healer).is_some(),
             should_follow,
