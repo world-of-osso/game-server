@@ -127,26 +127,10 @@ impl FollowerApl {
             self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
         }
-        if let Phase::Precombat { ticks } = &mut self.phase {
-            *ticks += 1;
-            if *ticks > PRECOMBAT_TICKS {
-                return Err("precombat did not finish within 30s".into());
-            }
-            let (gcd, cast) = literal_rotation::read_busy(world, actor);
-            if gcd || cast {
+        if self.in_precombat() {
+            self.prepare_tick(world, actor, targets)?;
+            if self.in_precombat() {
                 return Ok(());
-            }
-            if self.advance_plan(world, actor)? {
-                return Ok(());
-            }
-            match self.rotation.poll_precombat(world, actor, targets)? {
-                PrecombatPoll::Waiting => return Ok(()),
-                PrecombatPoll::Selected { action, execution } => {
-                    return self.execute_plan(world, actor, action, execution);
-                }
-                PrecombatPoll::Finished => {
-                    self.phase = Phase::Idle;
-                }
             }
         }
         if targets.is_empty() {
@@ -159,6 +143,51 @@ impl FollowerApl {
         }
         let rotation = &mut self.rotation;
         literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, targets))
+    }
+
+    /// Advance the same production precombat with the targets of an upcoming pull.
+    pub fn prepare_tick(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        if self.maintained_buffs.is_none() {
+            self.initialize_maintained_buffs(world);
+        }
+        let Phase::Precombat { ticks } = &mut self.phase else {
+            return Ok(());
+        };
+        *ticks += 1;
+        if *ticks > PRECOMBAT_TICKS {
+            return Err("precombat did not finish within 30s".into());
+        }
+        let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        if gcd || cast {
+            return Ok(());
+        }
+        if world
+            .get::<shared::components::CombatStatus>(actor)
+            .is_some_and(|status| status.0)
+        {
+            self.plan.clear();
+            self.pending_plan_cast = None;
+            self.phase = Phase::Idle;
+            return Ok(());
+        }
+        if self.advance_plan(world, actor)? {
+            return Ok(());
+        }
+        match self.rotation.poll_precombat(world, actor, targets)? {
+            PrecombatPoll::Waiting => Ok(()),
+            PrecombatPoll::Selected { action, execution } => {
+                self.execute_plan(world, actor, action, execution)
+            }
+            PrecombatPoll::Finished => {
+                self.phase = Phase::Idle;
+                Ok(())
+            }
+        }
     }
 
     fn idle(&mut self) {
