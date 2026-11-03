@@ -2,7 +2,7 @@ use super::healer_wcl_trace::RecordedHit;
 
 #[test]
 #[ignore = "requires native Priest and Altar spell data"]
-fn wcl_hostile_spell_triggers_prayer_of_mending() {
+fn wcl_intake_hostile_spell_triggers_prayer_of_mending() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;
     use shared::protocol::CombatLogKind;
