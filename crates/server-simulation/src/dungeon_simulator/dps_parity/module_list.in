@@ -3,6 +3,7 @@
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
 #[cfg(test)] mod brewmaster_balanced_stratagem_follower_tests;
 #[cfg(test)] mod brewmaster_keg_primary_follower_tests;
+#[cfg(test)] mod brewmaster_mid2_follower_tests;
 #[cfg(test)] mod protection_devastating_focus_follower_tests;
 #[cfg(test)] mod protection_tough_as_nails_follower_tests;
 #[cfg(test)] mod protection_wrecked_follower_tests;
