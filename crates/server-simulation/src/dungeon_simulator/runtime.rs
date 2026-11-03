@@ -202,6 +202,8 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
 /// class actors run no follower APL.
 pub(super) fn build_literal_app() -> App {
     let mut app = build_runtime_app(&mut None, &crate::test_data::world_db_path(), false);
+    super::native_movement::install_parity_arena(app.world_mut())
+        .expect("install parity arena navigation");
     server_follower_apl::action_metadata::install_provider(&mut app);
     app
 }

@@ -9,7 +9,7 @@ rust-version.workspace = true
 server-combat = { path = "../server-combat", features = ["test-support"] }
 server-spell-scripts = { path = "../server-spell-scripts", features = ["test-support"] }
 server-follower-apl = { path = "../server-follower-apl" }
-navigation = { path = "../navigation" }
+navigation = { path = "../navigation", features = ["bake"] }
 bevy = { version = "0.19", default-features = false, features = ["bevy_log", "bevy_state"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "cff29ac9376428fb298647d3899787a3d4033c6f" }
 serde = { version = "1", features = ["derive"] }

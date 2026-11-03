@@ -15,6 +15,43 @@ pub(super) fn short_walk(walker: &NativeMovement) -> (Vec3, Vec3) {
     (legs.front().unwrap().0, legs.back().unwrap().0)
 }
 
+#[test]
+fn parity_arena_follower_walks_to_owner_through_detour() {
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    super::super::native_movement::install_parity_arena(&mut world).unwrap();
+    let owner = world
+        .spawn(Position {
+            x: 20.0,
+            y: 0.0,
+            z: 0.0,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            crate::creature_ai::FollowOwner::new(owner),
+        ))
+        .id();
+    for _ in 0..100 {
+        tick(&mut world);
+    }
+    let actual = point(world.get::<Position>(follower).unwrap());
+    assert!(
+        actual.x >= 15.9 && actual.x <= 16.1,
+        "follower position {actual:?}"
+    );
+    assert!(world.get::<BlockedWalk>(follower).is_none());
+}
+
 fn pet_world(from: Vec3, to: Vec3) -> (World, Entity) {
     let mut world = World::new();
     world.insert_resource(Time::<()>::default());
