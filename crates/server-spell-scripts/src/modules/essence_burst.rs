@@ -7,7 +7,10 @@ use combat::random as rand;
 use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::AfterCastHook;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::NativeAfterCast(hook)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::NativeAfterCast(hook),
+    SpellScriptHook::AfterForegroundSpender(cast_twin_flame),
+];
 
 fn hook(spell: u32) -> Option<AfterCastHook> {
     match spell {
@@ -26,6 +29,35 @@ const AZURE_ESSENCE_BURST: u32 = 375721;
 const RUBY_ESSENCE_BURST: u32 = 376872;
 const ESSENCE_BURST: u32 = 359618;
 const DRAGONRAGE: u32 = 375087;
+
+fn cast_twin_flame(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
+    if !has_aura(world, caster, 1265979)
+        || !spell
+            .cast_charge_mods
+            .iter()
+            .flatten()
+            .any(|modifier| modifier.aura_spell_id == 369299)
+    {
+        return;
+    }
+    let Some(target) = target else {
+        warn!(?caster, "Twin Flame lacks a primary target");
+        return;
+    };
+    let child = if combat::spell_cast::targets::relation_matches(
+        world,
+        caster,
+        target,
+        combat::spell_cast::targets::Relation::Ally,
+    ) {
+        1265991
+    } else {
+        1265980
+    };
+    if !combat::spell_cast::try_cast_triggered(world, caster, child, Some(target), 1) {
+        warn!(?caster, ?target, child, "Twin Flame cast refused");
+    }
+}
 
 fn roll_azure_essence_burst(world: &mut World, caster: Entity, _: &SpellInfo) {
     roll_essence_burst(world, caster, AZURE_ESSENCE_BURST);
