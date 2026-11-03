@@ -170,10 +170,11 @@ fn efficient_training_does_not_boost_windwalker_sck() {
             .env_remove("DPS_PARITY_ACTOR")
             .output()
             .unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            output.status.success(),
-            "fixture child failed:\n{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
+            output.status.success() && stdout.contains("1 passed"),
+            "fixture child failed or ran no test:\n{}\n{}",
+            stdout,
             String::from_utf8_lossy(&output.stderr)
         );
         return;
