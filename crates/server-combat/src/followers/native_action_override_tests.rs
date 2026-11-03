@@ -48,9 +48,16 @@ fn ret_fixture(purchases: &[Purchase]) -> (Harness, Entity) {
     profile.role = shared::group::GroupRole::Dps;
     let owner = h.caster;
     spawning::initialize(h.app.world_mut(), owner, actor, profile.clone()).unwrap();
-    let (known, traits) = crate::class_progression::evaluate_reference_traits(
+    let identity = shared::components::Player {
+        name: String::new(),
+        class: profile.class_id,
+        race: 1,
+        appearance: Default::default(),
+    };
+    let (known, traits) = crate::class_progression::evaluate_player_reference_traits(
         h.app.world().resource::<crate::spell_info::ClassSpells>(),
-        &profile,
+        &identity,
+        profile.spec_id,
         RET_LEVEL,
         purchases,
     )

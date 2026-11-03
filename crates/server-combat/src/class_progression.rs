@@ -744,25 +744,6 @@ fn collect_npc_starter_spells(
         .collect()
 }
 
-/// Evaluate parity allocations through native grants, budgets and overrides.
-/// SimC fixture allocation rules are separate from strict production validation.
-#[cfg(any(test, feature = "test-support"))]
-pub fn evaluate_reference_traits(
-    classes: &ClassSpells,
-    profile: &crate::followers::Profile,
-    level: u8,
-    allocated: &[Purchase],
-) -> Result<(KnownSpells, TraitLoadout), String> {
-    // Followers retain the original source-neutral race0 identity.
-    let identity = Player {
-        name: String::new(),
-        class: profile.class_id,
-        race: 0,
-        appearance: Default::default(),
-    };
-    evaluate_player_reference_traits(classes, &identity, profile.spec_id, level, allocated)
-}
-
 #[cfg(any(test, feature = "test-support"))]
 pub fn evaluate_player_reference_traits(
     classes: &ClassSpells,
@@ -771,16 +752,36 @@ pub fn evaluate_player_reference_traits(
     level: u8,
     allocated: &[Purchase],
 ) -> Result<(KnownSpells, TraitLoadout), String> {
-    let class = class_info(classes, identity.class).ok_or("reference class absent")?;
+    let (spells, traits) = evaluate_simc_profile_traits(
+        classes,
+        identity.class,
+        identity.race,
+        spec_id,
+        level,
+        allocated,
+    )?;
+    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.spell_id).collect());
+    Ok((known, traits))
+}
+
+/// Evaluate a SimC allocation before installing a class actor's spellbook and passives.
+pub fn evaluate_simc_profile_traits(
+    classes: &ClassSpells,
+    class_id: u8,
+    race: u8,
+    spec_id: u32,
+    level: u8,
+    allocated: &[Purchase],
+) -> Result<(Vec<KnownSpell>, TraitLoadout), String> {
+    let class = class_info(classes, class_id).ok_or("reference class absent")?;
     let ctx = TraitContext { spec_id, level };
     let spec = resolve_spec(class, level, spec_id)
         .filter(|spec| spec.spec_id == spec_id)
         .ok_or("reference specialization is not available to this class and level")?;
     let entries = crate::trait_config::build_simc_fixture_config(&class.traits, ctx, allocated)?;
     let traits = build_trait_loadout(class, Some(spec), ctx, entries);
-    let spells = compute_known_spells(class, identity.race, level, Some(spec), &traits);
-    let known = KnownSpells::fixture(spells.iter().map(|spell| spell.spell_id).collect());
-    Ok((known, traits))
+    let spells = compute_known_spells(class, race, level, Some(spec), &traits);
+    Ok((spells, traits))
 }
 
 /// `(SpecializationSpells.OverridesSpellID, SpellID)` of the spec spells learned at

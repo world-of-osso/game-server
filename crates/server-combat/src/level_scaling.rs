@@ -37,6 +37,7 @@ pub struct CreatureStats {
     pub auto_attack_dps: f32,
     pub armor: f32,
     pub armor_constant: f32,
+    pub spell_damage: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -45,6 +46,7 @@ enum Stat {
     AutoAttackDps,
     Armor,
     ArmorConstant,
+    SpellDamage,
 }
 
 impl CreatureStats {
@@ -54,6 +56,7 @@ impl CreatureStats {
             Stat::AutoAttackDps => self.auto_attack_dps,
             Stat::Armor => self.armor,
             Stat::ArmorConstant => self.armor_constant,
+            Stat::SpellDamage => self.spell_damage,
         }
     }
 }
@@ -112,10 +115,6 @@ impl ExpectedStats {
         unit_class: u8,
         season: u32,
     ) -> Result<f32, String> {
-        let milestone = *self
-            .season_milestones
-            .get(&season)
-            .ok_or_else(|| format!("missing MythicPlusSeason {season}"))?;
         let row = self
             .by_level
             .get(&(level, expansion))
@@ -123,11 +122,33 @@ impl ExpectedStats {
             .ok_or_else(|| {
                 format!("missing ExpectedStat for level {level}, expansion {expansion}")
             })?;
+        let mut value = self.apply_keystone_mods(stat, row.get(stat), tuning, season)?;
+        if let Some(id) = class_mod_id(unit_class) {
+            value *= self
+                .mods
+                .get(&id)
+                .ok_or_else(|| format!("missing class ExpectedStatMod {id}"))?
+                .get(stat);
+        }
+        Ok(value)
+    }
+
+    /// `value` times each of `tuning`'s ContentTuningXExpected mods active in `season`.
+    fn apply_keystone_mods(
+        &self,
+        stat: Stat,
+        mut value: f32,
+        tuning: u32,
+        season: u32,
+    ) -> Result<f32, String> {
+        let milestone = *self
+            .season_milestones
+            .get(&season)
+            .ok_or_else(|| format!("missing MythicPlusSeason {season}"))?;
         let rows = self
             .armor_tuning_mods
             .get(&tuning)
             .ok_or_else(|| format!("missing ContentTuningXExpected {tuning}"))?;
-        let mut value = row.get(stat);
         for &(id, min, max) in rows {
             let bound = |id| {
                 self.season_milestones
@@ -142,13 +163,6 @@ impl ExpectedStats {
                 .mods
                 .get(&id)
                 .ok_or_else(|| format!("missing ExpectedStatMod {id}"))?
-                .get(stat);
-        }
-        if let Some(id) = class_mod_id(unit_class) {
-            value *= self
-                .mods
-                .get(&id)
-                .ok_or_else(|| format!("missing class ExpectedStatMod {id}"))?
                 .get(stat);
         }
         Ok(value)
@@ -352,6 +366,9 @@ pub struct LevelStats {
     base_damage: Vec<f32>,
     armor: Vec<f32>,
     damage_modifier: f32,
+    /// A Keystone creature's map/season CreatureSpellDamage and
+    /// CreatureAutoAttackDps mods (CLASS_NONE, as spell base values use).
+    keystone_spell_mods: Option<(f32, f32)>,
 }
 
 impl LevelStats {
@@ -383,6 +400,10 @@ impl LevelStats {
                 season,
             )?;
         }
+        self.keystone_spell_mods = Some((
+            stats.apply_keystone_mods(Stat::SpellDamage, 1.0, map_tuning, season)?,
+            stats.apply_keystone_mods(Stat::AutoAttackDps, 1.0, map_tuning, season)?,
+        ));
         Ok(())
     }
 
@@ -411,7 +432,18 @@ impl LevelStats {
                 .map(|level| eval(Stat::Armor, level) * inputs.armor_modifier)
                 .collect(),
             damage_modifier: inputs.damage_modifier,
+            keystone_spell_mods: None,
         }
+    }
+
+    /// The Keystone map/season multiplier of a creature spell's ExpectedStat base
+    /// value: CreatureAutoAttackDps for `auto_attack_dps`, else CreatureSpellDamage;
+    /// 1 outside a Keystone.
+    pub fn keystone_spell_multiplier(&self, auto_attack_dps: bool) -> f32 {
+        self.keystone_spell_mods.map_or(
+            1.0,
+            |(spell, dps)| if auto_attack_dps { dps } else { spell },
+        )
     }
 
     pub fn max_health(&self, level: u8) -> f32 {

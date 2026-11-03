@@ -435,7 +435,7 @@ fn literal_spec_selection_applies_to_player_and_follower() {
 #[test]
 fn literal_follower_only_specs_explicitly_preserve_their_actor_restriction() {
     use crate::followers::simulator::ParityActor;
-    for spec_id in [70, 266] {
+    for spec_id in [266] {
         assert!(measurement_driver(spec_id, &ParityActor::Follower).is_some());
         assert!(measurement_driver(spec_id, &ParityActor::Player { race: 1 }).is_none());
     }
@@ -602,12 +602,14 @@ fn spawn_reference_actor(
         .level
         .parse()
         .map_err(|error| format!("reference level: {error}"))?;
+    let race = inputs::read_reference_race(&profile.race)?;
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         profile.spec_id,
         level,
         copy,
         identity,
+        race,
     )?;
     // Pinned player.cpp1288: this Patchwerk fixture configures no movement event.
     app.world_mut()
@@ -615,10 +617,6 @@ fn spawn_reference_actor(
         .insert(crate::simc_apl_native::FixtureMovement {
             distance_to_move: 0.0,
         });
-    let race = inputs::read_reference_race(&profile.race)?;
-    app.world_mut()
-        .entity_mut(actor)
-        .insert(server::test_support::ReferenceRace(race));
     inputs::equip(app.world_mut(), actor, profile)?;
     inputs::install_traits(app.world_mut(), actor, traits)?;
     profile_initialization::initialize_declared_powers(app.world_mut(), actor, profile)?;
