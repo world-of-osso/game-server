@@ -56,6 +56,42 @@ fn area_units_follows_relocations_across_cell_boundaries() {
 }
 
 #[test]
+fn area_units_breaks_equal_distance_ties_by_entity() {
+    let mut app = App::new();
+    crate::maps::units::install(&mut app);
+    let map = crate::maps::InMap {
+        map_id: 2521,
+        instance_id: 1,
+    };
+    let spawn = |app: &mut App, x| {
+        app.world_mut()
+            .spawn((
+                map,
+                Position { x, y: 0.0, z: 0.0 },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+            ))
+            .id()
+    };
+    let caster = spawn(&mut app, 0.0);
+    let first = spawn(&mut app, 5.0);
+    let second = spawn(&mut app, -5.0);
+    let mut expected = vec![first, second];
+    expected.sort_unstable();
+    expected.insert(0, caster);
+    assert_eq!(
+        area_units(app.world_mut(), caster, Vec3::ZERO, 10.0, Relation::Any, 0),
+        expected
+    );
+    assert_eq!(
+        area_units(app.world_mut(), caster, Vec3::ZERO, 10.0, Relation::Any, 2),
+        expected[..2]
+    );
+}
+
+#[test]
 fn area_units_selects_only_living_nearby_units_in_the_same_copy() {
     let mut app = App::new();
     crate::maps::units::install(&mut app);

@@ -1110,7 +1110,7 @@ fn raid_corpses(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     bodies
         .retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit, caster));
-    bodies.sort_by(|a, b| a.0.total_cmp(&b.0));
+    bodies.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     if cap > 0 {
         bodies.truncate(cap as usize);
     }
@@ -2015,7 +2015,7 @@ pub fn area_units(
         })
         .collect();
     found.retain(|&(_, entity)| relation_matches(world, caster, entity, relation));
-    found.sort_by(|a, b| a.0.total_cmp(&b.0));
+    found.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     if max_targets > 0 {
         found.truncate(max_targets as usize);
     }

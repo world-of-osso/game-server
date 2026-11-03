@@ -171,12 +171,42 @@ fn choose_jump_target(world: &World, caster: Entity, target: Entity) -> Option<E
     if health.current > health.max * (threshold / 100.0) {
         return None;
     }
-    let targets: Vec<_> = combat::combat_refs::active_opponents(world, caster)
+    let targets = combat::combat_refs::active_opponents(world, caster)
         .filter(|candidate| {
             *candidate != target && combat::spell_cast::targets::is_alive(world, *candidate)
         })
         .collect();
+    choose_random_target(targets)
+}
+
+fn choose_random_target(mut targets: Vec<Entity>) -> Option<Entity> {
+    targets.sort_unstable();
     (!targets.is_empty()).then(|| targets[combat::random::thread_rng().gen_range(0..targets.len())])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn heart_seeded_jump_is_independent_of_opponent_order() {
+        let targets: Vec<_> = [7, 19, 32, 45]
+            .into_iter()
+            .map(|id| Entity::from_raw_u32(id).unwrap())
+            .collect();
+        for seed in 0..32 {
+            let first = {
+                let _scope = combat::random::seed_scope(seed);
+                choose_random_target(targets.clone())
+            };
+            let second = {
+                let _scope = combat::random::seed_scope(seed);
+                choose_random_target(targets.iter().rev().copied().collect())
+            };
+            assert_eq!(first, second, "seed {seed} must choose the same target");
+            assert!(targets.contains(&first.unwrap()));
+        }
+    }
 }
 
 fn is_boss(world: &World, target: Entity) -> bool {
