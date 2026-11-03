@@ -1055,6 +1055,14 @@ fn cast_on_owner_target(world: &mut World, actor: Entity) {
         .get_mut::<crate::networking::CombatTarget>(actor)
         .unwrap()
         .0 = target;
+    if let Some(target) = target
+        && let Some(mut state) = world.get_mut::<crate::creature_ai::CreatureState>(actor)
+        && matches!(*state, crate::creature_ai::CreatureState::Pursuing { .. })
+    {
+        *state = crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        };
+    }
     if world.get::<CastState>(actor).is_some() || !super::targets::is_alive(world, actor) {
         return;
     }

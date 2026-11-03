@@ -14,12 +14,27 @@ const DREADBITE: u32 = 271971;
 const DREADSTALKER: u32 = 98035;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::SummonInitialized(start_dreadstalker_attack),
     SpellScriptHook::AfterWhiteImpact(roll_extra_bite),
     SpellScriptHook::AfterQueuedTriggers(cast_earned_bites),
 ];
 
 #[derive(Component, Default)]
 struct EarnedBites(u32);
+
+fn start_dreadstalker_attack(world: &mut World, pet: Entity) {
+    if world.get::<Npc>(pet).is_none_or(|npc| npc.template_id != DREADSTALKER) {
+        return;
+    }
+    let Some(owner) = world.get::<SummonedCreature>(pet).map(|summon| summon.owner) else {
+        return;
+    };
+    let Some(target) = world.get::<combat::networking::CombatTarget>(owner).and_then(|target| target.0) else {
+        return;
+    };
+    // SimC76f8118 pets.cpp1151–1213: Dreadstalkers approach and melee their target.
+    spell_cast::summon::start_melee_attack(world, pet, target);
+}
 
 fn roll_extra_bite(world: &mut World, pet: Entity) {
     if world
@@ -51,12 +66,13 @@ fn roll_extra_bite(world: &mut World, pet: Entity) {
 }
 
 fn cast_earned_bites(world: &mut World) {
-    let pets: Vec<_> = world
+    let mut pets: Vec<_> = world
         .query::<(Entity, &EarnedBites)>()
         .iter(world)
         .filter(|(_, earned)| earned.0 > 0)
         .map(|(pet, _)| pet)
         .collect();
+    pets.sort_unstable();
     for pet in pets {
         if world.get::<CastState>(pet).is_some() {
             continue;
