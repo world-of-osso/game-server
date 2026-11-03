@@ -1,8 +1,5 @@
 //! Fixture adapter over the production APL.
-use super::{
-    Run,
-    literal_rotation::{self, PrecombatPoll},
-};
+use super::{Run, literal_rotation};
 use crate::simc_apl_native::{Encounter, NativeFacts};
 use bevy::prelude::*;
 use serde_json::Value;
@@ -107,31 +104,7 @@ fn frost_literal_empower_rune_weapon_uses_hostile_primary() {
 }
 
 pub(super) fn prepare_driver(run: &mut Run) -> Result<Box<dyn super::SpecDriver>, String> {
-    let encounter = Encounter::Fixture {
-        started_at: crate::spell_cast::now(run.app.world()),
-        duration: 300.0,
-        style: crate::simc_apl_native::FightStyle::Patchwerk,
-    };
-    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, &run.profile, encounter)?;
-    super::literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    for _ in 0..super::preparation::MAX_SETUP_TICKS {
-        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
-            PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
-            PrecombatPoll::Selected { action, execution } => {
-                super::preparation::execute_precombat_plan(
-                    run,
-                    &mut rotation.driver,
-                    action,
-                    execution,
-                )?;
-            }
-            PrecombatPoll::Finished => {
-                rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
-                return Ok(Box::new(rotation));
-            }
-        }
-    }
-    Err("native Frost precombat did not finish within the setup bound".into())
+    super::prepare_production_driver(run)
 }
 
 pub(super) const REPORT_KEY: Option<&str> = Some("frost_rotation");
