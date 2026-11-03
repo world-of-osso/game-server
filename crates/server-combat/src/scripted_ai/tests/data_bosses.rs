@@ -1393,6 +1393,37 @@ fn spawn_prepared_actor(
 }
 
 #[test]
+fn kystia_evade_despawns_mirrors_during_victim_update() {
+    let (mut h, kystia, _) = bound_boss(234648, 2813, 0);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(16.3);
+    let mirrors = h.creatures_of(255050);
+    assert!(!mirrors.is_empty());
+    assert!(mirrors.iter().any(|mirror| matches!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(*mirror),
+        Some(crate::creature_ai::CreatureState::Pursuing { .. })
+    )));
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
+    crate::creature_aggro::update_victim_system(h.app.world_mut());
+    assert!(
+        mirrors
+            .iter()
+            .all(|mirror| h.app.world().get_entity(*mirror).is_err())
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(kystia),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+}
+
+#[test]
 fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instance() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let player = h.player();
