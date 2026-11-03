@@ -343,7 +343,7 @@ fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
         .with_ansi(false)
         .with_writer(move || SpawnLogWriter(writer.clone()))
         .finish();
-    let count = bevy::log::tracing::subscriber::with_default(subscriber, || {
+    let count = crate::test_support::tracing_capture::with_default(subscriber, || {
         spawn_map_creatures(
             &mut commands,
             &data,

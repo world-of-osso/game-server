@@ -624,7 +624,7 @@ fn diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_
         .with_ansi(false)
         .with_writer(move || ChaseTraceWriter(writer.clone()))
         .finish();
-    bevy::log::tracing::subscriber::with_default(subscriber, || {
+    crate::test_support::tracing_capture::with_default(subscriber, || {
         h.app
             .world_mut()
             .run_system_once(crate::creature_ai::chase_system)

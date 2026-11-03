@@ -69,6 +69,7 @@ fn neutral_template(name: &str, level: u8) -> crate::world_data::CreatureTemplat
         experience_modifier: 0.0,
         gives_experience: false,
         script_name: String::new(),
+        null_ai: false,
         aggro_mode: crate::creature_aggro::AggroMode::Reactive,
         trigger: false,
         unit_flags: 0,

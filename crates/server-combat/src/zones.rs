@@ -529,6 +529,12 @@ pub fn spawn_creature(
     }
     if template.aggro_mode == crate::creature_aggro::AggroMode::Passive
         && template.static_flags[0] & crate::creature_static::IGNORE_COMBAT == 0
+        && !template.null_ai
+        && template.unit_flags
+            & (shared::components::UnitFlags::IMMUNE_TO_PC
+                | shared::components::UnitFlags::NON_ATTACKABLE
+                | shared::components::UnitFlags::NON_ATTACKABLE_2)
+            != 0
     {
         let unblocked = crate::creature_aggro::AggroMode::for_template(
             u32::from(template.creature_type),
@@ -1310,6 +1316,7 @@ mod tests {
             experience_modifier: 1.0,
             gives_experience: true,
             script_name: String::new(),
+            null_ai: false,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             trigger: false,
             unit_flags: 0,
@@ -1452,7 +1459,7 @@ mod tests {
              CREATE TABLE content_creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,
                 faction INTEGER, npcflag INTEGER, speed_walk REAL, HealthModifier REAL, name TEXT, rank INTEGER, exp INTEGER,
                 ExperienceModifier REAL, type INTEGER, flags_extra INTEGER, speed_run REAL,
-                ScriptName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
+                ScriptName TEXT, AIName TEXT, unit_class INTEGER, detection_range REAL, unit_flags INTEGER,
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
                 LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT,
                 ManaModifier REAL, unit_flags2 INTEGER, RegenHealth INTEGER, family INTEGER,
@@ -1531,7 +1538,7 @@ mod tests {
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1,0,0,2000)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'','',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1,0,0,2000)",
                 [entry],
             )
             .unwrap();

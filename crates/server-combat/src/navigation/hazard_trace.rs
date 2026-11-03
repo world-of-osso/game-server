@@ -40,7 +40,7 @@ mod tests {
             .with_writer(std::io::sink)
             .finish();
         let evaluated = std::cell::Cell::new(false);
-        bevy::log::tracing::subscriber::with_default(subscriber, || {
+        crate::test_support::tracing_capture::with_default(subscriber, || {
             emit("detected", Some(1.0), Entity::from_bits(41), || {
                 evaluated.set(true);
                 Value::Null
