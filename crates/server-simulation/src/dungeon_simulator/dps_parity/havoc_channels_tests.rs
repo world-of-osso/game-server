@@ -1482,6 +1482,10 @@ fn havoc_real_annihilation_and_swings_use_dummy_combat_reach() {
     preparation::finish_pending_setup(&mut run).unwrap();
     let actor = run.actor;
     let target = run.targets[0];
+    assert_eq!(
+        crate::scripted_ai::model_reach::combat_reach(run.app.world(), target),
+        Some(4.0)
+    );
     let target_pos = *run
         .app
         .world()
@@ -1497,7 +1501,7 @@ fn havoc_real_annihilation_and_swings_use_dummy_combat_reach() {
         .get_mut::<shared::components::Position>(actor)
         .unwrap();
     *actor_pos.into_inner() = shared::components::Position {
-        x: target_pos.x - 5.2,
+        x: target_pos.x - 6.8,
         ..target_pos
     };
     super::face_actor_toward_primary(run.app.world_mut(), actor, target);
@@ -1510,11 +1514,11 @@ fn havoc_real_annihilation_and_swings_use_dummy_combat_reach() {
     advance(&mut run, 40);
     assert!(
         !damage(&run, Some(227518)).is_empty(),
-        "real Annihilation must hit at 5.2yd"
+        "real Annihilation must hit at 6.8yd"
     );
     assert!(
         !damage(&run, None).is_empty(),
-        "real auto-swings must hit at 5.2yd"
+        "real auto-swings must hit at 6.8yd"
     );
     let spell = run
         .app
@@ -1527,7 +1531,7 @@ fn havoc_real_annihilation_and_swings_use_dummy_combat_reach() {
         .world_mut()
         .get_mut::<shared::components::Position>(actor)
         .unwrap()
-        .x = target_pos.x - 5.4;
+        .x = target_pos.x - 6.9;
     assert!(matches!(
         crate::spell_cast::read_native_cast_start(run.app.world_mut(), actor, &spell, target),
         Err(crate::spell_cast::CastFailure::OutOfRange)
