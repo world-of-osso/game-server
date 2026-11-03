@@ -134,7 +134,7 @@ pub(super) fn prepare_production_driver(run: &mut Run) -> Result<Box<dyn SpecDri
     let rotation = server_follower_apl::registry::load(world, run.actor, run.profile.spec_id)?;
     let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
     for _ in 0..preparation::MAX_SETUP_TICKS {
-        apl.tick(run.app.world_mut(), run.actor, &[])?;
+        apl.prepare_tick(run.app.world_mut(), run.actor, &run.targets)?;
         if !apl.in_precombat() {
             return Ok(Box::new(apl));
         }
@@ -487,6 +487,21 @@ fn measurement_driver(
         .ok()?;
     let driver = &DRIVERS[index];
     (driver.supports_actor)(identity).then_some(driver)
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
+fn production_precombat_lands_arcane_blast_before_pull() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    let _driver = prepare_production_driver(&mut run).unwrap();
+    let charges = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        run.actor,
+        shared::components::PowerType::ArcaneCharges,
+    )
+    .unwrap()
+    .0;
+    assert_eq!(charges, 2.0, "Arcane Blast must land during precombat");
 }
 
 #[test]
