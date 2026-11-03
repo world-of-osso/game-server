@@ -4,6 +4,59 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
+    use shared::protocol::CombatLogKind;
+    for (count, elapsed, expected) in [(1, 0.0, false), (5, 0.0, true), (1, 27.0, true)] {
+        let mut run = super::snapshot_party(1468, 90, count);
+        let healer = run.healer;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        super::engage(&mut run);
+        let now = crate::spell_cast::now(run.app.world());
+        let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
+            run.app.world_mut(),
+            healer,
+            crate::simc_apl_native::Encounter::dungeon(now - elapsed),
+        )
+        .unwrap();
+        let cursor = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, &run.sources)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        let cast = events.iter().any(|e| {
+            e.source == Some(healer.to_bits())
+                && e.spell_id == Some(357208)
+                && e.kind == CombatLogKind::CastSuccess
+        });
+        let casts: Vec<_> = events
+            .iter()
+            .filter(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
+            .map(|e| e.spell_id)
+            .collect();
+        assert_eq!(
+            cast, expected,
+            "count={count} elapsed={elapsed}: casts={casts:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_spends_merithra_at_inferred_health_threshold() {
     use crate::auras::{AuraApplication, AuraSource};
     use shared::protocol::CombatLogKind;
@@ -40,12 +93,7 @@ fn preservation_spends_merithra_at_inferred_health_threshold() {
             .0
             .len();
         rotation
-            .drive(
-                run.app.world_mut(),
-                healer,
-                &run.slots,
-                Some(run.sources[0]),
-            )
+            .drive(run.app.world_mut(), healer, &run.slots, &[run.sources[0]])
             .unwrap();
         for _ in 0..10 {
             run.app.update();

@@ -1,0 +1,5 @@
+# Preservation Fire Breath pull timing
+
+**INFERRED_WCL:** Permit the healer's damage-list Fire Breath when at least five enemies are engaged or 26.862 seconds after pull engagement. The APL's active-enemy count does not forecast cone occupancy; the timeout permits smaller pulls. This is a policy approximation, not a retail priority-list claim.
+
+In five current-build reports, 31 completed Fire Breath casts hit a median of seven and nearest-rank p25 of five distinct enemy instances. Direct 357209 damage was matched to each 357208 empower release within one second; canceled casts and misses are excluded. First observed party engagement to first empower start was 7.226, 24.414, 26.862, 28.161 and 66.426 seconds, median 26.862. Reports and fight/pull: `vhKYp3J2BcVdQ7fa` 2/1, `caf6pzLP3nNr7CMv` 3/1, `1gKbWZAyzT7JqBn6` 4/1, `6wC7gFdD9avRAWVL` 17/1 and `b64JANPjvFap98Kf` 11/1. Earliest hostile damage serves as observed engagement. Target counts are damage receipts, not exact pre-cast cone occupancy. Evidence: `/home/osso/.worktrees/healer-merithra-wcl/fire-breath-counts.json`.
