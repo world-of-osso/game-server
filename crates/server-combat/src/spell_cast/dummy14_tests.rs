@@ -84,6 +84,12 @@ fn pet(h: &mut Harness) -> Entity {
 fn dummy14_survival_kill_command_routes_named_damage_from_owned_pet() {
     // Named child damage must hit; avoidance has separate native tests.
     let mut h = harness(Vec::new(), &[259489, 259277, SUNWELL_RADIANCE], 3).unwrap();
+    // Default AP 37 yields 22 inherited pet AP after the 60% integer conversion.
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .attack_power = 37.0;
     let pet = pet(&mut h);
     apply_native_enemy_dodge_reduction_to(&mut h, pet);
     let target = h.npc;
