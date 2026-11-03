@@ -34,6 +34,8 @@ Retail Mainline defines the item/Font/countdown/challenge tracker/completion/rat
 
 ## Known gaps (current cycle)
 
+- [ ] Den Glacial Revenant Cryo Surge uses an `INFERRED_WCL` link from periodic-dummy aura 1239860 to area damage 1239871 at the aura recipient. Source-matched 1-second damage appears in `VxKH96NhkT487pnC/18`, `G8rCyV2w7L3mtQ1f/4` and `6FJTa3cr2VDhypG1/30`; DB2 supplies the 1-second period, 10-second duration and 4-yard radius, but no child spell. Retire the inferred link when authoritative current-build behavior is verified.
+
 - [ ] WCL-derived creature timers are `INFERRED_WCL`: first damage activity is only a combat-entry proxy. The producer collapses same-actor, same-spell cast records with identical timestamps or separations below `max(SpellCooldowns.RecoveryTime, CategoryRecoveryTime, StartRecoveryTime) + SpellCastTimes.Base` referenced by `SpellMisc.CastingTimeIndex`. It uses available base-difficulty DB2 fields; missing fields remain unknown, not evidence of zero recovery. Den 241813/1297701 has no SpellCooldowns row and cast-time base 0; five 1–20 ms pairs target different players and may be multi-target records, but DB2 supplies no positive bound to classify them.
 
 - [x] Both-skin private native activation/weighted-kill/encounter/terminal proof: Modern8→11 within85s, Forever8→7 over2492s via existing private clock-advance2251. Both use genuine NPC death/BossAI boundaries, with administrative Damage/Revive, not synthetic snapshots. [Proof and boundaries](../wiki/systems/mythic-plus.md#proof--2026-10-11).
