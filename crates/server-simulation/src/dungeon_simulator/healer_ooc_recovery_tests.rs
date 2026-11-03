@@ -15,14 +15,21 @@ fn run_in_snapshot_subprocess(test: &str) -> bool {
             .unwrap();
     db.execute("VACUUM INTO ?1", [snapshot.to_str().unwrap()])
         .unwrap();
-    let status = std::process::Command::new(std::env::current_exe().unwrap())
+    let test = test.split_once("::").unwrap().1;
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", test, "--nocapture"])
         .env("HEALER_RECOVERY_SNAPSHOT_CHILD", "1")
         .env("FOLLOWER_DPS_WORLD_DB", &snapshot)
         .env("DPS_PARITY_WORLD_DB", &snapshot)
-        .status()
+        .output()
         .unwrap();
-    assert!(status.success(), "snapshot subprocess failed: {status}");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success() && stdout.contains("1 passed;"),
+        "snapshot subprocess did not pass exactly one test: {}\n{stdout}\n{stderr}",
+        output.status
+    );
     true
 }
 
