@@ -15,6 +15,7 @@ mod blood_bloody_demise_follower_tests;
 mod protection_hammer_anvil_follower_tests;
 mod protection_divine_guidance_follower_tests;
 mod boss_invariance_tests;
+mod fixture_engagement_tests;
 mod mistweaver_sck_population_tests;
 mod mistweaver_ancient_party_tests;
 mod mistweaver_ancient_pulse_tests;
