@@ -219,6 +219,7 @@ mod enhancement_linked_mode_tests;
 mod enhancement_mechanics_tests;
 mod enhancement_operand_tests;
 mod enhancement_power_tests;
+mod enhancement_precombat_tests;
 mod enhancement_spending_tests;
 mod enhancement_stormblast_tests;
 mod enhancement_strike_tests;
@@ -278,6 +279,7 @@ mod fire_literal_tests;
 mod fire_nova_native_tests;
 mod firestarter_tests;
 mod fixture_facing_tests;
+mod follower_precombat_contract_tests;
 mod party_lust_follower_tests;
 mod frost_mage_feedback_tests;
 mod frost_mage_reaction_start_tests;
@@ -345,6 +347,10 @@ mod hunter_howl_tests;
 mod hunter_huntmaster_tests;
 mod hunter_mark_mask_tests;
 mod hunter_pack_mentality_tests;
+#[cfg(test)]
+mod mage_buff_persistence_tests;
+#[cfg(test)]
+mod hunter_persistence_tests;
 mod hunter_salvo_tests;
 #[cfg(test)]
 mod hunter_melee_tests;

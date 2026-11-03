@@ -292,6 +292,11 @@ impl crate::follower::SpecRotation for Restoration {
         self.driver.action_spells(&self.bindings)
     }
 
+    fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let party = crate::follower::healing_party(world, actor);
+        Restoration::drive(self, world, actor, &party, None)
+    }
+
     fn poll_precombat(
         &mut self,
         _world: &mut World,

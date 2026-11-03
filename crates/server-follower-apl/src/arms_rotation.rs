@@ -258,11 +258,14 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = ArmsFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     fn execute(

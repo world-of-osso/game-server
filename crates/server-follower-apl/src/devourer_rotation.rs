@@ -81,6 +81,22 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
+        match self.poll_precombat(world, actor, targets)? {
+            PrecombatPoll::Waiting => Ok(true),
+            PrecombatPoll::Finished => Ok(false),
+            PrecombatPoll::Selected { action, execution } => {
+                crate::follower::SpecRotation::execute(self, world, actor, action, execution)?;
+                Ok(true)
+            }
+        }
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
         if !self.entropy_initialized {
             self.initialize_entropy(world, actor)?;
             self.entropy_initialized = true;
@@ -93,19 +109,8 @@ impl Rotation {
             world,
             actor,
         };
-        match self
-            .driver
-            .poll_precombat(&facts, &prepared, &self.equipment)?
-        {
-            PrecombatPoll::Waiting => {
-                Err("Devourer precombat polled before native setup finished".into())
-            }
-            PrecombatPoll::Finished => Ok(false),
-            PrecombatPoll::Selected { action, execution } => {
-                self.driver.execute(world, actor, action, execution)?;
-                Ok(true)
-            }
-        }
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     fn initialize_entropy(&self, world: &mut World, actor: Entity) -> Result<(), String> {
@@ -211,11 +216,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.precombat_step(world, actor, targets)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(

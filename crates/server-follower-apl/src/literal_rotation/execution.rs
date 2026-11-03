@@ -67,6 +67,7 @@ pub struct Prepared {
     gcd_active: bool,
     spec_id: u32,
     after_channel: bool,
+    upkeep_actions: Option<BTreeSet<String>>,
 }
 
 // SimC76f8118 class constructors set use_off_gcd independently of APL options.
@@ -121,6 +122,10 @@ fn intrinsic_off_gcd(spec: u32, name: &str) -> bool {
 }
 
 impl Prepared {
+    pub(super) fn upkeep_actions(&self) -> Option<&BTreeSet<String>> {
+        self.upkeep_actions.as_ref()
+    }
+
     pub fn read<'a>(
         world: &mut World,
         actor: Entity,
@@ -173,6 +178,17 @@ impl Prepared {
             .get::<crate::spell_cast::SpellHistory>(actor)
             .is_some_and(|history| history.has_active_gcd(crate::spell_cast::history_now(world)));
         let targets = native_targets(world, actor, targets);
+        let actions: Vec<_> = actions.into_iter().collect();
+        let upkeep_actions = world
+            .get_resource::<super::BuffUpkeep>()
+            .filter(|upkeep| upkeep.actor == actor)
+            .map(|upkeep| {
+                actions
+                    .iter()
+                    .filter(|action| upkeep.spells.contains(&action.spell))
+                    .map(|action| action.name.to_owned())
+                    .collect()
+            });
         let mut prepared = Self {
             now: crate::spell_cast::history_now(world),
             moving,
@@ -184,6 +200,7 @@ impl Prepared {
                 .get::<shared::components::ActiveSpec>(actor)
                 .map_or(0, |spec| spec.0),
             after_channel,
+            upkeep_actions,
             ready: BTreeMap::new(),
             live_targets: targets
                 .iter()

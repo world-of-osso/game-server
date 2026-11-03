@@ -206,6 +206,11 @@ impl Preservation {
 }
 
 impl crate::follower::SpecRotation for Preservation {
+    fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let party = crate::follower::healing_party(world, actor);
+        Preservation::drive(self, world, actor, &party, None)
+    }
+
     fn action_spells(&self) -> Vec<u32> {
         self.driver.action_spells(&self.bindings)
     }

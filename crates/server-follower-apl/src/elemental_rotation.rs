@@ -67,6 +67,22 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
+        match self.poll_precombat(world, actor, targets)? {
+            crate::literal_rotation::PrecombatPoll::Waiting => Ok(true),
+            crate::literal_rotation::PrecombatPoll::Finished => Ok(false),
+            crate::literal_rotation::PrecombatPoll::Selected { action, execution } => {
+                crate::follower::SpecRotation::execute(self, world, actor, action, execution)?;
+                Ok(true)
+            }
+        }
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
         let prepared = Prepared::read(
             world,
             actor,
@@ -75,12 +91,13 @@ impl Rotation {
             bindings::execution_actions(),
             self.driver.snapshot.is_none(),
         )?;
-        let selected = self.select(world, actor, targets, "precombat", &prepared)?;
-        let Some((action, execution)) = selected else {
-            return Ok(false);
+        let facts = ElementalFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
         };
-        self.driver.execute(world, actor, action, execution)?;
-        Ok(true)
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn drive(
@@ -185,11 +202,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.precombat_step(world, actor, targets)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(

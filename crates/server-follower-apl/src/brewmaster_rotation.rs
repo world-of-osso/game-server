@@ -150,24 +150,27 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
-        let mut prepared = self.read_prepared(world, actor, targets)?;
-        // SimC sc_monk.cpp3498–3505 requires a ticking Stagger pool.
-        if !precombat && !crate::auras::has_aura(world, actor, 124255) {
-            prepared.suppress_action("purifying_brew");
-        }
-        let facts = BrewmasterFacts {
-            world,
-            actor,
-            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
-                .with_targets(targets.first().copied(), targets),
-            equipment: &self.equipment,
-        };
         let selected = if precombat {
-            precombat_selection(
-                self.driver
-                    .poll_precombat(&facts, &prepared, &self.equipment)?,
-            )?
+            precombat_selection(self.poll_precombat(world, actor, targets)?)?
         } else {
+            let mut prepared = self.read_prepared(world, actor, targets)?;
+            // SimC sc_monk.cpp3498–3505 requires a ticking Stagger pool.
+            if !crate::auras::has_aura(world, actor, 124255) {
+                prepared.suppress_action("purifying_brew");
+            }
+            let facts = BrewmasterFacts {
+                world,
+                actor,
+                native: NativeFacts::new(
+                    world,
+                    actor,
+                    &self.bindings,
+                    self.encounter,
+                    targets.len(),
+                )
+                .with_targets(targets.first().copied(), targets),
+                equipment: &self.equipment,
+            };
             self.driver
                 .select("default", &facts, &prepared, &self.equipment)?
         };
@@ -176,6 +179,24 @@ impl Rotation {
         };
         self.driver.execute(world, actor, action, execution)?;
         Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<literal_rotation::PrecombatPoll, String> {
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = BrewmasterFacts {
+            world,
+            actor,
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn read_prepared(
@@ -281,11 +302,7 @@ impl crate::follower::SpecRotation for Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            literal_rotation::PrecombatPoll::Waiting
-        } else {
-            literal_rotation::PrecombatPoll::Finished
-        })
+        Rotation::poll_precombat(self, world, actor, targets)
     }
 
     fn execute(

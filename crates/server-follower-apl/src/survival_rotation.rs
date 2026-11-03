@@ -1,7 +1,7 @@
 //! Literal pinned Survival source; decisions use the shared evaluator and native execution.
 pub mod bindings;
 use crate::hunter_facts::HunterFacts;
-use crate::literal_rotation::{Driver, equipment::Equipment, execution::Prepared};
+use crate::literal_rotation::{Driver, PrecombatPoll, equipment::Equipment, execution::Prepared};
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
 use serde_json::{Value, json};
@@ -69,8 +69,32 @@ impl Rotation {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<bool, String> {
+        match self.poll_precombat(world, actor, targets)? {
+            PrecombatPoll::Waiting => Ok(true),
+            PrecombatPoll::Finished => Ok(false),
+            PrecombatPoll::Selected { action, execution } => {
+                self.driver.execute(world, actor, action, execution)?;
+                Ok(true)
+            }
+        }
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
         self.start_combat_at(crate::spell_cast::now(world));
-        self.step(world, actor, targets, "precombat")
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = HunterFacts {
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment: &self.equipment,
+            potion: &self.potion,
+        };
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 
     pub fn drive(
@@ -92,18 +116,13 @@ impl Rotation {
         targets: &[Entity],
         list: &str,
     ) -> Result<bool, String> {
-        let prepared = Prepared::read(
-            world,
-            actor,
-            targets,
-            &self.equipment,
-            bindings::actions(),
-            self.driver.snapshot.is_none(),
-        )?;
-        let native = NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
-            .with_targets(targets.first().copied(), targets);
+        if list == "precombat" {
+            return self.precombat_step(world, actor, targets);
+        }
+        let prepared = self.read_prepared(world, actor, targets)?;
         let facts = HunterFacts {
-            native,
+            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
             equipment: &self.equipment,
             potion: &self.potion,
         };
@@ -115,6 +134,22 @@ impl Rotation {
         };
         self.driver.execute(world, actor, action, execution)?;
         Ok(true)
+    }
+
+    fn read_prepared(
+        &self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<Prepared, String> {
+        Prepared::read(
+            world,
+            actor,
+            targets,
+            &self.equipment,
+            bindings::actions(),
+            self.driver.snapshot.is_none(),
+        )
     }
 
     pub fn report(&self) -> Value {
@@ -134,12 +169,8 @@ impl crate::follower::SpecRotation for Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.precombat_step(world, actor, targets)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+    ) -> Result<PrecombatPoll, String> {
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(

@@ -18,6 +18,13 @@ use server::simc_apl::{Action, ActionFacts, Expression, Facts, Program, Variable
 #[derive(Resource, Default)]
 pub struct LiteralTickProgress(pub bool);
 
+/// Self-buffs eligible for out-of-combat upkeep on this actor.
+#[derive(Resource)]
+pub(crate) struct BuffUpkeep {
+    pub actor: Entity,
+    pub spells: std::collections::BTreeSet<u32>,
+}
+
 #[cfg(test)]
 mod action_metadata_tests {
     use super::*;
@@ -286,6 +293,12 @@ impl Driver {
         };
         let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
+            if prepared
+                .upkeep_actions()
+                .is_some_and(|actions| !actions.contains(&action.name))
+            {
+                return Ok(false);
+            }
             candidate_ready(
                 action,
                 facts,
@@ -296,13 +309,25 @@ impl Driver {
             )
         };
         let action = if list == "precombat" {
-            self.program.select_next(
-                list,
-                &mut self.precombat_cursor,
-                facts,
-                &mut self.variables,
-                &mut usable,
-            )?
+            if let Some(actions) = prepared.upkeep_actions() {
+                let mut cursor = 0;
+                self.program.select_next_matching(
+                    list,
+                    &mut cursor,
+                    facts,
+                    &mut self.variables,
+                    |action| actions.contains(&action.name),
+                    &mut usable,
+                )?
+            } else {
+                self.program.select_next(
+                    list,
+                    &mut self.precombat_cursor,
+                    facts,
+                    &mut self.variables,
+                    &mut usable,
+                )?
+            }
         } else {
             self.program
                 .select(list, facts, &mut self.variables, &mut usable)?

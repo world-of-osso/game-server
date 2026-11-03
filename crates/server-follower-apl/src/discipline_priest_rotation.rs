@@ -553,6 +553,11 @@ impl Discipline {
 }
 
 impl crate::follower::SpecRotation for Discipline {
+    fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let party = crate::follower::healing_party(world, actor);
+        Discipline::drive(self, world, actor, &party, &[])
+    }
+
     fn action_spells(&self) -> Vec<u32> {
         self.driver.action_spells(&self.bindings)
     }

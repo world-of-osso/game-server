@@ -8,10 +8,18 @@ use std::collections::VecDeque;
 /// Precombat setup bound, as in the parity fixture: 30s of 20Hz ticks.
 const PRECOMBAT_TICKS: u32 = 600;
 
+#[cfg(test)]
+mod lifecycle_tests;
+
 /// A spec's production APL driver over the shared literal `Driver`.
 pub trait SpecRotation: Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
     fn action_spells(&self) -> Vec<u32>;
+
+    /// Evaluate maintained default-list buffs while out of combat.
+    fn drive_upkeep(&mut self, _world: &mut World, _actor: Entity) -> Result<(), String> {
+        Ok(())
+    }
 
     /// Next precombat decision. `Waiting` covers a row the adapter executed itself.
     fn poll_precombat(
@@ -40,14 +48,14 @@ enum Phase {
     Idle,
 }
 
-/// The follower's APL persists across pulls until death or a precombat buff expires.
+/// The follower's APL persists for the lifetime of the follower.
 #[derive(Component)]
 pub struct FollowerApl {
     rotation: Box<dyn SpecRotation>,
     plan: VecDeque<(Action, Execution)>,
     phase: Phase,
     combat_started_at: f64,
-    precombat_buffs: std::collections::BTreeMap<u32, f64>,
+    maintained_buffs: Option<std::collections::BTreeSet<u32>>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -65,8 +73,24 @@ impl FollowerApl {
             plan: VecDeque::new(),
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
-            precombat_buffs: Default::default(),
+            maintained_buffs: None,
         }
+    }
+
+    pub fn new_for_world(world: &World, rotation: Box<dyn SpecRotation>) -> Self {
+        let mut apl = Self::new(rotation);
+        apl.initialize_maintained_buffs(world);
+        apl
+    }
+
+    fn initialize_maintained_buffs(&mut self, world: &World) {
+        self.maintained_buffs = Some(
+            self.rotation
+                .action_spells()
+                .into_iter()
+                .filter(|&spell| is_maintained_buff(world, spell))
+                .collect(),
+        );
     }
 
     pub fn in_combat(&self) -> bool {
@@ -79,7 +103,14 @@ impl FollowerApl {
         actor: Entity,
         targets: &[Entity],
     ) -> Result<(), String> {
-        if matches!(self.phase, Phase::Idle) {
+        if self.maintained_buffs.is_none() {
+            self.initialize_maintained_buffs(world);
+        }
+        if targets.is_empty() {
+            self.idle();
+        }
+        if !targets.is_empty() && !matches!(self.phase, Phase::Combat) {
+            self.plan.clear();
             self.combat_started_at = crate::spell_cast::now(world);
             self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
@@ -102,25 +133,12 @@ impl FollowerApl {
                     return self.execute_plan(world, actor, action, execution);
                 }
                 PrecombatPoll::Finished => {
-                    let actions = self.rotation.action_spells();
-                    self.precombat_buffs = world
-                        .get::<server::auras::ActiveAuras>(actor)
-                        .into_iter()
-                        .flat_map(|auras| auras.iter())
-                        .filter(|aura| {
-                            aura.caster == actor
-                                && !aura.passive
-                                && !aura.harmful
-                                && actions.contains(&aura.spell_id)
-                                && is_maintained_buff(world, aura.spell_id)
-                        })
-                        .filter_map(|aura| aura.expires_at.map(|at| (aura.spell_id, at)))
-                        .collect();
-                    self.combat_started_at = crate::spell_cast::now(world);
-                    self.rotation.start_combat_at(self.combat_started_at);
-                    self.phase = Phase::Combat;
+                    self.phase = Phase::Idle;
                 }
             }
+        }
+        if targets.is_empty() {
+            return self.maintain_buffs(world, actor);
         }
         let (gcd, cast) = literal_rotation::read_busy(world, actor);
         let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
@@ -137,24 +155,46 @@ impl FollowerApl {
         }
     }
 
-    fn precombat_buff_expired(&mut self, world: &World, actor: Entity) -> bool {
+    fn maintain_buffs(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+        let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        if gcd || cast {
+            return Ok(());
+        }
+        if let Some((action, execution)) = self.plan.pop_front() {
+            return self.rotation.execute(world, actor, action, execution);
+        }
         let now = crate::spell_cast::now(world);
-        self.precombat_buffs.iter_mut().any(|(spell, deadline)| {
-            let current = world
-                .get::<server::auras::ActiveAuras>(actor)
-                .into_iter()
-                .flat_map(|auras| auras.iter())
-                .find(|aura| aura.caster == actor && aura.spell_id == *spell);
-            match current {
-                Some(aura) => {
-                    if let Some(at) = aura.expires_at {
-                        *deadline = at;
-                    }
-                    false
-                }
-                None => now >= *deadline,
+        let spells = self
+            .maintained_buffs
+            .as_ref()
+            .expect("maintained buffs initialized before upkeep")
+            .iter()
+            .copied()
+            .filter(|spell| {
+                !world
+                    .get::<server::auras::ActiveAuras>(actor)
+                    .into_iter()
+                    .flat_map(|auras| auras.iter())
+                    .any(|aura| {
+                        aura.caster == actor
+                            && aura.spell_id == *spell
+                            && aura.expires_at.is_none_or(|expiry| expiry > now + 1.0)
+                    })
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        if !spells.is_empty() {
+            world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+            let decision = self.rotation.poll_precombat(world, actor, &[]);
+            world.remove_resource::<literal_rotation::BuffUpkeep>();
+            if let PrecombatPoll::Selected { action, execution } = decision? {
+                return self.execute_plan(world, actor, action, execution);
             }
-        })
+        }
+        let spells = self.maintained_buffs.as_ref().unwrap().clone();
+        world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+        let result = self.rotation.drive_upkeep(world, actor);
+        world.remove_resource::<literal_rotation::BuffUpkeep>();
+        result
     }
 
     /// Each composite step waits for the previous step's cast and GCD, as in the fixture.
@@ -181,18 +221,51 @@ impl FollowerApl {
     }
 }
 
-/// Cooldown-limited precombat effects are combat actions, not maintained buffs.
+/// Only positive self/ally aura actions without a cooldown are maintained.
 fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
-    world
-        .resource::<server::spell_info::SpellStore>()
-        .get(spell_id)
-        .is_some_and(|spell| {
-            spell.cooldowns.as_ref().is_none_or(|cooldown| {
-                cooldown.recovery_ms == 0 && cooldown.category_recovery_ms == 0
-            }) && spell
-                .categories
-                .as_ref()
-                .is_none_or(|category| category.max_charges == 0)
+    let store = world.resource::<server::spell_info::SpellStore>();
+    let Some(spell) = store.get(spell_id) else {
+        return false;
+    };
+    if spell
+        .cooldowns
+        .as_ref()
+        .is_some_and(|cooldown| cooldown.recovery_ms != 0 || cooldown.category_recovery_ms != 0)
+        || spell
+            .categories
+            .as_ref()
+            .is_some_and(|category| category.max_charges != 0)
+        || matches!(
+            server::spell_cast::targets::explicit_requirement(spell.effects.iter()),
+            Some(server::spell_cast::targets::Relation::Enemy)
+        )
+    {
+        return false;
+    }
+    has_positive_aura(store, spell_id, &mut std::collections::BTreeSet::new())
+}
+
+fn has_positive_aura(
+    store: &server::spell_info::SpellStore,
+    spell_id: u32,
+    visited: &mut std::collections::BTreeSet<u32>,
+) -> bool {
+    if !visited.insert(spell_id) {
+        return false;
+    }
+    let Some(spell) = store.get(spell_id) else {
+        return false;
+    };
+    let aura_mask = server::auras::aura_effect_mask(spell);
+    let positive = aura_mask & !server::spell_info::positivity::negative_effects(store, spell);
+    let duration = spell
+        .misc
+        .as_ref()
+        .and_then(|misc| misc.duration)
+        .is_some_and(|duration| duration.duration_ms != 0);
+    (positive != 0 && duration)
+        || spell.effects.iter().any(|effect| {
+            effect.trigger_spell != 0 && has_positive_aura(store, effect.trigger_spell, visited)
         })
 }
 
@@ -208,9 +281,9 @@ pub fn drive_followers(world: &mut World) {
 
 fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     if !crate::spell_cast::targets::is_alive(world, unit) {
-        world
-            .entity_mut(unit)
-            .remove::<(FollowerApl, FollowerAplFailed)>();
+        if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
+            apl.idle();
+        }
         return;
     }
     let targets = if let Some(target) = world.get::<DirectedOwnerTarget>(unit) {
@@ -242,34 +315,32 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
         } else {
             world.entity_mut(unit).remove::<FollowerAplFailed>();
         }
-        return;
-    }
-    if let Some(mut apl) = world.entity_mut(unit).take::<FollowerApl>() {
-        if !apl.precombat_buff_expired(world, unit) {
-            world.entity_mut(unit).insert(apl);
-        }
     }
     if world.get::<FollowerAplFailed>(unit).is_some() {
         return;
     }
     let apl = match world.entity_mut(unit).take::<FollowerApl>() {
         Some(apl) => Ok(apl),
-        None => crate::registry::load(world, unit, spec).map(FollowerApl::new),
+        None => crate::registry::load(world, unit, spec)
+            .map(|rotation| FollowerApl::new_for_world(world, rotation)),
     };
-    let result = apl.and_then(|mut apl| match apl.tick(world, unit, &targets) {
-        Ok(()) => Ok(apl),
-        Err(error) if server::simc_apl::is_not_ready(&error) => {
-            debug!(?unit, "follower APL waits one tick: {error}");
-            Ok(apl)
-        }
-        Err(error) => Err(error),
-    });
-    match result {
-        Ok(apl) => {
+    match apl {
+        Ok(mut apl) => {
+            let result = apl.tick(world, unit, &targets);
             world.entity_mut(unit).insert(apl);
+            match result {
+                Ok(()) => {}
+                Err(error) if server::simc_apl::is_not_ready(&error) => {
+                    debug!(?unit, "follower APL waits one tick: {error}");
+                }
+                Err(error) => {
+                    error!("Class follower {unit} spec{spec} APL stopped for this pull: {error}");
+                    world.entity_mut(unit).insert(FollowerAplFailed);
+                }
+            }
         }
         Err(error) => {
-            error!("Class follower {unit} spec{spec} APL stopped for this pull: {error}");
+            error!("Class follower {unit} spec{spec} APL failed to load: {error}");
             world.entity_mut(unit).insert(FollowerAplFailed);
         }
     }

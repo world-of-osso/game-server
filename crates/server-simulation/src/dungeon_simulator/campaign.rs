@@ -4533,9 +4533,8 @@ impl Run {
                     .get::<shared::components::ActiveSpec>(owner)
                     .ok_or("keystone owner lacks an active specialization")?
                     .0;
-                server_follower_apl::FollowerApl::new(server_follower_apl::registry::load(
-                    world, owner, spec,
-                )?)
+                let rotation = server_follower_apl::registry::load(world, owner, spec)?;
+                server_follower_apl::FollowerApl::new_for_world(world, rotation)
             }
         };
         let result = apl.tick(world, owner, &[target]);

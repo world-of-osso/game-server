@@ -1,6 +1,6 @@
 //! Literal267 adapter; native Warlock power and damage remain authoritative.
 use crate::literal_rotation::{
-    Driver, default_pet::ConfiguredPet, equipment::Equipment, execution::Prepared,
+    Driver, PrecombatPoll, default_pet::ConfiguredPet, equipment::Equipment, execution::Prepared,
 };
 use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
 use bevy::prelude::*;
@@ -73,25 +73,52 @@ impl Rotation {
         targets: &[Entity],
         precombat: bool,
     ) -> Result<bool, String> {
+        if precombat {
+            return match self.poll_precombat(world, actor, targets)? {
+                PrecombatPoll::Waiting => Ok(true),
+                PrecombatPoll::Finished => Ok(false),
+                PrecombatPoll::Selected { action, execution } => {
+                    self.driver.execute(world, actor, action, execution)?;
+                    Ok(true)
+                }
+            };
+        }
         let prepared = self.read_prepared(world, actor, targets)?;
-        let facts = DestructionFacts {
-            native: NativeFacts::new(world, actor, &self.bindings, self.encounter, targets.len())
-                .with_targets(targets.first().copied(), targets),
-            equipment: &self.equipment,
-            primary: targets.first().map(|target| target.to_bits()),
-            knows_wither: world
-                .get::<server::class_progression::KnownSpells>(actor)
-                .is_some_and(|known| known.contains(445465)),
-        };
-        let list = if precombat { "precombat" } else { "default" };
+        let facts = DestructionFacts::read(
+            world,
+            actor,
+            targets,
+            &self.bindings,
+            &self.equipment,
+            self.encounter,
+        );
         let Some((action, execution)) =
             self.driver
-                .select(list, &facts, &prepared, &self.equipment)?
+                .select("default", &facts, &prepared, &self.equipment)?
         else {
             return Ok(false);
         };
         self.driver.execute(world, actor, action, execution)?;
         Ok(true)
+    }
+
+    pub fn poll_precombat(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        let prepared = self.read_prepared(world, actor, targets)?;
+        let facts = DestructionFacts::read(
+            world,
+            actor,
+            targets,
+            &self.bindings,
+            &self.equipment,
+            self.encounter,
+        );
+        self.driver
+            .poll_precombat(&facts, &prepared, &self.equipment)
     }
 }
 
@@ -129,6 +156,27 @@ pub struct DestructionFacts<'a> {
     equipment: &'a Equipment,
     primary: Option<u64>,
     knows_wither: bool,
+}
+
+impl<'a> DestructionFacts<'a> {
+    fn read(
+        world: &'a World,
+        actor: Entity,
+        targets: &'a [Entity],
+        bindings: &'a Bindings,
+        equipment: &'a Equipment,
+        encounter: Encounter,
+    ) -> Self {
+        Self {
+            native: NativeFacts::new(world, actor, bindings, encounter, targets.len())
+                .with_targets(targets.first().copied(), targets),
+            equipment,
+            primary: targets.first().map(|target| target.to_bits()),
+            knows_wither: world
+                .get::<server::class_progression::KnownSpells>(actor)
+                .is_some_and(|known| known.contains(445465)),
+        }
+    }
 }
 
 impl Facts for DestructionFacts<'_> {
@@ -222,12 +270,8 @@ impl crate::follower::SpecRotation for Rotation {
         world: &mut World,
         actor: Entity,
         targets: &[Entity],
-    ) -> Result<crate::literal_rotation::PrecombatPoll, String> {
-        Ok(if self.step(world, actor, targets, true)? {
-            crate::literal_rotation::PrecombatPoll::Waiting
-        } else {
-            crate::literal_rotation::PrecombatPoll::Finished
-        })
+    ) -> Result<PrecombatPoll, String> {
+        self.poll_precombat(world, actor, targets)
     }
 
     fn execute(
