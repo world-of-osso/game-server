@@ -1336,6 +1336,60 @@ fn admitted_campaign_pull_reaches_follower_before_opening() {
 }
 
 #[test]
+#[ignore = "requires Stockade data and DUNGEON_SIMULATOR_PARTY_SPECS=66,105,262,62,253"]
+fn party_pull_does_not_send_unengaged_owners_pet_to_attack() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let owner = run.party.owner;
+    let target = run.actors[&20375759];
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).unwrap();
+    for _ in 0..1000 {
+        run.control().unwrap();
+        if crate::combat_refs::has_active_reference_to(run.app.world(), run.party.tank, target) {
+            assert!(
+                crate::combat_refs::active_opponents(run.app.world(), owner)
+                    .next()
+                    .is_none(),
+                "owner must not already be engaged"
+            );
+            crate::followers::simulator::update_leader(run.app.world_mut());
+            assert_eq!(
+                run.app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(pet)
+                    .and_then(|target| target.0),
+                None,
+                "a party member's pull must not order the owner's pet"
+            );
+            assert!(!crate::combat_refs::has_active_reference_to(
+                run.app.world(),
+                pet,
+                target
+            ));
+            crate::combat::deal_direct_damage(run.app.world_mut(), target, owner, 1.0);
+            assert!(
+                crate::combat_refs::has_active_reference_to(run.app.world(), owner, target),
+                "the owner must actually be attacked"
+            );
+            crate::followers::simulator::update_leader(run.app.world_mut());
+            assert_eq!(
+                run.app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(pet)
+                    .and_then(|target| target.0),
+                Some(target),
+                "the pet may attack after its owner is attacked"
+            );
+            return;
+        }
+        run.app.update();
+    }
+    panic!("the tank did not open the admitted pull");
+}
+
+#[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn keystone_two_pulls_do_not_repeat_precombat_setup() {
     const CHILD: &str = "AZURE_TWO_PULL_FIXTURE_CHILD";
