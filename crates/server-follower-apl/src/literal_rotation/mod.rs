@@ -112,9 +112,10 @@ pub fn encounter_starting_at(
             duration,
             style,
         },
-        Encounter::Dungeon { pulled_at, .. } => Encounter::Dungeon {
+        // SimC76f8118 raid_event.cpp:401–434 measures each wave from its spawn_time.
+        Encounter::Dungeon { .. } => Encounter::Dungeon {
             started_at,
-            pulled_at,
+            pulled_at: started_at,
         },
     }
 }
@@ -247,36 +248,30 @@ impl Driver {
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
         if let Some((action, execution, deadline)) = self.queued.take() {
-            // The queued cast retains its original target. Recheck that target,
-            // not the new default target selected after the previous one died.
+            // Revalidate the original target; never transfer a queued cast to a new target.
             let mut queued_action = action.clone();
-            if let Execution::Spell(_, unit, primary) = &execution {
-                if primary.is_some_and(|target| !prepared.has_live_target(target)) {
-                    return Ok(None);
-                }
+            let target_alive = if let Execution::Spell(_, unit, primary) = &execution {
                 queued_action.target = Some(primary.unwrap_or(*unit).to_bits());
-            }
-            if !facts.target_ready(&queued_action)? {
-                return Ok(None);
-            }
-            let ready = prepared.permits_row(&queued_action)?;
-            let current = if ready {
-                prepared.execution_in(&queued_action, equipment, &self.program)?
+                primary.is_none_or(|target| prepared.has_live_target(target))
             } else {
-                None
+                true
             };
-            match current {
-                Some(Execution::Queue(_, _)) if prepared.now() < deadline => {
-                    self.queued = Some((action, execution, deadline));
+            if prepared.now() <= deadline && target_alive && facts.target_ready(&queued_action)? {
+                let current = if prepared.permits_row(&queued_action)? {
+                    prepared.execution_in(&queued_action, equipment, &self.program)?
+                } else {
+                    None
+                };
+                match current {
+                    Some(Execution::Queue(_, _)) | None if prepared.now() < deadline => {
+                        self.queued = Some((action, execution, deadline));
+                        return Ok(None);
+                    }
+                    Some(Execution::Queue(_, _)) | None => {}
+                    Some(_) => return Ok(Some((action, execution))),
                 }
-                Some(Execution::Queue(_, _)) => {}
-                Some(_) => return Ok(Some((action, execution))),
-                None if prepared.now() < deadline => {
-                    self.queued = Some((action, execution, deadline));
-                }
-                None => {}
             }
-            return Ok(None);
+            // An expired or invalid queue falls through to the live priority list.
         }
         if self.waiting(facts)? {
             return Ok(None);
@@ -368,11 +363,12 @@ impl Driver {
             self.pending_line = None;
             return Ok(());
         }
-        if let Execution::Queue(execution, delay) = execution {
+        if let Execution::Queue(execution, _) = execution {
+            // Match read_native_cast_for_cooldown_queue's 250 ms queue window.
             self.queued = Some((
                 action,
                 *execution,
-                crate::spell_cast::history_now(world) + delay,
+                crate::spell_cast::history_now(world) + 0.250,
             ));
             return Ok(());
         }

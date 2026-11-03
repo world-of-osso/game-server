@@ -1192,6 +1192,138 @@ fn arms_casts_damage_beside_engaged_boss_with_pull_back_hold() {
 }
 
 #[test]
+fn interrupted_composite_cast_drops_remaining_steps_and_reselects() {
+    use server_combat::simc_apl::Action;
+    use server_follower_apl::SpecRotation;
+    use server_follower_apl::literal_rotation::{PrecombatPoll, execution::Execution};
+    use std::sync::{Arc, Mutex};
+
+    struct CompositeProbe(Arc<Mutex<Vec<&'static str>>>);
+    impl SpecRotation for CompositeProbe {
+        fn action_spells(&self) -> Vec<u32> {
+            vec![]
+        }
+        fn poll_precombat(
+            &mut self,
+            _: &mut World,
+            _: Entity,
+            _: &[Entity],
+        ) -> Result<PrecombatPoll, String> {
+            self.0.lock().unwrap().push("reselect");
+            Ok(PrecombatPoll::Finished)
+        }
+        fn execute(
+            &mut self,
+            world: &mut World,
+            actor: Entity,
+            _: Action,
+            execution: Execution,
+        ) -> Result<(), String> {
+            self.0.lock().unwrap().push("execute");
+            server_follower_apl::literal_rotation::execution::execute(world, actor, execution)
+        }
+        fn start_combat_at(&mut self, _: f64) {}
+        fn drive(&mut self, _: &mut World, _: Entity, _: &[Entity]) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    let mut pull = spawn(259);
+    let actor = pull.follower;
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut apl = FollowerApl::new(Box::new(CompositeProbe(log.clone())));
+    let action = Action {
+        source_row: None,
+        name: "apply_poison".into(),
+        target: None,
+        options: Default::default(),
+    };
+    apl.execute_plan(
+        pull.harness.app.world_mut(),
+        actor,
+        action,
+        Execution::Composite(vec![
+            Execution::Spell(2823, actor, None),
+            Execution::Spell(3408, actor, None),
+        ]),
+    )
+    .unwrap();
+    assert!(
+        pull.harness
+            .app
+            .world()
+            .get::<shared::casting::CastState>(actor)
+            .is_some(),
+        "first poison must start a real cast"
+    );
+    server_combat::spell_cast::cancel_cast(pull.harness.app.world_mut(), actor);
+    for _ in 0..200 {
+        pull.harness.app.update();
+        let world = pull.harness.app.world();
+        let busy = world
+            .get::<server_combat::spell_cast::SpellHistory>(actor)
+            .is_some_and(|history| {
+                history.has_active_gcd(server_combat::spell_cast::history_now(world))
+            });
+        if !busy {
+            break;
+        }
+    }
+    apl.tick(pull.harness.app.world_mut(), actor, &[]).unwrap();
+    assert_eq!(*log.lock().unwrap(), ["execute", "reselect"]);
+    assert!(!server_combat::auras::has_aura(
+        pull.harness.app.world(),
+        actor,
+        3408
+    ));
+
+    let mut control = spawn(259);
+    let actor = control.follower;
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut apl = FollowerApl::new(Box::new(CompositeProbe(log.clone())));
+    let action = Action {
+        source_row: None,
+        name: "apply_poison".into(),
+        target: None,
+        options: Default::default(),
+    };
+    apl.execute_plan(
+        control.harness.app.world_mut(),
+        actor,
+        action,
+        Execution::Composite(vec![
+            Execution::Spell(2823, actor, None),
+            Execution::Spell(3408, actor, None),
+        ]),
+    )
+    .unwrap();
+    for _ in 0..200 {
+        control.harness.app.update();
+        let world = control.harness.app.world();
+        let casting = world.get::<shared::casting::CastState>(actor).is_some();
+        let gcd = world
+            .get::<server_combat::spell_cast::SpellHistory>(actor)
+            .is_some_and(|history| {
+                history.has_active_gcd(server_combat::spell_cast::history_now(world))
+            });
+        if !casting && !gcd {
+            break;
+        }
+    }
+    assert!(
+        server_combat::auras::has_aura(control.harness.app.world(), actor, 2823),
+        "first poison completed"
+    );
+    apl.tick(control.harness.app.world_mut(), actor, &[])
+        .unwrap();
+    assert_eq!(
+        *log.lock().unwrap(),
+        ["execute", "execute"],
+        "successful prerequisite continues the composite"
+    );
+}
+
+#[test]
 fn restoration_shaman_maintains_shields_without_enemies() {
     let mut pull = spawn(264);
     let actor = pull.follower;

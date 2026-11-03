@@ -112,6 +112,68 @@ fn literal_native_gating_moving_zero_rejects_native_moving_input() {
 }
 
 #[test]
+#[ignore = "requires native269 profile inputs"]
+fn literal_reselect_movement_priority_each_decision() {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut run, equipment) = native_monk();
+    let actor = run.actor;
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        shared::components::PowerType::Chi,
+        5.0,
+    )
+    .unwrap();
+    let mut driver = Driver::new(
+        Program::parse(&[
+            ("default", "call_action_list,name=movement,if=moving"),
+            ("default", "tiger_palm,moving=0"),
+            ("movement", "blackout_kick,moving=1"),
+        ])
+        .unwrap(),
+    );
+    for (moving, expected) in [
+        (false, "tiger_palm"),
+        (true, "blackout_kick"),
+        (false, "tiger_palm"),
+    ] {
+        run.app
+            .world_mut()
+            .get_mut::<crate::networking::Moving>(actor)
+            .unwrap()
+            .0 = moving;
+        let prepared = Prepared::read(
+            run.app.world_mut(),
+            actor,
+            &run.targets,
+            &equipment,
+            [
+                NativeAction {
+                    name: "tiger_palm",
+                    spell: 100780,
+                    talent: None,
+                    self_target: false,
+                },
+                NativeAction {
+                    name: "blackout_kick",
+                    spell: 100784,
+                    talent: None,
+                    self_target: false,
+                },
+            ],
+            false,
+        )
+        .unwrap();
+        let facts = BTreeMap::from([("moving".to_owned(), f64::from(moving))]);
+        let selected = driver
+            .select("default", &facts, &prepared, &equipment)
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.0.name, expected);
+    }
+}
+
+#[test]
 #[ignore = "uses the real Brewmaster channel and Purifying Brew"]
 fn monk_purifying_brew_is_selectable_during_spinning_crane_kick() {
     let _seed = crate::random::seed_scope(70448);

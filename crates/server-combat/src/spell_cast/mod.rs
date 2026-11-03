@@ -739,6 +739,13 @@ impl SpellHistory {
             .map(|(spell, _)| spell)
     }
 
+    /// Sequence of the most recent successful foreground cast of this spell.
+    pub fn successful_cast_sequence(&self, spell: u32) -> Option<u64> {
+        self.successful_casts
+            .get(&SuccessKey::Spell(spell))
+            .map(|cast| cast.sequence)
+    }
+
     /// Simulation-clock completion of an ordinary successful cast, never its request.
     pub fn last_successful_cast_at(&self, spell: u32) -> Option<f64> {
         self.successful_casts
