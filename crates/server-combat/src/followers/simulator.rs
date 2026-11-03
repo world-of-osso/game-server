@@ -599,17 +599,6 @@ pub fn leader_requires_target_approach(
     Ok(blocked)
 }
 
-/// Apply the follower pull-safety sight check to one owner movement step.
-pub fn owner_step_enters_unpulled_sight(
-    world: &mut World,
-    owner: Entity,
-    target: Entity,
-    from: Vec3,
-    to: Vec3,
-) -> Result<bool, String> {
-    super::positioning::route_enters_unpulled_sight(world, owner, target, &[from, to])
-}
-
 /// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id =

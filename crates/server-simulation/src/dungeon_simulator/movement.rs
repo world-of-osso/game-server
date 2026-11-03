@@ -15,14 +15,11 @@ struct BlockedWalk {
     reason: String,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component)]
 struct Travel {
     destination: Vec3,
     legs: std::collections::VecDeque<(Vec3, f32)>,
 }
-
-#[derive(Component, Clone, Copy)]
-pub(super) struct SafeOwnerApproach(pub Entity);
 
 #[derive(Component)]
 struct FlightTravel {
@@ -386,21 +383,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         .remove::<(crate::creature_ai::CannotReachTarget, BlockedWalk)>();
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
-    let next =
-        if let Some(SafeOwnerApproach(target)) = world.get::<SafeOwnerApproach>(unit).copied() {
-            let mut proposed = travel.clone();
-            let next = advance(from, &mut proposed, speed * dt, reach);
-            if crate::followers::simulator::owner_step_enters_unpulled_sight(
-                world, unit, target, from, next,
-            )? {
-                world.entity_mut(unit).insert(travel);
-                return Ok(());
-            }
-            travel = proposed;
-            next
-        } else {
-            advance(from, &mut travel, speed * dt, reach)
-        };
+    let next = advance(from, &mut travel, speed * dt, reach);
     crate::creature_ai::move_follower(
         world,
         unit,
