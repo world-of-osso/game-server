@@ -431,7 +431,7 @@ fn feral_taste_for_blood_adds_conditional_tigers_fury_bite_damage() {
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_hunt_beneath_applies_cat_form_damage_modifiers() {
-    use crate::auras::spell_mods::{modify, SpellModOp};
+    use crate::auras::spell_mods::{SpellModOp, modify};
     let mut run = prepare_literal(103, 1).unwrap();
     let actor = run.actor;
     assert!(crate::auras::has_aura(run.app.world(), actor, 439868));
