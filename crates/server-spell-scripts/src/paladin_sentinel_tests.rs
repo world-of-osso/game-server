@@ -1,15 +1,19 @@
-use crate::{combat, test_support};
-use combat::auras::{self, AuraApplication, AuraSource, RemoveReason};
+use super::*;
+use combat::auras::{AuraApplication, AuraSource};
+use combat::spell_cast::script_registry::SpellScriptRegistry;
 
-const SENTINEL: u32 = 389539;
-const WRATH_HAMMER_OVERRIDE: u32 = 1241410;
-
-// Sentinel registers its own on_remove; the linked-aura policy's on_remove
-// must still run for the same spell.
 #[test]
-fn sentinel_removal_removes_linked_hammer_override() {
-    let mut harness = test_support::harness(vec![], &[SENTINEL, WRATH_HAMMER_OVERRIDE], 11)
-        .expect("native spell data");
+fn sentinel_removal_cleans_linked_aura_and_decay() {
+    let mut harness = combat::spell_cast::test_harness::harness_with_plugins(
+        vec![],
+        &[SENTINEL, 1241410],
+        11,
+        false,
+        |app| {
+            app.insert_resource(SpellScriptRegistry::new(super::super::MODULES));
+        },
+    )
+    .expect("native spell data");
     let caster = harness.caster;
     let world = harness.app.world_mut();
     world
@@ -23,12 +27,14 @@ fn sentinel_removal_removes_linked_hammer_override() {
         source: AuraSource::Cast,
     };
     auras::apply_aura(world, &application);
-    application.spell_id = WRATH_HAMMER_OVERRIDE;
+    application.spell_id = 1241410;
     auras::apply_aura(world, &application);
     assert!(auras::has_aura(world, caster, SENTINEL));
-    assert!(auras::has_aura(world, caster, WRATH_HAMMER_OVERRIDE));
+    assert!(auras::has_aura(world, caster, 1241410));
+    assert!(world.get::<SentinelDecay>(caster).is_some());
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == SENTINEL
     });
-    assert!(!auras::has_aura(world, caster, WRATH_HAMMER_OVERRIDE));
+    assert!(!auras::has_aura(world, caster, 1241410));
+    assert!(world.get::<SentinelDecay>(caster).is_none());
 }

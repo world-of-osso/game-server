@@ -113,3 +113,7 @@ fn remove(world: &mut World, unit: Entity, aura: &AuraInstance, _: RemoveReason)
         world.entity_mut(unit).remove::<SentinelDecay>();
     }
 }
+
+#[cfg(test)]
+#[path = "../paladin_sentinel_tests.rs"]
+mod tests;
