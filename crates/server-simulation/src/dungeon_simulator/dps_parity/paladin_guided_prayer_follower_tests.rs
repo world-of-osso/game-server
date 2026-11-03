@@ -114,7 +114,7 @@ fn guided_prayer_uses_wcl_projected_health_after_a_real_hit() {
         },
     );
     let max = run.app.world().get::<Health>(actor).unwrap().max;
-    let before = max * 0.70;
+    let before = max * 0.44;
     run.app
         .world_mut()
         .get_mut::<Health>(actor)
