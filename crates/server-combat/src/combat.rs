@@ -3088,6 +3088,7 @@ pub fn replay_post_mitigation_hit(
     spell_id: Option<u32>,
     school: u32,
     periodic: bool,
+    critical: bool,
     amount: f32,
 ) -> Result<ReplayDamageReceipt, String> {
     if !amount.is_finite() || amount < 0.0 {
@@ -3138,7 +3139,7 @@ pub fn replay_post_mitigation_hit(
                 periodic,
                 damage: loss,
                 heal: None,
-                hit_mask: procs::landed_hit_mask(false, 0.0, absorbed, loss),
+                hit_mask: procs::landed_hit_mask(critical, 0.0, absorbed, loss),
                 reflected: false,
             },
         );

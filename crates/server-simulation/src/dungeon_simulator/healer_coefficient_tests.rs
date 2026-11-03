@@ -23,6 +23,7 @@ fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
             None,
             1,
             false,
+            false,
             10_000.0,
         )
         .unwrap();
@@ -80,6 +81,7 @@ fn golden_hour_also_triggers_on_upgraded_merithra() {
         None,
         1,
         false,
+        false,
         10_000.0,
     )
     .unwrap();
@@ -124,6 +126,7 @@ fn golden_hour_heals_recent_damage_including_absorbs() {
         None,
         1,
         false,
+        false,
         10_000.0,
     )
     .unwrap();
@@ -144,6 +147,7 @@ fn golden_hour_heals_recent_damage_including_absorbs() {
         target,
         None,
         1,
+        false,
         false,
         10_000.0,
     )
