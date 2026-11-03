@@ -18,6 +18,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterAbsorbConsumed(reflection_from_absorb),
     SpellScriptHook::AvoidanceProcHitMask(grand_crusader_avoidance_mask),
     SpellScriptHook::ResolvedDamage(glory_from_shield),
+    SpellScriptHook::ResolvedDamage(hammer_and_anvil_from_critical),
     SpellScriptHook::ResolvedDamage(grant_bulwark_of_righteous_fury),
     SpellScriptHook::OnCast(glory_on_cast),
     SpellScriptHook::EffectHandler(armament_energize_handler),
@@ -427,6 +428,26 @@ fn consume_bulwark_of_righteous_fury(
         combat::auras::remove_auras(world, ctx.caster, RemoveReason::Consumed, |aura| {
             aura.spell_id == 386652 && aura.caster == ctx.caster
         });
+    }
+}
+
+fn hammer_and_anvil_from_critical(
+    world: &mut World,
+    ctx: &combat::spell_cast::effects::EffectCtx<'_>,
+    target: Entity,
+    critical: bool,
+    _: f32,
+) {
+    // SimC76f8118 sc_paladin.cpp1523–1526,1754–1756: Judgment and Hammer
+    // of Wrath critical strikes trigger Hammer and Anvil.
+    if critical && matches!(ctx.spell.id, 275779 | 1241413) {
+        cast_hammer_and_anvil(world, ctx.caster, target, ctx.depth + 1);
+    }
+}
+
+pub(super) fn cast_hammer_and_anvil(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    if selected(world, caster, 433718) {
+        combat::spell_cast::cast_triggered(world, caster, 433717, Some(target), depth);
     }
 }
 
