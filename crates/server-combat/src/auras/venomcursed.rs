@@ -6,6 +6,7 @@ use super::{
     AuraApplication, AuraInstance, AuraSource,
     scripts::{AuraScript, AuraScripts},
 };
+use crate::random::{self, Rng};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const DRIVERS: &[u32] = &[1307906, 1307923, 1307928];
@@ -20,6 +21,13 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             },
         );
     }
+    scripts.0.insert(
+        1317582,
+        AuraScript {
+            on_proc: Some(apply_random_stat_proc),
+            ..Default::default()
+        },
+    );
 }
 
 fn build_stat_buff(world: &World, driver: &AuraInstance) -> SpellInfo {
@@ -49,6 +57,53 @@ fn build_stat_buff(world: &World, driver: &AuraInstance) -> SpellInfo {
             .base_points = amount;
     }
     buff
+}
+
+fn apply_random_stat_proc(
+    world: &mut World,
+    unit: Entity,
+    driver: &AuraInstance,
+    _other: Option<Entity>,
+) {
+    // SimC76f8118 unique_gear_midnight.cpp5618–5670: reroll on every proc, including refreshes.
+    let positive = driver
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let negative = driver
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap();
+    let mut buff = world
+        .resource::<SpellStore>()
+        .get(positive.trigger_spell)
+        .unwrap()
+        .clone();
+    buff.cast_item_level = driver.cast_item_level;
+    buff.cast_item_inventory_type = driver.cast_item_inventory_type;
+    buff.effects.sort_by_key(|effect| effect.index);
+    let selected = random::thread_rng().gen_range(0..buff.effects.len());
+    for (index, effect) in buff.effects.iter_mut().enumerate() {
+        effect.base_points = if index == selected {
+            positive.amount
+        } else {
+            negative.amount
+        };
+    }
+    let effect_mask = super::aura_effect_mask(&buff);
+    super::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: buff.id,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+        &buff,
+    );
 }
 
 fn apply_stat_proc(world: &mut World, unit: Entity, driver: &AuraInstance, _other: Option<Entity>) {
