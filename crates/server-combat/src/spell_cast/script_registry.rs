@@ -2264,14 +2264,43 @@ pub fn guardian_action_eligible(world: &World, actor: Entity, spell: u32, target
         })
 }
 
+// VERIFIED_WCL: Blood Gift selects the 200% variants; the 7-stack cohort
+// tBg8fJZqzyCWX19D/7, jkcwtQYBLVahmpGC/58, waQDVTmFMp1HGnJr/4,
+// 2rA8HYvBPxG1wmpn/8 supports SimC76f8118 sc_death_knight.cpp:7378–7384.
+// Analysis: /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/blood-250-all-ds-d44558/wcl-cohort/analyze.py
+// Retire when DB2/TC encodes effect eligibility or a retail capture contradicts it.
+// (spell, selected spec, indexes disabled for that spec, indexes disabled otherwise)
+const EFFECT_SELECTION_OVERRIDES: &[(u32, u32, u32, u32)] = &[(
+    434153,
+    250,
+    (1 << 0) | (1 << 1) | (1 << 6),
+    (1 << 3) | (1 << 4) | (1 << 7),
+)];
+
 pub fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
-    world
-        .resource::<SpellScriptRegistry>()
-        .hooks(HookKind::EffectEnabled)
-        .all(|hook| match hook {
-            SpellScriptHook::EffectEnabled(run) => run(world, caster, spell, index),
-            _ => true,
-        })
+    let spec = world
+        .get::<shared::components::ActiveSpec>(caster)
+        .map(|spec| spec.0);
+    let enabled =
+        EFFECT_SELECTION_OVERRIDES
+            .iter()
+            .all(|&(id, selected, selected_mask, other_mask)| {
+                id != spell
+                    || (if spec == Some(selected) {
+                        selected_mask
+                    } else {
+                        other_mask
+                    }) & (1 << index)
+                        == 0
+            });
+    enabled
+        && world
+            .resource::<SpellScriptRegistry>()
+            .hooks(HookKind::EffectEnabled)
+            .all(|hook| match hook {
+                SpellScriptHook::EffectEnabled(run) => run(world, caster, spell, index),
+                _ => true,
+            })
 }
 
 pub fn check_native_spell(
