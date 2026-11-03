@@ -642,3 +642,4 @@ mod windwalker_player_tests;
 #[cfg(test)] mod unholy_magus_follower_tests;
 mod assassination_initial_energy_follower_tests;
 
+mod affliction_channel_gcd_follower_tests;

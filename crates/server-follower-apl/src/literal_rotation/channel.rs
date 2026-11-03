@@ -135,10 +135,35 @@ impl Driver {
         actor: Entity,
         decision: Decision,
     ) -> Result<(), String> {
-        crate::spell_cast::cancel_cast(world, actor);
         match decision {
-            Decision::Cancel => Ok(()),
-            Decision::Chain(action, execution) => self.execute(world, actor, action, execution),
+            Decision::Cancel => {
+                crate::spell_cast::cancel_cast(world, actor);
+                Ok(())
+            }
+            Decision::Chain(action, execution) => {
+                let Execution::Spell(id, _, _) = &execution else {
+                    crate::spell_cast::cancel_cast(world, actor);
+                    return self.execute(world, actor, action, execution);
+                };
+                let spell = world
+                    .resource::<crate::spell_info::SpellStore>()
+                    .get(*id)
+                    .ok_or_else(|| format!("chained channel spell{id} absent"))?
+                    .clone();
+                let deadline = world
+                    .get_mut::<crate::spell_cast::SpellHistory>(actor)
+                    .and_then(|mut history| history.take_channel_chain_gcd(&spell));
+                crate::spell_cast::cancel_cast(world, actor);
+                let result = self.execute(world, actor, action, execution);
+                if result.is_err() {
+                    if let Some(mut history) =
+                        world.get_mut::<crate::spell_cast::SpellHistory>(actor)
+                    {
+                        history.restore_channel_chain_gcd(&spell, deadline);
+                    }
+                }
+                result
+            }
         }
     }
 
