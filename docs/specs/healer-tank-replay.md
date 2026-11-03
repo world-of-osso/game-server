@@ -42,15 +42,37 @@ Level-90 healers wear their own tracked top-character profile gear, not identica
 
 - [Guardian Druid (104)](healer-tank-replay/104.md)
 
-## Composition tank status (2026-11-02)
+## Composition tank status (2026-11-03)
 
-The 300-second Guardian replay uses external healing and the composition-buffed dummy trace. The native results use seeds `70448, 1–9`; the corrected SimC reference uses seed `70448` and ten measured iterations. These are independent samples. The native intervals below are 95% t intervals and do not include reference uncertainty.
+All six replays use the 300-second composition-buffed dummy traces, external healing, native seeds `70448, 1–9`, and native tree `389ca621d0ed4ab7eef613a038bd67b8b79369b5`. All 60 runs survived and reported no fact errors. The reference uses seed 70448 and ten measured iterations. Native 95% Student-t intervals do not include independent reference uncertainty. Deltas are `(native / reference − 1) × 100`; the flag applies to the point estimate, not its confidence interval.
 
-| Tank | Native outgoing DPS | Corrected SimC outgoing DPS | Native taken/s | Corrected SimC dummy DPS | Outgoing / taken delta |
-|---|---:|---:|---:|---:|---:|
-| [Guardian 104](healer-tank-replay/104.md) | 100,461 ± 2,686 | 103,423 | 6,364 ± 971 | 7,007 | −2.86% / −9.18% |
+| Tank | Native taken/s ± 95% CI | SimC taken/s | Taken gap | Native DPS ± 95% CI | SimC DPS | DPS gap |
+|---|---:|---:|---:|---:|---:|---:|
+| Protection Paladin 66 | 12,852 ± 956 | 11,826 | +8.67% outside | 131,854 ± 3,349 | 142,925 | −7.75% outside |
+| Protection Warrior 73 | 9,975 ± 269 | 10,622 | −6.09% outside | 136,235 ± 2,783 | 157,626 | −13.57% outside |
+| Guardian 104 | 6,654 ± 562 | 7,007 | −5.04% outside | 101,070 ± 2,258 | 103,423 | −2.27% inside |
+| Blood 250 | 227 ± 91 | 230 | −1.33% inside | 138,343 ± 3,554 | 127,534 | +8.47% outside |
+| Brewmaster 268 | 11,939 ± 589 | 12,719 | −6.13% outside | 122,786 ± 2,492 | 140,478 | −12.59% outside |
+| Vengeance 581 | 19,939 ± 296 | 19,302 | +3.30% inside | 126,575 ± 2,974 | 130,306 | −2.86% inside |
 
-Native binary SHA-256: `608083ea8589e9fec6b03fff09dfb5ee8abc680a818ab8c643df984da30297fb`. SimC binary SHA-256: `583f112321241cb997504978e7365b60540680e69eb8badc25a03acb12036e26`. The comparison reference corrects Ursoc's Fury, Matted Fur, and Lunar Beam self-healing; its full modifier model remains inferred. Native reports and SimC command/proof: `/home/osso/.worktrees/guardian-104-batch/post-callback/`. SimC's player `dtps` field is total damage in this run, so its 2,102,153 mean is divided by 300 seconds and agrees with dummy DPS.
+SimC `dtps` is damage per fight here, divided by 300. For Brewmaster it includes self-Stagger, so dummy DPS alone is not the reference. Blood's near-zero taken makes a percentage gate unstable. Guardian's reference corrects Ursoc's Fury, Matted Fur and Lunar Beam self-healing; its full modifier model remains inferred. The 73, 268 and 581 composition references use the counterfactual corrections described in their specialization pages; 66 uses solo `fake_solidarity=0`, and 250 uses the canonical reference.
+
+### Scenario-specific rankings
+
+These are not general tank rankings. The six traces have the same dungeon-dummy scenario but are distinct source rolls: native raw intake ranges from 152,004 to 152,335/s, not exactly equal. Taken is after absorbs and before self-healing; gear and talents differ. Adjacent intervals are classified by overlap only, not by a test of paired differences. Non-overlap is evidence of separation under this criterion; overlap is inconclusive.
+
+| Rank | Lower taken/s first | Next neighbor's 95% CI | Higher outgoing DPS first | Next neighbor's 95% CI |
+|---:|---|---|---|---|
+| 1 | Blood 250 | no overlap | Blood 250 | overlap |
+| 2 | Guardian 104 | no overlap | Protection Warrior 73 | overlap |
+| 3 | Protection Warrior 73 | no overlap | Protection Paladin 66 | overlap |
+| 4 | Brewmaster 268 | overlap | Vengeance 581 | overlap |
+| 5 | Protection Paladin 66 | no overlap | Brewmaster 268 | no overlap |
+| 6 | Vengeance 581 | — | Guardian 104 | — |
+
+The existing matching-spell breakdown shows large outgoing differences in Shield Slam (73: native 36,496/s vs SimC 47,251/s), Death Strike (250: 56,834 vs 39,066), and Tiger Palm (268: 31,721 vs 35,248). These independent-sample differences do not establish causes. No single contributor to the other out-of-band gaps is established by this breakdown.
+
+Native binary SHA-256: `2ec446070b15bcccdaa318db0dcd01ffa4b5670af7f726cf4fbfd6473598b697`. World DB SHA-256 before and after the batch: `7cb667e44a870ef3159024829ce706cb970d514fe106f6618befb9ca6321c97b`. Reports, `summary.json`, trace and profile hashes are in `game-engine/data/diagnostics/tank-remeasure-2026-11-03/`. Composition references and their command, profile and binary hashes are in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank/`. Corrected Guardian reference and proof are in `/home/osso/.worktrees/guardian-104-batch/post-callback/`, SimC binary SHA-256 `583f112321241cb997504978e7365b60540680e69eb8badc25a03acb12036e26`.
 
 ## GCD-ready timing comparison (2026-10-29)
 
