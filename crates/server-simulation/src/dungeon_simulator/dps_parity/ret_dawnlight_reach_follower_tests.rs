@@ -82,7 +82,8 @@ impl Fight {
         unit
     }
 
-    /// The owner pulls the boss; the follower targets it through its own brain.
+    /// The owner pulls the boss from behind the follower, away from any pack
+    /// beyond it; the follower targets the boss through its own brain.
     fn engage(&mut self) {
         let owner = self
             .app
@@ -91,7 +92,9 @@ impl Fight {
             .unwrap()
             .owner;
         let boss = self.boss;
+        let behind = self.along(-8.0, 0.0);
         self.app.world_mut().entity_mut(owner).insert((
+            behind,
             crate::networking::CombatTarget(Some(boss)),
             crate::combat::AutoAttack::new(boss),
         ));
@@ -146,6 +149,25 @@ impl Fight {
             .collect()
     }
 
+    /// Whether `unit` fights the follower or its owner, or took the follower's damage.
+    /// Ret's Consecration stalker (43499) is a separate actor: it is not the party.
+    fn party_engaged(&self, unit: Entity) -> bool {
+        let world = self.app.world();
+        let owner = world.get::<crate::followers::Follower>(self.actor).unwrap().owner;
+        let damaged = world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(self.actor.to_bits())
+                    && event.target == Some(unit.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            });
+        damaged
+            || crate::combat_refs::active_opponents(world, unit)
+                .any(|opponent| opponent == self.actor || opponent == owner)
+    }
+
     fn idle(&self, unit: Entity) -> bool {
         crate::combat_refs::active_opponents(self.app.world(), unit)
             .next()
@@ -188,7 +210,10 @@ fn spends_beside_idle_pack(charge: bool) {
         assert!(!crate::auras::has_aura(world, fight.actor, DAWNLIGHT_CHARGE));
     }
     for unit in pack {
-        assert!(fight.idle(unit), "charge={charge}: the spender pulled {unit:?}");
+        assert!(
+            !fight.party_engaged(unit),
+            "charge={charge}: the spender pulled {unit:?}: {casts:?}"
+        );
     }
 }
 
