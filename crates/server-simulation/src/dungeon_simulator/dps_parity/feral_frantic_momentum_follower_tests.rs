@@ -5,6 +5,48 @@ use shared::{components::PowerType, protocol::CombatLogKind};
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
+fn feral_sudden_ambush_rolls_per_landed_five_point_finisher() {
+    let _seed = crate::random::seed_scope(103384667);
+    let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
+    let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
+    let copy = create_open_follower_copy(&mut app, 2515).unwrap();
+    let (mut app, actor, target, _) = prepare_class_follower(app, copy, 103, 70);
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 384667, Some(actor), 1);
+    assert!(crate::auras::has_aura(app.world(), actor, 384667));
+    crate::spell_cast::cast_triggered(app.world_mut(), actor, 768, Some(actor), 1);
+    let mut grants = 0;
+    for _ in 0..100 {
+        crate::auras::remove_auras(
+            app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 1244483,
+        );
+        app.world_mut()
+            .entity_mut(actor)
+            .remove::<crate::spell_cast::SpellHistory>();
+        crate::spell_cast::powers::change_power(
+            app.world_mut(),
+            actor,
+            PowerType::ComboPoints,
+            5.0,
+        );
+        crate::spell_cast::powers::change_power(app.world_mut(), actor, PowerType::Energy, 100.0);
+        crate::spell_cast::creature_cast(app.world_mut(), actor, 22568, Some(target), false)
+            .unwrap();
+        for _ in 0..3 {
+            app.update();
+        }
+        grants += usize::from(crate::auras::has_aura(app.world(), actor, 1244483));
+    }
+    assert!(
+        (17..=43).contains(&grants),
+        "expected about 30 grants from 100 landed finishers, got {grants}"
+    );
+}
+
+#[test]
+#[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn feral_follower_frantic_momentum_rolls_only_on_finishers() {
     let _seed = crate::random::seed_scope(70448);
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
