@@ -324,35 +324,57 @@ fn position(p: Vec3) -> Position {
     }
 }
 
-#[derive(Resource)]
-struct NavigationPublicationInstalled;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Resource)]
+enum NavigationPublicationInstalled {
+    Live,
+    #[cfg(any(test, feature = "test-support"))]
+    Headless,
+}
 
 pub(crate) fn install_publication(app: &mut App) {
-    install_publication_with(app, publish_navigation_results);
+    install_publication_with(
+        app,
+        NavigationPublicationInstalled::Live,
+        publish_navigation_results,
+    );
 }
 
 /// Headless simulation: requests reach the worker only at the fixed-tick publication,
 /// which waits for them. A seed then replays exactly, independent of thread timing.
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) fn install_headless(app: &mut App, root: &Path) {
+    if let Some(existing) = app.world().get_resource::<NavigationPublicationInstalled>() {
+        assert_eq!(
+            *existing,
+            NavigationPublicationInstalled::Headless,
+            "navigation publication mode already selected"
+        );
+        return;
+    }
     app.insert_resource(Navigation::with_worker(
         root,
         navigation::worker::Worker::headless(root.to_path_buf()),
     ));
-    install_publication_with(app, publish_all_navigation_results);
+    install_publication_with(
+        app,
+        NavigationPublicationInstalled::Headless,
+        publish_all_navigation_results,
+    );
 }
 
 fn install_publication_with<M>(
     app: &mut App,
+    mode: NavigationPublicationInstalled,
     publish: impl bevy::ecs::schedule::IntoScheduleConfigs<bevy::ecs::system::ScheduleSystem, M>,
 ) {
-    if app
-        .world()
-        .contains_resource::<NavigationPublicationInstalled>()
-    {
+    if let Some(existing) = app.world().get_resource::<NavigationPublicationInstalled>() {
+        assert_eq!(
+            *existing, mode,
+            "navigation publication mode already selected"
+        );
         return;
     }
-    app.insert_resource(NavigationPublicationInstalled);
+    app.insert_resource(mode);
     app.add_systems(
         FixedFirst,
         (
@@ -413,6 +435,20 @@ fn open_navigation(mut commands: Commands) {
         PathBuf::from,
     );
     commands.insert_resource(Navigation::new(&directory));
+}
+
+#[cfg(test)]
+#[test]
+fn changing_navigation_publication_mode_fails() {
+    let mut app = App::new();
+    install_publication(&mut app);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        install_headless(&mut app, Path::new("unused"));
+    }));
+    assert!(
+        result.is_err(),
+        "headless must not silently reuse live publication"
+    );
 }
 
 #[cfg(test)]

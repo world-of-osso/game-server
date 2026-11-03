@@ -437,10 +437,7 @@ fn build_runtime_app(
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
                 .expect("open flight catalogs");
         let root = super::graph::extraction::asset_root();
-        let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| root.join("navmesh"));
-        server::test_support::flight::install(&mut app, &db, &nav, &root)
+        server::test_support::flight::install(&mut app, &db, &root)
             .expect("install native simulator flight");
         app.add_systems(
             FixedUpdate,
@@ -484,11 +481,11 @@ fn build_runtime_app(
         let db =
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
                 .expect("open collision drop catalog");
-        let nav = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| super::graph::extraction::asset_root().join("navmesh"));
-        server::test_support::transport::install_drop_system(&mut app, &db, &nav)
+        server::test_support::transport::install_drop_system(&mut app, &db)
             .expect("install native collision drop system");
+    }
+    if has_drop || !app.world().resource::<super::Space>().0.flights.is_empty() {
+        server::test_support::install_navigation(&mut app, &nav_root);
     }
     if has_taxi {
         let db =

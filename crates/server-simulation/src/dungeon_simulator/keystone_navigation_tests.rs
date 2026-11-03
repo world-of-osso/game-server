@@ -13,6 +13,12 @@ fn headless_keystone_navigation_publishes_worker_routes() {
         Duration::from_millis(50),
     ));
     app.insert_resource(Time::<Fixed>::from_hz(20.0));
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    server::test_support::transport::install_drop_system(&mut app, &db).unwrap();
     server::test_support::install_navigation(
         &mut app,
         Path::new("/home/osso/Projects/world-of-osso/game-engine/data/navmesh"),
@@ -42,27 +48,20 @@ fn headless_keystone_navigation_publishes_worker_routes() {
         distance: 100.0,
         reach: 0.0,
     };
-    let mut reached = false;
-    for _ in 0..1000 {
-        match app
-            .world_mut()
+    assert!(matches!(
+        app.world_mut()
             .resource_mut::<Navigation>()
-            .advance(actor, request)
-        {
-            Step::Moved { reached: true, .. } => {
-                reached = true;
-                break;
-            }
-            Step::Pending => {}
-            Step::Moved { .. } => panic!("short route did not complete"),
-            Step::Blocked => panic!("native route was blocked"),
-            Step::Unbaked => panic!("native map was not baked"),
-        }
-        app.update();
-        std::thread::sleep(Duration::from_millis(5));
-    }
+            .advance(actor, request),
+        Step::Pending
+    ));
+    app.update();
     assert!(
-        reached,
-        "the headless setup must publish the real worker result"
+        matches!(
+            app.world_mut()
+                .resource_mut::<Navigation>()
+                .advance(actor, request),
+            Step::Moved { reached: true, .. }
+        ),
+        "the next fixed tick must publish the real worker result"
     );
 }

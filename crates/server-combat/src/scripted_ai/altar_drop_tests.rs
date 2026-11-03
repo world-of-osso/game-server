@@ -26,8 +26,8 @@ fn leader_reaches_drop_from_the_observed_stall_position() {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .unwrap();
-        crate::test_support::transport::install_drop_system(app, &db, &root.join("navmesh"))
-            .unwrap();
+        crate::test_support::transport::install_drop_system(app, &db).unwrap();
+        crate::test_support::install_navigation(app, &root.join("navmesh"));
         app.add_systems(
             Update,
             (

@@ -373,16 +373,10 @@ pub fn install_taxi_system(app: &mut App, db: &rusqlite::Connection) -> Result<(
     Ok(())
 }
 
-pub fn install_drop_system(
-    app: &mut App,
-    db: &rusqlite::Connection,
-    nav_root: &std::path::Path,
-) -> Result<(), String> {
-    app.insert_resource(crate::navigation::Navigation::new(nav_root));
+pub fn install_drop_system(app: &mut App, db: &rusqlite::Connection) -> Result<(), String> {
     if !app.world().contains_resource::<crate::ground::GroundMap>() {
         app.insert_resource(open_ground(db)?);
     }
-    crate::navigation::install_publication(app);
     Ok(())
 }
 
