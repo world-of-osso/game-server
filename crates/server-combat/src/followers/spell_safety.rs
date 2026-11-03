@@ -85,6 +85,25 @@ pub(crate) fn summon_targets_safe(
     })
 }
 
+fn pet_target_is_admitted(world: &World, owner: Entity, target: Entity) -> bool {
+    let owns_run = world.get::<super::party::FollowerRun>(owner).is_some()
+        || world
+            .get::<super::stockade_diagnostic::DiagnosticParty>(owner)
+            .is_some();
+    if !owns_run
+        || world
+            .get::<super::AdmittedPull>(owner)
+            .is_some_and(|pull| pull.0.contains(&target))
+    {
+        return true;
+    }
+    let direct_target = world
+        .get::<crate::networking::CombatTarget>(owner)
+        .is_some_and(|selected| selected.0 == Some(target));
+    (direct_target || world.get::<super::OwnerEngagedTargets>(owner).is_some())
+        && crate::combat_refs::has_active_reference_to(world, owner, target)
+}
+
 /// Shared admission for a follower spell or a follower-owned pet's direct attack.
 pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u32>) -> bool {
     let Some(follower) = controlling_follower(world, actor) else {
@@ -98,15 +117,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         let owner = super::ai::acting_follower(world, follower)
             .expect("controlling follower")
             .owner;
-        let owns_run = world.get::<super::party::FollowerRun>(owner).is_some()
-            || world
-                .get::<super::stockade_diagnostic::DiagnosticParty>(owner)
-                .is_some();
-        if owns_run
-            && !world
-                .get::<super::AdmittedPull>(owner)
-                .is_some_and(|pull| pull.0.contains(&target))
-        {
+        if !pet_target_is_admitted(world, owner, target) {
             return false;
         }
     }
