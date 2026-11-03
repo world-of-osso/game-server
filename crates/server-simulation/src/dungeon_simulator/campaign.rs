@@ -2822,8 +2822,8 @@ fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
         super::diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
     let radius = geometry["npc_acquisition_radius"].as_f64().unwrap() as f32;
     assert_eq!(
-        radius, 16.0,
-        "native31-to32 acquisition includes Crenna's3yd reach"
+        radius, 14.5,
+        "native31-to32 acquisition includes the actual 1.5yd creature reach"
     );
     for _ in 0..4000 {
         run.control().unwrap();
