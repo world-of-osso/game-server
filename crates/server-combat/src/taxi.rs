@@ -476,12 +476,27 @@ fn start_scripted_party_flight(
     if path == DARKFLAME_CART_PATH {
         points.push(DARKFLAME_CART_LANDING);
     }
+    let Some((&departure, &arrival)) = points.first().zip(points.last()) else {
+        error!("Scripted party TaxiPath {path} is empty");
+        return;
+    };
     let mut riders = vec![player];
     let followers: Vec<Entity> = world
         .query::<(Entity, &crate::followers::Follower, &crate::maps::InMap)>()
         .iter(world)
         .filter_map(|(entity, follower, current)| {
-            (follower.owner == player && *current == map).then_some(entity)
+            if follower.owner != player || *current != map {
+                return None;
+            }
+            if path == RUBY_FERRY_PATH
+                && let Some(position) = world.get::<Position>(entity)
+            {
+                let position = Vec3::new(position.x, position.y, position.z);
+                if position.distance_squared(arrival) < position.distance_squared(departure) {
+                    return None;
+                }
+            }
+            Some(entity)
         })
         .collect();
     riders.extend(followers);

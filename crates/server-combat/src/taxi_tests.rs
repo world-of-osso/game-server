@@ -176,6 +176,22 @@ fn ruby_ferry_click_flies_owner_and_follower_on_real_path() {
         (landed.y - floor).abs() < 0.01,
         "follower stayed at {landed:?}"
     );
+
+    // The released owner returns to the ferry while the follower remains upstairs.
+    h.app.world_mut().entity_mut(h.player).insert(start);
+    crate::taxi::start_ruby_ferry(h.app.world_mut(), h.player, npc);
+    assert!(h.app.world().get::<TaxiFlight>(h.player).is_some());
+    assert!(h.app.world().get::<TaxiFlight>(follower).is_none());
+    assert!(h.app.world().get::<Mounted>(follower).is_none());
+    for _ in 0..2000 {
+        if h.app.world().get::<TaxiFlight>(h.player).is_none() {
+            break;
+        }
+        h.app.update();
+    }
+    assert!(h.app.world().get::<TaxiFlight>(h.player).is_none());
+    assert_eq!(*h.app.world().get::<Position>(h.player).unwrap(), endpoint);
+    assert_eq!(*h.app.world().get::<Position>(follower).unwrap(), landed);
 }
 
 #[test]
