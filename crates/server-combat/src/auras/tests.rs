@@ -532,6 +532,53 @@ fn spellpower_override_leaves_intellect_caster_unchanged() {
     assert!(stats.spell_power > 0.0);
 }
 
+#[derive(Component)]
+struct AuraOrderMarker;
+
+fn periodic_damage_with_archetype_order(reverse: bool) -> Vec<(u8, i32, bool)> {
+    let _seed = crate::random::seed_scope(6);
+    let mut h = harness(Vec::new(), &[SHADOW_WORD_PAIN], 5).expect("world spell data");
+    let first = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 2.0);
+    let second = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 3.0);
+    let caster = h.caster;
+    for target in [first, second] {
+        apply(&mut h.app, caster, target, SHADOW_WORD_PAIN);
+    }
+    let order = if reverse {
+        [second, first]
+    } else {
+        [first, second]
+    };
+    for target in order {
+        h.app.world_mut().entity_mut(target).insert(AuraOrderMarker);
+    }
+    h.advance(frames_for(6000));
+    log_of(&h, CombatLogKind::Damage, SHADOW_WORD_PAIN)
+        .into_iter()
+        .filter(|event| event.periodic)
+        .map(|event| {
+            let target = if event.target == Some(first.to_bits()) {
+                0
+            } else {
+                assert_eq!(event.target, Some(second.to_bits()));
+                1
+            };
+            (target, event.amount, event.crit)
+        })
+        .collect()
+}
+
+#[test]
+fn periodic_order_and_rolls_do_not_depend_on_archetype_insertion_order() {
+    let forward = periodic_damage_with_archetype_order(false);
+    let reverse = periodic_damage_with_archetype_order(true);
+    assert!(
+        forward.len() >= 4,
+        "expected repeated ticks on both targets: {forward:?}"
+    );
+    assert_eq!(forward, reverse);
+}
+
 #[test]
 fn shadow_word_pain_ticks_periodic_damage_then_expires() {
     let Some(mut h) = harness(Vec::new(), &[SHADOW_WORD_PAIN], 5) else {
