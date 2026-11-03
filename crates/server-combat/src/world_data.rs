@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
+pub mod catalogs;
 pub(crate) mod summon_levels;
 
 fn retail_passive_creatures() -> &'static HashSet<u32> {
@@ -491,6 +492,7 @@ fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
         auto_attack_dps: row.get(2)?,
         armor: row.get(3)?,
         armor_constant: row.get(4)?,
+        spell_damage: row.get(5)?,
     })
 }
 
@@ -499,14 +501,15 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
     let mut stats = ExpectedStats::default();
     let mut stmt = conn
         .prepare(
-            "SELECT Lvl, CreatureHealth, CreatureAutoAttackDps, CreatureArmor, ArmorConstant, ExpansionID
+            "SELECT Lvl, CreatureHealth, CreatureAutoAttackDps, CreatureArmor, ArmorConstant,
+                    CreatureSpellDamage, ExpansionID
              FROM expected_stat ORDER BY ID",
         )
         .expect("Failed to prepare expected_stat query");
     let rows = stmt
         .query_map(params![], |row| {
             Ok((
-                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(5)? as i32),
+                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(6)? as i32),
                 creature_stats(row)?,
             ))
         })
@@ -515,7 +518,8 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
         .map(|row| row.expect("Failed to read expected_stat row"))
         .collect();
     let mut stmt = conn
-        .prepare("SELECT ID, CreatureHealthMod, CreatureAutoAttackDPSMod, CreatureArmorMod, ArmorConstantMod
+        .prepare("SELECT ID, CreatureHealthMod, CreatureAutoAttackDPSMod, CreatureArmorMod, ArmorConstantMod,
+                        CreatureSpellDamageMod
                  FROM expected_stat_mod")
         .expect("Failed to prepare expected_stat_mod query");
     let rows = stmt
@@ -1194,190 +1198,8 @@ fn load_formations(conn: &Connection) -> HashMap<u64, FormationInfo> {
         .collect()
 }
 
-fn startup_load_world_data(mut commands: Commands) {
-    let path = Path::new("data/world.db");
-    commands.insert_resource(crate::spell_cast::toy_requirements::load(Path::new("data"))
-        .expect("Load current generated Toy casting data; run generate_toy_area_requirements.py and generate_toy_facing_requirements.py before startup"));
-    let data = load_world_data(path);
-    commands.insert_resource(data.armor_constants.clone());
-    commands.insert_resource(data);
-    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .expect("Failed to open world.db");
-    let templates = crate::faction::load_faction_templates(&conn)
-        .expect("Failed to load faction_template; run scripts/db2.py import");
-    info!("Loaded {} faction templates", templates.0.len());
-    commands.insert_resource(templates);
-    let areas = crate::area_table::load_area_table(&conn)
-        .expect("Failed to load area_table; run scripts/import-area-table.py --csv <AreaTable.csv> --db <world.db> --build <source>");
-    commands.insert_resource(areas);
-    let gossip =
-        crate::npc_interaction::load_gossip_catalog(&conn).expect("Failed to load gossip menus");
-    commands.insert_resource(gossip);
-    commands.insert_resource(
-        crate::npc_interaction::load_spellclick_catalog(&conn).expect(
-            "Failed to load source spellclick rows; run add_battleground_summon_templates.py",
-        ),
-    );
-    commands.insert_resource(
-        crate::transmog::TransmogCatalog::load(&conn)
-            .expect("Failed to load transmog source catalog"),
-    );
-    let vendors =
-        crate::merchant::load_vendor_catalog(&conn).expect("Failed to load content_npc_vendor");
-    info!("Loaded {} vendor lists", vendors.vendors.len());
-    commands.insert_resource(vendors);
-    commands.insert_resource(crate::guild_rewards::load_guild_reward_catalog(&conn).expect(
-        "Failed to load tdb_guild_rewards; run scripts/import_guild_rewards.py on a world.db copy",
-    ));
-    let professions = crate::profession::load_profession_data(&conn)
-        .expect("Failed to load profession data; run scripts/import-azerothcore.sh");
-    commands.insert_resource(professions);
-    commands.insert_resource(
-        shared::crafting_reagents::CraftingReagentCatalog::load(Path::new("data/db2/active"))
-            .expect("Failed to load local Retail crafting reagent slot CSVs"),
-    );
-    commands.insert_resource(
-        crate::profession::specializations::load_specialization_data(&conn)
-            .expect("Failed to load profession specialization references; run scripts/profession_data.py with explicit --db and --source-dir"),
-    );
-    commands.insert_resource(
-        shared::concentration::ConcentrationCatalog::load(Path::new("data/db2/active"))
-            .expect("Failed to load local Retail concentration currency CSVs"),
-    );
-    let orders = crate::crafting_orders::load_catalog(&conn)
-        .expect("Failed to load CraftingOrder reference catalog");
-    if orders.0.is_empty() {
-        warn!(
-            "Crafting orders unavailable: run copy-only scripts/crafting_orders_import.py and select its world DB"
-        );
-    }
-    commands.insert_resource(orders);
-    let loot = crate::loot::load_loot_tables(&conn)
-        .expect("Failed to load content_creature_loot_template; run scripts/import-azerothcore.sh");
-    info!("Loaded loot tables for {} creatures", loot.creature.len());
-    commands.insert_resource(loot);
-    let taxi = crate::taxi::load_taxi_network(&conn)
-        .expect("Failed to load taxi_nodes/taxi_path/taxi_path_node; run scripts/db2.py import");
-    info!("Loaded {} flight points", taxi.nodes.len());
-    commands.insert_resource(taxi);
-    commands.insert_resource(
-        crate::unit_creature_type::load_race_types(&conn)
-            .expect("Failed to load chr_races.CreatureType; prepare the authored race catalog"),
-    );
-    let durability = crate::durability::load_item_durability(&conn)
-        .expect("Failed to load item durability; run scripts/db2.py import");
-    info!("Loaded durability for {} items", durability.0.len());
-    commands.insert_resource(durability);
-    let game_objects = crate::game_objects::load_game_object_spawns(&conn)
-        .expect("Failed to load content_gameobject; run scripts/import-azerothcore.sh");
-    info!("Loaded {} game object spawns", game_objects.0.len());
-    commands.insert_resource(
-        crate::pvp::arena_objects::SightCatalog::load(&conn, &game_objects)
-            .expect("Load authored arena Shadow Sight metadata"),
-    );
-    commands.insert_resource(game_objects);
-    commands.insert_resource(
-        crate::pvp::isle_siege::Catalog::load(&conn)
-            .expect("Load sourced Isle gate health; publish tdb_destructible_hitpoint first"),
-    );
-    commands.insert_resource(
-        crate::pvp::load_battleground_objects(&conn)
-            .expect("Failed to load source scripted battleground templates/displays"),
-    );
-    let gathering = crate::gathering::load_data(&conn)
-        .expect("Failed to load gathering metadata; apply scripts/gathering_metadata.py");
-    info!(
-        "Loaded {} gathering templates and {} skin mappings",
-        gathering.nodes.len(),
-        gathering.skins.len()
-    );
-    commands.insert_resource(gathering);
-    commands.insert_resource(
-        crate::game_objects::summoned::load_templates(&conn)
-            .expect("Failed to load spell-summoned gameobject templates"),
-    );
-    let meeting_stones = crate::meeting_stone::load_meeting_stone_data(&conn)
-        .expect("Failed to load meeting stone and ritual templates");
-    commands.insert_resource(meeting_stones);
-    let maps = crate::maps::store::load_map_store(&conn)
-        .expect("Failed to load map data; run scripts/import-azerothcore.sh");
-    info!(
-        "Loaded {} maps, area trigger teleports on {} maps",
-        maps.maps.len(),
-        maps.area_triggers.len()
-    );
-    commands.insert_resource(maps);
-    commands.insert_resource(
-        crate::scripted_ai::ragefire_chasm::intro_triggers::load_triggers(&conn)
-            .expect("Failed to load authored Ragefire intro areas7899/7904 from local DB2/TDB"),
-    );
-    commands.insert_resource(
-        crate::scripted_ai::nethekurse_intro::load_trigger(&conn)
-            .expect("Failed to load authored Nethekurse sewer4347 from local DB2/TDB"),
-    );
-    commands.insert_resource(
-        crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
-            .expect("Failed to load authored Molten Gold area12928 from local TDB"),
-    );
-    commands.insert_resource(
-        crate::spell_cast::area_trigger::load_aura_field_catalog(&conn)
-            .expect("Failed to load source aura395 area-trigger properties/actions/Curve inputs"),
-    );
-    commands.insert_resource(
-        crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).expect(
-            "Failed to load Gust Slash area13339 and its orbit; run scripts/import-battlegrounds.py",
-        ),
-    );
-    commands.insert_resource(
-        crate::scripted_ai::kings_rest::load_gold_model_reaches(&conn)
-            .expect("Failed to load authored Kings' Rest model combat reaches"),
-    );
-    commands.insert_resource(
-        crate::scripted_ai::waypoint_path::load_script_paths(&conn)
-            .expect("Failed to load TDB waypoint paths for scripted MovePath"),
-    );
-    let achievements = crate::achievement::load_achievement_catalog(&conn)
-        .expect("Failed to load achievements; run scripts/import_achievements.py with locally extracted DB2s");
-    let scenarios = crate::achievement::load_scenarios(&conn, &achievements).expect(
-        "Failed to load scenarios; run scripts/import_scenarios.py on a private world data copy",
-    );
-    commands.insert_resource(scenarios);
-    commands.insert_resource(crate::adventure_guide::load_catalog(
-        &conn,
-        &achievements,
-        Path::new("data/db2/active/AdventureJournal.csv"),
-    ));
-    commands.insert_resource(achievements);
-    let prices = crate::bank::load_bank_tab_prices(&conn)
-        .expect("Failed to load bank_tab; run scripts/db2.py import");
-    commands.insert_resource(prices);
-    commands.insert_resource(load_creature_spell_stats(&conn));
-    commands.insert_resource(
-        crate::transport_catalog::TransportCatalog::load(&conn)
-            .expect("Load authored transport routes; run scripts/import-battlegrounds.py"),
-    );
-    commands.insert_resource(
-        crate::pvp::arena_objects::GateCatalog::load(&conn)
-            .expect("Load source-backed arena gates; run scripts/import-arenas.py before startup"),
-    );
-    commands.insert_resource(crate::pvp::arena_dalaran::Catalog::load(&conn).expect(
-        "Load source Dalaran spout identities/pipe triggers; run scripts/import-arenas.py",
-    ));
-    commands.insert_resource(crate::pvp::arena_cage::Catalog::load(&conn).expect(
-        "Load Cage of Carnage entrance areatrigger actions; run scripts/import-battlegrounds.py",
-    ));
-    commands.insert_resource(
-        crate::pvp::random_bg::Catalog::load(&conn)
-            .expect("Load configured Random32 battleground templates"),
-    );
-    commands.insert_resource(
-        crate::pvp::arena::Catalog::load(&conn)
-            .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),
-    );
-    commands
-        .insert_resource(crate::pvp::pvp_talents::Catalog::load(&conn).expect(
-            "Load local PvP catalog; run scripts/import-pvp-progression.py before startup",
-        ));
+fn startup_load_world_data(world: &mut World) {
+    catalogs::load(Path::new("data/world.db"), Path::new("data")).install(world);
 }
 
 #[cfg(test)]

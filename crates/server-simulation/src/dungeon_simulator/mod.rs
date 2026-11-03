@@ -32,6 +32,7 @@ mod holy_priest_replay_tests;
 mod keystone;
 mod keystone_record;
 mod keystone_route;
+mod keystone_spell_tests;
 mod merithra_proc_tests;
 mod merithra_replay_tests;
 mod mistweaver_mana_tea_tests;
