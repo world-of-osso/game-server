@@ -81,13 +81,19 @@ fn apply_earned_stacks(world: &mut World, caster: Entity, current: u8, desired: 
         });
         return;
     }
-    if current == 0 {
-        combat::spell_cast::cast_triggered(world, caster, EMPOWERMENT, Some(caster), 1);
+    if current == 0
+        && !combat::spell_cast::try_cast_triggered(world, caster, EMPOWERMENT, Some(caster), 1)
+    {
+        // The triggered-cast producer logs its native rejection reason.
+        warn!(?caster, desired, "Unstable Empowerment cast was refused");
+        return;
     }
-    assert!(
-        combat::auras::set_self_cast_stacks(world, caster, EMPOWERMENT, desired),
-        "native Unstable Empowerment must attach before setting its earned stacks"
-    );
+    if !combat::auras::set_self_cast_stacks(world, caster, EMPOWERMENT, desired) {
+        warn!(
+            ?caster,
+            desired, "Unstable Empowerment cast did not attach its aura"
+        );
+    }
 }
 
 pub(super) fn sync(world: &mut World, caster: Entity) {
