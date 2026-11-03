@@ -55,6 +55,9 @@ fn replicate(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .expect("registered Echo root");
     for (holder, instance, percent) in echo_holders(world, caster) {
         combat::auras::remove_instance(world, holder, instance, RemoveReason::Consumed);
+        if super::evoker_golden_hour::is_reversion(spell.id) {
+            super::evoker_golden_hour::heal_target(world, caster, holder, percent / 100.0);
+        }
         spell_cast::cast_triggered_with_overrides(
             world,
             caster,
