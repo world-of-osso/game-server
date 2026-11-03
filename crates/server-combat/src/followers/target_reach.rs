@@ -31,9 +31,13 @@ pub(super) fn retain_reachable(
         .iter()
         .filter_map(|(enemy, _)| {
             let target = crate::spell_cast::targets::position(world, *enemy)?;
-            let ranged = range.is_some_and(|range| origin.distance(target) <= range)
-                && crate::line_of_sight::sees_in_world(world, unit, *enemy);
-            (!ranged).then_some((*enemy, target))
+            let melee = follower.profile.melee
+                && crate::scripted_ai::model_reach::melee_range(world, unit, *enemy)
+                    .is_some_and(|reach| crate::navigation::within_reach(origin, target, reach));
+            let ranged = range.is_some_and(|range| origin.distance(target) <= range);
+            let in_range =
+                (melee || ranged) && crate::line_of_sight::sees_in_world(world, unit, *enemy);
+            (!in_range).then_some((*enemy, target))
         })
         .collect();
     if pending.is_empty() {

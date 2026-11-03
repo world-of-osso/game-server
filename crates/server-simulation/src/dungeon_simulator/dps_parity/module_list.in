@@ -22,6 +22,7 @@ mod protection_divine_guidance_follower_tests;
 mod paladin_guided_prayer_follower_tests;
 mod boss_invariance_tests;
 mod fixture_engagement_tests;
+mod survival_melee_pursuit_follower_tests;
 mod marksmanship_chakram_ramp_follower_tests;
 mod mistweaver_sck_population_tests;
 mod mistweaver_ancient_party_tests;
