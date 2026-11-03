@@ -133,6 +133,11 @@ fn shadow_voidform_allows_paid_madness_and_restores_shadowform() {
     advance(&mut run, 40);
     assert!(crate::auras::has_aura(run.app.world(), actor, 194249));
     assert!(!crate::auras::has_aura(run.app.world(), actor, 232698));
+    assert_eq!(
+        crate::auras::overrides::resolve_spell(run.app.world(), actor, 232698),
+        194249,
+        "Voidform must override the Shadowform action"
+    );
     crate::spell_cast::powers::change_power(
         run.app.world_mut(),
         actor,
@@ -170,6 +175,11 @@ fn shadow_voidform_allows_paid_madness_and_restores_shadowform() {
     assert!(
         crate::auras::has_aura(run.app.world(), actor, 232698),
         "Shadowform must return after Voidform"
+    );
+    assert_eq!(
+        crate::auras::overrides::resolve_spell(run.app.world(), actor, 232698),
+        232698,
+        "the Shadowform action must return after Voidform"
     );
 }
 

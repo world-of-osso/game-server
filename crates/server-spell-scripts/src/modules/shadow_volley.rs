@@ -90,8 +90,7 @@ fn enter_voidform(world: &mut World, caster: Entity, _: &SpellInfo) {
             caster,
             target: caster,
             spell_id: VOIDFORM_BUFF,
-            // DB2 E9 preserves Shadow form 28 while Voidform replaces Shadowform.
-            effect_mask: 3 | (1 << 9),
+            effect_mask: u32::MAX,
             source: AuraSource::Cast,
         },
     );
