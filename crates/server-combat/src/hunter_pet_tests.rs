@@ -305,6 +305,7 @@ fn hunter_tames_a_diseased_young_wolf_after_the_channel() {
     assert_eq!(health.max, expected_health);
     assert_eq!(health.current, expected_health, "new tame must arrive full");
     let mut expected_pet = stored_wolf();
+    expected_pet.react_state = shared::protocol::REACT_ASSIST;
     expected_pet.health = Some(expected_health);
     let expected = StoredPetStable {
         current: Some(0),
