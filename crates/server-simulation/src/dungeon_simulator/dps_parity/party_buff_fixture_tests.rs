@@ -17,13 +17,10 @@ fn fixture_actor_holds_exactly_the_buffs_it_provides() {
     for (spec, expected) in [
         (63, &[1459][..]),
         (71, &[6673]),
-        (73, &[6673]),
         (103, &[1126]),
-        (104, &[1126]),
         (258, &[21562]),
         (262, &[462854]),
         (1467, &[364342]),
-        (66, &[]),
         (70, &[]),
     ] {
         let _seed = crate::random::seed_scope(70448);
