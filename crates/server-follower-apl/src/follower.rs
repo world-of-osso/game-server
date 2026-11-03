@@ -150,6 +150,9 @@ impl FollowerApl {
             return self.maintain_buffs(world, actor);
         }
         let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        if !cast && self.try_interrupt(world, actor, targets)? {
+            return Ok(());
+        }
         let elapsed = crate::spell_cast::now(world) - self.combat_started_at;
         if !gcd && !cast && server::consumables::use_wcl_potion(world, actor)? {
             return Ok(());
@@ -159,6 +162,44 @@ impl FollowerApl {
         }
         let rotation = &mut self.rotation;
         literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, targets))
+    }
+
+    /// INFERRED_WCL priority row: retail +2 p9d1wbR3BFrtjTWY fight2 pull4
+    /// interrupts an active add. Retire when sourced per-cast control policy exists.
+    fn try_interrupt(
+        &self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<bool, String> {
+        let actions = self.rotation.action_spells();
+        let spells: Vec<_> = actions
+            .into_iter()
+            .filter_map(|id| {
+                let spell = world.resource::<server::spell_info::SpellStore>().get(id)?;
+                (!server::auras::is_passive(spell)
+                    && spell.effects.iter().any(|effect| effect.effect == 68))
+                .then_some(spell.clone())
+            })
+            .collect();
+        let mut candidates = targets.to_vec();
+        candidates.sort_unstable();
+        for target in candidates {
+            if !server::simc_apl_native::interrupt_reaction_ready(world, actor, target)? {
+                continue;
+            }
+            for spell in &spells {
+                if !server::followers::action_safe(world, actor, target, Some(spell.id)) {
+                    continue;
+                }
+                if crate::spell_cast::read_native_cast_start(world, actor, spell, target).is_ok() {
+                    crate::spell_cast::creature_cast(world, actor, spell.id, Some(target), false)
+                        .map_err(|error| format!("interrupt {} refused: {error:?}", spell.id))?;
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
     }
 
     /// Advance the same production precombat with the targets of an upcoming pull.
