@@ -3244,6 +3244,21 @@ fn tank_report_block_reduction_matches_dungeon_combat() {
         (reported - actual).abs() < 0.02,
         "reported={reported} actual={actual}"
     );
+
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 100_000.0;
+    crate::spell_cast::effects::replay_simc_dummy_strike(
+        h.app.world_mut(),
+        h.npc,
+        h.caster,
+        10_000.0,
+        false,
+        true,
+    );
+    assert_eq!(100_000.0 - h.health(h.caster), 5_900.0);
 }
 
 #[test]

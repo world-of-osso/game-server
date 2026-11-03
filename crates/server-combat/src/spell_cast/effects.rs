@@ -1854,9 +1854,8 @@ fn spell_block_percent(world: &World, caster: Entity, target: Entity) -> f32 {
         .expect("blocked player retains native shield stats");
     let caster = UnitScaling::of(world, caster);
     let victim = UnitScaling::of(world, target);
-    let constant = world
-        .resource::<ArmorConstants>()
-        .at(caster.level_against(&victim))
+    let constant = caster
+        .armor_constant(&victim, world.resource::<ArmorConstants>())
         .expect("native armor constant for blocked spell caster level");
     stats
         .defense
