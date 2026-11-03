@@ -22,7 +22,13 @@ fn proc_count(blood_passive: bool) -> usize {
             },
         );
     }
-    let strike = h.app.world().resource::<SpellStore>().get(49998).unwrap().clone();
+    let strike = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(49998)
+        .unwrap()
+        .clone();
     let mut count = 0;
     for _ in 0..1000 {
         vampiric_proc(h.app.world_mut(), caster, &strike);
