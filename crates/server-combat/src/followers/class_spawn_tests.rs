@@ -166,8 +166,7 @@ fn class_install_requires_an_action_provider_before_mutating_actor() {
     assert!(world.get::<super::super::AplControlled>(actor).is_none());
 }
 
-#[test]
-fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
+fn class_follower_fixture() -> crate::spell_cast::test_harness::Harness {
     let (mut h, _, _) = spawn_profile_fixture_with_plugins(209057, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
     });
@@ -244,6 +243,7 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
                 250 => 206930,
                 268 => 121253,
                 104 => 33917,
+                103 => 5221,
                 257 => 2061,
                 62 => 30451,
                 _ => return Err(format!("no fixture action for spec{spec}")),
@@ -259,6 +259,57 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
             Ok(Vec::new())
         },
     });
+    h
+}
+
+#[test]
+fn feral_follower_spawns_with_full_final_energy() {
+    let mut h = class_follower_fixture();
+    let profile = super::super::class_profiles::read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == 103)
+        .unwrap();
+    let unit = spawn_class(
+        h.app.world_mut(),
+        h.caster,
+        &profile,
+        1,
+        0,
+        GearSource::Journal,
+    )
+    .unwrap();
+    let world = h.app.world();
+    let power = shared::components::PowerType::Energy;
+    let pool = world
+        .get::<crate::spell_cast::powers::PowerPools>(unit)
+        .unwrap()
+        .get(power)
+        .unwrap();
+    let mods = world.get::<crate::auras::AuraStatMods>(unit).unwrap();
+    let base = world
+        .resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .get(power)
+        .unwrap()
+        .max_base_power as f32;
+    let final_max = ((base + mods.max_power_flat(power as i32))
+        * mods.max_power_multiplier(power as i32))
+    .round();
+    assert!(final_max > base, "fixture must increase maximum Energy");
+    assert_eq!(pool.current, final_max, "spawned Feral Energy");
+    assert_eq!(pool.max, final_max, "spawned Feral maximum Energy");
+    let combo = world
+        .get::<crate::spell_cast::powers::PowerPools>(unit)
+        .unwrap()
+        .get(shared::components::PowerType::ComboPoints)
+        .unwrap();
+    assert_eq!(combo.current, 0.0, "combo points must remain empty");
+}
+
+#[test]
+fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
+    let mut h = class_follower_fixture();
+    let copy = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
     let profiles = super::super::class_profiles::read_profiles().unwrap();
     for (slot, spec) in [581, 73, 66, 250, 268, 104, 257, 62]
         .into_iter()

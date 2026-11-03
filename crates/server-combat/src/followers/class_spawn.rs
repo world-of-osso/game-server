@@ -529,6 +529,7 @@ pub fn install_class(
         &passives,
     );
     super::consumables::install(world, entity, &consumables)?;
+    fill_initial_powers(world, entity);
     spells.extend((provider.equipped_actions)(world, entity, source.spec_id)?);
     for id in &spells {
         let spell = world
@@ -544,6 +545,39 @@ pub fn install_class(
         .entity_mut(entity)
         .insert(super::FollowerActionSpells(spells));
     Ok(talent_source)
+}
+
+fn fill_initial_powers(world: &mut World, entity: Entity) {
+    let pools = world
+        .get::<PowerPools>(entity)
+        .expect("installed class powers");
+    let table = world.resource::<PowerTypeTable>();
+    let mods = world.get::<crate::auras::AuraStatMods>(entity);
+    let maxima: Vec<_> = pools
+        .pools
+        .iter()
+        .map(|pool| {
+            let info = table.get(pool.power).expect("native class power");
+            let base = info.max_base_power as f32;
+            let flat = mods.map_or(0.0, |mods| mods.max_power_flat(pool.power as i32));
+            let multiplier = mods.map_or(1.0, |mods| mods.max_power_multiplier(pool.power as i32));
+            let max = ((base + flat) * multiplier).round().max(0.0);
+            let regenerates = info.regen_peace > 0.0;
+            (max, regenerates)
+        })
+        .collect();
+    let mut pools = world
+        .get_mut::<PowerPools>(entity)
+        .expect("installed class powers");
+    for (pool, (max, regenerates)) in pools.pools.iter_mut().zip(maxima) {
+        let initially_full = pool.current == pool.max;
+        pool.max = max;
+        pool.current = if regenerates && initially_full {
+            max
+        } else {
+            pool.current.min(max)
+        };
+    }
 }
 
 fn follower_name(slot: usize) -> String {
