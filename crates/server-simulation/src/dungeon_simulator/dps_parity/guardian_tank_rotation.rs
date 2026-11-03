@@ -31,6 +31,53 @@ impl super::SpecDriver for Rotation {
 mod tests {
     #[test]
     #[ignore = "requires Guardian MID2 profile and native world data"]
+    fn elunes_favored_heals_owned_arcane_damage_in_bear_form() {
+        use crate::auras::{AuraApplication, AuraSource};
+        use crate::spell_cast::test_harness::ObservedCombatEvents;
+        use shared::components::Health;
+        use shared::protocol::CombatLogKind;
+        let mut run = super::super::prepare_registered_player(104, 70448).unwrap();
+        let (actor, target) = (run.actor, run.targets[0]);
+        super::super::engage(&mut run);
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 5487, Some(actor), 0);
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(actor)
+            .unwrap()
+            .current = max * 0.5;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 370586,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(run.app.world(), actor, 370588));
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 8921, Some(target), 0);
+        for _ in 0..60 {
+            run.app.update();
+        }
+        let events = &run.app.world().resource::<ObservedCombatEvents>().0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(164812))
+        );
+        assert!(events.iter().any(|event| event.kind == CombatLogKind::Heal
+            && event.source == Some(actor.to_bits())
+            && event.target == Some(actor.to_bits())
+            && event.spell_id == Some(370602)
+            && event.amount > 0));
+    }
+
+    #[test]
+    #[ignore = "requires Guardian MID2 profile and native world data"]
     fn guardian_thrash_real_hit_uses_selected_damage_modifiers() {
         use crate::spell_cast::effects::factor_capture::FactorCapture;
         let mut run = super::super::prepare_registered_player(104, 70448).unwrap();

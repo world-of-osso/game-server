@@ -330,6 +330,7 @@ register_modules! {
     guardian_wild_guardian: (1043, "modules/guardian_wild_guardian.rs"),
     guardian_matted_fur: (1041, "modules/guardian_matted_fur.rs"),
     guardian_natures_guardian: (1056, "modules/guardian_natures_guardian.rs"),
+    guardian_elunes_favored: (1057, "modules/guardian_elunes_favored.rs"),
     havoc: (150, "modules/havoc.rs"),
     havoc_children: (5771, "modules/havoc/children.rs"),
     havoc_dance: (5770, "modules/havoc/dance.rs"),

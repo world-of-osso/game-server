@@ -40,6 +40,7 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 **VERIFIED_WCL** `dtmp7Lg2abzyZVBG` fight 3 pull 1: the selected Glistening Radiance 1241805 grants absorb 1241866 to a Beacon of Faith recipient. DB2 70448 adds 2% of the recipient's maximum health at each Beacon tick while at full health, up to 6%; unspent absorb carries into each refresh.
 
 The [current-build Priest and Shaman matched-pull ledger](healer-tank-replay/priest-shaman-matched-2026-11-03.md) records five-seed outcomes, healing attribution and remaining policy gaps.
+**VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2: the matched Guardian selects Elune's Favored 370586 and receives 370602 healing at approximately one-second intervals. DB2 70448 supplies its 18% of Arcane damage in Bear Form and the one-second 370588 timer. The Guardian's WCL Frenzied Regeneration casts do not establish a general cast threshold; the native Guardian APL does not currently select it.
 
 ## Equal-health healer target ties
 
