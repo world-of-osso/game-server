@@ -160,6 +160,23 @@ SimC `76f8118` references use 300 seconds, fixed time, 1,000 iterations and seed
 | Devastation Evoker (1467) | 116,836 | 113,728 | +2.73% | `6d6cff57dd` / `eabc2a7a15` | 184,309 | 182,445 | +1.02% | `6d6cff57dd` / `eabc2a7a15` | in band |
 | Devourer Demon Hunter (1480) | 206,035 | 214,110 | -3.77% | `670c613ad8` / `8a7fe346ac` | 329,934 | 341,884 | -3.50% | `670c613ad8` / `8a7fe346ac` | in band |
 
+## Cross-tank intake qualification, 2026-11-03
+
+The final ten-seed runs of each tank use one native executable built from code `ad2deac7b7` and the frozen campaign DB `99887e4d…`; no new runs were needed for this comparison. Each spec replays its own fixed SimC trace: 148 swings, ten strikes and 145 bleed ticks in 300 seconds, plus five zero-damage bleed applications. Swing timestamps match; compared with Paladin, strike and bleed timestamps differ by at most 13 ms and 12 ms. Raw swing and strike rolls differ, so the traces are not identical. All six traces also specify the same 60 external heals of 75,000 at five-second intervals from 0 through 295 seconds; effective healing depends on missing health. `raw_damage` includes the pre-outcome amount even for avoided attacks; it does not vary across seeds within a spec.
+
+| Spec | Raw incoming DPS | Post-absorb DTPS ± 95% CI | Mitigated share ± 95% CI |
+|---|---:|---:|---:|
+| Blood 250 | 152,335 | 221 ± 125 | 99.85% ± 0.08 pp |
+| Guardian 104 | 152,057 | 6,954 ± 655 | 95.43% ± 0.43 pp |
+| Protection Warrior 73 | 152,172 | 9,428 ± 297 | 93.80% ± 0.19 pp |
+| Protection Paladin 66 | 152,258 | 11,829 ± 1,190 | 92.23% ± 0.78 pp |
+| Brewmaster 268 | 152,004 | 11,819 ± 613 | 92.22% ± 0.40 pp |
+| Vengeance 581 | 152,043 | 19,818 ± 522 | 86.97% ± 0.34 pp |
+
+Mitigated share is `100 × (1 − damage_taken / raw_damage)` per seed. Only the Paladin and Brewmaster intervals overlap; overlap does not prove equality. Damage taken is after absorbs, not net of self-healing. It includes Brewmaster self-Stagger ticks, while the raw denominator contains only enemy damage; the finite window omits any unpaid Stagger. The result combines avoidance, mitigation, absorbs and Stagger handling and does not measure burst survival.
+
+Blood's mean incoming damage after other mitigation but before absorbs is approximately 29,536 DPS; Blood Shield 77535 consumes 23,652 DPS and Frost Shield 207203 consumes 5,662 DPS. Umbilicus shield 391527 has no reported casts, sampled uptime or consumption in these runs, and the matched SimC trace does not list the talent. This fixture therefore does not demonstrate Umbilicus. Mean effective self-healing is 221 HPS and is not subtracted from DTPS. This explains the measurement's small remainder, not its general validity for encounters or other profiles. Per-seed files, exact timings and amounts are in `game-engine/data/diagnostics/tank-ranking-2026-11-03/` (`ranking.md`, `intake-qualification.json`).
+
 ## Protection Warrior tank intake — Wrecked reference gap, 2026-11-03
 
 The 300-second player-actor tank-dummy replay with external healing and seeds 70448, 1–9 measured 9,352 ± 286 DTPS native (`d15bf3a59f`) versus 10,622 in the `76f8118`-based SimC control (`f80d0416…`, ten measured iterations): native is 11.96% lower. This control removes SimC's duplicate Warrior armor multipliers and extra Shield Block charge; it also removes repeated Stagger tick mitigation. It is not the unmodified SimC executable. The runs use the frozen campaign world DB `99887e4dfb392b7f2dd93812e29fa4198c9a24ffaa8233445968781bf0c6d9e6`; ± is a 95% Student-t interval. Receipts are in `game-engine/data/diagnostics/tank-ranking-2026-11-03/`.
