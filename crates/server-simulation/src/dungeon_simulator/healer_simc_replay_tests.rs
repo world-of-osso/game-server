@@ -559,7 +559,7 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn wcl_intake_replays_recorded_hostile_and_self_damage() {
+fn wcl_intake_replays_hostile_pressure_and_excludes_self_damage() {
     let report = super::replay_simc_party_with_wcl(
         1468,
         90,
