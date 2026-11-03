@@ -168,6 +168,14 @@ In seed 70448, both sides receive 145 bleed ticks with a 25,000 base each. Basel
 
 A separate diagnostic replay zeroed only the Wrecked incoming aura effect; ten native seeds produced 9,983 ± 310 DTPS, 6.01% below the same SimC reference. The mean paired native difference was +632 ± 38 DTPS, explaining about half of the original 1,270-DTPS gap; the remaining difference is unresolved. This counterfactual was built on `ddc53717b6`, which advanced beyond the baseline; the intervening changes were not isolated in this experiment. It had zero deaths and fact errors. Diagnostic change and per-seed receipts are `73.counterfactual.txt` and `73.no-wrecked.<seed>.json`; no diagnostic code was retained.
 
+## Brewmaster tank intake — Stagger and sampling, 2026-11-03
+
+The 300-second player-actor fixture includes dummy damage after absorbs plus self-Stagger ticks after absorbs; purified damage is removed from the pool and is not damage taken. Ten native seeds on `d15bf3a59f` measured 11,819 ± 613 DTPS. The saved ten-iteration SimC control mean is 12,719 DTPS; its report has no DTPS variance. This control is `76f8118`-based binary `f80d0416…`, which removes repeated mitigation of self-Stagger ticks, not unmodified SimC. Native 124255 ignores damage-taken modifiers, as documented in [Brewmaster replay](healer-tank-replay/268.md#stagger-tick-mitigation-and-aura-269).
+
+A separate ten-run control sample uses seeds 70448, 1–9, one independent SimC iteration per seed, the same binary, profile and encounter options. It measured 12,362 ± 657 DTPS versus the native 11,819 ± 613; the native mean is 4.39% lower and intervals overlap. The two implementations do not share random streams, so matching seed labels do not pair the outcomes. This second sample does not replace the saved 12,719 reference or prove parity.
+
+Native / independent-control mean Purifying Brew casts are 43.3 / 43.8; Gai Plin raw healing is 927,813 / 986,558, implying approximately 3.711M / 3.946M purified by Brew at its selected 25% rate. Native / control self-Stagger damage is 5,392 ± 332 / 5,791 ± 362 per second; swing 2,258 ± 281 / 2,362 ± 253, strike 2,057 ± 68 / 2,066 ± 92, and bleed 2,112 ± 23 / 2,144 ± 29. The pool amounts and independently sampled avoidance do not establish an implementation defect. ± values are 95% Student-t intervals. Native seed 70448 pool instrumentation and control per-seed JSON/proof are in `game-engine/data/diagnostics/tank-ranking-2026-11-03/`.
+
 ## Tank outgoing DPS — composition replay, 2026-11-03
 
 These are the latest available measurements, not one common build. Each native result uses 300-second replays with seeds 70448 and 1–9; ± is a 95% Student's t interval for the native mean. References use the pinned SimC `76f8118` composition inputs. The status describes the mean relative to ±5%, not proof that the whole interval is in band.
