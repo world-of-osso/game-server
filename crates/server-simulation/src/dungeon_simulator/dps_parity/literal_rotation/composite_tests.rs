@@ -282,7 +282,10 @@ fn literal_composite_world_execute_rejects_without_dispatching_first_step() {
         Execution::Spell(COATINGS[1], run.actor, None),
     ]);
     let error = execution::execute(run.app.world_mut(), run.actor, plan).unwrap_err();
-    assert!(error.contains("precombat"), "{error}");
+    assert!(
+        matches!(&error, execution::ExecutionError::Other(message) if message.contains("precombat")),
+        "{error}"
+    );
     assert!(
         run.app
             .world()

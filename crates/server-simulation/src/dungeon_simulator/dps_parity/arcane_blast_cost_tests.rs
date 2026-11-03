@@ -45,6 +45,7 @@ fn request_blast(run: &mut Run) -> Result<(), String> {
         run.actor,
         literal_rotation::execution::Execution::Spell(30451, run.targets[0], Some(run.targets[0])),
     )
+    .map_err(Into::into)
 }
 
 #[test]

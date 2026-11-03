@@ -1221,6 +1221,7 @@ fn interrupted_composite_cast_drops_remaining_steps_and_reselects() {
         ) -> Result<(), String> {
             self.0.lock().unwrap().push("execute");
             server_follower_apl::literal_rotation::execution::execute(world, actor, execution)
+                .map_err(Into::into)
         }
         fn start_combat_at(&mut self, _: f64) {}
         fn drive(&mut self, _: &mut World, _: Entity, _: &[Entity]) -> Result<(), String> {

@@ -3722,6 +3722,31 @@ fn clip_route_to_tank_range(
     previous
 }
 
+/// Drive the persistent owner rotation for the current opening target.
+pub(crate) fn drive_owner_apl_opening(
+    world: &mut World,
+    owner: Entity,
+    target: Entity,
+) -> Result<(), String> {
+    let mut apl = match world
+        .entity_mut(owner)
+        .take::<server_follower_apl::FollowerApl>()
+    {
+        Some(apl) => apl,
+        None => {
+            let spec = world
+                .get::<shared::components::ActiveSpec>(owner)
+                .ok_or("keystone owner lacks an active specialization")?
+                .0;
+            let rotation = server_follower_apl::registry::load(world, owner, spec)?;
+            server_follower_apl::FollowerApl::new_for_world(world, rotation)
+        }
+    };
+    let result = apl.tick(world, owner, &[target]);
+    world.entity_mut(owner).insert(apl);
+    result.map_err(|error| format!("keystone owner opening failed: {error}"))
+}
+
 impl Run {
     fn performance(
         &self,
@@ -4521,25 +4546,7 @@ impl Run {
     }
 
     fn drive_owner_opening(&mut self, target: Entity) -> Result<(), String> {
-        let world = self.app.world_mut();
-        let owner = self.party.owner;
-        let mut apl = match world
-            .entity_mut(owner)
-            .take::<server_follower_apl::FollowerApl>()
-        {
-            Some(apl) => apl,
-            None => {
-                let spec = world
-                    .get::<shared::components::ActiveSpec>(owner)
-                    .ok_or("keystone owner lacks an active specialization")?
-                    .0;
-                let rotation = server_follower_apl::registry::load(world, owner, spec)?;
-                server_follower_apl::FollowerApl::new_for_world(world, rotation)
-            }
-        };
-        let result = apl.tick(world, owner, &[target]);
-        world.entity_mut(owner).insert(apl);
-        result.map_err(|error| format!("keystone owner opening failed: {error}"))
+        drive_owner_apl_opening(self.app.world_mut(), self.party.owner, target)
     }
 
     fn is_required_boss(&self, target: Entity) -> bool {

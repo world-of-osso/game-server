@@ -1,5 +1,6 @@
 //! Shared native APL driver; source rows and spec facts belong to adapters.
 mod channel;
+mod excluded_facts;
 pub use channel::Decision as ChannelDecision;
 pub mod default_pet;
 pub mod equipment;
@@ -166,6 +167,8 @@ pub struct Driver {
     precombat_harmful_executed: bool,
     wait_until: Option<f64>,
     queued: Option<(Action, Execution, f64)>,
+    excluded_targets: std::collections::BTreeSet<Entity>,
+    excluded_at: Option<f64>,
     pub snapshot: Option<Value>,
     cancellation: Option<(Action, Expression, u32)>,
     pending_fragment_row: Option<usize>,
@@ -187,6 +190,8 @@ impl Driver {
             precombat_harmful_executed: false,
             wait_until: None,
             queued: None,
+            excluded_targets: Default::default(),
+            excluded_at: None,
             snapshot: None,
             cancellation: None,
             pending_fragment_row: None,
@@ -247,6 +252,26 @@ impl Driver {
         prepared: &Prepared,
         equipment: &Equipment,
     ) -> Result<Option<(Action, Execution)>, String> {
+        if self.excluded_at != Some(prepared.now()) {
+            self.excluded_targets.clear();
+            self.excluded_at = None;
+        }
+        let filtered = (!self.excluded_targets.is_empty())
+            .then(|| prepared.without_targets(&self.excluded_targets));
+        let prepared = filtered.as_ref().unwrap_or(prepared);
+        let excluded_facts = if self.excluded_targets.is_empty() {
+            None
+        } else {
+            let Some(default_target) = prepared.first_target() else {
+                return Ok(None);
+            };
+            Some(excluded_facts::ExcludedFacts {
+                inner: facts,
+                excluded: &self.excluded_targets,
+                default_target,
+            })
+        };
+        let facts: &dyn ActionFacts = excluded_facts.as_ref().map_or(facts, |facts| facts);
         if let Some((action, execution, deadline)) = self.queued.take() {
             // Revalidate the original target; never transfer a queued cast to a new target.
             let mut queued_action = action.clone();
@@ -409,7 +434,42 @@ impl Driver {
             Execution::Snapshot => self.snapshot = Some(snapshot::stats(world, actor)?),
             Execution::Wait(deadline) => self.wait_until = Some(deadline),
             Execution::Queue(_, _) => unreachable!("queued actions return before execution"),
-            execution => execution::execute_row(world, actor, &action, execution)?,
+            execution => match execution::execute_row(world, actor, &action, execution) {
+                Ok(()) => {}
+                Err(execution::ExecutionError::Cast {
+                    spell,
+                    target,
+                    reason,
+                }) if target != actor
+                    && matches!(
+                        reason,
+                        crate::spell_cast::CastFailure::InvalidTarget
+                            | crate::spell_cast::CastFailure::NoTarget
+                            | crate::spell_cast::CastFailure::NoValidTargets
+                            | crate::spell_cast::CastFailure::LineOfSight
+                    ) =>
+                {
+                    let now = crate::spell_cast::history_now(world);
+                    if self.excluded_at != Some(now) {
+                        self.excluded_targets.clear();
+                    }
+                    self.excluded_at = Some(now);
+                    self.excluded_targets.insert(target);
+                    self.pending_line = None;
+                    debug!(
+                        ?actor,
+                        ?target,
+                        spell,
+                        ?reason,
+                        "native APL rejected target; reselecting"
+                    );
+                    if let Some(mut progress) = world.get_resource_mut::<LiteralTickProgress>() {
+                        progress.0 = true;
+                    }
+                    return Ok(());
+                }
+                Err(error) => return Err(error.into()),
+            },
         }
         if fragment_row.is_some() {
             self.pending_fragment_row = fragment_row;
