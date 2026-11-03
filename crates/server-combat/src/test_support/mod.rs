@@ -9,6 +9,15 @@ pub mod transport;
 pub use crate::ground::GroundMap;
 pub use crate::line_of_sight::LineOfSight;
 pub use crate::navigation::within_reach;
+
+pub fn distance_to_reach(
+    from: bevy::prelude::Vec3,
+    corner: bevy::prelude::Vec3,
+    target: bevy::prelude::Vec3,
+    reach: f32,
+) -> f32 {
+    crate::navigation::distance_to_reach(from, corner, target, reach)
+}
 pub use graph::Space;
 
 /// Install the live navigation worker in a headless app. Each fixed tick publishes

@@ -186,9 +186,19 @@ fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
     {
         let target = Entity::try_from_bits(*target)?;
         let to = point(world.get::<Position>(target)?);
-        let reach = world
-            .get::<crate::followers::FollowerReach>(unit)
-            .map_or(crate::creature_ai::CHASE_REACH, |reach| reach.0);
+        let fixture_melee_target = world
+            .get::<crate::simc_apl_native::FixtureMovement>(unit)
+            .is_some()
+            && world
+                .get::<crate::combat::AutoAttack>(unit)
+                .is_some_and(|attack| attack.victim == target);
+        let reach = if fixture_melee_target {
+            crate::scripted_ai::model_reach::melee_range(world, unit, target)?
+        } else {
+            world
+                .get::<crate::followers::FollowerReach>(unit)
+                .map_or(crate::creature_ai::CHASE_REACH, |reach| reach.0)
+        };
         return Some((to, reach));
     }
     if let Some(follow) = world.get::<crate::creature_ai::FollowOwner>(unit) {
@@ -247,8 +257,15 @@ fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> V
     while !travel.legs.is_empty() {
         let last = travel.legs.len() == 1;
         let (to, remaining) = travel.legs.front_mut().unwrap();
-        let available = if last {
-            (*remaining - reach).max(0.0)
+        let available = if last && reach > 0.0 {
+            let horizontal = (to.x - from.x).hypot(to.z - from.z);
+            let distance =
+                server::test_support::distance_to_reach(from, *to, travel.destination, reach);
+            if horizontal > 0.0 {
+                *remaining * (distance / horizontal)
+            } else {
+                0.0
+            }
         } else {
             *remaining
         };
@@ -347,6 +364,10 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
+    if server_follower_apl::literal_rotation::melee_intent::forced_movement(world, unit) {
+        world.entity_mut(unit).remove::<Travel>();
+        return Ok(());
+    }
     if !can_move(world, unit) {
         return Ok(());
     }
@@ -359,7 +380,6 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     let in_reach = server::test_support::within_reach(from, to, reach);
     let mut travel = world.entity_mut(unit).take::<Travel>().filter(|travel| {
         !travel.legs.is_empty()
-            && !(travel.legs.len() == 1 && travel.legs[0].1 <= reach + 0.0001)
             && travel.destination.distance(to) <= server_combat::navigation::REPATH_DISTANCE
             && !in_reach
     });
@@ -760,6 +780,21 @@ fn dead_flight_leader_waits_for_native_release() {
     advance_flight(&mut world, leader, 1.0).unwrap();
     assert_eq!(*world.get::<Position>(leader).unwrap(), position);
     assert!(flight_in_progress(&world, leader));
+}
+
+#[test]
+fn pursuit_arrives_inside_three_dimensional_melee_reach() {
+    let target = Vec3::ZERO;
+    let corner = Vec3::new(0.0, 0.2, 0.0);
+    let mut travel = Travel {
+        destination: target,
+        legs: [(corner, 10.0)].into(),
+    };
+    let position = advance(Vec3::new(10.0, 0.2, 0.0), &mut travel, 10.0, 5.0);
+    assert!(
+        position.distance(target) <= 5.0,
+        "stopped outside melee: {position:?}"
+    );
 }
 
 #[test]
