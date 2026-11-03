@@ -92,9 +92,7 @@ fn enhancement_trait_execute_switches_thorims_invocation_to_chain_lightning() {
     let mut invoked = Vec::new();
     for _ in 0..6000 {
         literal_rotation::drive_tick(run.app.world_mut(), actor, |world| {
-            if let Some((action, execution)) =
-                rotation.select(world, actor, &targets, "default")?
-            {
+            if let Some((action, execution)) = rotation.select(world, actor, &targets, "default")? {
                 let name = action.name.clone();
                 SpecRotation::execute(&mut rotation, world, actor, action, execution)?;
                 if matches!(name.as_str(), "chain_lightning" | "tempest") {

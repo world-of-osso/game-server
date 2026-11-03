@@ -65,7 +65,11 @@ fn multi_enemy_casts(run: &Run) -> BTreeMap<u32, usize> {
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
     let source = Some(run.actor.to_bits());
-    let opponents: Vec<u64> = run.damage_targets.iter().map(|unit| unit.to_bits()).collect();
+    let opponents: Vec<u64> = run
+        .damage_targets
+        .iter()
+        .map(|unit| unit.to_bits())
+        .collect();
     let mut hit: BTreeMap<u32, std::collections::BTreeSet<u64>> = BTreeMap::new();
     for event in events.iter().filter(|event| {
         event.source == source
@@ -134,4 +138,3 @@ fn dps_parity_engagement_fire_casts_multi_enemy_aoe() {
 fn dps_parity_engagement_feral_casts_multi_enemy_aoe() {
     assert_native_aoe_cast(103);
 }
-
