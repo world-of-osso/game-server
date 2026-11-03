@@ -1,6 +1,83 @@
 //! Native Feral mechanics, independent of the literal Feral controller.
 use super::*;
 
+fn taste_for_blood_bite(talent: bool, tigers_fury: bool) -> f32 {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 384665));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let target_position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: target_position.x - 1.0,
+            ..target_position
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    if !talent {
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            actor,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 384665,
+        );
+    }
+    if tigers_fury {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 5217, Some(actor), 1);
+    }
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 140.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    let _seed = crate::random::seed_scope(103384665);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22568, Some(target), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(22568) && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .expect("Bite must deal damage to the native training dummy")
+        .amount as f32
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_taste_for_blood_adds_conditional_tigers_fury_bite_damage() {
+    let plain = taste_for_blood_bite(false, false);
+    let talented = taste_for_blood_bite(true, false);
+    let fury_plain = taste_for_blood_bite(false, true);
+    let fury_talented = taste_for_blood_bite(true, true);
+    assert!(plain > 0.0 && fury_plain > 0.0);
+    assert!((talented / plain - 1.16).abs() < 0.02, "{talented}/{plain}");
+    assert!(
+        (fury_talented / fury_plain - 1.16 * 1.08).abs() < 0.02,
+        "{fury_talented}/{fury_plain}"
+    );
+}
+
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_hunt_beneath_applies_cat_form_damage_modifiers() {

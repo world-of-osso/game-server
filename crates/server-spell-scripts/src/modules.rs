@@ -259,6 +259,7 @@ register_modules! {
     feral_savage_fury: (1034, "modules/feral_savage_fury.rs"),
     feral_stalking: (1034, "modules/feral_stalking.rs"),
     feral_sudden_ambush: (1034, "modules/feral_sudden_ambush.rs"),
+    feral_taste_for_blood: (1034, "modules/feral_taste_for_blood.rs"),
     feral_tigers_tenacity: (1034, "modules/feral_tigers_tenacity.rs"),
     feral_twin_claw: (1032, "modules/feral_twin_claw.rs"),
     feral_unseen: (1032, "modules/feral_unseen.rs"),
