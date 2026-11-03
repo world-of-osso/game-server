@@ -1230,13 +1230,19 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
         );
         return;
     }
-    let _seed = crate::random::seed_scope(1);
+    for seed in 1..=3 {
+        check_azure_precombat(seed);
+    }
+}
+
+fn check_azure_precombat(seed: u64) {
+    let _seed = crate::random::seed_scope(seed);
     let options = super::keystone::Options {
         map_id: 2515,
         level: 2,
         specs: [66, 105, 262, 63, 253],
     };
-    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let mut run = spawn_run_mode(seed, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
     let mage = run
         .party
@@ -1310,7 +1316,7 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
             return;
         }
     }
-    panic!("five native source deaths and pulls were not observed");
+    panic!("five native source deaths and pulls were not observed for seed {seed}");
 }
 
 #[test]
