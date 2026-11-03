@@ -116,6 +116,95 @@ fn feral_coiled_waits_for_berserk_storage_and_free_bite_consumes_it() {
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_soul_of_the_forest_restores_energy_for_landed_finishers() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pos = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: pos.x - 1.0,
+            ..pos
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 158476));
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, -140.0);
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 100.0);
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1079, Some(target), false)
+        .unwrap();
+    let energy = || {
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy)
+            .unwrap()
+            .0
+    };
+    assert_eq!(energy(), 90.0, "20 spent and 10 restored for five points");
+
+    let mut bite = crate::spell_cast::load_triggered_spell(run.app.world(), 22568, 1).unwrap();
+    bite.cast_policy_context = Some(Box::new(crate::spell_info::CastPolicyContext {
+        resources: vec![(PowerType::ComboPoints, 5.0)],
+        free_spender: true,
+        targets: vec![target],
+    }));
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        actor,
+        &bite,
+        Some(target),
+        1
+    ));
+    assert_eq!(
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy)
+            .unwrap()
+            .0,
+        100.0,
+        "free five-point Bite also restores energy"
+    );
+
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 158476,
+    );
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::spell_cast::SpellHistory>();
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1079, Some(target), false)
+        .unwrap();
+    assert_eq!(
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Energy)
+            .unwrap()
+            .0,
+        80.0,
+        "no refund without the talent"
+    );
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_halazzis_fury_banks_paid_and_free_finisher_points_until_berserk_ends() {
     use shared::components::PowerType;
     let _seed = crate::random::seed_scope(1031301600);
@@ -342,7 +431,7 @@ fn feral_taste_for_blood_adds_conditional_tigers_fury_bite_damage() {
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_hunt_beneath_applies_cat_form_damage_modifiers() {
-    use crate::auras::spell_mods::{SpellModOp, modify};
+    use crate::auras::spell_mods::{modify, SpellModOp};
     let mut run = prepare_literal(103, 1).unwrap();
     let actor = run.actor;
     assert!(crate::auras::has_aura(run.app.world(), actor, 439868));
