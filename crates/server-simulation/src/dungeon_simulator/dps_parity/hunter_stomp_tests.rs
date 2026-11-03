@@ -2,6 +2,109 @@ use super::*;
 
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
+fn native_bm_serpentine_refunds_only_critical_cobra_impacts() {
+    use crate::auras::RemoveReason;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(253, 1).expect("native literal BM fixture");
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::auras::has_aura(run.app.world(), actor, 468701));
+
+    for (critical, triggered, selected) in [
+        (true, false, true),
+        (true, true, true),
+        (false, true, true),
+        (true, true, false),
+    ] {
+        if !selected {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                actor,
+                RemoveReason::Cancelled,
+                |aura| aura.spell_id == 468701,
+            );
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(actor)
+            .unwrap()
+            .crit_pct = if critical { 1000.0 } else { -1000.0 };
+        let before = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        if triggered {
+            crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 193455, Some(target), 1);
+        } else {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                actor,
+                193455,
+                Some(target),
+                false,
+            )
+            .expect("ordinary Cobra Shot");
+        }
+        for _ in 0..300 {
+            if run
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0[before..]
+                .iter()
+                .any(|event| {
+                    event.source == Some(actor.to_bits())
+                        && event.spell_id == Some(193455)
+                        && event.kind == CombatLogKind::Damage
+                })
+            {
+                break;
+            }
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(actor)
+                .unwrap()
+                .crit_pct = if critical { 1000.0 } else { -1000.0 };
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[before..];
+        let hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(193455)
+                    && event.kind == CombatLogKind::Damage
+            })
+            .collect();
+        assert_eq!(hits.len(), 1, "one real Cobra impact per case");
+        assert_eq!(hits[0].crit, critical);
+        let refunds: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.target == Some(actor.to_bits())
+                    && event.spell_id == Some(1282710)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .collect();
+        assert_eq!(refunds.len(), usize::from(critical && selected));
+        if let Some(refund) = refunds.first() {
+            assert_eq!(refund.amount, 10, "native 70448 Focus payload");
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_wrath_triggers_thundering_hooves_from_permanent_pets() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);

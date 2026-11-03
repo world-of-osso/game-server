@@ -334,6 +334,8 @@ Frost player reaction clocks are configured before food setup advances native fr
 
 ### Beast Mastery literal fixture
 
+- Selected Serpentine Strikes468701 refunds Focus through native1282710 for each critical Cobra Shot impact, including background shots. Its native class mask identifies eligible shots. Evidence: WCL report X4QmxjYc6rbZ9twR fight1, November 2, 2026, source13; SimC76f8118 hunter5013–5014.
+
 - Selected Huntmaster Call459730 increments native459731 once per actual Dire Beast, Dark Hound, or Bear. At its native stack cap it clears the counter and selects Fenryr459733 or Hati459739 equally; the selected owner buff459735/459738 supplies the real companion lifetime. Each companion uses live owner ranged AP and its own attacks; Fenryr launches native Ravenous Leap459753 (SimC76f8118 hunter1869–1873,1973–1982,2008,2049–2052,3715–3734,3865–3874).
 
 - Selected Dire Command378743 rolls its native chance using SimC accumulated PRD after actual BM Kill Command and summons native219199. Selected Ursine Fury472476 summons its native number of the same Dire Beasts when an earned Bear is summoned. Their native base lifetime is converted to the source's haste-scaled probabilistic swing count; Beast110063 inherits live owner ranged AP (SimC76f8118 hunter1736–1755,1935,3797–3803,6610–6613,8396).
