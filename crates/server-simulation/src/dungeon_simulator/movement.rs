@@ -125,10 +125,6 @@ pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal,
     Some((goal, travel.legs.iter().map(|(_, yards)| yards).sum()))
 }
 
-pub(super) fn apl_destination(world: &World, unit: Entity) -> Option<Vec3> {
-    world.get::<Travel>(unit).map(|travel| travel.destination)
-}
-
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
     let Some(travel) = world.get::<Travel>(unit) else {
         return world.get::<BlockedWalk>(unit).map_or(
@@ -474,45 +470,6 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
     }
     world.entity_mut(owner).insert(flight);
     Ok(())
-}
-
-#[test]
-fn apl_reads_simulator_travel_destination_while_actor_moves() {
-    use server::simc_apl::Facts;
-    use server::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
-    use shared::components::CreatureMotion;
-
-    let mut world = World::new();
-    world.insert_resource(MovementDestination(apl_destination));
-    let destination = Vec3::new(12.0, 0.0, 0.0);
-    let actor = world
-        .spawn((
-            Position {
-                x: 2.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            CreatureMotion::Run,
-            Travel {
-                destination,
-                legs: [(destination, 10.0)].into(),
-            },
-        ))
-        .id();
-    let bindings = Bindings::default();
-    let read = |world: &World| {
-        NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
-            .value("movement.distance")
-    };
-    assert_eq!(read(&world).unwrap(), 10.0);
-    world.entity_mut(actor).insert(Position {
-        x: 7.0,
-        y: 0.0,
-        z: 0.0,
-    });
-    assert_eq!(read(&world).unwrap(), 5.0);
-    world.entity_mut(actor).remove::<Travel>();
-    assert!(read(&world).is_err());
 }
 
 #[test]

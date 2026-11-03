@@ -234,9 +234,6 @@ fn build_runtime_app(
         super::native_movement::NativeMovement::open(&nav_root, map_id)
             .expect("open headless native movement"),
     );
-    app.insert_resource(server::simc_apl_native::MovementDestination(
-        super::movement::apl_destination,
-    ));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(TICK));
     app.insert_resource(Time::<Fixed>::from_duration(TICK));
