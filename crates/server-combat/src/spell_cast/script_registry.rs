@@ -63,6 +63,7 @@
 //! - `AfterForegroundSpender`: before Crusade stacks and spender-proc generation.
 //! - `AfterSpenderProc`: after spender-proc generation, before deferred background execution.
 //! - `AfterElementalLaunch`: after Elemental consumption, before pet-set launch state.
+//! - `AfterElementalChildrenLaunch`: after Elemental child launches, before later launch hooks.
 //! - `BeforeDirectDamagePolicies`: before Spellslinger and other direct-damage policies.
 //! - `AfterPeriodicDamagePolicies`: after generic periodic relationships and Spellslinger.
 //! - `EmpowerCompletion`: first completion handler, before channel end and finish GCD.
@@ -195,6 +196,7 @@ pub type AfterModifierConsumptionHook = fn(&mut World, Entity, &SpellInfo);
 pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterElementalLaunchHook = fn(&mut World, Entity, &SpellInfo, bool);
+pub type AfterElementalChildrenLaunchHook = fn(&mut World, Entity, &SpellInfo, u8, bool);
 pub type AreaTriggerExpiredHook = fn(&mut World, Entity, u32, Vec3);
 /// Spell ID and create-properties ID to (radius, relation, entry spell).
 pub type AreaTriggerBindingLookup = fn(u32, i32) -> Option<(f32, super::targets::Relation, u32)>;
@@ -475,6 +477,7 @@ spell_script_hooks! {
     AfterForegroundSpender(AfterForegroundSpenderHook),
     AfterSpenderProc(AfterSpenderProcHook),
     AfterElementalLaunch(AfterElementalLaunchHook),
+    AfterElementalChildrenLaunch(AfterElementalChildrenLaunchHook),
     AreaTriggerExpired(AreaTriggerExpiredHook),
     AreaTriggerBinding(AreaTriggerBindingLookup),
     BeforeDirectDamagePolicies(BeforeDirectDamagePoliciesHook),
@@ -1893,6 +1896,23 @@ pub fn after_elemental_launch(
     {
         if let SpellScriptHook::AfterElementalLaunch(run) = hook {
             run(world, caster, spell, foreground);
+        }
+    }
+}
+
+pub fn after_elemental_children_launch(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+    foreground: bool,
+) {
+    for hook in world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AfterElementalChildrenLaunch)
+    {
+        if let SpellScriptHook::AfterElementalChildrenLaunch(run) = hook {
+            run(world, caster, spell, depth, foreground);
         }
     }
 }
