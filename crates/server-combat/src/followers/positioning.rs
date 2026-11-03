@@ -169,6 +169,14 @@ fn hold_position(world: &mut World, unit: Entity) {
         .entity_mut(unit)
         .remove::<crate::creature_ai::FollowOwner>()
         .insert(crate::creature_ai::CreatureState::Idle);
+    let stopped = world
+        .get_mut::<shared::components::CreatureMotion>(unit)
+        .is_some_and(|mut motion| motion.set_if_neq(shared::components::CreatureMotion::Still));
+    if stopped
+        && let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>()
+    {
+        queue.mark(unit);
+    }
 }
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -476,6 +484,46 @@ mod tests {
             owner + direction,
             |point| point != owner,
         ));
+    }
+
+    #[test]
+    fn held_follow_stops_motion_and_reports_zero_movement_distance() {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        use server::simc_apl::Facts;
+        use shared::components::{CreatureMotion, Position};
+
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let owner = world.spawn_empty().id();
+        let follower = world
+            .spawn((
+                Position {
+                    x: 8956.8,
+                    y: 22.4,
+                    z: 4826.2,
+                },
+                CreatureMotion::Run,
+                crate::creature_ai::FollowOwner::new(owner),
+            ))
+            .id();
+        assert!(hold_unresolved_approach(
+            &mut world,
+            follower,
+            owner,
+            "unpulled hostile sight"
+        ));
+        assert_eq!(
+            world.get::<CreatureMotion>(follower),
+            Some(&CreatureMotion::Still)
+        );
+        assert!(
+            world
+                .get::<crate::creature_ai::FollowOwner>(follower)
+                .is_none()
+        );
+        let bindings = Bindings::default();
+        let facts = NativeFacts::new(&world, follower, &bindings, Encounter::dungeon(0.0), 1);
+        assert_eq!(facts.value("movement.distance").unwrap(), 0.0);
     }
 
     #[test]
