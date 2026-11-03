@@ -87,9 +87,10 @@ fn wcl_intake_avoided_outcomes_publish_distinct_miss_events() {
 fn wcl_intake_dodge_consumes_elusive_brawler_but_miss_does_not() {
     use crate::auras::{self, AuraApplication, AuraSource};
     let _seed = crate::random::seed_scope(70448);
-    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
-    let tank = run.actor;
-    let source = run.targets[0];
+    let mut run =
+        super::healer_simc_replay::snapshot_party_with_specs(1468, 90, [268, 1468, 62, 262, 262]);
+    let tank = run.tank;
+    let source = run.sources[0];
     for _ in 0..3 {
         auras::apply_aura(
             run.app.world_mut(),

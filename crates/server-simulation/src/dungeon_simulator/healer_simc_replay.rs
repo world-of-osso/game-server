@@ -275,6 +275,12 @@ pub(super) fn snapshot_party(spec: u32, level: u8, targets: usize) -> ClassParty
     spawn_class_party(&path, spec, level, targets, None).unwrap()
 }
 
+#[cfg(test)]
+pub(super) fn snapshot_party_with_specs(spec: u32, level: u8, specs: [u32; 5]) -> ClassParty {
+    let (path, _) = read_snapshot().unwrap();
+    spawn_class_party(&path, spec, level, 1, Some(specs)).unwrap()
+}
+
 fn spawn_class_party(
     path: &Path,
     spec: u32,
@@ -482,6 +488,21 @@ fn replay(
     )
 }
 
+fn install_profile_target(
+    world: &mut World,
+    unit: Entity,
+    (start, end): (u64, u64),
+    now: std::time::Duration,
+) {
+    world
+        .entity_mut(unit)
+        .insert(crate::simc_apl_native::FixtureTarget {
+            expires_at: now + std::time::Duration::from_millis(end),
+            lifetime: std::time::Duration::from_millis(end - start),
+            is_boss: false,
+        });
+}
+
 fn replay_profile(
     spec: u32,
     level: u8,
@@ -552,8 +573,21 @@ fn replay_profile(
             super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
         }
     }
+    if let Some(profile) = &profile {
+        let now = app.world().resource::<bevy::prelude::Time>().elapsed();
+        for ((_, &interval), &unit) in profile
+            .intervals_ms
+            .iter()
+            .enumerate()
+            .filter(|(_, (start, _))| *start == 0)
+            .zip(&sources)
+        {
+            install_profile_target(app.world_mut(), unit, interval, now);
+        }
+    }
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
+    let profile_start = app.world().resource::<bevy::prelude::Time>().elapsed();
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
     let frozen_sources = sources
@@ -587,6 +621,12 @@ fn replay_profile(
             .map(|(i, _)| i)
             .zip(&sources)
         {
+            install_profile_target(
+                app.world_mut(),
+                source,
+                profile.intervals_ms[index],
+                profile_start,
+            );
             active_profile.insert(index, source);
         }
     }
@@ -610,6 +650,7 @@ fn replay_profile(
                     }
                 } else if start <= elapsed_ms && !active_profile.contains_key(&index) {
                     let unit = super::dps_parity::spawn_level_dummy(&mut app, tank, level, index)?;
+                    install_profile_target(app.world_mut(), unit, (start, end), profile_start);
                     if wcl.is_none() {
                         super::tank_replay::apply_simc_dummy_debuffs(
                             &mut app, tank, unit, &debuffs,
