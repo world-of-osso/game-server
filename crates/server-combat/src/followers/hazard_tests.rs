@@ -132,6 +132,120 @@ pub(super) const FROM: Position = Position {
     z: -76.0,
 };
 
+#[test]
+fn follower_leaves_fel_nova_before_impact() {
+    let from = Position {
+        x: FROM.x + 5.0,
+        ..FROM
+    };
+    let (mut h, unit, _) = stockade_fixture(from);
+    let enemy = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert((FROM, InMap::continent(34)));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::networking::CombatTarget(Some(enemy)));
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(crate::networking::CombatTarget(Some(unit)));
+    prepare_enemy_spec(&mut h, enemy, 66);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 1223906, Some(enemy), false)
+        .unwrap();
+    h.advance(70);
+    let after = *h.app.world().get::<Position>(unit).unwrap();
+    assert!(
+        point(after).distance(point(FROM)) > 10.0,
+        "follower failed to leave Fel Nova: {after:?}"
+    );
+    h.advance(10);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(1223906)
+                && event.target == Some(unit.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage)
+    );
+}
+
+#[test]
+fn telegraph_preserves_safe_and_mobile_casts_but_interrupts_slow_casts() {
+    use shared::casting::CastState;
+    let (mut h, unit, _) = stockade_fixture(FROM);
+    let enemy = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert((FROM, InMap::continent(34)));
+    prepare_enemy_spec(&mut h, enemy, 66);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 1223906, Some(enemy), false)
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(CastState::normal(133, enemy.to_bits(), 1.0, true));
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+    assert!(h.app.world().get::<CastState>(unit).is_some());
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(CastState::normal(133, enemy.to_bits(), 5.0, true));
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+    assert!(h.app.world().get::<CastState>(unit).is_none());
+    let mut mobile = CastState::normal(133, enemy.to_bits(), 5.0, true);
+    mobile.cast_while_moving = true;
+    h.app.world_mut().entity_mut(unit).insert(mobile);
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+    assert!(h.app.world().get::<CastState>(unit).is_some());
+}
+
+#[test]
+fn overlapping_telegraphs_cancel_a_cast_that_outlasts_the_first_impact() {
+    use shared::casting::CastState;
+    let (mut h, unit, _) = stockade_fixture(FROM);
+    for elapsed in [0.0, 3.0] {
+        let enemy = spawn_npc(&mut h.app, 0.0);
+        h.app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert((FROM, InMap::continent(34)));
+        prepare_enemy_spec(&mut h, enemy, 66);
+        crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 1223906, Some(enemy), false)
+            .unwrap();
+        h.app
+            .world_mut()
+            .get_mut::<CastState>(enemy)
+            .unwrap()
+            .elapsed = elapsed;
+    }
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(CastState::normal(133, 0, 1.0, true));
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+    assert!(h.app.world().get::<CastState>(unit).is_none());
+}
+
+#[test]
+fn follower_ignores_large_and_instant_cast_telegraphs() {
+    let (mut h, unit, _) = stockade_fixture(FROM);
+    let enemy = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert((FROM, InMap::continent(34)));
+    prepare_enemy_spec(&mut h, enemy, 66);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 474197, Some(enemy), false).unwrap();
+    assert!(!super::hazards::escape(h.app.world_mut(), unit));
+    crate::spell_cast::cancel_cast(h.app.world_mut(), enemy);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 270485, Some(enemy), true).unwrap();
+    assert!(!super::hazards::escape(h.app.world_mut(), unit));
+}
+
 fn hostile_field(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity) -> Entity {
     hostile_field_at(h, unit, FROM)
 }

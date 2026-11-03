@@ -10,6 +10,7 @@ struct Field {
     entity: Entity,
     center: Vec3,
     radius: f32,
+    impact_at: Option<f64>,
 }
 
 // FOLLOWER_HAZARD_REACTION_POLICY: project policy, not sourced Retail timing.
@@ -57,6 +58,7 @@ fn hostile_fields_at(world: &mut World, unit: Entity, prediction: f64) -> Vec<Fi
             entity,
             center,
             radius,
+            impact_at: None,
         })
         .collect();
     let map = world.get::<InMap>(unit).copied();
@@ -99,10 +101,62 @@ fn hostile_fields_at(world: &mut World, unit: Entity, prediction: f64) -> Vec<Fi
                     entity,
                     center: point(*anchor),
                     radius,
+                    impact_at: None,
                 })
             }),
     );
+    fields.extend(hostile_cast_telegraphs(world, unit, map, now));
     fields
+}
+
+// INFERRED_WCL: +2–+6 keys, Murder Row p9d1wbR3BFrtjTWY/2,
+// Kings' Rest 2L8BJvP1XcbtQ4jd/1, Den Hx64j9RrfnytB8cA/12,
+// Voidscar AFV14RDGyHxQhbTB/7 and matching +3–+6 samples. Retire when
+// sourced per-spell avoidance policy replaces this cast-geometry inference.
+fn hostile_cast_telegraphs(
+    world: &mut World,
+    unit: Entity,
+    map: Option<InMap>,
+    now: f64,
+) -> Vec<Field> {
+    use shared::casting::{CastState, CastType};
+    let mut query = world.query::<(Entity, &CastState, &Position, &InMap)>();
+    query
+        .iter(world)
+        .filter_map(|(caster, cast, position, caster_map)| {
+            if Some(*caster_map) != map
+                || cast.cast_type != CastType::Normal
+                || cast.duration < 2.5
+                || cast.elapsed >= cast.duration
+                || !crate::spell_cast::targets::relation_matches(
+                    world,
+                    caster,
+                    unit,
+                    crate::spell_cast::targets::Relation::Enemy,
+                )
+            {
+                return None;
+            }
+            let spell = world
+                .get_resource::<crate::spell_info::SpellStore>()?
+                .get(cast.spell_id)?;
+            let radius = spell
+                .effects
+                .iter()
+                .filter(|effect| {
+                    matches!(effect.effect, 2 | 98) && effect.implicit_targets == [18, 16]
+                })
+                .map(|effect| crate::spell_cast::targets::radius(effect, 1))
+                .filter(|radius| *radius > 0.0 && *radius <= 20.0)
+                .max_by(f32::total_cmp)?;
+            Some(Field {
+                entity: caster,
+                center: point(*position),
+                radius: radius + shared::los::body::BODY_RADIUS * 2.0,
+                impact_at: Some(now + f64::from(cast.duration - cast.elapsed)),
+            })
+        })
+        .collect()
 }
 
 pub(super) fn target_is_hazardous(world: &mut World, unit: Entity, target: Entity) -> bool {
@@ -277,7 +331,25 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         clear_escape_probe(world, unit);
         return false;
     };
-    crate::spell_cast::cancel_cast(world, unit);
+    let now = crate::auras::aura_now(world);
+    if let Some(cast) = world.get::<shared::casting::CastState>(unit) {
+        let remaining = f64::from((cast.duration - cast.elapsed).max(0.0));
+        let finishes_before_all_impacts = fields
+            .iter()
+            .filter(|hazard| contains(hazard, point(from)))
+            .all(|hazard| {
+                hazard
+                    .impact_at
+                    .is_some_and(|impact| now + remaining < impact)
+            });
+        if !cast.cast_while_moving && finishes_before_all_impacts {
+            hold_escape(world, unit, from, "finishing_cast");
+            return true;
+        }
+        if !cast.cast_while_moving {
+            crate::spell_cast::cancel_cast(world, unit);
+        }
+    }
     world
         .entity_mut(unit)
         .remove::<crate::creature_ai::FollowOwner>()
