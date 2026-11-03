@@ -1,5 +1,18 @@
 # DPS parity status
 
+## Feral Druid remeasure — 2026-11-03
+
+The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds. The SimC `76f8118` references and confidence-interval method match the landed-master table below.
+
+| Targets | Native revision | Native DPS | SimC DPS | Ratio ± 95% CI | Flag |
+|---|---|---:|---:|---:|---|
+| 1T | `df901fcc13` | 200,399 | 202,645 | 0.9889 ± 0.0215 | in |
+| 3T | `95e32ffd79` | 252,333 | 261,956 | 0.9633 ± 0.0143 | in |
+
+Both point estimates are within the ±5% band. The 3T interval crosses its lower boundary. These are different revisions: the 1T run predates the melee-reach and death-burst changes in the 3T run, and neither run was repeated after the final rebase. The fact-error ledgers are empty. Evidence: `game-engine/data/diagnostics/parity-103-2026-11-03b/103.soul.1.log`, `103.death-burst.3.log` and the corresponding per-seed JSON files.
+
+Retail WCL `gWbkCLMtx7FyX9YH` fight 7 pull 1 actor 3 supports a Bursting Growth event on Vines target death: 24 observed deaths with a surviving enemy within 9 yards had Growth damage within 30 ms before to 23 ms after death. At 94.107s, one burst followed removal of a three-stack Vines aura; the native fix emits once on death, not once per stack.
+
 ## Arms Warrior remeasure — 2026-11-03
 
 The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds on candidate `7131ba15ea`. SimC `76f8118` references match the landed-master table below.
