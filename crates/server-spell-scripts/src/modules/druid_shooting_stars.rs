@@ -20,7 +20,7 @@ struct ShootingStarsTimers([f64; 2]);
 
 fn update_drivers(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
+    let mut actors: Vec<_> = world
         .query::<(
             Entity,
             &ActiveAuras,
@@ -53,6 +53,7 @@ fn update_drivers(world: &mut World) {
             ))
         })
         .collect();
+    actors.sort_unstable_by_key(|(actor, _, _)| actor.to_bits());
     for (actor, config, previous) in actors {
         let Some((chance, period)) = config else {
             world.entity_mut(actor).remove::<ShootingStarsTimers>();

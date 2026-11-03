@@ -182,6 +182,7 @@ fn update(world: &mut World) {
             pending.next_summon += SUMMON_INTERVAL;
         }
     }
+    due.sort_unstable_by_key(|caster| caster.to_bits());
     for caster in due {
         if !spell_cast::try_cast_triggered(world, caster, ARMY_GHOUL, Some(caster), 1) {
             warn!(?caster, "Native Army lesser-ghoul summon refused");

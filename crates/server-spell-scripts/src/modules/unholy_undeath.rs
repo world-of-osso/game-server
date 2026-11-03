@@ -131,11 +131,12 @@ fn initialize(world: &mut World, actor: Entity) {
 
 fn update(world: &mut World) {
     let now = combat::auras::aura_now(world);
-    let ready: Vec<_> = world
+    let mut ready: Vec<_> = world
         .query::<(Entity, &SummonedCreature, &UndeathReady)>()
         .iter(world)
         .filter_map(|(actor, summon, ready)| (ready.0 <= now).then_some((actor, summon.owner)))
         .collect();
+    ready.sort_unstable_by_key(|(actor, _)| actor.to_bits());
     for (actor, owner) in ready {
         let Some(target) = world
             .get::<combat::networking::CombatTarget>(owner)

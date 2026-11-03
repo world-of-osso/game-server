@@ -108,12 +108,13 @@ fn accumulate_damage(world: &mut World, actor: Entity, spell: Option<u32>, amoun
 
 fn expire_orbs(world: &mut World) {
     let now = spell_cast::now(world);
-    let actors: Vec<_> = world
+    let mut actors: Vec<_> = world
         .query::<(Entity, &Orbs)>()
         .iter(world)
         .filter(|(_, orbs)| orbs.0.front().is_some_and(|expires| *expires <= now))
         .map(|(actor, _)| actor)
         .collect();
+    actors.sort_unstable_by_key(|actor| actor.to_bits());
     for actor in actors {
         while world
             .get::<Orbs>(actor)

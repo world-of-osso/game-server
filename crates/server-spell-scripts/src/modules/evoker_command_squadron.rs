@@ -57,14 +57,16 @@ fn breath_hook(spell: u32) -> Option<AfterCastHook> {
 }
 
 fn owned_commandos(world: &mut World, owner: Entity) -> Vec<Entity> {
-    world
+    let mut actors: Vec<_> = world
         .query::<(Entity, &Npc, &SummonedCreature)>()
         .iter(world)
         .filter(|(_, npc, summon)| {
             npc.template_id == ENTRY && summon.owner == owner && SUMMONS.contains(&summon.spell_id)
         })
         .map(|(actor, _, _)| actor)
-        .collect()
+        .collect();
+    actors.sort_unstable_by_key(|actor| actor.to_bits());
+    actors
 }
 
 fn start_squadron(world: &mut World, owner: Entity, spell: &SpellInfo) {
