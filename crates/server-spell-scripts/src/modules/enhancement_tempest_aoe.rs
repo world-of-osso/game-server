@@ -22,11 +22,8 @@ fn multiplier(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) 
     {
         return 1.0;
     }
-    spell
-        .effects
-        .iter()
-        .find(|effect| effect.index == 1)
-        .expect("native Tempest secondary percentage")
-        .base_points
-        / 100.0
+    // VERIFIED_WCL: secondary/primary is 56% in post-2026-10-16 reports
+    // XpkVf3Gr2HK6TBJQ/45, dx6PkVv9GbYHF2KB/35, N1QGHbxpnZzwC7Tt/11,
+    // HPCmtnQVN8zTwfY4/13. Enhancement passive 137041 modifies 65 by +7 and -16.
+    combat::spell_cast::scripts::script_effect_value(world, caster, spell.id, 1) / 100.0
 }
