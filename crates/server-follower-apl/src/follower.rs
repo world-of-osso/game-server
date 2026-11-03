@@ -12,7 +12,7 @@ const PRECOMBAT_TICKS: u32 = 600;
 mod lifecycle_tests;
 
 /// A spec's production APL driver over the shared literal `Driver`.
-pub trait SpecRotation: Send + Sync {
+pub trait SpecRotation: std::any::Any + Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
     fn action_spells(&self) -> Vec<u32>;
 
@@ -93,6 +93,11 @@ impl FollowerApl {
                 .filter(|&spell| is_maintained_buff(world, spell))
                 .collect(),
         );
+    }
+
+    /// The production rotation that owns this follower's live decisions.
+    pub fn rotation(&self) -> &dyn std::any::Any {
+        self.rotation.as_ref()
     }
 
     pub fn in_combat(&self) -> bool {
