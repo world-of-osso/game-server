@@ -2862,12 +2862,10 @@ fn recovery_drink_retries_and_interrupts_on_cast_and_combat() {
         crate::auras::has_aura(run.app.world(), healer, 1291791),
         "remaining low mana must trigger another item use"
     );
-    run.app
-        .world_mut()
-        .get_mut::<CombatStatus>(healer)
-        .unwrap()
-        .0 = true;
-    run.app.update();
+    let enemy = run.actors[&20375766];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), healer, enemy);
+    assert!(run.app.world().get::<CombatStatus>(healer).unwrap().0);
+    crate::followers::update_ai(run.app.world_mut());
     assert!(
         !crate::auras::has_aura(run.app.world(), healer, 1291791),
         "combat must interrupt drinking"
