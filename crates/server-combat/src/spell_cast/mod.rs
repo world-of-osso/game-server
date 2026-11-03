@@ -1360,9 +1360,8 @@ fn send_inventory_rejection(
     }
 }
 
-/// Send to the owners of the event's source and target (once each), including
-/// guardian ancestry (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
-/// wall clock; damage also counts on the damage meters.
+/// Send events to source and target owners, and NPC self-casts to their observers.
+/// Each connection receives at most one event; damage also updates damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     #[cfg(any(test, feature = "test-support"))]
@@ -1414,8 +1413,25 @@ pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
             players.push(player);
         }
     }
+    let self_cast_observers = event
+        .source
+        .filter(|source| event.kind == CombatLogKind::CastSuccess && event.target == Some(*source))
+        .and_then(Entity::try_from_bits)
+        .filter(|source| world.get::<Npc>(*source).is_some())
+        .map(|source| visible_connections(world, source))
+        .unwrap_or_default();
+    let mut connections = self_cast_observers;
     for player in players {
-        send_to_owner(world, player, event.clone());
+        if let Some(connection) = owner_connection(world, player)
+            && !connections.contains(&connection)
+        {
+            connections.push(connection);
+        }
+    }
+    for connection in connections {
+        if let Some(mut sender) = world.get_mut::<MessageSender<CombatLogEvent>>(connection) {
+            sender.send::<CombatChannel>(event.clone());
+        }
     }
 }
 
@@ -1447,19 +1463,22 @@ fn unix_millis() -> u64 {
         .as_millis() as u64
 }
 
-/// Send to every client that replicates `unit` (TrinityCore `SendMessageToSet`): the
-/// connections that see it through interest, or every authenticated client for a unit
-/// replicated without `NetworkVisibility`.
+/// Connections that replicate the unit through interest, or all authenticated clients
+/// when the unit has no `NetworkVisibility`.
+fn visible_connections(world: &mut World, unit: Entity) -> Vec<Entity> {
+    match world.get::<NetworkVisibility>(unit) {
+        Some(visibility) => visibility.visible_senders().collect(),
+        None => crate::system_states::entities_with::<With<Authenticated>>(world),
+    }
+}
+
+/// `SendMessageToSet`: send to each client that replicates the unit.
 pub(crate) fn send_to_set<M: lightyear::prelude::Message + Clone>(
     world: &mut World,
     unit: Entity,
     message: M,
 ) {
-    let receivers: Vec<Entity> = match world.get::<NetworkVisibility>(unit) {
-        Some(visibility) => visibility.visible_senders().collect(),
-        None => crate::system_states::entities_with::<With<Authenticated>>(world),
-    };
-    for connection in receivers {
+    for connection in visible_connections(world, unit) {
         if let Some(mut sender) = world.get_mut::<MessageSender<M>>(connection) {
             sender.send::<CombatChannel>(message.clone());
         }
