@@ -116,13 +116,43 @@ pub(in crate::spell_cast) fn on_expire(world: &mut World, actor: Entity) {
     };
     if selected(world, owner, FINAL_CALLING) {
         // sc_shaman.cpp4421–4433 chooses an actual valid enemy on natural expiry.
-        use crate::random::seq::SliceRandom;
-        let targets: Vec<_> = crate::combat_refs::active_opponents(world, owner)
+        let targets = crate::combat_refs::active_opponents(world, owner)
             .filter(|enemy| super::super::targets::is_alive(world, *enemy))
             .collect();
-        let target = targets.choose(&mut crate::random::thread_rng()).copied();
+        let target = choose_final_calling_target(targets);
         if let Some(target) = target {
             super::super::cast_triggered(world, actor, BLAST, Some(target), 1);
+        }
+    }
+}
+
+fn choose_final_calling_target(mut targets: Vec<Entity>) -> Option<Entity> {
+    use crate::random::seq::SliceRandom;
+    targets.sort_unstable();
+    targets.choose(&mut crate::random::thread_rng()).copied()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn final_calling_seeded_target_is_independent_of_candidate_order() {
+        let targets: Vec<_> = [7, 19, 32, 45]
+            .into_iter()
+            .map(|id| Entity::from_raw_u32(id).unwrap())
+            .collect();
+        for seed in 0..32 {
+            let first = {
+                let _scope = crate::random::seed_scope(seed);
+                choose_final_calling_target(targets.clone())
+            };
+            let second = {
+                let _scope = crate::random::seed_scope(seed);
+                choose_final_calling_target(targets.iter().rev().copied().collect())
+            };
+            assert_eq!(first, second, "seed {seed} must choose the same target");
+            assert!(targets.contains(&first.unwrap()));
         }
     }
 }
