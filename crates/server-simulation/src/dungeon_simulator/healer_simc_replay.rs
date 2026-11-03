@@ -624,6 +624,7 @@ fn replay_profile(
     super::healer_replay::freeze_sources(app.world_mut(), &frozen_sources);
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     let mut tank_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut tank_cast_events = Vec::new();
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut healer_cast_events = Vec::new();
     let mut mitigation_ticks = 0_u32;
@@ -862,9 +863,12 @@ fn replay_profile(
             };
             if event.source == Some(tank.to_bits()) {
                 *tank_casts.entry(spell).or_default() += 1;
+                tank_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell,
+                    "target_slot":event.target.and_then(|target| slots.iter().position(|unit| unit.to_bits() == target))}));
             } else if event.source == Some(healer.to_bits()) {
                 *healer_casts.entry(spell).or_default() += 1;
-                healer_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell}));
+                healer_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell,
+                    "target_slot":event.target.and_then(|target| slots.iter().position(|unit| unit.to_bits() == target))}));
             }
         }
         event_cursor = events.len();
@@ -875,7 +879,7 @@ fn replay_profile(
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
-        "tank_casts":tank_casts,"healer_casts":healer_casts,"healer_cast_events":healer_cast_events,
+        "tank_casts":tank_casts,"tank_cast_events":tank_cast_events,"healer_casts":healer_casts,"healer_cast_events":healer_cast_events,
         "party_entities":slots.map(Entity::to_bits),
         "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
         "metrics":recorder.report(app.world(), duration)});

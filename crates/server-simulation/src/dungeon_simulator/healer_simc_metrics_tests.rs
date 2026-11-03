@@ -76,15 +76,30 @@ fn healer_report_records_real_mana_payment_by_spell() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    let recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    let mut recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current *= 0.5;
     h.cast_and_deliver(2061, Some(h.caster));
     h.advance(80);
+    recorder.observe_frame(h.app.world(), 80);
     assert!(
         h.inbox.failed.is_empty(),
         "real Flash Heal must succeed: {:?}",
         h.inbox.failed
     );
     let report = recorder.report(h.app.world(), 5);
+    assert!(
+        report["self_healing_events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|event| event["spell"] == 2061
+                && event["slot"] == 0
+                && event["effective"].as_u64().unwrap() > 0)
+    );
     assert!(
         report["mana_spent_by_spell"]["2061"]
             .as_f64()
@@ -218,7 +233,7 @@ fn healer_report_counts_only_consumed_owned_shields() {
         sources: [(h.npc, (6, 6))].into(),
         ..Default::default()
     });
-    let recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
+    let mut recorder = Recorder::start(h.app.world(), h.caster, h.caster, vec![h.caster]);
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -255,6 +270,11 @@ fn healer_report_counts_only_consumed_owned_shields() {
         200.0,
     );
     assert_eq!(h.health(h.caster), before);
+    recorder.observe_frame(h.app.world(), 1);
+    assert_eq!(
+        recorder.report(h.app.world(), 1)["self_absorb_events"],
+        serde_json::json!([{"time_seconds":0.05,"slot":0,"spell":17,"amount":200.0}])
+    );
     assert_eq!(
         recorder.report(h.app.world(), 1)["consumed_absorbs_by_spell"]["17"],
         200.0

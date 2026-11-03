@@ -153,6 +153,7 @@ pub struct Capture {
     pub hits: Vec<Hit>,
     pub consumed_absorbs: BTreeMap<Entity, ConsumedAbsorbPoints>,
     pub consumed_absorbs_by_spell: BTreeMap<(Entity, u32), f64>,
+    pub consumed_absorbs_by_target: BTreeMap<(Entity, Entity, u32), f64>,
     pub melee_rage: BTreeMap<(Entity, &'static str), f64>,
     pub active_hit_scale: Option<(Entity, f32)>,
     pub source_snapshots: BTreeMap<u64, SourceSnapshot>,
@@ -265,6 +266,10 @@ pub fn record_absorb(
         *capture
             .consumed_absorbs_by_spell
             .entry((caster, spell_id))
+            .or_default() += points;
+        *capture
+            .consumed_absorbs_by_target
+            .entry((caster, target, spell_id))
             .or_default() += points;
         let usage = capture.consumed_absorbs.entry(caster).or_default();
         usage.total += points;
