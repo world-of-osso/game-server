@@ -124,6 +124,7 @@ fn consume_overflow(world: &mut World, unit: Entity, spell: &SpellInfo, _: Optio
 }
 
 fn remove_overflow(world: &mut World, unit: Entity, _: &AuraInstance, _: RemoveReason) {
+    super::feral_halazzis_fury::finish_berserk(world, unit);
     auras::remove_auras(world, unit, RemoveReason::Cancelled, |aura| {
         aura.spell_id == OVERFLOW && aura.caster == unit
     });
