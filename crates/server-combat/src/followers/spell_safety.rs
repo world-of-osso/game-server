@@ -109,13 +109,22 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_unintended_reach", "follower action refused");
         return false;
     };
-    if reach_is_empty(reach) {
+    let engaged_areas = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .map(|info| {
+            world
+                .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
+                .engaged_areas(world, actor, info)
+        })
+        .unwrap_or_default();
+    if reach_is_empty(reach) && engaged_areas.is_empty() {
         return true;
     }
-    if pending
-        .iter()
-        .any(|&helper| reaches_unit(world, reach, actor, target, helper))
-    {
+    if pending.iter().any(|&helper| {
+        reaches_unit(world, reach, actor, target, helper)
+            || reaches_engaged_area(world, actor, helper, &engaged_areas)
+    }) {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, ?reach, reason = "pending_helper_in_reach", "follower action refused");
         return false;
     }
@@ -124,7 +133,7 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_nonchain_reach", "follower action refused");
         return false;
     };
-    if reach_is_empty(reach) {
+    if reach_is_empty(reach) && engaged_areas.is_empty() {
         return true;
     }
     let caster = actor;
@@ -154,13 +163,51 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                 && world.get::<Npc>(actor).is_some()
                 && !engaged_with_party(world, follower, actor)
                 && targets::relation_matches(world, caster, actor, targets::Relation::Enemy)
-                && reaches_unit(world, reach, caster, target, actor)
+                && (reaches_unit(world, reach, caster, target, actor)
+                    || reaches_engaged_area(world, caster, actor, &engaged_areas))
         });
     if let Some(outsider) = outsider {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, ?reach, reason = "unengaged_outsider", "follower action refused");
         return false;
     }
     true
+}
+
+/// A selected engaged primary can splash onto any unit in its authored area.
+fn reaches_engaged_area(
+    world: &World,
+    caster: Entity,
+    unit: Entity,
+    areas: &[DeclaredReach],
+) -> bool {
+    if areas.is_empty() {
+        return false;
+    }
+    let Some((map, origin, point)) = world
+        .get::<InMap>(caster)
+        .copied()
+        .zip(targets::position(world, caster))
+        .zip(targets::position(world, unit))
+        .map(|((map, origin), point)| (map, origin, point))
+    else {
+        return true;
+    };
+    world
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(map)
+        .any(|candidate| {
+            targets::is_alive(world, candidate)
+                && targets::relation_matches(world, caster, candidate, targets::Relation::Enemy)
+                && crate::combat_refs::active_opponents(world, candidate)
+                    .next()
+                    .is_some()
+                && targets::position(world, candidate).is_none_or(|center| {
+                    areas.iter().any(|area| {
+                        center.distance(origin) <= area.caster_radius
+                            && center.distance(point) <= area.target_radius
+                    })
+                })
+        })
 }
 
 fn reach_is_empty(reach: DeclaredReach) -> bool {

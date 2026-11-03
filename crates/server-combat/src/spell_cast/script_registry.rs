@@ -614,6 +614,24 @@ impl SpellScriptRegistry {
             })
     }
 
+    /// Areas around a primary selected from enemies already in combat.
+    pub fn engaged_areas(
+        self,
+        world: &World,
+        caster: Entity,
+        spell: &SpellInfo,
+    ) -> Vec<DeclaredReach> {
+        self.hooks(HookKind::DeclaredReach)
+            .filter_map(|hook| match hook {
+                SpellScriptHook::DeclaredReach(declare) => match declare(world, caster, spell) {
+                    ScriptReach::EngagedArea(area) if area.target_radius > 0.0 => Some(area),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect()
+    }
+
     pub fn additional_reach_actions(self, world: &World, unit: Entity) -> Vec<u32> {
         self.hooks(HookKind::AdditionalReachActions)
             .filter_map(|hook| match hook {

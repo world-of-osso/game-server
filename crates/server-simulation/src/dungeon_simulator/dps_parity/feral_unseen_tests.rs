@@ -90,6 +90,47 @@ fn feral_native_unseen_bleed_pays_one_damage_event_per_scheduled_tick() {
     );
 }
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_unseen_chooses_engaged_primary_not_idle_enemy() {
+    let _seed = crate::random::seed_scope(1031263657);
+    let mut run = prepare_cat();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let idle = spawn_level_dummy(&mut run.app, actor, 90, 1).unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(idle)
+        .insert(shared::components::Position {
+            x: 25.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    for _ in 0..10 {
+        cast_full_energy_bite(&mut run);
+        for _ in 0..120 {
+            run.app.update();
+        }
+    }
+    let hits = |target: Entity| {
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.target == Some(target.to_bits())
+                    && matches!(event.spell_id, Some(1263890 | 1263908))
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.amount > 0
+            })
+            .count()
+    };
+    assert!(hits(primary) > 0, "Unseen must hit an engaged enemy");
+    assert_eq!(hits(idle), 0, "Unseen cannot pick the idle enemy");
+}
+
 fn prepare_cat() -> Run {
     let mut run = prepare_literal(103, 1).unwrap();
     let actor = run.actor;

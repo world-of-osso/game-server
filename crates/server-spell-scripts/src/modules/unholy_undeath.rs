@@ -187,13 +187,7 @@ fn declared_reach(
     {
         return Default::default();
     }
-    let undeath = world
-        .resource::<SpellStore>()
-        .get(444633)
-        .expect("native Undeath range");
-    combat::spell_cast::script_registry::ScriptReach::caster(
-        spell_cast::targets::spell_range(undeath, true).1,
-    )
+    combat::spell_cast::script_registry::ScriptReach::EngagedOnly
 }
 
 fn spread(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
@@ -230,7 +224,12 @@ fn spread(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
         spell_cast::targets::Relation::Enemy,
         0,
     );
-    targets.retain(|candidate| *candidate != target);
+    // INFERRED_SIMC: SimC76f8118 action.cpp1737–1751 target_non_sleeping_list.
+    // Retire on a retail pull by Undeath or a client sniff showing idle targets.
+    targets.retain(|&candidate| {
+        candidate != target
+            && combat::combat_refs::active_opponents(world, candidate).next().is_some()
+    });
     targets.sort_by_key(|candidate| owned_stacks(world, ctx.caster, *candidate).unwrap_or(0));
     let Some(other) = targets.first().copied() else {
         return;

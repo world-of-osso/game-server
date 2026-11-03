@@ -34,17 +34,7 @@ fn declared_reach(
     {
         return Default::default();
     }
-    let wrath = world
-        .resource::<SpellStore>()
-        .get(1308093)
-        .expect("native Spirit's Wrath");
-    let range = wrath
-        .misc
-        .as_ref()
-        .and_then(|misc| misc.range)
-        .expect("native Spirit's Wrath range")
-        .max_hostile;
-    combat::spell_cast::script_registry::ScriptReach::caster(range)
+    combat::spell_cast::script_registry::ScriptReach::EngagedOnly
 }
 
 fn talent_amount(world: &World, caster: Entity, spell: u32, index: u8) -> Option<f32> {
@@ -144,7 +134,10 @@ fn spirit_attack(world: &mut World, ctx: &EffectCtx<'_>) {
         .and_then(|misc| misc.range)
         .expect("Spirit's Wrath native range")
         .max_hostile;
-    let candidates = targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
+    let mut candidates = targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
+    // INFERRED_WCL: h82XJKQYxVztdnqv fight1, 406 hits, none first friendly
+    // damage on its target. Retire on a retail pull by this spell or a client sniff.
+    candidates.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
     if candidates.is_empty() {
         return;
     }
