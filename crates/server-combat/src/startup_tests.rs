@@ -41,11 +41,12 @@ fn create_world_schema(conn: &rusqlite::Connection) {
         CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE expected_stat (
             ID INTEGER PRIMARY KEY, ExpansionID INTEGER, CreatureHealth REAL,
-            CreatureAutoAttackDps REAL, CreatureArmor REAL, ArmorConstant REAL, Lvl INTEGER
+            CreatureAutoAttackDps REAL, CreatureArmor REAL, ArmorConstant REAL, Lvl INTEGER,
+            CreatureSpellDamage REAL
         );
         CREATE TABLE expected_stat_mod (
             ID INTEGER PRIMARY KEY, CreatureHealthMod REAL, CreatureAutoAttackDPSMod REAL,
-            CreatureArmorMod REAL, ArmorConstantMod REAL
+            CreatureArmorMod REAL, ArmorConstantMod REAL, CreatureSpellDamageMod REAL
         );
         CREATE TABLE mythic_plus_season (ID INTEGER PRIMARY KEY, MilestoneSeason INTEGER);
         CREATE TABLE content_tuning_x_expected (

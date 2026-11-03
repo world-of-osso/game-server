@@ -492,6 +492,7 @@ fn creature_stats(row: &Row) -> rusqlite::Result<CreatureStats> {
         auto_attack_dps: row.get(2)?,
         armor: row.get(3)?,
         armor_constant: row.get(4)?,
+        spell_damage: row.get(5)?,
     })
 }
 
@@ -500,14 +501,15 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
     let mut stats = ExpectedStats::default();
     let mut stmt = conn
         .prepare(
-            "SELECT Lvl, CreatureHealth, CreatureAutoAttackDps, CreatureArmor, ArmorConstant, ExpansionID
+            "SELECT Lvl, CreatureHealth, CreatureAutoAttackDps, CreatureArmor, ArmorConstant,
+                    CreatureSpellDamage, ExpansionID
              FROM expected_stat ORDER BY ID",
         )
         .expect("Failed to prepare expected_stat query");
     let rows = stmt
         .query_map(params![], |row| {
             Ok((
-                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(5)? as i32),
+                (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(6)? as i32),
                 creature_stats(row)?,
             ))
         })
@@ -516,7 +518,8 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
         .map(|row| row.expect("Failed to read expected_stat row"))
         .collect();
     let mut stmt = conn
-        .prepare("SELECT ID, CreatureHealthMod, CreatureAutoAttackDPSMod, CreatureArmorMod, ArmorConstantMod
+        .prepare("SELECT ID, CreatureHealthMod, CreatureAutoAttackDPSMod, CreatureArmorMod, ArmorConstantMod,
+                        CreatureSpellDamageMod
                  FROM expected_stat_mod")
         .expect("Failed to prepare expected_stat_mod query");
     let rows = stmt
