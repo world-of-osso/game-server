@@ -41,7 +41,12 @@ fn declared_reach(
     let selected =
         combat::spell_cast::script_registry::reach_source_selected(world, caster, 369939)
             || combat::auras::has_aura(world, caster, 370901);
-    if spell.id != LIVING_FLAME || !selected {
+    if spell.id != LIVING_FLAME
+        || !selected
+        || spell
+            .cast_primary_target
+            .is_some_and(|target| relation_matches(world, caster, target, Relation::Ally))
+    {
         return Default::default();
     }
     combat::spell_cast::script_registry::ScriptReach::caster(targets::spell_range(spell, true).1)
@@ -180,11 +185,15 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     if relation_matches(world, caster, target, Relation::Ally) {
         spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
         super::essence_burst::roll_ruby_essence_burst(world, caster);
+        for extra in leaping_extras(world, caster, target, stacks, Relation::Ally) {
+            spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(extra), depth + 1);
+            super::essence_burst::roll_ruby_essence_burst(world, caster);
+        }
         return;
     }
     refund_energizing_flame(world, caster);
     cast_scarlet_damage(world, caster, target, depth + 1, scarlet);
-    let extras = leaping_extras(world, caster, target, stacks);
+    let extras = leaping_extras(world, caster, target, stacks, Relation::Enemy);
     for &extra in &extras {
         cast_scarlet_damage(world, caster, extra, depth + 1, scarlet);
     }
@@ -204,7 +213,13 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     }
 }
 
-fn leaping_extras(world: &mut World, caster: Entity, target: Entity, stacks: u8) -> Vec<Entity> {
+fn leaping_extras(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    stacks: u8,
+    relation: Relation,
+) -> Vec<Entity> {
     if stacks == 0 {
         return Vec::new();
     }
@@ -214,7 +229,7 @@ fn leaping_extras(world: &mut World, caster: Entity, target: Entity, stacks: u8)
         .get(LIVING_FLAME)
         .expect("native Living Flame");
     let (_, range) = targets::spell_range(spell, true);
-    let mut extras = targets::area_units(world, caster, center, range, Relation::Enemy, 0);
+    let mut extras = targets::area_units(world, caster, center, range, relation, 0);
     extras.retain(|&unit| unit != target);
     extras.truncate(usize::from(stacks));
     extras
