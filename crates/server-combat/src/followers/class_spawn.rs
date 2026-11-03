@@ -220,6 +220,7 @@ fn spawn_neutral(
             .insert((
                 crate::zones::TempSummon { summoner: owner },
                 crate::zones::CreatureDifficulty(difficulty_id),
+                shared::components::CombatStatus(false),
             ))
             .remove::<crate::combat::RespawnDelay>();
         Some(entity)

@@ -103,6 +103,34 @@ fn spawn(spec: u32) -> Pull {
     spawn_at(spec, 90)
 }
 
+#[test]
+fn fresh_vengeance_follower_has_out_of_combat_status_on_first_apl_tick() {
+    use server_combat::simc_apl::Facts;
+    use server_follower_apl::vengeance_tank_rotation::{Context, Rotation};
+    use shared::components::CombatStatus;
+
+    let mut pull = spawn(581);
+    let actor = pull.follower;
+    let target = pull.harness.npc;
+    let world = pull.harness.app.world_mut();
+    assert_eq!(world.get::<CombatStatus>(actor), Some(&CombatStatus(false)));
+    let encounter = server_combat::simc_apl_native::Encounter::dungeon(0.0);
+    let rotation = Rotation::load(world, actor, encounter).unwrap();
+    let targets = [target];
+    let facts = Context::new(
+        world,
+        actor,
+        &targets,
+        &rotation.bindings,
+        &rotation.equipment,
+        encounter,
+    );
+    assert_eq!(facts.value("in_combat").unwrap(), 0.0);
+    let mut apl = FollowerApl::new_for_world(world, Box::new(rotation));
+    apl.tick(world, actor, &targets)
+        .expect("first Vengeance APL tick");
+}
+
 /// Spawn `spec` for an owner at `level`; followers take their owner's level.
 fn spawn_at(spec: u32, level: u8) -> Pull {
     spawn_at_map(spec, level, 2515)
