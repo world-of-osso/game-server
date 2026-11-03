@@ -583,7 +583,8 @@ fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &Sp
         };
         return round(spell_scaling_value(spell, effect, level));
     }
-    let creature = world.get::<Npc>(caster).is_some();
+    let creature = world.get::<Npc>(caster).is_some()
+        && !crate::followers::is_player_like_combatant(world, caster);
     let stats = world.get_resource::<crate::level_scaling::CreatureSpellStats>();
     let (true, Some(stats)) = (creature && scales_with_spell_damage(effect), stats) else {
         return effect.base_points;

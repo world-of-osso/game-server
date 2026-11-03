@@ -61,6 +61,86 @@ fn assert_equipped_driver_budget(run: &Run, id: u32) -> f32 {
 }
 
 #[test]
+#[ignore = "requires native Arcane follower profile and full world catalog"]
+fn follower_acidbrood_uses_item_budget_while_creature_damage_scales() {
+    use crate::spell_cast::effects::factor_capture::FactorCapture;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_measurement(62, 1).expect("equipped Arcane follower");
+    let actor = run.actor;
+    let target = run.targets[0];
+    let world = run.app.world();
+    assert!(
+        world
+            .get::<crate::followers::ClassCombatant>(actor)
+            .is_some()
+    );
+    assert!(world.get::<shared::components::Npc>(actor).is_some());
+    assert!(
+        world
+            .get_resource::<crate::level_scaling::CreatureSpellStats>()
+            .is_some()
+    );
+    let budget = assert_equipped_driver_budget(&run, 1310082);
+
+    // The target is a native creature, so the same zero-coefficient damage effect
+    // must still take the full catalog's CreatureSpellDamage branch.
+    let world = run.app.world();
+    let spell = world.resource::<SpellStore>().get(1310088).unwrap();
+    let mut effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .clone();
+    effect.base_points = budget;
+    let stats = world.resource::<crate::level_scaling::CreatureSpellStats>();
+    let level = world
+        .get::<shared::components::UnitLevel>(target)
+        .unwrap()
+        .0;
+    let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
+    let auto_attack = spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[0] & 0x0008_0000 != 0);
+    let creature_base =
+        crate::spell_cast::effects::modded_base_points(world, target, spell, &effect);
+    let expected_creature = (stats.evaluate(auto_attack, level, tuning) * budget / 100.0).round();
+    assert!(
+        (creature_base - expected_creature).abs() < 1.0,
+        "creature={creature_base} expected={expected_creature}"
+    );
+    assert!(
+        creature_base > budget * 2.0,
+        "the control must exercise creature scaling"
+    );
+
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 1310088, "acidbrood", 1));
+    engage(&mut run);
+    for _ in 0..2400 {
+        drive_player(&mut run).unwrap();
+        run.app.update();
+        let capture = run.app.world().resource::<FactorCapture>().export();
+        if let Some(event) = capture["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 1310088)
+        {
+            let actual = event["factors"]["native_scaled_amount"].as_f64().unwrap();
+            assert!(
+                (actual - f64::from(budget)).abs() < 1.0,
+                "Acidbrood base {actual}, item budget {budget}; {event}"
+            );
+            return;
+        }
+    }
+    panic!("no real Acidbrood hit during 120 seconds");
+}
+
+#[test]
 #[ignore = "requires exact native64/62/263 equipped profile, traits and world DB"]
 fn native_equipped_midnight_item_damage_payloads_are_nonzero() {
     let _seed = crate::random::seed_scope(70448);
