@@ -57,6 +57,7 @@ pub struct FollowerApl {
     phase: Phase,
     combat_started_at: f64,
     maintained_buffs: Option<std::collections::BTreeSet<u32>>,
+    recovery_heals: std::collections::BTreeSet<u32>,
 }
 
 /// The APL failed this pull; the error was logged once and casting stops until the next pull.
@@ -76,6 +77,7 @@ impl FollowerApl {
             phase: Phase::Precombat { ticks: 0 },
             combat_started_at: 0.0,
             maintained_buffs: None,
+            recovery_heals: std::collections::BTreeSet::new(),
         }
     }
 
@@ -86,6 +88,15 @@ impl FollowerApl {
     }
 
     fn initialize_maintained_buffs(&mut self, world: &World) {
+        let store = world.resource::<server::spell_info::SpellStore>();
+        self.recovery_heals = self
+            .rotation
+            .action_spells()
+            .into_iter()
+            .filter(|&spell| {
+                has_healing_effect(store, spell, &mut std::collections::BTreeSet::new())
+            })
+            .collect();
         self.maintained_buffs = Some(
             self.rotation
                 .action_spells()
@@ -192,15 +203,25 @@ impl FollowerApl {
             })
             .collect::<std::collections::BTreeSet<_>>();
         if !spells.is_empty() {
-            world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+            world.insert_resource(literal_rotation::BuffUpkeep {
+                actor,
+                spells,
+                healing_spells: Default::default(),
+            });
             let decision = self.rotation.poll_precombat(world, actor, &[]);
             world.remove_resource::<literal_rotation::BuffUpkeep>();
             if let PrecombatPoll::Selected { action, execution } = decision? {
                 return self.execute_plan(world, actor, action, execution);
             }
         }
-        let spells = self.maintained_buffs.as_ref().unwrap().clone();
-        world.insert_resource(literal_rotation::BuffUpkeep { actor, spells });
+        let healing_spells = self.recovery_heals.clone();
+        let mut spells = self.maintained_buffs.as_ref().unwrap().clone();
+        spells.extend(&healing_spells);
+        world.insert_resource(literal_rotation::BuffUpkeep {
+            actor,
+            spells,
+            healing_spells,
+        });
         let result = self.rotation.drive_upkeep(world, actor);
         world.remove_resource::<literal_rotation::BuffUpkeep>();
         result

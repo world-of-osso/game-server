@@ -24,6 +24,7 @@ pub struct LiteralTickProgress(pub bool);
 pub(crate) struct BuffUpkeep {
     pub actor: Entity,
     pub spells: std::collections::BTreeSet<u32>,
+    pub healing_spells: std::collections::BTreeSet<u32>,
 }
 
 #[cfg(test)]
