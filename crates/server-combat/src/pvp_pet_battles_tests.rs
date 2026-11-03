@@ -1184,16 +1184,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
-    let maps = crate::maps::store::load_map_store(&conn).unwrap();
-    let data = std::env::var_os("GAME_SERVER_GROUND_DIR").expect("real ground asset directory");
-    let ground = crate::ground::GroundMap::new(
-        std::path::Path::new(&data),
-        maps.maps
-            .iter()
-            .map(|(&id, map)| (id, map.wdt_file_data_id))
-            .collect(),
-    );
-    app.insert_resource(ground);
+    app.insert_resource(crate::test_data::ground_map());
     app.init_resource::<crate::maps::ServerClock>();
     let [a, b] = matched(&mut app);
     for (owner, character) in [a, b].into_iter().zip(characters) {
