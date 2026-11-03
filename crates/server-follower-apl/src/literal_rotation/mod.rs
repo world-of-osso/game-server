@@ -283,7 +283,14 @@ impl Driver {
             } else {
                 true
             };
-            if prepared.now() <= deadline && target_alive && facts.target_ready(&queued_action)? {
+            let allowed_in_upkeep = prepared
+                .upkeep_actions()
+                .is_none_or(|actions| actions.contains(&queued_action.name));
+            if allowed_in_upkeep
+                && prepared.now() <= deadline
+                && target_alive
+                && facts.target_ready(&queued_action)?
+            {
                 let current = if prepared.permits_row(&queued_action)? {
                     prepared.execution_in(&queued_action, equipment, &self.program)?
                 } else {

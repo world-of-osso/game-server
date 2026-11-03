@@ -1207,12 +1207,42 @@ fn keystone_death_time_starts_after_native_countdown() {
 #[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn keystone_two_pulls_do_not_repeat_precombat_setup() {
+    const CHILD: &str = "AZURE_TWO_PULL_FIXTURE_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "dungeon_simulator::campaign::keystone_two_pulls_do_not_repeat_precombat_setup",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .env("DUNGEON_SIMULATOR_MAP", "2515")
+            .env_remove("DUNGEON_SIMULATOR_GRAPH")
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success() && stdout.contains("1 passed"),
+            "Azure fixture child failed or ran no test:\n{}\n{}",
+            stdout,
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+    for seed in 1..=3 {
+        check_azure_precombat(seed);
+    }
+}
+
+fn check_azure_precombat(seed: u64) {
+    let _seed = crate::random::seed_scope(seed);
     let options = super::keystone::Options {
         map_id: 2515,
         level: 2,
         specs: [66, 105, 262, 63, 253],
     };
-    let mut run = spawn_run_mode(1, &mut None, Some(options)).unwrap();
+    let mut run = spawn_run_mode(seed, &mut None, Some(options)).unwrap();
     let owner = run.party.owner;
     let mage = run
         .party
@@ -1226,12 +1256,9 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
                 .is_some_and(|spec| spec.0 == 63)
         })
         .unwrap();
-    let cursor = run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0
-        .len();
+    // Preparation can cast while spawn_run_mode walks to the Font. Include
+    // those actual events when counting once-only precombat setup.
+    let cursor = 0;
     for _ in 0..2000 {
         run.control().unwrap();
         run.app.update();
@@ -1289,7 +1316,7 @@ fn keystone_two_pulls_do_not_repeat_precombat_setup() {
             return;
         }
     }
-    panic!("five native source deaths and pulls were not observed");
+    panic!("five native source deaths and pulls were not observed for seed {seed}");
 }
 
 #[test]
