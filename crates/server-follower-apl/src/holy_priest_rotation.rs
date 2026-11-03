@@ -140,7 +140,8 @@ impl Holy {
                 (h.current > 0.0 && h.max > 0.0).then_some((unit, h.current / h.max))
             })
             .collect();
-        let Some((target, _)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1)) else {
+        let Some((target, _)) = crate::follower::lowest_health(world, living.iter().copied())
+        else {
             return Ok(());
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.85).count();

@@ -263,7 +263,7 @@ impl Mistweaver {
             })
             .collect();
         let Some((lowest, lowest_ratio)) =
-            living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1))
+            crate::follower::lowest_health(world, living.iter().copied())
         else {
             return Ok(());
         };

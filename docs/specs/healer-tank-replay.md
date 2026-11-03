@@ -26,6 +26,22 @@ Matched WCL replays require all five actors' recorded CombatantInfo talent entri
 
 Gate normalized WCL intake for each party member in 15-second windows up to the first native party death, including the last partial window, but stop immediately before the fatal hit because remaining health clips its effective damage. Count the damage commit and all consumed absorbs, including death-prevention absorbs; do not subtract a rescue heal from the incoming damage. Report death and post-death undelivered hits as outcomes, not intake-gate failures. Include timestamped tank and healer casts, healer healing, party self-healing and self-absorbs, and a per-second party-health curve to investigate the 10 seconds before death. WCL intake conversion retains only the configured measurement interval; later pull events cannot invalidate that interval. WCL replay configurations record each party member's observed Bloodlust application time. Apply the 40-second native haste aura to each recorded recipient at that time. Treat WCL blocked hits as already-mitigated landed pressure. For changing WCL maximum health, use the latest available observation at each hit; if the first observation is later than the hit or pull start, record its timestamp as an inference rather than treating it as an observed starting value. Exclude WCL source-unknown Shadow Word: Death 32409 when its target is a party Priest: it is the Priest's self-inflicted backlash. Do not represent friendly damage-transfer events as hostile hits. WCL ability 3 is its Falling environmental sentinel, not the unrelated DB2 spell 3; replay it as physical non-spell pressure using the inferred engaged-hostile source, so its hostile proc semantics remain an approximation.
 
+## Equal-health healer target ties
+
+Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:
+
+| Spec | WCL report / fight / pull | First three targets |
+|---|---|---|
+| 65 | `dtmp7Lg2abzyZVBG` / 3 / 1 | T, T, D |
+| 105 | `2gBLy8vcfWAHQ7t3` / 25 / 1 | T, T, H |
+| 1468 | `vhKYp3J2BcVdQ7fa` / 2 / 1 | T, T, D |
+| 256 | `R19Zb4BqjxKvgzGm` / 13 / 1 | H, D, D |
+| 257 | `BCX8v3VPd6pnyzM4` / 1 / 1 | T, H, D |
+| 264 | `mHcDYRVyprndwjFC` / 2 / 2 | T, D, D |
+| 270 | `BaN8nxT64QztvMkH` / 1 / 1 | D, T, H |
+
+Mistweaver's first directed heal occurs at 29.64 seconds; attack-triggered automatic heals are excluded. These observations support a tie policy, not a rule for unequal health.
+
 ## Healer parity reference population
 
 The [seven-healer hostile-hit recheck](healer-tank-replay/seven-healer-recheck-2026-11-02.md) records the same-binary ratios and the remaining Mistweaver gap.

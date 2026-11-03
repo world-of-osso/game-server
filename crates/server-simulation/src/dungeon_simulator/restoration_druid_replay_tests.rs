@@ -176,6 +176,73 @@ fn master_shapeshifter_restores_mana_from_bear_form_ironfur() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_first_full_health_rejuvenation_targets_tank() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    super::healer_simc_replay::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    for unit in run.slots {
+        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max;
+    }
+    run.app
+        .world_mut()
+        .entity_mut(healer)
+        .remove::<server::test_support::LiteralParityFixture>()
+        .insert(crate::followers::AplControlled);
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    super::healer_simc_replay::engage(&mut run);
+    for _ in 0..80 {
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        if let Some(cast) = events.iter().find(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(healer.to_bits())
+                && event.spell_id == Some(774)
+        }) {
+            assert_eq!(cast.target, Some(run.tank.to_bits()));
+            return;
+        }
+    }
+    panic!("no Rejuvenation cast");
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn healer_lowest_health_ties_use_tank_then_entity_order() {
+    let run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+    let world = run.app.world();
+    let tank = run.tank;
+    let a = run.slots[2];
+    let b = run.slots[3];
+    let select = |values: &[(bevy::prelude::Entity, f32)]| {
+        server_follower_apl::lowest_health(world, values.iter().copied())
+            .unwrap()
+            .0
+    };
+    assert_eq!(select(&[(b, 1.0), (tank, 1.0), (a, 1.0)]), tank);
+    assert_eq!(select(&[(tank, 1.0), (b, 1.0), (a, 1.0)]), tank);
+    assert_eq!(select(&[(tank, 1.0), (a, 0.999)]), a);
+    let first = if a.to_bits() < b.to_bits() { a } else { b };
+    assert_eq!(select(&[(a, 0.5), (b, 0.5)]), first);
+    assert_eq!(select(&[(b, 0.5), (a, 0.5)]), first);
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn restoration_druid_uses_selected_germination_in_party_pulse() {
     let trace = std::env::var("HEALER_TANK_TIMELINE").unwrap();

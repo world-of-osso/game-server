@@ -104,7 +104,8 @@ impl HolyPaladin {
                     .then_some((unit, health.current / health.max))
             })
             .collect();
-        let Some((target, _)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1)) else {
+        let Some((target, _)) = crate::follower::lowest_health(world, living.iter().copied())
+        else {
             return Ok(());
         };
         let beacon_up = living.iter().any(|(unit, _)| {

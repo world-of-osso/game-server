@@ -14,6 +14,7 @@ use server::{
 
 pub mod action_metadata;
 mod follower;
+pub use follower::lowest_health;
 pub mod hunter_facts;
 pub mod literal_rotation;
 mod lust_policy;
