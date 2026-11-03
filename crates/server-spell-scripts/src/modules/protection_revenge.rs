@@ -96,17 +96,24 @@ fn grant_vengeful_shield(
     });
     if equipped {
         // SimC76f8118 sc_warrior.cpp6021–6030: free Revenge earns the 2pc buff.
-        auras::apply_aura(world, &AuraApplication {
-            caster: actor,
-            target: actor,
-            spell_id: VENGEFUL_SHIELD,
-            effect_mask: u32::MAX,
-            source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: VENGEFUL_SHIELD,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 
-fn consume_vengeful_shield(world: &mut World, actor: Entity, spell: &combat::spell_info::SpellInfo) {
+fn consume_vengeful_shield(
+    world: &mut World,
+    actor: Entity,
+    spell: &combat::spell_info::SpellInfo,
+) {
     if spell.id == 23922 {
         // SimC76f8118 sc_warrior.cpp6306: expire after Shield Slam executes.
         auras::remove_auras(world, actor, RemoveReason::Consumed, |aura| {
