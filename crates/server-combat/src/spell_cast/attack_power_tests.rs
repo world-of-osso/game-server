@@ -288,7 +288,7 @@ fn class_completeness_native_aimed_shot_uses_source_ranged_ap_not_melee_ap() {
 }
 
 #[test]
-fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_ap() {
+fn class_completeness_native_hunter_pet_command_inherits_owner_default_not_ranged_ap() {
     let mut h = harness(Vec::new(), &[259489, 259277, SUNWELL_RADIANCE], 3).unwrap();
     {
         let mut owner = h
@@ -296,8 +296,8 @@ fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_
             .world_mut()
             .get_mut::<CharacterStats>(h.caster)
             .unwrap();
-        owner.attack_power = 1.0;
-        owner.ranged_attack_power = 1000.0;
+        owner.attack_power = 1000.0;
+        owner.ranged_attack_power = 1.0;
     }
     let pet = spawn_player(&mut h.app, 3, 2.0);
     h.app
@@ -324,7 +324,7 @@ fn class_completeness_native_hunter_pet_command_inherits_owner_ranged_not_melee_
     assert_eq!(
         5000.0 - h.health(h.npc),
         1800.0,
-        "native pet:3×(1000 owner RAP×0.6), not owner melee AP1"
+        "native pet:3×(1000 owner default AP×0.6), not owner ranged AP1"
     );
     assert!(
         h.inbox

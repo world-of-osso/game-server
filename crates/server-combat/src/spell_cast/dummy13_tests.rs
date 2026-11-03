@@ -235,6 +235,12 @@ fn pet(h: &mut Harness) -> Entity {
 #[test]
 fn dummy13_bestial_wrath_strike_uses_own_pets_current_target() {
     let mut h = harness(Vec::new(), &[19574, 344572, SUNWELL_RADIANCE], 3).unwrap();
+    // Default AP 37 yields 22 inherited pet AP after the 60% integer conversion.
+    h.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .attack_power = 37.0;
     let own = pet(&mut h);
     apply_native_enemy_dodge_reduction_to(&mut h, own);
     let target = h.npc;
