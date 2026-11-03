@@ -221,6 +221,7 @@ pub(super) fn replay_simc_party_with_profile(
         initial,
         Some(profile),
         None,
+        None,
     )
 }
 
@@ -232,6 +233,7 @@ pub(super) fn replay_simc_party_with_wcl(
     seed: u64,
     profile: &Path,
     intake: &Path,
+    builds: Option<&Path>,
 ) -> Result<Value, String> {
     let profile = EnemyProfile::read(profile, duration)?;
     let initial = profile
@@ -240,6 +242,21 @@ pub(super) fn replay_simc_party_with_wcl(
         .filter(|&&(start, _)| start == 0)
         .count();
     let intake = super::healer_wcl_trace::Trace::read(intake)?;
+    let builds = builds
+        .map(|path| {
+            let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+            let builds: [crate::followers::simulator::RecordedBuild; 5] =
+                serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+            for (slot, build) in builds.iter().enumerate() {
+                if intake.actor_slots.get(&build.actor_id) != Some(&slot)
+                    || intake.party_specs[slot] != build.spec_id
+                {
+                    return Err(format!("WCL_BUILD_ACTOR_MISMATCH:{slot}"));
+                }
+            }
+            Ok(builds)
+        })
+        .transpose()?;
     replay_profile(
         spec,
         level,
@@ -250,6 +267,7 @@ pub(super) fn replay_simc_party_with_wcl(
         initial,
         Some(profile),
         Some(intake),
+        builds,
     )
 }
 
@@ -272,13 +290,13 @@ pub(super) struct ClassParty {
 #[cfg(test)]
 pub(super) fn snapshot_party(spec: u32, level: u8, targets: usize) -> ClassParty {
     let (path, _) = read_snapshot().unwrap();
-    spawn_class_party(&path, spec, level, targets, None).unwrap()
+    spawn_class_party(&path, spec, level, targets, None, None).unwrap()
 }
 
 #[cfg(test)]
 pub(super) fn snapshot_party_with_specs(spec: u32, level: u8, specs: [u32; 5]) -> ClassParty {
     let (path, _) = read_snapshot().unwrap();
-    spawn_class_party(&path, spec, level, 1, Some(specs)).unwrap()
+    spawn_class_party(&path, spec, level, 1, Some(specs), None).unwrap()
 }
 
 fn spawn_class_party(
@@ -287,6 +305,7 @@ fn spawn_class_party(
     level: u8,
     targets: usize,
     party_specs: Option<[u32; 5]>,
+    builds: Option<&[crate::followers::simulator::RecordedBuild; 5]>,
 ) -> Result<ClassParty, String> {
     let mut app = super::dps_parity::build_snapshot_app(path)?;
     let copy = super::dps_parity::create_open_follower_copy(&mut app, measurement_map(level)?)?;
@@ -297,7 +316,24 @@ fn spawn_class_party(
     };
     let party = if let Some(mut specs) = party_specs {
         specs[1] = spec;
-        crate::followers::simulator::spawn_test_party(app.world_mut(), copy, origin, level, specs)?
+        if let Some(builds) = builds {
+            crate::followers::simulator::spawn_test_party_recorded(
+                app.world_mut(),
+                copy,
+                origin,
+                level,
+                specs,
+                builds,
+            )?
+        } else {
+            crate::followers::simulator::spawn_test_party(
+                app.world_mut(),
+                copy,
+                origin,
+                level,
+                specs,
+            )?
+        }
     } else {
         crate::followers::simulator::spawn_party_with_healer(
             app.world_mut(),
@@ -308,7 +344,7 @@ fn spawn_class_party(
         )?
     };
     let (tank, healer) = (party.tank, party.members[1]);
-    if level == 90 {
+    if level == 90 && builds.is_none() {
         equip_healer_profile(app.world_mut(), healer, spec)?;
     }
     let sources = (0..targets)
@@ -485,6 +521,7 @@ fn replay(
         targets,
         None,
         None,
+        None,
     )
 }
 
@@ -530,6 +567,7 @@ fn replay_profile(
     targets: usize,
     profile: Option<EnemyProfile>,
     wcl: Option<super::healer_wcl_trace::Trace>,
+    builds: Option<[crate::followers::simulator::RecordedBuild; 5]>,
 ) -> Result<Value, String> {
     if duration == 0 {
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
@@ -555,7 +593,14 @@ fn replay_profile(
     let tank_spec = party_specs.map_or(crate::followers::simulator::DEFAULT_PARTY[0], |specs| {
         specs[0]
     });
-    let mut party = spawn_class_party(&snapshot, spec, level, targets, party_specs)?;
+    let mut party = spawn_class_party(
+        &snapshot,
+        spec,
+        level,
+        targets,
+        party_specs,
+        builds.as_ref(),
+    )?;
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();

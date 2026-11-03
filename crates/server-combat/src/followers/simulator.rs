@@ -248,6 +248,156 @@ pub fn spawn_test_party(
     )
 }
 
+/// A WCL combatant's recorded talents and equipped item instances.
+#[cfg(any(test, feature = "test-support"))]
+#[derive(serde::Deserialize)]
+pub struct RecordedBuild {
+    #[serde(rename = "sourceID")]
+    pub actor_id: i64,
+    #[serde(rename = "specID")]
+    pub spec_id: u32,
+    #[serde(rename = "talentTree")]
+    talents: Vec<RecordedTalent>,
+    gear: Vec<RecordedItem>,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+#[derive(serde::Deserialize)]
+struct RecordedTalent {
+    id: u32,
+    rank: u32,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+#[derive(serde::Deserialize)]
+struct RecordedItem {
+    id: u32,
+    #[serde(rename = "bonusIDs", default)]
+    bonuses: Vec<u32>,
+    #[serde(rename = "itemLevel")]
+    item_level: u16,
+    #[serde(rename = "permanentEnchant", default)]
+    enchant: u32,
+    #[serde(rename = "temporaryEnchant", default)]
+    temporary_enchant: u32,
+    #[serde(default)]
+    gems: Vec<RecordedGem>,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+#[derive(serde::Deserialize)]
+struct RecordedGem {
+    id: u32,
+}
+
+/// Spawn a party with each logged combatant's talents and item instances.
+#[cfg(any(test, feature = "test-support"))]
+pub fn spawn_test_party_recorded(
+    world: &mut World,
+    copy: crate::maps::InMap,
+    at: Position,
+    level: u8,
+    specs: [u32; 5],
+    builds: &[RecordedBuild; 5],
+) -> Result<Party, String> {
+    let mut profiles = read_party_profiles(specs)?;
+    for (slot, (profile, build)) in profiles.iter_mut().zip(builds).enumerate() {
+        if profile.spec_id != build.spec_id || build.talents.is_empty() || build.gear.len() != 18 {
+            return Err(format!("WCL_BUILD_INVALID_SLOT:{slot}"));
+        }
+        profile.talents_source = Some("TALENTS_FROM_WCL".into());
+        profile.talent_entries = Some(
+            build
+                .talents
+                .iter()
+                .map(|talent| (talent.id, talent.rank))
+                .collect(),
+        );
+    }
+    let party = spawn_profiled_party(world, copy, at, level, profiles, GearSource::Journal)?;
+    let units = [
+        party.tank,
+        party.members[1],
+        party.members[2],
+        party.members[3],
+        party.owner,
+    ];
+    for (&unit, build) in units.iter().zip(builds) {
+        equip_recorded_build(world, unit, build)?;
+        let provider = *world.resource::<super::FollowerActionProvider>();
+        let mut actions = (provider.source_actions)(world, unit, build.spec_id)?;
+        actions.extend((provider.equipped_actions)(world, unit, build.spec_id)?);
+        actions.sort_unstable();
+        actions.dedup();
+        world
+            .entity_mut(unit)
+            .insert(super::FollowerActionSpells(actions));
+    }
+    Ok(party)
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn equip_recorded_build(
+    world: &mut World,
+    unit: Entity,
+    build: &RecordedBuild,
+) -> Result<(), String> {
+    use shared::item_data::ItemDefinitionSource;
+    let slots = [
+        "head",
+        "neck",
+        "shoulders",
+        "",
+        "chest",
+        "waist",
+        "legs",
+        "feet",
+        "wrists",
+        "hands",
+        "finger1",
+        "finger2",
+        "trinket1",
+        "trinket2",
+        "back",
+        "main_hand",
+        "off_hand",
+        "",
+    ];
+    let mut items = Vec::new();
+    let mut modifiers = crate::stats::EquippedItemModifiers::default();
+    for (name, item) in slots.into_iter().zip(&build.gear) {
+        if name.is_empty() || item.id == 0 {
+            continue;
+        }
+        let slot = super::parity_profile::slot(name)?;
+        if world
+            .resource::<crate::item_templates::ItemTemplates>()
+            .get(ItemDefinitionSource::Retail, item.id)
+            .is_none()
+        {
+            return Err(format!("WCL_BUILD_MISSING_ITEM:{}", item.id));
+        }
+        items.push((slot, ItemDefinitionSource::Retail, item.id));
+        modifiers.items.push((
+            slot,
+            crate::item_instance::ItemInstanceModifiers {
+                bonus_list: item.bonuses.clone(),
+                item_level_override: Some(item.item_level),
+                enchant: item.enchant,
+                gems: item.gems.iter().map(|gem| gem.id).collect(),
+                ..Default::default()
+            },
+        ));
+        if item.temporary_enchant != 0 {
+            modifiers
+                .temporary_enchants
+                .push((slot, item.temporary_enchant));
+        }
+    }
+    super::parity_profile::equip_instances(world, unit, items, modifiers);
+    Ok(())
+}
+
 /// Spawn an explicitly selected class party using the qualified key-band builds.
 pub fn spawn_keystone_party(
     world: &mut World,

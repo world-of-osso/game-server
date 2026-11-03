@@ -16,6 +16,7 @@ pub(super) struct Trace {
     pub provenance: String,
     pub excluded_self: usize,
     pub party_specs: [u32; 5],
+    pub actor_slots: std::collections::BTreeMap<i64, usize>,
     pub bloodlust: Vec<TimedBloodlust>,
     pub hits: Vec<RecordedHit>,
 }

@@ -37,6 +37,8 @@ fn native_replay_cli_driver() {
                 );
                 let profile = std::env::var_os("HEALER_ENEMY_PROFILE")
                     .expect("WCL intake requires HEALER_ENEMY_PROFILE");
+                let builds = std::env::var_os("HEALER_WCL_BUILDS")
+                    .expect("WCL intake requires recorded HEALER_WCL_BUILDS");
                 super::healer_simc_replay::replay_simc_party_with_wcl(
                     spec.parse().unwrap(),
                     level,
@@ -45,6 +47,7 @@ fn native_replay_cli_driver() {
                     seed,
                     Path::new(&profile),
                     Path::new(&intake),
+                    Some(Path::new(&builds)),
                 )
             } else if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
                 if let Some(profile) = std::env::var_os("HEALER_ENEMY_PROFILE") {

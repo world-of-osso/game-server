@@ -559,6 +559,36 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_combatant_build_equips_recorded_items_and_talents() {
+    let bytes = std::fs::read(fixture("wcl_worldnature_builds.json")).unwrap();
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_slice(&bytes).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let party = super::spawn_class_party(
+        &snapshot,
+        105,
+        90,
+        1,
+        Some([66, 105, 70, 1480, 262]),
+        Some(&builds),
+    )
+    .unwrap();
+    let world = party.app.world();
+    let gear = world
+        .get::<crate::stats::EquippedItems>(party.healer)
+        .unwrap();
+    assert!(gear.items.iter().any(|(_, _, item)| *item == 270167));
+    assert!(gear.items.iter().any(|(_, _, item)| *item == 250214));
+    let talents = world
+        .get::<crate::class_progression::TraitLoadout>(party.healer)
+        .unwrap();
+    assert_eq!(talents.talent_rank(1213597), Some(1));
+    assert_eq!(talents.talent_rank(392256), Some(1));
+    assert_eq!(talents.talent_rank(474678), Some(1));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn wcl_bloodlust_applies_only_to_the_recorded_slot_at_the_recorded_time() {
     let mut party = super::snapshot_party(105, 90, 1);
     let buffs = [super::super::healer_wcl_trace::TimedBloodlust {
@@ -599,6 +629,7 @@ fn wcl_intake_replays_hostile_and_deferred_pressure() {
         1,
         &fixture("altar_fangs_wcl_pull1.json"),
         &fixture("altar_fangs_wcl_pull1_damage.json"),
+        None,
     )
     .unwrap();
     assert_eq!(report["timeline"], "wcl_damage_taken");
