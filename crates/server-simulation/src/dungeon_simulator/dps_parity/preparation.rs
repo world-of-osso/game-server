@@ -42,6 +42,7 @@ pub(super) fn start_configured_native_pet(run: &mut Run) -> Result<(), String> {
         run.actor,
         super::literal_rotation::execution::Execution::Spell(action.spell, run.actor, None),
     )
+    .map_err(Into::into)
 }
 
 pub(super) fn wait_for_configured_pet_action(

@@ -35,6 +35,52 @@ pub struct NativeComposite<'a> {
     pub steps: &'a [NativeAction<'a>],
 }
 
+#[derive(Debug)]
+pub enum ExecutionError {
+    Cast {
+        spell: u32,
+        target: Entity,
+        reason: crate::spell_cast::CastFailure,
+    },
+    Other(String),
+}
+
+impl From<String> for ExecutionError {
+    fn from(value: String) -> Self {
+        Self::Other(value)
+    }
+}
+
+impl From<&str> for ExecutionError {
+    fn from(value: &str) -> Self {
+        Self::Other(value.into())
+    }
+}
+
+impl std::fmt::Display for ExecutionError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cast {
+                spell,
+                target,
+                reason,
+            } => write!(
+                formatter,
+                "selected native literal spell{spell} target {target:?} rejected: {reason:?}"
+            ),
+            Self::Other(message) => formatter.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for ExecutionError {}
+
+impl From<ExecutionError> for String {
+    fn from(value: ExecutionError) -> Self {
+        value.to_string()
+    }
+}
+
 // Keys identify selection contexts; Execution retains the actual native cast target.
 // None is the native default, never a substitute for an unknown explicit context.
 type ActionKey = (String, Option<Entity>);
@@ -47,10 +93,12 @@ struct NativeReadiness {
     queue_delay: Option<f64>,
 }
 
+#[derive(Clone)]
 pub struct Prepared {
     now: f64,
     ready: ReadyActions,
     live_targets: BTreeSet<Entity>,
+    ordered_targets: Vec<Entity>,
     limits: BTreeMap<ActionKey, PowerType>,
     pickups: BTreeMap<
         (
@@ -124,6 +172,45 @@ fn intrinsic_off_gcd(spec: u32, name: &str) -> bool {
 impl Prepared {
     pub(super) fn upkeep_actions(&self) -> Option<&BTreeSet<String>> {
         self.upkeep_actions.as_ref()
+    }
+
+    pub(super) fn without_targets(&self, excluded: &BTreeSet<Entity>) -> Self {
+        let mut filtered = self.clone();
+        filtered
+            .ordered_targets
+            .retain(|target| !excluded.contains(target));
+        filtered
+            .live_targets
+            .retain(|target| !excluded.contains(target));
+        let replacement = filtered.ordered_targets.first().copied();
+        let names: BTreeSet<_> = self.ready.keys().map(|(name, _)| name.clone()).collect();
+        for name in names {
+            let key = (name.clone(), None);
+            if self
+                .ready
+                .get(&key)
+                .is_none_or(|execution| execution_targets_any(execution, excluded))
+            {
+                if let Some(execution) =
+                    replacement.and_then(|target| self.ready.get(&(name.clone(), Some(target))))
+                {
+                    filtered.ready.insert(key, execution.clone());
+                } else {
+                    filtered.ready.remove(&key);
+                }
+            }
+        }
+        filtered
+            .ready
+            .retain(|(_, target), _| target.is_none_or(|target| !excluded.contains(&target)));
+        filtered
+            .limits
+            .retain(|(_, target), _| target.is_none_or(|target| !excluded.contains(&target)));
+        filtered
+    }
+
+    pub(super) fn first_target(&self) -> Option<Entity> {
+        self.ordered_targets.first().copied()
     }
 
     pub fn read<'a>(
@@ -203,6 +290,11 @@ impl Prepared {
             upkeep_actions,
             ready: BTreeMap::new(),
             live_targets: targets
+                .iter()
+                .copied()
+                .filter(|target| server::spell_cast::targets::is_alive(world, *target))
+                .collect(),
+            ordered_targets: targets
                 .iter()
                 .copied()
                 .filter(|target| server::spell_cast::targets::is_alive(world, *target))
@@ -421,6 +513,23 @@ impl Prepared {
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
             || intrinsic_off_gcd(self.spec_id, &action.name);
         Ok(execution.filter(|execution| !off_gcd || !matches!(execution, Execution::Queue(_, _))))
+    }
+}
+
+fn execution_targets_any(execution: &Execution, excluded: &BTreeSet<Entity>) -> bool {
+    match execution {
+        Execution::Spell(_, target, primary) => {
+            excluded.contains(target) || primary.is_some_and(|target| excluded.contains(&target))
+        }
+        Execution::Item(_, target)
+        | Execution::AutoAttack(target)
+        | Execution::Retarget(target)
+        | Execution::RetargetAutoAttack(target) => excluded.contains(target),
+        Execution::Queue(inner, _) => execution_targets_any(inner, excluded),
+        Execution::Composite(steps) => steps
+            .iter()
+            .any(|step| execution_targets_any(step, excluded)),
+        _ => false,
     }
 }
 
@@ -1085,7 +1194,7 @@ pub fn execute_row(
     actor: Entity,
     row: &Action,
     execution: Execution,
-) -> Result<(), String> {
+) -> Result<(), ExecutionError> {
     let action_safe = match &execution {
         Execution::Spell(spell, target, _) => {
             server::followers::action_safe(world, actor, *target, Some(*spell))
@@ -1107,7 +1216,7 @@ pub fn execute_row(
         if row.name != "potion" {
             return Err("pre_pot_time requires a native potion row".into());
         }
-        return super::precombat_potion::execute(world, actor, execution, age);
+        return super::precombat_potion::execute(world, actor, execution, age).map_err(Into::into);
     }
     let Some(stage) = row.options.get("empower_to") else {
         return execute(world, actor, execution);
@@ -1136,15 +1245,21 @@ pub fn execute_row(
         },
         stage,
     )
-    .map_err(|error| format!("native empower{spell} stage{stage} rejected: {error:?}"))
+    .map_err(|reason| ExecutionError::Cast {
+        spell,
+        target: unit,
+        reason,
+    })
 }
 
-pub fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), String> {
+pub fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<(), ExecutionError> {
     match action {
         Execution::Snapshot | Execution::Wait(_) | Execution::Queue(_, _) => {
             Err("snapshot and wait execution belong to the literal driver".into())
         }
-        Execution::PickupFragment(plan) => server::soul_fragments::begin_pickup(world, actor, plan),
+        Execution::PickupFragment(plan) => {
+            server::soul_fragments::begin_pickup(world, actor, plan).map_err(Into::into)
+        }
         Execution::CancelCast => {
             crate::spell_cast::cancel_cast(world, actor);
             Ok(())
@@ -1207,8 +1322,11 @@ pub fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<()
             } else {
                 crate::spell_cast::creature_cast_with_targets(world, actor, id, targets)
             };
-            result
-                .map_err(|reason| format!("selected native literal spell{id} rejected: {reason:?}"))
+            result.map_err(|reason| ExecutionError::Cast {
+                spell: id,
+                target,
+                reason,
+            })
         }
         Execution::Item(item, target) => {
             crate::spell_cast::cast_item_spell(

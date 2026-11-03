@@ -16,7 +16,13 @@ fn subtlety_shadow_dance_refuses_active_recast_and_allows_after_expiry() {
     let failure =
         literal_rotation::execution::execute(run.app.world_mut(), actor, dance()).unwrap_err();
     assert!(
-        failure.contains("CasterAuraState"),
+        matches!(
+            failure,
+            literal_rotation::execution::ExecutionError::Cast {
+                reason: crate::spell_cast::CastFailure::CasterAuraState,
+                ..
+            }
+        ),
         "real recast must be refused: {failure}"
     );
     for _ in 0..600 {

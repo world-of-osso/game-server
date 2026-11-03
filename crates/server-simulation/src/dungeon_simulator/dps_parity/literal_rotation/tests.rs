@@ -184,6 +184,40 @@ fn select_fresh_palm(
 
 #[test]
 #[ignore = "requires native269 profile inputs"]
+fn literal_reselect_after_native_invalid_target_cast() {
+    let (mut run, equipment) = human(2);
+    let old = run.targets[0];
+    let live = run.targets[1];
+    let mut driver = palm_driver(false);
+    let (action, execution) = select_palm(&mut run, &mut driver, &equipment);
+    assert!(matches!(execution, Execution::Spell(100780, target, _) if target == old));
+    run.app.world_mut().get_mut::<Health>(old).unwrap().current = 0.0;
+    run.app.world_mut().init_resource::<LiteralTickProgress>();
+    driver
+        .execute(run.app.world_mut(), run.actor, action, execution)
+        .unwrap();
+    assert!(
+        run.app.world().resource::<LiteralTickProgress>().0,
+        "rejected target must trigger same-tick reselection"
+    );
+    let (action, execution) = select_palm(&mut run, &mut driver, &equipment);
+    assert_eq!(action.target, Some(live.to_bits()));
+    assert!(matches!(execution, Execution::Spell(100780, target, _) if target == live));
+    let mut health = run.app.world_mut().get_mut::<Health>(old).unwrap();
+    health.current = health.max;
+    run.app
+        .world_mut()
+        .resource_mut::<Time<Real>>()
+        .advance_by(Duration::from_millis(50));
+    let (_, execution) = select_palm(&mut run, &mut driver, &equipment);
+    assert!(
+        matches!(execution, Execution::Spell(100780, target, _) if target == old),
+        "exclusion expires on the next tick"
+    );
+}
+
+#[test]
+#[ignore = "requires native269 profile inputs"]
 fn literal_reselect_dead_queued_target_in_the_same_decision() {
     let (mut run, equipment) = human(2);
     let old = run.targets[0];

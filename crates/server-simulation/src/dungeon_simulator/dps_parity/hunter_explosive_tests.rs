@@ -69,18 +69,10 @@ fn queued_explosive_shot_skips_dead_target_before_selecting_survivor() {
     };
     let facts = BTreeMap::<String, f64>::new();
     let prepared = sample(&mut run);
-    assert!(
-        driver
-            .select("default", &facts, &prepared, &equipment)
-            .unwrap()
-            .is_none(),
-        "dead queued target must be discarded"
-    );
-    let prepared = sample(&mut run);
     let (action, execution) = driver
         .select("default", &facts, &prepared, &equipment)
         .unwrap()
-        .expect("survivor can be selected");
+        .expect("survivor is selected in the same decision");
     driver
         .execute(run.app.world_mut(), run.actor, action, execution)
         .unwrap();
@@ -90,6 +82,140 @@ fn queued_explosive_shot_skips_dead_target_before_selecting_survivor() {
     assert!(
         hits(&run, 212431, survivor) > 0,
         "survivor receives native Explosive Shot damage"
+    );
+}
+
+struct RejectedExplosive {
+    driver: literal_rotation::Driver,
+    equipment: literal_rotation::equipment::Equipment,
+    attempted: std::sync::Arc<std::sync::Mutex<Vec<Entity>>>,
+    invalidate_first: bool,
+}
+
+impl server_follower_apl::SpecRotation for RejectedExplosive {
+    fn action_spells(&self) -> Vec<u32> {
+        vec![]
+    }
+    fn poll_precombat(
+        &mut self,
+        _: &mut World,
+        _: Entity,
+        _: &[Entity],
+    ) -> Result<literal_rotation::PrecombatPoll, String> {
+        Ok(literal_rotation::PrecombatPoll::Finished)
+    }
+    fn execute(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        action: server::simc_apl::Action,
+        execution: literal_rotation::execution::Execution,
+    ) -> Result<(), String> {
+        self.driver.execute(world, actor, action, execution)
+    }
+    fn start_combat_at(&mut self, _: f64) {}
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        use literal_rotation::execution::{Execution, NativeAction, Prepared};
+        let prepared = Prepared::read(
+            world,
+            actor,
+            targets,
+            &self.equipment,
+            [NativeAction {
+                name: "explosive_shot",
+                spell: 212431,
+                talent: None,
+                self_target: false,
+            }],
+            false,
+        )?;
+        let facts = std::collections::BTreeMap::<String, f64>::new();
+        let Some((action, execution)) =
+            self.driver
+                .select("default", &facts, &prepared, &self.equipment)?
+        else {
+            return Ok(());
+        };
+        let Execution::Spell(_, target, _) = &execution else {
+            return Err("expected Explosive Shot".into());
+        };
+        let target = *target;
+        self.attempted.lock().unwrap().push(target);
+        if self.invalidate_first {
+            self.invalidate_first = false;
+            world
+                .get_mut::<Health>(target)
+                .ok_or("target has no health")?
+                .current = 0.0;
+        }
+        self.driver.execute(world, actor, action, execution)
+    }
+}
+
+fn rejected_explosive(
+    run: &mut Run,
+) -> (
+    server_follower_apl::FollowerApl,
+    std::sync::Arc<std::sync::Mutex<Vec<Entity>>>,
+) {
+    let equipment = literal_rotation::equipment::Equipment::load(
+        run.app.world(),
+        run.actor,
+        &mut Default::default(),
+    )
+    .unwrap();
+    let attempted = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let rotation = RejectedExplosive {
+        driver: literal_rotation::Driver::new(
+            server::simc_apl::Program::parse(&[("default", "explosive_shot")]).unwrap(),
+        ),
+        equipment,
+        attempted: attempted.clone(),
+        invalidate_first: true,
+    };
+    (
+        server_follower_apl::FollowerApl::new(Box::new(rotation)),
+        attempted,
+    )
+}
+
+#[test]
+#[ignore = "requires private exact254 profile/traits and native world data"]
+fn ruby_explosive_invalid_target_reselects_survivor_within_follower_tick() {
+    let _seed = crate::random::seed_scope(17742812211184693247);
+    let mut run = player(2);
+    let targets = run.targets.clone();
+    let (mut apl, attempted) = rejected_explosive(&mut run);
+    apl.tick(run.app.world_mut(), run.actor, &targets).unwrap();
+    assert_eq!(
+        *attempted.lock().unwrap(),
+        targets,
+        "the surviving target must be selected in the same tick"
+    );
+}
+
+#[test]
+#[ignore = "requires private exact254 profile/traits and native world data"]
+fn ruby_owner_opening_does_not_fail_when_explosive_target_becomes_invalid() {
+    let _seed = crate::random::seed_scope(17742812211184693247);
+    let mut run = player(1);
+    let target = run.targets[0];
+    let (apl, attempted) = rejected_explosive(&mut run);
+    run.app.world_mut().entity_mut(run.actor).insert(apl);
+    super::super::campaign::drive_owner_apl_opening(run.app.world_mut(), run.actor, target)
+        .unwrap();
+    assert_eq!(*attempted.lock().unwrap(), [target]);
+    assert!(
+        run.app
+            .world()
+            .get::<server_follower_apl::FollowerApl>(run.actor)
+            .is_some(),
+        "owner rotation survives the rejected cast"
     );
 }
 
