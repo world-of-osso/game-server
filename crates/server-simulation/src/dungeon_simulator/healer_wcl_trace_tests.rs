@@ -19,6 +19,53 @@ fn wcl_falling_replays_as_physical_pressure_without_db2_spell_three() {
 }
 
 #[test]
+#[ignore = "requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_intake_triggers_selected_aessinas_renewal_from_recorded_large_hit() {
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut party =
+        super::healer_simc_replay::snapshot_party_with_specs(105, 90, [66, 105, 70, 1480, 262]);
+    let healer = party.healer;
+    super::healer_simc_replay::hold(&mut party, healer);
+    let enemy = party.sources[0];
+    assert!(
+        crate::auras::has_aura(party.app.world(), healer, 474678),
+        "selected Aessina aura must be present"
+    );
+    let hp = party.app.world().get::<Health>(healer).unwrap().max;
+    party
+        .app
+        .world_mut()
+        .get_mut::<Health>(healer)
+        .unwrap()
+        .current = hp * 0.7;
+    party
+        .app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":9771,"slot":1,"source_actor":1034,"target_actor":4,"spell_id":1306381,"school":8,"defense":1,"hit_type":1,"periodic":false,"max_hp":877300,"amount":239678,"absorbed":0}"#).unwrap();
+    assert!(matches!(
+        hit.deliver(party.app.world_mut(), enemy, &party.slots)
+            .unwrap(),
+        super::healer_wcl_trace::Delivery::Applied(_)
+    ));
+    for _ in 0..5 {
+        party.app.update();
+    }
+    let events = &party
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(|event| event.kind == CombatLogKind::Heal
+            && event.spell_id == Some(474683)
+            && event.target == Some(healer.to_bits())
+            && event.amount > 0),
+        "Aessina self-heal missing: {events:?}"
+    );
+}
+
+#[test]
 #[ignore = "requires native Priest and Altar spell data"]
 fn wcl_intake_counts_guardian_spirit_absorb_separately_from_rescue_heal() {
     use crate::spell_cast::test_harness::harness;
