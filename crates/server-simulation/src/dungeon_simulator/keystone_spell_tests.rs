@@ -6,6 +6,36 @@ const EARTHWHISPER_TENDER: u32 = 241814;
 const EARTH_BOLT: u32 = 1241214;
 
 #[test]
+fn class_followers_are_knocked_back_by_fel_nova() {
+    let _seed = crate::random::seed_scope(1);
+    let mut app = super::runtime::build_app();
+    let root = super::graph::extraction::asset_root();
+    app.insert_resource(server::test_support::LineOfSight::load(&root.join("los")).unwrap());
+    let copy = super::runtime::create_copy(&mut app);
+    let actors = super::runtime::spawn_population(&mut app, copy);
+    let caster = *actors.values().next().expect("hostile creature spawn");
+    let position = *app.world().get::<Position>(caster).unwrap();
+    let party = crate::followers::simulator::spawn_keystone_party(
+        app.world_mut(),
+        copy,
+        position,
+        90,
+        [581, 264, 71, 577, 251],
+        2,
+    )
+    .unwrap();
+    crate::spell_cast::creature_cast(app.world_mut(), caster, 1223906, Some(caster), true).unwrap();
+    for &unit in &party.members {
+        assert!(
+            app.world()
+                .get::<shared::components::MovementControl>(unit)
+                .is_some_and(|control| control.controlled),
+            "follower {unit:?} must enter knockback flight"
+        );
+    }
+}
+
+#[test]
 fn den_keystone_earth_bolt_uses_seasonal_creature_spell_damage() {
     let _seed = crate::random::seed_scope(1);
     let mut app = super::runtime::build_app();

@@ -72,7 +72,9 @@ pub(crate) fn launch_directed(
     let start = Vec3::new(position.x, position.y, position.z);
     require_ground_and_collision(world, map, start)?;
     // MotionMaster makes NPC vertical speed positive; player impulses keep its sign.
-    if world.get::<shared::components::Npc>(target).is_some() {
+    if world.get::<shared::components::Npc>(target).is_some()
+        && !crate::followers::is_player_like_combatant(world, target)
+    {
         velocity.y = velocity.y.abs();
     }
     let speed_xy = Vec2::new(velocity.x, velocity.z).length();
