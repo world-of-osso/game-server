@@ -1,5 +1,7 @@
 //! Fixture adapter over the production APL.
 use super::Run;
+#[cfg(test)]
+use crate::simc_apl_native::Encounter;
 use crate::simc_apl_native::{Bindings, NativeFacts};
 use bevy::prelude::*;
 use server::simc_apl::{Action, ActionFacts, Facts};
