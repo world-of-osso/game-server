@@ -37,7 +37,7 @@ fn apply_pet_damage(world: &mut World, pet: Entity) {
 }
 
 fn read_owned_critters(world: &mut World, owner: Entity) -> Vec<(Entity, u32)> {
-    world
+    let mut critters: Vec<_> = world
         .query::<(Entity, &SummonedCreature, &Health)>()
         .iter(world)
         .filter(|(_, summon, health)| {
@@ -46,7 +46,9 @@ fn read_owned_critters(world: &mut World, owner: Entity) -> Vec<(Entity, u32)> {
                 && health.current > 0.0
         })
         .map(|(pet, summon, _)| (pet, summon.spell_id))
-        .collect()
+        .collect();
+    critters.sort_unstable_by_key(|(pet, _)| pet.to_bits());
+    critters
 }
 
 fn command_existing(world: &mut World, owner: Entity, spell: &SpellInfo, foreground: bool) {

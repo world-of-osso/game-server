@@ -49,12 +49,13 @@ fn combat_changed(world: &mut World, unit: Entity, active: bool) {
 
 fn summon_due(world: &mut World) {
     let now = combat::spell_cast::now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &InnerDemonsClock)>()
         .iter(world)
         .filter(|(_, clock)| clock.next <= now)
         .map(|(unit, _)| unit)
         .collect();
+    due.sort_unstable_by_key(|unit| unit.to_bits());
     for unit in due {
         if !has_aura(world, unit, TALENT) {
             world.entity_mut(unit).remove::<InnerDemonsClock>();

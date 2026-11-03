@@ -341,7 +341,7 @@ fn initialize_fiend(world: &mut World, actor: Entity) {
 
 fn update_voidwraith(world: &mut World) {
     let now = combat::spell_cast::now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(
             Entity,
             &VoidwraithAttack,
@@ -351,6 +351,7 @@ fn update_voidwraith(world: &mut World) {
         .filter(|(_, state, _)| state.next <= now)
         .map(|(actor, state, summon)| (actor, state.target, summon.owner))
         .collect();
+    due.sort_unstable_by_key(|(actor, _, _)| actor.to_bits());
     for (actor, target, owner) in due {
         if !combat::spell_cast::targets::is_alive(world, target) {
             continue;

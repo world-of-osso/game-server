@@ -2984,8 +2984,9 @@ pub fn channel_completed(world: &mut World, caster: Entity, spell_id: u32) {
                 .filter_map(move |aura| Some((unit, aura.instance_id, aura.expires_at?)))
         })
         .collect();
+    let now = aura_now(world);
     for (unit, instance_id, expiry) in channel_auras {
-        complete_timed_channel_aura(world, unit, instance_id, expiry);
+        complete_timed_channel_aura(world, unit, instance_id, expiry.min(now));
     }
 }
 
@@ -3237,6 +3238,7 @@ fn units_with_auras(
             tracking.spec = spec;
         }
     }
+    with_auras.sort_unstable();
     with_auras
 }
 

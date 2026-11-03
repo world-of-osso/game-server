@@ -43,12 +43,13 @@ fn rend_on_summon(world: &mut World, owner: Entity, spell: &SpellInfo, _: bool) 
     let Some(primary) = spell.cast_primary_target else {
         return;
     };
-    let bears: Vec<_> = world
+    let mut bears: Vec<_> = world
         .query_filtered::<(Entity, &SummonedCreature), Without<RendStarted>>()
         .iter(world)
         .filter(|(_, summon)| summon.owner == owner && summon.spell_id == BEAR_SUMMON)
         .map(|(bear, _)| bear)
         .collect();
+    bears.sort_unstable_by_key(|bear| bear.to_bits());
     for bear in bears {
         // SimC76f8118 sc_hunter.cpp2057–2060: the actual new Bear, not
         // its owner or stable pet, immediately executes Rend on its target.

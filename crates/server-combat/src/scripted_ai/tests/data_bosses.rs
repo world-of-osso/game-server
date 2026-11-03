@@ -1393,6 +1393,37 @@ fn spawn_prepared_actor(
 }
 
 #[test]
+fn kystia_evade_despawns_mirrors_during_victim_update() {
+    let (mut h, kystia, _) = bound_boss(234648, 2813, 0);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(16.3);
+    let mirrors = h.creatures_of(255050);
+    assert!(!mirrors.is_empty());
+    assert!(mirrors.iter().any(|mirror| matches!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(*mirror),
+        Some(crate::creature_ai::CreatureState::Pursuing { .. })
+    )));
+    h.app.world_mut().get_mut::<Health>(player).unwrap().current = 0.0;
+    crate::creature_aggro::update_victim_system(h.app.world_mut());
+    assert!(
+        mirrors
+            .iter()
+            .all(|mirror| h.app.world().get_entity(*mirror).is_err())
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(kystia),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+}
+
+#[test]
 fn encounter_coverage_kystia_mirror_tick_spawns_authored_copy_in_the_same_instance() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
     let player = h.player();
@@ -5650,6 +5681,44 @@ fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase(
         h.inbox(1).engages.is_empty(),
         "companion frame cannot leak to another copy"
     );
+}
+
+#[test]
+fn kystia_shortened_destabilized_channel_does_not_fire_future_ticks() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(0.1);
+    h.hit_pct(nibbles, 2_000.0);
+    h.advance(4.0);
+    assert!(h.has_aura(kystia, 1265412));
+    h.advance(2.0);
+    let before = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(1214959) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert!(before > 0);
+    let mut channel = h.app.world_mut().get_mut::<CastState>(kystia).unwrap();
+    assert_eq!(channel.spell_id, 1265412);
+    channel.elapsed = channel.duration - 0.01;
+    h.advance(0.1);
+    let after = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(1214959) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert_eq!(after, before, "completion must not pay future aura ticks");
+    assert!(!h.has_aura(kystia, 1265412));
 }
 
 #[test]

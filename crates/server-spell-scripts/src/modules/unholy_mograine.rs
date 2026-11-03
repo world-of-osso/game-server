@@ -115,7 +115,7 @@ fn initialize(world: &mut World, actor: Entity) {
 
 fn update(world: &mut World) {
     let now = combat::auras::aura_now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &mut Decay)>()
         .iter_mut(world)
         .filter_map(|(actor, mut decay)| {
@@ -126,6 +126,7 @@ fn update(world: &mut World) {
             Some(actor)
         })
         .collect();
+    due.sort_unstable_by_key(|actor| actor.to_bits());
     for actor in due {
         // SimC76f8118 sc_death_knight.cpp4927–4970: tick immediately and
         // at the native interval, from the actual Mograine actor.

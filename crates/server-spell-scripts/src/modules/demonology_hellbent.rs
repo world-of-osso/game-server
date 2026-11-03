@@ -106,12 +106,13 @@ fn remove_stacks(world: &mut World, owner: Entity, count: usize) {
 
 fn heartbeat(world: &mut World) {
     let now = spell_cast::now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &HellbentClock)>()
         .iter(world)
         .filter(|(_, clock)| clock.0 <= now)
         .map(|(owner, _)| owner)
         .collect();
+    due.sort_unstable_by_key(|owner| owner.to_bits());
     for owner in due {
         if !selected(world, owner) {
             world.entity_mut(owner).remove::<HellbentClock>();
