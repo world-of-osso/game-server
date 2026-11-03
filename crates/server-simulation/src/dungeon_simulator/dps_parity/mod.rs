@@ -105,7 +105,23 @@ impl SpecDriver for server_follower_apl::FollowerApl {
     }
 
     fn label(&self) -> &'static str {
-        "PRODUCTION_FOLLOWER_APL"
+        follower_spec_driver(self).label()
+    }
+
+    fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
+        follower_spec_driver(self).tank_active_mitigation_auras()
+    }
+
+    fn tank_resource_counters(&self, world: &World, actor: Entity) -> BTreeMap<&'static str, u64> {
+        follower_spec_driver(self).tank_resource_counters(world, actor)
+    }
+
+    fn tank_target_debuff_auras(&self) -> &'static [u32] {
+        follower_spec_driver(self).tank_target_debuff_auras()
+    }
+
+    fn report(&self) -> Value {
+        follower_spec_driver(self).report()
     }
 }
 
@@ -148,6 +164,14 @@ macro_rules! spec_drivers {
             supports_actor: <$module::Rotation as SpecDriver>::supports_actor,
             report_key: $module::REPORT_KEY,
         },)*];
+
+        fn follower_spec_driver(apl: &server_follower_apl::FollowerApl) -> &dyn SpecDriver {
+            let rotation = apl.rotation();
+            $(if let Some(rotation) = rotation.downcast_ref::<$module::Rotation>() {
+                return rotation;
+            })*
+            panic!("production follower rotation has no parity registration")
+        }
     };
 }
 
@@ -463,6 +487,30 @@ fn measurement_driver(
         .ok()?;
     let driver = &DRIVERS[index];
     (driver.supports_actor)(identity).then_some(driver)
+}
+
+#[test]
+#[ignore = "requires a prepared MID2 profile and native world data"]
+fn production_driver_forwards_report_and_tank_metadata() {
+    let spec: u32 = std::env::var("DPS_PARITY_SPEC").unwrap().parse().unwrap();
+    let mut run = prepare_literal(spec, 1).unwrap();
+    let registration = DRIVERS.iter().find(|entry| entry.spec_id == spec).unwrap();
+    let previous = (registration.prepare)(&mut run).unwrap();
+    let production = prepare_production_driver(&mut run).unwrap();
+    assert_eq!(production.label(), previous.label());
+    assert!(!production.report().is_null());
+    assert_eq!(
+        production.tank_active_mitigation_auras(),
+        previous.tank_active_mitigation_auras()
+    );
+    assert_eq!(
+        production.tank_target_debuff_auras(),
+        previous.tank_target_debuff_auras()
+    );
+    assert_eq!(
+        production.tank_resource_counters(run.app.world(), run.actor),
+        previous.tank_resource_counters(run.app.world(), run.actor)
+    );
 }
 
 #[test]
