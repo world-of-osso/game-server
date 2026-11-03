@@ -14,6 +14,7 @@ struct CacheKey {
     balance_alignment: u32,
     lunar_calling: bool,
     pet_summon: Option<u32>,
+    follower: bool,
     coatings: Vec<u32>,
 }
 
@@ -62,6 +63,7 @@ fn cached_actions(
         balance_alignment: input.balance_alignment,
         lunar_calling: input.lunar_calling,
         pet_summon: input.pet_summon,
+        follower: input.follower,
         coatings: input.coatings.clone(),
     };
     let cached = world
@@ -112,6 +114,7 @@ pub struct ActionInputs<'a> {
     pub balance_alignment: u32,
     pub lunar_calling: bool,
     pub pet_summon: Option<u32>,
+    pub follower: bool,
     pub coatings: Vec<u32>,
 }
 
@@ -153,6 +156,7 @@ pub fn read_inputs(world: &World, actor: Entity, spec: u32) -> Result<ActionInpu
         balance_alignment,
         lunar_calling,
         pet_summon,
+        follower: world.get::<server::followers::Follower>(actor).is_some(),
         coatings,
     })
 }
@@ -298,7 +302,10 @@ pub fn parse(
                 }
                 bindings.actions.insert("summon_pet".into(), spell);
             }
-            let profile = profile(spec)?;
+            let mut profile = profile(spec)?;
+            if input.follower {
+                crate::profiles::insert_warlock_interrupts(&mut profile)?;
+            }
             let program = match spec {
                 265 => affliction_rotation::read_program(&profile)?,
                 266 => demonology_rotation::read_program(&profile)?,
