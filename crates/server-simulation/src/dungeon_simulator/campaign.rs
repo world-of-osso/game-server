@@ -357,6 +357,210 @@ fn keystone_owner_walks_until_occluded_opening_is_castable() {
 }
 
 #[test]
+#[ignore = "requires the Altar Mythic graph, native ground and navigation"]
+fn occluded_owner_approach_stops_before_unadmitted_sight() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2993,
+            level: 2,
+            specs: [104, 256, 254, 260, 262],
+        }),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        if !run
+            .keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+        {
+            break;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    let target = run.actors[&63994065];
+    let watcher = run.actors[&63994042];
+    let other_actors: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| *actor != target && *actor != watcher)
+        .collect();
+    for actor in other_actors {
+        if let Some(mut health) = run.app.world_mut().get_mut::<Health>(actor) {
+            health.current = 0.0;
+        }
+    }
+    let owner = run.party.owner;
+    let start = Position {
+        x: 1739.2566,
+        y: 31.913038,
+        z: -2118.5251,
+    };
+    let members: Vec<_> = run.members().collect();
+    for unit in members {
+        run.app.world_mut().entity_mut(unit).insert(start);
+    }
+    run.app.world_mut().entity_mut(watcher).insert(Position {
+        x: 1717.0,
+        y: 31.913038,
+        z: -2118.5251,
+    });
+    let target_position = *run.app.world().get::<Position>(target).unwrap();
+    run.app.world_mut().entity_mut(owner).insert((
+        MoveIntent(Vec3::new(
+            target_position.x,
+            target_position.y,
+            target_position.z,
+        )),
+        super::movement::SafeOwnerApproach(target),
+    ));
+    let initial_health = run.app.world().get::<Health>(watcher).unwrap().current;
+    for _ in 0..200 {
+        super::movement::update(run.app.world_mut());
+    }
+    let stopped = *run.app.world().get::<Position>(owner).unwrap();
+    assert_ne!(
+        stopped, start,
+        "the owner should use the safe portion of the route"
+    );
+    for _ in 0..20 {
+        super::movement::update(run.app.world_mut());
+    }
+    assert_eq!(
+        *run.app.world().get::<Position>(owner).unwrap(),
+        stopped,
+        "the owner must hold at the unadmitted sight boundary"
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(watcher).unwrap().current,
+        initial_health
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<shared::components::CombatStatus>(watcher)
+            .is_some_and(|status| status.0)
+    );
+}
+
+#[test]
+#[ignore = "requires the Altar Mythic graph, native ground and navigation"]
+fn later_boss_blocking_trash_approach_is_promoted() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2993,
+            level: 2,
+            specs: [104, 256, 254, 260, 262],
+        }),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        if !run
+            .keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+        {
+            break;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    let target = run.actors[&3276417191];
+    let boss = run.actors[&3276417175];
+    let other_actors: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| *actor != target && *actor != boss)
+        .collect();
+    for actor in other_actors {
+        if let Some(mut health) = run.app.world_mut().get_mut::<Health>(actor) {
+            health.current = 0.0;
+        }
+    }
+    let start = Position {
+        x: 1529.1617,
+        y: -78.032875,
+        z: -2089.8271,
+    };
+    let members: Vec<_> = run.members().collect();
+    for unit in members {
+        run.app.world_mut().entity_mut(unit).insert(start);
+    }
+    run.graph
+        .route
+        .retain(|step| [3276417191, 3276417175].contains(&step.pack));
+    run.chain_groups = Some(vec![vec![3276417191], vec![3276417175]]);
+    run.chain_group = 0;
+    let owner = run.party.owner;
+    // Reproduce the blocker reported by the live seed-1 sight guard.
+    let blockers = vec![boss];
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(super::movement::BlockedOwnerApproach { target, blockers });
+    run.control().unwrap();
+    assert_eq!(run.current_pack, Some(3276417175));
+    assert_eq!(run.graph.route[0].pack, 3276417175);
+    assert_eq!(run.chain_groups.as_ref().unwrap()[0][0], 3276417175);
+    run.graph.route.retain(|step| step.pack != 3276417175);
+    for group in run.chain_groups.as_mut().unwrap() {
+        group.retain(|pack| *pack != 3276417175);
+    }
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(super::movement::BlockedOwnerApproach {
+            target,
+            blockers: vec![boss],
+        });
+    assert_eq!(
+        run.promote_blocking_route_step(3276417191, target).unwrap(),
+        Some((3276417175, boss))
+    );
+    assert_eq!(run.graph.route[0].pack, 3276417175);
+    assert_eq!(run.chain_groups.as_ref().unwrap()[0][0], 3276417175);
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(super::movement::BlockedOwnerApproach {
+            target,
+            blockers: vec![boss],
+        });
+    run.stalled();
+    run.last_progress = run.now() - STALL_SECONDS - 1.0;
+    assert!(run.stalled());
+    let errors = run
+        .app
+        .world()
+        .get::<server::simc_apl::FactErrors>(owner)
+        .unwrap()
+        .snapshot();
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.fact == "route.unadmitted_sight"
+                && error.target == Some(boss.to_bits())
+                && error.detail.contains("Rav'i"))
+    );
+}
+
+#[test]
 fn chain_approach_stops_where_the_walk_route_leaves_tank_range() {
     let clipped = clip_route_to_tank_range(
         Vec3::ZERO,
@@ -5278,6 +5482,10 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<super::movement::SafeOwnerApproach>();
         if let Some(keystone) = &self.keystone
             && keystone.waiting_for_start(self.app.world())?
         {
@@ -5398,6 +5606,11 @@ impl Run {
                 "no living hostile source pack remains, but boss deaths are incomplete".into()
             });
         };
+        if self.keystone.is_some() && !fighting {
+            if let Some(promoted) = self.promote_blocking_route_step(pack_id, target)? {
+                (pack_id, target) = promoted;
+            }
+        }
         self.current_pack = Some(pack_id);
         if self.chain_groups.is_some() && fighting && self.is_required_boss(target) {
             self.app
@@ -5424,7 +5637,17 @@ impl Run {
         if self.approach_translocation(approach)? {
             return Ok(());
         }
-        if self.keystone.is_some() && self.is_required_boss(target) {
+        if self.keystone.is_some() {
+            if self.members().any(|member| {
+                server::test_support::transport::follower_routing(self.app.world(), member)
+                    || server::test_support::transport::in_progress(self.app.world(), member)
+            }) {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
+                return Ok(());
+            }
             (pack_id, target) = self.resolve_keystone_approach(pack_id, target)?;
             self.current_pack = Some(pack_id);
             let position = *self.app.world().get::<Position>(target).unwrap();
@@ -5520,10 +5743,11 @@ impl Run {
             } else {
                 approach
             };
-            self.app
-                .world_mut()
-                .entity_mut(self.party.owner)
-                .insert(MoveIntent(destination));
+            let mut owner = self.app.world_mut().entity_mut(self.party.owner);
+            owner.insert(MoveIntent(destination));
+            if target_obscured {
+                owner.insert(super::movement::SafeOwnerApproach(target));
+            }
             return Ok(());
         }
         if !fighting && self.wait_for_tank()? {
@@ -5732,23 +5956,143 @@ impl Run {
         drive_owner_apl_opening(self.app.world_mut(), self.party.owner, target)
     }
 
+    fn promote_blocking_route_step(
+        &mut self,
+        current_pack: u64,
+        target: Entity,
+    ) -> Result<Option<(u64, Entity)>, String> {
+        let Some(blocked) = self
+            .app
+            .world()
+            .get::<super::movement::BlockedOwnerApproach>(self.party.owner)
+        else {
+            return Ok(None);
+        };
+        if blocked.target != target {
+            return Ok(None);
+        }
+        let blockers = blocked.blockers.clone();
+        let Some(current_index) = self
+            .graph
+            .route
+            .iter()
+            .position(|step| step.pack == current_pack)
+        else {
+            return Err(format!("blocked route pack {current_pack} is missing"));
+        };
+        let mut candidates = Vec::new();
+        for actor in blockers {
+            let Some(guid) = self
+                .actors
+                .iter()
+                .find_map(|(&guid, &unit)| (unit == actor).then_some(guid))
+            else {
+                continue;
+            };
+            let Some(pack) = self
+                .graph
+                .packs
+                .iter()
+                .find(|pack| pack.spawns.iter().any(|spawn| spawn.guid == guid))
+            else {
+                continue;
+            };
+            let index = self
+                .graph
+                .route
+                .iter()
+                .position(|step| step.pack == pack.id);
+            if index.is_none_or(|index| index > current_index) {
+                candidates.push((index, pack.id, actor));
+            }
+        }
+        candidates.sort_by_key(|candidate| candidate.0.unwrap_or(usize::MAX));
+        for (_index, pack, actor) in candidates {
+            if !crate::spell_cast::targets::relation_matches(
+                self.app.world(),
+                self.party.owner,
+                actor,
+                crate::spell_cast::targets::Relation::Enemy,
+            ) || !self.boss_approach_blockers(actor)?.is_empty()
+            {
+                continue;
+            }
+            self.insert_route_prerequisite(current_pack, pack)?;
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<super::movement::BlockedOwnerApproach>();
+            self.record_pull(
+                pack,
+                format!("Promote sight blocker before pack {current_pack}"),
+            );
+            return Ok(Some((pack, actor)));
+        }
+        Ok(None)
+    }
+
+    fn insert_route_prerequisite(&mut self, current_pack: u64, pack: u64) -> Result<(), String> {
+        let current = self
+            .graph
+            .route
+            .iter()
+            .position(|step| step.pack == current_pack)
+            .ok_or_else(|| format!("blocked route pack {current_pack} is missing"))?;
+        let existing = self.graph.route.iter().position(|step| step.pack == pack);
+        if existing.is_some_and(|index| index <= current) {
+            return Ok(());
+        }
+        let step = if let Some(index) = existing {
+            self.graph.route.remove(index)
+        } else {
+            let source = self
+                .graph
+                .packs
+                .iter()
+                .find(|source| source.id == pack)
+                .ok_or_else(|| format!("blocker pack {pack} is missing"))?;
+            super::graph::RouteStep {
+                pack,
+                anchor: source.point().to_array(),
+            }
+        };
+        self.graph.route.insert(current, step);
+        if let Some(groups) = &mut self.chain_groups {
+            for group in groups.iter_mut() {
+                group.retain(|id| *id != pack);
+            }
+            groups
+                .get_mut(self.chain_group)
+                .ok_or("active chain group missing")?
+                .insert(0, pack);
+        }
+        Ok(())
+    }
+
     fn resolve_keystone_approach(
         &mut self,
         pack: u64,
         target: Entity,
     ) -> Result<(u64, Entity), String> {
-        Ok(self
-            .boss_approach_prerequisite(target)?
-            .unwrap_or((pack, target)))
+        if let Some(prerequisite) = self.boss_approach_prerequisite(target)? {
+            self.insert_route_prerequisite(pack, prerequisite.0)?;
+            return Ok(prerequisite);
+        }
+        Ok((pack, target))
     }
 
     fn boss_approach_blockers(&mut self, boss: Entity) -> Result<Vec<(u64, Entity)>, String> {
         let members: Vec<_> = self.members().collect();
         let mut blockers = Vec::new();
         for member in members {
-            for actor in
-                server::followers::simulator::approach_blockers(self.app.world_mut(), member, boss)?
-            {
+            let found =
+                server::followers::simulator::approach_blockers(self.app.world_mut(), member, boss)
+                    .map_err(|error| {
+                        format!(
+                            "route prerequisite approach member {member:?} target {boss:?}: {error}"
+                        )
+                    })?;
+            for actor in found {
                 let guid = self
                     .actors
                     .iter()
@@ -6321,6 +6665,37 @@ impl Run {
         }
         if self.now() - self.last_progress < STALL_SECONDS {
             return false;
+        }
+        if let Some(blocked) = world.get::<super::movement::BlockedOwnerApproach>(self.party.owner)
+        {
+            let target = blocked.target;
+            let blockers = blocked.blockers.clone();
+            let ledger = world
+                .get::<server::simc_apl::FactErrors>(self.party.owner)
+                .cloned()
+                .unwrap_or_default();
+            for blocker in blockers {
+                let name = world
+                    .get::<shared::components::Npc>(blocker)
+                    .map(|npc| npc.name.as_str())
+                    .unwrap_or("unknown");
+                let guid = world
+                    .get::<crate::zones::CreatureOrigin>(blocker)
+                    .map(|origin| origin.guid);
+                let detail = format!(
+                    "unadmitted sight blocker {name} source {guid:?} prevents route to {target:?} for {STALL_SECONDS}s"
+                );
+                ledger.record(
+                    "route.unadmitted_sight",
+                    self.party.owner.to_bits(),
+                    Some(blocker.to_bits()),
+                    &detail,
+                );
+            }
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(ledger);
         }
         self.report.status = "stalled".into();
         self.report.detail = self.report.pulls.last().map_or_else(
