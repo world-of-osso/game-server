@@ -18,6 +18,54 @@ def load_module(name):
 derive = load_module('derive_wcl_creature_abilities')
 emit = load_module('emit_wcl_creature_ability_sql')
 
+SPELL_DB2 = """
+CREATE TABLE spell_cooldowns(SpellID INTEGER,DifficultyID INTEGER,RecoveryTime INTEGER,CategoryRecoveryTime INTEGER,StartRecoveryTime INTEGER);
+CREATE TABLE spell_misc(SpellID INTEGER,DifficultyID INTEGER,CastingTimeIndex INTEGER,DurationIndex INTEGER);
+CREATE TABLE spell_cast_times(ID INTEGER,Base INTEGER);
+CREATE TABLE spell_duration(ID INTEGER,Duration INTEGER);
+CREATE TABLE spell_effect(SpellID INTEGER,DifficultyID INTEGER,EffectIndex INTEGER,Effect INTEGER,EffectAura INTEGER,ImplicitTarget_0 INTEGER,ImplicitTarget_1 INTEGER);
+INSERT INTO spell_cast_times VALUES(1,0);
+INSERT INTO spell_duration VALUES(21,-1),(18,20000);
+-- Rotten Ground 1297701: periodic damage + screen effect on the target, never expiring.
+INSERT INTO spell_misc VALUES(1297701,0,1,21);
+INSERT INTO spell_effect VALUES(1297701,0,0,6,3,25,0),(1297701,0,1,6,260,25,0);
+-- Same aura shape with Rotten Ground's 20-second area duration.
+INSERT INTO spell_misc VALUES(500001,0,1,18);
+INSERT INTO spell_effect VALUES(500001,0,0,6,3,25,0);
+-- Never-expiring aura the caster puts on itself.
+INSERT INTO spell_misc VALUES(500002,0,1,21);
+INSERT INTO spell_effect VALUES(500002,0,0,6,3,1,0);
+"""
+
+
+def write_report(directory, casts):
+    prefix = Path(directory) / 'den-report-1'
+    actors = {'reportData': {'report': {'masterData': {'actors': [
+        {'id': 966, 'type': 'NPC', 'subType': 'NPC', 'gameID': 241813},
+        {'id': 963, 'type': 'Player', 'gameID': 0},
+        {'id': 964, 'type': 'Player', 'gameID': 0},
+        {'id': 1, 'type': 'Pet', 'gameID': 0},
+    ]}}}}
+    Path(f'{prefix}-actors.json').write_text(json.dumps(actors))
+    Path(f'{prefix}-friendly-damage.jsonl').write_text(json.dumps({'targetID': 966, 'targetInstance': 10, 'fight_ms': 50000}) + '\n')
+    Path(f'{prefix}-damage.jsonl').write_text('')
+    rows = [
+        {'type': kind, 'sourceID': 966, 'sourceInstance': 10, 'targetID': target, 'abilityGameID': spell, 'fight_ms': time}
+        for kind, spell, time, target in casts
+    ]
+    Path(f'{prefix}-casts.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in rows))
+    return prefix
+
+
+def derive_rows(casts):
+    db = sqlite3.connect(':memory:')
+    db.executescript(SPELL_DB2)
+    results = {}
+    with tempfile.TemporaryDirectory() as directory:
+        derive.collect_report(write_report(directory, casts), 'VxKH96NhkT487pnC/18', results, db)
+    spells, refused = derive.split_refused(db, results)
+    return {row['spell']: row for row in spells}, {row['spell']: row['reasons'] for row in refused}
+
 
 class WclCreatureAbilityTests(unittest.TestCase):
     def test_same_timestamp_multi_target_cast_is_one_event_per_actor(self):
@@ -43,6 +91,37 @@ class WclCreatureAbilityTests(unittest.TestCase):
             row = results[(241813, 1297701)]
             self.assertEqual([x['delay_ms'] for x in row['delay_proxy_ms']], [400])
             self.assertEqual([x['interval_ms'] for x in row['interval_ms']], [1000, 700])
+
+    def test_refuses_timer_for_never_expiring_aura_on_players(self):
+        # Spaced WCL casts on players: no area-entry cluster, only the DB2 duration differs.
+        casts = [('cast', spell, time, target) for spell in (1297701, 500001, 500002)
+                 for time, target in [(51659, 963), (54021, 964), (56840, 963)]]
+        spells, refused = derive_rows(casts)
+        self.assertEqual(set(refused), {1297701})
+        self.assertEqual([reason['reason'] for reason in refused[1297701]], ['non_expiring_aura_on_enemy'])
+        self.assertEqual([(effect['effect_index'], effect['aura']) for effect in refused[1297701][0]['effects']], [(0, 3), (1, 260)])
+        self.assertEqual(set(spells), {500001, 500002})
+        self.assertEqual([sample['interval_ms'] for sample in spells[500001]['interval_ms']], [2362, 2819])
+
+    def test_refuses_area_entry_signature_without_begincast(self):
+        # VxKH96NhkT487pnC/18 instance 10: 963 at 51659, then 1 and 964 at 51660.
+        entry = [(51659, 963), (51660, 1), (51660, 964), (69404, 963), (69404, 964)]
+        spells, refused = derive_rows([('cast', 500001, time, target) for time, target in entry])
+        self.assertEqual(list(refused), [500001])
+        self.assertEqual(refused[500001][0]['reason'], 'area_entry_signature')
+        self.assertEqual([(c['fight_ms'], c['separation_ms']) for c in refused[500001][0]['clusters']],
+                         [(51659, 1), (51660, 0), (69404, 0)])
+        self.assertEqual(spells, {})
+
+        cast_bar = [('begincast', 500001, 50159, 963)] + [('cast', 500001, time, target) for time, target in entry]
+        spells, refused = derive_rows(cast_bar)
+        self.assertEqual(refused, {})
+        self.assertEqual(list(spells), [500001])
+
+        same_target_or_spaced = [(51659, 963), (51660, 963), (51681, 964)]
+        spells, refused = derive_rows([('cast', 500001, time, target) for time, target in same_target_or_spaced])
+        self.assertEqual(refused, {})
+        self.assertEqual(list(spells), [500001])
 
     def test_db2_recovery_and_cast_time_collapse_short_intervals(self):
         db = sqlite3.connect(':memory:')
