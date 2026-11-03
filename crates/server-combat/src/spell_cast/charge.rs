@@ -2,6 +2,7 @@
 //! Two-point movement subset, matching the existing direct point generator.
 //! Obstacle-generated paths are not implemented.
 use super::{effects::EffectCtx, *};
+use crate::simc_apl_native::MovementDestination;
 use shared::components::{CreatureMotion, MovementSpeed, Position, Rotation};
 
 const ATTACK_ON_CHARGE: u32 = 0x0004_0000;
@@ -42,10 +43,18 @@ pub(super) fn launch(
     } else {
         prepare_destination_charge(world, caster, spell, planned)?
     };
-    world
-        .entity_mut(caster)
-        .insert((movement, CreatureMotion::Run, MovementSpeed(speed)));
+    start(world, caster, movement, speed);
     Ok(Some(delay))
+}
+
+fn start(world: &mut World, caster: Entity, movement: ChargeMovement, speed: f32) {
+    let destination = MovementDestination(movement.to);
+    world.entity_mut(caster).insert((
+        movement,
+        destination,
+        CreatureMotion::Run,
+        MovementSpeed(speed),
+    ));
 }
 
 fn prepare_unit_charge(
@@ -135,13 +144,28 @@ fn calculate_timing(distance: f32, authored_speed: f32, speed_is_delay: bool) ->
 }
 
 /// Keep motion ownership through the landing tick, as with scripted jumps.
+/// Release also stops the run gait and destination the charge set at launch.
 pub(super) fn release_finished(
     mut commands: Commands,
-    movers: Query<(Entity, &ChargeMovement, Has<crate::combat::DeathState>)>,
+    mut movers: Query<(
+        Entity,
+        &ChargeMovement,
+        Has<crate::combat::DeathState>,
+        Option<&mut CreatureMotion>,
+    )>,
+    replication: Option<Res<lightyear::prelude::ReplicationDirtyQueue>>,
 ) {
-    for (unit, movement, dead) in &movers {
+    for (unit, movement, dead, motion) in &mut movers {
         if dead || movement.finished {
-            commands.entity(unit).remove::<ChargeMovement>();
+            commands
+                .entity(unit)
+                .remove::<(ChargeMovement, MovementDestination)>();
+            if let Some(mut motion) = motion
+                && motion.set_if_neq(CreatureMotion::Still)
+                && let Some(queue) = replication.as_deref()
+            {
+                queue.mark(unit);
+            }
         }
     }
 }
@@ -195,6 +219,65 @@ fn step_charge(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn charge_publishes_its_landing_point_until_release() {
+        use crate::simc_apl::Facts;
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        use bevy::ecs::system::RunSystemOnce;
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let caster = world
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                CreatureMotion::Still,
+                MovementSpeed(7.0),
+            ))
+            .id();
+        let read = |world: &World| {
+            NativeFacts::new(
+                world,
+                caster,
+                &Bindings::default(),
+                Encounter::dungeon(0.0),
+                1,
+            )
+            .value("movement.distance")
+        };
+        assert_eq!(read(&world).unwrap(), 0.0, "idle");
+        let to = Vec3::new(21.0, 0.0, 0.0);
+        let (movement, speed) =
+            calculate_destination_movement(Vec3::ZERO, to, &SpellInfo::default(), 0.0);
+        start(&mut world, caster, movement, speed);
+        assert_eq!(
+            world.get::<MovementDestination>(caster),
+            Some(&MovementDestination(to))
+        );
+        assert_eq!(read(&world).unwrap(), 21.0);
+        world
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(250));
+        advance(&mut world);
+        let x = world.get::<Position>(caster).unwrap().x;
+        assert!(x > 10.0 && x < 11.0, "halfway along the charge: {x}");
+        assert_eq!(read(&world).unwrap(), f64::from(21.0 - x));
+        world
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(300));
+        advance(&mut world);
+        world.run_system_once(release_finished).unwrap();
+        assert!(world.get::<ChargeMovement>(caster).is_none());
+        assert!(world.get::<MovementDestination>(caster).is_none());
+        assert_eq!(
+            world.get::<CreatureMotion>(caster),
+            Some(&CreatureMotion::Still)
+        );
+        assert_eq!(read(&world).unwrap(), 0.0);
+    }
 
     #[test]
     fn encounter_coverage_charge_timing_preserves_velocity_default_and_delay_modes() {
