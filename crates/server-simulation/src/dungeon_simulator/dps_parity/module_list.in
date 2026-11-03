@@ -228,6 +228,7 @@ mod enhancement_armor_tests;
 mod enhancement_crash_mid2_tests;
 mod enhancement_doom_deck_tests;
 mod enhancement_elemental_weapons_tests;
+mod enhancement_lightning_strikes_follower_tests;
 mod enhancement_flurry_tests;
 mod enhancement_generation_tests;
 mod enhancement_incoming_scope_tests;

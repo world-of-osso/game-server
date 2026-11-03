@@ -197,13 +197,13 @@ fn stacked_amount(world: &World, aura: &AuraInstance, effect: &AuraEffectState) 
     effect.amount * stack_multiplier(world, aura, effect)
 }
 
-pub(super) fn stack_multiplier(
+fn effect_suppresses_stacking(
     world: &World,
     aura: &AuraInstance,
     effect: &AuraEffectState,
-) -> f32 {
+) -> bool {
     // DB2 SpellEffect attribute 0x40 suppresses stacking for this effect only.
-    let suppress_stacking = world
+    world
         .resource::<crate::spell_info::SpellStore>()
         .get(aura.spell_id)
         .and_then(|spell| {
@@ -212,8 +212,17 @@ pub(super) fn stack_multiplier(
                 .iter()
                 .find(|native| native.index == effect.index)
         })
-        .is_some_and(|native| native.attributes & 0x40 != 0);
-    if suppress_stacking || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
+        .is_some_and(|native| native.attributes & 0x40 != 0)
+}
+
+pub(super) fn stack_multiplier(
+    world: &World,
+    aura: &AuraInstance,
+    effect: &AuraEffectState,
+) -> f32 {
+    if effect_suppresses_stacking(world, aura, effect)
+        || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id)
+    {
         1.0
     } else {
         aura.stack_multiplier()
@@ -552,13 +561,26 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
 /// Named accumulated next-spell uses share one native proc charge.
 ///Keep that charge while another stack remains; final use follows normal removal.
 fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool {
+    // A charged, non-stacking modifier retains one charge for each remaining use.
+    let suppresses_stacking = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| auras.get(instance))
+        .is_some_and(|aura| {
+            aura.stacks > 1
+                && aura.effects.iter().any(|effect| {
+                    is_spell_mod(effect.aura_type)
+                        && effect_suppresses_stacking(world, aura, effect)
+                })
+        });
     let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
         return false;
     };
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if !(STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) || aura.spell_id == 359618)
+    if !(suppresses_stacking
+        || STACKED_NEXT_SPELL_USES.contains(&aura.spell_id)
+        || aura.spell_id == 359618)
         || aura.stacks <= 1
     {
         return false;
