@@ -40,16 +40,6 @@ fn declared_reach(
         return ScriptReach::None;
     }
     let store = world.resource::<combat::spell_info::SpellStore>();
-    let caster_radius = if wave {
-        store
-            .get(435802)
-            .and_then(|spell| spell.misc.as_ref())
-            .and_then(|misc| misc.range)
-            .expect("native Wave of Souls range")
-            .max_hostile
-    } else {
-        0.0
-    };
     let target_radius = if rupture {
         store
             .get(439594)
@@ -64,11 +54,14 @@ fn declared_reach(
     } else {
         0.0
     };
-    ScriptReach::Area(DeclaredReach {
-        caster_radius,
-        target_radius,
-        ..Default::default()
-    })
+    if rupture {
+        ScriptReach::Area(DeclaredReach {
+            target_radius,
+            ..Default::default()
+        })
+    } else {
+        ScriptReach::EngagedOnly
+    }
 }
 
 fn register_mark(scripts: &mut auras::scripts::AuraScripts) {
@@ -364,6 +357,9 @@ fn launch_wave(world: &mut World, caster: Entity, primary: Entity, depth: u8, re
         combat::spell_cast::targets::Relation::Enemy,
         0,
     );
+    // INFERRED_WCL: hwxf36VXncWvTPpg fight9, 426 hits, none first friendly
+    // damage on its target. Retire on a retail pull by Wave or a client sniff.
+    targets.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
     if let Some(index) = targets.iter().position(|target| *target == primary) {
         targets.swap(0, index);
     }

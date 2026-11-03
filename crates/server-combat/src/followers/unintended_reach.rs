@@ -100,6 +100,11 @@ fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
         let Some(spell) = world.resource::<SpellStore>().get(spell) else {
             continue;
         };
+        // The pull position has no primary yet. Preserve the area around an
+        // engaged recipient without treating its selection range as an explosion.
+        for area in registry.engaged_areas(world, unit, spell) {
+            reach.target_radius = reach.target_radius.max(area.target_radius);
+        }
         // No primary exists yet: take the maximum over possible targets.
         let spell = spell_reach(world, unit, spell, None, registry, 0);
         // A beam runs from the unit to its own target; with no target yet, this

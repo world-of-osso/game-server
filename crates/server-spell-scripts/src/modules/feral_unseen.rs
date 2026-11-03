@@ -45,8 +45,12 @@ fn declared_reach(
         .resource::<combat::spell_info::SpellStore>()
         .get(SWIPE)
         .expect("native Unseen Swipe");
-    combat::spell_cast::script_registry::ScriptReach::caster(
-        range + targets::radius(&swipe.effects[0], 0),
+    combat::spell_cast::script_registry::ScriptReach::EngagedArea(
+        combat::spell_cast::script_registry::DeclaredReach {
+            caster_radius: range,
+            target_radius: targets::radius(&swipe.effects[0], 1),
+            ..Default::default()
+        },
     )
 }
 
@@ -106,7 +110,10 @@ fn roll_unseen(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 fn choose_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
     let range = effect(world, caster, UNSEEN, 1).expect("native Unseen range");
     let center = targets::position(world, caster).expect("native Bite caster position");
-    let enemies = targets::area_units(world, caster, center, range, targets::Relation::Enemy, 0);
+    let mut enemies = targets::area_units(world, caster, center, range, targets::Relation::Enemy, 0);
+    // INFERRED_WCL: JvWkQGTfz47mahtD fight3, 2,606 Slash/Swipe hits,
+    // none first friendly damage on its target. Retire on a retail pull or client sniff.
+    enemies.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
     if enemies.is_empty() {
         return None;
     }
@@ -121,7 +128,7 @@ fn read_attack(
 ) -> Option<combat::spell_info::SpellInfo> {
     let target_center = targets::position(world, target).expect("native selected Unseen target");
     let swipe = spell_cast::load_triggered_spell(world, SWIPE, depth)?;
-    let radius = targets::radius(&swipe.effects[0], 0);
+    let radius = targets::radius(&swipe.effects[0], 1);
     let local = targets::area_units(
         world,
         caster,
