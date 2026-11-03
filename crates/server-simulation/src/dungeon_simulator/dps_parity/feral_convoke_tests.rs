@@ -4,6 +4,53 @@ use shared::components::PowerType;
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_convoke_consumes_sudden_ambush_but_preserves_clearcasting() {
+    let _seed = crate::random::seed_scope(103391528);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    engage(&mut run);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 384667,
+    );
+    for spell in [1244483, 135700] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, spell, Some(actor), 1);
+        assert!(crate::auras::has_aura(run.app.world(), actor, spell));
+    }
+    run.app
+        .world_mut()
+        .insert_resource(crate::spell_cast::test_harness::ObservedTriggeredCasts::default());
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Spell(391528, actor, Some(target)),
+    )
+    .unwrap();
+    for _ in 0..120 {
+        run.app.update();
+        let hit = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+            .0
+            .iter()
+            .any(|(caster, spell, _)| *caster == actor && matches!(spell, 5221 | 1822));
+        if hit {
+            assert!(!crate::auras::has_aura(run.app.world(), actor, 1244483));
+            assert!(crate::auras::has_aura(run.app.world(), actor, 135700));
+            return;
+        }
+    }
+    panic!("Convoke did not execute a qualifying Cat generator");
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_native_convoke_keeps_its_unhasted_channel_lifetime() {
     use shared::casting::{CastState, CastType};
     let mut run = prepare_literal(103, 1).unwrap();

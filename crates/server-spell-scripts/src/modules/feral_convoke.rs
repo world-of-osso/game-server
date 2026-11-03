@@ -20,6 +20,7 @@ const BITE: u32 = 22568;
 const RAKE: u32 = 1822;
 const RAKE_BLEED: u32 = 155722;
 const SHRED: u32 = 5221;
+const SUDDEN_AMBUSH: u32 = 1244483;
 const MOONFIRE: u32 = 155625;
 const WRATH: u32 = 5176;
 const REGROWTH: u32 = 8936;
@@ -226,5 +227,27 @@ fn launch_child(world: &mut World, caster: Entity, id: u32, target: Entity) {
             targets: vec![target],
         }));
     }
-    spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1);
+    if spell_cast::launch_triggered_spell(world, caster, &spell, Some(target), 1) {
+        consume_sudden_ambush(world, caster, &spell);
+    }
+}
+
+fn consume_sudden_ambush(world: &mut World, caster: Entity, spell: &combat::spell_info::SpellInfo) {
+    let instance = world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == SUDDEN_AMBUSH
+                    && aura.caster == caster
+                    && aura.effects.iter().any(|effect| {
+                        combat::auras::spell_mods::class_mask_affects(aura, effect, spell)
+                    })
+            })
+        })
+        .map(|aura| aura.instance_id);
+    if let Some(instance) = instance {
+        // VERIFIED_WCL: g1dGBjmAtcHYXaM9 fight15 actor162; free Convoke
+        // Shreds at 7.398s, 138.887s and 139.640s consume Sudden Ambush.
+        combat::auras::spend_charge(world, caster, instance);
+    }
 }
