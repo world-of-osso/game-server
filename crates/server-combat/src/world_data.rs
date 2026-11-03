@@ -123,6 +123,8 @@ pub struct CreatureTemplate {
     pub gives_experience: bool,
     /// `ScriptName`: the AzerothCore CreatureScript (`creature_scripts`).
     pub script_name: String,
+    /// Source selection of NullCreatureAI for an unscripted spell-click creature.
+    pub null_ai: bool,
     pub aggro_mode: AggroMode,
     /// `CREATURE_FLAG_EXTRA_TRIGGER`: the template spawns with its invisible model.
     pub trigger: bool,
@@ -722,6 +724,11 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
             })
         })
         .transpose()?;
+    let null_ai = row.get::<_, u64>("npcflag")? & shared::protocol::NpcFlags::SPELLCLICK != 0
+        && row
+            .get::<_, Option<String>>("AIName")?
+            .is_none_or(|name| name.is_empty())
+        && row.get::<_, String>("ScriptName")?.is_empty();
     Ok(CreatureTemplate {
         entry,
         min_level: row.get::<_, i64>(1)? as u8,
@@ -747,10 +754,12 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         speed_run: row.get(12)?,
         base_attack_time_ms,
         script_name: row.get(13)?,
+        null_ai,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
-        aggro_mode: if static_flags[0] & crate::creature_static::IGNORE_COMBAT != 0 {
-            // TC Creature.cpp:1300–1309: IGNORE_COMBAT selects passive react state.
+        aggro_mode: if static_flags[0] & crate::creature_static::IGNORE_COMBAT != 0 || null_ai {
+            // TC 15e0ed76 Creature.cpp:1302 and PassiveAI.cpp:33–42: without an
+            // explicit AI, SPELLCLICK selects the passive NullCreatureAI.
             AggroMode::Passive
         } else {
             AggroMode::for_template(
@@ -787,7 +796,7 @@ pub(crate) fn load_templates(
                     LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
                     ManaModifier, unit_flags2, RegenHealth, family, type_flags, BaseAttackTime,
                     StaticFlags1, StaticFlags2, StaticFlags3, StaticFlags4,
-                    StaticFlags5, StaticFlags6, StaticFlags7, StaticFlags8
+                    StaticFlags5, StaticFlags6, StaticFlags7, StaticFlags8, AIName
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -841,7 +850,7 @@ pub(crate) fn load_difficulty_templates(
                     d.ManaModifier, t.unit_flags2, t.RegenHealth, t.family, t.type_flags,
                     d.DifficultyID, t.BaseAttackTime,
                     d.StaticFlags1, d.StaticFlags2, d.StaticFlags3, d.StaticFlags4,
-                    d.StaticFlags5, d.StaticFlags6, d.StaticFlags7, d.StaticFlags8
+                    d.StaticFlags5, d.StaticFlags6, d.StaticFlags7, d.StaticFlags8, t.AIName
              FROM content_creature_template_difficulty d
              JOIN content_creature_template t ON t.entry = d.entry",
         )
