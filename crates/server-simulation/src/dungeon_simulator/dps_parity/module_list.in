@@ -4,6 +4,7 @@
 #[cfg(test)] mod hunter_loadout_tests;
 mod frostdk_hyperpyrexia_follower_tests;
 mod active_enemy_tests;
+mod boss_invariance_tests;
 mod mistweaver_sck_population_tests;
 mod mistweaver_ancient_party_tests;
 mod mistweaver_ancient_pulse_tests;
