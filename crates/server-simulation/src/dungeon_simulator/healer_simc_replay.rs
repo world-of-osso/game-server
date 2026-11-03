@@ -166,6 +166,63 @@ pub(super) fn replay_simc_party_with_targets(
     )
 }
 
+#[derive(serde::Deserialize)]
+struct EnemyProfile {
+    provenance: String,
+    intervals_ms: Vec<(u64, u64)>,
+}
+
+impl EnemyProfile {
+    fn read(path: &Path, duration: u32) -> Result<Self, String> {
+        let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+        let profile: Self = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        if profile.provenance.is_empty()
+            || profile.intervals_ms.is_empty()
+            || profile.intervals_ms.iter().any(|(start, end)| start >= end)
+        {
+            return Err("invalid enemy profile".into());
+        }
+        for tick in 0..u64::from(duration) * 20 {
+            let ms = tick * 50;
+            if !profile
+                .intervals_ms
+                .iter()
+                .any(|&(start, end)| start <= ms && ms < end)
+            {
+                return Err(format!("enemy profile has no source at {ms}ms"));
+            }
+        }
+        Ok(profile)
+    }
+}
+
+pub(super) fn replay_simc_party_with_profile(
+    spec: u32,
+    level: u8,
+    trace: &Path,
+    party_trace: &Path,
+    duration: u32,
+    seed: u64,
+    profile: &Path,
+) -> Result<Value, String> {
+    let profile = EnemyProfile::read(profile, duration)?;
+    let initial = profile
+        .intervals_ms
+        .iter()
+        .filter(|&&(start, _)| start == 0)
+        .count();
+    replay_profile(
+        spec,
+        level,
+        trace,
+        Some(party_trace),
+        duration,
+        seed,
+        initial,
+        Some(profile),
+    )
+}
+
 /// A class party (tank, `spec` healer, two DPS and the leader DPS), with a
 /// level-90 healer in its tracked profile gear and other actors in Journal gear,
 /// casting through their spec APLs, engaged on the
@@ -376,6 +433,28 @@ fn replay(
     seed: u64,
     targets: usize,
 ) -> Result<Value, String> {
+    replay_profile(
+        spec,
+        level,
+        trace,
+        party_trace,
+        duration,
+        seed,
+        targets,
+        None,
+    )
+}
+
+fn replay_profile(
+    spec: u32,
+    level: u8,
+    trace: &Path,
+    party_trace: Option<&Path>,
+    duration: u32,
+    seed: u64,
+    targets: usize,
+    profile: Option<EnemyProfile>,
+) -> Result<Value, String> {
     if duration == 0 {
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
     }
@@ -407,7 +486,7 @@ fn replay(
     engage(&mut party);
     let ClassParty {
         mut app,
-        sources,
+        mut sources,
         tank,
         healer,
         slots,
@@ -443,6 +522,20 @@ fn replay(
     let mut atonement_target_ticks = 0_u64;
     let mut pain_periodic_hits = 0_u64;
     let mut damage_by_dummy = std::collections::BTreeMap::<u64, u64>::new();
+    let mut active_profile = std::collections::BTreeMap::new();
+    if let Some(profile) = &profile {
+        for (index, &source) in profile
+            .intervals_ms
+            .iter()
+            .enumerate()
+            .filter(|(_, (start, _))| *start == 0)
+            .map(|(i, _)| i)
+            .zip(&sources)
+        {
+            active_profile.insert(index, source);
+        }
+    }
+    let mut enemy_count_samples = Vec::new();
     let alive = |world: &World, unit: Entity| {
         world
             .get::<Health>(unit)
@@ -450,6 +543,52 @@ fn replay(
     };
     for tick in 1..=ticks {
         let elapsed_ms = u64::from(tick - 1) * 50;
+        let source = if let Some(profile) = &profile {
+            let mut changed = tick == 1;
+            for (index, &(start, end)) in profile.intervals_ms.iter().enumerate() {
+                if end <= elapsed_ms {
+                    if let Some(unit) = active_profile.remove(&index) {
+                        // Retain the inactive entity until pending native casts finish;
+                        // despawning it leaves those casts with an invalid target.
+                        app.world_mut().get_mut::<Health>(unit).unwrap().current = 0.0;
+                        changed = true;
+                    }
+                } else if start <= elapsed_ms && !active_profile.contains_key(&index) {
+                    let unit = super::dps_parity::spawn_level_dummy(&mut app, tank, level, index)?;
+                    super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, unit, &debuffs)?;
+                    super::healer_replay::freeze_sources(
+                        app.world_mut(),
+                        &[(index as u64, unit)].into(),
+                    );
+                    crate::combat_refs::set_in_combat_with(app.world_mut(), slots[4], unit);
+                    active_profile.insert(index, unit);
+                    sources.push(unit);
+                    changed = true;
+                }
+            }
+            let source = *active_profile
+                .values()
+                .next()
+                .ok_or("enemy profile has no active source")?;
+            if changed {
+                let target = app
+                    .world()
+                    .get::<crate::networking::CombatTarget>(slots[4])
+                    .and_then(|target| target.0);
+                if !active_profile.values().any(|&unit| Some(unit) == target) {
+                    app.world_mut().entity_mut(slots[4]).insert((
+                        crate::networking::CombatTarget(Some(source)),
+                        crate::combat::AutoAttack::new(source),
+                    ));
+                }
+                let observed =
+                    crate::followers::simulator::inspect_follower_decision(app.world_mut(), healer);
+                enemy_count_samples.push(json!({"time_ms":elapsed_ms,"expected":active_profile.len(),"observed":observed["enemies"].as_array().unwrap().len()}));
+            }
+            source
+        } else {
+            source
+        };
         while let Some(hit) = hits.get(next).filter(|hit| hit.time_ms <= elapsed_ms) {
             if alive(app.world(), tank) {
                 deliver_hit(app.world_mut(), source, tank, hit, tick)?;
@@ -573,6 +712,10 @@ fn replay(
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
         "metrics":recorder.report(app.world(), duration)});
+    if let Some(profile) = profile {
+        report["enemy_profile"] =
+            json!({"provenance":profile.provenance,"samples":enemy_count_samples});
+    }
     super::fact_error_report::attach_fact_errors(app.world_mut(), &mut report)?;
     Ok(report)
 }

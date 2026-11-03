@@ -506,6 +506,58 @@ fn simc_party_pulse_replays_two_engaged_damageable_dummies() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn simc_enemy_profile_changes_engaged_enemy_count() {
+    let report = super::replay_simc_party_with_profile(
+        270,
+        90,
+        &fixture("healer_simc_fixture.log"),
+        &fixture("healer_simc_party_fixture.log"),
+        5,
+        70448,
+        &fixture("healer_enemy_profile_test.json"),
+    )
+    .unwrap();
+    let samples = report["enemy_profile"]["samples"].as_array().unwrap();
+    let counts: Vec<_> = samples
+        .iter()
+        .map(|s| {
+            (
+                s["time_ms"].as_u64().unwrap(),
+                s["observed"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(counts, [(0, 1), (1000, 2), (2000, 3), (3000, 2), (4000, 1)]);
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn simc_enemy_profile_retires_targets_during_active_casts() {
+    let report = super::replay_simc_party_with_profile(
+        270,
+        90,
+        &fixture("healer_simc_fixture.log"),
+        &fixture("healer_simc_party_fixture.log"),
+        35,
+        1,
+        &fixture("altar_fangs_wcl_pull1.json"),
+    )
+    .unwrap();
+    let samples = report["enemy_profile"]["samples"].as_array().unwrap();
+    assert!(
+        samples
+            .iter()
+            .any(|sample| sample["time_ms"].as_u64().unwrap() >= 24_050)
+    );
+    assert!(
+        samples
+            .iter()
+            .all(|sample| sample["expected"] == sample["observed"])
+    );
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
     let trace = fixture("healer_simc_fixture.log");

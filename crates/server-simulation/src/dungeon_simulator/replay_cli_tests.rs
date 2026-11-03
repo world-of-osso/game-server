@@ -31,19 +31,31 @@ fn native_replay_cli_driver() {
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
             if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
-                let targets = std::env::var("HEALER_TANK_TARGETS")
-                    .unwrap_or_else(|_| "1".into())
-                    .parse()
-                    .expect("numeric HEALER_TANK_TARGETS");
-                super::healer_simc_replay::replay_simc_party_with_targets(
-                    spec.parse().unwrap(),
-                    level,
-                    Path::new(&path),
-                    Path::new(&party_trace),
-                    duration,
-                    seed,
-                    targets,
-                )
+                if let Some(profile) = std::env::var_os("HEALER_ENEMY_PROFILE") {
+                    super::healer_simc_replay::replay_simc_party_with_profile(
+                        spec.parse().unwrap(),
+                        level,
+                        Path::new(&path),
+                        Path::new(&party_trace),
+                        duration,
+                        seed,
+                        Path::new(&profile),
+                    )
+                } else {
+                    let targets = std::env::var("HEALER_TANK_TARGETS")
+                        .unwrap_or_else(|_| "1".into())
+                        .parse()
+                        .expect("numeric HEALER_TANK_TARGETS");
+                    super::healer_simc_replay::replay_simc_party_with_targets(
+                        spec.parse().unwrap(),
+                        level,
+                        Path::new(&path),
+                        Path::new(&party_trace),
+                        duration,
+                        seed,
+                        targets,
+                    )
+                }
             } else {
                 super::healer_simc_replay::replay_simc(
                     spec.parse().unwrap(),
