@@ -132,6 +132,12 @@ Native behavioral tests: `simc_apl_native/tests.rs` (earned Hit Combo and Chi, r
 
 Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/countdown/impact, hardcast exclusion, actor isolation and Meteor handoff/refusal. At3e3cacb6d, current-canonical source-view library tests yield startup1PASS/flight4genuine unknown-property RED in9.65s, compile19m12/zero warnings. Both requested properties are evaluated before failure. The earlier binary-target source-view refusal was not RED. Implementation reads pending native deadlines and the live TC Meteor continuation; targeted GREEN remains pending.
 
+### Dungeon pull facts
+
+- A follower uses the same persistent APL in every dungeon. Active pull existence, count, boss flag and remaining time use its live engaged enemies; remaining time estimates the wave from the same damage rate as target TTD.
+- The keystone bot owner publishes its next planned pack and an ETA estimated as current wave remaining time plus the tank's native Detour path length to that pack divided by the tank's run speed. It clears the publication when the route has no next pack. A human owner publishes no route; next-event time then uses SimC's unconfigured-event value (`raid_event.cpp:3068–3077`). This estimate is not a scheduled time.
+- Fixed fights retain their configured fixture facts, independent of a dungeon route publication.
+
 ### Add-event activity
 
 - [x] `raid_event.adds.up` returns1 only while a configured fixture add event is active, otherwise0 (including absent, waiting, exact expiry and retired waves); a later active wave returns1 again. Configured event existence/count and enemy count are not activity substitutes. Pinned SimC76f8118 raid_event.cpp2440–2443/3068–3108; [scoped proof ledger](../handoffs/adds-up-proof-ledger.md).

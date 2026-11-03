@@ -230,15 +230,6 @@ impl Facts for UnholyFacts<'_> {
         if name == "dot.dread_plague.active_dots" {
             return self.native.value("active_dot.dread_plague");
         }
-        // SimC76f8118 raid_event.cpp3068–3078: any absent-event filter
-        // other than in/cooldown is zero; do not infer a configured pull's role.
-        if name == "raid_event.pull.has_boss" {
-            return if self.native.value("raid_event.pull.exists")? == 0.0 {
-                Ok(0.0)
-            } else {
-                Err("native configured Unholy pull lacks boss metadata".into())
-            };
-        }
         // SimC76f8118 action.cpp4276/player.cpp11768–11770,11807–11808,
         // 12574–12600: bare operands bind the actor, even inside target_if.
         if name == "health.pct" {
