@@ -5,6 +5,32 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires native Merithra's Blessing spell data"]
+fn merithra_repeats_blooms_on_the_only_injured_ally() {
+    let mut h = harness(Vec::new(), &[1256581], 13).unwrap();
+    let primary = spawn_player(&mut h.app, 13, 1.0);
+    let full = spawn_player(&mut h.app, 13, 2.0);
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 1.0;
+    let full_hp = h.app.world().get::<Health>(full).unwrap().max;
+    h.app.world_mut().get_mut::<Health>(full).unwrap().current = full_hp;
+    h.cast_and_deliver(1256581, Some(primary));
+    h.advance(40);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let targets: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(1256581) && event.kind == CombatLogKind::Heal)
+        .filter_map(|event| event.target)
+        .collect();
+    assert_eq!(targets, vec![primary.to_bits(); 5]);
+}
+
+#[test]
+#[ignore = "requires native Merithra's Blessing spell data"]
 fn target45_heals_friendly_primary_and_jumps_to_greatest_deficits() {
     let mut h = harness(Vec::new(), &[1256581], 13).unwrap();
     let primary = spawn_player(&mut h.app, 13, 1.0);

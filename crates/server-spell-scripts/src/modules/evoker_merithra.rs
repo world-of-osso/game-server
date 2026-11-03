@@ -17,7 +17,35 @@ const TALENT: u32 = 1256577;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterNativeOnCast(consume_override),
     SpellScriptHook::EarlyAuraRegistration(register),
+    SpellScriptHook::TargetFilter(repeat_primary),
 ];
+
+fn repeat_primary(
+    world: &World,
+    _: Entity,
+    spell: &combat::spell_info::SpellInfo,
+    effect: u8,
+    primary: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    if spell.id != BLESSING || effect != 1 {
+        return;
+    }
+    let Some(primary) = primary else { return };
+    targets.retain(|&target| {
+        target == primary
+            || world
+                .get::<shared::components::Health>(target)
+                .is_some_and(|health| health.current < health.max)
+    });
+    let count = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Merithra heal effect")
+        .chain_targets as usize;
+    targets.resize(count, primary);
+}
 
 fn register(scripts: &mut AuraScripts) {
     scripts
