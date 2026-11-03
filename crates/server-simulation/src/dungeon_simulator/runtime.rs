@@ -227,6 +227,48 @@ pub(super) fn build_app_with_world_db(path: &std::path::Path) -> App {
     build_runtime_app(&mut None, path, true)
 }
 
+#[cfg(test)]
+fn configure_simulator_logging(app: &mut App) {
+    if std::env::var_os("KEYSTONE_SIMULATOR_OUTPUT").is_some()
+        || std::env::var_os("FOLLOWER_DPS_LOG_ERRORS").is_some()
+    {
+        let filter = if std::env::var_os("KEYSTONE_SIMULATOR_OUTPUT").is_some() {
+            "warn"
+        } else {
+            "error"
+        };
+        app.add_plugins(bevy::log::LogPlugin {
+            filter: filter.into(),
+            ..default()
+        });
+    }
+}
+
+#[test]
+fn keystone_simulator_emits_warnings() {
+    const CHILD: &str = "KEYSTONE_LOG_TEST_CHILD";
+    if std::env::var_os(CHILD).is_some() {
+        configure_simulator_logging(&mut App::new());
+        warn!("keystone warning output probe");
+        return;
+    }
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "dungeon_simulator::runtime::keystone_simulator_emits_warnings",
+            "--nocapture",
+        ])
+        .env(CHILD, "1")
+        .env("KEYSTONE_SIMULATOR_OUTPUT", "test")
+        .env_remove("RUST_LOG")
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let text = String::from_utf8_lossy(&output.stdout).to_string()
+        + &String::from_utf8_lossy(&output.stderr);
+    assert!(text.contains("keystone warning output probe"), "{text}");
+}
+
 fn build_runtime_app(
     catalogs: &mut Option<super::catalogs::Catalogs>,
     path: &std::path::Path,
@@ -234,12 +276,7 @@ fn build_runtime_app(
 ) -> App {
     let mut app = App::new();
     #[cfg(test)]
-    if std::env::var_os("FOLLOWER_DPS_LOG_ERRORS").is_some() {
-        app.add_plugins(bevy::log::LogPlugin {
-            filter: "error".into(),
-            ..default()
-        });
-    }
+    configure_simulator_logging(&mut app);
     app.add_plugins(server_spell_scripts::SpellScriptsPlugin);
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     let nav_root = std::env::var_os("DUNGEON_SIMULATOR_NAVMESH")

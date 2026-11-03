@@ -102,23 +102,38 @@ struct HoldLog {
     target: Entity,
     last: f64,
     since: f64,
+    reason: String,
 }
 
-fn hold_unresolved_approach(world: &mut World, unit: Entity, target: Entity, reason: &str) -> bool {
+fn note_hold(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    reason: &str,
+    blockers: &[Entity],
+) -> f64 {
     let now = world.resource::<Time>().elapsed_secs_f64();
     let previous = world
         .get::<HoldLog>(unit)
-        .filter(|hold| hold.target == target)
-        .map(|hold| (hold.last, hold.since));
-    let since = previous.map_or(now, |(_, since)| since);
-    if previous.is_none_or(|(last, _)| now - last >= HOLD_LOG_INTERVAL_SECONDS) {
-        warn!(?unit, ?target, reason, "Follower approach held");
+        .filter(|hold| hold.target == target);
+    let since = previous.map_or(now, |hold| hold.since);
+    if previous
+        .is_none_or(|hold| hold.reason != reason || now - hold.last >= HOLD_LOG_INTERVAL_SECONDS)
+    {
+        warn!(?unit, ?target, reason, ?blockers, "Follower approach held");
         world.entity_mut(unit).insert(HoldLog {
             target,
             last: now,
             since,
+            reason: reason.to_owned(),
         });
     }
+    since
+}
+
+fn hold_unresolved_approach(world: &mut World, unit: Entity, target: Entity, reason: &str) -> bool {
+    let since = note_hold(world, unit, target, reason, &[]);
+    let now = world.resource::<Time>().elapsed_secs_f64();
     let is_owner = world
         .get::<super::Follower>(unit)
         .is_some_and(|follower| follower.owner == target);
@@ -160,6 +175,7 @@ pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Enti
         world.entity_mut(unit).remove::<HoldLog>();
         return false;
     }
+    note_hold(world, unit, target, "unpulled hostile sight", &blockers);
     hold_position(world, unit);
     if is_owner {
         return super::trail_follow::advance(world, unit, target, blockers);
@@ -394,6 +410,64 @@ mod tests {
     use shared::components::{
         CharacterAppearance, CharacterVisual, ModelDisplay, Position, UnitLevel,
     };
+
+    #[test]
+    fn held_approach_logs_blockers_and_throttles_repeats() {
+        use std::io::Write;
+        use std::sync::{Arc, Mutex};
+
+        struct Capture(Arc<Mutex<Vec<u8>>>);
+        impl Write for Capture {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().unwrap().extend_from_slice(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let output = Arc::new(Mutex::new(Vec::new()));
+        let captured = output.clone();
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_ansi(false)
+            .with_writer(move || Capture(captured.clone()))
+            .finish();
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            let mut world = World::new();
+            world.insert_resource(Time::<()>::default());
+            let unit = world.spawn_empty().id();
+            let target = world.spawn_empty().id();
+            let blocker = world.spawn_empty().id();
+            note_hold(
+                &mut world,
+                unit,
+                target,
+                "unpulled hostile sight",
+                &[blocker],
+            );
+            note_hold(
+                &mut world,
+                unit,
+                target,
+                "unpulled hostile sight",
+                &[blocker],
+            );
+            world
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs(11));
+            note_hold(
+                &mut world,
+                unit,
+                target,
+                "unpulled hostile sight",
+                &[blocker],
+            );
+        });
+        let text = String::from_utf8(output.lock().unwrap().clone()).unwrap();
+        assert_eq!(text.matches("Follower approach held").count(), 2, "{text}");
+        assert!(text.contains("unpulled hostile sight"), "{text}");
+        assert!(text.contains("blockers=["), "{text}");
+    }
 
     #[test]
     fn character_visual_follower_keeps_following_when_watchers_are_off_route() {
