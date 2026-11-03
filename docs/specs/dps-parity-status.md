@@ -1,4 +1,70 @@
-# DPS parity status — 2026-10-29
+# DPS parity status
+
+## L90 landed-master remeasure (2026-11-03)
+
+Each native row uses a follower actor, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC `76f8118` references use 1,000 iterations, the same fixed duration, seed 70448 and the actor-only raid-buff composition. The 3T reference uses timed add events. Devastation uses its approved MID1 profile. The exact commands, hashes, per-seed reports, logs and world snapshot are in `game-engine/data/diagnostics/dps-parity-landed-master-2026-11-03/` and the references in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/dps/`.
+
+Ratio is native mean / SimC mean. The approximate 95% CI uses the delta method for independent means, native sample standard deviation, SimC reported standard error and the conservative t critical value for nine degrees of freedom. It is not a paired-seed CI. **OUT** means the point estimate is outside [0.95, 1.05], regardless of whether its CI crosses the boundary.
+
+| Spec | Targets | Native DPS | SimC DPS | Ratio ± 95% CI | Flag | Driver at measurement | Master |
+|---|---:|---:|---:|---:|---|---|---|
+| Arcane Mage (62) | 1T | 175,731 | 177,681 | 0.9890 ± 0.0309 | in | old wrapper | `389ca621d0` |
+| Arcane Mage (62) | 3T | 332,276 | 330,648 | 1.0049 ± 0.0349 | in | old wrapper | `389ca621d0` |
+| Fire Mage (63) | 1T | 206,602 | 197,191 | 1.0477 ± 0.0271 | in | old wrapper | `389ca621d0` |
+| Fire Mage (63) | 3T | 387,793 | 371,059 | 1.0451 ± 0.0274 | in | old wrapper | `389ca621d0` |
+| Frost Mage (64) | 1T | 192,575 | 196,155 | 0.9817 ± 0.0181 | in | production | `288a949232` |
+| Frost Mage (64) | 3T | 295,078 | 298,610 | 0.9882 ± 0.0127 | in | production | `288a949232` |
+| Retribution Paladin (70) | 1T | 178,637 | 178,061 | 1.0032 ± 0.0252 | in | production | `389ca621d0` |
+| Retribution Paladin (70) | 3T | 317,175 | 321,347 | 0.9870 ± 0.0136 | in | production | `389ca621d0` |
+| Arms Warrior (71) | 1T | 185,933 | 197,315 | 0.9423 ± 0.0272 | **OUT** | old wrapper | `389ca621d0` |
+| Arms Warrior (71) | 3T | 348,989 | 344,060 | 1.0143 ± 0.0211 | in | old wrapper | `389ca621d0` |
+| Fury Warrior (72) | 1T | 211,831 | 211,803 | 1.0001 ± 0.0134 | in | production | `288a949232` |
+| Fury Warrior (72) | 3T | 275,990 | 284,888 | 0.9688 ± 0.0244 | in | production | `288a949232` |
+| Feral Druid (103) | 1T | 190,439 | 202,645 | 0.9398 ± 0.0120 | **OUT** | old wrapper | `389ca621d0` |
+| Feral Druid (103) | 3T | 242,130 | 261,956 | 0.9243 ± 0.0144 | **OUT** | old wrapper | `389ca621d0` |
+| Frost Death Knight (251) | 1T | 199,242 | 206,579 | 0.9645 ± 0.0165 | in | old wrapper | `389ca621d0` |
+| Frost Death Knight (251) | 3T | 372,121 | 387,833 | 0.9595 ± 0.0190 | in | old wrapper | `389ca621d0` |
+| Unholy Death Knight (252) | 1T | 189,078 | 198,328 | 0.9534 ± 0.0151 | in | old wrapper | `389ca621d0` |
+| Unholy Death Knight (252) | 3T | 322,187 | 330,005 | 0.9763 ± 0.0255 | in | old wrapper | `389ca621d0` |
+| Beast Mastery Hunter (253) | 1T | 168,299 | 202,388 | 0.8316 ± 0.0128 | **OUT** | production | `ce51d76614` |
+| Beast Mastery Hunter (253) | 3T | 216,044 | 259,613 | 0.8322 ± 0.0108 | **OUT** | production | `ce51d76614` |
+| Marksmanship Hunter (254) | 1T | 175,234 | 192,745 | 0.9091 ± 0.0146 | **OUT** | old wrapper | `389ca621d0` |
+| Marksmanship Hunter (254) | 3T | 218,752 | 280,759 | 0.7791 ± 0.0513 | **OUT** | old wrapper | `389ca621d0` |
+| Survival Hunter (255) | 1T | 190,161 | 198,514 | 0.9579 ± 0.0150 | in | old wrapper | `389ca621d0` |
+| Survival Hunter (255) | 3T | 306,827 | 318,630 | 0.9630 ± 0.0132 | in | old wrapper | `389ca621d0` |
+| Shadow Priest (258) | 1T | 162,835 | 183,245 | 0.8886 ± 0.0100 | **OUT** | production | `288a949232` |
+| Shadow Priest (258) | 3T | 322,370 | 339,984 | 0.9482 ± 0.0154 | **OUT** | production | `288a949232` |
+| Assassination Rogue (259) | 1T | 177,749 | 186,209 | 0.9546 ± 0.0129 | in | old wrapper | `389ca621d0` |
+| Assassination Rogue (259) | 3T | 246,311 | 265,841 | 0.9265 ± 0.0241 | **OUT** | old wrapper | `389ca621d0` |
+| Outlaw Rogue (260) | 1T | 189,588 | 207,454 | 0.9139 ± 0.0305 | **OUT** | old wrapper | `389ca621d0` |
+| Outlaw Rogue (260) | 3T | 336,375 | 348,127 | 0.9662 ± 0.0328 | in | old wrapper | `389ca621d0` |
+| Subtlety Rogue (261) | 1T | 231,850 | 228,930 | 1.0128 ± 0.0129 | in | old wrapper | `389ca621d0` |
+| Subtlety Rogue (261) | 3T | 383,049 | 391,502 | 0.9784 ± 0.0134 | in | old wrapper | `389ca621d0` |
+| Elemental Shaman (262) | 1T | 233,900 | 211,367 | 1.1066 ± 0.0275 | **OUT** | old wrapper | `389ca621d0` |
+| Elemental Shaman (262) | 3T | 364,612 | 324,957 | 1.1220 ± 0.0212 | **OUT** | old wrapper | `389ca621d0` |
+| Enhancement Shaman (263) | 1T | 180,502 | 200,137 | 0.9019 ± 0.0169 | **OUT** | old wrapper | `389ca621d0` |
+| Enhancement Shaman (263) | 3T | 374,935 | 414,337 | 0.9049 ± 0.0199 | **OUT** | old wrapper | `389ca621d0` |
+| Affliction Warlock (265) | 1T | 189,587 | 200,692 | 0.9447 ± 0.0183 | **OUT** | production | `288a949232` |
+| Affliction Warlock (265) | 3T | 270,472 | 275,122 | 0.9831 ± 0.0262 | in | production | `288a949232` |
+| Demonology Warlock (266) | 1T | 170,854 | 196,790 | 0.8682 ± 0.0172 | **OUT** | production | `ce51d76614` |
+| Demonology Warlock (266) | 3T | 392,647 | 420,736 | 0.9332 ± 0.0167 | **OUT** | production | `ce51d76614` |
+| Destruction Warlock (267) | 1T | 183,949 | 195,142 | 0.9426 ± 0.0155 | **OUT** | production | `288a949232` |
+| Destruction Warlock (267) | 3T | 249,623 | 256,778 | 0.9721 ± 0.0147 | in | production | `288a949232` |
+| Windwalker Monk (269) | 1T | 197,011 | 206,444 | 0.9543 ± 0.0126 | in | old wrapper | `389ca621d0` |
+| Windwalker Monk (269) | 3T | 372,079 | 376,560 | 0.9881 ± 0.0297 | in | old wrapper | `389ca621d0` |
+| Havoc Demon Hunter (577) | 1T | 188,598 | 214,737 | 0.8783 ± 0.0135 | **OUT** | production | `288a949232` |
+| Havoc Demon Hunter (577) | 3T | 304,141 | 334,847 | 0.9083 ± 0.0116 | **OUT** | production | `288a949232` |
+| Devastation Evoker (1467) | 1T | 114,680 | 113,711 | 1.0085 ± 0.0177 | in | old wrapper | `389ca621d0` |
+| Devastation Evoker (1467) | 3T | 183,445 | 182,175 | 1.0070 ± 0.0166 | in | old wrapper | `389ca621d0` |
+| Devourer Demon Hunter (1480) | 1T | 220,555 | 214,110 | 1.0301 ± 0.0277 | in | old wrapper | `389ca621d0` |
+| Devourer Demon Hunter (1480) | 3T | 356,053 | 341,884 | 1.0414 ± 0.0268 | in | old wrapper | `389ca621d0` |
+
+**3T scope:** Every 3T row is labeled with the measured master. These results predate the separate fixture-engagement fix reported by the team; they do not establish parity after that fix.
+
+**Ledger:** Each valid row reports an empty fact-error ledger for all seeds. An invalid row is not a passing measurement. The base and port campaign logs include setup failures and the pet-admission assertion failures; see the evidence directory for details.
+
+
+## Earlier train snapshot — 2026-10-29
 
 Snapshot of the 25 DPS specs with approved pinned profiles. Train data is ranked by the first-parent master commit, not report modification time. Each cell uses the newest successful archived literal-rotation report for that target count on master through `8ccdf3012e`; commit and train entry identify its source. Older commits than `2a49eee69c` are fallback measurements. Local diagnostic results are listed separately below and do not replace train measurements.
 
