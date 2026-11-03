@@ -231,6 +231,20 @@ fn overlapping_telegraphs_cancel_a_cast_that_outlasts_the_first_impact() {
 }
 
 #[test]
+fn follower_avoids_caster_area_destination_knockback() {
+    let (mut h, unit, _) = stockade_fixture(FROM);
+    let enemy = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert((FROM, InMap::continent(34)));
+    prepare_enemy_spec(&mut h, enemy, 66);
+    // Earthbreaker 250453: effect144 is the only caster-destination area effect.
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 250453, Some(enemy), false).unwrap();
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+}
+
+#[test]
 fn follower_ignores_large_and_instant_cast_telegraphs() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     let enemy = spawn_npc(&mut h.app, 0.0);
