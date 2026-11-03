@@ -400,6 +400,10 @@ fn windrunner_devastation_apl_fire_breath_respects_pull_closure() {
     );
     queue.apply(run.app.world_mut());
     run.app.insert_resource(ground);
+    run.app.insert_resource(
+        super::super::native_movement::NativeMovement::open(&root.join("navmesh"), map.map_id)
+            .expect("native Windrunner movement"),
+    );
     let here = Position {
         x: 5216.415,
         y: 127.7347,
