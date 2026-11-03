@@ -151,6 +151,43 @@ mod tests {
     }
 
     #[test]
+    fn missing_native_target_health_is_recorded_and_selection_continues() {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        let mut world = World::new();
+        let actor = world.spawn_empty().id();
+        let target = world.spawn_empty().id();
+        let targets = [target];
+        let bindings = Bindings::default();
+        let native = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1)
+            .with_targets(Some(target), &targets);
+        let errors = FactErrors::default();
+        let facts = FactContext {
+            inner: &native,
+            errors: &errors,
+            actor,
+            default_target: Some(target),
+        };
+        let program = Program::parse(&[
+            ("default", "interrupt,if=target.health>0"),
+            ("default", "attack"),
+        ])
+        .unwrap();
+        assert_eq!(
+            program
+                .select("default", &facts, &mut program.state(), |_| Ok(true))
+                .unwrap()
+                .unwrap()
+                .name,
+            "attack"
+        );
+        let entries = errors.snapshot();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].fact, "target.health");
+        assert_eq!(entries[0].target, Some(target.to_bits()));
+        assert!(entries[0].detail.contains("lacks Health"));
+    }
+
+    #[test]
     fn cycling_variable_does_not_keep_partial_updates_after_a_fact_error() {
         struct Targets([u64; 2]);
         impl Facts for Targets {
