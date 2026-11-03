@@ -2239,6 +2239,7 @@ fn deal_source_damage_and_report(
     damage: DamageInput,
     recorded_hit: Option<(f32, bool)>,
 ) -> f32 {
+    let replayed_hit = recorded_hit.is_some();
     let DamageInput {
         crit,
         periodic,
@@ -2528,7 +2529,15 @@ fn deal_source_damage_and_report(
             hit_mask,
         );
     if (amount > 0.0 || absorbed > 0.0 || blocked > 0.0) && !recorded_hit {
-        push_damage_event(world, ctx, target, periodic, scaled_loss, hit_mask);
+        push_damage_event(
+            world,
+            ctx,
+            target,
+            periodic,
+            scaled_loss,
+            hit_mask,
+            replayed_hit,
+        );
     }
     crate::scripted_ai::health_threshold::complete_crossing(world, target, before, incoming_loss);
     if commit.lethal {
@@ -2552,21 +2561,22 @@ fn push_damage_event(
     periodic: bool,
     damage: f32,
     hit_mask: u32,
+    replayed_hit: bool,
 ) {
     let (actor, taken) = if periodic {
         (
             procs::PROC_DEAL_HARMFUL_PERIODIC,
             procs::PROC_TAKE_HARMFUL_PERIODIC,
         )
-    } else if ctx.spell.id == 0
+    } else if (replayed_hit || ctx.spell.id == 0)
         && ctx
             .spell
             .categories
             .as_ref()
             .is_some_and(|category| matches!(category.defense_type, 1 | 2))
     {
-        // Classified ID-zero replay damage has no cast ledger but still lands
-        // as its authored hostile spell or melee ability.
+        // Recorded replay damage has no cast ledger but retains the actual
+        // hostile spell or melee-ability proc classification.
         procs::spell_hit_masks(ctx.spell, true)
     } else {
         (0, 0)

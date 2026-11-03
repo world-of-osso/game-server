@@ -633,7 +633,7 @@ fn replay_profile(
             while let Some(hit) = wcl
                 .hits
                 .get(next_wcl)
-                .filter(|hit| hit.time_ms <= elapsed_ms)
+                .filter(|hit| hit.time_ms < elapsed_ms + 50)
             {
                 match hit.deliver(app.world_mut(), source, &slots, tick)? {
                     super::healer_wcl_trace::Delivery::Applied => {
