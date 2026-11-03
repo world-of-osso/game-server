@@ -2816,6 +2816,55 @@ fn recovery_drink_is_interrupted_by_follower_movement() {
 }
 
 #[test]
+fn recovery_drink_retries_and_interrupts_on_cast_and_combat() {
+    use shared::components::{CombatStatus, Mana};
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let healer = run.party.members[1];
+    let tank = run.party.tank;
+    let pack = std::collections::BTreeSet::from([20375766]);
+    let mut mana = run.app.world_mut().get_mut::<Mana>(healer).unwrap();
+    mana.current = mana.max * 0.30;
+    for _ in 0..100 {
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+        if crate::auras::has_aura(run.app.world(), healer, 1291791) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 1291791));
+    crate::spell_cast::cast_granted(run.app.world_mut(), healer, 17, Some(healer)).unwrap();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "casting must interrupt drinking"
+    );
+    for _ in 0..100 {
+        run.app.update();
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
+        if crate::auras::has_aura(run.app.world(), healer, 1291791) {
+            break;
+        }
+    }
+    assert!(
+        crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "remaining low mana must trigger another item use"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<CombatStatus>(healer)
+        .unwrap()
+        .0 = true;
+    run.app.update();
+    assert!(
+        !crate::auras::has_aura(run.app.world(), healer, 1291791),
+        "combat must interrupt drinking"
+    );
+}
+
+#[test]
 fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
     let _rng_scope = crate::random::seed_scope(3);
     let mut run = spawn_run(3, &mut None).unwrap();
