@@ -115,6 +115,66 @@ fn ready(run: &mut Run, name: &str, spell: u32) -> bool {
 
 #[test]
 #[ignore = "requires native258 Player/profile/traits"]
+fn shadow_voidform_allows_paid_madness_and_restores_shadowform() {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(258, 1).unwrap();
+    engage_fixture_opponents(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        232698,
+        Some(actor),
+        1
+    ));
+    assert!(crate::auras::has_aura(run.app.world(), actor, 232698));
+    cast(&mut run, VOIDFORM);
+    advance(&mut run, 40);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 194249));
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 232698));
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::Insanity,
+        10000.0,
+    );
+    let before =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Insanity)
+            .unwrap()
+            .0;
+    cast(&mut run, 335467);
+    advance(&mut run, 20);
+    let after = crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::Insanity)
+        .unwrap()
+        .0;
+    assert!(
+        after < before,
+        "Madness must spend Insanity in Voidform: {before} -> {after}"
+    );
+    assert!(
+        run.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(335467)
+                && event.amount > 0),
+        "Madness must hit in Voidform"
+    );
+    advance(&mut run, 500);
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 194249));
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 232698),
+        "Shadowform must return after Voidform"
+    );
+}
+
+#[test]
+#[ignore = "requires native258 Player/profile/traits"]
 fn shadow_volley_voidform_funds_native_uses_and_ordinary_casts_consume_them() {
     let mut run = prepare_literal(258, 1).unwrap();
     engage_fixture_opponents(&mut run);
