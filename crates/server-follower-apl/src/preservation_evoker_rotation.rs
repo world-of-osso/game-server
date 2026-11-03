@@ -68,7 +68,11 @@ pub(crate) fn program() -> Result<Program, String> {
             "reversion,if=target.health.pct<95&target.reversion_up=0",
         ),
         ("default", "living_flame,if=target.health.pct<95"),
-        ("damage", "fire_breath,empower_to=1"),
+        // INFERRED_WCL: p25 five targets, first-cast delay median 26.862 seconds.
+        (
+            "damage",
+            "fire_breath,empower_to=1,if=active_enemies>=5|time>=26.862",
+        ),
         ("damage", "disintegrate"),
         ("damage", "living_flame"),
     ])
@@ -136,13 +140,13 @@ impl ActionFacts for PartyFacts<'_> {
 }
 
 impl Preservation {
-    /// Heal the party; damage `enemy` when no heal is due.
+    /// Heal the party; damage engaged enemies when no heal is due.
     pub fn drive(
         &mut self,
         world: &mut World,
         healer: Entity,
         party: &[Entity],
-        enemy: Option<Entity>,
+        enemies: &[Entity],
     ) -> Result<(), String> {
         let living: Vec<_> = party
             .iter()
@@ -190,10 +194,10 @@ impl Preservation {
         if injured != 0 {
             return Ok(());
         }
-        let Some(enemy) = enemy else {
+        let Some(&enemy) = enemies.first() else {
             return Ok(());
         };
-        let enemies = [enemy];
+
         let actions = SPELLS
             .iter()
             .filter(|(name, _, _)| matches!(*name, "fire_breath" | "disintegrate" | "living_flame"))
@@ -203,9 +207,9 @@ impl Preservation {
                 self_target,
                 talent: None,
             });
-        let prepared = Prepared::read(world, healer, &enemies, &self.equipment, actions, false)?;
-        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
-            .with_targets(Some(enemy), &enemies);
+        let prepared = Prepared::read(world, healer, enemies, &self.equipment, actions, false)?;
+        let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
+            .with_targets(Some(enemy), enemies);
         if let Some((action, execution)) =
             self.driver
                 .select("damage", &facts, &prepared, &self.equipment)?
@@ -219,7 +223,7 @@ impl Preservation {
 impl crate::follower::SpecRotation for Preservation {
     fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
         let party = crate::follower::healing_party(world, actor);
-        Preservation::drive(self, world, actor, &party, None)
+        Preservation::drive(self, world, actor, &party, &[])
     }
 
     fn action_spells(&self) -> Vec<u32> {
@@ -257,6 +261,6 @@ impl crate::follower::SpecRotation for Preservation {
         targets: &[Entity],
     ) -> Result<(), String> {
         let party = crate::follower::healing_party(world, actor);
-        Preservation::drive(self, world, actor, &party, targets.first().copied())
+        Preservation::drive(self, world, actor, &party, targets)
     }
 }
