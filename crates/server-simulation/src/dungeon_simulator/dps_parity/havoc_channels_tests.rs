@@ -18,6 +18,17 @@ fn damage(run: &Run, spell: Option<u32>) -> Vec<CombatLogEvent> {
         .collect()
 }
 
+/// Native Chaos Brand1490 (+3% magic damage taken) is earned by the first
+/// impact; clear it so paired casts differ only by Never Say Die.
+fn clear_chaos_brand(run: &mut Run, target: Entity) {
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        target,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1490,
+    );
+}
+
 fn advance(run: &mut Run, frames: usize) {
     for _ in 0..frames {
         run.app.update();
@@ -699,6 +710,7 @@ fn havoc_never_say_die_low_health_does_not_start_damage_bonus() {
         .get_mut::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .crit_pct = -1000.0;
+    clear_chaos_brand(&mut run, target);
     {
         let _seed = crate::random::seed_scope(88);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
@@ -715,6 +727,7 @@ fn havoc_never_say_die_low_health_does_not_start_damage_bonus() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    clear_chaos_brand(&mut run, target);
     {
         let _seed = crate::random::seed_scope(88);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
@@ -767,6 +780,7 @@ fn havoc_never_say_die_keeps_earned_damage_below_threshold() {
         .get_mut::<crate::stats::CharacterStats>(actor)
         .unwrap()
         .crit_pct = -1000.0;
+    clear_chaos_brand(&mut run, target);
     {
         let _seed = crate::random::seed_scope(88);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
@@ -783,6 +797,7 @@ fn havoc_never_say_die_keeps_earned_damage_below_threshold() {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    clear_chaos_brand(&mut run, target);
     {
         let _seed = crate::random::seed_scope(88);
         crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 227518, Some(target), 1);
@@ -2434,12 +2449,16 @@ fn havoc_initiative_ignores_item_damage_until_demon_hunter_hit() {
         1,
         1000.0,
     );
+    // Guillotine impacts after its native travel delay (c197344ec9).
+    advance(&mut run, 25);
     assert!(
         !damage(&run, Some(1306624)).is_empty(),
         "item must deal damage"
     );
     assert!(!crate::auras::has_aura(run.app.world(), actor, 391215));
     crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 337819, Some(target), 1);
+    // Throw Glaive is a native missile (SpellMisc speed 40).
+    advance(&mut run, 25);
     assert!(!damage(&run, Some(337819)).is_empty(), "glaive must hit");
     assert!(crate::auras::has_aura(run.app.world(), actor, 391215));
 }
