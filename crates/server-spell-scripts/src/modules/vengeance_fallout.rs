@@ -19,7 +19,6 @@ fn initial_damage(world: &mut World, actor: Entity, aura: &AuraInstance) {
     if aura.spell_id != 258920
         || aura.caster != actor
         || !is_vengeance(world, actor)
-        || is_precombat(world, actor)
     {
         return;
     }
@@ -33,17 +32,6 @@ fn is_vengeance(world: &World, actor: Entity) -> bool {
         .get::<ActiveSpec>(actor)
         .is_some_and(|spec| spec.0 == 581)
 }
-#[cfg(feature = "test-support")]
-fn is_precombat(world: &World, actor: Entity) -> bool {
-    world
-        .get::<combat::simc_apl_native::FixturePrecombat>(actor)
-        .is_some()
-}
-#[cfg(not(feature = "test-support"))]
-fn is_precombat(_: &World, _: Entity) -> bool {
-    false
-}
-
 fn effect_hit(spell: u32, index: u8) -> Option<HitHook> {
     match (spell, index) {
         (258921, 0) => Some(initial_hit),
