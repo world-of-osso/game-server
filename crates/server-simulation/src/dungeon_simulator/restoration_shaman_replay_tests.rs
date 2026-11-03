@@ -231,6 +231,43 @@ fn restoration_shaman_uses_surging_totem_throughout_party_pulse() {
 }
 
 #[test]
+#[ignore = "requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn follower_leaves_ghost_wolf_to_cast_riptide() {
+    use server_follower_apl::literal_rotation::execution::{Execution, execute};
+    let mut party = super::healer_simc_replay::snapshot_party(264, 90, 1);
+    let healer = party.healer;
+    let target = party.tank;
+    crate::spell_cast::cast_triggered(party.app.world_mut(), healer, 2645, Some(healer), 0);
+    assert!(crate::auras::has_aura(party.app.world(), healer, 2645));
+    let spell = party
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(61295)
+        .unwrap()
+        .clone();
+    assert!(matches!(
+        crate::spell_cast::read_native_cast_start(party.app.world_mut(), healer, &spell, target),
+        Err(crate::spell_cast::CastFailure::NotShapeshift)
+    ));
+    crate::spell_cast::read_follower_cast_after_unshift(
+        party.app.world_mut(),
+        healer,
+        &spell,
+        target,
+    )
+    .unwrap();
+    execute(
+        party.app.world_mut(),
+        healer,
+        Execution::Spell(61295, target, Some(target)),
+    )
+    .unwrap();
+    assert!(!crate::auras::has_aura(party.app.world(), healer, 2645));
+    assert!(crate::auras::has_aura(party.app.world(), target, 61295));
+}
+
+#[test]
 #[ignore = "requires native Restoration Shaman spell data"]
 fn earthliving_imbue_allows_riptide_to_apply_its_hot() {
     use crate::spell_cast::{

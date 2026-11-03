@@ -2079,6 +2079,7 @@ fn check_ordinary_caster_life(
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum StartCheck {
     Native,
+    FollowerUnshift,
     ResourceMax(PowerType),
     IgnoreCastInProgress,
     IgnoreRange,
@@ -2111,6 +2112,55 @@ pub fn read_native_cast_start(
     target: Entity,
 ) -> Result<Option<Entity>, CastFailure> {
     validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Check a follower's selected spell as if it had left its current form.
+pub fn read_follower_cast_after_unshift(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    if world.get::<crate::followers::Follower>(caster).is_none()
+        || !matches!(
+            shapeshift::check_cast(world, caster, spell),
+            Err(CastFailure::NotShapeshift)
+        )
+    {
+        return Err(CastFailure::NotShapeshift);
+    }
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(target),
+        StartCheck::FollowerUnshift,
+    )
+}
+
+/// Leave a form only when the selected follower spell requires it and permits caster form.
+pub fn unshift_follower_for_spell(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if world.get::<crate::followers::Follower>(caster).is_none()
+        || !matches!(
+            shapeshift::check_cast(world, caster, spell),
+            Err(CastFailure::NotShapeshift)
+        )
+        || shapeshift::check_unshifted(world, spell).is_err()
+    {
+        return;
+    }
+    let instance = world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .and_then(crate::auras::shapeshift::current_form)
+        .map(|(aura, _)| aura.instance_id);
+    if let Some(instance) = instance {
+        crate::auras::remove_instance(
+            world,
+            caster,
+            instance,
+            crate::auras::RemoveReason::Cancelled,
+        );
+    }
 }
 
 /// Read all native start checks except maximum target range, without casting.
@@ -2272,7 +2322,11 @@ fn validate_start_with_policy(
     }
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
-    shapeshift::check_cast(world, caster, spell)?;
+    if check == StartCheck::FollowerUnshift {
+        shapeshift::check_unshifted(world, spell)?;
+    } else {
+        shapeshift::check_cast(world, caster, spell)?;
+    }
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     equipped_items::check_cast(world, caster, spell)?;
     scripts::check_enhancement_cast(world, caster, spell)?;
@@ -2291,6 +2345,7 @@ fn validate_start_with_policy(
     if matches!(
         check,
         StartCheck::Native
+            | StartCheck::FollowerUnshift
             | StartCheck::ResourceMax(_)
             | StartCheck::IgnoreRange
             | StartCheck::CooldownQueue {
