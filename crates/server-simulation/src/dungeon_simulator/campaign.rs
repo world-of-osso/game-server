@@ -2666,10 +2666,22 @@ fn stationary_full_party_still_stalls_without_any_progress() {
     for _ in 0..400 {
         run.app.update();
     }
+    // Keep the fixture's mana full: native buff upkeep can otherwise spend mana
+    // between samples, so its later regeneration is legitimate progress.
+    let members: Vec<_> = run.members().collect();
+    let fill_mana = |run: &mut Run| {
+        for &member in &members {
+            if let Some(mut mana) = run.app.world_mut().get_mut::<Mana>(member) {
+                mana.current = mana.max;
+            }
+        }
+    };
+    fill_mana(&mut run);
     run.last_progress = run.now();
     assert!(!run.stalled());
     for _ in 0..1201 {
         run.app.update();
+        fill_mana(&mut run);
     }
     assert!(
         run.stalled(),
