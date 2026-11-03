@@ -117,6 +117,9 @@ fn start_flight(world: &mut World, unit: Entity, follower: &Follower) -> bool {
 
 fn move_toward(world: &mut World, unit: Entity, here: Vec3, target: Vec3, speed: f32, dt: f32) {
     let next = here + (target - here).clamp_length_max(speed * dt);
+    world
+        .entity_mut(unit)
+        .insert(crate::simc_apl_native::MovementDestination(target));
     super::move_flying_follower(
         world,
         unit,
@@ -201,5 +204,7 @@ fn land_on_leader_floor(
     } else {
         world.entity_mut(unit).remove::<Mounted>();
     }
-    world.entity_mut(unit).remove::<FlightFollow>();
+    world
+        .entity_mut(unit)
+        .remove::<(FlightFollow, crate::simc_apl_native::MovementDestination)>();
 }
