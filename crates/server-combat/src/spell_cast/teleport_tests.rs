@@ -246,6 +246,57 @@ fn spell_teleport_ground_leap_rejects_out_of_range_and_nonfinite_destinations() 
 }
 
 #[test]
+fn infernal_strike_resolves_cursor_landing_to_ground() {
+    use lightyear::prelude::*;
+    let mut h = harness(Vec::new(), &[189110, 189112], 12).unwrap();
+    h.app.add_systems(
+        FixedUpdate,
+        (
+            crate::scripted_ai::jump_movement::release_finished_jumps,
+            crate::scripted_ai::jump_movement::advance_jumps,
+        )
+            .chain(),
+    );
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
+    h.app
+        .insert_resource(crate::terrain_height::test_helpers::flat_ground(
+            33.0, 33.0, 2.0,
+        ));
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(std::path::Path::new(
+            "/home/osso/Projects/world-of-osso/game-engine/data/los",
+        ))
+        .unwrap(),
+    );
+    h.app.world_mut().entity_mut(h.caster).insert((
+        Position {
+            x: 10.0,
+            y: 2.0,
+            z: -10.0,
+        },
+        Rotation {
+            x: 0.0,
+            y: std::f32::consts::FRAC_PI_2,
+            z: 0.0,
+        },
+    ));
+    let request: shared::protocol::SpellCastIntent = serde_json::from_value(serde_json::json!({
+        "spell_id":189110,"spell":"","target_entity":null,"witness":null,"destination":[30.0,1.9,-10.0]
+    })).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::SpellCastIntent>>(h.connection)
+        .unwrap()
+        .send::<shared::protocol::CombatChannel>(request);
+    h.advance(30);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let landed = *h.app.world().get::<Position>(h.caster).unwrap();
+    assert!((landed.x - 30.0).abs() < 0.01, "{landed:?}");
+    assert!((landed.y - 2.0).abs() < 0.01, "{landed:?}");
+}
+
+#[test]
 fn infernal_strike_follows_native_progress_curve_and_damages_on_arrival() {
     use lightyear::prelude::*;
     let mut h = harness(Vec::new(), &[189110, 189112], 12).unwrap();
