@@ -3,37 +3,32 @@ use super::*;
 
 #[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
-fn havoc_precombat_immolation_starts_at_pull_before_felblade() {
+fn havoc_precombat_does_not_run_after_combat_starts() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
-    let mut run = prepare_measurement(577, 1).expect("native Havoc fixture");
+    let mut run = prepare_literal(577, 1).expect("native Havoc fixture");
+    run.app
+        .world_mut()
+        .entity_mut(run.actor)
+        .insert(shared::components::CombatStatus(true));
+    let before = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let driver = havoc_rotation::prepare_driver(&mut run).expect("production Havoc preparation");
+    assert!(driver.report()["native_precombat_snapshot"].is_null());
     let events = &run
         .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
-    assert!(events.iter().any(|event| event.spell_id == Some(258920) && event.kind == CombatLogKind::CastSuccess));
+        .0[before..];
     assert!(
-        !events
-            .iter()
-            .any(|event| event.spell_id == Some(258922) && event.kind == CombatLogKind::Damage),
-        "precombat Immolation must not tick before pull"
-    );
-    engage(&mut run);
-    let started_at = run.app.world().resource::<Time>().elapsed();
-    install_fixture_lifetimes(&mut run, started_at);
-    drive_player(&mut run).expect("first literal combat decision");
-    let events = &run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
-    assert!(events.iter().any(|event| event.spell_id == Some(232893) && event.kind == CombatLogKind::CastSuccess), "Felblade must be available at pull");
-    assert!(
-        !events.iter().any(
-            |event| event.spell_id == Some(1297908) && event.kind == CombatLogKind::CastSuccess
-        ),
-        "Font must wait for Initiative from an actual impact"
+        !events.iter().any(|event| {
+            event.spell_id == Some(258920) && event.kind == CombatLogKind::CastSuccess
+        }),
+        "precombat Immolation must not cast after combat starts"
     );
 }
 
