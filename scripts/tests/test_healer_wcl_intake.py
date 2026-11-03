@@ -24,8 +24,10 @@ class WclIntakeTest(unittest.TestCase):
         db.execute('CREATE TABLE spell_categories (SpellID INTEGER, DifficultyID INTEGER, DefenseType INTEGER)')
         db.executemany('INSERT INTO spell_misc VALUES (?, 0, 1)', [(1306338,), (124255,)])
         db.execute('INSERT INTO spell_categories VALUES (1306338, 0, 2)')
+        config = {'actors': [6, 221, 1, 225, 231], 'party_specs': [268, 1468, 62, 262, 262],
+                  'provenance': 'INFERRED_WCL test fight 1 pull 1'}
         events = []
-        for actor in intake.ACTORS:
+        for actor in config['actors']:
             events.append({'targetID': actor, 'sourceID': 413, 'sourceInstance': 1,
                            'abilityGameID': 1306338, 'timestamp': 100, 'fight_ms': 0,
                            'hitType': 1, 'amount': 100, 'absorbed': 300, 'maxHitPoints': 1000})
@@ -35,11 +37,21 @@ class WclIntakeTest(unittest.TestCase):
         heals = [{'type': 'absorbed', 'abilityGameID': 115069, 'targetID': 6,
                   'attackerID': 413, 'attackerInstance': 1, 'extraAbilityGameID': 1306338,
                   'timestamp': 99, 'amount': 200}]
-        result = intake.convert(events, heals, db)
+        result = intake.convert(events, heals, db, config)
         first, tick = result['hits'][0], result['hits'][-1]
         self.assertEqual((first['amount'], first['absorbed'], first['deferred_absorbed']), (100, 100, 200))
         self.assertEqual((tick['spell_id'], tick['amount'], tick['deferred']), (124255, 50, True))
         self.assertEqual(result['excluded_self'], 0)
+
+    def test_uses_time_varying_max_health_and_marks_future_observation(self):
+        events = [{'sourceID': 6, 'targetID': 413, 'resourceActor': 1, 'fight_ms': 100,
+                   'maxHitPoints': 1000, 'hitPoints': 800},
+                  {'sourceID': 413, 'targetID': 6, 'resourceActor': 2, 'fight_ms': 200,
+                   'maxHitPoints': 1500, 'hitPoints': 900}]
+        observations = intake.read_health_observations(events, {6: 0})
+        self.assertEqual(intake.max_health_at(observations, 6, 50), (1000, 100))
+        self.assertEqual(intake.max_health_at(observations, 6, 150), (1000, 100))
+        self.assertEqual(intake.max_health_at(observations, 6, 200), (1500, 200))
 
     def test_rejects_ambiguous_or_unmatched_absorb_receipts(self):
         event = {'targetID': 6, 'sourceID': 413, 'sourceInstance': 1,
