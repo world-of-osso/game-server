@@ -110,6 +110,9 @@ fn fresh_vengeance_follower_has_out_of_combat_status_on_first_apl_tick() {
     use shared::components::CombatStatus;
 
     let mut pull = spawn(581);
+    pull.harness
+        .app
+        .insert_resource(server_combat::test_support::GroundMap::flat_arena(0.0));
     let actor = pull.follower;
     let target = pull.harness.npc;
     let world = pull.harness.app.world_mut();
@@ -1511,6 +1514,9 @@ fn follower_apl_keeps_casting_while_its_target_casts() {
     // Murder Row Kystia casts Chaos Barrage 1230298 almost continuously; the Vengeance
     // `disrupt,if=target.debuff.casting.react` row must not stop the APL for the pull.
     let mut pull = spawn(581);
+    pull.harness
+        .app
+        .insert_resource(server_combat::test_support::GroundMap::flat_arena(0.0));
     let target = pull.harness.npc;
     for frame in 0..FRAMES {
         pull.harness
