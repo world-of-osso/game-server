@@ -4421,8 +4421,47 @@ impl Run {
         };
         self.record_pull(pack_id, decision);
         if !allowed {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<crate::followers::AdmittedPull>();
             return Ok(());
         }
+        let mut prospective = vec![target];
+        prospective.extend(
+            guids
+                .iter()
+                .filter_map(|guid| self.actors.get(guid).copied())
+                .filter(|actor| *actor != target),
+        );
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .insert(crate::followers::AdmittedPull(prospective));
+        if self
+            .party
+            .members
+            .iter()
+            .copied()
+            .chain(std::iter::once(self.party.owner))
+            .any(|unit| {
+                self.app
+                    .world()
+                    .get::<crate::followers::AplControlled>(unit)
+                    .is_some()
+                    && self
+                        .app
+                        .world()
+                        .get::<server_follower_apl::FollowerApl>(unit)
+                        .is_none_or(|apl| apl.in_precombat())
+            })
+        {
+            return Ok(());
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<crate::followers::AdmittedPull>();
         if self.keystone.is_some() {
             return self.drive_owner_opening(target);
         }

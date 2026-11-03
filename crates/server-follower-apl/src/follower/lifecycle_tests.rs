@@ -56,6 +56,51 @@ fn same_rotation_runs_three_pulls_without_precombat_during_combat() {
     );
 }
 
+struct TargetProbe(Entity, Arc<Mutex<usize>>);
+
+impl SpecRotation for TargetProbe {
+    fn action_spells(&self) -> Vec<u32> {
+        vec![]
+    }
+    fn poll_precombat(
+        &mut self,
+        _: &mut World,
+        _: Entity,
+        targets: &[Entity],
+    ) -> Result<PrecombatPoll, String> {
+        assert_eq!(targets, &[self.0]);
+        *self.1.lock().unwrap() += 1;
+        Ok(PrecombatPoll::Finished)
+    }
+    fn execute(&mut self, _: &mut World, _: Entity, _: Action, _: Execution) -> Result<(), String> {
+        unreachable!()
+    }
+    fn start_combat_at(&mut self, _: f64) {}
+    fn drive(&mut self, _: &mut World, _: Entity, _: &[Entity]) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+#[test]
+fn precombat_reads_prospective_targets_but_never_polls_in_combat() {
+    let mut world = World::new();
+    let actor = world.spawn_empty().id();
+    let target = world.spawn_empty().id();
+    let calls = Arc::new(Mutex::new(0));
+    let mut apl = FollowerApl::new(Box::new(TargetProbe(target, calls.clone())));
+    apl.prepare_tick(&mut world, actor, &[target]).unwrap();
+    assert_eq!(*calls.lock().unwrap(), 1);
+    assert!(!apl.in_precombat());
+
+    let mut apl = FollowerApl::new(Box::new(TargetProbe(target, calls.clone())));
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CombatStatus(true));
+    apl.prepare_tick(&mut world, actor, &[target]).unwrap();
+    assert_eq!(*calls.lock().unwrap(), 1);
+    assert!(!apl.in_precombat());
+}
+
 struct EncounterProbe {
     encounter: crate::simc_apl_native::Encounter,
     values: Arc<Mutex<Vec<f64>>>,

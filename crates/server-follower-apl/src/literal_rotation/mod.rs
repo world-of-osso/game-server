@@ -150,6 +150,8 @@ pub fn read_busy(world: &World, actor: Entity) -> (bool, bool) {
     (gcd, cast)
 }
 
+pub(crate) const PRECOMBAT_TARGET_PENDING: &str = "PRECOMBAT_TARGET_PENDING";
+
 pub enum PrecombatPoll {
     Waiting,
     Selected {
@@ -313,6 +315,12 @@ impl Driver {
         };
         let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
+            if list == "precombat"
+                && prepared.upkeep_actions().is_none()
+                && prepared.awaits_target(action)
+            {
+                return Err(PRECOMBAT_TARGET_PENDING.to_owned());
+            }
             if prepared
                 .upkeep_actions()
                 .is_some_and(|actions| !actions.contains(&action.name))
@@ -340,13 +348,19 @@ impl Driver {
                     &mut usable,
                 )?
             } else {
-                self.program.select_next(
+                match self.program.select_next(
                     list,
                     &mut self.precombat_cursor,
                     facts,
                     &mut self.variables,
                     &mut usable,
-                )?
+                ) {
+                    Err(error) if error == PRECOMBAT_TARGET_PENDING => {
+                        self.precombat_cursor -= 1;
+                        return Err(error);
+                    }
+                    result => result?,
+                }
             }
         } else {
             self.program

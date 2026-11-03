@@ -55,6 +55,14 @@ pub(crate) trait SpecDriver: std::any::Any {
 
     fn drive(&mut self, world: &mut World, actor: Entity, targets: &[Entity])
     -> Result<(), String>;
+    fn drive_frame(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        literal_rotation::drive_tick(world, actor, |world| self.drive(world, actor, targets))
+    }
     fn label(&self) -> &'static str;
     /// Tank adapters must explicitly identify their native active-mitigation auras.
     fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
@@ -75,6 +83,64 @@ pub(crate) trait SpecDriver: std::any::Any {
     fn report(&self) -> Value {
         Value::Null
     }
+}
+
+impl SpecDriver for server_follower_apl::FollowerApl {
+    fn drive(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.tick(world, actor, targets)
+    }
+
+    fn drive_frame(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        self.tick(world, actor, targets)
+    }
+
+    fn label(&self) -> &'static str {
+        follower_spec_driver(self).label()
+    }
+
+    fn tank_active_mitigation_auras(&self) -> Option<&'static [u32]> {
+        follower_spec_driver(self).tank_active_mitigation_auras()
+    }
+
+    fn tank_resource_counters(&self, world: &World, actor: Entity) -> BTreeMap<&'static str, u64> {
+        follower_spec_driver(self).tank_resource_counters(world, actor)
+    }
+
+    fn tank_target_debuff_auras(&self) -> &'static [u32] {
+        follower_spec_driver(self).tank_target_debuff_auras()
+    }
+
+    fn report(&self) -> Value {
+        follower_spec_driver(self).report()
+    }
+}
+
+/// Build and prepare the production follower lifecycle against fixed Patchwerk data.
+pub(super) fn prepare_production_driver(run: &mut Run) -> Result<Box<dyn SpecDriver>, String> {
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, run.profile.spec_id)?;
+    let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        apl.prepare_tick(run.app.world_mut(), run.actor, &run.targets)?;
+        if !apl.in_precombat() {
+            return Ok(Box::new(apl));
+        }
+        run.app.update();
+    }
+    Err("production follower precombat exceeded 30 seconds".into())
 }
 
 type PrepareDriver = fn(&mut Run) -> Result<Box<dyn SpecDriver>, String>;
@@ -98,6 +164,14 @@ macro_rules! spec_drivers {
             supports_actor: <$module::Rotation as SpecDriver>::supports_actor,
             report_key: $module::REPORT_KEY,
         },)*];
+
+        fn follower_spec_driver(apl: &server_follower_apl::FollowerApl) -> &dyn SpecDriver {
+            let rotation = apl.rotation();
+            $(if let Some(rotation) = rotation.downcast_ref::<$module::Rotation>() {
+                return rotation;
+            })*
+            panic!("production follower rotation has no parity registration")
+        }
     };
 }
 
@@ -413,6 +487,156 @@ fn measurement_driver(
         .ok()?;
     let driver = &DRIVERS[index];
     (driver.supports_actor)(identity).then_some(driver)
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
+fn production_follower_precasts_only_the_admitted_pull() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    run.app
+        .add_systems(FixedUpdate, server_follower_apl::drive_followers);
+    let owner = crate::followers::acting_follower(run.app.world(), run.actor)
+        .unwrap()
+        .owner;
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, 62).unwrap();
+    let apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    world.entity_mut(run.actor).insert(apl);
+    for _ in 0..120 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<server_follower_apl::FollowerApl>(run.actor)
+            .unwrap()
+            .in_precombat()
+    );
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::followers::AdmittedPull(run.targets.clone()));
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        run.app.update();
+        if crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges,
+        )
+        .unwrap()
+        .0 == 2.0
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        2.0
+    );
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
+fn follower_defers_arcane_precast_until_pull_is_admitted() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, 62).unwrap();
+    let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    for _ in 0..120 {
+        apl.tick(run.app.world_mut(), run.actor, &[]).unwrap();
+        run.app.update();
+    }
+    assert!(apl.in_precombat(), "targeted precast must remain pending");
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        apl.prepare_tick(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        if !apl.in_precombat() {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(!apl.in_precombat());
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        2.0
+    );
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
+fn production_precombat_lands_arcane_blast_before_pull() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    let _driver = prepare_production_driver(&mut run).unwrap();
+    let charges = crate::spell_cast::powers::power_value(
+        run.app.world(),
+        run.actor,
+        shared::components::PowerType::ArcaneCharges,
+    )
+    .unwrap()
+    .0;
+    assert_eq!(charges, 2.0, "Arcane Blast must land during precombat");
+}
+
+#[test]
+#[ignore = "requires a prepared MID2 profile and native world data"]
+fn production_driver_forwards_report_and_tank_metadata() {
+    let spec: u32 = std::env::var("DPS_PARITY_SPEC").unwrap().parse().unwrap();
+    let mut run = prepare_literal(spec, 1).unwrap();
+    let registration = DRIVERS.iter().find(|entry| entry.spec_id == spec).unwrap();
+    let previous = (registration.prepare)(&mut run).unwrap();
+    let production = prepare_production_driver(&mut run).unwrap();
+    assert_eq!(production.label(), previous.label());
+    assert!(!production.report().is_null());
+    assert_eq!(
+        production.tank_active_mitigation_auras(),
+        previous.tank_active_mitigation_auras()
+    );
+    assert_eq!(
+        production.tank_target_debuff_auras(),
+        previous.tank_target_debuff_auras()
+    );
+    assert_eq!(
+        production.tank_resource_counters(run.app.world(), run.actor),
+        previous.tank_resource_counters(run.app.world(), run.actor)
+    );
 }
 
 #[test]
@@ -911,9 +1135,7 @@ use literal_rotation::LiteralTickProgress;
 pub(crate) fn drive_literal_tick(run: &mut Run) -> Result<(), String> {
     let driver = run.spec_driver.as_mut().expect("literal driver is present");
     let (actor, targets) = (run.actor, &run.targets);
-    literal_rotation::drive_tick(run.app.world_mut(), actor, |world| {
-        driver.drive(world, actor, targets)
-    })
+    driver.drive_frame(run.app.world_mut(), actor, targets)
 }
 
 pub(crate) fn drive_literal_off_gcd(run: &mut Run) -> Result<bool, String> {
