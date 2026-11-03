@@ -3397,6 +3397,8 @@ pub(crate) fn corpse_decay_system(
             &mut Corpse,
             Has<crate::zones::TempSummon>,
             Option<&crate::followers::Follower>,
+            Has<shared::components::Player>,
+            Has<crate::followers::ClassCombatant>,
         ),
         Without<crate::loot::PendingGroupLoot>,
     >,
@@ -3405,7 +3407,10 @@ pub(crate) fn corpse_decay_system(
     mut commands: Commands,
 ) {
     let dt = time.delta_secs();
-    for (entity, mut corpse, summon, follower) in &mut corpses {
+    for (entity, mut corpse, summon, follower, player, class_combatant) in &mut corpses {
+        if crate::followers::player_like_combatant(player, class_combatant) {
+            continue;
+        }
         let active_run = follower.is_some_and(|follower| {
             runs.get(follower.owner)
                 .is_ok_and(|run| run.contains_member(entity))
