@@ -63,6 +63,7 @@ fn declared_reach(world: &World, caster: Entity, spell: &SpellInfo) -> ScriptRea
         ScriptReach::Area(DeclaredReach {
             caster_radius,
             target_radius: 0.0,
+            ..Default::default()
         })
     })
 }

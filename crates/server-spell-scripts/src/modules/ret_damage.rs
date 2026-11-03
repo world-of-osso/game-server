@@ -33,11 +33,19 @@ fn declared_reach(
     caster: Entity,
     spell: &SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
+    use combat::spell_cast::script_registry::{DeclaredReach, ScriptReach};
     let child = match spell.id {
-        LIGHT_WITHIN | TEMPEST | 431911 => Some(spell.id),
+        // SimC76f8118 sc_paladin.cpp3048–3055: each Dawnlight tick beams to its carrier.
+        431380 if selected(world, caster, AVATAR_TALENT) => return ScriptReach::Child(AVATAR),
+        AVATAR => {
+            return ScriptReach::Owned(DeclaredReach {
+                beam_half_width: avatar_half_width(spell),
+                ..Default::default()
+            });
+        }
+        LIGHT_WITHIN | TEMPEST => Some(spell.id),
         BLADE if selected(world, caster, LIGHT_WITHIN_TALENT) => Some(LIGHT_WITHIN),
         STORM if selected(world, caster, TEMPEST_TALENT) => Some(TEMPEST),
-        431380 if selected(world, caster, AVATAR_TALENT) => Some(431911),
         _ => None,
     };
     let Some(child) = child else {
@@ -48,7 +56,19 @@ fn declared_reach(
         .resource::<SpellStore>()
         .get(radius_spell)
         .expect("native Ret area child");
-    combat::spell_cast::script_registry::ScriptReach::target(damage_area_radius(damage))
+    ScriptReach::target(damage_area_radius(damage))
+}
+
+/// DB2 SpellEffect 431911 target 87/134 (TC 15e0ed76 SpellInfo.cpp382 RECT, caster to
+/// destination) with SpellTargetRestrictions Width 5: a beam from the paladin to the
+/// Dawnlight carrier, half the Width to each side (Spell.cpp1988).
+fn avatar_half_width(spell: &SpellInfo) -> f32 {
+    spell
+        .target_restrictions
+        .as_ref()
+        .expect("native Sun's Avatar retains its target restrictions")
+        .width
+        / 2.0
 }
 
 fn context_hit(spell: u32) -> Option<ContextHitHook> {
@@ -60,7 +80,7 @@ fn enemy_context_hit(spell: u32) -> Option<EnemyContextHitHook> {
 }
 
 fn target_plan(spell: u32) -> Option<(targets::Relation, TargetPlanHook)> {
-    matches!(spell, LIGHT_WITHIN | TEMPEST | 431911)
+    matches!(spell, LIGHT_WITHIN | TEMPEST | AVATAR)
         .then_some((targets::Relation::Enemy, area_plan))
 }
 
@@ -83,6 +103,7 @@ const TRUTHS_WAKE: u32 = 403695;
 const BURN_TO_ASH: u32 = 446663;
 const SUN_SEAR_TALENT: u32 = 431413;
 const AVATAR_TALENT: u32 = 431425;
+const AVATAR: u32 = 431911;
 
 #[derive(Component)]
 struct WakePrimary(Entity);
@@ -348,7 +369,7 @@ pub(super) fn after_direct_damage(world: &mut World, ctx: &EffectCtx, target: En
 fn after_periodic_damage(world: &mut World, ctx: &EffectCtx, target: Entity, crit: bool) {
     if ctx.spell.id == 431380 && selected(world, ctx.caster, AVATAR_TALENT) {
         // sc_paladin.cpp3048–3055: one native Avatar action per Dawnlight tick.
-        spell_cast::cast_triggered(world, ctx.caster, 431911, Some(target), ctx.depth + 1);
+        spell_cast::cast_triggered(world, ctx.caster, AVATAR, Some(target), ctx.depth + 1);
     }
     if ctx.spell.id == TRUTHS_WAKE && crit && selected(world, ctx.caster, BURN_TO_ASH) {
         extend_truths_wake(world, ctx.caster, target);
@@ -502,12 +523,10 @@ pub(super) fn area_plan(
     explicit: Option<Entity>,
 ) -> TargetPlan {
     let target = explicit.expect("Ret damage child requires its actual primary");
-    let (radius, cap) = match spell.id {
-        LIGHT_WITHIN => (damage_area_radius(spell), 8.0),
-        431911 => (
-            damage_area_radius(spell),
-            script_effect_value(world, caster, AVATAR_TALENT, 5),
-        ),
+    let center = targets::position(world, target).expect("Ret child primary position");
+    let mut units = match spell.id {
+        LIGHT_WITHIN => area_around(world, caster, center, damage_area_radius(spell)),
+        AVATAR => beam_units(world, caster, spell, center),
         TEMPEST => {
             let storm = world
                 .resource::<SpellStore>()
@@ -515,12 +534,15 @@ pub(super) fn area_plan(
                 .expect("Tempest requires native Divine Storm");
             // SimC76f8118 Ret468–493: Tempest is unlimited area damage.
             // Native Storm owns its radius, independently of target slot.
-            (damage_area_radius(storm), 0.0)
+            area_around(world, caster, center, damage_area_radius(storm))
         }
         _ => unreachable!("only registered Ret area children"),
     };
-    let center = targets::position(world, target).expect("Ret child primary position");
-    let mut units = targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0);
+    let cap = match spell.id {
+        LIGHT_WITHIN => 8.0,
+        AVATAR => script_effect_value(world, caster, AVATAR_TALENT, 5),
+        _ => 0.0,
+    };
     units.retain(|&unit| unit != target);
     units.insert(0, target);
     let reduced = if cap > 0.0 && units.len() as f32 > cap {
@@ -539,6 +561,28 @@ pub(super) fn area_plan(
         missed_units: Vec::new(),
         prevent_hit_script: false,
     }]
+}
+
+fn area_around(world: &mut World, caster: Entity, center: Vec3, radius: f32) -> Vec<Entity> {
+    targets::area_units(world, caster, center, radius, targets::Relation::Enemy, 0)
+}
+
+/// The beam ends at the carrier, within the native 40-yard radius (TC 15e0ed76
+/// Spell.cpp1969–1971 clamps radius.Max to the destination distance).
+fn beam_units(world: &mut World, caster: Entity, spell: &SpellInfo, carrier: Vec3) -> Vec<Entity> {
+    let origin = targets::position(world, caster).expect("Sun's Avatar caster position");
+    let radius = damage_area_radius(spell);
+    let end = origin + (carrier - origin).clamp_length_max(radius);
+    let half_width = avatar_half_width(spell);
+    let mut units = targets::area_units(world, caster, origin, radius, targets::Relation::Enemy, 0);
+    units.retain(|&unit| match targets::within_beam(world, origin, end, half_width, unit) {
+        Some(inside) => inside,
+        None => {
+            warn!(?unit, "Sun's Avatar beam candidate lacks a sourced combat reach");
+            false
+        }
+    });
+    units
 }
 
 /// Damage effects can place their native area radius in either target slot.

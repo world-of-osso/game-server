@@ -284,10 +284,12 @@ pub type BeforeMeleeComboDamageHook = fn(&mut World, &EffectCtx<'_>);
 pub type BeforePeriodicItemDamageHook = fn(&mut World, &EffectCtx<'_>, Entity);
 
 /// Maximum hostile secondary-target distance from the actor and its primary target.
+/// `beam_half_width` is a rectangle from the actor to its primary (`targets::within_beam`).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct DeclaredReach {
     pub caster_radius: f32,
     pub target_radius: f32,
+    pub beam_half_width: f32,
 }
 
 /// Effects restricted to already-afflicted enemies cannot acquire an idle pack.
@@ -301,20 +303,22 @@ pub enum ScriptReach {
     EngagedOnly,
     /// A bounded selection that can only reach enemies already in combat.
     EngagedArea(DeclaredReach),
+    /// A script-owned target plan: native effect selectors do not describe its hits.
+    Owned(DeclaredReach),
 }
 
 impl ScriptReach {
     pub fn caster(radius: f32) -> Self {
         Self::Area(DeclaredReach {
             caster_radius: radius,
-            target_radius: 0.0,
+            ..Default::default()
         })
     }
 
     pub fn target(radius: f32) -> Self {
         Self::Area(DeclaredReach {
-            caster_radius: 0.0,
             target_radius: radius,
+            ..Default::default()
         })
     }
 }
@@ -584,8 +588,25 @@ impl SpellScriptRegistry {
                 {
                     reach.caster_radius = reach.caster_radius.max(declared.caster_radius);
                     reach.target_radius = reach.target_radius.max(declared.target_radius);
+                    reach.beam_half_width = reach.beam_half_width.max(declared.beam_half_width);
                 }
                 reach
+            })
+    }
+
+    pub fn owned_reach(
+        self,
+        world: &World,
+        caster: Entity,
+        spell: &SpellInfo,
+    ) -> Option<DeclaredReach> {
+        self.hooks(HookKind::DeclaredReach)
+            .find_map(|hook| match hook {
+                SpellScriptHook::DeclaredReach(declare) => match declare(world, caster, spell) {
+                    ScriptReach::Owned(reach) => Some(reach),
+                    _ => None,
+                },
+                _ => None,
             })
     }
 

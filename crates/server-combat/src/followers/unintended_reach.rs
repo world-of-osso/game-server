@@ -57,32 +57,37 @@ fn party_and_pets(world: &mut World, party: &[Entity]) -> Vec<Entity> {
 }
 
 /// Reach of one spell around its caster and explicit target. Missing spells or
-/// target entities return `None`; radii do not depend on the target's identity.
+/// target entities return `None`.
 pub fn spell_unintended_reach(
     world: &World,
     caster: Entity,
     spell_id: u32,
     target: Entity,
 ) -> Option<(f32, f32)> {
-    world.get_entity(target).ok()?;
-    let spell = world.resource::<SpellStore>().get(spell_id)?;
-    let registry = *world.resource::<SpellScriptRegistry>();
-    let reach = spell_reach(world, caster, spell, registry, 0);
+    let reach = action_reach(world, caster, spell_id, target, true)?;
     Some((reach.caster_radius, reach.target_radius))
 }
 
-pub(super) fn spell_reach_without_chain(
+/// Reach of one action at `target`; `chain: false` admits only its first chain target.
+pub(super) fn action_reach(
     world: &World,
     caster: Entity,
     spell_id: u32,
     target: Entity,
-) -> Option<(f32, f32)> {
+    chain: bool,
+) -> Option<DeclaredReach> {
     world.get_entity(target).ok()?;
     let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
-    spell.cast_single_target = true;
+    spell.cast_single_target |= !chain;
     let registry = *world.resource::<SpellScriptRegistry>();
-    let reach = spell_reach(world, caster, &spell, registry, 0);
-    Some((reach.caster_radius, reach.target_radius))
+    Some(spell_reach(
+        world,
+        caster,
+        &spell,
+        Some(target),
+        registry,
+        0,
+    ))
 }
 
 fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
@@ -92,14 +97,21 @@ fn unit_reach(world: &mut World, unit: Entity) -> DeclaredReach {
         .into_iter()
         .chain(registry.additional_reach_actions(world, unit))
     {
-        // Radii are target-independent; the actor supplies a valid entity for
-        // this maximum over possible actions when no primary target exists.
-        let Some((caster_radius, target_radius)) = spell_unintended_reach(world, unit, spell, unit)
-        else {
+        let Some(spell) = world.resource::<SpellStore>().get(spell) else {
             continue;
         };
-        reach.caster_radius = reach.caster_radius.max(caster_radius);
-        reach.target_radius = reach.target_radius.max(target_radius);
+        // No primary exists yet: take the maximum over possible targets.
+        let spell = spell_reach(world, unit, spell, None, registry, 0);
+        // A beam runs from the unit to its own target; with no target yet, this
+        // bounds it only by its width around each anchor.
+        reach.caster_radius = reach
+            .caster_radius
+            .max(spell.caster_radius)
+            .max(spell.beam_half_width);
+        reach.target_radius = reach
+            .target_radius
+            .max(spell.target_radius)
+            .max(spell.beam_half_width);
     }
     let fields = attached_field_reach(world, unit);
     reach.caster_radius = reach.caster_radius.max(fields.caster_radius);
@@ -165,9 +177,13 @@ fn spell_reach(
     world: &World,
     caster: Entity,
     spell: &crate::spell_info::SpellInfo,
+    primary: Option<Entity>,
     registry: SpellScriptRegistry,
     depth: u8,
 ) -> DeclaredReach {
+    if let Some(owned) = registry.owned_reach(world, caster, spell) {
+        return owned;
+    }
     let mut result = registry.declared_reach(world, caster, spell);
     if depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
         for rank in 1..=4 {
@@ -176,9 +192,8 @@ fn spell_reach(
             ) else {
                 break;
             };
-            let reach = spell_reach(world, caster, &release, registry, depth + 1);
-            result.caster_radius = result.caster_radius.max(reach.caster_radius);
-            result.target_radius = result.target_radius.max(reach.target_radius);
+            let reach = spell_reach(world, caster, &release, primary, registry, depth + 1);
+            merge_reach(&mut result, reach);
         }
     }
     if let Some(radius) =
@@ -210,7 +225,7 @@ fn spell_reach(
         let Some(child) = world.resource::<SpellStore>().get(effect.trigger_spell) else {
             continue;
         };
-        let child = spell_reach(world, caster, child, registry, depth + 1);
+        let child = spell_reach(world, caster, child, primary, registry, depth + 1);
         result.caster_radius = result.caster_radius.max(child.caster_radius);
         if effect.implicit_targets.contains(&1) {
             result.caster_radius = result.caster_radius.max(child.target_radius);
@@ -221,6 +236,12 @@ fn spell_reach(
             result.target_radius = result
                 .target_radius
                 .max(target_radius + child.target_radius);
+            extend_beam(
+                &mut result,
+                caster_radius,
+                target_radius,
+                child.beam_half_width,
+            );
         }
     }
     if depth < crate::spell_cast::effects::MAX_TRIGGER_DEPTH {
@@ -228,20 +249,22 @@ fn spell_reach(
             let Some(child) = world.resource::<SpellStore>().get(child_id) else {
                 continue;
             };
-            let child = spell_reach(world, caster, child, registry, depth + 1);
-            result.caster_radius = result.caster_radius.max(child.caster_radius);
-            result.target_radius = result.target_radius.max(child.target_radius);
+            let child = spell_reach(world, caster, child, primary, registry, depth + 1);
+            merge_reach(&mut result, child);
         }
         let parent = result;
         for (child_id, caster_range, splash_radius) in
-            crate::spell_cast::scripts::reach_children(world, caster, spell)
+            crate::spell_cast::scripts::reach_children(world, caster, spell, primary)
         {
             let Some(child) = world.resource::<SpellStore>().get(child_id) else {
                 continue;
             };
-            let child = spell_reach(world, caster, child, registry, depth + 1);
+            // A ranged payload may land on another unit, which is its own primary.
+            let child_primary = if caster_range > 0.0 { None } else { primary };
+            let child = spell_reach(world, caster, child, child_primary, registry, depth + 1);
             result.caster_radius = result.caster_radius.max(child.caster_radius);
             if caster_range > 0.0 {
+                extend_beam(&mut result, caster_range, 0.0, child.beam_half_width);
                 result.caster_radius = result
                     .caster_radius
                     .max(caster_range + child.target_radius.max(splash_radius));
@@ -252,8 +275,37 @@ fn spell_reach(
                         result.caster_radius.max(parent.caster_radius + extension);
                 }
                 result.target_radius = result.target_radius.max(parent.target_radius + extension);
+                extend_beam(
+                    &mut result,
+                    parent.caster_radius,
+                    parent.target_radius,
+                    child.beam_half_width,
+                );
             }
         }
     }
     result
+}
+
+fn merge_reach(result: &mut DeclaredReach, reach: DeclaredReach) {
+    result.caster_radius = result.caster_radius.max(reach.caster_radius);
+    result.target_radius = result.target_radius.max(reach.target_radius);
+    result.beam_half_width = result.beam_half_width.max(reach.beam_half_width);
+}
+
+/// A child beam runs from the caster to each parent recipient. Recipients within
+/// `caster_radius` of the caster keep it inside `caster_radius + width`; the primary
+/// and recipients within `target_radius` of it keep every beam point within
+/// `target_radius + width` of the caster-to-primary beam.
+fn extend_beam(result: &mut DeclaredReach, caster_radius: f32, target_radius: f32, width: f32) {
+    if width <= 0.0 {
+        return;
+    }
+    if caster_radius > 0.0 {
+        result.caster_radius = result.caster_radius.max(caster_radius + width);
+    }
+    if target_radius > 0.0 {
+        result.target_radius = result.target_radius.max(target_radius + width);
+    }
+    result.beam_half_width = result.beam_half_width.max(target_radius + width);
 }
