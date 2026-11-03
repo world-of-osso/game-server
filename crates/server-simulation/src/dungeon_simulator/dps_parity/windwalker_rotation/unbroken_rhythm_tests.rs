@@ -143,6 +143,41 @@ fn wait_for_natural_buff_expiry(run: &mut Run) {
 
 #[test]
 fn efficient_training_does_not_boost_windwalker_sck() {
+    const CHILD: &str = "WINDWALKER_EFFICIENT_TRAINING_FIXTURE_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let fixture = tempfile::tempdir().unwrap();
+        std::fs::write(
+            fixture.path().join("269.profile.json"),
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../server-follower-apl/profiles/269.profile.json"
+            )),
+        )
+        .unwrap();
+        std::fs::write(
+            fixture.path().join("269.selected-traits-active.json"),
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/windwalker-selected-traits-76f8118.json"
+            )),
+        )
+        .unwrap();
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "dungeon_simulator::dps_parity::windwalker_rotation::unbroken_rhythm_tests::efficient_training_does_not_boost_windwalker_sck", "--nocapture"])
+            .env(CHILD, "1")
+            .env("DPS_PARITY_OUTPUT", fixture.path())
+            .env("DPS_PARITY_WORLD_DB", crate::test_data::world_db_path())
+            .env_remove("DPS_PARITY_ACTOR")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "fixture child failed:\n{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 450989));
