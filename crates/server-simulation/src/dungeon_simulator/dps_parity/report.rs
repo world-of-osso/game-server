@@ -307,7 +307,7 @@ pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<Str
             "NATIVE_TARGET_ADMISSION_FOR_RANGE_FACTS".into(),
         ]
     } else {
-        vec!["NATIVE_FOLLOWER_KIT_VS_SIMC_APL: rotation changes are lead-owned".into()]
+        Vec::new()
     };
     gaps.extend(profile.reference_gap.iter().cloned());
     gaps.extend(

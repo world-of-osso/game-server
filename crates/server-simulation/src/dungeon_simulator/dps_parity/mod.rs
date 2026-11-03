@@ -750,21 +750,19 @@ fn prepare_measurement_with(
 ) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let identity = inputs::read_actor(&profile)?;
-    if let Some(driver) = measurement_driver(spec_id, &identity) {
-        let mut run = spawn_literal_reference(profile, &traits, count, identity)?;
-        if spec_id == 64 {
-            frost_mage_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
-        } else if spec_id == 1480 {
-            devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
-        }
-        preparation::consume_profile_food(&mut run)?;
-        preparation::cast_provided_party_buffs(&mut run)?;
-        before_prepare(&mut run)?;
-        run.spec_driver = Some((driver.prepare)(&mut run)?);
-        Ok(run)
-    } else {
-        prepare_reference(profile, &traits, count, identity)
+    let driver = measurement_driver(spec_id, &identity)
+        .ok_or_else(|| format!("NATIVE_LITERAL_DRIVER_UNAVAILABLE:{spec_id}"))?;
+    let mut run = spawn_literal_reference(profile, &traits, count, identity)?;
+    if spec_id == 64 {
+        frost_mage_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
+    } else if spec_id == 1480 {
+        devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
     }
+    preparation::consume_profile_food(&mut run)?;
+    preparation::cast_provided_party_buffs(&mut run)?;
+    before_prepare(&mut run)?;
+    run.spec_driver = Some((driver.prepare)(&mut run)?);
+    Ok(run)
 }
 
 fn prepare_reference(
@@ -1176,7 +1174,7 @@ fn drive_player(run: &mut Run) -> Result<(), String> {
     Ok(())
 }
 
-fn driver_report(run: &Run) -> serde_json::Map<String, Value> {
+fn driver_report(run: &Run) -> Result<serde_json::Map<String, Value>, String> {
     let mut output = serde_json::Map::new();
     for registration in DRIVERS {
         if let Some(key) = registration.report_key {
@@ -1193,10 +1191,13 @@ fn driver_report(run: &Run) -> serde_json::Map<String, Value> {
     } else if run.player_rotation.is_some() {
         "NATIVE_ASSISTED_COMBAT_70448"
     } else {
-        "NATIVE_FOLLOWER_KIT"
+        return Err(format!(
+            "NATIVE_LITERAL_DRIVER_UNAVAILABLE:{}",
+            run.profile.spec_id
+        ));
     };
     output.insert("driver".into(), json!(label));
-    output
+    Ok(output)
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
@@ -1261,7 +1262,7 @@ fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> 
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
-    output.as_object_mut().unwrap().extend(driver_report(&run));
+    output.as_object_mut().unwrap().extend(driver_report(&run)?);
     Ok(output)
 }
 
