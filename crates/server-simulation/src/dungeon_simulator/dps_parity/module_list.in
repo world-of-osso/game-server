@@ -5,6 +5,7 @@
 #[cfg(test)] mod brewmaster_keg_primary_follower_tests;
 #[cfg(test)] mod protection_devastating_focus_follower_tests;
 #[cfg(test)] mod protection_tough_as_nails_follower_tests;
+#[cfg(test)] mod protection_wrecked_follower_tests;
 #[cfg(test)] mod protection_vengeful_shield_follower_tests;
 #[cfg(test)] mod hunter_loadout_tests;
 mod frostdk_hyperpyrexia_follower_tests;
