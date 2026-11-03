@@ -60,6 +60,7 @@ register_modules! {
     affliction_procs: (2652, "modules/affliction_procs.rs"),
     affliction_seed_ua: (2659, "modules/affliction_seed_ua.rs"),
     affliction_shared_agony: (2659, "modules/affliction_shared_agony.rs"),
+    affliction_siphon_life: (2659, "modules/affliction_siphon_life.rs"),
     affliction_targets: (2657, "modules/affliction_targets.rs"),
     affliction_ua: (2653, "modules/affliction_ua.rs"),
     affliction_volley: (2659, "modules/affliction_volley.rs"),
