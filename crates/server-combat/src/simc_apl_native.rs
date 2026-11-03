@@ -294,7 +294,7 @@ impl<'a> NativeFacts<'a> {
         let health = |unit| {
             self.world
                 .get::<shared::components::Health>(unit)
-                .ok_or_else(|| "native target lacks Health".to_owned())
+                .ok_or_else(|| format!("target.time_to_die: target {unit:?} lacks Health"))
         };
         let current = f64::from(health(target)?.current);
         if current <= 0.0 {
@@ -327,7 +327,7 @@ impl<'a> NativeFacts<'a> {
         .ok_or("NATIVE_APL_TARGET_UNAVAILABLE: no selected entity")?;
         self.world
             .get_entity(target)
-            .map_err(|_| "NATIVE_APL_TARGET_UNAVAILABLE: expired entity".to_owned())?;
+            .map_err(|_| format!("NATIVE_APL_TARGET_UNAVAILABLE: expired target {target:?}"))?;
         Ok(target)
     }
 
@@ -352,7 +352,7 @@ impl<'a> NativeFacts<'a> {
                 let from = crate::spell_cast::targets::position(self.world, self.actor)
                     .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: actor position missing")?;
                 let to = crate::spell_cast::targets::position(self.world, target)
-                    .ok_or("NATIVE_APL_POSITION_UNAVAILABLE: selected target position missing")?;
+                    .ok_or_else(|| format!("target.distance: target {target:?} lacks position"))?;
                 Ok(f64::from(from.distance(to)))
             }
             // SimC76f8118 hunter_marksmanship.simc18 scores target.health;
@@ -361,7 +361,7 @@ impl<'a> NativeFacts<'a> {
                 .world
                 .get::<shared::components::Health>(target)
                 .map(|health| f64::from(health.current))
-                .ok_or("native target lacks Health".into()),
+                .ok_or_else(|| format!("target.health: target {target:?} lacks Health")),
             "health.pct" => self.target_health_pct(target),
             // SimC76f8118 player.cpp11813–11814: query the actual target's live shield.
             "has_absorb" => Ok(bool_value(
@@ -381,10 +381,9 @@ impl<'a> NativeFacts<'a> {
             )),
             "debuff.casting.react" => self.casting_reaction(target),
             "time_to_die" | "is_boss" => {
-                let metadata = self
-                    .world
-                    .get::<FixtureTarget>(target)
-                    .ok_or("NATIVE_FIXTURE_TARGET_UNAVAILABLE: explicit lifetime/role missing")?;
+                let metadata = self.world.get::<FixtureTarget>(target).ok_or_else(|| {
+                    format!("target.{property}: target {target:?} lacks fixture lifetime/role")
+                })?;
                 if property == "is_boss" {
                     return Ok(bool_value(metadata.is_boss));
                 }
@@ -400,9 +399,11 @@ impl<'a> NativeFacts<'a> {
         let health = self
             .world
             .get::<shared::components::Health>(target)
-            .ok_or("native target lacks Health")?;
+            .ok_or_else(|| format!("target.health.pct: target {target:?} lacks Health"))?;
         if health.max <= 0.0 {
-            return Err("native target has invalid maximum Health".into());
+            return Err(format!(
+                "target.health.pct: target {target:?} has invalid maximum Health"
+            ));
         }
         Ok(f64::from(health.current) * 100.0 / f64::from(health.max))
     }
@@ -418,7 +419,9 @@ impl<'a> NativeFacts<'a> {
         let reaction = self
             .world
             .get::<reaction::CastingReactionDelay>(target)
-            .ok_or_else(|| server::simc_apl::not_ready("NATIVE_CASTING_REACTION_UNAVAILABLE: active cast has no qualified reaction snapshot"))?;
+            .ok_or_else(|| {
+                format!("target.debuff.casting.react: target {target:?} lacks reaction snapshot")
+            })?;
         Ok(bool_value(cast.elapsed >= reaction.0))
     }
 
@@ -597,7 +600,9 @@ impl<'a> NativeFacts<'a> {
             let navigation = self
                 .world
                 .get_resource::<crate::navigation::Navigation>()
-                .ok_or("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")?;
+                .ok_or_else(|| {
+                    format!("movement.distance: actor {:?} lacks navigation", self.actor)
+                })?;
             let destination = match navigation.current_destination(self.actor) {
                 Some(destination) => destination,
                 // The active request has not published its destination yet.
@@ -608,8 +613,9 @@ impl<'a> NativeFacts<'a> {
                 }
                 // Moving without a navigation route, e.g. under another movement driver.
                 None => {
-                    return Err(server::simc_apl::not_ready(
-                        "DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE",
+                    return Err(format!(
+                        "movement.distance: actor {:?} has no destination",
+                        self.actor
                     ));
                 }
             };

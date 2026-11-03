@@ -483,6 +483,7 @@ impl State {
             deaths,
             pulls,
             actors,
+            fact_errors: Vec::new(),
             diagnostics,
         })
     }

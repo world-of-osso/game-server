@@ -288,6 +288,38 @@ fn target_cast_reaction_tracks_cast_lifetime_and_seeded_delay() {
 }
 
 #[test]
+fn missing_cast_reaction_snapshot_fails_with_fact_and_target() {
+    use shared::casting::CastState;
+    let (mut h, targets, bindings) = enemies();
+    let target = h.npc;
+    let actor = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(CastState::normal(133, actor.to_bits(), 3.0, true));
+    h.app.world_mut().flush();
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .remove::<reaction::CastingReactionDelay>();
+    let program = crate::simc_apl::Program::parse(&[
+        ("default", "pummel,if=target.debuff.casting.react"),
+        ("default", "slam"),
+    ])
+    .unwrap();
+    let world = h.app.world();
+    let facts = NativeFacts::new(world, actor, &bindings, encounter(world), targets.len())
+        .with_targets(Some(target), &targets);
+    let error = program
+        .select("default", &facts, &mut program.state(), |_| Ok(true))
+        .unwrap_err();
+    assert_eq!(
+        error,
+        format!("target.debuff.casting.react: target {target:?} lacks reaction snapshot")
+    );
+}
+
+#[test]
 fn casting_react_selects_interrupt_only_for_interruptible_native_casts() {
     use shared::casting::CastState;
     let (mut h, targets, bindings) = enemies();

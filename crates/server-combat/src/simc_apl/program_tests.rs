@@ -392,7 +392,7 @@ impl crate::simc_apl::Facts for UnavailableThisTick {
     fn value(&self, name: &str) -> Result<f64, String> {
         if name == self.0 {
             return Err(crate::simc_apl::not_ready(
-                "NATIVE_CASTING_REACTION_UNAVAILABLE",
+                "DUNGEON_MOVEMENT_DESTINATION_PENDING",
             ));
         }
         Err(format!("unknown APL operand {name}"))
@@ -408,11 +408,11 @@ impl crate::simc_apl::ActionFacts for UnavailableThisTick {
 #[test]
 fn simc_apl_not_ready_condition_skips_only_its_row() {
     let program = Program::parse(&[
-        ("default", "mind_freeze,if=target.debuff.casting.react"),
+        ("default", "mind_freeze,if=movement.distance>5"),
         ("default", "obliterate"),
     ])
     .unwrap();
-    let facts = UnavailableThisTick("target.debuff.casting.react");
+    let facts = UnavailableThisTick("movement.distance");
     let mut state = program.state();
     let selected = program
         .select("default", &facts, &mut state, |_| Ok(true))

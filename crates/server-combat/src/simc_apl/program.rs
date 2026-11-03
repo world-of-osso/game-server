@@ -281,13 +281,16 @@ impl Program {
         rules: &[Rule],
         selection: &mut Selection<'_>,
     ) -> Result<Option<Action>, String> {
-        for (index, rule) in rules.iter().enumerate() {
+        'rules: for (index, rule) in rules.iter().enumerate() {
             if rule.action.source_row == selection.stop_before && selection.stop_before.is_some() {
                 selection.pooling = true;
                 return Ok(None);
             }
-            let Some(action) = bind_ready_target(rule, selection)? else {
-                continue;
+            let action = match bind_ready_target(rule, selection) {
+                Ok(Some(action)) => action,
+                Ok(None) => continue,
+                Err(error) if super::is_not_ready(&error) => continue,
+                Err(error) => return Err(error),
             };
             match &rule.body {
                 Body::Variable {
@@ -295,14 +298,40 @@ impl Program {
                     assignment,
                     cycling,
                 } => {
-                    if *cycling && selection.facts.value_for(&action, "active_enemies")? > 1.0 {
-                        for target in selection.facts.target_ids(&action)? {
-                            let mut target_action = action.clone();
-                            target_action.target = Some(target);
-                            self.assign(name, assignment, &target_action, selection)?;
+                    let cycles = if *cycling {
+                        match selection.facts.value_for(&action, "active_enemies") {
+                            Ok(count) => count > 1.0,
+                            Err(error) if super::is_not_ready(&error) => continue,
+                            Err(error) => return Err(error),
                         }
                     } else {
-                        self.assign(name, assignment, &action, selection)?;
+                        false
+                    };
+                    if cycles {
+                        let targets = match selection.facts.target_ids(&action) {
+                            Ok(targets) => targets,
+                            Err(error) if super::is_not_ready(&error) => continue,
+                            Err(error) => return Err(error),
+                        };
+                        let original = selection.variables.values[name];
+                        for target in targets {
+                            let mut target_action = action.clone();
+                            target_action.target = Some(target);
+                            match self.assign(name, assignment, &target_action, selection) {
+                                Ok(()) => {}
+                                Err(error) if super::is_not_ready(&error) => {
+                                    selection.variables.values.insert(name.clone(), original);
+                                    continue 'rules;
+                                }
+                                Err(error) => return Err(error),
+                            }
+                        }
+                    } else {
+                        match self.assign(name, assignment, &action, selection) {
+                            Ok(()) => {}
+                            Err(error) if super::is_not_ready(&error) => continue,
+                            Err(error) => return Err(error),
+                        }
                     }
                 }
                 Body::Call(name) => {
@@ -315,9 +344,14 @@ impl Program {
                     let next = rules
                         .get(index + 1)
                         .expect("pool next action validated at parse");
-                    if pooling::should_wait(next, selection, resource.as_deref())? {
-                        selection.pooling = true;
-                        return Ok(None);
+                    match pooling::should_wait(next, selection, resource.as_deref()) {
+                        Ok(true) => {
+                            selection.pooling = true;
+                            return Ok(None);
+                        }
+                        Ok(false) => {}
+                        Err(error) if super::is_not_ready(&error) => continue,
+                        Err(error) => return Err(error),
                     }
                 }
                 // action.cpp4749–4763 switches lists without resuming this caller.
