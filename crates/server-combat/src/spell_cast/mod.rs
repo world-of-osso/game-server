@@ -4237,6 +4237,8 @@ pub struct TriggeredSpellOverrides {
     pub duration_ms: Option<i32>,
     /// Exact duration of the triggered aura after spell modifiers.
     pub fixed_aura_duration_ms: Option<u32>,
+    /// A periodic tick of the caster's running channel.
+    pub channel_tick: bool,
 }
 
 pub fn cast_triggered_with_overrides(
@@ -4257,6 +4259,7 @@ pub fn cast_triggered_with_overrides(
     spell.cast_original_caster = values.original_caster;
     spell.cast_item_level = values.item_level;
     spell.cast_item_inventory_type = values.item_inventory_type;
+    spell.cast_channel_tick = values.channel_tick;
     if let Some(mask) = values.effect_mask {
         spell
             .effects
@@ -4368,14 +4371,18 @@ pub fn plan_triggered_spell(
     }
     aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     let plan = plan_targets(world, caster, spell, explicit, true)?;
-    if !crate::followers::summon_targets_safe(
-        world,
-        caster,
-        spell.cast_primary_target.or(explicit),
-        plan.iter()
-            .flat_map(|effect| effect.selected_units.iter().chain(&effect.units))
-            .copied(),
-    ) {
+    // Summon pull-safety admitted a channel when it started; each of its ticks hits
+    // every valid target in its area, as in retail.
+    if !spell.cast_channel_tick
+        && !crate::followers::summon_targets_safe(
+            world,
+            caster,
+            spell.cast_primary_target.or(explicit),
+            plan.iter()
+                .flat_map(|effect| effect.selected_units.iter().chain(&effect.units))
+                .copied(),
+        )
+    {
         return Err(CastFailure::NoValidTargets);
     }
     Ok(plan)
