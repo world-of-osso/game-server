@@ -144,6 +144,26 @@ fn point(position: &Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
 
+pub(super) fn move_owner_to_tank(
+    world: &mut World,
+    owner: Entity,
+    tank: Entity,
+) -> Result<(), String> {
+    let from = point(
+        world
+            .get::<Position>(owner)
+            .ok_or("cohesion owner absent")?,
+    );
+    let target = point(world.get::<Position>(tank).ok_or("cohesion tank absent")?);
+    let destination = world
+        .get_resource::<NativeMovement>()
+        .ok_or("native movement map is not installed")?
+        .cohesion_destination(from, target)
+        .map_err(|error| format!("cohesion approach from {from:?} toward {target:?}: {error}"))?;
+    world.entity_mut(owner).insert(MoveIntent(destination));
+    Ok(())
+}
+
 fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
     if world.get::<crate::creature_ai::CreatureState>(unit)
         == Some(&crate::creature_ai::CreatureState::Returning)
@@ -734,7 +754,17 @@ pub(super) fn update(world: &mut World) {
         .map(|(unit, _, _)| unit)
         .collect();
     for unit in units {
-        move_one(world, unit, dt)
-            .unwrap_or_else(|error| panic!("simulated movement {unit:?}: {error}"));
+        if let Err(error) = move_one(world, unit, dt) {
+            let ledger = world
+                .get::<server::simc_apl::FactErrors>(unit)
+                .cloned()
+                .unwrap_or_default();
+            ledger.record("movement.native", unit.to_bits(), None, &error);
+            if let Ok(mut entity) = world.get_entity_mut(unit) {
+                entity.remove::<(Travel, MoveIntent)>();
+                entity.insert((ledger, BlockedWalk { reason: error }));
+            }
+            crate::creature_ai::publish_planned_destination(world, unit, None);
+        }
     }
 }

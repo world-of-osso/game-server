@@ -4872,16 +4872,8 @@ impl Run {
             }
         } else if fighting {
             if self.wait_for_tank()? {
-                // The engaged tank cannot come back; bring the leader to it.
-                let tank = *self
-                    .app
-                    .world()
-                    .get::<Position>(self.party.tank)
-                    .ok_or("cohesion tank absent")?;
-                self.app
-                    .world_mut()
-                    .entity_mut(self.party.owner)
-                    .insert(MoveIntent(Vec3::new(tank.x, tank.y, tank.z)));
+                // The engaged tank cannot come back; bring the leader toward it.
+                self.move_owner_to_tank()?;
                 return Ok(());
             }
         }
@@ -5153,16 +5145,7 @@ impl Run {
     }
 
     fn move_owner_to_tank(&mut self) -> Result<(), String> {
-        let position = *self
-            .app
-            .world()
-            .get::<Position>(self.party.tank)
-            .ok_or("chain tank has no position")?;
-        self.app
-            .world_mut()
-            .entity_mut(self.party.owner)
-            .insert(MoveIntent(Vec3::new(position.x, position.y, position.z)));
-        Ok(())
+        super::movement::move_owner_to_tank(self.app.world_mut(), self.party.owner, self.party.tank)
     }
 
     fn return_after_chain_tag(&mut self) -> Result<bool, String> {

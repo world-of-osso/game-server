@@ -75,6 +75,26 @@ impl NativeMovement {
         })
     }
 
+    /// Resolve a moving tank's position onto a surface the owner can reach.
+    pub(super) fn cohesion_destination(&self, from: Vec3, tank: Vec3) -> Result<Vec3, String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "native movement map lock poisoned")?;
+        if let Some(surface) = state.map.floor_polygon(tank)? {
+            state.map.complete_walk_path(from, surface)?;
+            return Ok(surface);
+        }
+        let toward_tank = Vec3::new(tank.x, from.y, tank.z);
+        let destination = state.map.first_collision(from, toward_tank)?;
+        if destination.distance(from) < 0.01 && toward_tank.distance(from) >= 0.01 {
+            return Err(format!(
+                "no reachable cohesion approach from {from:?} toward {tank:?}"
+            ));
+        }
+        Ok(destination)
+    }
+
     pub(super) fn walk_legs(
         &self,
         from: Vec3,
