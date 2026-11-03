@@ -36,6 +36,10 @@ mod recovery_admission_tests;
 #[derive(Component)]
 pub(super) struct MoveIntent(pub Vec3);
 
+/// Last unavailable optional route estimate, retained until it becomes available.
+#[derive(Component, PartialEq, Eq)]
+struct NextPullEstimateFailure(String);
+
 #[derive(Serialize)]
 pub(super) struct MemberSample {
     entity: u64,
@@ -2450,12 +2454,83 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+#[ignore = "requires the Vale keystone graph and native navigation assets"]
+fn disconnected_next_pull_eta_does_not_block_route_and_recovers() {
+    use crate::simc_apl_native::PlannedNextPull;
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2859,
+            level: 2,
+            specs: [268, 264, 70, 261, 254],
+        }),
+    )
+    .unwrap();
+    let tank = run.party.tank;
+    let owner = run.party.owner;
+    // Position from the real failed Vale run, before the route's transport.
+    let from = Vec3::new(1286.7549, 72.49426, -1737.3788);
+    run.app.world_mut().entity_mut(tank).insert(Position {
+        x: from.x,
+        y: from.y,
+        z: from.z,
+    });
+    let world = run.app.world();
+    let movement = world.resource::<super::native_movement::NativeMovement>();
+    let (pack, target) = run
+        .graph
+        .route
+        .iter()
+        .find_map(|step| {
+            let (_, target) = run.next_pack_in(Some(&[step.pack]), true)?;
+            let position = world.get::<Position>(target)?;
+            let to = Vec3::new(position.x, position.y, position.z);
+            movement
+                .walk_legs(from, to, "test-disconnected-next-pull")
+                .err()
+                .filter(|error| error.contains("hierarchy disconnected"))
+                .map(|_| (step.pack, target))
+        })
+        .expect("Vale route must contain a target across the disconnected hierarchy");
+    run.graph.route.retain(|step| step.pack == pack);
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(PlannedNextPull {
+            enemies: vec![target],
+            has_boss: false,
+            travel_seconds: 1.0,
+        });
+    run.publish_next_pull();
+    assert!(run.app.world().get::<PlannedNextPull>(owner).is_none());
+    assert!(
+        run.app
+            .world()
+            .get::<NextPullEstimateFailure>(owner)
+            .unwrap()
+            .0
+            .contains("hierarchy disconnected")
+    );
+    let destination = *run.app.world().get::<Position>(target).unwrap();
+    run.app.world_mut().entity_mut(tank).insert(destination);
+    run.publish_next_pull();
+    assert!(run.app.world().get::<PlannedNextPull>(owner).is_some());
+    assert!(
+        run.app
+            .world()
+            .get::<NextPullEstimateFailure>(owner)
+            .is_none()
+    );
+}
+
+#[test]
 fn planned_next_pull_tracks_route_deaths_and_boss_metadata() {
     use crate::simc_apl_native::PlannedNextPull;
     let mut run = spawn_run(1, &mut None).unwrap();
     let owner = run.party.owner;
     let first = run.next_pack().unwrap().0;
-    run.publish_next_pull().unwrap();
+    run.publish_next_pull();
     let published = run.app.world().get::<PlannedNextPull>(owner).unwrap();
     assert!(!published.enemies.is_empty());
     assert!(published.travel_seconds.is_finite() && published.travel_seconds >= 0.0);
@@ -2465,7 +2540,7 @@ fn planned_next_pull_tracks_route_deaths_and_boss_metadata() {
     }
     let second = run.next_pack().unwrap().0;
     assert_ne!(first, second);
-    run.publish_next_pull().unwrap();
+    run.publish_next_pull();
     let published = run.app.world().get::<PlannedNextPull>(owner).unwrap();
     assert!(
         published
@@ -2481,7 +2556,7 @@ fn planned_next_pull_tracks_route_deaths_and_boss_metadata() {
         .unwrap()
         .id;
     run.graph.route.retain(|step| step.pack == boss_pack);
-    run.publish_next_pull().unwrap();
+    run.publish_next_pull();
     assert!(
         run.app
             .world()
@@ -2490,7 +2565,7 @@ fn planned_next_pull_tracks_route_deaths_and_boss_metadata() {
             .has_boss
     );
     run.graph.route.clear();
-    run.publish_next_pull().unwrap();
+    run.publish_next_pull();
     assert!(run.app.world().get::<PlannedNextPull>(owner).is_none());
 }
 
@@ -5084,7 +5159,7 @@ impl Run {
         }
         self.refresh_population();
         if self.keystone.is_some() {
-            self.publish_next_pull()?;
+            self.publish_next_pull();
         }
         if server::test_support::transport::in_progress(self.app.world(), self.party.owner) {
             return Ok(());
@@ -5819,9 +5894,33 @@ impl Run {
         }
     }
 
+    /// An unavailable optional ETA must not block the native route controller.
+    fn publish_next_pull(&mut self) {
+        match self.try_publish_next_pull() {
+            Ok(()) => {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<NextPullEstimateFailure>();
+            }
+            Err(error) => {
+                let world = self.app.world_mut();
+                let mut owner = world.entity_mut(self.party.owner);
+                owner.remove::<crate::simc_apl_native::PlannedNextPull>();
+                if owner
+                    .get::<NextPullEstimateFailure>()
+                    .is_none_or(|last| last.0 != error)
+                {
+                    warn!(%error, "Next pull ETA unavailable");
+                    owner.insert(NextPullEstimateFailure(error));
+                }
+            }
+        }
+    }
+
     /// Publish what the bot owner knows, not a scheduled pull time. Exclude
     /// the whole current pack, even if only part of it has entered combat.
-    fn publish_next_pull(&mut self) -> Result<(), String> {
+    fn try_publish_next_pull(&mut self) -> Result<(), String> {
         use crate::simc_apl_native::PlannedNextPull;
         let world = self.app.world();
         let engaged = crate::followers::simulator::active_enemies(world, self.party.owner);
@@ -5867,7 +5966,8 @@ impl Run {
                 .ok_or_else(|| format!("next pull actor {actor:?} lacks position"))
         };
         let legs = world
-            .resource::<super::native_movement::NativeMovement>()
+            .get_resource::<super::native_movement::NativeMovement>()
+            .ok_or("next pull native movement unavailable")?
             .walk_legs(
                 position(self.party.tank)?,
                 position(target)?,

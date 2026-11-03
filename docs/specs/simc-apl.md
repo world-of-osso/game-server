@@ -135,7 +135,7 @@ Behavioral source: `followers/native_flight_tests.rs` covers Pyroblast launch/co
 ### Dungeon pull facts
 
 - A follower uses the same persistent APL in every dungeon. Active pull existence, count, boss flag and remaining time use its live engaged enemies; remaining time estimates the wave from the same damage rate as target TTD.
-- The keystone bot owner publishes its next planned pack and an ETA estimated as current wave remaining time plus the tank's native Detour path length to that pack divided by the tank's run speed. It clears the publication when the route has no next pack. A human owner publishes no route; next-event time then uses SimC's unconfigured-event value (`raid_event.cpp:3068–3077`). This estimate is not a scheduled time.
+- The keystone bot owner publishes its next planned pack and an ETA estimated as current wave remaining time plus the tank's native Detour path length to that pack divided by the tank's run speed. It clears the publication when the route has no next pack or the estimate is unavailable. An unavailable estimate is recorded and must not block route control; it is retried as the party moves. A human owner publishes no route; next-event time then uses SimC's unconfigured-event value (`raid_event.cpp:3068–3077`). This estimate is not a scheduled time.
 - Fixed fights retain their configured fixture facts, independent of a dungeon route publication.
 
 ### Add-event activity
