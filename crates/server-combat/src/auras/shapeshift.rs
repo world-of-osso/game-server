@@ -36,6 +36,7 @@ struct ShapeshiftForm {
 pub struct FormAttackTiming {
     pub seconds: f32,
     pub use_form_ap_speed: bool,
+    pub normalize_beast_weapon: bool,
 }
 
 /// TC Player::InitDataForForm restores the ranged base clock while shifted.
@@ -56,6 +57,7 @@ impl ShapeshiftForms {
                     form,
                     FORM_CAT | FORM_BEAR | FORM_DIRE_BEAR | FORM_GHOST_WOLF
                 ),
+            normalize_beast_weapon: matches!(form, FORM_CAT | FORM_BEAR | FORM_DIRE_BEAR),
         })
     }
 

@@ -85,7 +85,16 @@ pub(crate) fn weapon_damage_terms(
     } else {
         speed
     };
-    let weapon_scale = form.map_or(1.0, |form| form.seconds / ap_speed);
+    // VERIFIED_WCL: g1dGBjmAtcHYXaM9 fight15 actor162, 2026-11-02;
+    // SimC76f8118 sc_druid.cpp13937–13959 normalizes the equipped weapon
+    // to the Cat/Bear round time independently of the AP multiplier.
+    let weapon_scale = form.map_or(1.0, |form| {
+        if form.normalize_beast_weapon {
+            form.seconds / weapon.speed
+        } else {
+            form.seconds / ap_speed
+        }
+    });
     (
         weapon.min * weapon_scale,
         weapon.max * weapon_scale,
