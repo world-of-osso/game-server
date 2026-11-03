@@ -1,7 +1,7 @@
 //! Selected Bursting Growth from actual owned Vines loss and landed Bite.
 use super::super::combat;
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraInstance, scripts::AuraScripts};
+use combat::auras::{scripts::AuraScripts, ActiveAuras, AuraInstance};
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::EnemyContextHitHook};
 
 const BURSTING_GROWTH: u32 = 440120;
