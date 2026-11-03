@@ -2760,13 +2760,14 @@ fn recovery_wait_drinks_native_item_and_reaches_healer_mana_gate() {
     let (allowed, reason) =
         crate::followers::simulator::pull(run.app.world_mut(), tank, &pack).unwrap();
     assert!(!allowed && reason.contains("Recovery"), "{reason}");
-    let mut saw_drink = false;
-    for _ in 0..260 {
+    let mut started_at = None;
+    let mut reached_at = None;
+    for frame in 0..400 {
         run.app.update();
         let world = run.app.world_mut();
         let _ = crate::followers::simulator::pull(world, tank, &pack).unwrap();
         if crate::auras::has_aura(world, healer, 1291791) {
-            saw_drink = true;
+            started_at.get_or_insert(frame);
             assert_eq!(
                 world.get::<PlayerStandState>(healer).unwrap().0,
                 StandState::Sit
@@ -2774,12 +2775,17 @@ fn recovery_wait_drinks_native_item_and_reaches_healer_mana_gate() {
         }
         let mana = world.get::<Mana>(healer).unwrap();
         if mana.current >= mana.max * 0.81 {
+            reached_at = Some(frame);
             break;
         }
     }
-    let mana = run.app.world().get::<Mana>(healer).unwrap();
-    assert!(saw_drink, "native drink aura was never applied");
-    assert!(mana.current >= mana.max * 0.81, "healer mana: {mana:?}");
+    let start = started_at.expect("native drink aura was never applied");
+    let end = reached_at.expect("healer did not reach the recovery gate");
+    assert!(
+        end - start <= 220,
+        "recovery took {} frames after drinking began",
+        end - start
+    );
 }
 
 #[test]
