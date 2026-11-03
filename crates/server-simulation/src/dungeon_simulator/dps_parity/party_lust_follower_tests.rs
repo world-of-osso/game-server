@@ -3,19 +3,28 @@ use super::*;
 use shared::protocol::CombatLogKind;
 
 /// The follower policy lusts only on production pulls (a fixed fight takes its lust
-/// from the SimC reference): engage `lust_policy::TRASH_ENGAGED` (8) non-boss dummies
-/// in front of `anchor`, a large trash pull, which lusts after its 7.7 s delay.
+/// from the SimC reference): `lust_policy::TRASH_ENGAGED` (8) trash enemies fighting
+/// the owner, which lusts after its 7.7 s delay. Training dummy 31146 carries the
+/// world-boss type flag, so its pulls hold lust for the final boss.
 pub(super) fn start_large_trash_pull(app: &mut App, owner: Entity, anchor: Entity) {
-    let pack: Vec<Entity> = (0..8)
-        .map(|index| spawn_level_dummy(app, anchor, 90, index).unwrap())
-        .collect();
+    const KOBOLD_VERMIN: u32 = 6;
     let world = app.world_mut();
-    world.entity_mut(owner).insert((
-        crate::networking::CombatTarget(Some(pack[0])),
-        crate::combat::AutoAttack::new(pack[0]),
-    ));
-    for target in pack {
-        crate::combat_refs::set_in_combat_with(world, owner, target);
+    for index in 0..8 {
+        let enemy = crate::zones::summon_creature(
+            world,
+            anchor,
+            KOBOLD_VERMIN,
+            [1.5, index as f32 * 0.5, 0.0, 0.0],
+        )
+        .expect("trash enemy spawns");
+        world.entity_mut(enemy).insert((
+            shared::components::Health {
+                current: 10_000_000.0,
+                max: 10_000_000.0,
+            },
+            crate::networking::CombatTarget(Some(owner)),
+        ));
+        crate::combat_refs::set_in_combat_with(world, enemy, owner);
     }
 }
 
@@ -78,7 +87,9 @@ fn mage_and_devastation_followers_use_native_lust_on_a_large_pull() {
         let _seed = crate::random::seed_scope(70448);
         let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
         let copy = create_open_follower_copy(&mut app, 2813).unwrap();
-        let (mut app, actor, _, _) = prepare_class_follower(app, copy, spec, 90);
+        let (mut app, actor, dummy, _) = prepare_class_follower(app, copy, spec, 90);
+        // The fixture's boss-flagged dummy would make AoE pulls a boss pull.
+        app.world_mut().despawn(dummy);
         let owner = app
             .world()
             .get::<crate::followers::Follower>(actor)
@@ -113,3 +124,5 @@ fn mage_and_devastation_followers_use_native_lust_on_a_large_pull() {
         assert_eq!(casts, 1, "spec {spec} must cast its real lust exactly once");
     }
 }
+
+

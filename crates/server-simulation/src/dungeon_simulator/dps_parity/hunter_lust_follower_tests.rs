@@ -1,5 +1,4 @@
 //! A Ferocity follower pet supplies Primal Rage to a party with no other lust.
-use super::follower_dps_diagnostic::*;
 use super::*;
 use shared::protocol::CombatLogKind;
 
