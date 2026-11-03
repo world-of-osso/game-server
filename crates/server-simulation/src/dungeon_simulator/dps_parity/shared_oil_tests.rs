@@ -56,7 +56,11 @@ fn shared_oil_elemental_condition_uses_native_selected_talent() {
         run.profile
             .consumables
             .insert("temporary_enchant".into(), token.clone());
-        super::profile_effects::install(run.app.world_mut(), actor, &run.profile).unwrap();
+        let values = [("temporary_enchant".to_owned(), token.clone())]
+            .into_iter()
+            .collect();
+        let selection = server::followers::consumables::simc(&values).unwrap();
+        server::followers::consumables::install(run.app.world_mut(), actor, &selection).unwrap();
         run.app.update();
         let after = run
             .app

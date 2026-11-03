@@ -36,7 +36,7 @@ fn survival_native_idle_setup_cannot_roll_temporary_equipment_stat_procs() {
         idle_crit, 606.0,
         "actual permanent gear and Serrated Tips crit"
     );
-    preparation::consume_profile_food(&mut run).unwrap();
+    preparation::finish_spawn_loadout_setup(&mut run).unwrap();
     log_rating_sources(&run, "after_food");
     let driver = survival_rotation::prepare_driver(&mut run).unwrap();
     log_rating_sources(&run, "after_precombat");

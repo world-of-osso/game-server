@@ -2,84 +2,18 @@
 use super::inputs::Profile;
 use bevy::prelude::*;
 use rusqlite::{Connection, OpenFlags};
-
-pub(super) use super::literal_rotation::equipment::Potion;
+#[cfg(test)]
+pub(super) use server::consumables::Potion;
 
 fn database() -> Result<Connection, String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("native effect database absent")?;
     Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|e| e.to_string())
 }
 
+/// Omnium is a separate expansion loadout, not a consumable.
 pub(super) fn install(world: &mut World, actor: Entity, profile: &Profile) -> Result<(), String> {
     let db = database()?;
-    install_expansion(world, actor, profile, &db)?;
-    for (kind, value) in &profile.consumables {
-        if value == "disabled" || value.is_empty() {
-            continue;
-        }
-        // SimC76f8118 generated consumable/temporary_enchant bindings supply identities only.
-        // Native ItemSparse/ItemEffect/SpellItemEnchantment supply all values and quality scaling.
-        match (kind.as_str(), value.as_str()) {
-            ("flask", "flask_of_the_magisters_2" | "magisters_2") => {
-                apply_item(world, actor, 241322, &db)?
-            }
-            // SimC76f8118 consumable.cpp40–59/item_data.inc175834: quality2 identity.
-            ("flask", "flask_of_the_blood_knights_2") => apply_item(world, actor, 241324, &db)?,
-            // SimC76f8118 item_data.inc175836: quality2; native ItemSparse owns the ilvl.
-            ("flask", "flask_of_the_shattered_sun_2") => apply_item(world, actor, 241326, &db)?,
-            // SimC76f8118 item_data.inc175830: quality2 native item/ilvl295.
-            ("flask", "flask_of_thalassian_resistance_2") => apply_item(world, actor, 241320, &db)?,
-            // consumable.cpp613 accepts both short and full Void-Touched tokens.
-            ("augmentation", "void_touched" | "void_touched_augment_rune") => {
-                apply_item(world, actor, 259085, &db)?
-            }
-            // Food selectors require the composed native equipment/consumable ratings.
-            ("food", _) => {}
-            ("potion", _) => {
-                let Some(id) = potion_item(value) else {
-                    continue;
-                };
-                let item = super::literal_rotation::equipment::ItemUse::consumable(world, id)?;
-                world.entity_mut(actor).insert((
-                    Potion(item),
-                    crate::simc_apl_native::ConfiguredPotion {
-                        name: value.clone(),
-                        on_use: item.on_use,
-                    },
-                ));
-            }
-            ("temporary_enchant", _) => super::profile_oils::install(world, actor, value)?,
-            _ => {} // Report retains every unsupported token explicitly.
-        }
-    }
-    Ok(())
-}
-
-pub(super) fn install_food(
-    world: &mut World,
-    actor: Entity,
-    profile: &Profile,
-) -> Result<(), String> {
-    let Some(food) = profile.consumables.get("food") else {
-        return Ok(());
-    };
-    // SimC76f8118 unique_gear_midnight.cpp6388/6395–6398: native food identities.
-    let spell = match food.as_str() {
-        "royal_roast" => 1294727,
-        "harandar_celebration" | "silvermoon_parade" => 1232585,
-        "blooming_feast" => 1232091,
-        _ => return Ok(()), // Disabled/unsupported tokens retain their report semantics.
-    };
-    server::consumables::apply(world, actor, spell, None)
-}
-
-fn item_spell(db: &Connection, item: u32) -> Result<(u32, u16), String> {
-    db.query_row("SELECT e.SpellID,s.ItemLevel FROM item_sparse s JOIN item_x_item_effect x ON x.ItemID=s.ID JOIN item_effect e ON e.ID=x.ItemEffectID WHERE s.ID=?1 AND e.TriggerType=0", [item], |r| Ok((r.get(0)?,r.get(1)?)))
-        .map_err(|e| format!("native consumable item{item}: {e}"))
-}
-fn apply_item(world: &mut World, actor: Entity, item: u32, db: &Connection) -> Result<(), String> {
-    let (spell, level) = item_spell(db, item)?;
-    server::consumables::apply(world, actor, spell, Some(level))
+    install_expansion(world, actor, profile, &db)
 }
 
 fn install_expansion(
@@ -126,36 +60,7 @@ fn resolve_expansion_entry(token: &str) -> Result<u32, String> {
         .map_err(|error| format!("native expansion entry {token:?}: {error}"))
 }
 
-fn potion_item(token: &str) -> Option<u32> {
-    // SimC76f8118 item_data.inc175810/175828: identities only; native catalogs
-    // supply each potion's spell, item level, coefficient and cooldown.
-    match token {
-        // SimC76f8118 item_data.inc175824: quality2; native item 241292 supplies its use spell.
-        "draught_of_rampant_abandon_2" => Some(241292),
-        "potion_of_recklessness_2" => Some(241288),
-        "lights_potential_2" => Some(241308),
-        // SimC76f8118 item_data.inc182728: Liquid Luster quality2, native ilvl295.
-        "liquid_luster_2" => Some(271887),
-        _ => None,
-    }
-}
-
 pub(super) fn supported(kind: &str, value: &str) -> bool {
-    if value == "disabled" || value.is_empty() {
-        return true;
-    }
-    matches!(
-        (kind, value),
-        ("flask", "flask_of_the_magisters_2" | "magisters_2")
-            | ("flask", "flask_of_the_blood_knights_2")
-            | ("flask", "flask_of_the_shattered_sun_2")
-            | ("flask", "flask_of_thalassian_resistance_2")
-            | ("augmentation", "void_touched" | "void_touched_augment_rune")
-            | ("food", "royal_roast")
-            | (
-                "food",
-                "harandar_celebration" | "silvermoon_parade" | "blooming_feast"
-            )
-    ) || (kind == "potion" && potion_item(value).is_some())
-        || (kind == "temporary_enchant" && super::profile_oils::supported(value))
+    let values = [(kind.to_owned(), value.to_owned())].into_iter().collect();
+    server::followers::consumables::simc(&values).is_ok()
 }
