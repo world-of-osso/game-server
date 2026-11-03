@@ -1,5 +1,16 @@
 # DPS parity status
 
+## Beast Mastery remeasure — 2026-11-03
+
+The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds. The SimC `76f8118` references and confidence-interval method match the landed-master table below.
+
+| Targets | Native revision | Native DPS | SimC DPS | Ratio ± 95% CI | Flag |
+|---|---|---:|---:|---:|---|
+| 1T | `40770835c7` | 195,531 | 202,388 | 0.9661 ± 0.0119 | in |
+| 3T | `3cab680a64` | 256,422 | 259,613 | 0.9877 ± 0.0146 | in |
+
+Both point estimates are in the ±5% band. The 1T interval crosses its lower boundary. The 3T measurement predates the Feral-only rebase in `40770835c7`; it was not repeated on that revision. The earlier 3T result of 0.8322 used an older revision, so its improvement cannot be attributed to one fix. The reported fact-error ledgers are empty; potion inventory and external Power Infusion remain unavailable. Evidence: `game-engine/data/diagnostics/parity-253-2026-11-03b/407708-1t/` and `tip-fixed/`.
+
 ## Elemental and Fire remeasure — 2026-11-03
 
 On candidate `1cea56b867` (base `55bd63da49`), the fixture-engagement, Elemental MotE/Fusion and Vile Vial fixes were measured with the frozen campaign database and native follower seeds `70448,1–9`. The SimC `76f8118` references are unchanged. These results include other changes since `389ca621d0`; the difference from the earlier campaign cannot be attributed to one fix.
