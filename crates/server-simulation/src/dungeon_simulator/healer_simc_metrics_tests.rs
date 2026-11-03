@@ -311,7 +311,7 @@ fn idle_gcd_excludes_native_global_cooldown_after_an_instant_cast() {
 fn idle_gcd_counts_only_living_frames_without_cast_or_channel() {
     let mut world = World::new();
     world.insert_resource(Time::<Real>::default());
-    world.insert_resource(Time::default());
+    world.insert_resource(Time::<()>::default());
     world.insert_resource(crate::spell_cast::test_harness::ObservedCombatEvents::default());
     let healer = world
         .spawn(Health {
