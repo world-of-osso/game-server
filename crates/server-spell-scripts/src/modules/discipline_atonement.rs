@@ -97,6 +97,68 @@ fn void_shield_reach_uses_native_discharge_range_and_only_engaged_targets() {
     assert_eq!(discharge_range, 50_000.0);
 }
 
+#[cfg(test)]
+#[test]
+fn random_enemy_selectors_ignore_archetype_order() {
+    #[derive(Component)]
+    struct Marker;
+
+    let mut harness = combat::spell_cast::test_harness::harness(Vec::new(), &[1253828], 5).unwrap();
+    let mut enemies = vec![harness.npc];
+    for x in [3.5, 4.0, 4.5, 5.0, 5.5, 6.0] {
+        enemies.push(combat::spell_cast::test_harness::spawn_npc(
+            &mut harness.app,
+            x,
+        ));
+    }
+    for &enemy in &enemies {
+        harness
+            .app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert(shared::components::CombatStatus(true));
+    }
+    let read = |harness: &mut combat::spell_cast::test_harness::Harness| {
+        (0..16)
+            .map(|seed| {
+                let _seed = combat::random::seed_scope(seed);
+                let target = void_discharge_target(harness.app.world_mut(), harness.caster, None);
+                let spread =
+                    find_pain_spread_targets(harness.app.world_mut(), harness.caster, harness.npc);
+                let next = combat::random::random::<u32>();
+                (target, spread, next)
+            })
+            .collect::<Vec<_>>()
+    };
+    let before_order: Vec<_> = harness
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::CombatStatus)>()
+        .iter(harness.app.world())
+        .filter(|(entity, _)| enemies.contains(entity))
+        .map(|(entity, _)| entity)
+        .collect();
+    let before = read(&mut harness);
+    assert!(
+        before
+            .iter()
+            .all(|(target, spread, _)| target.is_some() && spread.len() == 6)
+    );
+    for &enemy in enemies.iter().step_by(2) {
+        harness.app.world_mut().entity_mut(enemy).insert(Marker);
+    }
+    let after_order: Vec<_> = harness
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::CombatStatus)>()
+        .iter(harness.app.world())
+        .filter(|(entity, _)| enemies.contains(entity))
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_ne!(before_order, after_order, "fixture must change query order");
+    assert_eq!(before, read(&mut harness));
+}
+
 fn trigger_dark_indulgence(
     world: &mut World,
     ctx: &EffectCtx<'_>,
@@ -528,7 +590,7 @@ fn void_discharge_target(
     // SimC76f8118 sc_priest.cpp:86-102 chooses only a non-sleeping enemy
     // when the attacker is absent or invalid. CombatStatus represents that
     // active-enemy boundary in the server; native1253828 supplies the range.
-    let enemies: Vec<_> = world
+    let mut enemies: Vec<_> = world
         .query::<(Entity, &CombatStatus)>()
         .iter(world)
         .filter(|(target, status)| status.0 && valid(world, *target))
@@ -537,6 +599,7 @@ fn void_discharge_target(
     if enemies.is_empty() {
         return None;
     }
+    enemies.sort_unstable_by_key(|enemy| enemy.to_bits());
     Some(enemies[(combat::random::random::<f32>() * enemies.len() as f32) as usize])
 }
 
@@ -617,6 +680,7 @@ fn find_pain_spread_targets(world: &mut World, caster: Entity, target: Entity) -
             .then_some(candidate)
         })
         .collect();
+    recipients.sort_unstable_by_key(|recipient| recipient.to_bits());
     recipients.shuffle(&mut combat::random::thread_rng());
     recipients.sort_by_key(|&candidate| has_owned_pain(world, caster, candidate));
     recipients
@@ -866,7 +930,7 @@ fn select_twinsight_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
         .find(|effect| effect.index == 1)
         .expect("Twinsight range");
     let radius = targets::radius(effect, 1);
-    let candidates: Vec<_> = world
+    let mut candidates: Vec<_> = world
         .query::<(Entity, &CombatStatus)>()
         .iter(world)
         .filter_map(|(enemy, status)| {
@@ -882,6 +946,7 @@ fn select_twinsight_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
     if candidates.is_empty() {
         return None;
     }
+    candidates.sort_unstable_by_key(|candidate| candidate.to_bits());
     // INFERRED: WCL KWw69CqBnf3Tpk8L fight 4 actor 4 shows three damage
     // bolts on one enemy during a friendly channel; choose one engaged enemy.
     Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
@@ -889,7 +954,7 @@ fn select_twinsight_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
 
 fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entity> {
     let map = *world.get::<combat::maps::InMap>(caster)?;
-    let candidates: Vec<_> = world
+    let mut candidates: Vec<_> = world
         .query::<(
             Entity,
             &Health,
@@ -914,6 +979,7 @@ fn select_twinsight_recipient(world: &mut World, caster: Entity) -> Option<Entit
     if candidates.is_empty() {
         return None;
     }
+    candidates.sort_unstable_by_key(|candidate| candidate.to_bits());
     Some(candidates[(combat::random::random::<f32>() * candidates.len() as f32) as usize])
 }
 

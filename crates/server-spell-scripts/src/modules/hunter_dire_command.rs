@@ -26,12 +26,13 @@ fn start_new_beasts(world: &mut World, owner: Entity, spell: &SpellInfo, _: bool
     let Some(primary) = spell.cast_primary_target else {
         return;
     };
-    let pets: Vec<_> = world
+    let mut pets: Vec<_> = world
         .query_filtered::<(Entity, &SummonedCreature), Without<AttackStarted>>()
         .iter(world)
         .filter(|(_, summon)| summon.owner == owner && summon.spell_id == DIRE_BEAST)
         .map(|(pet, _)| pet)
         .collect();
+    pets.sort_unstable_by_key(|pet| pet.to_bits());
     for pet in pets {
         // SimC76f8118 hunter1869–1873: newly summoned DireCritters start
         // their own white attack against the real consuming KC primary.

@@ -102,6 +102,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
     (
+        "discipline_atonement.rs",
+        "random_enemy_selectors_ignore_archetype_order",
+        "query",
+        2,
+        "test-only fixture reading selector results; not a runtime target-selection site",
+    ),
+    (
         "feral_aggravate_wounds.rs",
         "collect_owned_wounds",
         "query",
