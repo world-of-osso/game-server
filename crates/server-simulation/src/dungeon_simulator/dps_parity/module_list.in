@@ -585,6 +585,7 @@ mod trigger_primary_tests;
 mod unholy_tests;
 mod unholy_lesser_haste_tests;
 mod venomcursed_tests;
+mod venomcursed_ascendance_follower_tests;
 mod windwalker_karma_follower_tests;
 mod windwalker_thunderfist_follower_tests;
 mod windwalker_wdp_thunderfist_follower_tests;
