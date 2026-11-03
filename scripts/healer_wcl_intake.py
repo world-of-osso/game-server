@@ -92,7 +92,9 @@ def convert(events, healing, db, config):
         time_ms = int(event['fight_ms'])
         max_hp, observed_ms = max_health_at(observations, target, time_ms)
         deferred = source == target and spell in DEFERRED_ENEMY_DAMAGE
-        if source == target:
+        unknown_priest_backlash = (source == -1 and spell == 32409
+                                  and config['party_specs'][actor_slots[target]] in (256, 257, 258))
+        if source == target or unknown_priest_backlash:
             observed_self.append({'time_ms': time_ms, 'slot': actor_slots[target],
                                   'spell_id': spell, 'amount': event.get('amount', 0),
                                   'absorbed': event.get('absorbed', 0), 'max_hp': max_hp})

@@ -53,6 +53,23 @@ class WclIntakeTest(unittest.TestCase):
         self.assertEqual(intake.max_health_at(observations, 6, 150), (1000, 100))
         self.assertEqual(intake.max_health_at(observations, 6, 200), (1500, 200))
 
+    def test_excludes_unknown_source_priest_shadow_word_death_backlash(self):
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE spell_misc (SpellID INTEGER, DifficultyID INTEGER, SchoolMask INTEGER)')
+        db.execute('CREATE TABLE spell_categories (SpellID INTEGER, DifficultyID INTEGER, DefenseType INTEGER)')
+        db.execute('INSERT INTO spell_misc VALUES (1306890, 0, 8)')
+        config = {'actors': [1, 2, 3, 4, 5], 'party_specs': [104, 270, 258, 253, 252],
+                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': []}
+        events = [{'targetID': actor, 'sourceID': -1, 'abilityGameID': 1306890,
+                   'timestamp': 100, 'fight_ms': 0, 'hitType': 1, 'amount': 10,
+                   'maxHitPoints': 1000} for actor in config['actors']]
+        events.append({'targetID': 3, 'sourceID': -1, 'abilityGameID': 32409,
+                       'timestamp': 101, 'fight_ms': 1, 'hitType': 1, 'amount': 50})
+        result = intake.convert(events, [], db, config)
+        self.assertEqual(result['excluded_self'], 1)
+        self.assertEqual([hit['spell_id'] for hit in result['hits']], [1306890] * 5)
+        self.assertEqual(result['observed_self'][0]['spell_id'], 32409)
+
     def test_wcl_falling_sentinel_is_not_db2_spell_three(self):
         db = sqlite3.connect(':memory:')
         self.assertEqual(intake.read_spell_metadata(db, 3), (1, None))
