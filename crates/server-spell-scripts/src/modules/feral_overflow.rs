@@ -2,16 +2,19 @@
 use super::combat;
 use bevy::prelude::*;
 use combat::auras::{self, ActiveAuras, AuraInstance, RemoveReason, scripts::AuraScripts};
-use combat::spell_cast::{self, powers, script_registry::SpellScriptHook};
+use combat::spell_cast::{self, effects::EffectCtx, powers, script_registry::SpellScriptHook};
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{ActiveSpec, PowerType};
 
 const BERSERK: u32 = 106951;
 const INCARNATION: u32 = 102543;
 const OVERFLOW: u32 = 405189;
+const COILED_TALENT: u32 = 449537;
+const COILED_BUFF: u32 = 449538;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterComboOverflow(store_overflow),
+    SpellScriptHook::BeforePolicyPrimaryHit(consume_coiled_convoke),
     SpellScriptHook::AfterForegroundSpender(consume_overflow),
     SpellScriptHook::LateAuraRegistration(register),
 ];
@@ -60,6 +63,37 @@ fn store_overflow(world: &mut World, unit: Entity, overflow: f32) {
     let count = overflow.min(capacity(world, unit)) as u32;
     for _ in 0..count {
         spell_cast::cast_triggered(world, unit, OVERFLOW, Some(unit), 1);
+    }
+    // SimC76f8118 sc_druid.cpp13124–13144 and Retail70448 spelltext449537:
+    // only points exceeding both the normal and Berserk storage earn the buff.
+    if overflow > count as f32 && auras::has_aura(world, unit, COILED_TALENT) {
+        spell_cast::cast_triggered(world, unit, COILED_BUFF, Some(unit), 1);
+    }
+}
+
+fn consume_coiled_convoke(world: &mut World, ctx: &EffectCtx<'_>, _: Entity) {
+    let free = ctx
+        .spell
+        .cast_policy_context
+        .as_ref()
+        .is_some_and(|context| context.free_spender);
+    if ctx.depth == 0 || !free {
+        return;
+    }
+    let instance = world
+        .get::<ActiveAuras>(ctx.caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == COILED_BUFF
+                    && aura.caster == ctx.caster
+                    && aura.effects.iter().any(|effect| {
+                        combat::auras::spell_mods::class_mask_affects(aura, effect, ctx.spell)
+                    })
+            })
+        })
+        .map(|aura| aura.instance_id);
+    if let Some(instance) = instance {
+        auras::spend_charge(world, ctx.caster, instance);
     }
 }
 
