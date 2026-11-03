@@ -240,6 +240,16 @@ pub(super) fn route_enters_unpulled_sight(
     target: Entity,
     path: &[Vec3],
 ) -> Result<bool, String> {
+    Ok(!route_sight_blockers(world, unit, target, path, false)?.is_empty())
+}
+
+pub(super) fn route_sight_blockers(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    path: &[Vec3],
+    allow_non_closing: bool,
+) -> Result<Vec<Entity>, String> {
     let map = *world
         .get::<InMap>(unit)
         .ok_or("Follower positioning lacks map")?;
@@ -253,7 +263,9 @@ pub(super) fn route_enters_unpulled_sight(
         .in_map(map)
         .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
         .collect();
-    Ok(!blockers_on_path(world, unit, path, watchers)?.is_empty())
+    with_state::<AggroDistance, _>(world, |world, geometry| {
+        blockers_with(world, geometry, unit, path, watchers, allow_non_closing)
+    })
 }
 
 fn blockers_on_path(
@@ -263,7 +275,7 @@ fn blockers_on_path(
     watchers: Vec<Entity>,
 ) -> Result<Vec<Entity>, String> {
     with_state::<AggroDistance, _>(world, |world, geometry| {
-        blockers_with(world, geometry, unit, path, watchers)
+        blockers_with(world, geometry, unit, path, watchers, false)
     })
 }
 
@@ -273,6 +285,7 @@ fn blockers_with(
     unit: Entity,
     path: &[Vec3],
     watchers: Vec<Entity>,
+    allow_non_closing: bool,
 ) -> Result<Vec<Entity>, String> {
     let mut blockers = Vec::new();
     for watcher in watchers {
@@ -281,17 +294,32 @@ fn blockers_with(
         let sight = crate::line_of_sight::ProjectedSight::capture(world, watcher, unit);
         let los = world.get_resource::<crate::line_of_sight::LineOfSight>();
         if path.windows(2).any(|leg| {
-            leg_enters_sight(
-                (center, radius + AGGRO_STEP_MARGIN),
-                leg[0],
-                leg[1],
-                |point| sight.sees(los, point),
-            )
+            let radius = radius + AGGRO_STEP_MARGIN;
+            let sees = |point| sight.sees(los, point);
+            if allow_non_closing {
+                owner_step_enters_sight((center, radius), leg[0], leg[1], sees)
+            } else {
+                leg_enters_sight((center, radius), leg[0], leg[1], sees)
+            }
         }) {
             blockers.push(watcher);
         }
     }
     Ok(blockers)
+}
+
+fn owner_step_enters_sight(
+    (center, radius): (Vec3, f32),
+    from: Vec3,
+    to: Vec3,
+    sees: impl Fn(Vec3) -> bool,
+) -> bool {
+    let start = from.distance_squared(center);
+    let end = to.distance_squared(center);
+    if start < radius * radius && end >= start && sees(from) {
+        return false;
+    }
+    leg_enters_sight((center, radius), from, to, sees)
 }
 
 /// The one idle-hostile exclusion predicate for a path leg. TC ea5113cce
@@ -430,6 +458,25 @@ mod tests {
     use shared::components::{
         CharacterAppearance, CharacterVisual, ModelDisplay, Position, UnitLevel,
     };
+
+    #[test]
+    fn owner_step_inside_murder_row_patron_sight_can_leave_but_not_close() {
+        let patron = Vec3::new(8955.889_6, 22.343_485, 4817.76);
+        let owner = Vec3::new(8956.807, 22.466_433, 4826.255_4);
+        let direction = (owner - patron).normalize();
+        let radius = 10.0;
+        let blocks = |from, to| owner_step_enters_sight((patron, radius), from, to, |_| true);
+        assert!(!blocks(owner, owner + direction));
+        assert!(!blocks(owner, owner));
+        assert!(blocks(owner, owner - direction));
+        assert!(blocks(patron + direction * 11.0, owner));
+        assert!(owner_step_enters_sight(
+            (patron, radius),
+            owner,
+            owner + direction,
+            |point| point != owner,
+        ));
+    }
 
     #[test]
     fn held_approach_logs_blockers_and_throttles_repeats() {

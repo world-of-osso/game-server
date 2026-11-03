@@ -762,6 +762,17 @@ pub fn leader_requires_target_approach(
     Ok(blocked)
 }
 
+/// Read the unadmitted hostiles blocking one owner movement step.
+pub fn owner_step_sight_blockers(
+    world: &mut World,
+    owner: Entity,
+    target: Entity,
+    from: Vec3,
+    to: Vec3,
+) -> Result<Vec<Entity>, String> {
+    super::positioning::route_sight_blockers(world, owner, target, &[from, to], true)
+}
+
 /// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id =
