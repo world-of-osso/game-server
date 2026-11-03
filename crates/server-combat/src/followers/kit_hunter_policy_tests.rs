@@ -280,6 +280,8 @@ fn ruby_taxi_temporarily_unsummons_and_restores_follower_pet() {
 #[test]
 fn native_revive_pet_restores_the_dead_follower_pet() {
     let (mut h, caster, pet) = prepare_native_duck(70);
+    // Call Pet starts the normal global cooldown; let it expire before Revive Pet.
+    h.advance(35);
     let max_health = h.app.world().get::<Health>(pet).unwrap().max;
     let attacker = h.npc;
     crate::combat::deal_direct_damage(h.app.world_mut(), attacker, pet, max_health + 1.0);
