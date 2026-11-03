@@ -3092,13 +3092,32 @@ fn voidscar_boss_approach_prerequisites_survive_forces_skip() {
             z: 445.47736,
         });
     }
+    let tank = run.party.tank;
+    let unit = server::followers::simulator::planned_pull(run.app.world_mut(), tank, boss).unwrap();
+    for guid in 3276417105..=3276417109 {
+        assert!(
+            unit.contains(&run.actors[&guid]),
+            "missing merged Siphoid {guid}"
+        );
+    }
+    assert!(
+        !unit.contains(&run.actors[&3276417060]),
+        "far pack must stay separate"
+    );
+    let siphoid = run.actors[&3276417105];
+    let reverse =
+        server::followers::simulator::planned_pull(run.app.world_mut(), tank, siphoid).unwrap();
+    assert!(
+        reverse.contains(&boss),
+        "pulling the Siphoid must select the same unit"
+    );
     let blockers = run.boss_approach_blockers(boss).unwrap();
     for guid in 3276417105..=3276417109 {
         assert!(
-            blockers
+            !blockers
                 .iter()
                 .any(|(_, actor)| *actor == run.actors[&guid]),
-            "missing blocker {guid}"
+            "merged Siphoid {guid} must not be a prerequisite"
         );
     }
     let mut selected = std::collections::HashSet::new();
@@ -3122,10 +3141,10 @@ fn voidscar_boss_approach_prerequisites_survive_forces_skip() {
             });
         }
     }
-    for guid in 3276417105..=3276417109 {
+    for (_, blocker) in blockers {
         assert!(
-            selected.contains(&run.actors[&guid]),
-            "forces skip omitted prerequisite {guid}"
+            selected.contains(&blocker),
+            "forces skip omitted unrelated prerequisite"
         );
     }
 }

@@ -19,8 +19,21 @@ pub fn approach_blockers(
     unit: Entity,
     target: Entity,
 ) -> Result<Vec<Entity>, String> {
+    super::pull_set::refresh_boss_units(world, unit)?;
     super::positioning::approach_enters_unpulled_sight(world, unit, target)?
         .ok_or_else(|| "complete approach path is not yet available".into())
+}
+
+/// The native pull unit used by approach, action safety and admission.
+pub fn planned_pull(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+) -> Result<Vec<Entity>, String> {
+    super::pull_set::refresh_boss_units(world, unit)?;
+    Ok(super::pull_set::members(world, target, unit)
+        .into_iter()
+        .collect())
 }
 
 /// Tank, healer, two DPS and the leader DPS: Protection Paladin, Restoration

@@ -112,8 +112,23 @@ fn read_cleared_single_pull(
         .iter()
         .map(|guid| read_source_pack(&sources, *guid))
         .collect::<Result<_, _>>()?;
+    let mut actors = intended.iter().map(|guid| {
+        sources[guid]
+            .actor
+            .ok_or_else(|| format!("Ready pull source GUID {guid} lacks its native actor"))
+    });
+    let first = actors.next().transpose()?.ok_or("Empty intended pull")?;
+    let merged_packs = super::pull_set::merged_pack_count(world, first, tank);
     if packs.len() != 1 {
-        return Ok(Some(Decision::Wait(Reason::FirstSinglePack)));
+        let unit = super::pull_set::members(world, first, tank);
+        if merged_packs <= 1
+            || actors
+                .collect::<Result<Vec<_>, _>>()?
+                .iter()
+                .any(|actor| !unit.contains(actor))
+        {
+            return Ok(Some(Decision::Wait(Reason::FirstSinglePack)));
+        }
     }
     if let Some(reason) = read_party_recovery(world, run)? {
         return Ok(Some(Decision::Wait(reason)));
@@ -134,6 +149,21 @@ fn read_cleared_single_pull(
         .any(|target| super::hazards::target_is_hazardous(world, tank, *target))
     {
         return Ok(Some(Decision::Wait(Reason::Hazard)));
+    }
+    if merged_packs > 1 {
+        let mut scripted = false;
+        for &target in &targets {
+            scripted |= forecast::requires_explicit_pull(world, target)?;
+        }
+        if !scripted {
+            // The complete expanded footprint still goes through the ordinary budget.
+            return Ok(None);
+        }
+        debug!(?tank, ?packs, merged_packs, "SCRIPTED_BOSS_UNIT_WHEN_READY");
+        return Ok(Some(Decision::Allow {
+            bootstrap: run.history.completed_fights == 0,
+            forecast_health: None,
+        }));
     }
     let scripted_boss = targets.iter().any(|target| {
         world

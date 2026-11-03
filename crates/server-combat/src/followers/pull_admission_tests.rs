@@ -226,6 +226,97 @@ impl Fixture {
 }
 
 #[test]
+fn scripted_boss_unit_checks_merged_hazards_and_rejects_outsiders() {
+    let mut fixture = fixture();
+    let tank = fixture.tank;
+    let boss = fixture.first;
+    let map = *fixture.h.app.world().get::<InMap>(tank).unwrap();
+    let data = fixture.h.app.world().resource::<WorldData>();
+    let pack = |guid| {
+        super::pack_identity::pack_guid(
+            guid,
+            data.formations.get(&guid).map(|entry| entry.leader_guid),
+        )
+    };
+    let boss_pack = pack(fixture.first_guid);
+    let mut other_packs = BTreeSet::new();
+    let guids: Vec<_> = data
+        .spawns
+        .iter()
+        .filter(|spawn| spawn.map == 34 && spawn.spawns_at(1) && spawn.guid != fixture.first_guid)
+        .filter(|spawn| {
+            let id = pack(spawn.guid);
+            id != boss_pack && other_packs.insert(id)
+        })
+        .take(2)
+        .map(|spawn| spawn.guid)
+        .collect();
+    assert_eq!(guids.len(), 2);
+    let add = spawn_source(&mut fixture.h, guids[0], map);
+    let outsider = spawn_source(&mut fixture.h, guids[1], map);
+    fixture
+        .h
+        .app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(crate::scripted_ai::CreatureScriptName("boss_test".into()));
+    super::pull_set::install_test_boss_unit(fixture.h.app.world_mut(), tank, boss, &[boss, add]);
+    assert!(matches!(
+        fixture.read(&[boss]).unwrap(),
+        Decision::Allow {
+            forecast_health: None,
+            ..
+        }
+    ));
+    assert_eq!(
+        fixture.read(&[boss, outsider]).unwrap(),
+        Decision::Wait(Reason::FirstSinglePack)
+    );
+
+    let at = *fixture
+        .h
+        .app
+        .world()
+        .get::<shared::components::Position>(add)
+        .unwrap();
+    let source = crate::spell_cast::test_harness::spawn_npc(&mut fixture.h.app, 0.0);
+    fixture
+        .h
+        .app
+        .world_mut()
+        .entity_mut(source)
+        .insert((at, map));
+    super::utility_tests::prepare_enemy_spec(&mut fixture.h, source, 66);
+    crate::spell_cast::creature_cast(
+        fixture.h.app.world_mut(),
+        source,
+        26573,
+        Some(source),
+        false,
+    )
+    .unwrap();
+    fixture.h.advance(1);
+    assert_eq!(
+        fixture.read(&[boss]).unwrap(),
+        Decision::Wait(Reason::Hazard)
+    );
+    let owner = fixture.h.caster;
+    crate::combat_refs::set_in_combat_with(fixture.h.app.world_mut(), owner, boss);
+    assert!(crate::combat_refs::has_active_reference_to(
+        fixture.h.app.world(),
+        owner,
+        boss
+    ));
+    let error = fixture
+        .read(&[outsider])
+        .expect_err("scripted overlap must be refused");
+    assert!(
+        error.contains("requires an explicit pull decision"),
+        "{error}"
+    );
+}
+
+#[test]
 fn splashed_critter_stops_blocking_after_native_combat_ends() {
     let mut fixture = fixture();
     let owner = fixture.h.caster;
