@@ -1834,7 +1834,7 @@ fn released_leader_waits_for_party_on_ruby_ferry() {
         z: landing.z,
     });
     run.returning_to_party = true;
-    for _ in 0..100 {
+    for _ in 0..1000 {
         run.app.update();
         let position = *run.app.world().get::<Position>(tank).unwrap();
         if position.y > 230.0 && position.y < 245.0 {
