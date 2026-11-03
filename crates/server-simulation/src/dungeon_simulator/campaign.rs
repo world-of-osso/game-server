@@ -2666,10 +2666,22 @@ fn stationary_full_party_still_stalls_without_any_progress() {
     for _ in 0..400 {
         run.app.update();
     }
+    // Keep the fixture's mana full: native buff upkeep can otherwise spend mana
+    // between samples, so its later regeneration is legitimate progress.
+    let members: Vec<_> = run.members().collect();
+    let fill_mana = |run: &mut Run| {
+        for &member in &members {
+            if let Some(mut mana) = run.app.world_mut().get_mut::<Mana>(member) {
+                mana.current = mana.max;
+            }
+        }
+    };
+    fill_mana(&mut run);
     run.last_progress = run.now();
     assert!(!run.stalled());
     for _ in 0..1201 {
         run.app.update();
+        fill_mana(&mut run);
     }
     assert!(
         run.stalled(),
@@ -2786,6 +2798,11 @@ fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
             .entity_mut(watcher)
             .insert((react, CreatureState::Idle));
         crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        if react == ReactState::Passive {
+            // The first update clears the previous aggressive watcher's trail;
+            // the next update resumes ordinary following.
+            crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        }
         assert_eq!(
             run.app.world().get::<FollowOwner>(healer).is_some(),
             should_follow,
@@ -2805,8 +2822,8 @@ fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
         super::diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
     let radius = geometry["npc_acquisition_radius"].as_f64().unwrap() as f32;
     assert_eq!(
-        radius, 16.0,
-        "native31-to32 acquisition includes Crenna's3yd reach"
+        radius, 14.5,
+        "native31-to32 acquisition includes the actual 1.5yd creature reach"
     );
     for _ in 0..4000 {
         run.control().unwrap();
