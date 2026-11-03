@@ -50,6 +50,7 @@ fn declared_reach(
         return ScriptReach::Area(DeclaredReach {
             caster_radius: 0.0,
             target_radius: PAIN_SPREAD_RADIUS,
+            ..Default::default()
         });
     }
     if !matches!(spell.id, 1253593 | 1253827) || !reach_source_selected(world, caster, 1253827) {
@@ -63,6 +64,7 @@ fn declared_reach(
     ScriptReach::EngagedArea(DeclaredReach {
         caster_radius: range,
         target_radius: 0.0,
+        ..Default::default()
     })
 }
 
@@ -88,7 +90,8 @@ fn void_shield_reach_uses_native_discharge_range_and_only_engaged_targets() {
         declared_reach(&world, caster, &shield),
         ScriptReach::EngagedArea(DeclaredReach {
             caster_radius: discharge_range,
-            target_radius: 0.0
+            target_radius: 0.0,
+            ..Default::default()
         })
     );
     assert_eq!(discharge_range, 50_000.0);

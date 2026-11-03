@@ -72,6 +72,7 @@ fn declared_reach(
     ScriptReach::Area(DeclaredReach {
         caster_radius: spell_cast::targets::radius(effect, 1),
         target_radius: spell_cast::targets::radius(effect, 0),
+        ..Default::default()
     })
 }
 
