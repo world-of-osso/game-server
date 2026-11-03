@@ -1727,7 +1727,7 @@ mod copy_tests {
     }
 
     #[test]
-    fn follower_release_waits_for_combat_and_requires_a_complete_follow_path() {
+    fn follower_releases_during_trash_combat_and_walks_back_to_owner() {
         use shared::components::{CombatStatus, Health, Position};
         let (mut app, owner, run) = fixture();
         let member = run.members[0];
@@ -1755,12 +1755,7 @@ mod copy_tests {
             crate::combat::DeathState { respawn_timer: 0.0 },
         ));
         super::super::release::update(app.world_mut());
-        assert!(
-            app.world().get::<crate::combat::Corpse>(member).is_some(),
-            "combat keeps the follower dead"
-        );
-        app.world_mut().get_mut::<CombatStatus>(owner).unwrap().0 = false;
-        super::super::release::update(app.world_mut());
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
         app.world_mut()
             .resource_mut::<crate::navigation::Navigation>()
             .drain_until_idle();
@@ -1782,18 +1777,23 @@ mod copy_tests {
             std::time::Duration::from_millis(100),
         ));
         crate::creature_ai::install_follow_fixture(&mut app);
-        for _ in 0..80 {
+        let target = *app.world().get::<Position>(owner).unwrap();
+        for _ in 0..1200 {
             app.update();
             app.world_mut()
                 .resource_mut::<crate::navigation::Navigation>()
                 .drain_until_idle();
+            if crate::creature_ai::within_follow_range(
+                *app.world().get::<Position>(member).unwrap(),
+                target,
+            ) {
+                break;
+            }
         }
         let moved = *app.world().get::<Position>(member).unwrap();
-        let target = *app.world().get::<Position>(owner).unwrap();
-        let distance = |p: Position| (p.x - target.x).hypot(p.z - target.z);
         assert!(
-            distance(moved) < distance(entrance) - 5.0,
-            "normal Follow must walk toward the owner"
+            crate::creature_ai::within_follow_range(moved, target),
+            "released follower did not rejoin owner: {moved:?} versus {target:?}"
         );
     }
 
@@ -1836,13 +1836,22 @@ mod copy_tests {
         let log = capture_release_update(&mut app);
         assert!(log.contains("route_incomplete"), "{log}");
         assert!(log.contains("error=Some("), "{log}");
+        let errors = app
+            .world()
+            .get::<crate::simc_apl::FactErrors>(member)
+            .unwrap()
+            .snapshot();
+        assert!(
+            errors.iter().any(|error| error.fact == "follower.release"
+                && error.detail.contains("route_incomplete"))
+        );
         assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
         assert_eq!(*app.world().get::<Position>(member).unwrap(), corpse);
         assert_eq!(app.world().get::<Health>(member).unwrap().current, 0.0);
     }
 
     #[test]
-    fn killed_follower_waits_for_the_pull_to_end_then_releases() {
+    fn killed_follower_releases_during_trash_combat() {
         use shared::components::{CombatStatus, Health, Position};
         let (fixture_app, _, mut run) = fixture();
         let store = fixture_app
@@ -1883,9 +1892,6 @@ mod copy_tests {
         super::super::release::update(h.app.world_mut());
         assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
         assert!(h.app.world().get::<crate::combat::Corpse>(target).is_some());
-        crate::combat::combat_stop(h.app.world_mut(), h.npc);
-        assert!(!h.app.world().get::<CombatStatus>(h.caster).unwrap().0);
-        super::super::release::update(h.app.world_mut());
         h.app
             .world_mut()
             .resource_mut::<crate::navigation::Navigation>()

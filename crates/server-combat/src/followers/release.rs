@@ -83,6 +83,34 @@ pub(super) fn update(world: &mut World) {
             continue;
         }
         let (decision, reason, walk_seconds, error) = release_if_reachable(world, unit, owner);
+        if matches!(
+            reason,
+            "route_error"
+                | "route_incomplete"
+                | "navigation_unbaked"
+                | "navigation_unavailable"
+                | "no_release_location"
+                | "release_outside_instance"
+                | "owner_position_missing"
+                | "unexpected_route_result"
+                | "run_speed_zero"
+        ) {
+            let detail = format!("follower release {reason}: {error:?}");
+            if world.get::<crate::simc_apl::FactErrors>(unit).is_none() {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::simc_apl::FactErrors::default());
+            }
+            world
+                .get::<crate::simc_apl::FactErrors>(unit)
+                .unwrap()
+                .record(
+                    "follower.release",
+                    unit.to_bits(),
+                    Some(owner.to_bits()),
+                    &detail,
+                );
+        }
         info!(follower = ?unit, owner = ?owner, decision, reason, walk_seconds = ?walk_seconds, error = ?error, "Follower release evaluation");
     }
 }
@@ -196,18 +224,11 @@ fn release_if_reachable(world: &mut World, unit: Entity, owner: Entity) -> Evalu
     if !members.contains(&unit) || world.get::<InMap>(unit) != Some(&map) {
         return wait("not_in_admitted_copy");
     }
-    let in_combat = std::iter::once(owner)
-        .chain(members.iter().copied())
-        .any(|member| {
-            world
-                .get::<CombatStatus>(member)
-                .is_some_and(|status| status.0)
-        });
-    if in_combat || crate::scripted_ai::instance_script::boss_in_progress(world, map) {
+    if crate::scripted_ai::instance_script::boss_in_progress(world, map) {
         if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
             nav.cancel_query(unit, Goal::FollowerRelease);
         }
-        return wait("party_in_combat");
+        return wait("boss_in_progress");
     }
     let Some(destination) = release_location(world, unit, map) else {
         return wait("no_release_location");
