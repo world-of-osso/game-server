@@ -59,21 +59,19 @@ pub(super) fn retain_reachable(
         };
         let Some(mut nav) = world.get_resource_mut::<Navigation>() else {
             error!(?unit, "Follower target selection requires navigation");
-            enemies.clear();
+            retain_directly_reachable(enemies, &pending);
             return false;
         };
         let result = nav.query_deferred(unit, map.map_id, Goal::FollowerTargetSelection, query);
         let paths = match result {
             None => {
-                enemies.retain(|(entity, _)| {
-                    !pending.iter().any(|(candidate, _)| candidate == entity)
-                });
+                retain_directly_reachable(enemies, &pending);
                 return true;
             }
             Some(Ok(Some(Output::Candidates(paths)))) => paths,
             Some(other) => {
                 error!(?unit, ?other, "Follower target navigation failed");
-                enemies.clear();
+                retain_directly_reachable(enemies, &pending);
                 return false;
             }
         };
@@ -97,6 +95,13 @@ pub(super) fn retain_reachable(
                 .any(|(candidate, _, reachable)| candidate == entity && *reachable)
     });
     false
+}
+
+fn retain_directly_reachable(
+    enemies: &mut Vec<(Entity, Option<Entity>)>,
+    pending: &[(Entity, Vec3)],
+) {
+    enemies.retain(|(entity, _)| !pending.iter().any(|(candidate, _)| candidate == entity));
 }
 
 #[cfg(test)]
