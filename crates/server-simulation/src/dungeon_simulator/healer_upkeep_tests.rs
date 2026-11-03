@@ -44,6 +44,14 @@ fn check_full_health_upkeep(spec: u32, excluded_heals: &[u32], check_mark: bool)
             );
         }
     }
+    if spec == 264 {
+        crate::auras::remove_auras(
+            app.world_mut(),
+            healer,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 52127,
+        );
+    }
     {
         let mut mana = app.world_mut().get_mut::<Mana>(healer).unwrap();
         mana.current = mana.max * 0.79;
@@ -77,6 +85,12 @@ fn check_full_health_upkeep(spec: u32, excluded_heals: &[u32], check_mark: bool)
             .is_some_and(|spell| excluded_heals.contains(&spell))),
         "spec {spec} cast healing upkeep: {casts:?}"
     );
+    if spec == 264 {
+        assert!(
+            casts.iter().any(|event| event.spell_id == Some(52127)),
+            "missing Water Shield must be recast as a maintained stat buff"
+        );
+    }
     if check_mark {
         assert!(
             events
