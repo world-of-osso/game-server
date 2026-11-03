@@ -35,7 +35,7 @@ fn snapshot_gravedigger(world: &mut World, caster: Entity, spell: &SpellInfo, de
     }
 }
 
-fn prepare_duration(_: &World, _: Entity, spell: &mut SpellInfo) {
+fn prepare_duration(world: &World, _: Entity, spell: &mut SpellInfo) {
     if spell.id != BTE {
         return;
     }
@@ -49,16 +49,20 @@ fn prepare_duration(_: &World, _: Entity, spell: &mut SpellInfo) {
                 .find_map(|(power, amount)| (*power == PowerType::ComboPoints).then_some(*amount))
         })
         .expect("Between the Eyes retains its effective combo points");
+    let native = world
+        .resource::<SpellStore>()
+        .get(BTE)
+        .and_then(|spell| spell.misc.as_ref())
+        .and_then(|misc| misc.duration.as_ref())
+        .expect("native Between the Eyes duration");
     let duration = spell
         .misc
         .as_mut()
         .and_then(|misc| misc.duration.as_mut())
-        .expect("native Between the Eyes duration");
-    // SimC76f8118 sc_rogue.cpp3844–3845: base duration plus one native
-    // duration increment per effective combo point, capped by native data.
-    duration.duration_ms = (duration.duration_ms
-        + (duration.per_resource_ms as f32 * points) as i32)
-        .min(duration.max_duration_ms);
+        .expect("snapshotted Between the Eyes duration");
+    // WCL T9M3am2H8Bz6p7g4 fight10: a charged 7-point cast lasts 22s;
+    // SimC76f8118 sc_rogue.cpp3844–3845 uses every effective point.
+    duration.duration_ms = native.duration_ms + (native.per_resource_ms as f32 * points) as i32;
 }
 
 fn after_bte(world: &mut World, ctx: &EffectCtx) {
