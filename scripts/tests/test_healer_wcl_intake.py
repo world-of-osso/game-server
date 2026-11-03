@@ -29,8 +29,8 @@ class WclIntakeTest(unittest.TestCase):
         ]
         auras = intake.opening_auras(combatants, buffs, [1, 2, 3, 4, 5])
         self.assertEqual(auras, [
-            {'source_actor': 1, 'target_actor': 2, 'spell_id': 465, 'stacks': 1, 'evidence': 'combatant_info'},
-            {'source_actor': 2, 'target_actor': 2, 'spell_id': 1256579, 'stacks': 1, 'evidence': 'first_removebuff'},
+            {'source_actor': 1, 'target_actor': 2, 'spell_id': 465, 'stacks': 1, 'evidence': 'combatant_info', 'remove_ms': 6},
+            {'source_actor': 2, 'target_actor': 2, 'spell_id': 1256579, 'stacks': 1, 'evidence': 'first_removebuff', 'remove_ms': 2},
             {'source_actor': 1, 'target_actor': 1, 'spell_id': 195181, 'stacks': 7, 'evidence': 'first_removebuffstack'},
         ])
 

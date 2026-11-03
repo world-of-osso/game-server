@@ -151,6 +151,10 @@ def opening_auras(combatants, buffs, actors):
         stacks = event.get('stack', 0) + 1 if event['type'] == 'removebuffstack' else 1
         initial[key] = {'source_actor': key[0], 'target_actor': key[1], 'spell_id': key[2],
                         'stacks': stacks, 'evidence': 'first_' + event['type']}
+    for event in buffs:
+        key = (event.get('sourceID'), event.get('targetID'), event.get('abilityGameID'))
+        if key in initial and event['type'] == 'removebuff' and event['fight_ms'] >= 0:
+            initial[key].setdefault('remove_ms', int(event['fight_ms']))
     return list(initial.values())
 
 
