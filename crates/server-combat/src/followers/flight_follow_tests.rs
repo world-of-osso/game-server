@@ -346,3 +346,86 @@ fn flying_follower_requires_area_permission_and_lands_on_leaders_navmesh() {
         "landing must connect to the leader"
     );
 }
+
+#[test]
+fn flying_follower_publishes_its_leader_until_it_lands() {
+    use crate::simc_apl::Facts;
+    use crate::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
+    let from = Position {
+        x: 150.557,
+        y: -34.85624,
+        z: -45.8164,
+    };
+    let (mut h, follower, _) = stockade_fixture(from);
+    // Production creature bundles carry the replicated gait; the harness NPC does not.
+    h.app
+        .world_mut()
+        .entity_mut(follower)
+        .insert(shared::components::CreatureMotion::Still);
+    let owner = h.caster;
+    let landing = Position {
+        x: 103.0,
+        y: -34.85623,
+        z: -76.0,
+    };
+    let in_air = Position {
+        y: landing.y + 20.0,
+        ..landing
+    };
+    h.app.insert_resource(GroundMap::with_area_samples(&[(
+        34,
+        Vec3::new(in_air.x, in_air.y, in_air.z),
+        9001,
+    )]));
+    h.app.insert_resource(areas(2));
+    let read = |h: &crate::spell_cast::test_harness::Harness| {
+        NativeFacts::new(
+            h.app.world(),
+            follower,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    };
+    assert_eq!(read(&h).unwrap(), 0.0, "idle");
+    h.app.world_mut().entity_mut(owner).insert((
+        in_air,
+        PlayerMotion(PlayerMotion::CAN_FLY | PlayerMotion::FLYING),
+    ));
+    h.advance(5);
+    let leader = Vec3::new(in_air.x, in_air.y, in_air.z);
+    assert_eq!(
+        h.app.world().get::<MovementDestination>(follower),
+        Some(&MovementDestination(leader))
+    );
+    let at = *h.app.world().get::<Position>(follower).unwrap();
+    let here = Vec3::new(at.x, at.y, at.z);
+    assert!(
+        here.distance(leader) > 1.0,
+        "still flying toward the leader"
+    );
+    assert_eq!(read(&h).unwrap(), f64::from(here.distance(leader)));
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((landing, PlayerMotion::default()));
+    for _ in 0..500 {
+        h.advance(1);
+        if h.app.world().get::<Mounted>(follower).is_none() {
+            break;
+        }
+        h.app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
+            .drain_until_idle();
+    }
+    assert!(h.app.world().get::<Mounted>(follower).is_none(), "landed");
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::flight_follow::FlightFollow>(follower)
+            .is_none()
+    );
+    assert!(h.app.world().get::<MovementDestination>(follower).is_none());
+}

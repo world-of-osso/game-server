@@ -2,6 +2,10 @@
 use bevy::prelude::*;
 use shared::components::{MovementControl, Position, Rotation};
 
+#[cfg(test)]
+#[path = "retreat_destination_tests.rs"]
+mod destination_tests;
+
 #[derive(Component)]
 pub struct RetreatSetup;
 
@@ -52,7 +56,10 @@ pub fn prepare_havoc_retreat(
         }
         let stride = speed * world.resource::<Time>().delta_secs();
         let step = difference.clamp(-stride, stride);
-        let point = Vec3::new(from.x, from.y, from.z) + offset * (step / distance);
+        let here = Vec3::new(from.x, from.y, from.z);
+        let point = here + offset * (step / distance);
+        let edge = here + offset * (difference / distance);
+        crate::creature_ai::publish_planned_destination(world, actor, Some(edge));
         crate::creature_ai::move_follower(
             world,
             actor,
@@ -66,6 +73,7 @@ pub fn prepare_havoc_retreat(
         return Ok(false);
     }
     world.entity_mut(actor).remove::<RetreatSetup>();
+    crate::creature_ai::publish_planned_destination(world, actor, None);
     let mut rotation = world
         .get_mut::<Rotation>(actor)
         .ok_or("Retreat actor lacks rotation")?;

@@ -174,6 +174,28 @@ fn dungeon_movement_distance_distinguishes_pending_route_from_missing_destinatio
 }
 
 #[test]
+fn dungeon_movement_distance_reads_driver_destination_before_navigation() {
+    let (mut world, actor, _) = fixture();
+    let read = |world: &World| read_distance(world, actor, Encounter::dungeon(0.0));
+    world
+        .entity_mut(actor)
+        .insert(MovementDestination(Vec3::new(3.0, 0.0, 4.0)));
+    assert_eq!(read(&world).unwrap(), 0.0, "idle actor");
+    world
+        .entity_mut(actor)
+        .insert(shared::components::CreatureMotion::Run);
+    assert_eq!(read(&world).unwrap(), 5.0);
+    world.entity_mut(actor).remove::<MovementDestination>();
+    world.insert_resource(crate::navigation::Navigation::new(std::path::Path::new(
+        "/nonexistent-navigation-fixture",
+    )));
+    assert_eq!(
+        read(&world).unwrap_err(),
+        server::simc_apl::not_ready("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")
+    );
+}
+
+#[test]
 fn class_follower_movement_distance_does_not_borrow_fixture_configuration() {
     let (mut world, actor, _) = fixture();
     world.entity_mut(actor).insert(FixtureMovement {

@@ -62,14 +62,13 @@ pub(super) fn begin_flight(
         .windows(2)
         .map(|pair| (pair[1], pair[0].distance(pair[1])))
         .collect();
+    let destination = *positions.last().unwrap();
     world.entity_mut(owner).remove::<(Travel, MoveIntent)>();
     world.entity_mut(owner).insert(FlightTravel {
         phase: FlightPhase::Mounting,
-        travel: Travel {
-            destination: *positions.last().unwrap(),
-            legs,
-        },
+        travel: Travel { destination, legs },
     });
+    crate::creature_ai::publish_planned_destination(world, owner, Some(destination));
     Ok(())
 }
 
@@ -88,6 +87,7 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     units.extend(pets);
     for unit in units {
         world.entity_mut(unit).remove::<(Travel, FlightTravel)>();
+        crate::creature_ai::publish_planned_destination(world, unit, None);
     }
 }
 
@@ -123,10 +123,6 @@ pub(super) fn remaining_route(world: &World, unit: Entity) -> Option<(RouteGoal,
         RouteGoal::Point(travel.destination)
     };
     Some((goal, travel.legs.iter().map(|(_, yards)| yards).sum()))
-}
-
-pub(super) fn apl_destination(world: &World, unit: Entity) -> Option<Vec3> {
-    world.get::<Travel>(unit).map(|travel| travel.destination)
 }
 
 pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
@@ -267,6 +263,7 @@ fn handle_unreachable_movement(
         crate::creature_ai::mark_chase_blocked(world, unit, *target);
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     if (world.get::<MoveIntent>(unit).is_none()
@@ -283,6 +280,7 @@ fn handle_unreachable_movement(
         world.entity_mut(unit).insert(BlockedWalk { reason });
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     Err(format!(
@@ -311,6 +309,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     if server::test_support::transport::in_progress(world, unit) {
         world.entity_mut(unit).remove::<(Travel, MoveIntent)>();
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     if !can_move(world, unit) {
@@ -318,6 +317,8 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     let from = point(world.get::<Position>(unit).unwrap());
     let Some((to, reach)) = destination(world, unit, from) else {
+        // Hazard escape or another driver took the unit's goal over.
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     };
     let in_reach = server::test_support::within_reach(from, to, reach);
@@ -392,6 +393,8 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     } else if !in_reach {
         world.entity_mut(unit).insert(travel);
     }
+    let goal = (!returned_home && !in_reach).then_some(to);
+    crate::creature_ai::publish_planned_destination(world, unit, goal);
     Ok(())
 }
 
@@ -468,51 +471,13 @@ fn advance_flight(world: &mut World, owner: Entity, dt: f32) -> Result<(), Strin
                 .iter(world)
                 .any(|(follower, _)| follower.owner == owner);
             if !flying {
+                crate::creature_ai::publish_planned_destination(world, owner, None);
                 return Ok(());
             }
         }
     }
     world.entity_mut(owner).insert(flight);
     Ok(())
-}
-
-#[test]
-fn apl_reads_simulator_travel_destination_while_actor_moves() {
-    use server::simc_apl::Facts;
-    use server::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
-    use shared::components::CreatureMotion;
-
-    let mut world = World::new();
-    world.insert_resource(MovementDestination(apl_destination));
-    let destination = Vec3::new(12.0, 0.0, 0.0);
-    let actor = world
-        .spawn((
-            Position {
-                x: 2.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            CreatureMotion::Run,
-            Travel {
-                destination,
-                legs: [(destination, 10.0)].into(),
-            },
-        ))
-        .id();
-    let bindings = Bindings::default();
-    let read = |world: &World| {
-        NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
-            .value("movement.distance")
-    };
-    assert_eq!(read(&world).unwrap(), 10.0);
-    world.entity_mut(actor).insert(Position {
-        x: 7.0,
-        y: 0.0,
-        z: 0.0,
-    });
-    assert_eq!(read(&world).unwrap(), 5.0);
-    world.entity_mut(actor).remove::<Travel>();
-    assert!(read(&world).is_err());
 }
 
 #[test]
@@ -553,6 +518,72 @@ fn travel_updates_follower_motion_flag_on_movement_and_stop() {
     assert!(!world.get::<FollowOwner>(follower).unwrap().is_moving());
 }
 
+#[cfg(test)]
+fn read_apl_distance(world: &World, actor: Entity) -> Result<f64, String> {
+    use server::simc_apl::Facts;
+    use server::simc_apl_native::{Bindings, Encounter, NativeFacts};
+    NativeFacts::new(
+        world,
+        actor,
+        &Bindings::default(),
+        Encounter::dungeon(0.0),
+        1,
+    )
+    .value("movement.distance")
+}
+
+#[test]
+fn travel_publishes_its_goal_while_walking_and_clears_it_on_arrival() {
+    use crate::creature_ai::FollowOwner;
+    use server::simc_apl_native::MovementDestination;
+    let mut world = World::new();
+    let walker = reach_tests::altar_walker();
+    let (from, to) = reach_tests::short_walk(&walker);
+    world.insert_resource(walker);
+    let owner = world
+        .spawn(Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::CreatureMotion::Still,
+            FollowOwner::new(owner),
+        ))
+        .id();
+    assert_eq!(read_apl_distance(&world, follower).unwrap(), 0.0, "idle");
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert_eq!(
+        world.get::<MovementDestination>(follower),
+        Some(&MovementDestination(to))
+    );
+    let here = point(world.get::<Position>(follower).unwrap());
+    assert_eq!(
+        read_apl_distance(&world, follower).unwrap(),
+        f64::from(here.distance(to))
+    );
+    assert!(
+        here.distance(to) > 4.0,
+        "still walking toward the follow reach"
+    );
+    let position = *world.get::<Position>(follower).unwrap();
+    world.entity_mut(owner).insert(position);
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_none());
+    assert_eq!(read_apl_distance(&world, follower).unwrap(), 0.0);
+}
+
 #[test]
 fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
     let mut world = World::new();
@@ -576,6 +607,81 @@ fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
     let (goal, remaining) = remaining_route(&world, leader).unwrap();
     assert!(goal == RouteGoal::Point(Vec3::new(5.0, 3.0, 0.0)));
     assert_eq!(remaining, 7.0);
+}
+
+#[test]
+fn travel_without_a_goal_drops_its_destination() {
+    use crate::creature_ai::FollowOwner;
+    use server::simc_apl_native::MovementDestination;
+    let mut world = World::new();
+    let walker = reach_tests::altar_walker();
+    let (from, to) = reach_tests::short_walk(&walker);
+    world.insert_resource(walker);
+    let owner = world
+        .spawn(Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::CreatureMotion::Still,
+            FollowOwner::new(owner),
+        ))
+        .id();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_some());
+    // Hazard escape removes the follow goal and moves through a navigation route.
+    world.entity_mut(follower).remove::<FollowOwner>();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_none());
+}
+
+#[test]
+fn flight_publishes_its_landing_point_until_the_party_has_landed() {
+    use server::simc_apl_native::MovementDestination;
+    use shared::components::CreatureMotion;
+    let mut world = World::new();
+    let leader = world
+        .spawn((
+            Position {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            CreatureMotion::Still,
+        ))
+        .id();
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 0.0, "idle");
+    let path = [[1.0, 0.0, 0.0], [1.0, 3.0, 0.0], [5.0, 3.0, 0.0]];
+    begin_flight(&mut world, leader, &path).unwrap();
+    let landing = Vec3::new(5.0, 3.0, 0.0);
+    assert_eq!(
+        world.get::<MovementDestination>(leader),
+        Some(&MovementDestination(landing))
+    );
+    world.entity_mut(leader).insert(CreatureMotion::Run);
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 5.0);
+    world.get_mut::<FlightTravel>(leader).unwrap().phase = FlightPhase::Landing;
+    world.entity_mut(leader).insert(CreatureMotion::Still);
+    advance_flight(&mut world, leader, 0.1).unwrap();
+    assert!(!flight_in_progress(&world, leader));
+    assert!(world.get::<MovementDestination>(leader).is_none());
+    assert_eq!(read_apl_distance(&world, leader).unwrap(), 0.0);
 }
 
 #[test]
