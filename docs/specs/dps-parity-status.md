@@ -1,5 +1,18 @@
 # DPS parity status
 
+## Elemental and Fire remeasure — 2026-11-03
+
+On candidate `1cea56b867` (base `55bd63da49`), the fixture-engagement, Elemental MotE/Fusion and Vile Vial fixes were measured with the frozen campaign database and native follower seeds `70448,1–9`. The SimC `76f8118` references are unchanged. These results include other changes since `389ca621d0`; the difference from the earlier campaign cannot be attributed to one fix.
+
+| Spec | Targets | Native DPS | SimC DPS | Ratio ± 95% CI | Flag |
+|---|---:|---:|---:|---:|---|
+| Elemental Shaman (262) | 1T | 209,528 | 211,367 | 0.9913 ± 0.0288 | in |
+| Elemental Shaman (262) | 3T | 320,193 | 324,957 | 0.9853 ± 0.0154 | in |
+| Fire Mage (63) | 1T | 191,988 | 197,191 | 0.9736 ± 0.0345 | in |
+| Fire Mage (63) | 3T | 354,685 | 371,059 | 0.9559 ± 0.0251 | in |
+
+All four point estimates are within [0.95, 1.05]; the Fire 3T interval crosses the lower boundary. Each run completed ten seeds with an empty fact-error ledger. The CI method is the same as the landed-master table below. Logs and per-seed reports: `game-engine/data/diagnostics/parity-262-new-2026-11-03/vial-fix/`.
+
 ## Marksmanship diagnostic — 2026-11-03
 
 The fixture-engagement and Radiant Edge fixes were measured locally with the frozen campaign database and seeds `70448,1–9`. On `561f69a99c`, native 1T was 177,957 versus SimC 192,745 (0.9233 ± 0.0149); native 3T was 263,329 versus 280,759 (0.9379 ± 0.0203). Both point estimates remain outside the ±5% band. The earlier campaign at `389ca621d0` measured 175,234 and 218,752 respectively; the different master revisions prevent attribution of the full change to one fix. Applying `edb3688d1d` locally did not change any seed: this profile uses fixed-stat neck bonus 13708, not that commit's random-stat bonus. Evidence: `game-engine/data/diagnostics/parity-254-2026-11-03/`.
