@@ -35,17 +35,20 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             family INTEGER NOT NULL DEFAULT 0, type_flags INTEGER NOT NULL DEFAULT 0,
             BaseAttackTime INTEGER NOT NULL
         );
+        CREATE TABLE faction_template (ID INTEGER PRIMARY KEY);
+        INSERT INTO faction_template VALUES (35);
         CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER);
         CREATE TABLE difficulty (ID INTEGER, FallbackDifficultyID INTEGER);
         CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE expected_stat (
             ID INTEGER PRIMARY KEY, ExpansionID INTEGER, CreatureHealth REAL,
-            CreatureAutoAttackDps REAL, CreatureArmor REAL, ArmorConstant REAL, Lvl INTEGER
+            CreatureAutoAttackDps REAL, CreatureArmor REAL, ArmorConstant REAL, Lvl INTEGER,
+            CreatureSpellDamage REAL
         );
         CREATE TABLE expected_stat_mod (
             ID INTEGER PRIMARY KEY, CreatureHealthMod REAL, CreatureAutoAttackDPSMod REAL,
-            CreatureArmorMod REAL, ArmorConstantMod REAL
+            CreatureArmorMod REAL, ArmorConstantMod REAL, CreatureSpellDamageMod REAL
         );
         CREATE TABLE mythic_plus_season (ID INTEGER PRIMARY KEY, MilestoneSeason INTEGER);
         CREATE TABLE content_tuning_x_expected (

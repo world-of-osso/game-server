@@ -22,6 +22,7 @@ pub(crate) fn reach_children(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
+    primary: Option<Entity>,
 ) -> Vec<(u32, f32, f32)> {
     let Some(registry) = world.get_resource::<SpellScriptRegistry>() else {
         return Vec::new();
@@ -47,12 +48,21 @@ pub(crate) fn reach_children(
                 ))
             }
             Relationship::SpenderHit {
-                resource, payload, ..
+                resource,
+                counter,
+                payload,
             } if spell
                 .power_costs
                 .iter()
                 .any(|cost| cost.power_type == resource as i32) =>
             {
+                // SimC76f8118 sc_paladin.hpp1512–1532: only an available charge applies
+                // the payload, to the primary unless it already carries it (choose_target);
+                // an unknown primary may carry it.
+                read_counter_instance(world, caster, counter)?;
+                if primary.is_some_and(|primary| !owns_periodic(world, caster, primary, payload)) {
+                    return Some((payload, 0.0, 0.0));
+                }
                 let range = targets::spell_range(spell, true).1;
                 let range = spell_mods::modify(world, caster, spell, SpellModOp::Range, range);
                 Some((payload, range, 0.0))

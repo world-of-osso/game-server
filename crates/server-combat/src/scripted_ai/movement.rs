@@ -9,6 +9,11 @@ use super::{Hook, MotionType};
 use crate::combat::DeathState;
 use crate::creature_ai::SpawnPoint;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::simc_apl_native::MovementDestination;
+
+#[cfg(test)]
+#[path = "movement_destination_tests.rs"]
+mod destination_tests;
 
 /// Base walk and run speeds, yards per second (`baseMoveSpeed`).
 const BASE_WALK_SPEED: f32 = 2.5;
@@ -37,15 +42,32 @@ pub(crate) fn retain_path_home(world: &mut World, creature: Entity) {
 
 /// A running `PointMovementGenerator`.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
+#[component(on_remove = clear_point_destination)]
 pub struct PointMovement {
     pub id: u32,
     /// Bevy space.
     pub target: Position,
 }
 
+fn point_destination(target: Position) -> MovementDestination {
+    MovementDestination(Vec3::new(target.x, target.y, target.z))
+}
+
+/// Every generator exit (arrival, MotionMaster clear, follow takeover) ends the
+/// destination the point published while it moved the unit.
+fn clear_point_destination(
+    mut world: bevy::ecs::world::DeferredWorld,
+    context: bevy::ecs::lifecycle::HookContext,
+) {
+    world
+        .commands()
+        .entity(context.entity)
+        .try_remove::<MovementDestination>();
+}
+
 pub(crate) fn move_point(world: &mut World, unit: Entity, id: u32, target: Position) {
     if let Ok(mut entity) = world.get_entity_mut(unit) {
-        entity.insert(PointMovement { id, target });
+        entity.insert((PointMovement { id, target }, point_destination(target)));
     }
 }
 
@@ -77,6 +99,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut arrived = Vec::new();
     let mut moved = Vec::new();
+    let mut heading = Vec::new();
     let mut bearing_changed = Vec::new();
     let mut movers = world.query_filtered::<(
         Entity,
@@ -144,6 +167,9 @@ pub(crate) fn point_movement_system(world: &mut World) {
         }
         if reached {
             arrived.push((entity, movement.id));
+        } else {
+            // Re-publish after a jump or charge that paused this generator ends.
+            heading.push((entity, movement.target));
         }
         let gait = if reached { CreatureMotion::Still } else { gait };
         let mut changed = motion.is_some_and(|mut motion| motion.set_if_neq(gait));
@@ -171,6 +197,9 @@ pub(crate) fn point_movement_system(world: &mut World) {
         for entity in moved {
             mark_interest_position_changed(Some(queue), entity);
         }
+    }
+    for (entity, target) in heading {
+        world.entity_mut(entity).insert(point_destination(target));
     }
     for (entity, id) in arrived {
         world.entity_mut(entity).remove::<PointMovement>();

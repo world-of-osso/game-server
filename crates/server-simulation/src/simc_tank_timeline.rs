@@ -354,12 +354,14 @@ fn parse_trace(trace: &str, dummy: &str) -> Result<Vec<Hit>, String> {
                     .map_err(|error| format!("invalid {name}: {error}"))?;
                 if !value.is_finite()
                     || (matches!(name, "miss" | "crit") && value > 1.0)
-                    || (name != "miss" && value < 0.0)
+                    || (name == "crit" && value < 0.0)
                 {
                     return Err(format!("invalid {name} in SimC attack table: {line}"));
                 }
-                // SimC attack.cpp197–211 omits nonpositive miss entries.
-                Ok(value.max(0.0))
+                // SimC 76f8118 attack.cpp:209–241 adds miss, dodge and parry
+                // only when their raw chance is positive. Nonpositive values
+                // therefore represent an absent outcome, not negative avoidance.
+                Ok(if value <= 0.0 { 0.0 } else { value })
             };
             melee_table = Some(MeleeTable {
                 miss: value("miss")?,
@@ -571,6 +573,44 @@ fn reads_each_dummy_attacker_table_and_rejects_missing_tables() {
         })
     );
     assert!(parse_trace("1.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=100", "Tank_Dummy_Dungeon").is_err());
+}
+
+#[test]
+fn nonpositive_simc_avoidance_is_an_absent_outcome() {
+    let trace = "4.000 Enemy 'Tank_Dummy_Dungeon' performs Action 'melee_main_hand_tank' (0)\n4.000 attack_t::build_table: miss=-0.015 dodge=0.2863057860364703 parry=-0.03 glance=0 crit=0\n4.000 Enemy 'Tank_Dummy_Dungeon' direct amount for Action 'melee_main_hand_tank' (0): amount=245737";
+    let hit = parse_trace(trace, "Tank_Dummy_Dungeon").unwrap().remove(0);
+    let table = hit.melee_table.unwrap();
+    assert_eq!(table.miss, 0.0);
+    assert_eq!(table.parry, 0.0);
+    assert!((table.expected_landed() - 0.7136942).abs() < 0.000001);
+
+    let negative_dodge = trace.replace("dodge=0.2863057860364703", "dodge=-0.045");
+    assert_eq!(
+        parse_trace(&negative_dodge, "Tank_Dummy_Dungeon").unwrap()[0]
+            .melee_table
+            .unwrap()
+            .dodge,
+        0.0
+    );
+    let positive_parry = trace.replace("parry=-0.03", "parry=0.03");
+    assert_eq!(
+        parse_trace(&positive_parry, "Tank_Dummy_Dungeon").unwrap()[0]
+            .melee_table
+            .unwrap()
+            .parry,
+        0.03
+    );
+    for invalid in ["parry=NaN", "parry=inf", "crit=-0.01"] {
+        let malformed = if invalid.starts_with("crit=") {
+            trace.replace("crit=0", invalid)
+        } else {
+            trace.replace("parry=-0.03", invalid)
+        };
+        assert!(
+            parse_trace(&malformed, "Tank_Dummy_Dungeon").is_err(),
+            "{invalid}"
+        );
+    }
 }
 
 #[test]

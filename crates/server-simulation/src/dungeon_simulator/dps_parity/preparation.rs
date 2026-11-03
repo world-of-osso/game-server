@@ -97,6 +97,32 @@ pub(super) fn consume_profile_food(run: &mut Run) -> Result<(), String> {
     finish_pending_setup(run)
 }
 
+/// Production followers cast the party buffs their composition provides out of combat
+/// (`server_follower_apl::party_buffs`). This fixture's composition is its one actor,
+/// so before the fight it casts each buff it provides, natively; its reference sets
+/// `override.<buff>=1` for the same set.
+pub(super) fn cast_provided_party_buffs(run: &mut Run) -> Result<(), String> {
+    use server_follower_apl::party_buffs::{PARTY_BUFFS, own_lost_buff};
+    for _ in 0..PARTY_BUFFS.len() {
+        let Some(spell) = own_lost_buff(run.app.world_mut(), run.actor)? else {
+            return Ok(());
+        };
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.actor),
+            false,
+        )
+        .map_err(|error| format!("PARTY_BUFF_CAST_FAILED:{spell}:{error:?}"))?;
+        finish_pending_setup(run)?;
+    }
+    match own_lost_buff(run.app.world_mut(), run.actor)? {
+        None => Ok(()),
+        Some(spell) => Err(format!("PARTY_BUFF_NOT_APPLIED:{spell}")),
+    }
+}
+
 pub(super) fn warm_up_reference(run: &mut Run) -> Result<(), String> {
     for _ in 0..4 {
         run.app.update();

@@ -769,3 +769,56 @@ fn waypoint_rejected_interior_segment_never_moves_or_reports_a_path_arrival() {
         "no synthetic script arrival after rejected controls"
     );
 }
+
+#[test]
+fn waypoint_spline_publishes_its_end_until_chase_preempts_and_after_arrival() {
+    use crate::simc_apl::Facts;
+    let read = |world: &World, actor| {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        NativeFacts::new(
+            world,
+            actor,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    };
+    let (mut world, actor, target) = motion_ownership_world();
+    assert_eq!(read(&world, actor).unwrap(), 0.0, "idle before launch");
+    for _ in 0..80 {
+        tick_owned_motion(&mut world);
+    }
+    let end = bevy(Vec3::new(12.0, 0.0, 0.0));
+    let end = Vec3::new(end.x, end.y, end.z);
+    assert_eq!(
+        world.get::<MovementDestination>(actor),
+        Some(&MovementDestination(end))
+    );
+    let at = *world.get::<Position>(actor).unwrap();
+    let at = Vec3::new(at.x, at.y, at.z);
+    assert_ne!(
+        world.get::<CreatureMotion>(actor),
+        Some(&CreatureMotion::Still)
+    );
+    assert_eq!(read(&world, actor).unwrap(), f64::from(at.distance(end)));
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Pursuing {
+            target: target.to_bits(),
+        });
+    tick_owned_motion(&mut world);
+    assert!(
+        world.get::<MovementDestination>(actor).is_none(),
+        "chase owns the destination through navigation"
+    );
+    world
+        .entity_mut(actor)
+        .insert(crate::creature_ai::CreatureState::Idle);
+    for _ in 0..240 {
+        tick_owned_motion(&mut world);
+    }
+    assert_eq!(world.resource::<ArrivalReceipts>().0, vec![(1, 1)]);
+    assert!(world.get::<MovementDestination>(actor).is_none());
+    assert_eq!(read(&world, actor).unwrap(), 0.0);
+}

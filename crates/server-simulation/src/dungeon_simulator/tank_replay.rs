@@ -340,12 +340,18 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
     let mut app = super::runtime::build_app();
     let graph = app.world().resource::<super::Space>().0.clone();
     let copy = super::runtime::create_copy(&mut app);
+    let race = crate::followers::class_profiles::read_profiles()?
+        .into_iter()
+        .find(|profile| profile.spec_id == 66)
+        .ok_or("follower spec66 absent")?
+        .race;
     let tank = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         66,
         intake.level,
         copy,
         crate::followers::simulator::ParityActor::Follower,
+        race,
     )?;
     let actors = super::runtime::spawn_population(&mut app, copy);
     super::healer_intake::apply_source_snapshots(app.world_mut(), &intake.sources, &actors)?;
@@ -596,13 +602,11 @@ pub(super) fn replay_simc_with_targets(
     let racial = simc_tank_timeline::read_touch_of_elune(path, &scenario.player)?;
     let mut hits = simc_tank_timeline::read_trace(path, &scenario.dummy)?;
     scale_pressure(&mut hits, pressure_scale);
-    let (bloodlust_ms, raid_buffs) = if external_healing {
-        (
-            simc_tank_timeline::read_bloodlust_time(path, &scenario.player)?,
-            simc_tank_timeline::read_raid_buffs(path, &scenario.player)?,
-        )
+    let raid_buffs = simc_tank_timeline::read_raid_buffs(path, &scenario.player)?;
+    let bloodlust_ms = if external_healing {
+        simc_tank_timeline::read_bloodlust_time(path, &scenario.player)?
     } else {
-        (None, Vec::new())
+        None
     };
     let dummy_debuffs = if external_healing {
         simc_tank_timeline::read_dummy_debuffs(path, &scenario.dummy)?
@@ -618,8 +622,8 @@ pub(super) fn replay_simc_with_targets(
     let mut run =
         super::dps_parity::prepare_registered_player_with(spec_id, target_count, |run| {
             apply_simc_touch_of_elune(run, racial)?;
-            apply_simc_raid_buffs(run, &raid_buffs)?;
-            if racial.is_some() && raid_buffs.is_empty() {
+            require_composition_raid_buffs(run, &raid_buffs)?;
+            if racial.is_some() {
                 run.app.update();
             }
             let (actor, target) = (run.actor, run.targets[0]);
@@ -734,6 +738,28 @@ pub(super) fn apply_simc_touch_of_elune(
     Ok(())
 }
 
+/// The trace's SimC raid-buff overrides must be exactly the buffs the solo tank
+/// provides; the fixture cast those natively (`preparation::cast_provided_party_buffs`).
+fn require_composition_raid_buffs(
+    run: &super::dps_parity::Run,
+    trace: &[simc_tank_timeline::RaidBuff],
+) -> Result<(), String> {
+    let provided: std::collections::BTreeSet<&str> =
+        server_follower_apl::party_buffs::provided_buffs(run.app.world(), &[run.actor])
+            .into_iter()
+            .map(|(_, name)| name)
+            .collect();
+    let traced: std::collections::BTreeSet<&str> =
+        trace.iter().map(|buff| buff.name.as_str()).collect();
+    if provided != traced {
+        return Err(format!(
+            "SIMC_TRACE_RAID_BUFFS_NOT_COMPOSITION:trace{traced:?}:provided{provided:?}"
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
 pub(super) fn apply_simc_raid_buffs(
     run: &mut super::dps_parity::Run,
     buffs: &[simc_tank_timeline::RaidBuff],
@@ -742,6 +768,7 @@ pub(super) fn apply_simc_raid_buffs(
     apply_simc_raid_buffs_to(&mut run.app, tank, buffs)
 }
 
+#[cfg(test)]
 pub(super) fn apply_simc_raid_buffs_to(
     app: &mut App,
     tank: Entity,

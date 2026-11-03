@@ -8,6 +8,7 @@ use shared::components::{Position, Rotation};
 use super::{Hook, MotionType};
 use crate::combat::DeathState;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::simc_apl_native::MovementDestination;
 
 /// TC a352b1fa SharedDefines.h:6740, generic jump completion ID.
 pub(crate) const EVENT_JUMP: u32 = 1004;
@@ -86,7 +87,8 @@ pub(crate) fn move_jump_with_options(
         warn!("MoveJump {unit}: speed below source minimum");
         return;
     };
-    world.entity_mut(unit).insert(jump);
+    let destination = MovementDestination(jump.to);
+    world.entity_mut(unit).insert((jump, destination));
 }
 
 /// Source speed cap/height calculation and CommonInitializer's integer duration,
@@ -147,7 +149,9 @@ pub(crate) fn release_finished_jumps(
 ) {
     for (entity, jump, dead) in &jumps {
         if dead || jump.elapsed_ms == jump.duration_ms {
-            commands.entity(entity).remove::<JumpMovement>();
+            commands
+                .entity(entity)
+                .remove::<(JumpMovement, MovementDestination)>();
         }
     }
 }
@@ -260,5 +264,84 @@ fn publish_jump_position(world: &World, entity: Entity) {
     mark_interest_position_changed(world.get_resource::<InterestDirtyQueue>(), entity);
     if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
         queue.mark(entity);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::simc_apl::Facts;
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::components::CreatureMotion;
+
+    fn read_distance(world: &World, unit: Entity) -> Result<f64, String> {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        NativeFacts::new(
+            world,
+            unit,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    }
+
+    #[test]
+    fn jump_publishes_its_landing_point_until_release() {
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let unit = world
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                CreatureMotion::Still,
+            ))
+            .id();
+        assert_eq!(read_distance(&world, unit).unwrap(), 0.0, "idle");
+        let to = Vec3::new(20.0, 0.0, 0.0);
+        move_jump(
+            &mut world,
+            unit,
+            EVENT_JUMP,
+            Position {
+                x: to.x,
+                y: to.y,
+                z: to.z,
+            },
+            20.0,
+            0.0,
+        );
+        assert_eq!(
+            world.get::<MovementDestination>(unit),
+            Some(&MovementDestination(to))
+        );
+        world.entity_mut(unit).insert(CreatureMotion::Run);
+        assert_eq!(read_distance(&world, unit).unwrap(), 20.0);
+        let step = |world: &mut World, ms| {
+            world
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_millis(ms));
+            advance_jumps(world);
+        };
+        step(&mut world, 500);
+        let at = world.get::<Position>(unit).unwrap();
+        let here = Vec3::new(at.x, at.y, at.z);
+        assert!(
+            here.x > 9.0 && here.x < 11.0,
+            "halfway along the jump: {here:?}"
+        );
+        assert_eq!(
+            read_distance(&world, unit).unwrap(),
+            f64::from(here.distance(to))
+        );
+        step(&mut world, 600);
+        world.entity_mut(unit).insert(CreatureMotion::Still);
+        world.run_system_once(release_finished_jumps).unwrap();
+        assert!(world.get::<JumpMovement>(unit).is_none());
+        assert!(world.get::<MovementDestination>(unit).is_none());
+        assert_eq!(read_distance(&world, unit).unwrap(), 0.0);
     }
 }

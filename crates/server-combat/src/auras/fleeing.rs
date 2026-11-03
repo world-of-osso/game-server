@@ -75,7 +75,9 @@ pub(super) fn start(world: &mut World, unit: Entity) {
 pub(super) fn stop(world: &mut World, unit: Entity) {
     cancel_queries(world, unit);
     let epoch = world.get::<Fleeing>(unit).and_then(|state| state.epoch);
-    world.entity_mut(unit).remove::<Fleeing>();
+    world
+        .entity_mut(unit)
+        .remove::<(Fleeing, crate::simc_apl_native::MovementDestination)>();
     if let Some(epoch) = epoch {
         let mut control = world
             .get_mut::<MovementControl>(unit)
@@ -121,7 +123,10 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
     }) {
         cancel_queries(world, unit);
         state.query = None;
-        world.entity_mut(unit).insert(state);
+        world
+            .entity_mut(unit)
+            .insert(state)
+            .remove::<crate::simc_apl_native::MovementDestination>();
         return;
     }
     let speed = run_speed(world, unit);
@@ -144,7 +149,20 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
         }
         advance_path(world, unit, &mut state, speed, dt);
     }
+    publish_destination(world, unit, &state);
     world.entity_mut(unit).insert(state);
+}
+
+/// The running flee path owns the APL destination; a pause or block has none.
+fn publish_destination(world: &mut World, unit: Entity, state: &Fleeing) {
+    let mut entity = world.entity_mut(unit);
+    if state.path.is_some() {
+        entity.insert(crate::simc_apl_native::MovementDestination(
+            state.destination,
+        ));
+    } else {
+        entity.remove::<crate::simc_apl_native::MovementDestination>();
+    }
 }
 
 fn advance_path(world: &mut World, unit: Entity, state: &mut Fleeing, speed: f32, dt: f32) {

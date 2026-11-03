@@ -79,6 +79,9 @@ fn hash_snapshot(path: &Path) -> Result<(PathBuf, String), String> {
     Ok((path, format!("{:x}", hasher.finalize())))
 }
 
+/// SimC `optimal_raid` dummy debuffs and lust. Raid buffs are not applied here:
+/// the party's production followers cast the ones their composition provides
+/// (`settle_party_buffs`).
 pub(super) fn apply_optimal_raid_environment(
     app: &mut App,
     source: Entity,
@@ -86,25 +89,41 @@ pub(super) fn apply_optimal_raid_environment(
 ) -> Result<(), String> {
     use crate::simc_tank_timeline::RaidBuff;
 
-    let buffs =
-        [("arcane_intellect", 1459), ("mark_of_the_wild", 1126)].map(|(name, spell_id)| RaidBuff {
-            name: name.into(),
-            spell_id,
-        });
     let debuffs =
         [("chaos_brand", 1490), ("mystic_touch", 113746)].map(|(name, spell_id)| RaidBuff {
             name: name.into(),
             spell_id,
         });
-    for &member in members {
-        super::tank_replay::apply_simc_raid_buffs_to(app, member, &buffs)?;
-    }
     super::tank_replay::apply_simc_dummy_debuffs(app, members[0], source, &debuffs)?;
     for &member in members {
         super::tank_replay::apply_replay_bloodlust(app.world_mut(), member)?;
     }
     Ok(())
 }
+
+/// Before the pull, production followers cast the party buffs this composition
+/// provides, as a keystone party does between pulls.
+pub(super) fn settle_party_buffs(party: &mut ClassParty) -> Result<(), String> {
+    use server_follower_apl::party_buffs::{holds_buff, provided_buffs};
+    let provided = provided_buffs(party.app.world(), &party.slots);
+    for _ in 0..SETTLE_PARTY_BUFF_TICKS {
+        party.app.update();
+        let world = party.app.world();
+        let mut settled = true;
+        for &unit in &party.slots {
+            for &(spell, _) in &provided {
+                settled &= holds_buff(world, unit, spell)?;
+            }
+        }
+        if settled {
+            return Ok(());
+        }
+    }
+    Err("HEALER_REPLAY_PARTY_BUFFS_INCOMPLETE".into())
+}
+
+/// 60 seconds of out-of-combat frames, far more than one cast per provided buff.
+const SETTLE_PARTY_BUFF_TICKS: u32 = 60 * TICKS_PER_SECOND;
 
 pub(super) fn replay_simc(
     spec: u32,
@@ -384,6 +403,7 @@ fn replay(
         .insert_resource(server_follower_apl::registry::FixedLengthFight {
             duration: f64::from(duration),
         });
+    settle_party_buffs(&mut party)?;
     engage(&mut party);
     let ClassParty {
         mut app,

@@ -38,6 +38,35 @@ References are under `game-engine/data/diagnostics/dps-parity-2026-10-21/`: `<sp
 
 **Missing reference and measurement — Balance Druid (102):** This additional DPS spec is outside the 25-profile comparison: `all-spec-current-reference-manifests/102.profile.json` records no shipped current-tier reference and no native harness profile; its MID1 candidate was not selected. It has no valid 1T or 3T comparison.
 
+## Party-buff composition remeasure (2026-11-02)
+
+References changed from `optimal_raid=0` to the composition rule in [DPS parity](dps-parity.md): each actor gains only its own class raid buff, in both SimC and native. Old = branch `party-buffs-parity` without the native cast line, against the pinned references above. New = with the cast line, against `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/dps/`. Both use one `sim`-profile build of the same tree, canonical `world.db`, the latest train inputs per spec (copied to `.../native/{baseline,new}/`) and seeds 70448, 1–9. Mage references are unchanged because the APL already casts Arcane Intellect, and the Priest reference is unchanged because Fortitude adds no damage.
+
+| Spec | T | Old native / SimC | Old gap | New native / SimC | New gap |
+|---|---|---:|---:|---:|---:|
+| 62 | 1T | 175,182 / 177,681 | -1.41% | 180,788 / 177,681 | +1.75% |
+| 62 | 3T | 323,393 / 330,648 | -2.19% | 325,782 / 330,648 | -1.47% |
+| 63 | 1T | 208,117 / 197,191 | +5.54% | 203,649 / 197,191 | +3.28% |
+| 63 | 3T | 390,279 / 371,059 | +5.18% | 395,159 / 371,059 | +6.49% |
+| 64 | 1T | 192,292 / 196,155 | -1.97% | 192,692 / 196,155 | -1.77% |
+| 64 | 3T | 294,671 / 298,610 | -1.32% | 293,854 / 298,610 | -1.59% |
+| 71 | 1T | 181,627 / 188,596 | -3.70% | 183,230 / 197,315 | -7.14% |
+| 71 | 3T | 339,796 / 328,902 | +3.31% | 353,806 / 344,060 | +2.83% |
+| 72 | 1T | 202,715 / 202,543 | +0.09% | 207,777 / 211,803 | -1.90% |
+| 72 | 3T | 268,274 / 272,806 | -1.66% | 284,430 / 284,888 | -0.16% |
+| 103 | 1T | 182,532 / 191,667 | -4.77% | 193,745 / 202,645 | -4.39% |
+| 103 | 3T | 228,918 / 247,749 | -7.60% | 244,750 / 261,956 | -6.57% |
+| 258 | 1T | 164,620 / 183,245 | -10.16% | 165,262 / 183,245 | -9.81% |
+| 258 | 3T | 323,607 / 339,984 | -4.82% | 322,091 / 339,984 | -5.26% |
+| 262 | 1T | 231,301 / 207,736 | +11.34% | 234,286 / 211,367 | +10.84% |
+| 262 | 3T | 365,319 / 319,420 | +14.37% | 363,890 / 324,957 | +11.98% |
+| 263 | 1T | 179,234 / 193,093 | -7.18% | 181,108 / 200,137 | -9.51% |
+| 263 | 3T | 363,119 / 400,251 | -9.28% | 383,819 / 414,337 | -7.37% |
+| 1467 | 1T | 116,142 / 113,728 | +2.12% | 115,612 / 113,711 | +1.67% |
+| 1467 | 3T | 184,204 / 182,445 | +0.96% | 185,810 / 182,175 | +2.00% |
+
+Old gaps for 258, 262 and 263 are already outside ±5% and differ from the table above on the same reference. That table is older train data; this run's inputs or the code since then differ, and the cause is not attributed. 71 1T moves out of band with this change: the reference gains 4.6% with Battle Shout, native gains 0.9%, while 71 3T and 72 gain 2.5–6.0%. It is open for investigation and was not tuned.
+
 ## First evidence for out-of-band results
 
 - **Beast Mastery Hunter (253):** 3T 245,734 vs 259,613 (-5.35%; train `ed6300d16b`). In the local 3T sample, Stomp (201754) contributes 27,717 vs 33,208 reference DPS.

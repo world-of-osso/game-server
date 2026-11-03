@@ -207,6 +207,7 @@ fn fire_blast_reach(
         combat::spell_cast::script_registry::DeclaredReach {
             caster_radius: combat::spell_cast::targets::spell_range(spell, true).1,
             target_radius: 0.0,
+            ..Default::default()
         },
     )
 }

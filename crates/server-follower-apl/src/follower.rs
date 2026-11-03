@@ -12,7 +12,7 @@ const PRECOMBAT_TICKS: u32 = 600;
 mod lifecycle_tests;
 
 /// A spec's production APL driver over the shared literal `Driver`.
-pub trait SpecRotation: Send + Sync {
+pub trait SpecRotation: std::any::Any + Send + Sync {
     /// Spell IDs bound to actions in this rotation's actual program.
     fn action_spells(&self) -> Vec<u32>;
 
@@ -91,15 +91,23 @@ impl FollowerApl {
                 .action_spells()
                 .into_iter()
                 .filter(|&spell| {
-                    is_maintained_buff(world, spell)
-                        && !crate::party_buffs::PARTY_BUFFS.contains(&spell)
+                    is_maintained_buff(world, spell) && !crate::party_buffs::is_party_buff(spell)
                 })
                 .collect(),
         );
     }
 
+    /// The production rotation that owns this follower's live decisions.
+    pub fn rotation(&self) -> &dyn std::any::Any {
+        self.rotation.as_ref()
+    }
+
     pub fn in_combat(&self) -> bool {
         matches!(self.phase, Phase::Combat)
+    }
+
+    pub fn in_precombat(&self) -> bool {
+        matches!(self.phase, Phase::Precombat { .. })
     }
 
     pub fn tick(
@@ -121,26 +129,10 @@ impl FollowerApl {
             self.rotation.start_combat_at(self.combat_started_at);
             self.phase = Phase::Combat;
         }
-        if let Phase::Precombat { ticks } = &mut self.phase {
-            *ticks += 1;
-            if *ticks > PRECOMBAT_TICKS {
-                return Err("precombat did not finish within 30s".into());
-            }
-            let (gcd, cast) = literal_rotation::read_busy(world, actor);
-            if gcd || cast {
+        if self.in_precombat() {
+            self.prepare_tick(world, actor, targets)?;
+            if self.in_precombat() {
                 return Ok(());
-            }
-            if self.advance_plan(world, actor)? {
-                return Ok(());
-            }
-            match self.rotation.poll_precombat(world, actor, targets)? {
-                PrecombatPoll::Waiting => return Ok(()),
-                PrecombatPoll::Selected { action, execution } => {
-                    return self.execute_plan(world, actor, action, execution);
-                }
-                PrecombatPoll::Finished => {
-                    self.phase = Phase::Idle;
-                }
             }
         }
         if targets.is_empty() {
@@ -155,6 +147,58 @@ impl FollowerApl {
         literal_rotation::drive_tick(world, actor, |world| rotation.drive(world, actor, targets))
     }
 
+    /// Advance the same production precombat with the targets of an upcoming pull.
+    pub fn prepare_tick(
+        &mut self,
+        world: &mut World,
+        actor: Entity,
+        targets: &[Entity],
+    ) -> Result<(), String> {
+        if self.maintained_buffs.is_none() {
+            self.initialize_maintained_buffs(world);
+        }
+        let Phase::Precombat { ticks } = &mut self.phase else {
+            return Ok(());
+        };
+        *ticks += 1;
+        if *ticks > PRECOMBAT_TICKS {
+            return Err("precombat did not finish within 30s".into());
+        }
+        let (gcd, cast) = literal_rotation::read_busy(world, actor);
+        if gcd || cast {
+            return Ok(());
+        }
+        if world
+            .get::<shared::components::CombatStatus>(actor)
+            .is_some_and(|status| status.0)
+        {
+            self.plan.clear();
+            self.pending_plan_cast = None;
+            self.phase = Phase::Idle;
+            return Ok(());
+        }
+        if self.advance_plan(world, actor)? {
+            return Ok(());
+        }
+        match self.rotation.poll_precombat(world, actor, targets) {
+            Err(error) if error == literal_rotation::PRECOMBAT_TARGET_PENDING => {
+                if let Phase::Precombat { ticks } = &mut self.phase {
+                    *ticks = 0;
+                }
+                self.maintain_buffs(world, actor)
+            }
+            Err(error) => Err(error),
+            Ok(PrecombatPoll::Waiting) => Ok(()),
+            Ok(PrecombatPoll::Selected { action, execution }) => {
+                self.execute_plan(world, actor, action, execution)
+            }
+            Ok(PrecombatPoll::Finished) => {
+                self.phase = Phase::Idle;
+                Ok(())
+            }
+        }
+    }
+
     fn idle(&mut self) {
         if matches!(self.phase, Phase::Combat) {
             self.phase = Phase::Idle;
@@ -167,6 +211,9 @@ impl FollowerApl {
             return Ok(());
         }
         if self.advance_plan(world, actor)? {
+            return Ok(());
+        }
+        if crate::party_buffs::cast_lost_party_buff(world, actor)? {
             return Ok(());
         }
         if crate::party_buffs::cast_lost_party_buff(world, actor)? {
@@ -377,7 +424,26 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     };
     match apl {
         Ok(mut apl) => {
-            let result = apl.tick(world, unit, &targets);
+            let prospective = server::followers::acting_follower(world, unit)
+                .and_then(|follower| world.get::<server::followers::AdmittedPull>(follower.owner))
+                .filter(|pull| {
+                    pull.0.iter().all(|target| {
+                        crate::spell_cast::targets::is_alive(world, *target)
+                            && !world
+                                .get::<shared::components::CombatStatus>(*target)
+                                .is_some_and(|status| status.0)
+                    })
+                })
+                .map(|pull| pull.0.clone());
+            let result = if targets.is_empty() && apl.in_precombat() {
+                if let Some(prospective) = prospective.as_deref() {
+                    apl.prepare_tick(world, unit, prospective)
+                } else {
+                    apl.tick(world, unit, &targets)
+                }
+            } else {
+                apl.tick(world, unit, &targets)
+            };
             world.entity_mut(unit).insert(apl);
             match result {
                 Ok(()) => {}

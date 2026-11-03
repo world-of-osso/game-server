@@ -15,6 +15,7 @@ use super::movement::Walking;
 use crate::combat::DeathState;
 use crate::creature_ai::SpawnPoint;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
+use crate::simc_apl_native::MovementDestination;
 
 #[cfg(test)]
 #[path = "waypoint_path_tests.rs"]
@@ -224,6 +225,11 @@ struct Spline {
 }
 
 impl Spline {
+    /// WoW-space end of this launch; a Catmull-Rom virtual end repeats it.
+    fn destination(&self) -> Vec3 {
+        *self.points.last().expect("launched spline has controls")
+    }
+
     fn segments(&self) -> usize {
         self.times.len() - 1
     }
@@ -571,6 +577,8 @@ pub(crate) fn path_movement_system(world: &mut World) {
     let mut moved = Vec::new();
     let mut changed = Vec::new();
     let mut walking_modes = Vec::new();
+    let mut heading = Vec::new();
+    let mut idle = Vec::new();
     let mut movers = world.query_filtered::<(
         Entity,
         &mut Position,
@@ -623,6 +631,7 @@ pub(crate) fn path_movement_system(world: &mut World) {
                     nav.cancel_query(entity, movement.query_goal());
                 }
                 movement.deactivate();
+                idle.push(entity);
                 continue;
             }
             _ => movement.reactivate(),
@@ -666,6 +675,10 @@ pub(crate) fn path_movement_system(world: &mut World) {
             (Some(_), true) => CreatureMotion::Walk,
             (Some(_), false) => CreatureMotion::Run,
         };
+        match &movement.spline {
+            Some(spline) => heading.push((entity, bevy(spline.destination()))),
+            None => idle.push(entity),
+        }
         if *position != before {
             moved.push(entity);
         }
@@ -693,15 +706,27 @@ pub(crate) fn path_movement_system(world: &mut World) {
     if let Some(ground) = ground {
         world.insert_resource(ground);
     }
+    for (entity, at) in heading {
+        world
+            .entity_mut(entity)
+            .insert(MovementDestination(Vec3::new(at.x, at.y, at.z)));
+    }
+    for entity in idle {
+        world.entity_mut(entity).remove::<MovementDestination>();
+    }
     for entity in retired {
-        world.entity_mut(entity).remove::<PathMovement>();
+        world
+            .entity_mut(entity)
+            .remove::<(PathMovement, MovementDestination)>();
     }
     for (entity, walking) in walking_modes {
         super::movement::set_walk(world, entity, walking);
     }
     for (entity, path_id, error) in failed {
         error!("MovePath {path_id} for {entity:?}: {error}; stopped without arrival");
-        world.entity_mut(entity).remove::<PathMovement>();
+        world
+            .entity_mut(entity)
+            .remove::<(PathMovement, MovementDestination)>();
         if world
             .get_mut::<CreatureMotion>(entity)
             .is_some_and(|mut motion| motion.set_if_neq(CreatureMotion::Still))

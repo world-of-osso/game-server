@@ -3,7 +3,6 @@ use super::*;
 use crate::auras::ActiveAuras;
 use crate::followers::Follower;
 use crate::stats::{CharacterStats, StatModifiers};
-use server::test_support::ReferenceRace;
 use shared::components::{Player, UnitLevel};
 
 fn infer_equipped_intellect(world: &World, actor: Entity, base: f32) -> f32 {
@@ -43,9 +42,9 @@ fn read_actor_identity(world: &World, actor: Entity) -> (u8, u8) {
         .get::<Follower>(actor)
         .expect("native reference actor is a player or follower");
     let race = world
-        .get::<ReferenceRace>(actor)
+        .get::<shared::components::CharacterVisual>(actor)
         .expect("native reference follower retains its declared race")
-        .0;
+        .race;
     (follower.profile.class_id, race)
 }
 

@@ -2971,7 +2971,7 @@ fn plate_tank_profiles_receive_simc_base_dodge() {
 #[ignore = "runs all six native MID2 tank dummy replays"]
 fn all_tanks_use_dungeon_season_combat_inputs() {
     let directory = Path::new(
-        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank",
     );
     for spec in [66, 73, 104, 250, 268, 581] {
         let trace = directory.join(format!("{spec}.simc-trace.log"));
@@ -5050,4 +5050,21 @@ fn unrelenting_edict_impacts_can_earn_divine_inspiration() {
         "real Edict hits must earn Inspirations: {applications:?}"
     );
     assert!(applications.windows(2).all(|pair| pair[0] != pair[1]));
+}
+
+/// The pinned Brewmaster trace carries all six `optimal_raid` raid buffs; a solo
+/// Brewmaster provides none, so the replay refuses the trace.
+#[test]
+#[ignore = "requires the pinned Brewmaster trace and DPS_PARITY_WORLD_DB"]
+fn tank_replay_rejects_trace_buffs_beyond_its_composition() {
+    let trace = std::path::Path::new(
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay/268.simc-trace.log",
+    );
+    let error = super::tank_replay::replay_simc_with_targets(268, trace, 1, 300, 70448, true, 1.0)
+        .unwrap_err();
+    assert!(
+        error.starts_with("SIMC_TRACE_RAID_BUFFS_NOT_COMPOSITION:"),
+        "{error}"
+    );
+    assert!(error.ends_with(":provided{}"), "{error}");
 }

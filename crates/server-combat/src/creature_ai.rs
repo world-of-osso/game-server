@@ -1030,9 +1030,14 @@ pub(crate) fn chase_system(
         }
         // MotionMaster initializes a newly-preempting active generator with
         // diff0. The default spline may already have moved before sight/aggro.
-        let initializing =
-            default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Chase(target)));
-        if initializing {
+        let preempted = default_waypoint.map(|mut path| path.preempt_for(Goal::Chase(target)));
+        if preempted.is_some() {
+            // Chase publishes through its navigation route, not the paused spline.
+            commands
+                .entity(entity)
+                .remove::<crate::simc_apl_native::MovementDestination>();
+        }
+        if preempted == Some(true) {
             continue;
         }
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
@@ -1624,6 +1629,24 @@ pub fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32
     );
 }
 
+/// A planned driver (simulator travel, hazard escape, retreat, melee return) publishes the
+/// goal it moves the actor toward through `move_follower`, or `None` when it stops.
+/// Forced movement keeps its own destination: `move_follower` holds those actors too.
+pub fn publish_planned_destination(world: &mut World, entity: Entity, goal: Option<Vec3>) {
+    let planned =
+        crate::system_states::with_query::<(), ActiveUncontrolled, _>(world, |world, query| {
+            query.get(world, entity).is_ok()
+        });
+    if !planned {
+        return;
+    }
+    let mut unit = world.entity_mut(entity);
+    match goal {
+        Some(goal) => unit.insert(crate::simc_apl_native::MovementDestination(goal)),
+        None => unit.remove::<crate::simc_apl_native::MovementDestination>(),
+    };
+}
+
 fn move_flying_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
     crate::system_states::with_state::<FollowerMoveParams<With<flight_follow::FlightFollow>>, _>(
         world,
@@ -2024,8 +2047,13 @@ pub(crate) fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
-        let initializing = default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Home));
-        if initializing {
+        let preempted = default_waypoint.map(|mut path| path.preempt_for(Goal::Home));
+        if preempted.is_some() {
+            commands
+                .entity(entity)
+                .remove::<crate::simc_apl_native::MovementDestination>();
+        }
+        if preempted == Some(true) {
             continue;
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");

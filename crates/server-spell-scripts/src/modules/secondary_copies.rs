@@ -61,6 +61,7 @@ fn declared_reach(
         combat::spell_cast::script_registry::DeclaredReach {
             caster_radius,
             target_radius: 0.0,
+            ..Default::default()
         },
     )
 }

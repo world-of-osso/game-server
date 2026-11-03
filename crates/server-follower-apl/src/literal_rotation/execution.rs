@@ -108,6 +108,7 @@ pub struct Prepared {
         server::soul_fragments::PickupPlan,
     >,
     declared: BTreeSet<String>,
+    awaiting_target: BTreeSet<String>,
     moving: bool,
     cast_active: bool,
     pickup_cast_usable: bool,
@@ -301,6 +302,7 @@ impl Prepared {
                 .collect(),
             limits: BTreeMap::new(),
             pickups: fragment_pickup_plans(world, actor, targets.first().copied())?,
+            awaiting_target: BTreeSet::new(),
             declared: [
                 "snapshot_stats",
                 "auto_attack",
@@ -382,6 +384,10 @@ impl Prepared {
     /// Suppress every target context for a fixture-specific action policy.
     pub fn suppress_action(&mut self, name: &str) {
         self.ready.retain(|(action, _), _| action != name);
+    }
+
+    pub(super) fn awaits_target(&self, action: &Action) -> bool {
+        self.ordered_targets.is_empty() && self.awaiting_target.contains(&action.name)
     }
 
     pub fn now(&self) -> f64 {
@@ -929,6 +935,9 @@ fn read_spell(
         prepared.channel_cast_actions.insert(name.into());
     }
     let self_target = self_target || crate::spell_cast::targets::targets_caster_only(resolved);
+    if !self_target && enemies.is_empty() {
+        prepared.awaiting_target.insert(name.into());
+    }
     // SimC76f8118 sc_hunter.cpp7269–7274: start once; native repeats
     // own later shots. This applies to any native autorepeat, not a spell-ID branch.
     if crate::spell_cast::native_apl::auto_repeat_active(world, actor, id) {

@@ -11,6 +11,8 @@ use shared::components::Position;
 struct WalkStep {
     target: Entity,
     position: Position,
+    /// The melee edge this walk ends at.
+    goal: Vec3,
     speed: f32,
     arrived: bool,
 }
@@ -47,6 +49,11 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     }
     let walking = step.as_ref().is_some_and(|step| !step.arrived);
     set_return_walking(world, actor, walking);
+    let goal = step
+        .as_ref()
+        .filter(|step| !step.arrived)
+        .map(|step| step.goal);
+    crate::creature_ai::publish_planned_destination(world, actor, goal);
     let Some(step) = step else {
         return;
     };
@@ -146,7 +153,8 @@ fn walk_toward_melee(
         return None;
     }
     let step = (speed * delta).min(remaining);
-    let position = Vec3::new(from.x, from.y, from.z) + offset * (step / distance);
+    let here = Vec3::new(from.x, from.y, from.z);
+    let position = here + offset * (step / distance);
     Some(WalkStep {
         target,
         position: Position {
@@ -154,7 +162,100 @@ fn walk_toward_melee(
             y: position.y,
             z: position.z,
         },
+        goal: here + offset * (remaining / distance),
         speed,
         arrived: step >= remaining,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use server::simc_apl::Facts;
+    use server::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
+    use shared::components::{
+        CharacterAppearance, CharacterVisual, CreatureMotion, Health, Rotation,
+    };
+
+    fn read_distance(world: &World, actor: Entity) -> Result<f64, String> {
+        NativeFacts::new(
+            world,
+            actor,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    }
+
+    fn visual() -> CharacterVisual {
+        CharacterVisual {
+            race: 1,
+            class: 1,
+            appearance: CharacterAppearance::default(),
+        }
+    }
+
+    fn tick(world: &mut World) {
+        world
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(500));
+        advance(world);
+    }
+
+    #[test]
+    fn melee_return_publishes_the_melee_edge_until_it_arrives() {
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        let health = Health {
+            current: 100.0,
+            max: 100.0,
+        };
+        let target = world
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                health,
+                visual(),
+            ))
+            .id();
+        let actor = world
+            .spawn((
+                Position {
+                    x: 12.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                health,
+                CreatureMotion::Still,
+                FixtureMovement {
+                    distance_to_move: 0.0,
+                },
+                crate::combat::AutoAttack::new(target),
+                visual(),
+            ))
+            .id();
+        assert_eq!(read_distance(&world, actor).unwrap(), 0.0, "idle");
+        let range = crate::scripted_ai::model_reach::melee_range(&world, actor, target).unwrap();
+        tick(&mut world);
+        let edge = world.get::<MovementDestination>(actor).unwrap().0;
+        assert!(edge.distance(Vec3::new(range, 0.0, 0.0)) < 1e-4, "{edge:?}");
+        let x = world.get::<Position>(actor).unwrap().x;
+        assert!((x - 8.5).abs() < 1e-4, "one 0.5s run stride: {x}");
+        let distance = read_distance(&world, actor).unwrap();
+        assert!((distance - f64::from(x - range)).abs() < 1e-5, "{distance}");
+        for _ in 0..3 {
+            tick(&mut world);
+        }
+        assert!(world.get::<ReturningToMelee>(actor).is_none());
+        assert!(world.get::<MovementDestination>(actor).is_none());
+    }
 }

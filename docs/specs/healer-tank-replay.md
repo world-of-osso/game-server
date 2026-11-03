@@ -5,6 +5,7 @@ Replay recorded incoming damage in the native server combat simulation to compar
 ## What it must do
 
 - [ ] Load incoming hits with time, damage school, raw amount and target role. Reject invalid timelines rather than silently changing them. An optional `--party-trace` replays SimC raid-event source rolls onto the five native party slots alongside the tank trace.
+- [x] Raid buffs follow the party composition, as production followers cast them ([follower utility](follower-utility.md)). Tank traces use `optimal_raid=1` with `override.<buff>=1` only for the raid buff the solo tank's class provides and `0` for the other five (`scripts/dps_parity.py` `composition_options`). The native tank casts that buff before the fight. The replay fails with `SIMC_TRACE_RAID_BUFFS_NOT_COMPOSITION` when the trace's raid-buff overrides differ from the tank's provided set. Healer replay applies no raid buffs: before the pull, the class party casts its own provided set. Composition traces and ten-measured references: `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank/`. Earlier traces in `healer-tank-replay/` carry the old fixed four or six buffs and are rejected.
 - [ ] Prefer SimulationCraft tank-dummy output as the timeline source; also accept recorded World of Osso runs. Preserve the distinction between swings, strikes and bleeds. SimC direct damage amounts are source rolls before hit outcomes and must not be reported as post-crit damage. Use each trace-declared attacker miss and crit chance while retaining native defender dodge, parry and block. Replay the physical spell_dot's zero-damage application as a landed direct spell hit, separate from its later bleed ticks.
 - [ ] Use `/home/osso/Projects/world-of-osso/game-server/data/world.db` for measurements unless an explicit immutable snapshot is selected for tank replay with `DPS_PARITY_WORLD_DB`. Tank startup and reference catalogs must read the same selected database. Level-90 replay healers use the most common exact +17 WCL talent build per spec from `scripts/reference/healer-wcl-loadouts.json`, and the tracked MID2 top-character profile equipment; other party actors retain Journal gear. Level-70 Stockade is a Journal-gear smoke test. The replay party is single-faction; the healer adopts the tank's faction template before setup advances the world, while retaining its profile race and stats.
 - [ ] Replay hits against a dummy party through native combat, with Holy Paladin (65) as the first healer and Protection Paladin (66) as the first tank. Extend the same harness to every healer and tank specialization and their spells. The initial Holy Paladin benchmark uses its native learned Holy Light and Flash of Light; this is not complete spell coverage.
@@ -70,6 +71,10 @@ The replay now schedules foreground readiness and Gaussian 100±10 ms off-GCD an
 | 581 | 5,837,808 | 5,759,202 | 5,949,784 |
 
 All native runs survived. The paired mean damage changes have standard errors 247,554 / 42,753 / 83,599 / 18,516 / 87,889 / 71,242 respectively. The Paladin shift of −452,732 is about 1.8 paired standard errors and remains unresolved at this sample size. Both native samples averaged 92.8 Shield of the Righteous, zero Guardian of Ancient Kings and 5 Ardent Defender casts; SimC averaged 91.6, no Guardian entry and 5.0 respectively. Mean Holy Bulwark consumption rose from 3,156,938 to 3,617,946, accounting for most of the damage difference, but its cause and persistence are unproven. Reports: `game-engine/data/diagnostics/healer-tank-replay/all-tankgaps2-ready-baseline-ten-seeds/` and `all-tankgaps2-simc-polls-ten-seeds/`.
+
+## SimC attack-table inputs
+
+SimC 76f8118 logs raw miss, dodge and parry chances before constructing the attack table. A nonpositive chance creates no corresponding avoidance outcome (`engine/action/attack.cpp:189–241`); the replay records that outcome as zero. Nonfinite values and invalid crit chances remain errors.
 
 ## Scaled tank pressure
 
@@ -191,6 +196,33 @@ Measured on master `93a42f1f4a`: each tank's SimC trace, external dummy healing,
 
 Blood absorbs about 8.69M of 8.79M pre-absorb intake, so its 13k difference is 0.03% of raw intake and within its 54k–154k seed range; a percentage gate is not meaningful there. The Protection Paladin native replay has no Solidarity, so its reference is the solo SimC run; the default reference adds fictional allied effects. Its absorb drop from 3.13M to 2.85M between runs is random Bulwark-application variation, and the remaining gap was missing Lightsmith armament rules; see [Protection Paladin](healer-tank-replay/66.md#mitigation-decomposition-and-lightsmith-fix-2026-10-29). The Guardian reference corrects SimC's Ursoc's Fury shield size; see [Guardian](healer-tank-replay/104.md#ursocs-fury-counterfactual-reference).
 
+### Party-buff composition remeasure (2026-11-02)
+
+Old = SHA 1 `c7bd39f512` with the pinned traces and fixed-buff references; both carry all six raid buffs. New = branch `party-buffs-parity` with composition traces, where each tank holds only its own class buff; references are in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank/`. Healed replays, seeds 70448–70457. SimC is the mean `dtps` over ten measured iterations, with the corrected binary where the table above uses it. The old SimC column reruns the pinned options on that binary and reproduces the table above.
+
+| Tank | Old native / SimC | Old Δ | New native / SimC | New Δ |
+|---|---:|---:|---:|---:|
+| 66 | 3,282,031 / 3,249,867 | +1.0% | 3,573,562 / 3,547,720 | +0.7% |
+| 73 | 2,869,731 / 2,951,770 | −2.8% | 2,967,994 / 3,186,502 | −6.9% |
+| 250 | 59,300 / 88,144 | −32.7% | 71,333 / 69,035 | +3.3% |
+| 268 | 3,518,570 / 3,471,015 | +1.4% | 3,512,976 / 3,815,658 | −7.9% |
+| 581 | 5,805,206 / 5,812,546 | −0.1% | 6,001,571 / 5,790,554 | +3.6% |
+
+104 is blocked on both binaries: its top-character trace fails `parse_trace` with `invalid parry in SimC attack table … parry=-0.03`. After this change, 73 and 268 are outside ±5%. SimC takes 8.0% and 9.9% more damage without the lost buffs; native takes 3.4% and −0.2% more. Both are open for investigation and were not tuned. Blood's ±5% gate is not meaningful (see above).
+
+Seven-healer party pulse, same inputs as the [recheck](healer-tank-replay/seven-healer-recheck-2026-11-02.md). Old = SHA 1, which applies the hardcoded Arcane Intellect and Mark of the Wild to the party. New = the party 66/healer/262/63/253 casts its own set before the pull: Arcane Intellect and Skyfury, plus Fortitude with a Priest healer. Difference is native/Holy against WCL/Holy.
+
+| Healer | Old /Holy | Old diff | New /Holy | New diff |
+|---|---:|---:|---:|---:|
+| 256 | 1.0428 | +14.04% | 0.9896 | +8.22% |
+| 264 | 0.9872 | +10.32% | 0.9650 | +7.84% |
+| 65 | 1.0240 | +9.41% | 0.9857 | +5.31% |
+| 1468 | 0.9852 | +13.74% | 0.9915 | +14.46% |
+| 270 | 1.0500 | +18.34% | 1.0388 | +17.09% |
+| 105 | 1.0639 | +17.13% | 0.9974 | +9.81% |
+
+Holy Priest means are 34,088 (old) and 32,715 (new). Old SHA 1 values differ from the recheck table measured on `7cd700375a` (for example Discipline +14.04% vs +2.54%). The cause is not attributed. Reports: `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/native/{old,new}/`.
+
 ### Midnight Season 2 boss-pressure calibration (2026-10-29; provisional)
 
 Warcraft Logs extracts are in `game-engine/data/diagnostics/mplus-calibration-2026-10-29/`. They include report metadata and affixes, boss-pull lists, resource-bearing damage events, and selected Guardian buff streams. The current-season Altar of Fangs sample has one run each at +2, +4, +6, +8, +10, +12, +15, +22, +23 and +24; three bosses provide health observations in each run. Den of Nalorakk and Ruby Life Pools each have +22 and +24 runs. These are convenience samples, not population-weighted estimates.
@@ -266,6 +298,7 @@ The SimC tank report includes raw and effective self-healing and outgoing period
 - [Blood Death Knight 250](healer-tank-replay/250.md): spec-specific replay notes and known reference differences.
 
 - [x] Guardian Ursoc's Fury grants the native cumulative 372505 absorb from actual Thrash and Maul-family damage, including Thrash ticks, capped at 30% max health. Source: `sc_druid.cpp5148–5188,5600–5604,5912–5920`.
+- [ ] Open gap: Bloodlust and the raid debuffs (Chaos Brand, Mystic Touch, Hunter's Mark, Mortal Wounds, bleeding) still come from `optimal_raid=1` in tank traces, and healer replay still applies lust, Chaos Brand and Mystic Touch to every party. They do not follow the composition. This is a separate decision.
 - [ ] Connect SimC tank-dummy trace input to the healer replay.
 - [ ] Register native tank APL adapters. Guardian 104 uses the pinned default Guardian APL and reports Ironfur, Frenzied Regeneration, Barkskin and Rage of the Sleeper as active mitigation. SimC tank replay requires a registered literal parity driver and explicit active-mitigation auras; unregistered tanks fail rather than use the smoke-test policy.
 - [ ] Support replay durations other than 300 seconds with matching literal-APL encounter timing.

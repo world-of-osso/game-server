@@ -1,5 +1,8 @@
 //! Summon a player-class companion using a neutral, kit-free creature template.
 #[cfg(test)]
+#[path = "loadout_spawn_tests.rs"]
+mod loadout_spawn_tests;
+#[cfg(test)]
 #[path = "class_spawn_tests.rs"]
 mod tests;
 use bevy::prelude::*;
@@ -20,6 +23,24 @@ const CLASS_FOLLOWER_ENTRY: u32 = u32::MAX - 1;
 pub enum GearSource {
     Journal,
     KeystoneBand(u32),
+}
+
+pub enum LoadoutSource {
+    Journal,
+    Wcl(u32),
+    SimcProfile {
+        items: super::parity_profile::ItemInstances,
+        traits: Vec<crate::trait_config::Purchase>,
+    },
+}
+
+impl From<GearSource> for LoadoutSource {
+    fn from(source: GearSource) -> Self {
+        match source {
+            GearSource::Journal => Self::Journal,
+            GearSource::KeystoneBand(level) => Self::Wcl(level),
+        }
+    }
 }
 
 fn neutral_template(name: &str, level: u8) -> crate::world_data::CreatureTemplate {
@@ -251,7 +272,7 @@ pub fn spawn_class(
     source: &ClassProfile,
     sex: u8,
     slot: usize,
-    gear: GearSource,
+    gear: impl Into<LoadoutSource>,
 ) -> Result<Entity, String> {
     if let Some(error) = &source.rejection {
         return Err(format!(
@@ -263,8 +284,21 @@ pub fn spawn_class(
         .get::<Level>(owner)
         .ok_or("follower owner has no level")?
         .0;
+    let loadout = gear.into();
+    let race = match &loadout {
+        LoadoutSource::Wcl(level) => super::gear::wcl::class_profile(source, *level)?.race,
+        LoadoutSource::Journal | LoadoutSource::SimcProfile { .. } => source.race,
+    };
     let entity = spawn_neutral(world, owner, &follower_name(slot), level)?;
-    match install_class(world, owner, entity, source, sex, slot, gear) {
+    world.entity_mut(entity).insert(CharacterVisual {
+        race,
+        class: source.class_id,
+        appearance: CharacterAppearance {
+            sex,
+            ..Default::default()
+        },
+    });
+    match install_class(world, owner, entity, source, sex, slot, loadout) {
         Ok(talent_source) => {
             info!(
                 "class follower spec {} uses {}",
@@ -295,11 +329,12 @@ pub fn install_class(
     source: &ClassProfile,
     sex: u8,
     slot: usize,
-    gear: GearSource,
+    gear: impl Into<LoadoutSource>,
 ) -> Result<crate::trait_config::TalentSource, String> {
-    let keystone_profile = match gear {
-        GearSource::Journal => None,
-        GearSource::KeystoneBand(level) => Some(super::gear::wcl::class_profile(source, level)?),
+    let loadout = gear.into();
+    let keystone_profile = match &loadout {
+        LoadoutSource::Wcl(level) => Some(super::gear::wcl::class_profile(source, *level)?),
+        LoadoutSource::Journal | LoadoutSource::SimcProfile { .. } => None,
     };
     let source = keystone_profile.as_ref().unwrap_or(source);
     let provider = *world
@@ -309,25 +344,61 @@ pub fn install_class(
         .get::<Level>(owner)
         .ok_or("follower owner has no level")?
         .0;
+    let race = world
+        .get::<shared::components::Player>(entity)
+        .map(|player| player.race)
+        .or_else(|| {
+            world
+                .get::<CharacterVisual>(entity)
+                .map(|visual| visual.race)
+        })
+        .ok_or("class actor race unavailable")?;
     let faction = *world
         .get::<UnitFactionTemplate>(owner)
         .ok_or("follower owner has no faction")?;
     let classes = world
         .get_resource::<crate::spell_info::ClassSpells>()
         .ok_or("follower classes unavailable")?;
-    let logged = source
-        .talent_entries
-        .as_ref()
-        .ok_or("follower talents unavailable")?;
-    let (known, traits, talent_source) = crate::class_progression::evaluate_follower_progression(
-        classes,
-        source.class_id,
-        source.race,
-        source.spec_id,
-        level,
-        source.talent_source()?,
-        logged,
-    )?;
+    let simc_logged;
+    let logged = match &loadout {
+        LoadoutSource::SimcProfile { traits, .. } => {
+            simc_logged = traits
+                .iter()
+                .map(|entry| (entry.entry_id, entry.ranks))
+                .collect();
+            &simc_logged
+        }
+        _ => source
+            .talent_entries
+            .as_ref()
+            .ok_or("follower talents unavailable")?,
+    };
+    let (known, traits, talent_source) = match &loadout {
+        LoadoutSource::SimcProfile { traits, .. } => {
+            let (known, traits) = crate::class_progression::evaluate_simc_profile_traits(
+                classes,
+                source.class_id,
+                race,
+                source.spec_id,
+                level,
+                traits,
+            )?;
+            (
+                known,
+                traits,
+                crate::trait_config::TalentSource::SimcProfile,
+            )
+        }
+        _ => crate::class_progression::evaluate_follower_progression(
+            classes,
+            source.class_id,
+            race,
+            source.spec_id,
+            level,
+            source.talent_source()?,
+            logged,
+        )?,
+    };
     let class_tree = &classes
         .classes
         .iter()
@@ -348,7 +419,7 @@ pub fn install_class(
                 .map(|spell| spell.spell_id),
         )?;
     }
-    let (stats, pools, _) = class_stats(world, &profile, level, source.race)?;
+    let (stats, pools, _) = class_stats(world, &profile, level, race)?;
     let passives: Vec<_> = known
         .iter()
         .filter(|spell| spell.passive)
@@ -368,7 +439,7 @@ pub fn install_class(
             super::AplControlled,
             super::ClassCombatant,
             CharacterVisual {
-                race: source.race,
+                race,
                 class: source.class_id,
                 appearance: CharacterAppearance {
                     sex,
@@ -413,13 +484,13 @@ pub fn install_class(
         &passives,
     );
     let mut spells = (provider.source_actions)(world, entity, source.spec_id)?;
-    match gear {
-        GearSource::Journal => super::gear::equip(world, entity, &profile, &spells),
-        GearSource::KeystoneBand(level) => {
-            super::gear::wcl::equip(world, entity, source.spec_id, level)
-        }
-    }
-    .and_then(|()| super::gear::publish_appearance(world, entity))?;
+    let instances = match loadout {
+        LoadoutSource::Journal => super::gear::select_instances(world, entity, &profile, &spells)?,
+        LoadoutSource::Wcl(level) => super::gear::wcl::select_instances(source.spec_id, level)?,
+        LoadoutSource::SimcProfile { items, .. } => items,
+    };
+    super::parity_profile::equip_instances(world, entity, instances.items, instances.modifiers);
+    super::gear::publish_appearance(world, entity)?;
     // Armor-dependent passives were not eligible before the gear was equipped.
     crate::auras::sync_passives(
         world,

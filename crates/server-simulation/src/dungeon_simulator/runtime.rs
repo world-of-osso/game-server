@@ -166,10 +166,23 @@ fn native_evade_walks_frozen_home_route_before_completing_return() {
     let actor = actors[&20375744];
     let home = *app.world().get::<Position>(actor).unwrap();
     crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
-    app.world_mut().entity_mut(actor).insert(Position {
+    let displaced = Position {
         x: home.x + 4.0,
         ..home
-    });
+    };
+    app.world_mut().entity_mut(actor).insert(displaced);
+    let endpoint = app
+        .world()
+        .resource::<super::native_movement::NativeMovement>()
+        .walk_legs(
+            Vec3::new(displaced.x, displaced.y, displaced.z),
+            Vec3::new(home.x, home.y, home.z),
+            "evade-test",
+        )
+        .unwrap()
+        .back()
+        .unwrap()
+        .0;
     app.update();
     let first_step = *app.world().get::<Position>(actor).unwrap();
     assert!(
@@ -183,7 +196,8 @@ fn native_evade_walks_frozen_home_route_before_completing_return() {
     for _ in 0..80 {
         app.update();
     }
-    assert_eq!(*app.world().get::<Position>(actor).unwrap(), home);
+    let arrived = app.world().get::<Position>(actor).unwrap();
+    assert_eq!(Vec3::new(arrived.x, arrived.y, arrived.z), endpoint);
     assert_eq!(
         app.world().get::<crate::creature_ai::CreatureState>(actor),
         Some(&crate::creature_ai::CreatureState::Idle)
@@ -202,6 +216,8 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
 /// class actors run no follower APL.
 pub(super) fn build_literal_app() -> App {
     let mut app = build_runtime_app(&mut None, &crate::test_data::world_db_path(), false);
+    super::native_movement::install_parity_arena(app.world_mut())
+        .expect("install parity arena navigation");
     server_follower_apl::action_metadata::install_provider(&mut app);
     app
 }
@@ -234,9 +250,6 @@ fn build_runtime_app(
         super::native_movement::NativeMovement::open(&nav_root, map_id)
             .expect("open headless native movement"),
     );
-    app.insert_resource(server::simc_apl_native::MovementDestination(
-        super::movement::apl_destination,
-    ));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(TICK));
     app.insert_resource(Time::<Fixed>::from_duration(TICK));
@@ -265,6 +278,8 @@ fn build_runtime_app(
     }
     app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
+    // MapsPlugin and AchievementPlugin initialize the server clock.
+    app.init_resource::<crate::maps::ServerClock>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::spell_cast::test_harness::ReplayCombatClock>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
@@ -390,10 +405,13 @@ pub(super) fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
     app.insert_resource(
         crate::item_proc_data::load(&db).expect("load native equipped-producer catalogs"),
     );
-    let data = crate::world_data::load_world_data(path);
-    app.insert_resource(data.armor_constants.clone());
-    app.insert_resource(data);
-    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+    // Server startup's own definition set (WorldDataPlugin), kept as a resource so
+    // seeded-world reuse moves the same set.
+    let mut catalogs = crate::world_data::catalogs::load(path, &data);
+    catalogs.install(app.world_mut());
+    app.insert_resource(catalogs);
+    let db2 = data.join("db2/active");
     app.insert_resource(
         crate::followers::gear::load_source(path, &db2)
             .expect("load follower gear from the selected world database"),
@@ -408,10 +426,7 @@ pub(super) fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
         enchants: server::item_instance::load::load_enchantment_tables(&db).unwrap(),
         effects: server::item_instance::load::load_item_effect_tables(&db).unwrap(),
     });
-    app.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
-    app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
-    app.insert_resource(crate::unit_creature_type::load_race_types(&db).unwrap());
     app.insert_resource(crate::conditions::load_spell_target_conditions(path).unwrap());
 }
 

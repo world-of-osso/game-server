@@ -545,7 +545,8 @@ fn scales_with_spell_damage(effect: &SpellEffect) -> bool {
 /// (clamped to the spell's SpellScaling range, or its base level with
 /// `SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING`) × the coefficient, at least 1 when
 /// positive. Otherwise a creature's damage effect is `BasePoints`% of ExpectedStat
-/// CreatureSpellDamage at its level, and everything else `BasePoints` (player class
+/// CreatureSpellDamage at its level (times a Keystone creature's map/season mods),
+/// and everything else `BasePoints` (player class
 /// spells carry their damage in coefficients). Both round unless
 /// `SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS`. Item-level spells instead
 /// use RandPropPoints at the casting item's effective level. Not modelled:
@@ -589,7 +590,12 @@ fn calc_base_value(world: &World, caster: Entity, spell: &SpellInfo, effect: &Sp
     };
     let auto_attack = attribute(0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
     let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
-    round(stats.evaluate(auto_attack, level, tuning) * effect.base_points / 100.0)
+    // A Keystone creature's spells take its map/season ExpectedStatMods, as its
+    // health and melee do (TC passes no ContentTuning here: its own TODO).
+    let keystone = world
+        .get::<crate::level_scaling::ScaledStats>(caster)
+        .map_or(1.0, |stats| stats.0.keystone_spell_multiplier(auto_attack));
+    round(stats.evaluate(auto_attack, level, tuning) * keystone * effect.base_points / 100.0)
 }
 
 /// Item-level branch of TC SpellEffectInfo::CalcBaseValue: classes -8/-9 use

@@ -13,6 +13,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 17.05213,
                     armor: 90.0,
                     armor_constant: 210.0,
+                    spell_damage: 1.0,
                 },
             ),
             (
@@ -22,6 +23,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 162.6229,
                     armor: 155.0,
                     armor_constant: 361.0,
+                    spell_damage: 1.0,
                 },
             ),
             (
@@ -31,6 +33,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 200.0,
                     armor: 200.0,
                     armor_constant: 400.0,
+                    spell_damage: 1.0,
                 },
             ),
         ]),
@@ -42,6 +45,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 1.0,
                     armor: 1.0,
                     armor_constant: 1.0,
+                    spell_damage: 1.0,
                 },
             ),
             (
@@ -51,6 +55,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 0.925,
                     armor: 0.8,
                     armor_constant: 1.0,
+                    spell_damage: 1.0,
                 },
             ),
             (
@@ -60,6 +65,7 @@ fn expected_stats() -> ExpectedStats {
                     auto_attack_dps: 0.5,
                     armor: 1.0,
                     armor_constant: 1.0,
+                    spell_damage: 1.0,
                 },
             ),
         ]),

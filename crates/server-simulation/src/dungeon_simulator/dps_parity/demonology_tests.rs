@@ -658,6 +658,7 @@ fn demonology_imp_critical_damage_inherits_demonic_brutality() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_literal(266, 1).unwrap();
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 453908));
+    engage(&mut run);
     let effect = run
         .app
         .world()

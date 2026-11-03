@@ -286,7 +286,6 @@ pub fn build_logged_config(
 /// this policy; native membership, ranks, non-hero spec, choice, subtree and budget remain.
 /// player.cpp2775 exempts HERO allocations from spec gates; native granted ranks
 /// are subtracted once from exported totals under the same fixture policy.
-#[cfg(any(test, feature = "test-support"))]
 pub fn build_simc_fixture_config(
     tree: &TraitTree,
     ctx: TraitContext,
@@ -320,7 +319,6 @@ pub fn build_simc_fixture_config(
     Ok(entries)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn subtract_granted_ranks(allocated: &[Purchase], grants: &[ConfigEntry]) -> Vec<Purchase> {
     allocated
         .iter()
@@ -337,7 +335,6 @@ fn subtract_granted_ranks(allocated: &[Purchase], grants: &[ConfigEntry]) -> Vec
         .collect()
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn clear_fixture_hero_spec_gates(conds: &mut [TraitCond]) {
     // SimC76f8118 player.cpp2775–2779: HERO allocations ignore id_spec.
     // Do not alter granted-rank eligibility or any other condition field.
@@ -352,7 +349,6 @@ fn clear_fixture_hero_spec_gates(conds: &mut [TraitCond]) {
     }
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn is_hero_group(tree: &TraitTree, group: u32) -> bool {
     let mut members = tree
         .nodes
@@ -364,7 +360,6 @@ fn is_hero_group(tree: &TraitTree, group: u32) -> bool {
     first.sub_tree_id != 0 && members.all(|node| node.sub_tree_id != 0)
 }
 
-#[cfg(any(test, feature = "test-support"))]
 fn is_not_currency_gate(cond: &TraitCond) -> bool {
     let targets_node = cond.node_group_id != 0 || cond.node_id != 0 || cond.node_entry_id != 0;
     cond.currency_id == 0 || !targets_node

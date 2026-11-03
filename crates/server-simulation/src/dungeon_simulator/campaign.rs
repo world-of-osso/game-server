@@ -2666,10 +2666,22 @@ fn stationary_full_party_still_stalls_without_any_progress() {
     for _ in 0..400 {
         run.app.update();
     }
+    // Keep the fixture's mana full: native buff upkeep can otherwise spend mana
+    // between samples, so its later regeneration is legitimate progress.
+    let members: Vec<_> = run.members().collect();
+    let fill_mana = |run: &mut Run| {
+        for &member in &members {
+            if let Some(mut mana) = run.app.world_mut().get_mut::<Mana>(member) {
+                mana.current = mana.max;
+            }
+        }
+    };
+    fill_mana(&mut run);
     run.last_progress = run.now();
     assert!(!run.stalled());
     for _ in 0..1201 {
         run.app.update();
+        fill_mana(&mut run);
     }
     assert!(
         run.stalled(),
@@ -2786,6 +2798,11 @@ fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
             .entity_mut(watcher)
             .insert((react, CreatureState::Idle));
         crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        if react == ReactState::Passive {
+            // The first update clears the previous aggressive watcher's trail;
+            // the next update resumes ordinary following.
+            crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        }
         assert_eq!(
             run.app.world().get::<FollowOwner>(healer).is_some(),
             should_follow,
@@ -2805,8 +2822,8 @@ fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
         super::diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
     let radius = geometry["npc_acquisition_radius"].as_f64().unwrap() as f32;
     assert_eq!(
-        radius, 16.0,
-        "native31-to32 acquisition includes Crenna's3yd reach"
+        radius, 14.5,
+        "native31-to32 acquisition includes the actual 1.5yd creature reach"
     );
     for _ in 0..4000 {
         run.control().unwrap();
@@ -2925,12 +2942,18 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     let mut run = spawn_run(2, &mut None).unwrap();
     let member = run.party.members[1];
     crate::combat::kill_unit(run.app.world_mut(), run.party.owner, member);
+    // Active followers now receive resurrection/release handling; detach this
+    // dead summon so native corpse decay can exercise the missing-member sample.
+    run.app
+        .world_mut()
+        .entity_mut(member)
+        .remove::<crate::followers::Follower>();
     for _ in 0..1202 {
         run.app.update();
     }
     assert!(
         run.app.world().get_entity(member).is_err(),
-        "native corpse decay must actually despawn the dead follower"
+        "native corpse decay must actually despawn the dead summon"
     );
     assert!(
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run.sample())).is_ok(),
@@ -4404,8 +4427,47 @@ impl Run {
         };
         self.record_pull(pack_id, decision);
         if !allowed {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<crate::followers::AdmittedPull>();
             return Ok(());
         }
+        let mut prospective = vec![target];
+        prospective.extend(
+            guids
+                .iter()
+                .filter_map(|guid| self.actors.get(guid).copied())
+                .filter(|actor| *actor != target),
+        );
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .insert(crate::followers::AdmittedPull(prospective));
+        if self
+            .party
+            .members
+            .iter()
+            .copied()
+            .chain(std::iter::once(self.party.owner))
+            .any(|unit| {
+                self.app
+                    .world()
+                    .get::<crate::followers::AplControlled>(unit)
+                    .is_some()
+                    && self
+                        .app
+                        .world()
+                        .get::<server_follower_apl::FollowerApl>(unit)
+                        .is_none_or(|apl| apl.in_precombat())
+            })
+        {
+            return Ok(());
+        }
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<crate::followers::AdmittedPull>();
         if self.keystone.is_some() {
             return self.drive_owner_opening(target);
         }
