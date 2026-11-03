@@ -55,6 +55,27 @@ fn holy_recovery_unblocks_next_pull_with_stalker_combat_reference() {
         .collect();
     let before = crate::followers::simulator::pull(run.app.world_mut(), tank, &sources).unwrap();
     assert_eq!(before, (false, "Wait(Recovery)".to_owned()));
+    run.current_pack = Some(first);
+    run.record_pull(first, before.1);
+    let mut key = run.keystone.take().unwrap();
+    key.update(run.app.world_mut()).unwrap();
+    let mut output = Vec::new();
+    key.report_progress(
+        &mut super::super::keystone::Progress::default(),
+        run.app.world(),
+        run.current_pack,
+        &run.party,
+        &run.report.pulls,
+        &mut output,
+    )
+    .unwrap();
+    let line = String::from_utf8(output).unwrap();
+    assert_eq!(line.lines().count(), 1, "{line}");
+    assert!(line.contains("KEYSTONE_PROGRESS"));
+    assert!(line.contains("decision=\"Wait(Recovery)\""), "{line}");
+    assert!(line.contains("party="));
+    assert!(line.contains("enemies_in_combat="));
+    run.keystone = Some(key);
     for _ in 0..6000 {
         run.app.update();
         if run.app.world().get::<Health>(owner).unwrap().current >= max * 0.5 {

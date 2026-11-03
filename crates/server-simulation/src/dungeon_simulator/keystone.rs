@@ -83,6 +83,48 @@ struct TankProgress<'a> {
 #[derive(Default)]
 pub(super) struct Progress {
     next_ms: u64,
+    reported_decisions: usize,
+}
+
+struct Observation<'a> {
+    current_pack: Option<u64>,
+    decisions: &'a [super::campaign::PullDecision],
+    party: &'a [Entity],
+    world: &'a World,
+    owner: Entity,
+    tank: TankProgress<'a>,
+}
+
+fn percentage(current: f32, max: f32) -> String {
+    if max > 0.0 {
+        format!("{:.1}", current * 100.0 / max)
+    } else {
+        "na".into()
+    }
+}
+
+fn describe_party(world: &World, party: &[Entity]) -> String {
+    use shared::components::{Health, Mana};
+    party
+        .iter()
+        .map(|&unit| {
+            let hp = world
+                .get::<Health>(unit)
+                .map(|v| percentage(v.current, v.max))
+                .unwrap_or_else(|| "na".into());
+            let mana = world
+                .get::<Mana>(unit)
+                .map(|v| percentage(v.current, v.max))
+                .unwrap_or_else(|| "na".into());
+            let alive = if crate::spell_cast::targets::is_alive(world, unit) {
+                "alive"
+            } else {
+                "dead"
+            };
+            format!("{}:{hp}:{mana}:{alive}", unit.to_bits())
+        })
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 impl Progress {
@@ -91,20 +133,69 @@ impl Progress {
         writer: &mut impl std::io::Write,
         sim_ms: u64,
         snapshot: &shared::protocol::ChallengeRun,
-        current_pack: Option<u64>,
         route: &[super::graph::RouteStep],
-        tank: TankProgress<'_>,
+        observation: Observation<'_>,
     ) -> std::io::Result<()> {
-        if snapshot.phase != shared::protocol::ChallengePhase::Running || sim_ms < self.next_ms {
+        let changed = observation.decisions.len() != self.reported_decisions;
+        if snapshot.phase != shared::protocol::ChallengePhase::Running
+            || (sim_ms < self.next_ms && !changed)
+        {
             return Ok(());
         }
+        let pending = &observation.decisions[self.reported_decisions..];
+        if pending.is_empty() {
+            Self::write_sample(
+                writer,
+                sim_ms,
+                snapshot,
+                route,
+                &observation,
+                observation.decisions.last(),
+            )?;
+        } else {
+            for decision in pending {
+                Self::write_sample(
+                    writer,
+                    sim_ms,
+                    snapshot,
+                    route,
+                    &observation,
+                    Some(decision),
+                )?;
+                self.reported_decisions += 1;
+            }
+        }
+        self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
+        Ok(())
+    }
+
+    fn write_sample(
+        writer: &mut impl std::io::Write,
+        sim_ms: u64,
+        snapshot: &shared::protocol::ChallengeRun,
+        route: &[super::graph::RouteStep],
+        observation: &Observation<'_>,
+        decision: Option<&super::campaign::PullDecision>,
+    ) -> std::io::Result<()> {
         let bosses = snapshot.bosses.iter().filter(|boss| boss.defeated).count();
+        let current_pack = observation.current_pack;
         let step = current_pack
             .and_then(|pack| route.iter().position(|step| step.pack == pack))
             .map(|index| index + 1);
+        let decision_pack = decision.map(|decision| decision.pack);
+        let decision = decision
+            .map(|decision| decision.decision.as_str())
+            .unwrap_or("none");
+        let party = describe_party(observation.world, observation.party);
+        let enemies =
+            crate::followers::simulator::active_enemies(observation.world, observation.owner)
+                .into_iter()
+                .filter(|&enemy| crate::spell_cast::targets::is_alive(observation.world, enemy))
+                .count();
+        let tank = observation.tank;
         writeln!(
             writer,
-            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} tank_position={:?} tank_state={:?} tank_follow={:?}",
+            "KEYSTONE_PROGRESS sim_ms={sim_ms} forces={}/{} bosses={}/{} deaths={} current_pack={current_pack:?} route_step={step:?}/{} decision_pack={decision_pack:?} decision={decision:?} party={party} enemies_in_combat={enemies} tank_position={:?} tank_state={:?} tank_follow={:?}",
             snapshot.forces,
             snapshot.forces_required,
             bosses,
@@ -115,9 +206,7 @@ impl Progress {
             tank.state,
             tank.follow
         )?;
-        writer.flush()?;
-        self.next_ms = (sim_ms / 60_000 + 1) * 60_000;
-        Ok(())
+        writer.flush()
     }
 }
 
@@ -281,10 +370,15 @@ impl State {
         reporter: &mut Progress,
         world: &World,
         current_pack: Option<u64>,
-        tank: Entity,
+        party: &crate::followers::simulator::Party,
+        decisions: &[super::campaign::PullDecision],
+        writer: &mut impl std::io::Write,
     ) -> Result<(), String> {
         let elapsed = self.elapsed_ms(world);
-        if elapsed < self.countdown_ms || elapsed - self.countdown_ms < reporter.next_ms {
+        if elapsed < self.countdown_ms
+            || (elapsed - self.countdown_ms < reporter.next_ms
+                && decisions.len() == reporter.reported_decisions)
+        {
             return Ok(());
         }
         let snapshot = self
@@ -293,17 +387,25 @@ impl State {
             .ok_or("active keystone snapshot unavailable")?;
         reporter
             .write(
-                &mut std::io::stdout().lock(),
+                writer,
                 elapsed - self.countdown_ms,
                 &snapshot,
-                current_pack,
                 &self.route.steps,
-                TankProgress {
-                    position: world
-                        .get::<shared::components::Position>(tank)
-                        .map(|p| [p.x, p.y, p.z]),
-                    state: world.get::<crate::creature_ai::CreatureState>(tank),
-                    follow: world.get::<crate::creature_ai::FollowOwner>(tank),
+                Observation {
+                    current_pack,
+                    decisions,
+                    party: &std::iter::once(party.owner)
+                        .chain(party.members.iter().copied())
+                        .collect::<Vec<_>>(),
+                    world,
+                    owner: party.owner,
+                    tank: TankProgress {
+                        position: world
+                            .get::<shared::components::Position>(party.tank)
+                            .map(|p| [p.x, p.y, p.z]),
+                        state: world.get::<crate::creature_ai::CreatureState>(party.tank),
+                        follow: world.get::<crate::creature_ai::FollowOwner>(party.tank),
+                    },
                 },
             )
             .map_err(|error| format!("write keystone progress: {error}"))

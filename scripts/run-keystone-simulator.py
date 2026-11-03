@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Run one native headless keystone using the server-simulation test executable."""
+"""Run a native headless keystone.
+
+Progress is printed as KEYSTONE_PROGRESS lines. The party field lists
+entity:health_percent:mana_percent:alive_or_dead entries (na means unavailable).
+Pull decisions are flushed to <output>.pulls.jsonl while the run is active; the full JSON record is written
+at exit. The journal is replaced when a new run uses the same output path.
+"""
 import argparse
 import os
 from pathlib import Path
