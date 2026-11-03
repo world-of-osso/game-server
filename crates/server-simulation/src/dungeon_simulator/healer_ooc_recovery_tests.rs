@@ -3,9 +3,44 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
+fn run_in_snapshot_subprocess(test: &str) -> bool {
+    if std::env::var_os("HEALER_RECOVERY_SNAPSHOT_CHILD").is_some() {
+        return false;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let snapshot = dir.path().join("world.db");
+    let source = crate::test_data::world_db_path();
+    let db =
+        rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    db.execute("VACUUM INTO ?1", [snapshot.to_str().unwrap()])
+        .unwrap();
+    let test = test.split_once("::").unwrap().1;
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", test, "--nocapture"])
+        .env("HEALER_RECOVERY_SNAPSHOT_CHILD", "1")
+        .env("FOLLOWER_DPS_WORLD_DB", &snapshot)
+        .env("DPS_PARITY_WORLD_DB", &snapshot)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success() && stdout.contains("1 passed;"),
+        "snapshot subprocess did not pass exactly one test: {}\n{stdout}\n{stderr}",
+        output.status
+    );
+    true
+}
+
 #[test]
-#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn healers_top_up_small_wounds_with_a_persistent_unattackable_combat_reference() {
+    if run_in_snapshot_subprocess(concat!(
+        module_path!(),
+        "::healers_top_up_small_wounds_with_a_persistent_unattackable_combat_reference"
+    )) {
+        return;
+    }
     use shared::components::{CombatStatus, UnitFlags};
     for spec in [65, 105, 256, 257, 264, 270, 1468] {
         let mut run = super::healer_simc_replay::snapshot_party(spec, 70, 1);
@@ -65,8 +100,13 @@ fn healers_top_up_small_wounds_with_a_persistent_unattackable_combat_reference()
 }
 
 #[test]
-#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn restoration_shaman_heals_injured_owner_out_of_combat() {
+    if run_in_snapshot_subprocess(concat!(
+        module_path!(),
+        "::restoration_shaman_heals_injured_owner_out_of_combat"
+    )) {
+        return;
+    }
     let mut run = super::healer_simc_replay::snapshot_party(264, 70, 1);
     let owner = run.slots[4];
     let healer = run.healer;

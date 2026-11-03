@@ -924,6 +924,10 @@ fn read_spell(
     if !talent_permits(world, actor, talent)? {
         return Ok(());
     }
+    let recovery_heal = world
+        .get_resource::<super::BuffUpkeep>()
+        .filter(|upkeep| upkeep.actor == actor)
+        .is_some_and(|upkeep| upkeep.healing_spells.contains(&id));
     let Some(id) = resolve_action(world, actor, id)? else {
         return Ok(());
     };
@@ -949,6 +953,18 @@ fn read_spell(
         enemies
     };
     for (index, &target) in targets.iter().enumerate() {
+        let patient = if self_target {
+            enemies.first().copied().unwrap_or(actor)
+        } else {
+            target
+        };
+        if recovery_heal
+            && !world
+                .get::<shared::components::Health>(patient)
+                .is_some_and(|health| health.current > 0.0 && health.current < health.max)
+        {
+            continue;
+        }
         if interrupt_requires_casting_target(name)
             && world.get::<shared::casting::CastState>(target).is_none()
         {
