@@ -491,6 +491,69 @@ fn measurement_driver(
 
 #[test]
 #[ignore = "requires the Arcane MID2 profile and native world data"]
+fn production_follower_precasts_only_the_admitted_pull() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    let owner = crate::followers::acting_follower(run.app.world(), run.actor)
+        .unwrap()
+        .owner;
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, 62).unwrap();
+    let apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    world.entity_mut(run.actor).insert(apl);
+    for _ in 0..120 {
+        run.app.update();
+    }
+    assert!(
+        run.app
+            .world()
+            .get::<server_follower_apl::FollowerApl>(run.actor)
+            .unwrap()
+            .in_precombat()
+    );
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::followers::AdmittedPull(run.targets.clone()));
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        run.app.update();
+        if crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges,
+        )
+        .unwrap()
+        .0 == 2.0
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        2.0
+    );
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
 fn follower_defers_arcane_precast_until_pull_is_admitted() {
     let mut run = prepare_literal(62, 1).unwrap();
     let world = run.app.world_mut();
