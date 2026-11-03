@@ -112,7 +112,6 @@ impl RecordedHit {
         if health.current <= 0.0 {
             return Ok(Delivery::TargetDead);
         }
-        let before = health.current;
         let native_max = health.max;
         let amount = pressure as f32 / self.max_hp as f32 * native_max;
         let spell_id = if matches!(self.spell_id, 1 | 3) {
@@ -171,7 +170,7 @@ impl RecordedHit {
             "native_hp_pct":100.0 * f64::from(after / native_max),
             "wcl_loss_pct":100.0 * self.amount as f64 / self.max_hp as f64,
             "wcl_absorbed_pct":100.0 * self.absorbed as f64 / self.max_hp as f64,
-            "native_loss_pct":100.0 * f64::from((before - after) / native_max),
+            "native_loss_pct":100.0 * f64::from(receipt.damage_hp / native_max),
             "native_absorbed_pct":100.0 * f64::from(receipt.absorbed_hp / native_max),
             "deferred":self.deferred}),
         ))

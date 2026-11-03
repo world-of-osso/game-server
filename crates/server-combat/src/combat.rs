@@ -2985,9 +2985,9 @@ pub(crate) fn deal_health_damage(
     school: u32,
     spell_id: Option<u32>,
     absorbed: f32,
-) {
+) -> (f32, f32) {
     if !crate::spell_cast::targets::is_alive(world, victim) {
-        return;
+        return (0.0, 0.0);
     }
     #[cfg(any(test, feature = "test-support"))]
     crate::test_support::healer_intake::note_unrecorded_direct(world, attacker, victim);
@@ -2999,7 +2999,7 @@ pub(crate) fn deal_health_damage(
     );
     let loss = crate::level_scaling::health_loss(&attacker_scaling, &victim_scaling, damage);
     let Some(health) = world.get::<Health>(victim) else {
-        return;
+        return (0.0, 0.0);
     };
     let before = health.current;
     let incoming_loss = loss;
@@ -3055,7 +3055,7 @@ pub(crate) fn deal_health_damage(
     }
     crate::scripted_ai::health_threshold::complete_crossing(world, victim, before, incoming_loss);
     if !commit.lethal {
-        return;
+        return (loss.min(before), absorbed);
     }
     #[cfg(any(test, feature = "test-support"))]
     if let Some(spell) = spell_id {
@@ -3068,10 +3068,12 @@ pub(crate) fn deal_health_damage(
         world.write_message(crate::death::PlayerDeathTransition { player: victim });
     }
     crate::spell_cast::log_event(world, death_log_event(attacker, victim));
+    (loss.min(before), absorbed)
 }
 
 #[cfg(any(test, feature = "test-support"))]
 pub struct ReplayDamageReceipt {
+    pub damage_hp: f32,
     pub absorbed_hp: f32,
 }
 
@@ -3110,11 +3112,8 @@ pub fn replay_post_mitigation_hit(
     let (damage, absorbed) =
         crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
     let absorbed = absorbed + source_absorbed;
-    deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
-    let after = world
-        .get::<Health>(victim)
-        .map_or(0.0, |health| health.current);
-    let loss = (before - after).max(0.0);
+    let (loss, absorbed) =
+        deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
     if loss > 0.0 || absorbed > 0.0 {
         procs::push_event(
             world,
@@ -3144,6 +3143,7 @@ pub fn replay_post_mitigation_hit(
         );
     }
     Ok(ReplayDamageReceipt {
+        damage_hp: loss,
         absorbed_hp: absorbed / health_multiplier,
     })
 }

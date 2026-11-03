@@ -20,6 +20,32 @@ fn wcl_falling_replays_as_physical_pressure_without_db2_spell_three() {
 
 #[test]
 #[ignore = "requires native Priest and Altar spell data"]
+fn wcl_intake_counts_guardian_spirit_absorb_separately_from_rescue_heal() {
+    use crate::spell_cast::test_harness::harness;
+    use shared::components::Health;
+
+    let mut h = harness(Vec::new(), &[47788, 48153, 1306890], 10).unwrap();
+    h.cast_and_deliver(47788, Some(h.caster));
+    h.advance(3);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 47788));
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 10000.0,
+        max: 100000.0,
+    };
+    let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":0,"slot":0,"source_actor":-1,"target_actor":4,"spell_id":1306890,"school":8,"defense":1,"hit_type":1,"periodic":false,"max_hp":100000,"amount":20000,"absorbed":0}"#).unwrap();
+    let super::healer_wcl_trace::Delivery::Applied(sample) = hit
+        .deliver(h.app.world_mut(), h.npc, &[h.caster; 5])
+        .unwrap()
+    else {
+        panic!("hit not applied")
+    };
+    assert_eq!(sample["native_loss_pct"], 0.0);
+    assert_eq!(sample["native_absorbed_pct"], 20.0);
+    assert!(sample["native_hp_pct"].as_f64().unwrap() > 10.0);
+}
+
+#[test]
+#[ignore = "requires native Priest and Altar spell data"]
 fn wcl_intake_hostile_spell_triggers_prayer_of_mending() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;
