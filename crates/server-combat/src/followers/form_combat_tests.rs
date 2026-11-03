@@ -159,7 +159,12 @@ fn assert_native_weapon_terms(
     form: crate::auras::shapeshift::FormAttackTiming,
 ) {
     let ap_speed = expected_form_ap_speed(weapon, row, player, normalized);
-    let scale = row.1 as f32 / 1000.0 / ap_speed;
+    let weapon_speed = if matches!(row.0, 1 | 5 | 8) {
+        weapon.speed
+    } else {
+        ap_speed
+    };
+    let scale = row.1 as f32 / 1000.0 / weapon_speed;
     let actual = crate::melee::weapon_damage_terms(weapon, normalized, Some(form));
     assert!((actual.0 - weapon.min * scale).abs() < 0.001);
     assert!((actual.1 - weapon.max * scale).abs() < 0.001);
@@ -173,8 +178,51 @@ fn assert_native_weapon_terms(
     assert_eq!(regular, (weapon.min, weapon.max, regular_speed));
 }
 
+fn landed_form_swing(form_spell: u32, speed: f32) -> i32 {
+    let _seed = crate::random::seed_scope(70448);
+    let (mut h, actor, _) = fixture(Some(form_spell));
+    let target = h.npc;
+    let stats = h
+        .app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .into_inner();
+    stats.main_hand.min = 100.0 * speed;
+    stats.main_hand.max = 100.0 * speed;
+    stats.main_hand.speed = speed;
+    let world = h.app.world_mut();
+    crate::combat::start_attack(&mut world.commands(), actor, target, None);
+    world.flush();
+    for _ in 0..300 {
+        h.advance(1);
+        if let Some(event) = h.inbox.log.iter().find(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id.is_none()
+                && event.amount > 0
+        }) {
+            return event.amount;
+        }
+    }
+    panic!("form {form_spell} did not land a swing");
+}
+
 #[test]
-#[ignore = "native private DB: every nonzero form uses TC weapon/AP timing, not a damage scalar"]
+#[ignore = "native private DB: Cat and Bear normalize equal-DPS weapon rolls"]
+fn cat_and_bear_landed_swings_use_weapon_dps_not_equipped_swing_damage() {
+    for form in [768, 5487] {
+        let fast = landed_form_swing(form, 2.0);
+        let slow = landed_form_swing(form, 3.6);
+        assert_eq!(
+            fast, slow,
+            "form {form}: equal weapon DPS must yield equal swing damage"
+        );
+    }
+}
+
+#[test]
+#[ignore = "native private DB: every nonzero form uses sourced weapon/AP timing"]
 fn native_form_weapon_terms_cover_all_authored_forms_and_actor_kinds() {
     let (h, actor, _) = fixture(None);
     let melee = h

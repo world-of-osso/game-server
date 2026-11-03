@@ -1,6 +1,6 @@
 # Player Damage
 
-Players deal Retail damage: auto-attacks swing the equipped weapon with attack power, through the melee hit table and the target's armor, and spells scale with spell or attack power. The rules are TrinityCore master a352b1fa's, except the weapon-power coefficient (Retail 6, TrinityCore 3.5). Level scaling's health-ratio rule still applies on top ([level scaling](level-scaling.md)).
+Players deal Retail damage: auto-attacks swing the equipped weapon with attack power, through the melee hit table and the target's armor, and spells scale with spell or attack power. The rules are TrinityCore master a352b1fa's, except the Retail weapon-power coefficient and Cat/Bear weapon normalization. Level scaling's health-ratio rule still applies on top ([level scaling](level-scaling.md)).
 
 ## What it must do
 
@@ -15,7 +15,7 @@ Rake
 
 Auto-attack
 - [ ] Class-stat actors, including native followers, use every nonzero authored `SpellShapeshiftForm.CombatRoundTime` for both melee hands; zero/missing form timing uses regular equipment timing. Form changes do not restart an existing swing. Active timed forms restore ranged base time to TC's2s. Keep signed/native haste and slow modifiers.
-- [ ] Form weapon min/max scale by authored form time over TC's AP multiplier (minimum0.25s), independent of the swing clock. Ordinary and normalized weapon hits use the same terms. Preserve TC Player/non-Player AP-time selection and the existing Retail AP/DPS6 coefficient. Do not manufacture a `DamageVariance` scalar: pinned TC has no runtime consumer. See [form source/proof](../handoffs/feral-source-census.md#native-form-combat-timing).
+- [x] Cat and Bear weapon min/max scale by authored form time over equipped weapon speed, independent of the AP multiplier; this affects Feral (103) and Guardian (104). Other forms retain TC's AP-time scaling. Preserve the Retail AP/DPS6 coefficient and form swing clocks. VERIFIED_WCL: g1dGBjmAtcHYXaM9 fight15 actor162, 2026-11-02; SimC76f8118 `sc_druid.cpp:13937–13959`.
 - [x] Main-hand, off-hand and ranged autorepeat countdowns use exact durations, with resets truncated to native integer milliseconds (TC Unit.cpp670–673/Unit.h710–713,1541). A2s attack is ready at the40th50ms tick, not41. Each successful melee swing carries its current tick's deadline overshoot into that hand's next interval, matching SimC's independent event scheduling; already-ready blocked swings gain no extra credit.
 - [x] Attack admission and hostile spell targeting honor authored UNIT_FLAG_NON_ATTACKABLE, NON_ATTACKABLE_2, NOT_SELECTABLE and IMMUNE_TO_PC. PC immunity blocks players/player-controlled sources, not independent creatures. Neutral unflagged creatures remain attackable; faction masks/lists are unchanged.
 - [x] A player's swing rolls a whole number between trunc((weapon min + AP / 6 × weapon speed) × (1 + versatility)) and the same for weapon max (Player::CalculateMinMaxDamage, StatSystem.cpp:435-485; Unit::CalculateDamage, Unit.cpp:2490-2539). AP / 6 is SimC's `WEAPON_POWER_COEFFICIENT`; TrinityCore divides by 3.5 (StatSystem.cpp:455).
