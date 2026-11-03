@@ -42,11 +42,16 @@ fn summon_treant(world: &mut World, caster: Entity, spell: &SpellInfo) {
 
 fn restoration_harmony(world: &World, caster: Entity, target: Entity, spell: &SpellInfo) -> f32 {
     // Percent-health and other modifier-immune heals must not gain mastery.
-    if spell.misc.as_ref().is_some_and(|misc| misc.attributes[6] & 0x0800_0000 != 0) {
+    if spell
+        .misc
+        .as_ref()
+        .is_some_and(|misc| misc.attributes[6] & 0x0800_0000 != 0)
+    {
         return 1.0;
     }
     let guardian = if spell.id == NOURISH {
-        world.get::<combat::spell_cast::summon::SummonedCreature>(caster)
+        world
+            .get::<combat::spell_cast::summon::SummonedCreature>(caster)
             .filter(|summon| summon.spell_id == SUMMON)
             .map(|summon| summon.owner)
     } else {
@@ -54,7 +59,10 @@ fn restoration_harmony(world: &World, caster: Entity, target: Entity, spell: &Sp
     };
     let owner = guardian.unwrap_or(caster);
     if !combat::auras::has_aura(world, owner, 77495)
-        || spell.class_options.as_ref().is_none_or(|class| class.spell_class_set != 7)
+        || spell
+            .class_options
+            .as_ref()
+            .is_none_or(|class| class.spell_class_set != 7)
     {
         return 1.0;
     }
