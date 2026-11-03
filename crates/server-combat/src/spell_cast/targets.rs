@@ -1140,11 +1140,23 @@ fn directed_units(
     let half_arc = restrictions.cone_degrees.to_radians() / 2.0;
     let width = restrictions.width;
     let line = matches!(effect.implicit_targets[slot], 129 | 134);
+    let beam_end = if effect.implicit_targets[slot] == 134 {
+        let destination = destination.ok_or(134_u32)?;
+        let toward = Vec3::new(destination.x - origin.x, 0.0, destination.z - origin.z);
+        Some(origin + toward.clamp_length_max(radius(effect, slot)))
+    } else {
+        None
+    };
+    let search_radius = if beam_end.is_some() {
+        radius(effect, slot) * 2.0
+    } else {
+        radius(effect, slot)
+    };
     let mut units = area_units(
         world,
         caster,
         origin,
-        radius(effect, slot),
+        search_radius,
         if effect.implicit_targets[slot] == 59 {
             Relation::Ally
         } else {
@@ -1153,6 +1165,9 @@ fn directed_units(
         0,
     );
     units.retain(|&unit| {
+        if let Some(end) = beam_end {
+            return within_beam(world, origin, end, width / 2.0, unit).is_some_and(|inside| inside);
+        }
         let offset = position(world, unit).expect("area unit position") - origin;
         (!line && within_cone_boundary(world, caster, unit, offset))
             || within_directed_shape(offset, forward, line, width, half_arc)
