@@ -6,11 +6,12 @@ Five native seeds passed the predeclared intake gate: each party member's normal
 
 | Measure | Native mean (95% seed CI) | WCL actor 221 |
 |---|---:|---:|
-| Effective healing per second | 78,777.74 (77,582.93–79,972.56) | 102,684.08 |
-| Consumed absorbs per second | 7,534.85 (7,289.73–7,779.98) | 33,549.61 |
+| Effective healing, % initial party max HP/s | 3.508% (3.455–3.561%) | 2.989% |
+| Consumed absorbs, % initial party max HP/s | 0.336% (0.325–0.346%) | 0.977% |
+| Combined healing and absorbs, % initial party max HP/s | 3.844% (3.794–3.894%) | 3.966% |
 | Overheal | 43.16% (40.43–45.88%) | 55.80% |
 | Dream Breath 355941 share | 21.74% (19.65–23.84%) | 4.75% |
 | Reversion 355916 share | 13.00% (10.82–15.18%) | 6.42% |
 | Time Dilation 357170 share | 0% | 7.98% |
 
-Shares divide effective healing plus consumed absorbs by the same total. Overheal excludes absorbs and is overheal divided by effective plus overheal. WCL counts its actor's heal and absorbed events; native includes the healer and its owned summons. The two raw HPS values use different original max-HP scales and cannot be compared directly. The 95% intervals describe seed variation, not WCL population uncertainty. The per-seed gate, reports, binary/input hashes and original event extracts are under `/home/osso/.worktrees/healer-wcl-preservation-evidence/` and `/home/osso/.worktrees/healer-multi-enemy-evidence-v2/`.
+Shares divide effective healing plus consumed absorbs by the same total. Overheal excludes absorbs and is overheal divided by effective plus overheal. WCL counts its actor's heal and absorbed events; native includes the healer and its owned summons. HPS is divided by the sum of the five initial maximum-health values: 2,245,480 native and 3,435,220 WCL. This is not a time-varying party-health denominator. The 95% intervals describe seed variation, not WCL population uncertainty. The per-seed gate, reports, binary/input hashes and original event extracts are under `/home/osso/.worktrees/healer-wcl-preservation-normalized-evidence/` and `/home/osso/.worktrees/healer-multi-enemy-evidence-v2/`.
