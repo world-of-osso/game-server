@@ -683,7 +683,7 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
             .get_mut::<crate::stats::CharacterStats>(run.actor)
             .unwrap()
             .crit_pct = 0.0;
-        if let Some(id) = buff {
+        let buff_instance = if let Some(id) = buff {
             crate::spell_cast::cast_triggered(
                 run.app.world_mut(),
                 run.actor,
@@ -703,7 +703,10 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
                 aura.effects[0].amount, 80.0,
                 "native Light Within modifies the buff effect"
             );
-        }
+            Some(aura.instance_id)
+        } else {
+            None
+        };
         run.app
             .world_mut()
             .resource_mut::<ObservedCombatEvents>()
@@ -722,10 +725,17 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
             .unwrap();
         }
         ticks(&mut run, 30);
-        assert!(
-            !crate::auras::has_aura(run.app.world(), run.actor, buff.unwrap_or(406086)),
-            "the actual Blade consumed the buff"
-        );
+        if let Some(instance) = buff_instance {
+            assert!(
+                !run.app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(run.actor)
+                    .unwrap()
+                    .iter()
+                    .any(|aura| aura.instance_id == instance),
+                "the actual Blade consumed the original buff {buff:?}, triggered={triggered_blade}"
+            );
+        }
         damage(&run, 184575)
     }
     for triggered_blade in [false, true] {
