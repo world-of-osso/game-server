@@ -5,6 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 
 # Production class-follower casting: the DPS parity harness's spec APL drivers.
+[features]
+test-support = []
+
 [dependencies]
 server-combat = { path = "../server-combat" }
 server-spell-scripts = { path = "../server-spell-scripts" }

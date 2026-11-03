@@ -163,6 +163,11 @@ pub enum PrecombatPoll {
     Finished,
 }
 
+/// Executed APL decisions observed by native fixture tests.
+#[cfg(feature = "test-support")]
+#[derive(bevy::prelude::Component, Default)]
+pub struct DecisionTrace(pub Vec<(String, Option<usize>, String)>);
+
 pub struct Driver {
     program: Program,
     variables: Variables,
@@ -515,6 +520,14 @@ impl Driver {
             self.cancellation = cancellation;
         }
         self.precombat_harmful_executed |= ends_precombat;
+        #[cfg(feature = "test-support")]
+        if let Some(mut trace) = world.get_mut::<DecisionTrace>(actor) {
+            trace.0.push((
+                self.selected_list.clone(),
+                action.source_row,
+                action.name.clone(),
+            ));
+        }
         self.decisions += 1;
         if let Some(mut progress) = world.get_resource_mut::<LiteralTickProgress>() {
             progress.0 = continues_tick;
