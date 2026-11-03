@@ -204,6 +204,33 @@ fn telegraph_preserves_safe_and_mobile_casts_but_interrupts_slow_casts() {
 }
 
 #[test]
+fn overlapping_telegraphs_cancel_a_cast_that_outlasts_the_first_impact() {
+    use shared::casting::CastState;
+    let (mut h, unit, _) = stockade_fixture(FROM);
+    for elapsed in [0.0, 3.0] {
+        let enemy = spawn_npc(&mut h.app, 0.0);
+        h.app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert((FROM, InMap::continent(34)));
+        prepare_enemy_spec(&mut h, enemy, 66);
+        crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 1223906, Some(enemy), false)
+            .unwrap();
+        h.app
+            .world_mut()
+            .get_mut::<CastState>(enemy)
+            .unwrap()
+            .elapsed = elapsed;
+    }
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(CastState::normal(133, 0, 1.0, true));
+    assert!(super::hazards::escape(h.app.world_mut(), unit));
+    assert!(h.app.world().get::<CastState>(unit).is_none());
+}
+
+#[test]
 fn follower_ignores_large_and_instant_cast_telegraphs() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     let enemy = spawn_npc(&mut h.app, 0.0);

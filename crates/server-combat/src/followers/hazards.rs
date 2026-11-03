@@ -334,11 +334,15 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
     let now = crate::auras::aura_now(world);
     if let Some(cast) = world.get::<shared::casting::CastState>(unit) {
         let remaining = f64::from((cast.duration - cast.elapsed).max(0.0));
-        if !cast.cast_while_moving
-            && field
-                .impact_at
-                .is_some_and(|impact| now + remaining < impact)
-        {
+        let finishes_before_all_impacts = fields
+            .iter()
+            .filter(|hazard| contains(hazard, point(from)))
+            .all(|hazard| {
+                hazard
+                    .impact_at
+                    .is_some_and(|impact| now + remaining < impact)
+            });
+        if !cast.cast_while_moving && finishes_before_all_impacts {
             hold_escape(world, unit, from, "finishing_cast");
             return true;
         }
