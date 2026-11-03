@@ -491,6 +491,52 @@ fn measurement_driver(
 
 #[test]
 #[ignore = "requires the Arcane MID2 profile and native world data"]
+fn follower_defers_arcane_precast_until_pull_is_admitted() {
+    let mut run = prepare_literal(62, 1).unwrap();
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, 62).unwrap();
+    let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    for _ in 0..120 {
+        apl.tick(run.app.world_mut(), run.actor, &[]).unwrap();
+        run.app.update();
+    }
+    assert!(apl.in_precombat(), "targeted precast must remain pending");
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        0.0
+    );
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        apl.prepare_tick(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        if !apl.in_precombat() {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(!apl.in_precombat());
+    assert_eq!(
+        crate::spell_cast::powers::power_value(
+            run.app.world(),
+            run.actor,
+            shared::components::PowerType::ArcaneCharges
+        )
+        .unwrap()
+        .0,
+        2.0
+    );
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
 fn production_precombat_lands_arcane_blast_before_pull() {
     let mut run = prepare_literal(62, 1).unwrap();
     let _driver = prepare_production_driver(&mut run).unwrap();

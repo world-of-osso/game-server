@@ -181,12 +181,19 @@ impl FollowerApl {
         if self.advance_plan(world, actor)? {
             return Ok(());
         }
-        match self.rotation.poll_precombat(world, actor, targets)? {
-            PrecombatPoll::Waiting => Ok(()),
-            PrecombatPoll::Selected { action, execution } => {
+        match self.rotation.poll_precombat(world, actor, targets) {
+            Err(error) if error == literal_rotation::PRECOMBAT_TARGET_PENDING => {
+                if let Phase::Precombat { ticks } = &mut self.phase {
+                    *ticks = 0;
+                }
+                self.maintain_buffs(world, actor)
+            }
+            Err(error) => Err(error),
+            Ok(PrecombatPoll::Waiting) => Ok(()),
+            Ok(PrecombatPoll::Selected { action, execution }) => {
                 self.execute_plan(world, actor, action, execution)
             }
-            PrecombatPoll::Finished => {
+            Ok(PrecombatPoll::Finished) => {
                 self.phase = Phase::Idle;
                 Ok(())
             }
@@ -415,7 +422,26 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     };
     match apl {
         Ok(mut apl) => {
-            let result = apl.tick(world, unit, &targets);
+            let prospective = server::followers::acting_follower(world, unit)
+                .and_then(|follower| world.get::<server::followers::AdmittedPull>(follower.owner))
+                .filter(|pull| {
+                    pull.0.iter().all(|target| {
+                        crate::spell_cast::targets::is_alive(world, *target)
+                            && !world
+                                .get::<shared::components::CombatStatus>(*target)
+                                .is_some_and(|status| status.0)
+                    })
+                })
+                .map(|pull| pull.0.clone());
+            let result = if targets.is_empty() && apl.in_precombat() {
+                if let Some(prospective) = prospective.as_deref() {
+                    apl.prepare_tick(world, unit, prospective)
+                } else {
+                    apl.tick(world, unit, &targets)
+                }
+            } else {
+                apl.tick(world, unit, &targets)
+            };
             world.entity_mut(unit).insert(apl);
             match result {
                 Ok(()) => {}

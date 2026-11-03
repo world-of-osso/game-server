@@ -228,6 +228,10 @@ pub struct FollowerActionProvider {
     pub equipped_actions: fn(&mut World, Entity, u32) -> Result<Vec<u32>, String>,
 }
 
+/// Targets of the party's admitted, not-yet-engaged pull, primary first.
+#[derive(Component, Clone)]
+pub struct AdmittedPull(pub Vec<Entity>);
+
 /// Whether this class follower must hold damage while its tank repositions a pull.
 pub fn holding_pull_damage(world: &World, unit: Entity) -> bool {
     world.get::<AplControlled>(unit).is_some()

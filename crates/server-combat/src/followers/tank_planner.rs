@@ -149,11 +149,21 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     }
     // Existing but incomplete run records still go through fail-closed admission.
     let (reason, error) = match read_route_admission(world, tank, target, &follower, None, true) {
-        Ok(Some(true)) => return false,
+        Ok(Some((true, targets))) => {
+            if !targets.is_empty() {
+                world
+                    .entity_mut(follower.owner)
+                    .insert(super::AdmittedPull(targets));
+            }
+            return false;
+        }
         Ok(None) => ("pursuit awaits published admission route", None),
-        Ok(Some(false)) => ("pursuit held by pull budget", None),
+        Ok(Some((false, _))) => ("pursuit held by pull budget", None),
         Err(error) => ("pursuit admission unavailable", Some(error)),
     };
+    world
+        .entity_mut(follower.owner)
+        .remove::<super::AdmittedPull>();
     report_hold(world, tank, Some(target), reason, |_| error);
     world
         .entity_mut(tank)
@@ -175,7 +185,10 @@ pub(super) fn read_movement_admission(
     follower: &Follower,
     destination: Option<Vec3>,
 ) -> Result<Option<bool>, String> {
-    read_route_admission(world, tank, target, follower, destination, false)
+    Ok(
+        read_route_admission(world, tank, target, follower, destination, false)?
+            .map(|(allowed, _)| allowed),
+    )
 }
 
 fn read_route_admission(
@@ -185,7 +198,7 @@ fn read_route_admission(
     follower: &Follower,
     destination: Option<Vec3>,
     pursuit: bool,
-) -> Result<Option<bool>, String> {
+) -> Result<Option<(bool, Vec<Entity>)>, String> {
     let map = *world
         .get::<crate::maps::InMap>(tank)
         .ok_or("Tank movement lacks a map copy")?;
@@ -223,7 +236,7 @@ fn read_route_admission(
     if super::hazards::route_crosses_hostile_field(world, tank, &route.points)
         || super::positioning::route_enters_unpulled_sight(world, tank, target, &route.points)?
     {
-        return Ok(Some(false));
+        return Ok(Some((false, Vec::new())));
     }
     debug!(
         ?tank,
@@ -251,12 +264,24 @@ fn read_route_admission(
             .get(guid)
             .is_some_and(|source| engaged_packs.contains(&source.pack_guid))
     }) {
-        return Ok(Some(true));
+        return Ok(Some((true, Vec::new())));
     }
-    Ok(Some(matches!(
+    let allowed = matches!(
         super::pull_admission::read_pull_budget(world, tank, &projected, difficulty)?,
         super::pull_budget::Decision::Allow { .. }
-    )))
+    );
+    let mut targets = vec![target];
+    if allowed {
+        for guid in projected {
+            let actor = sources[&guid].actor.ok_or_else(|| {
+                format!("Admitted pull source GUID {guid} lacks its native actor")
+            })?;
+            if actor != target {
+                targets.push(actor);
+            }
+        }
+    }
+    Ok(Some((allowed, targets)))
 }
 
 /// Consume the same admitted point at both kit pursuit and idle regroup boundaries.
