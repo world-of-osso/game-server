@@ -428,8 +428,10 @@ pub(super) fn replay(intake: &Intake, spec: u32) -> Result<Value, String> {
     if observed_raw != expected_raw {
         return Err("UNRECORDED_NATIVE_INCOMING_DAMAGE".into());
     }
-    Ok(json!({"spec":spec,"status":"native","seed":intake.seed,
+    let mut report = json!({"spec":spec,"status":"native","seed":intake.seed,
         "metrics":metrics,"gaps":gaps,"level_scaling":scaling,
         "intake_hits":intake.hits.len(),"native_damage_receipts":incoming_count(app.world(), &members, &actors),
-        "source_status":intake.source_status,"duration_ticks":intake.end_tick}))
+        "source_status":intake.source_status,"duration_ticks":intake.end_tick});
+    super::fact_error_report::attach_fact_errors(app.world_mut(), &mut report)?;
+    Ok(report)
 }
