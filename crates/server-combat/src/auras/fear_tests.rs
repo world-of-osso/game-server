@@ -286,6 +286,75 @@ fn fear_runs_at_native_speed_then_pauses_before_next_route() {
 }
 
 #[test]
+fn fear_publishes_its_flee_point_while_running_and_clears_it_when_paused_or_removed() {
+    use crate::simc_apl::Facts;
+    use crate::simc_apl_native::{Bindings, Encounter, MovementDestination, NativeFacts};
+    let (mut h, _dir) = fleeing_harness();
+    let (player, npc) = (h.caster, h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(CreatureMotion::Still);
+    let read = |h: &Harness| {
+        NativeFacts::new(
+            h.app.world(),
+            npc,
+            &Bindings::default(),
+            Encounter::dungeon(0.0),
+            1,
+        )
+        .value("movement.distance")
+    };
+    assert_eq!(read(&h).unwrap(), 0.0, "idle");
+    start_fleeing(&mut h, npc, player);
+    let mut published = None;
+    let mut paused_at = None;
+    for _ in 0..120 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(npc).unwrap();
+        let here = Vec3::new(at.x, at.y, at.z);
+        match h.app.world().get::<MovementDestination>(npc) {
+            Some(destination) => {
+                assert_eq!(read(&h).unwrap(), f64::from(here.distance(destination.0)));
+                published = Some(destination.0);
+            }
+            None if published.is_some() => {
+                paused_at = Some(here);
+                break;
+            }
+            None => {}
+        }
+    }
+    let goal = published.expect("fear published its flee point while running");
+    let paused_at = paused_at.expect("route≤30yd ends and pauses");
+    assert!(
+        (paused_at.x - goal.x).hypot(paused_at.z - goal.z) < 0.05,
+        "the published point is where the route ends: {paused_at:?} vs {goal:?}"
+    );
+    assert_eq!(
+        h.app.world().get::<CreatureMotion>(npc),
+        Some(&CreatureMotion::Still)
+    );
+    assert_eq!(read(&h).unwrap(), 0.0, "paused");
+    for _ in 0..60 {
+        h.advance(1);
+        if h.app.world().get::<MovementDestination>(npc).is_some() {
+            break;
+        }
+    }
+    assert!(
+        h.app.world().get::<MovementDestination>(npc).is_some(),
+        "next route publishes again"
+    );
+    remove_auras(h.app.world_mut(), npc, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == INTIMIDATING_SHOUT
+    });
+    h.advance(1);
+    assert!(h.app.world().get::<MovementDestination>(npc).is_none());
+    assert_eq!(read(&h).unwrap(), 0.0, "fear removed");
+}
+
+#[test]
 fn fear_destination_stops_before_live_collision_wall() {
     let (mut h, _dir) = fleeing_harness();
     let (player, npc) = (h.caster, h.npc);
