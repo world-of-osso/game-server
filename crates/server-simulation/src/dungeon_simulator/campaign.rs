@@ -1295,6 +1295,10 @@ fn admitted_campaign_pull_reaches_follower_before_opening() {
         }),
     );
     world.entity_mut(mage).insert(apl);
+    // Let native self-buff GCDs finish before the route controller admits a pull.
+    for _ in 0..100 {
+        run.app.update();
+    }
     for _ in 0..6000 {
         run.control().unwrap();
         if let Some((targets, published, engaged)) = observed.lock().unwrap().first().cloned() {
