@@ -224,16 +224,15 @@ fn observe(world: &mut World, event: &CombatLogEvent) {
         CombatLogKind::Heal => 2,
         _ => return,
     };
-    // sc_monk.cpp2225 admits Monk auto-attacks; class spell callbacks use
-    // sc_monk.cpp6790–6808's explicit exclusion list.
+    // SIMC_SOURCED action_callback.cpp:35 uses DB2 bit 416. The eight exclusions
+    // in sc_monk.cpp:6790-6808 share no DB2 attribute except that admission bit.
     let class_ability = match event.spell_id {
         None => effect == 0,
         Some(216521 | 178173 | 124507 | 387621 | 115129 | 124255 | 450820 | 450763) => false,
         Some(spell) => world
             .resource::<SpellStore>()
             .get(spell)
-            .and_then(|info| info.class_options.as_ref())
-            .is_some_and(|options| options.spell_class_set == 53),
+            .is_some_and(|info| spell_cast::attributes(info, 13) & 1 != 0),
     };
     if !class_ability {
         return;

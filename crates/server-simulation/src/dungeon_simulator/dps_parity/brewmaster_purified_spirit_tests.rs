@@ -181,6 +181,130 @@ fn refreshed_spender_splits_purified_spirit_between_targets() {
 }
 
 use super::*;
+
+#[test]
+#[ignore = "requires equipped MID2 Brewmaster profile and world data"]
+fn shrapnel_without_class_proc_flag_does_not_deposit_into_harmony() {
+    use crate::auras::harmony::HarmonyPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    let before = run
+        .app
+        .world()
+        .get::<HarmonyPools>(actor)
+        .map_or(0.0, |p| p.accumulator);
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        1301619,
+        Some(target),
+        1
+    ));
+    for _ in 0..100 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(actor.to_bits())
+                    && event.spell_id == Some(1301619)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            })
+        {
+            break;
+        }
+    }
+    let world = run.app.world();
+    assert!(
+        world
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(1301619)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "Shrapnel must deal damage"
+    );
+    let after = world
+        .get::<HarmonyPools>(actor)
+        .map_or(0.0, |p| p.accumulator);
+    assert_eq!(
+        before, after,
+        "damage without DB2 class-proc flag must not fund Harmony"
+    );
+}
+
+#[test]
+#[ignore = "requires equipped MID2 Brewmaster profile and world data"]
+fn font_channel_deposits_actual_damage_into_harmony() {
+    use crate::auras::harmony::HarmonyPools;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(268, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let target = run.targets[0];
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .remove::<crate::combat::AutoAttack>();
+    let mut bindings = server::simc_apl_native::Bindings::default();
+    let equipment =
+        literal_rotation::equipment::Equipment::load(run.app.world(), actor, &mut bindings)
+            .unwrap();
+    let item = equipment
+        .uses()
+        .map(|(_, item)| item)
+        .find(|item| item.on_use.spell_id == 1297908)
+        .expect("equipped Font");
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        actor,
+        literal_rotation::execution::Execution::Item(item, target),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let world = run.app.world();
+    let damage: i32 = world
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(1297908)
+                && event.kind == CombatLogKind::Damage
+        })
+        .map(|event| event.amount)
+        .sum();
+    assert!(damage > 0, "Font must deal channel damage");
+    let pool = world
+        .get::<HarmonyPools>(actor)
+        .expect("Font funds Harmony")
+        .accumulator;
+    let expected = damage as f32 * 0.12 * 1.5;
+    assert!(
+        (pool - expected).abs() < 5.0,
+        "Font damage {damage}, pool {pool}, expected {expected}"
+    );
+}
 use shared::protocol::CombatLogKind;
 
 #[test]
