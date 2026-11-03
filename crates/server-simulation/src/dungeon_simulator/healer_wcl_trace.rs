@@ -115,7 +115,7 @@ impl RecordedHit {
         let before = health.current;
         let native_max = health.max;
         let amount = pressure as f32 / self.max_hp as f32 * native_max;
-        let spell_id = if self.spell_id == 1 {
+        let spell_id = if matches!(self.spell_id, 1 | 3) {
             None
         } else {
             let spell = world

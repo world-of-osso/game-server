@@ -53,6 +53,10 @@ class WclIntakeTest(unittest.TestCase):
         self.assertEqual(intake.max_health_at(observations, 6, 150), (1000, 100))
         self.assertEqual(intake.max_health_at(observations, 6, 200), (1500, 200))
 
+    def test_wcl_falling_sentinel_is_not_db2_spell_three(self):
+        db = sqlite3.connect(':memory:')
+        self.assertEqual(intake.read_spell_metadata(db, 3), (1, None))
+
     def test_rejects_ambiguous_or_unmatched_absorb_receipts(self):
         event = {'targetID': 6, 'sourceID': 413, 'sourceInstance': 1,
                  'abilityGameID': 1306338, 'timestamp': 100, 'absorbed': 300}

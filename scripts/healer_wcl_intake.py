@@ -37,6 +37,8 @@ def max_health_at(observations, actor, time_ms):
 def read_spell_metadata(db, spell):
     if spell == 1:
         return 1, 2  # WCL basic melee sentinel, not SpellInfo ID 1.
+    if spell == 3:
+        return 1, None  # WCL Falling sentinel, not SpellInfo ID 3.
     row = db.execute(
         'SELECT SchoolMask FROM spell_misc WHERE SpellID=? AND DifficultyID=0', (spell,)
     ).fetchone()
