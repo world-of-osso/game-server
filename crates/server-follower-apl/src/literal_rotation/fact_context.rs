@@ -250,6 +250,113 @@ mod tests {
     }
 
     #[test]
+    fn native_cast_reaction_delay_does_not_enter_the_error_ledger() {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        use shared::casting::CastState;
+        let mut h = server::spell_cast::test_harness::harness(Vec::new(), &[133], 1).unwrap();
+        let actor = h.caster;
+        let target = h.npc;
+        h.app
+            .world_mut()
+            .entity_mut(target)
+            .insert(CastState::normal(133, actor.to_bits(), 3.0, true));
+        h.app.world_mut().flush();
+        let errors = FactErrors::default();
+        let program = Program::parse(&[
+            ("default", "interrupt,if=target.debuff.casting.react"),
+            ("default", "attack"),
+        ])
+        .unwrap();
+        let bindings = Bindings::default();
+        let targets = [target];
+        let select = |world: &World| {
+            let native = NativeFacts::new(world, actor, &bindings, Encounter::dungeon(0.0), 1)
+                .with_targets(Some(target), &targets);
+            let facts = FactContext {
+                inner: &native,
+                errors: &errors,
+                actor,
+                default_target: Some(target),
+            };
+            program
+                .select("default", &facts, &mut program.state(), |_| Ok(true))
+                .unwrap()
+                .unwrap()
+                .name
+        };
+        assert_eq!(select(h.app.world()), "attack");
+        assert!(errors.snapshot().is_empty());
+        h.app
+            .world_mut()
+            .get_mut::<CastState>(target)
+            .unwrap()
+            .elapsed = 2.0;
+        assert_eq!(select(h.app.world()), "interrupt");
+        assert!(errors.snapshot().is_empty());
+    }
+
+    #[test]
+    fn pending_native_navigation_does_not_enter_the_error_ledger() {
+        use crate::simc_apl_native::{Bindings, Encounter, NativeFacts};
+        use server::navigation::{Goal, MoveRequest, Navigation, Step};
+        use shared::components::{CreatureMotion, Position};
+
+        let mut world = World::new();
+        let from = Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let to = Position {
+            x: 5.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let actor = world.spawn((from, CreatureMotion::Run)).id();
+        let target = world.spawn(to).id();
+        let mut navigation =
+            Navigation::new(std::path::Path::new("/nonexistent-navigation-fixture"));
+        assert!(matches!(
+            navigation.advance(
+                actor,
+                MoveRequest {
+                    map_id: 34,
+                    goal: Goal::Chase(target.to_bits()),
+                    from,
+                    to,
+                    distance: 1.0,
+                    reach: 2.0,
+                }
+            ),
+            Step::Pending
+        ));
+        world.insert_resource(navigation);
+        let bindings = Bindings::default();
+        let native = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1);
+        let errors = FactErrors::default();
+        let facts = FactContext {
+            inner: &native,
+            errors: &errors,
+            actor,
+            default_target: Some(target),
+        };
+        let program = Program::parse(&[
+            ("default", "interrupt,if=movement.distance>0"),
+            ("default", "attack"),
+        ])
+        .unwrap();
+        assert_eq!(
+            program
+                .select("default", &facts, &mut program.state(), |_| Ok(true))
+                .unwrap()
+                .unwrap()
+                .name,
+            "attack"
+        );
+        assert!(errors.snapshot().is_empty());
+    }
+
+    #[test]
     fn pending_movement_does_not_enter_the_error_ledger() {
         let mut world = World::new();
         let actor = world.spawn_empty().id();

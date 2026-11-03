@@ -191,7 +191,7 @@ fn dungeon_movement_distance_reads_driver_destination_before_navigation() {
     )));
     assert_eq!(
         read(&world).unwrap_err(),
-        server::simc_apl::not_ready("DUNGEON_MOVEMENT_DESTINATION_UNAVAILABLE")
+        format!("movement.distance: actor {actor:?} has no destination")
     );
 }
 
