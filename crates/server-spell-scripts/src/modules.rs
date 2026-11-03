@@ -253,6 +253,7 @@ register_modules! {
     feral_overflow: (1034, "modules/feral_overflow.rs"),
     feral_panthers_guile: (1034, "modules/feral_panthers_guile.rs"),
     feral_primal_fury: (1034, "modules/feral_primal_fury.rs"),
+    feral_predator: (1034, "modules/feral_predator.rs"),
     feral_ravage: (1034, "modules/feral_ravage.rs"),
     feral_rip_and_tear: (1034, "modules/feral_rip_and_tear.rs"),
     feral_sabertooth: (1034, "modules/feral_sabertooth.rs"),
