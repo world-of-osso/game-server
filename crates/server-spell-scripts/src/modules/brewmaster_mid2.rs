@@ -30,19 +30,30 @@ fn equipped(world: &World, caster: Entity, spell: u32) -> bool {
 
 fn ignite(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if spell.id == 115181 && equipped(world, caster, TWO) {
-        auras::apply_aura(world, &AuraApplication {
-            caster, target: caster, spell_id: HOT_POTATO,
-            effect_mask: u32::MAX, source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster,
+                target: caster,
+                spell_id: HOT_POTATO,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
 
 fn launch_shrapnel(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8) {
-    if depth != 0 || spell.id != 121253 || !equipped(world, caster, TWO)
-        || !auras::has_aura(world, caster, HOT_POTATO) {
+    if depth != 0
+        || spell.id != 121253
+        || !equipped(world, caster, TWO)
+        || !auras::has_aura(world, caster, HOT_POTATO)
+    {
         return;
     }
-    let Some(target) = spell.cast_primary_target else { return; };
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
     auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
         aura.spell_id == HOT_POTATO && aura.caster == caster
     });
@@ -53,9 +64,15 @@ fn launch_shrapnel(world: &mut World, caster: Entity, spell: &SpellInfo, depth: 
 
 fn scorch(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool, _: f32) {
     if ctx.spell.id == SHRAPNEL && equipped(world, ctx.caster, FOUR) {
-        auras::apply_aura(world, &AuraApplication {
-            caster: ctx.caster, target, spell_id: SCORCHED,
-            effect_mask: u32::MAX, source: AuraSource::Cast,
-        });
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster: ctx.caster,
+                target,
+                spell_id: SCORCHED,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
     }
 }
