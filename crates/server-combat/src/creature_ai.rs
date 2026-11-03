@@ -1030,9 +1030,14 @@ pub(crate) fn chase_system(
         }
         // MotionMaster initializes a newly-preempting active generator with
         // diff0. The default spline may already have moved before sight/aggro.
-        let initializing =
-            default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Chase(target)));
-        if initializing {
+        let preempted = default_waypoint.map(|mut path| path.preempt_for(Goal::Chase(target)));
+        if preempted.is_some() {
+            // Chase publishes through its navigation route, not the paused spline.
+            commands
+                .entity(entity)
+                .remove::<crate::simc_apl_native::MovementDestination>();
+        }
+        if preempted == Some(true) {
             continue;
         }
         let speed = mods.map_or(1.0, |mods| mods.movement_speed);
@@ -2042,8 +2047,13 @@ pub(crate) fn return_to_spawn_system(
         if *state != CreatureState::Returning {
             continue;
         }
-        let initializing = default_waypoint.is_some_and(|mut path| path.preempt_for(Goal::Home));
-        if initializing {
+        let preempted = default_waypoint.map(|mut path| path.preempt_for(Goal::Home));
+        if preempted.is_some() {
+            commands
+                .entity(entity)
+                .remove::<crate::simc_apl_native::MovementDestination>();
+        }
+        if preempted == Some(true) {
             continue;
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
