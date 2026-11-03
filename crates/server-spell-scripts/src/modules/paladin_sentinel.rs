@@ -113,3 +113,40 @@ fn remove(world: &mut World, unit: Entity, aura: &AuraInstance, _: RemoveReason)
         world.entity_mut(unit).remove::<SentinelDecay>();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use combat::auras::{AuraApplication, AuraSource};
+
+    #[test]
+    fn sentinel_removal_cleans_linked_aura_and_decay() {
+        let mut harness = crate::test_support::harness(vec![], &[SENTINEL, 1241410], 11)
+            .expect("native spell data");
+        let caster = harness.caster;
+        let world = harness.app.world_mut();
+        world
+            .entity_mut(caster)
+            .insert(shared::components::ActiveSpec(66));
+        for spell_id in [SENTINEL, 1241410] {
+            auras::apply_aura(
+                world,
+                &AuraApplication {
+                    caster,
+                    target: caster,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        assert!(auras::has_aura(world, caster, SENTINEL));
+        assert!(auras::has_aura(world, caster, 1241410));
+        assert!(world.get::<SentinelDecay>(caster).is_some());
+        auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == SENTINEL
+        });
+        assert!(!auras::has_aura(world, caster, 1241410));
+        assert!(world.get::<SentinelDecay>(caster).is_none());
+    }
+}

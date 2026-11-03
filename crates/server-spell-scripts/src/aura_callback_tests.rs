@@ -20,8 +20,12 @@ fn first_remove(world: &mut World, _: Entity, _: &AuraInstance, _: RemoveReason)
 fn second_remove(world: &mut World, _: Entity, _: &AuraInstance, _: RemoveReason) {
     world.resource_mut::<Calls>().0.push("second remove");
 }
-fn first_periodic(_: &mut World, _: Entity, _: &AuraInstance, _: u8) {}
-fn second_periodic(_: &mut World, _: Entity, _: &AuraInstance, _: u8) {}
+fn first_periodic(world: &mut World, _: Entity, _: &AuraInstance, _: u8) {
+    world.resource_mut::<Calls>().0.push("first periodic");
+}
+fn second_periodic(world: &mut World, _: Entity, _: &AuraInstance, _: u8) {
+    world.resource_mut::<Calls>().0.push("second periodic");
+}
 
 fn apply_lunar_calling(world: &mut World, caster: Entity) {
     auras::apply_aura(
