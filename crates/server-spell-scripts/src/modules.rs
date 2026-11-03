@@ -406,6 +406,7 @@ register_modules! {
     paladin_vengeful_wrath: (9807, "modules/paladin_vengeful_wrath.rs"),
     paladin_word_of_glory: (9808, "modules/paladin_word_of_glory.rs"),
     paladin_edict: (1001, "modules/paladin_edict.rs"),
+    paladin_guided_prayer: (9808, "modules/paladin_guided_prayer.rs"),
     paladin_masterwork: (9802, "modules/paladin_masterwork.rs"),
     paladin_sacred_weapon: (9803, "modules/paladin_sacred_weapon.rs"),
     paladin_strength_adversity: (1003, "modules/paladin_strength_adversity.rs"),
