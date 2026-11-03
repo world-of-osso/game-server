@@ -32,7 +32,7 @@ fn survival_native_kill_command_reduces_running_bomb_recharge_by_wildfire_infusi
     // adjusts Wildfire Bomb's running recovery by selected460198 effect1 once.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     cast(&mut run, 259495, false);

@@ -27,7 +27,7 @@ fn survival_takedown_pet_cancels_after_owner_kills_primary() {
     use shared::components::Health;
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 3).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
@@ -80,7 +80,7 @@ fn survival_takedown_pet_cancels_after_owner_kills_primary() {
 fn assert_takedown_outcomes(seed: u64) -> (bool, bool) {
     let _seed = crate::random::seed_scope(seed);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);

@@ -26,7 +26,7 @@ fn survival_sentinel_actual_tip_impacts_can_earn_owned_marks_without_takedown() 
     // consumption rolls a native Sentinel mark without forcing it through Takedown.
     let _seed = crate::random::seed_scope(70448);
     let mut run = player();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     assert!(!owns_mark(&run));
     for _ in 0..32 {

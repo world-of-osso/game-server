@@ -6,7 +6,7 @@ use crate::spell_cast::effects::factor_capture::FactorCapture;
 fn target_factor(spell: u32, pet_source: bool, selected: bool, execute: bool) -> f64 {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);

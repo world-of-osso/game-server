@@ -45,11 +45,15 @@ fn ranged_hunters_spawn_with_ranged_journal_weapons_at_queue_levels() {
         .app
         .world_mut()
         .resource_mut::<crate::world_data::WorldData>();
+    let pets = crate::spell_cast::test_harness::load_native_creature_world(&[154]);
+    world_data.templates.extend(pets.templates);
     world_data.class_level_base_hp = source.class_level_base_hp.clone();
     world_data.class_level_base_mana = source.class_level_base_mana.clone();
     drop(world_data);
     let path = crate::test_data::world_db_path();
     let db = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    h.app
+        .insert_resource(crate::hunter_pet::read_pet_catalog(&db).unwrap());
     h.app
         .insert_resource(super::super::catalog::load_catalog(&db).unwrap());
     h.app.insert_resource(

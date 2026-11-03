@@ -329,26 +329,35 @@ pub fn spawn_parity_attacker(
     copy: crate::maps::InMap,
     actor: ParityActor,
     race: u8,
+    loadout: impl Into<super::class_spawn::LoadoutSource>,
 ) -> Result<Entity, String> {
     let difficulty = copy_difficulty(world, copy)?;
-    if let ParityActor::Player { .. } = actor {
-        return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
-    }
+    let loadout = loadout.into();
     let mut source = super::class_profiles::read_profiles()?
         .into_iter()
         .find(|source| source.spec_id == spec_id)
         .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
     source.race = race;
+    if let ParityActor::Player { .. } = actor {
+        let player = spawn_parity_player(world, spec_id, level, race, copy, difficulty)?;
+        if matches!(
+            &loadout,
+            super::class_spawn::LoadoutSource::SimcProfile { .. }
+        ) {
+            super::class_spawn::install_class(world, player, player, &source, 0, 0, loadout)?;
+            world.entity_mut(player).remove::<(
+                Follower,
+                super::AplControlled,
+                super::ClassCombatant,
+                shared::components::UnitSummonedBy,
+                crate::creature_ai::FollowOwner,
+            )>();
+        }
+        return Ok(player);
+    }
     // An inert native Player owns the attacker's party and runs no rotation.
     let owner = spawn_parity_player(world, spec_id, level, source.race, copy, difficulty)?;
-    let unit = super::class_spawn::spawn_class(
-        world,
-        owner,
-        &source,
-        0,
-        0,
-        super::class_spawn::GearSource::Journal,
-    )?;
+    let unit = super::class_spawn::spawn_class(world, owner, &source, 0, 0, loadout)?;
     // A living native owner can maintain /startattack without landing out-of-range swings.
     world.entity_mut(owner).insert(Position {
         x: 20.0,

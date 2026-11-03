@@ -31,6 +31,7 @@ pub enum LoadoutSource {
     SimcProfile {
         items: super::parity_profile::ItemInstances,
         traits: Vec<crate::trait_config::Purchase>,
+        pet: Option<u32>,
     },
 }
 
@@ -476,6 +477,20 @@ pub fn install_class(
         None => world.entity_mut(entity).remove::<LoggedHeroTree>(),
     };
     crate::spell_cast::powers::install_class_powers(world, entity, pools);
+    let pet = match &loadout {
+        // INFERRED_WCL: Ferocity with Primal Rage and Mortal Wounds; species unobserved.
+        // Entry 154 is a native tameable Carrion Bird; retire when family data is available.
+        LoadoutSource::Journal | LoadoutSource::Wcl(_) if matches!(source.spec_id, 253 | 255) => {
+            Some(154)
+        }
+        LoadoutSource::SimcProfile { pet, .. } => *pet,
+        _ => None,
+    };
+    if source.class_id == 3
+        && (matches!(&loadout, LoadoutSource::SimcProfile { .. }) || pet.is_some())
+    {
+        crate::hunter_pet::install_follower_pet(world, entity, pet)?;
+    }
     (provider.before_passives)(world, entity, source.spec_id)?;
     crate::auras::sync_passives(
         world,
