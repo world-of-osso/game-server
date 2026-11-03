@@ -113,8 +113,18 @@ impl Fight {
 
     fn grant_dawnlight_charge(&mut self) {
         let actor = self.actor;
-        crate::spell_cast::cast_triggered(self.app.world_mut(), actor, DAWNLIGHT_CHARGE, Some(actor), 1);
-        assert!(crate::auras::has_aura(self.app.world(), actor, DAWNLIGHT_CHARGE));
+        crate::spell_cast::cast_triggered(
+            self.app.world_mut(),
+            actor,
+            DAWNLIGHT_CHARGE,
+            Some(actor),
+            1,
+        );
+        assert!(crate::auras::has_aura(
+            self.app.world(),
+            actor,
+            DAWNLIGHT_CHARGE
+        ));
     }
 
     fn safe(&self, spell: u32) -> bool {
@@ -153,7 +163,10 @@ impl Fight {
     /// Ret's Consecration stalker (43499) is a separate actor: it is not the party.
     fn party_engaged(&self, unit: Entity) -> bool {
         let world = self.app.world();
-        let owner = world.get::<crate::followers::Follower>(self.actor).unwrap().owner;
+        let owner = world
+            .get::<crate::followers::Follower>(self.actor)
+            .unwrap()
+            .owner;
         let damaged = world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0
@@ -207,7 +220,11 @@ fn spends_beside_idle_pack(charge: bool) {
                     .any(|aura| aura.spell_id == DAWNLIGHT && aura.caster == fight.actor)),
             "the spent charge applies Dawnlight to the boss"
         );
-        assert!(!crate::auras::has_aura(world, fight.actor, DAWNLIGHT_CHARGE));
+        assert!(!crate::auras::has_aura(
+            world,
+            fight.actor,
+            DAWNLIGHT_CHARGE
+        ));
     }
     for unit in pack {
         assert!(
@@ -242,13 +259,22 @@ fn follower_ret_refuses_spenders_whose_area_or_beam_reaches_an_idle_enemy() {
     // Divine Storm's 8-yard caster area reaches an enemy 5 yards behind Ret.
     let behind = fight.along(-5.0, 0.0);
     let storm_victim = fight.idle_enemy(behind);
-    assert!(!fight.safe(STORM), "Divine Storm would hit the idle enemy behind Ret");
-    assert!(fight.safe(VERDICT), "single-target Final Verdict cannot reach it");
+    assert!(
+        !fight.safe(STORM),
+        "Divine Storm would hit the idle enemy behind Ret"
+    );
+    assert!(
+        fight.safe(VERDICT),
+        "single-target Final Verdict cannot reach it"
+    );
     fight.app.world_mut().despawn(storm_victim);
     // An enemy inside the Ret-to-boss line, beside the boss.
     let inside = fight.along(fight.boss_distance() - 0.5, 1.0);
     let beam_victim = fight.idle_enemy(inside);
-    assert!(fight.safe(VERDICT), "without a charge Final Verdict applies no Dawnlight");
+    assert!(
+        fight.safe(VERDICT),
+        "without a charge Final Verdict applies no Dawnlight"
+    );
     fight.grant_dawnlight_charge();
     assert!(
         !fight.safe(VERDICT),
@@ -259,6 +285,9 @@ fn follower_ret_refuses_spenders_whose_area_or_beam_reaches_an_idle_enemy() {
     let beyond = fight.idle_enemy(beyond);
     let actor = fight.actor;
     crate::spell_cast::cast_triggered(fight.app.world_mut(), actor, AVATAR, Some(target), 1);
-    assert!(!fight.idle(beam_victim), "the beam must hit the enemy inside it");
+    assert!(
+        !fight.idle(beam_victim),
+        "the beam must hit the enemy inside it"
+    );
     assert!(fight.idle(beyond), "the beam ends at its Dawnlight carrier");
 }

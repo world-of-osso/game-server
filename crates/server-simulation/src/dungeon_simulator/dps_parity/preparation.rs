@@ -107,8 +107,14 @@ pub(super) fn cast_provided_party_buffs(run: &mut Run) -> Result<(), String> {
         let Some(spell) = own_lost_buff(run.app.world_mut(), run.actor)? else {
             return Ok(());
         };
-        crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, spell, Some(run.actor), false)
-            .map_err(|error| format!("PARTY_BUFF_CAST_FAILED:{spell}:{error:?}"))?;
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            spell,
+            Some(run.actor),
+            false,
+        )
+        .map_err(|error| format!("PARTY_BUFF_CAST_FAILED:{spell}:{error:?}"))?;
         finish_pending_setup(run)?;
     }
     match own_lost_buff(run.app.world_mut(), run.actor)? {

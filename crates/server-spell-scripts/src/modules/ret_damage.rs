@@ -578,15 +578,26 @@ fn beam_units(world: &mut World, caster: Entity, spell: &SpellInfo, carrier: Vec
     // The sphere only prefilters: it contains TC's cylinder, `radius` plus reach across
     // and `radius` vertically; within_beam owns the bounds.
     let prefilter = radius * 2.0;
-    let mut units =
-        targets::area_units(world, caster, origin, prefilter, targets::Relation::Enemy, 0);
-    units.retain(|&unit| match targets::within_beam(world, origin, end, half_width, unit) {
-        Some(inside) => inside,
-        None => {
-            warn!(?unit, "Sun's Avatar beam candidate lacks a sourced combat reach");
-            false
-        }
-    });
+    let mut units = targets::area_units(
+        world,
+        caster,
+        origin,
+        prefilter,
+        targets::Relation::Enemy,
+        0,
+    );
+    units.retain(
+        |&unit| match targets::within_beam(world, origin, end, half_width, unit) {
+            Some(inside) => inside,
+            None => {
+                warn!(
+                    ?unit,
+                    "Sun's Avatar beam candidate lacks a sourced combat reach"
+                );
+                false
+            }
+        },
+    );
     units
 }
 

@@ -124,5 +124,3 @@ fn mage_and_devastation_followers_use_native_lust_on_a_large_pull() {
         assert_eq!(casts, 1, "spec {spec} must cast its real lust exactly once");
     }
 }
-
-
