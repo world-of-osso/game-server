@@ -456,7 +456,8 @@ fn has_positive_aura(
 
 /// Drive every APL-controlled follower after the follower brain positioned it.
 pub fn drive_followers(world: &mut World) {
-    let units = server::system_states::entities_with::<With<AplControlled>>(world);
+    let mut units = server::system_states::entities_with::<With<AplControlled>>(world);
+    units.sort_unstable();
     for unit in units {
         if let Some(follower) = server::followers::acting_follower(world, unit) {
             drive_follower(world, unit, follower.profile.spec_id);

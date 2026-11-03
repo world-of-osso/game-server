@@ -240,6 +240,50 @@ fn same_seed_headless_keystones_produce_identical_records() {
 }
 
 #[test]
+#[ignore = "requires the canonical Altar graph, navmesh and frozen world database"]
+fn same_seed_fresh_processes_replay_the_first_pull() {
+    const CHILD: &str = "KEYSTONE_REPLAY_FIRST_PULL_CHILD";
+    const MARKER: &str = "KEYSTONE_FIRST_PULL_EVENTS=";
+    if std::env::var_os(CHILD).is_some() {
+        let options = Options::from_environment().expect("explicit keystone runner inputs");
+        let record = super::super::campaign::run_keystone_ticks(1, options, 400);
+        let value = serde_json::to_value(record).unwrap();
+        let events = &value["diagnostics"]["native_combat_events"];
+        assert!(events.as_array().is_some_and(|events| !events.is_empty()));
+        println!("{MARKER}{events}");
+        return;
+    }
+    let run = || {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "dungeon_simulator::keystone::tests::same_seed_fresh_processes_replay_the_first_pull",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let events = stdout
+            .lines()
+            .find_map(|line| line.split_once(MARKER).map(|(_, events)| events))
+            .expect("child must report its native combat events");
+        serde_json::from_str::<serde_json::Value>(events).unwrap()
+    };
+    assert_eq!(
+        run(),
+        run(),
+        "same seed changed the first pull event stream"
+    );
+}
+
+#[test]
 #[ignore = "explicit native headless keystone inputs; two 200 s runs of one seed"]
 fn same_seed_and_epoch_select_identical_affixes() {
     const TICKS: usize = 4_000;

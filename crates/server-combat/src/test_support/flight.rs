@@ -49,28 +49,16 @@ impl Areas {
     }
 }
 
-pub fn install(
-    app: &mut App,
-    db: &rusqlite::Connection,
-    nav_root: &Path,
-    data_root: &Path,
-) -> Result<(), String> {
+pub fn install(app: &mut App, db: &rusqlite::Connection, data_root: &Path) -> Result<(), String> {
     let areas = Areas::open(db, data_root)?;
     if !app.world().contains_resource::<crate::ground::GroundMap>() {
         app.insert_resource(areas.ground);
-    }
-    if !app
-        .world()
-        .contains_resource::<crate::navigation::Navigation>()
-    {
-        app.insert_resource(crate::navigation::Navigation::new(nav_root));
     }
     app.insert_resource(areas.table);
     app.insert_resource(
         crate::auras::mount::load_mount_store(db)
             .map_err(|error| format!("flight mount catalog: {error}"))?,
     );
-    crate::navigation::install_publication(app);
     Ok(())
 }
 
