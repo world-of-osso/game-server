@@ -14,6 +14,7 @@ mod active_enemy_tests;
 mod rng_target_order_follower_tests;
 mod elemental_mote_fusion_follower_tests;
 mod outlaw_bte_duration_follower_tests;
+mod venom_random_stat_follower_tests;
 mod blood_bloody_demise_follower_tests;
 mod protection_hammer_anvil_follower_tests;
 mod protection_divine_guidance_follower_tests;
