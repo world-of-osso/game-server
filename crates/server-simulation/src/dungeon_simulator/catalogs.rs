@@ -5,15 +5,26 @@ use bevy::prelude::*;
 macro_rules! catalogs {
     ($($field:ident: $ty:path),+ $(,)?) => {
         pub(super) struct Catalogs {
+            server: Option<crate::world_data::catalogs::WorldCatalogs>,
             $($field: Option<$ty>,)+
         }
 
         impl Catalogs {
             pub(super) fn take(world: &mut World) -> Self {
-                Self { $($field: world.remove_resource::<$ty>(),)+ }
+                let server = world
+                    .remove_resource::<crate::world_data::catalogs::WorldCatalogs>()
+                    .map(|mut server| {
+                        server.take(world);
+                        server
+                    });
+                Self { server, $($field: world.remove_resource::<$ty>(),)+ }
             }
 
             pub(super) fn install(self, world: &mut World) {
+                if let Some(mut server) = self.server {
+                    server.install(world);
+                    world.insert_resource(server);
+                }
                 $(
                     // Preserve native absence (e.g. ItemLocks after a loader error).
                     world.remove_resource::<$ty>();
@@ -27,8 +38,6 @@ macro_rules! catalogs {
 }
 
 catalogs! {
-    world: crate::world_data::WorldData,
-    armor: crate::level_scaling::ArmorConstants,
     spells: crate::spell_info::SpellStore,
     classes: crate::spell_info::ClassSpells,
     powers: crate::spell_cast::powers::PowerTypeTable,
@@ -39,10 +48,7 @@ catalogs! {
     item_instances: crate::stats::NativeItemInstances,
     item_procs: crate::item_proc_data::ItemProcInputs,
     follower_gear: crate::followers::gear::FollowerGearSource,
-    factions: crate::faction::FactionTemplates,
-    maps: crate::maps::MapStore,
     reaches: crate::scripted_ai::model_reach::ModelReaches,
-    races: crate::unit_creature_type::RaceCreatureTypes,
     conditions: crate::conditions::SpellTargetConditions,
     followers: crate::followers::FollowerCatalog,
     texts: crate::scripted_ai::creature_text::CreatureTexts,

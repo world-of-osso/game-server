@@ -264,6 +264,8 @@ fn build_runtime_app(
     }
     app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
+    // MapsPlugin and AchievementPlugin initialize the server clock.
+    app.init_resource::<crate::maps::ServerClock>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.init_resource::<crate::spell_cast::test_harness::ReplayCombatClock>();
     app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
@@ -389,10 +391,13 @@ pub(super) fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
     app.insert_resource(
         crate::item_proc_data::load(&db).expect("load native equipped-producer catalogs"),
     );
-    let data = crate::world_data::load_world_data(path);
-    app.insert_resource(data.armor_constants.clone());
-    app.insert_resource(data);
-    let db2 = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+    let data = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data");
+    // Server startup's own definition set (WorldDataPlugin), kept as a resource so
+    // seeded-world reuse moves the same set.
+    let mut catalogs = crate::world_data::catalogs::load(path, &data);
+    catalogs.install(app.world_mut());
+    app.insert_resource(catalogs);
+    let db2 = data.join("db2/active");
     app.insert_resource(
         crate::followers::gear::load_source(path, &db2)
             .expect("load follower gear from the selected world database"),
@@ -407,10 +412,7 @@ pub(super) fn load_gameplay_data(app: &mut App, path: &std::path::Path) {
         enchants: server::item_instance::load::load_enchantment_tables(&db).unwrap(),
         effects: server::item_instance::load::load_item_effect_tables(&db).unwrap(),
     });
-    app.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
-    app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
-    app.insert_resource(crate::unit_creature_type::load_race_types(&db).unwrap());
     app.insert_resource(crate::conditions::load_spell_target_conditions(path).unwrap());
 }
 
