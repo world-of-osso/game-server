@@ -1025,6 +1025,7 @@ fn measure_seed(spec_id: u32, count: usize, seed: u64) -> Result<Value, String> 
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391});
     output.as_object_mut().unwrap().extend(driver_report(&run));
+    super::fact_error_report::attach_fact_errors(run.app.world_mut(), &mut output)?;
     Ok(output)
 }
 
