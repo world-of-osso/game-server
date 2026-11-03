@@ -55,6 +55,7 @@ Source: [selected per-spec loadouts](../sources/follower-consumables/selected.md
 
 `INFERRED_WCL` (`lust_policy.rs`; 144 Midnight S2 keys, +2..+10, 16 per level across 8 dungeons; 213 party lust applications):
 - [x] A follower casts Bloodlust, Heroism, Time Warp, Fury of the Aspects or its pet's Primal Rage only while no party member has a lust lockout.
+- [ ] For an APL-selected cast blocked by the current form, followers leave that form only if DB2 permits the spell unshifted. `VERIFIED_WCL` mHcDYRVyprndwjFC fight 2 pull 2: the Restoration Shaman leaves Ghost Wolf at 2.535 seconds and casts healing spells. Keep form-required spells and player cast admission unchanged.
 - [x] The first lust goes on the first trash pull with at least 8 live engaged enemies, at least 7.7 s into the pull. Both are nearest-rank p10 of the 110 retail trash lusts.
 - [x] After the party has a lust in the instance copy, trash never gets another lust, even when the lockout ends. In 81 retail keys the lockout ended before the final-boss pull; 59 held the lust for that boss and 12 spent it on trash. The trash share does not rise with distance to the final boss (2/16 under 60 s, 2/11 at 240 s or more), and no trash pack recurs more than twice.
 - [x] The final boss gets a lust at any point of its pull while no lockout is active. The final boss is a boss bound in the copy's instance script whose other bosses are all done. Retail final-boss lusts are at p10 0.7 s and median 4.0 s; 11 of 23 later ones waited for a lockout. Other bosses get no lust.

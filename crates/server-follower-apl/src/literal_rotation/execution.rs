@@ -1181,6 +1181,12 @@ fn native_readiness(
     } else {
         crate::spell_cast::read_native_cast_start(world, actor, &spell, target)
     };
+    let admission = match admission {
+        Err(crate::spell_cast::CastFailure::NotShapeshift) if !after_channel => {
+            crate::spell_cast::read_follower_cast_after_unshift(world, actor, &spell, target)
+        }
+        other => other,
+    };
     match admission {
         Ok(_) => Ok(NativeReadiness {
             ready: true,
@@ -1438,6 +1444,8 @@ pub fn execute(world: &mut World, actor: Entity, action: Execution) -> Result<()
                 primary,
                 destination: action_destination(world, spell, target)?,
             };
+            let spell = spell.clone();
+            crate::spell_cast::unshift_follower_for_spell(world, actor, &spell);
             let result = if world.get::<shared::components::Player>(actor).is_some() {
                 crate::spell_cast::cast_for_player_with_targets(world, actor, id, targets)
             } else {

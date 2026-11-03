@@ -48,6 +48,14 @@ pub(super) fn check_cast(
     check_unmatched_form(world, spell, form, required)
 }
 
+pub(super) fn check_unshifted(world: &World, spell: &SpellInfo) -> Result<(), CastFailure> {
+    let required = spell
+        .shapeshift
+        .as_ref()
+        .map_or(0, |row| combine_mask(row.shapeshift_mask));
+    check_unmatched_form(world, spell, 0, required)
+}
+
 fn combine_mask(words: [u32; 2]) -> u64 {
     u64::from(words[0]) | (u64::from(words[1]) << 32)
 }
