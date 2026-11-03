@@ -1,7 +1,7 @@
 //! TC a352b1fa SpellEffects.cpp:4037–4075/4151, effects98/144/124.
 use super::{effects::EffectCtx, *};
 use crate::spell_info::SpellEffect;
-use shared::components::{Npc, Player, UnitSummonedBy};
+use shared::components::{Npc, UnitSummonedBy};
 
 const SPEED_RATIO: f32 = 0.1;
 const MINIMUM_SPEED: f32 = 0.01;
@@ -118,6 +118,9 @@ fn target_allows_knockback(world: &World, caster: Entity, target: Entity) -> boo
     if rooted {
         return false;
     }
+    if crate::followers::is_player_like_combatant(world, target) {
+        return true;
+    }
     let Some(npc) = world.get::<Npc>(target) else {
         return true;
     };
@@ -134,7 +137,7 @@ fn target_allows_knockback(world: &World, caster: Entity, target: Entity) -> boo
     let controller = world.get::<UnitSummonedBy>(caster).map_or(caster, |owner| {
         Entity::try_from_bits(owner.0).expect("server summon controller")
     });
-    let player_cast = world.get::<Player>(controller).is_some();
+    let player_cast = crate::followers::is_player_like_combatant(world, controller);
     let world_boss = template.type_flags & WORLD_BOSS_TYPE_FLAG != 0
         && world.get::<crate::hunter_pet::HunterPet>(target).is_none();
     let dungeon_boss = template.flags_extra & DUNGEON_BOSS_EXTRA_FLAG != 0;
