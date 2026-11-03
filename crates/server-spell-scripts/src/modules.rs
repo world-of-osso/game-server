@@ -127,6 +127,7 @@ register_modules! {
     core_reach: (1000, "modules/core_reach.rs"),
     death_knight_permafrost: (2506, "modules/death_knight_permafrost.rs"),
     den_cryo_surge: (9811, "modules/den_cryo_surge.rs"),
+    den_rotten_ground: (9811, "modules/den_rotten_ground.rs"),
     defensive_health_procs: (9801, "modules/defensive_health_procs.rs"),
     dragonflight_burgeoning_seed: (9808, "modules/dragonflight_burgeoning_seed.rs"),
     dragonflight_heart: (1000, "modules/dragonflight_heart.rs"),

@@ -1,7 +1,9 @@
 //! Spell-created area triggers, distinct from static map/quest triggers.
 //! TC a352b1fa Spell::EffectCreateAreaTrigger: one object at the destination
 //! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding,
-//! except the finite Frozen Ground source-template binding.
+//! except the finite Frozen Ground source-template binding and script-supplied
+//! `AreaTriggerBinding`s. Units that leave a field, or are inside when it ends,
+//! lose its entry aura.
 //! Aura395 uses exact aura-effect ownership and supported source template actions.
 //! Missing or unsupported source definitions never acquire guessed geometry.
 mod aura_owned;
@@ -15,6 +17,7 @@ pub(crate) use catalog::load_catalog as load_aura_field_catalog;
 
 use super::effects::EffectCtx;
 use super::targets::{self, Relation};
+use crate::auras::RemoveReason;
 use crate::maps::InMap;
 use crate::spell_info::{SpellEffect, SpellStore};
 use bevy::prelude::*;
@@ -131,6 +134,10 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
                 return;
             }
         }
+    } else if let Some(binding) =
+        super::script_registry::area_trigger_binding(world, ctx.spell.id, effect.misc_values[0])
+    {
+        binding
     } else {
         (
             radius,
@@ -218,7 +225,7 @@ fn update_trigger(world: &mut World, entity: Entity) {
         || owner_map.is_none()
         || owner_map != trigger_map
     {
-        meteor::remove_exited(world, &trigger, &[]);
+        remove_exited(world, &trigger, &[]);
         if owner_map.is_some() && owner_map == trigger_map {
             if let Some(position) = world.get::<Position>(entity).copied() {
                 let center = Vec3::new(position.x, position.y, position.z);
@@ -252,7 +259,7 @@ fn update_trigger(world: &mut World, entity: Entity) {
         trigger.relation,
         0,
     );
-    meteor::remove_exited(world, &trigger, &inside);
+    remove_exited(world, &trigger, &inside);
     apply_trigger_spells(world, &trigger, &inside, now);
     if let Some(mut stored) = world.get_mut::<SpellAreaTrigger>(entity) {
         stored.inside = inside.into_iter().collect();
@@ -260,6 +267,27 @@ fn update_trigger(world: &mut World, entity: Entity) {
             stored.next_tick_at = now + f64::from(trigger.period_ms) / 1000.0;
         }
     }
+}
+
+/// TC AreaTrigger::UndoActions: a unit that leaves the field, or is inside when
+/// it ends, loses the entry aura this field's caster applied.
+fn remove_exited(world: &mut World, trigger: &SpellAreaTrigger, inside: &[Entity]) {
+    for &unit in trigger.inside.iter().filter(|unit| !inside.contains(unit)) {
+        for instance in owned_entry_auras(world, unit, trigger) {
+            crate::auras::remove_instance(world, unit, instance, RemoveReason::Expired);
+        }
+    }
+}
+
+fn owned_entry_auras(world: &World, unit: Entity, trigger: &SpellAreaTrigger) -> Vec<u32> {
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(unit) else {
+        return Vec::new();
+    };
+    auras
+        .iter()
+        .filter(|aura| aura.spell_id == trigger.trigger_spell && aura.caster == trigger.caster)
+        .map(|aura| aura.instance_id)
+        .collect()
 }
 
 fn apply_trigger_spells(

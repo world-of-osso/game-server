@@ -78,6 +78,7 @@
 //! - `FireAuraRegistration`: after native Ret Sentence, before Fel Devastation.
 //! - `BeforeProcLaunch` and `LaunchDamageModifier`: admitted launch snapshots before damage.
 //! - `HotStreakProducers`: shared eligible flight/damage classification table.
+//! - `AreaTriggerBinding`: first match supplies an effect179 field's radius, relation and entry spell.
 //! - `AfterFireDirectHit`: positive direct hits after generic direct damage callbacks.
 //! - `RecordFireOutcome`, `AfterFireOutcomeHit`: eligible hit outcomes, then Meteorite callbacks.
 //! - `CastHitProcChance` and `RollCastHitProc`: chance snapshot before consumption, roll after cast.
@@ -195,6 +196,8 @@ pub type AfterForegroundSpenderHook = fn(&mut World, Entity, &SpellInfo, Option<
 pub type AfterSpenderProcHook = fn(&mut World, Entity, &SpellInfo, Option<Entity>);
 pub type AfterElementalLaunchHook = fn(&mut World, Entity, &SpellInfo, bool);
 pub type AreaTriggerExpiredHook = fn(&mut World, Entity, u32, Vec3);
+/// Spell ID and create-properties ID to (radius, relation, entry spell).
+pub type AreaTriggerBindingLookup = fn(u32, i32) -> Option<(f32, super::targets::Relation, u32)>;
 pub type BeforeDirectDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity, bool);
 pub type AfterPeriodicDamagePoliciesHook = fn(&mut World, &EffectCtx<'_>, Entity);
 pub type EmpowerCompleteHook =
@@ -469,6 +472,7 @@ spell_script_hooks! {
     AfterSpenderProc(AfterSpenderProcHook),
     AfterElementalLaunch(AfterElementalLaunchHook),
     AreaTriggerExpired(AreaTriggerExpiredHook),
+    AreaTriggerBinding(AreaTriggerBindingLookup),
     BeforeDirectDamagePolicies(BeforeDirectDamagePoliciesHook),
     AfterPeriodicDamagePolicies(AfterPeriodicDamagePoliciesHook),
     EmpowerCompletion(EmpowerCompleteLookup),
@@ -2282,6 +2286,20 @@ pub fn area_trigger_expired(world: &mut World, caster: Entity, spell: u32, posit
             run(world, caster, spell, position);
         }
     }
+}
+
+pub fn area_trigger_binding(
+    world: &World,
+    spell: u32,
+    properties: i32,
+) -> Option<(f32, super::targets::Relation, u32)> {
+    world
+        .resource::<SpellScriptRegistry>()
+        .hooks(HookKind::AreaTriggerBinding)
+        .find_map(|hook| match hook {
+            SpellScriptHook::AreaTriggerBinding(lookup) => lookup(spell, properties),
+            _ => None,
+        })
 }
 
 pub fn after_cast_update(world: &mut World) {
