@@ -2651,6 +2651,84 @@ fn voidscar_siphoid_pull_recruits_nearby_helpers() {
 }
 
 #[test]
+#[ignore = "requires extracted Voidscar graph and world data"]
+fn voidscar_boss_approach_prerequisites_survive_forces_skip() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2923,
+            level: 2,
+            specs: [268, 270, 261, 70, 253],
+        }),
+    )
+    .unwrap();
+    assert_eq!(run.graph.map_id, 2923);
+    let owner = run.party.owner;
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: 4553.104,
+        y: -115.449486,
+        z: 370.31216,
+    });
+    let atroxus = run.actors[&3276417028];
+    let position = *run.app.world().get::<Position>(atroxus).unwrap();
+    assert!(
+        run.approach_translocation(Vec3::new(position.x, position.y, position.z))
+            .unwrap(),
+        "the party must use the transport before testing a complete walk path"
+    );
+    let boss = run.actors[&3276417029];
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: 3276417029,
+        anchor: [5096.57, -19.800343, 450.6],
+    }];
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(Position {
+            x: 5053.584,
+            y: -19.386562,
+            z: 445.47736,
+        });
+    }
+    let blockers = run.boss_approach_blockers(boss).unwrap();
+    for guid in 3276417105..=3276417109 {
+        assert!(
+            blockers
+                .iter()
+                .any(|(_, actor)| *actor == run.actors[&guid]),
+            "missing blocker {guid}"
+        );
+    }
+    let mut selected = std::collections::HashSet::new();
+    for _ in 0..=blockers.len() {
+        let (pack, selected_boss) = run.next_pack_with_forces(None, false, true).unwrap();
+        let (_, prerequisite) = run.resolve_keystone_approach(pack, selected_boss).unwrap();
+        if prerequisite == boss {
+            break;
+        }
+        selected.insert(prerequisite);
+        run.app
+            .world_mut()
+            .get_mut::<Health>(prerequisite)
+            .unwrap()
+            .current = 0.0;
+        for member in run.members().collect::<Vec<_>>() {
+            run.app.world_mut().entity_mut(member).insert(Position {
+                x: 5060.0,
+                y: -19.1,
+                z: 446.0,
+            });
+        }
+    }
+    for guid in 3276417105..=3276417109 {
+        assert!(
+            selected.contains(&run.actors[&guid]),
+            "forces skip omitted prerequisite {guid}"
+        );
+    }
+}
+
+#[test]
 fn forces_complete_skips_unengaged_trash_and_selects_remaining_boss() {
     let run = spawn_run(2, &mut None).unwrap();
     let normal = run.next_pack_with_forces(None, false, false).unwrap();
@@ -3660,6 +3738,7 @@ struct Run {
     objects: BTreeMap<u64, Entity>,
     report: Report,
     current_pack: Option<u64>,
+    approach_prerequisites: Option<(Entity, Vec<(u64, Entity)>)>,
     waiting_objective: Option<(u64, f64)>,
     deck_replay: Option<DeckReplay>,
     /// Packs whose frozen route anchor the owner reached without engaging them.
@@ -4343,6 +4422,7 @@ fn spawn_run_mode_record(
         actors,
         objects,
         current_pack: None,
+        approach_prerequisites: None,
         waiting_objective: None,
         deck_replay: None,
         anchors_reached: Default::default(),
@@ -4906,7 +4986,7 @@ impl Run {
                 .remove::<MoveIntent>();
             return Ok(());
         }
-        let Some((pack_id, target)) = next else {
+        let Some((mut pack_id, mut target)) = next else {
             if self.has_living_required_boss() {
                 self.app
                     .world_mut()
@@ -4929,7 +5009,7 @@ impl Run {
             return Ok(());
         }
         let target_position = *self.app.world().get::<Position>(target).unwrap();
-        let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        let mut to = Vec3::new(target_position.x, target_position.y, target_position.z);
         let attackable = crate::spell_cast::targets::relation_matches(
             self.app.world(),
             self.party.owner,
@@ -4942,9 +5022,16 @@ impl Run {
             self.hold_for_objective(pack_id);
             return Ok(());
         }
-        let approach = self.approach_point(pack_id, target, to);
+        let mut approach = self.approach_point(pack_id, target, to);
         if self.approach_translocation(approach)? {
             return Ok(());
+        }
+        if self.keystone.is_some() && self.is_required_boss(target) {
+            (pack_id, target) = self.resolve_keystone_approach(pack_id, target)?;
+            self.current_pack = Some(pack_id);
+            let position = *self.app.world().get::<Position>(target).unwrap();
+            to = Vec3::new(position.x, position.y, position.z);
+            approach = self.approach_point(pack_id, target, to);
         }
         let (opener, range) = if self.keystone.is_some() {
             let range = crate::followers::simulator::leader_attack_range(
@@ -5252,6 +5339,79 @@ impl Run {
 
     fn drive_owner_opening(&mut self, target: Entity) -> Result<(), String> {
         drive_owner_apl_opening(self.app.world_mut(), self.party.owner, target)
+    }
+
+    fn resolve_keystone_approach(
+        &mut self,
+        pack: u64,
+        target: Entity,
+    ) -> Result<(u64, Entity), String> {
+        Ok(self
+            .boss_approach_prerequisite(target)?
+            .unwrap_or((pack, target)))
+    }
+
+    fn boss_approach_blockers(&mut self, boss: Entity) -> Result<Vec<(u64, Entity)>, String> {
+        let members: Vec<_> = self.members().collect();
+        let mut blockers = Vec::new();
+        for member in members {
+            for actor in
+                server::followers::simulator::approach_blockers(self.app.world_mut(), member, boss)?
+            {
+                let guid = self
+                    .actors
+                    .iter()
+                    .find_map(|(&guid, &entity)| (entity == actor).then_some(guid))
+                    .ok_or_else(|| format!("approach blocker {actor:?} lacks a graph source"))?;
+                let pack = self
+                    .graph
+                    .packs
+                    .iter()
+                    .find(|pack| pack.spawns.iter().any(|spawn| spawn.guid == guid))
+                    .ok_or_else(|| format!("approach blocker source {guid} lacks a graph pack"))?;
+                if !blockers.iter().any(|(_, found)| *found == actor) {
+                    blockers.push((pack.id, actor));
+                }
+            }
+        }
+        let from = *self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .ok_or("party owner lacks position")?;
+        let from = Vec3::new(from.x, from.y, from.z);
+        blockers.sort_by(|(_, left), (_, right)| {
+            let distance = |actor| {
+                self.app
+                    .world()
+                    .get::<Position>(actor)
+                    .map(|p| from.distance_squared(Vec3::new(p.x, p.y, p.z)))
+                    .unwrap_or(f32::INFINITY)
+            };
+            distance(*left)
+                .total_cmp(&distance(*right))
+                .then(left.to_bits().cmp(&right.to_bits()))
+        });
+        Ok(blockers)
+    }
+
+    fn boss_approach_prerequisite(
+        &mut self,
+        boss: Entity,
+    ) -> Result<Option<(u64, Entity)>, String> {
+        if let Some((cached_boss, blockers)) = &self.approach_prerequisites
+            && *cached_boss == boss
+            && let Some(next) = blockers
+                .iter()
+                .copied()
+                .find(|(_, actor)| crate::spell_cast::targets::is_alive(self.app.world(), *actor))
+        {
+            return Ok(Some(next));
+        }
+        let blockers = self.boss_approach_blockers(boss)?;
+        let next = blockers.first().copied();
+        self.approach_prerequisites = Some((boss, blockers));
+        Ok(next)
     }
 
     fn is_required_boss(&self, target: Entity) -> bool {

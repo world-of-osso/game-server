@@ -13,6 +13,16 @@ pub struct Party {
     pub members: Vec<Entity>,
 }
 
+/// Live idle hostiles seen along the same complete approach used by followers.
+pub fn approach_blockers(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+) -> Result<Vec<Entity>, String> {
+    super::positioning::approach_enters_unpulled_sight(world, unit, target)?
+        .ok_or_else(|| "complete approach path is not yet available".into())
+}
+
 /// Tank, healer, two DPS and the leader DPS: Protection Paladin, Restoration
 /// Druid, Elemental Shaman, Fire Mage and Beast Mastery Hunter.
 pub const DEFAULT_PARTY: [u32; 5] = [66, 105, 262, 63, 253];
