@@ -180,6 +180,22 @@ fn protection_producers_item_native_inputs_resolve_equipped_counts_spec_and_role
     assert!(crate::item_proc_data::has_equipped_bonus(h.app.world(), h.caster, 1296648).is_err());
 }
 
+fn is_swing(h: &Harness, event: &shared::protocol::CombatLogEvent) -> bool {
+    event.spell_id.is_none() && event.source == Some(h.caster.to_bits())
+}
+
+/// Advance until the caster's running auto attack resolves, restarting its swing timer.
+fn wait_for_swing(h: &mut Harness) {
+    h.inbox = Inbox::default();
+    for _ in 0..100 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| is_swing(h, event)) {
+            return;
+        }
+    }
+    panic!("the running auto attack never swung");
+}
+
 fn landed_revenge(pieces: usize, free: bool) -> Harness {
     for _ in 0..8 {
         let mut h = item_fixture(false);
@@ -192,7 +208,7 @@ fn landed_revenge(pieces: usize, free: bool) -> Harness {
             ]),
         );
         // Actual autos and native Shield Slam energizes fund the paid control.
-        // Stop autos before reading the cost boundary; never write a Rage budget.
+        // Never write a Rage budget.
         h.attack(h.npc);
         h.advance(3);
         for _ in 0..3 {
@@ -200,8 +216,10 @@ fn landed_revenge(pieces: usize, free: bool) -> Harness {
             h.advance(190);
             assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
         }
-        h.stop_attack();
-        h.advance(35);
+        // Native SpellMisc6572 Attributes_1 0x200 (SPELL_ATTR1_INITIATES_COMBAT_ENABLES_AUTO_ATTACK,
+        // TC Spell.cpp5768) makes Revenge restart stopped autos, and that first swing earns
+        // Rage. Keep autos running and read the cost boundary inside one swing interval.
+        wait_for_swing(&mut h);
         if free {
             let caster = h.caster;
             apply_passive(&mut h, caster, FREE_REVENGE);
@@ -215,6 +233,10 @@ fn landed_revenge(pieces: usize, free: bool) -> Harness {
         h.cast_and_deliver(REVENGE, Some(h.npc));
         h.advance(5);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            !h.inbox.log.iter().any(|event| is_swing(&h, event)),
+            "no auto attack may land inside the measured cost window"
+        );
         let after = h.power(shared::components::PowerType::Rage);
         if free {
             assert_eq!(
