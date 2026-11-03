@@ -221,6 +221,8 @@ C	enhancement/maelstrom_weapon.rs	384451
 C	enhancement_converging.rs	198300
 C	enhancement_crackling.rs	224127
 C	essence_burst.rs	359618
+C	essence_burst.rs	1265980
+C	essence_burst.rs	1265991
 C	evoker_bombardments.rs	434473
 C	evoker_bombardments.rs	443788
 C	evoker_burnout.rs	375802
@@ -653,6 +655,7 @@ D	shadow_yogg.rs	spawn_thing	launch_triggered_spell	&summon	1	373277
 D	subtlety_techniques.rs	earn_storage	launch_triggered_spell	&spell	1	196911
 D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
 D	survival_takedown.rs	cast_pet_damage	launch_triggered_spell	&spell	1	1253862
+D	essence_burst.rs	cast_twin_flame	try_cast_triggered	child	1	1265980,1265991
 D	destruction_rift.rs	roll_rift	try_cast_triggered	summon	1	387979,394235,394243,434587
 D	destruction_rift.rs	barrage_tick	try_cast_triggered	child	1	387985,394238
 D	affliction_grasp.rs	copy_owned_ticks	cast_triggered_with_effect0_amount	child	1	1261158,1261166,1261176,1279686

@@ -3,6 +3,67 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native Essence Burst and Twin Flame spell data"]
+fn preservation_twin_flame_requires_consuming_essence_burst() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    let mut h = harness(Vec::new(), &[1265979, 1265991, 369299, 355913, 355916], 13).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let target = spawn_player(&mut h.app, 13, 2.0);
+    *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 1265979,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.cast_and_deliver(355913, Some(target));
+    h.advance(50);
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|e| e.spell_id == Some(1265991))
+    );
+    h.advance(700);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 369299,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+    h.cast_and_deliver(355913, Some(target));
+    h.advance(50);
+    assert!(
+        !crate::auras::has_aura(h.app.world(), h.caster, 369299),
+        "failed casts: {:?}",
+        h.inbox.failed
+    );
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(1265991)
+            && e.target == Some(target.to_bits())
+            && e.amount > 0),
+        "{events:?}"
+    );
+}
+
+#[test]
 #[ignore = "checks native Emerald Blossom and Fluttering Seedlings"]
 fn preservation_blossom_generates_seedlings_for_unfilled_slots() {
     let spells = [359793, 355913, 355916, 361361];
