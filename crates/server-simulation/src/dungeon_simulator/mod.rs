@@ -19,6 +19,7 @@ mod healer_intake_tests;
 mod healer_metrics;
 mod healer_metrics_tests;
 mod healer_ooc_recovery_tests;
+mod healer_upkeep_tests;
 mod healer_party_pulse_proc_tests;
 mod healer_party_trace;
 mod healer_profile_gear_tests;

@@ -293,7 +293,31 @@ fn is_maintained_buff(world: &World, spell_id: u32) -> bool {
     {
         return false;
     }
-    has_positive_aura(store, spell_id, &mut std::collections::BTreeSet::new())
+    !has_healing_effect(store, spell_id, &mut std::collections::BTreeSet::new())
+        && has_positive_aura(store, spell_id, &mut std::collections::BTreeSet::new())
+}
+
+fn has_healing_effect(
+    store: &server::spell_info::SpellStore,
+    spell_id: u32,
+    visited: &mut std::collections::BTreeSet<u32>,
+) -> bool {
+    if !visited.insert(spell_id) {
+        return false;
+    }
+    let Some(spell) = store.get(spell_id) else {
+        return false;
+    };
+    // TC SpellEffects.cpp: HEAL (10), HEAL_MAX_HEALTH (67), HEAL_MECHANICAL
+    // (75), HEAL_PCT (136); SpellAuraDefines.h: PERIODIC_HEAL (8),
+    // OBS_MOD_HEALTH (20), SCHOOL_ABSORB (69), SCHOOL_ABSORB_OVERKILL (316).
+    spell.effects.iter().any(|effect| {
+        matches!(effect.effect, 10 | 67 | 75 | 136)
+            || (server::spell_info::is_aura_effect(effect)
+                && matches!(effect.aura, 8 | 20 | 69 | 316))
+            || (effect.trigger_spell != 0
+                && has_healing_effect(store, effect.trigger_spell, visited))
+    })
 }
 
 fn has_positive_aura(
@@ -307,14 +331,43 @@ fn has_positive_aura(
     let Some(spell) = store.get(spell_id) else {
         return false;
     };
-    let aura_mask = server::auras::aura_effect_mask(spell);
-    let positive = aura_mask & !server::spell_info::positivity::negative_effects(store, spell);
+    let negative = server::spell_info::positivity::negative_effects(store, spell);
     let duration = spell
         .misc
         .as_ref()
         .and_then(|misc| misc.duration)
         .is_some_and(|duration| duration.duration_ms != 0);
-    (positive != 0 && duration)
+    // TC SpellAuraDefines.h: stat, resistance, speed, power and rating modifier
+    // auras. Dummy, periodic-heal, absorb and periodic-trigger auras are not
+    // sufficient evidence that a heal is a maintained utility buff.
+    let maintained = spell.effects.iter().any(|effect| {
+        server::spell_info::is_aura_effect(effect)
+            && effect.index < 32
+            && negative & (1 << effect.index) == 0
+            && matches!(
+                effect.aura,
+                22 | 29
+                    | 31
+                    | 34
+                    | 35
+                    | 79
+                    | 80
+                    | 85
+                    | 99
+                    | 132
+                    | 133
+                    | 137
+                    | 145
+                    | 166
+                    | 167
+                    | 189
+                    | 193
+                    | 250
+                    | 405
+                    | 471
+            )
+    });
+    (maintained && duration)
         || spell.effects.iter().any(|effect| {
             effect.trigger_spell != 0 && has_positive_aura(store, effect.trigger_spell, visited)
         })
