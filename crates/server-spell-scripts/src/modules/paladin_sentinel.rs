@@ -128,18 +128,16 @@ mod tests {
         world
             .entity_mut(caster)
             .insert(shared::components::ActiveSpec(66));
-        for spell_id in [SENTINEL, 1241410] {
-            auras::apply_aura(
-                world,
-                &AuraApplication {
-                    caster,
-                    target: caster,
-                    spell_id,
-                    effect_mask: u32::MAX,
-                    source: AuraSource::Cast,
-                },
-            );
-        }
+        let mut application = AuraApplication {
+            caster,
+            target: caster,
+            spell_id: SENTINEL,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        };
+        auras::apply_aura(world, &application);
+        application.spell_id = 1241410;
+        auras::apply_aura(world, &application);
         assert!(auras::has_aura(world, caster, SENTINEL));
         assert!(auras::has_aura(world, caster, 1241410));
         assert!(world.get::<SentinelDecay>(caster).is_some());
