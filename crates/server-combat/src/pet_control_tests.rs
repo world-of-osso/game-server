@@ -409,6 +409,30 @@ impl PetHarness {
 }
 
 #[test]
+fn felhunter_learns_automatic_spell_lock_at_level_zero() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch("\
+        CREATE TABLE creature_family (ID INTEGER, SkillLine_0 INTEGER, SkillLine_1 INTEGER);\
+        CREATE TABLE skill_line_ability (ID INTEGER, SkillLine INTEGER, Spell INTEGER, AcquireMethod INTEGER);\
+        CREATE TABLE spell_levels (SpellID INTEGER, DifficultyID INTEGER, SpellLevel INTEGER);\
+        CREATE TABLE spell_misc (SpellID INTEGER, DifficultyID INTEGER, Attributes_0 INTEGER, Attributes_1 INTEGER, Attributes_9 INTEGER);\
+        INSERT INTO creature_family VALUES (15, 189, 0);\
+        INSERT INTO skill_line_ability VALUES (47884, 189, 19647, 2);\
+        INSERT INTO spell_levels VALUES (19647, 0, 0);\
+        INSERT INTO spell_misc VALUES (19647, 0, 262144, 131072, 0);\
+    ").unwrap();
+    let spells = load_pet_levelup_spells(&conn).unwrap();
+    assert_eq!(
+        spells.0[&15],
+        vec![PetLevelupSpell {
+            level: 0,
+            spell: 19647,
+            kind: ACT_PASSIVE
+        }]
+    );
+}
+
+#[test]
 fn level_up_spells_of_the_wolf_family_in_trinitycore_order() {
     let Some(conn) = world_db() else {
         return;

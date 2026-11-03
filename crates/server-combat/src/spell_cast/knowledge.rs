@@ -38,6 +38,12 @@ pub fn resolve_actor_action(
     if crate::auras::is_passive(spell) {
         return Err(CastFailure::NotKnown);
     }
+    // DB2 119898 transforms to the active demon's Command Demon ability.
+    if known.contains(119898)
+        && crate::pet_control::command_demon_pet(world, actor, resolved).is_some()
+    {
+        return Ok(resolved);
+    }
     if known.contains(resolved)
         || crate::auras::shapeshift::grants_preset_spell(world, actor, resolved)
         || triggered_action_is_known(world, actor, known, resolved)

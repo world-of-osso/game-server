@@ -2,6 +2,8 @@
 use super::*;
 
 pub const ACTIONS: &[(&str, u32, bool, Option<u32>)] = &[
+    ("spell_lock", 119910, false, None),
+    ("axe_toss", 119914, false, None),
     ("shadow_bolt", 686, false, None),
     ("demonbolt", 264178, false, None),
     ("hand_of_guldan", 105174, false, None),

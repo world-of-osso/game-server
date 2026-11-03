@@ -280,6 +280,14 @@ pub(super) fn build_literal_app() -> App {
 }
 
 #[cfg(test)]
+pub(super) fn build_literal_follower_app() -> App {
+    let mut app = build_runtime_app(&mut None, &crate::test_data::world_db_path(), true);
+    super::native_movement::install_parity_arena(app.world_mut())
+        .expect("install parity arena navigation");
+    app
+}
+
+#[cfg(test)]
 pub(super) fn build_app_with_world_db(path: &std::path::Path) -> App {
     build_runtime_app(&mut None, path, true)
 }

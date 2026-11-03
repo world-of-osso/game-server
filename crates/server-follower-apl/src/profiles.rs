@@ -48,3 +48,30 @@ pub fn profile(spec: u32) -> Result<Profile, String> {
     };
     serde_json::from_str(text).map_err(|error| format!("spec{spec} APL profile: {error}"))
 }
+
+pub(crate) fn insert_warlock_interrupts(profile: &mut Profile) -> Result<(), String> {
+    let actions = profile
+        .options
+        .get_mut("actions")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or("warlock APL profile lacks actions")?;
+    let first_default = actions
+        .iter()
+        .position(|row| {
+            row.as_str()
+                .is_some_and(|row| row.starts_with("actions=") || row.starts_with("actions+="))
+        })
+        .ok_or("warlock APL profile lacks a default action list")?;
+    // INFERRED_WCL: Season 2 Ruby keys use both commands; see follower-dungeons.md.
+    // Retire this override when SimC supplies a warlock interrupt row.
+    let rows = [
+        "actions+=/spell_lock,cycle_targets=1,use_off_gcd=1,use_while_casting=1,if=target.debuff.casting.react",
+        "actions+=/axe_toss,cycle_targets=1,use_off_gcd=1,use_while_casting=1,if=target.debuff.casting.react",
+    ];
+    actions.splice(
+        first_default..first_default,
+        rows.into_iter()
+            .map(|row| serde_json::Value::String(row.into())),
+    );
+    Ok(())
+}

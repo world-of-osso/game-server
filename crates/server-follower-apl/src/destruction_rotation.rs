@@ -295,7 +295,14 @@ impl crate::follower::SpecRotation for Rotation {
         targets: &[Entity],
     ) -> Result<(), String> {
         // SimC76f8118 pet.cpp67–68/149: the actual pet follows its owner's target.
-        crate::pet_control::order_companion_pet(world, actor, targets.first().copied());
+        if targets.is_empty()
+            || world.get::<server::followers::Follower>(actor).is_none()
+            || server::combat_refs::active_opponents(world, actor)
+                .next()
+                .is_some()
+        {
+            crate::pet_control::order_companion_pet(world, actor, targets.first().copied());
+        }
         self.step(world, actor, targets, false).map(|_| ())
     }
 }

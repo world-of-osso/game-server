@@ -5,6 +5,8 @@ use crate::simc_apl_native::{DotRefresh, DotRefreshPolicy, native_dot_spell};
 use shared::components::PowerType;
 
 pub const ACTIONS: &[(&str, u32, bool, Option<u32>)] = &[
+    ("spell_lock", 119910, false, None),
+    ("axe_toss", 119914, false, None),
     ("incinerate", 29722, false, None),
     ("immolate", 348, false, None),
     ("wither", 445468, false, Some(445465)),

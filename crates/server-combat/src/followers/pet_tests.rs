@@ -123,70 +123,16 @@ pub(super) fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
 }
 
 #[test]
-fn follower_lantha_felguard_interrupts_with_learned_axe_toss_without_canceling_owner_cast() {
-    let (mut f, pet) = felguard_at_level(17); // SpellLevels89766: learned at17, CreatureFamily29/SkillLine761.
-    let before = count_persisted_rows(f.h.app.world());
-    let charm =
+fn follower_lantha_felguard_does_not_invent_axe_toss_below_its_authored_level() {
+    let (mut f, pet) = felguard_at_level(16);
+    assert!(
         f.h.app
             .world()
             .get::<crate::pet_control::PetCharm>(pet)
-            .unwrap();
-    assert!(
-        charm
-            .action_bar
-            .iter()
-            .any(|button| shared::protocol::pet_action_button_action(*button) == 89766),
-        "real level17 bar must contain sourced Axe Toss"
-    );
-    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
-    crate::spell_cast::creature_cast(f.h.app.world_mut(), f.unit, 686, Some(f.h.npc), false)
-        .unwrap();
-    super::update_ai(f.h.app.world_mut());
-    // SpellMisc89766 Speed30: native minimum5yd flight is166ms, then UDP delivery.
-    f.h.advance(8);
-    assert!(
-        f.h.app
-            .world()
-            .get::<shared::casting::CastState>(f.h.npc)
-            .is_none(),
-        "actual enemy Fireball must be interrupted; pet charm {:?}; pet cast {:?}; pet powers {:?}; failures {:?}; go {:?}; log {:?}",
-        f.h.app.world().get::<crate::pet_control::PetCharm>(pet),
-        f.h.app.world().get::<shared::casting::CastState>(pet),
-        f.h.app.world().get::<shared::components::UnitPowers>(pet),
-        f.h.inbox.failed,
-        f.h.inbox.go,
-        f.h.inbox.log,
-    );
-    assert_eq!(
-        f.h.app
-            .world()
-            .get::<shared::casting::CastState>(f.unit)
             .unwrap()
-            .spell_id,
-        686,
-        "pet kick must not cancel companion's own Shadow Bolt"
+            .spell_slot(89766)
+            .is_none()
     );
-    assert!(
-        f.h.inbox.log.iter().any(
-            |event| event.kind == shared::protocol::CombatLogKind::Interrupt
-                && event.source == Some(pet.to_bits())
-                && event.target == Some(f.h.npc.to_bits())
-                && event.spell_id == Some(347008)
-                && event.extra_spell_id == Some(133)
-        ),
-        "authored Axe Toss child347008 interrupt missing: {:?}",
-        f.h.inbox.log
-    );
-    assert_eq!(
-        count_persisted_rows(f.h.app.world()),
-        before,
-        "NPC pet kick must preserve existing fixture persistence without adding NPC rows"
-    );
-}
-
-#[test]
-fn follower_lantha_felguard_does_not_invent_axe_toss_below_its_authored_level() {
-    let (mut f, pet) = felguard_at_level(16);
     super::utility_tests::start_enemy_fireball(&mut f.h, pet);
     super::update_ai(f.h.app.world_mut());
     f.h.advance(3);
@@ -202,32 +148,6 @@ fn follower_lantha_felguard_does_not_invent_axe_toss_below_its_authored_level() 
             .iter()
             .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
     );
-}
-
-#[test]
-fn follower_lantha_felguard_cooldown_preserves_damage_priority() {
-    let (mut f, pet) = felguard_at_level(17);
-    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
-    super::update_ai(f.h.app.world_mut());
-    f.h.advance(160);
-    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
-    super::update_ai(f.h.app.world_mut());
-    f.h.advance(8);
-    assert!(
-        f.h.app
-            .world()
-            .get::<shared::casting::CastState>(f.h.npc)
-            .is_some()
-    );
-    assert_eq!(
-        f.h.inbox
-            .go
-            .iter()
-            .filter(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
-            .count(),
-        1
-    );
-    assert_lantha_damage_priority(&f);
 }
 
 #[test]
@@ -249,61 +169,6 @@ fn follower_lantha_felguard_does_not_waste_axe_toss_on_non_interruptible_firebal
             .go
             .iter()
             .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
-    );
-}
-
-#[test]
-fn follower_lantha_felguard_stun_blocks_axe_toss_without_stopping_owner_damage() {
-    let (mut f, pet) = felguard_at_level(17);
-    let stunner = crate::spell_cast::test_harness::spawn_npc(&mut f.h.app, 0.0);
-    super::utility_tests::prepare_enemy_spec(&mut f.h, stunner, 66);
-    crate::spell_cast::creature_cast(f.h.app.world_mut(), stunner, 853, Some(pet), false).unwrap();
-    assert!(
-        f.h.app
-            .world()
-            .get::<crate::auras::ActiveAuras>(pet)
-            .unwrap()
-            .is_stunned()
-    );
-    super::utility_tests::start_enemy_fireball(&mut f.h, pet);
-    super::update_ai(f.h.app.world_mut());
-    f.h.advance(8);
-    assert!(
-        f.h.app
-            .world()
-            .get::<shared::casting::CastState>(f.h.npc)
-            .is_some()
-    );
-    assert!(
-        !f.h.inbox
-            .go
-            .iter()
-            .any(|cast| cast.caster == pet.to_bits() && cast.spell_id == 89766)
-    );
-    assert_lantha_damage_priority(&f);
-}
-
-fn assert_lantha_damage_priority(f: &PetFixture) {
-    let profile =
-        &f.h.app
-            .world()
-            .get::<super::Follower>(f.unit)
-            .unwrap()
-            .profile;
-    let spells = [profile.attack_spell, profile.cooldown_spell];
-    let casting =
-        f.h.app
-            .world()
-            .get::<shared::casting::CastState>(f.unit)
-            .is_some_and(|cast| spells.contains(&cast.spell_id));
-    let launched =
-        f.h.inbox
-            .go
-            .iter()
-            .any(|cast| cast.caster == f.unit.to_bits() && spells.contains(&cast.spell_id));
-    assert!(
-        casting || launched,
-        "failed pet readiness must leave the actual sourced damage priority available"
     );
 }
 
@@ -695,38 +560,6 @@ fn follower_felguard_melee_kill_taps_the_authenticated_player() {
 }
 
 #[test]
-fn follower_felguard_fights_the_companions_engaged_enemy() {
-    let mut f = fixture();
-    f.h.attack(f.h.npc);
-    f.h.advance(3);
-    for _ in 0..240 {
-        super::update_ai(f.h.app.world_mut());
-        f.h.advance(1);
-    }
-    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).unwrap();
-    assert!(
-        f.h.inbox
-            .log
-            .iter()
-            .any(|event| event.source == Some(pet.to_bits())
-                && event.target == Some(f.h.npc.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage),
-        "actual Felguard damage missing: pos {:?}, target {:?}, state {:?}, charm {:?}, hp {:?}, attack {:?}, flags {:?}, enemy hp {:?}; combat {:?}",
-        f.h.app.world().get::<shared::components::Position>(pet),
-        f.h.app.world().get::<crate::networking::CombatTarget>(pet),
-        f.h.app
-            .world()
-            .get::<crate::creature_ai::CreatureState>(pet),
-        f.h.app.world().get::<crate::pet_control::PetCharm>(pet),
-        f.h.app.world().get::<shared::components::Health>(pet),
-        f.h.app.world().get::<crate::combat::AutoAttack>(pet),
-        f.h.app.world().get::<shared::components::UnitFlags>(pet),
-        f.h.app.world().get::<shared::components::Health>(f.h.npc),
-        f.h.inbox.log
-    );
-}
-
-#[test]
 fn follower_felguard_leaves_when_runtime_companion_owner_is_removed() {
     let mut f = fixture();
     let before = count_persisted_rows(f.h.app.world());
@@ -738,34 +571,4 @@ fn follower_felguard_leaves_when_runtime_companion_owner_is_removed() {
     f.h.advance(3);
     assert!(!f.h.app.world().entities().contains(pet));
     assert_eq!(count_persisted_rows(f.h.app.world()), before);
-}
-
-#[test]
-fn follower_lantha_ai_prepares_authored_felguard_before_damage() {
-    let mut f = fixture();
-    for _ in 0..180 {
-        super::update_ai(f.h.app.world_mut());
-        f.h.advance(1);
-        if crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit).is_some() {
-            break;
-        }
-    }
-    let pet = crate::hunter_pet::summoned_pet(f.h.app.world(), f.unit)
-        .expect("companion AI prepared Felguard");
-    assert_eq!(
-        f.h.app
-            .world()
-            .get::<shared::components::Npc>(pet)
-            .unwrap()
-            .template_id,
-        17252
-    );
-    assert!(
-        !f.h.inbox
-            .log
-            .iter()
-            .any(|event| event.source == Some(f.unit.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage),
-        "summon preparation precedes damage"
-    );
 }

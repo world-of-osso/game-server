@@ -37,6 +37,8 @@ mod tank_fixture_tests;
 mod vengeance_consume_soul_tests;
 #[cfg(test)]
 mod vengeful_wrath_tests;
+#[cfg(test)]
+mod warlock_pet_interrupt_tests;
 
 const DUMMY_ENTRY: u32 = 31_146;
 const DUMMY_LATERAL_STEP: f32 = 0.5;
@@ -876,7 +878,22 @@ pub(crate) fn spawn_reference(
     count: usize,
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
-    let mut app = super::runtime::build_literal_app();
+    spawn_reference_in(
+        super::runtime::build_literal_app(),
+        profile,
+        traits,
+        count,
+        identity,
+    )
+}
+
+fn spawn_reference_in(
+    mut app: App,
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
     app.add_systems(Last, melee_return::advance);
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
@@ -933,7 +950,11 @@ fn spawn_reference_actor(
     let loadout = crate::followers::class_spawn::LoadoutSource::SimcProfile {
         items: crate::followers::parity_profile::profile_instances(app.world(), profile)?,
         traits: purchases,
-        pet: crate::followers::parity_profile::simc_hunter_pet(profile)?,
+        pet: if matches!(profile.spec_id, 265..=267) {
+            crate::followers::parity_profile::simc_warlock_pet(app.world(), profile)?
+        } else {
+            crate::followers::parity_profile::simc_hunter_pet(profile)?
+        },
         consumables: crate::followers::consumables::simc(&profile.consumables)?,
     };
     let actor = crate::followers::simulator::spawn_parity_attacker(

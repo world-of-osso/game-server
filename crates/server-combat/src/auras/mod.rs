@@ -2446,7 +2446,7 @@ pub fn has_aura(world: &World, unit: Entity, spell_id: u32) -> bool {
 /// independent of aura type. SpellDefines.h:114 includes scripted damage breaks.
 pub(crate) const ANY_DAMAGE_INTERRUPT_MASK: u32 = 0x0900_0002;
 
-pub(crate) fn has_breakable_by_damage_cc(world: &World, unit: Entity) -> bool {
+pub fn has_breakable_by_damage_cc(world: &World, unit: Entity) -> bool {
     world.get::<ActiveAuras>(unit).is_some_and(|auras| {
         auras
             .iter()

@@ -349,6 +349,7 @@ register_modules! {
     hunter_unnatural_causes: (1000, "modules/hunter_unnatural_causes.rs"),
     hunter_wild_hunt: (2534, "modules/hunter_wild_hunt.rs"),
     hunter_wyvern: (2535, "modules/hunter_wyvern.rs"),
+    warlock_command_demon: (900, "modules/warlock_command_demon.rs"),
     impact_procs: (330, "modules/impact_procs.rs"),
     lava_surge: (300, "modules/lava_surge.rs"),
     marksmanship: (380, "modules/marksmanship.rs"),

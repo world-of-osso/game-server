@@ -11,20 +11,13 @@ pub struct ConfiguredPet {
 }
 
 impl ConfiguredPet {
-    pub fn read(world: &World, actor: Entity, profile: &Profile) -> Result<Option<Self>, String> {
-        let class = profile
-            .options
-            .get("class")
-            .and_then(serde_json::Value::as_str)
-            .ok_or("reference profile lacks its class namespace")?;
-        let key = format!("{class}.default_pet");
-        let Some(value) = profile.options.get(&key) else {
-            return Ok(None);
-        };
-        let name = value
-            .as_str()
-            .ok_or_else(|| format!("reference {key} must be a pet name"))?;
-        read_known_summon(world, actor, name).map(Some)
+    pub fn read(world: &World, actor: Entity, _profile: &Profile) -> Result<Option<Self>, String> {
+        let pet = world
+            .get::<server::followers::class_spawn::LoadoutPet>(actor)
+            .ok_or("actor lacks its selected pet loadout")?;
+        pet.0
+            .map(|entry| read_known_summon(world, actor, entry))
+            .transpose()
     }
 
     pub fn spell_id(&self) -> u32 {
@@ -68,8 +61,7 @@ impl ConfiguredPet {
     }
 }
 
-fn read_known_summon(world: &World, actor: Entity, name: &str) -> Result<ConfiguredPet, String> {
-    let expected = format!("Summon {name}");
+fn read_known_summon(world: &World, actor: Entity, entry: u32) -> Result<ConfiguredPet, String> {
     let known = world
         .get::<crate::class_progression::KnownSpells>(actor)
         .ok_or("default-pet actor lacks its native spellbook")?;
@@ -77,11 +69,16 @@ fn read_known_summon(world: &World, actor: Entity, name: &str) -> Result<Configu
     let spells: Vec<_> = known
         .iter()
         .filter_map(|id| store.get(id))
-        .filter(|spell| spell.name.eq_ignore_ascii_case(&expected))
+        .filter(|spell| {
+            spell.effects.iter().any(|effect| {
+                effect.effect == crate::hunter_pet::EFFECT_SUMMON_PET
+                    && u32::try_from(effect.misc_values[0]) == Ok(entry)
+            })
+        })
         .collect();
     let [spell] = spells.as_slice() else {
         return Err(format!(
-            "default_pet {name:?} resolves {} learned native summons",
+            "pet entry {entry} resolves {} learned native summons",
             spells.len()
         ));
     };
