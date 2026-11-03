@@ -42,15 +42,17 @@ pub(super) fn read_pull_budget(
         difficulty,
         &run.history.cleared_spawns,
     )?;
-    let projected = expand_assistance(world, tank, projected, &sources)?;
-    if let Some(decision) = read_cleared_single_pull(world, tank, &run, &projected, difficulty)? {
+    let expanded = expand_assistance(world, tank, projected, &sources)?;
+    if let Some(decision) =
+        read_cleared_single_pull(world, tank, &run, projected, &expanded, difficulty)?
+    {
         return Ok(decision);
     }
     let Some(ready) = pull_readiness::read_ready_heal(world, tank, &run.party)? else {
         return Ok(Decision::Wait(Reason::Healer));
     };
     debug!(healer=?ready.healer, spell_id=ready.spell_id, costs=?ready.costs, "Sourced tank healing capability checked");
-    let projection = read_projection(world, tank, &run, &projected, difficulty)?;
+    let projection = read_projection(world, tank, &run, &expanded, difficulty)?;
     let input = read_budget_input(world, tank, &run, &projection)?;
     Ok(pull_budget::evaluate(&input))
 }
@@ -85,6 +87,7 @@ fn read_cleared_single_pull(
     world: &mut World,
     tank: Entity,
     run: &RunBudget,
+    intended: &BTreeSet<u64>,
     projected: &BTreeSet<u64>,
     difficulty: u32,
 ) -> Result<Option<Decision>, String> {
@@ -105,7 +108,7 @@ fn read_cleared_single_pull(
         difficulty,
         &run.history.cleared_spawns,
     )?;
-    let packs: BTreeSet<_> = projected
+    let packs: BTreeSet<_> = intended
         .iter()
         .map(|guid| read_source_pack(&sources, *guid))
         .collect::<Result<_, _>>()?;

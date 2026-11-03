@@ -8,6 +8,63 @@ use super::graph::{Graph, Pack};
 
 const TICK: Duration = Duration::from_millis(50);
 
+pub(super) fn install_keystone_los(
+    app: &mut App,
+    asset_root: &std::path::Path,
+    map_id: u32,
+) -> Result<(), String> {
+    let root = asset_root.join("los");
+    let map = root.join(map_id.to_string());
+    let entries = std::fs::read_dir(&map).map_err(|error| {
+        format!(
+            "keystone map {map_id} LOS bake {} unavailable: {error}",
+            map.display()
+        )
+    })?;
+    let mut has_tile = false;
+    for entry in entries {
+        let entry =
+            entry.map_err(|error| format!("read keystone map {map_id} LOS bake: {error}"))?;
+        if entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "los")
+            && entry
+                .file_type()
+                .map_err(|error| format!("read LOS tile type: {error}"))?
+                .is_file()
+        {
+            has_tile = true;
+            break;
+        }
+    }
+    if !has_tile {
+        return Err(format!(
+            "keystone map {map_id} LOS bake {} has no tiles",
+            map.display()
+        ));
+    }
+    let los = server::test_support::LineOfSight::load(&root)
+        .map_err(|error| format!("load keystone map {map_id} LOS bake: {error}"))?;
+    app.insert_resource(los);
+    Ok(())
+}
+
+#[test]
+fn keystone_los_rejects_missing_map_bake() {
+    let assets = tempfile::tempdir().unwrap();
+    let mut app = App::new();
+    let error = install_keystone_los(&mut app, assets.path(), 2923).unwrap_err();
+    assert!(
+        error.contains("2923") && error.contains("LOS bake"),
+        "{error}"
+    );
+    assert!(
+        !app.world()
+            .contains_resource::<server::test_support::LineOfSight>()
+    );
+}
+
 pub(super) fn output_directory() -> std::path::PathBuf {
     std::env::var_os("DUNGEON_SIMULATOR_OUTPUT")
         .map(std::path::PathBuf::from)
