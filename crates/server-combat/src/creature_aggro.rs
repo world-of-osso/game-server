@@ -456,6 +456,10 @@ pub fn update_victim_system(world: &mut World) {
         .map(|(creature, _)| creature)
         .collect();
     for creature in creatures {
+        // An earlier evade can despawn summons in this snapshot.
+        if world.get_entity(creature).is_err() {
+            continue;
+        }
         // ThreatManager updates independently of AI/react state (TC:216–230).
         victim::update_reference_when_due(world, creature);
         update_active_projection(world, creature);
