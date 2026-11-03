@@ -500,7 +500,13 @@ fn start_native_fissure(f: &mut Fixture) {
     }
 }
 
+/// Runner: `GAME_SERVER_GROUND_DIR=/home/osso/data/fixtures/azure-tank-fixture-assets
+/// AZURE_TANK_BAKE_RECEIPT_SHA256=1780fed3e150cdcd3ba3ccc42da7b2305205044421652563308a1a8502569b8a
+/// cargo test --locked -p server-combat --lib followers::party::frontal_tests:: -- --ignored`.
+/// The private 2515 LOS bake and Azure eye table come from CASC model data; the
+/// repository and canonical `data/ground` hold neither.
 #[test]
+#[ignore = "requires private 2515 LOS/eye bake via GAME_SERVER_GROUND_DIR and AZURE_TANK_BAKE_RECEIPT_SHA256"]
 fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
     let mut f = fixture();
     let initial = point(&f.h, f.tank);
