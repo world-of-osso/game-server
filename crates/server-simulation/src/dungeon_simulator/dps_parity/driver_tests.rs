@@ -112,5 +112,8 @@ fn selected_driver_errors_are_not_replaced_by_another_rotation() {
 fn missing_follower_driver_reports_an_explicit_error() {
     let mut run = fixture(false);
     run.spec_driver = None;
-    assert_eq!(driver_report(&run).unwrap_err(), "NATIVE_LITERAL_DRIVER_UNAVAILABLE:63");
+    assert_eq!(
+        driver_report(&run).unwrap_err(),
+        "NATIVE_LITERAL_DRIVER_UNAVAILABLE:63"
+    );
 }

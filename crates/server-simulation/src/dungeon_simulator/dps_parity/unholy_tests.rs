@@ -6,7 +6,10 @@ use shared::protocol::CombatLogKind;
 fn unholy_literal_driver_executes_native_profile_actions() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_measurement(252, 1).expect("literal Unholy preparation");
-    assert_eq!(driver_report(&run).unwrap()["driver"], "LITERAL_SIMC_UNHOLY_76f8118");
+    assert_eq!(
+        driver_report(&run).unwrap()["driver"],
+        "LITERAL_SIMC_UNHOLY_76f8118"
+    );
     assert!(
         run.app
             .world()
