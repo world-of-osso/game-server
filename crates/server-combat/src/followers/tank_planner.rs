@@ -416,7 +416,7 @@ mod tests {
             .without_time()
             .with_ansi(false)
             .finish();
-        bevy::log::tracing::subscriber::with_default(subscriber, || {
+        crate::test_support::tracing_capture::with_default(subscriber, || {
             let tick = |world: &mut World, millis: u64, reason| {
                 world
                     .resource_mut::<Time>()

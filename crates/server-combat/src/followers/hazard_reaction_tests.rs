@@ -50,7 +50,7 @@ fn follower_hazard_trace_correlates_native_detection_worker_and_escape() {
         .without_time()
         .with_ansi(false)
         .finish();
-    bevy::log::tracing::subscriber::with_default(subscriber, || {
+    crate::test_support::tracing_capture::with_default(subscriber, || {
         assert!(super::hazards::escape(h.app.world_mut(), unit));
         crate::navigation::drain_fixture(&mut h.app);
         assert!(super::hazards::escape(h.app.world_mut(), unit));

@@ -287,7 +287,7 @@ fn smartai_coverage_warns_once_per_unsupported_type_including_timed_lists() {
     )
     .unwrap();
     let capture = WarningCapture::default();
-    bevy::log::tracing::subscriber::with_default(capture.clone(), || {
+    crate::test_support::tracing_capture::with_default(capture.clone(), || {
         load_smart_scripts(&temp.path().join("escort.sqlite")).unwrap();
     });
     let warnings = capture.0.lock().unwrap();
