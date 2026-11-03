@@ -38,7 +38,18 @@ fn initial_tick(world: &mut World, actor: Entity, spell: u32, depth: u8) {
     };
     // SimC76f8118 pets.cpp1978–2002: the unhasted channel ticks at zero;
     // the pet schedules its next hasted execute while that channel runs.
-    combat::spell_cast::cast_triggered(world, actor, 1280460, Some(target), depth + 1);
+    // The zero tick belongs to the admitted channel, like its scheduled ticks.
+    combat::spell_cast::cast_triggered_with_overrides(
+        world,
+        actor,
+        1280460,
+        Some(target),
+        depth + 1,
+        combat::spell_cast::TriggeredSpellOverrides {
+            channel_tick: true,
+            ..Default::default()
+        },
+    );
     let spell = world
         .resource::<combat::spell_info::SpellStore>()
         .get(1280457)

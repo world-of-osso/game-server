@@ -567,13 +567,7 @@ fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &T
             .expect("registered periodic trigger retains its native parent aura");
         run(world, unit, &aura, tick.effect_index);
     } else if tick.trigger_spell != 0 {
-        crate::spell_cast::cast_triggered(
-            world,
-            tick.caster,
-            tick.trigger_spell,
-            Some(unit),
-            TICK_TRIGGER_DEPTH,
-        );
+        cast_tick_trigger(world, tick.caster, spell, tick.trigger_spell, unit);
     }
     if spell.id == super::fel_devastation::FEL_DEVASTATION && tick.effect_index == 0 {
         super::fel_devastation::generate_meteoric_rise_fragment(
@@ -674,15 +668,31 @@ fn run_dummy_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tic
             scheduled_at: tick.scheduled_at,
         },
     );
-    crate::spell_cast::cast_triggered(
+    cast_tick_trigger(world, tick.caster, spell, trigger, target);
+    #[cfg(any(test, feature = "test-support"))]
+    effects::factor_capture::end_periodic_observation(world, observed_emission);
+}
+
+/// A channel's tick is part of the admitted channel, not a new action by its caster.
+fn cast_tick_trigger(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    trigger: u32,
+    target: Entity,
+) {
+    let channel_tick = crate::spell_cast::is_channeled_for_actor(world, caster, spell);
+    crate::spell_cast::cast_triggered_with_overrides(
         world,
-        tick.caster,
+        caster,
         trigger,
         Some(target),
         TICK_TRIGGER_DEPTH,
+        crate::spell_cast::TriggeredSpellOverrides {
+            channel_tick,
+            ..Default::default()
+        },
     );
-    #[cfg(any(test, feature = "test-support"))]
-    effects::factor_capture::end_periodic_observation(world, observed_emission);
 }
 
 /// `AuraEffect::HandleObsModPowerAuraTick` (SpellAuraEffects.cpp): the amount percent

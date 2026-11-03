@@ -149,6 +149,9 @@ pub struct SpellInfo {
     /// TC TRIGGERED_DONT_RESET_PERIODIC_TIMER (0x20000), included in FULL_MASK.
     #[serde(skip)]
     pub cast_dont_reset_periodic_timer: bool,
+    /// A periodic tick of its caster's running channel, admitted when the channel started.
+    #[serde(skip)]
+    pub cast_channel_tick: bool,
     /// Native Maelstrom launch helpers leave modifier-charge consumption to their parent.
     #[serde(skip)]
     pub cast_parent_owns_modifier_charges: bool,
