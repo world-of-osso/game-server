@@ -195,7 +195,7 @@ pub mod native_apl;
 #[cfg(test)]
 mod protection_producer_tests;
 mod sanctuary;
-pub(crate) use interruptibility::can_interrupt_cast;
+pub use interruptibility::can_interrupt_cast;
 #[cfg(test)]
 mod interruptibility_rule_tests;
 #[cfg(test)]

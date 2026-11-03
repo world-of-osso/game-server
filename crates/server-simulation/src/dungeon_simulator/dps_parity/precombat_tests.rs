@@ -99,6 +99,48 @@ fn literal_precombat_configured_demo_pet_uses_real_cast_and_does_not_resummon() 
 }
 
 #[test]
+#[ignore = "requires canonical 266 inputs and native follower loadout catalogs"]
+fn production_warlock_loadouts_resolve_felhunter_without_changing_simc_pet() {
+    use crate::followers::class_spawn::{GearSource, LoadoutPet};
+    use literal_rotation::default_pet::ConfiguredPet;
+
+    let mut run = prepare_literal(266, 1).unwrap();
+    let copy = *run
+        .app
+        .world()
+        .get::<crate::maps::InMap>(run.actor)
+        .unwrap();
+    let simc = ConfiguredPet::read(run.app.world(), run.actor, &run.profile)
+        .unwrap()
+        .expect("SimC profile selects Felguard");
+    assert_eq!(simc.spell_id(), 30146);
+
+    for spec in [265, 266, 267] {
+        for gear in [GearSource::Journal, GearSource::KeystoneBand(11)] {
+            let actor = crate::followers::simulator::spawn_parity_attacker(
+                run.app.world_mut(),
+                spec,
+                90,
+                copy,
+                crate::followers::simulator::ParityActor::Follower,
+                1,
+                gear,
+            )
+            .unwrap();
+            assert_eq!(
+                run.app.world().get::<LoadoutPet>(actor),
+                Some(&LoadoutPet(Some(417)))
+            );
+            let profile = server_follower_apl::profiles::profile(spec).unwrap();
+            let pet = ConfiguredPet::read(run.app.world(), actor, &profile)
+                .unwrap()
+                .expect("production loadout selects Felhunter");
+            assert_eq!(pet.spell_id(), 691);
+        }
+    }
+}
+
+#[test]
 #[ignore = "requires prepared269 profile/current native source view; snapshot before fixture engagement"]
 fn literal_precombat_ww_snapshot_exists_before_engagement_and_fight_time() {
     let _seed = crate::random::seed_scope(70448);

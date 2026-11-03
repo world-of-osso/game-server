@@ -25,6 +25,10 @@ pub enum GearSource {
     KeystoneBand(u32),
 }
 
+/// Native pet entry selected by the follower's loadout.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LoadoutPet(pub Option<u32>);
+
 pub enum LoadoutSource {
     Journal,
     Wcl(u32),
@@ -491,9 +495,12 @@ pub fn install_class(
         LoadoutSource::Journal | LoadoutSource::Wcl(_) if matches!(source.spec_id, 253 | 255) => {
             Some(154)
         }
+        // INFERRED_WCL: rank-selected Ruby Life Pools S2, 24 keys/spec; see spec.
+        LoadoutSource::Journal | LoadoutSource::Wcl(_) if source.class_id == 9 => Some(417),
         LoadoutSource::SimcProfile { pet, .. } => *pet,
         _ => None,
     };
+    world.entity_mut(entity).insert(LoadoutPet(pet));
     if source.class_id == 3
         && (matches!(&loadout, LoadoutSource::SimcProfile { .. }) || pet.is_some())
     {

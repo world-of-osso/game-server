@@ -166,12 +166,13 @@ pub struct PetLevelupSpell {
 }
 
 /// `mPetLevelupSpellMap`: per `CreatureFamily`, its two skill lines' `AutomaticCharLevel`
-/// abilities with a spell level, by level and then skill line and ability order (the
+/// abilities with a spell level row, by level and then skill line and ability order (the
 /// multimap's insertion order). Passive spells are left out: they never reach the bar.
 #[derive(Resource, Debug, Default, Clone)]
 pub struct PetLevelupSpells(pub HashMap<u32, Vec<PetLevelupSpell>>);
 
 pub fn load_pet_levelup_spells(conn: &Connection) -> rusqlite::Result<PetLevelupSpells> {
+    // Retail DB2 gives Felhunter Spell Lock (19647) an automatic-acquisition level of 0.
     let mut stmt = conn.prepare(
         "SELECT f.ID, a.Spell, l.SpellLevel, COALESCE(m.Attributes_0, 0),
                 COALESCE(m.Attributes_1, 0), COALESCE(m.Attributes_9, 0)
@@ -179,7 +180,7 @@ pub fn load_pet_levelup_spells(conn: &Connection) -> rusqlite::Result<PetLevelup
          JOIN skill_line_ability a ON a.SkillLine IN (f.SkillLine_0, f.SkillLine_1)
          JOIN spell_levels l ON l.SpellID = a.Spell AND l.DifficultyID = 0
          LEFT JOIN spell_misc m ON m.SpellID = a.Spell AND m.DifficultyID = 0
-         WHERE a.SkillLine != 0 AND a.AcquireMethod = ?1 AND l.SpellLevel > 0
+         WHERE a.SkillLine != 0 AND a.AcquireMethod = ?1
          ORDER BY f.ID, l.SpellLevel, a.SkillLine != f.SkillLine_0, a.ID",
     )?;
     let rows = stmt.query_map([ACQUIRE_AUTOMATIC_CHAR_LEVEL], |r| {
@@ -335,17 +336,35 @@ fn handle_pet_action(world: &mut World, owner: Entity, action: PetAction) {
 /// spells the bar does not cast (`HandlePetActionHelper`).
 const AREA_ENEMY_TARGETS: [u32; 3] = [15, 16, 28];
 
+/// Resolve Command Demon to an actual learned interrupt on the owner's current pet.
+pub fn command_demon_pet(world: &World, owner: Entity, command: u32) -> Option<(Entity, u32)> {
+    let spell = match command {
+        119914 => 89766, // Axe Toss
+        119910 => 19647, // Spell Lock
+        _ => return None,
+    };
+    let pet = summoned_pet(world, owner)?;
+    let charm = world.get::<PetCharm>(pet)?;
+    (!is_dead(world, pet) && charm.spell_slot(spell).is_some()).then_some((pet, spell))
+}
+
 /// A spell button (`ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE`, `HandlePetActionHelper`):
 /// a learned, non-passive spell without an enemy area target is cast by the pet through
 /// the spell pipeline at the given unit; as with an Attack order the pet goes after a unit
 /// its owner is not friendly to (`_AttackStart`). A failed cast clears the attack order.
-fn cast_ordered_spell(
+pub fn cast_ordered_spell(
     world: &mut World,
     owner: Entity,
     pet: Entity,
     spell_id: u32,
     action: &PetAction,
-) {
+) -> bool {
+    if world.get::<Mounted>(owner).is_some()
+        || summoned_pet(world, owner) != Some(pet)
+        || is_dead(world, pet)
+    {
+        return false;
+    }
     let learned = world
         .get::<PetCharm>(pet)
         .is_some_and(|charm| charm.spell_slot(spell_id).is_some());
@@ -354,14 +373,14 @@ fn cast_ordered_spell(
         .and_then(|store| store.get(spell_id))
         .cloned()
     else {
-        return;
+        return false;
     };
     let area_enemy = spell
         .effects
         .iter()
         .any(|effect| AREA_ENEMY_TARGETS.contains(&effect.implicit_targets[0]));
     if !learned || area_enemy || crate::auras::is_passive(&spell) {
-        return;
+        return false;
     }
     update_charm(world, pet, |charm| {
         charm.command_attack = true;
@@ -376,10 +395,12 @@ fn cast_ordered_spell(
             {
                 attack_start(world, pet, target);
             }
+            true
         }
         Err(failure) => {
             debug!("Pet {pet} could not cast {spell_id}: {failure:?}");
             update_charm(world, pet, |charm| charm.command_attack = false);
+            false
         }
     }
 }

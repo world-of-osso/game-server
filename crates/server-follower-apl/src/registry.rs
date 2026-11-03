@@ -34,6 +34,15 @@ pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecR
         },
         None => Encounter::dungeon(started_at),
     };
+    let warlock_profile = if matches!(spec, 265..=267) {
+        let mut profile = profile(spec)?;
+        if world.get::<server::followers::Follower>(actor).is_some() {
+            crate::profiles::insert_warlock_interrupts(&mut profile)?;
+        }
+        Some(profile)
+    } else {
+        None
+    };
     use crate::*;
     Ok(match spec {
         62 => Box::new(arcane_rotation::Rotation::load(
@@ -169,19 +178,19 @@ pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecR
         265 => Box::new(affliction_rotation::Rotation::load(
             world,
             actor,
-            &profile(265)?,
+            warlock_profile.as_ref().expect("warlock profile"),
             encounter,
         )?),
         266 => Box::new(demonology_rotation::Rotation::load(
             world,
             actor,
-            &profile(266)?,
+            warlock_profile.as_ref().expect("warlock profile"),
             encounter,
         )?),
         267 => Box::new(destruction_rotation::Rotation::load(
             world,
             actor,
-            &profile(267)?,
+            warlock_profile.as_ref().expect("warlock profile"),
             encounter,
         )?),
         268 => Box::new(brewmaster_rotation::Rotation::load(

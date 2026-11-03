@@ -47,6 +47,45 @@ pub fn simc_hunter_pet(profile: &Profile) -> Result<Option<u32>, String> {
     }
 }
 
+/// Resolve a SimC warlock's configured pet through its native summon effect.
+pub fn simc_warlock_pet(world: &World, profile: &Profile) -> Result<Option<u32>, String> {
+    if !matches!(profile.spec_id, 265..=267) {
+        return Ok(None);
+    }
+    let Some(value) = profile.options.get("warlock.default_pet") else {
+        return Ok(None);
+    };
+    let name = value
+        .as_str()
+        .ok_or("warlock.default_pet must be a string")?;
+    let spell_id = match name {
+        "imp" => 688,
+        "felhunter" => 691,
+        "voidwalker" => 697,
+        "sayaad" => 366222,
+        "felguard" => 30146,
+        "none" => return Ok(None),
+        _ => return Err(format!("unsupported warlock.default_pet {name:?}")),
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .ok_or_else(|| format!("native summon spell{spell_id} missing"))?;
+    let entries: Vec<_> = spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == crate::hunter_pet::EFFECT_SUMMON_PET)
+        .filter_map(|effect| u32::try_from(effect.misc_values[0]).ok())
+        .filter(|entry| *entry != 0)
+        .collect();
+    match entries.as_slice() {
+        [entry] => Ok(Some(*entry)),
+        _ => Err(format!(
+            "native summon spell{spell_id} has no unique pet entry"
+        )),
+    }
+}
+
 // SimC76f8118 item.cpp2090–2111 resolves explicit names through the pinned
 // embellishment table; native ItemBonus then resolves the equipped effect.
 pub fn embellishment_bonus(name: &str) -> Option<u32> {
@@ -191,6 +230,40 @@ pub fn equip_instances(
 mod tests {
     use super::*;
     use shared::item_data::ItemDefinitionSource;
+
+    #[test]
+    fn simc_warlock_pet_preserves_each_profile_selection() {
+        use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
+
+        let mut world = World::new();
+        world.insert_resource(SpellStore::fixture(
+            [(688, 416), (691, 417), (30146, 17252), (366222, 1863)]
+                .into_iter()
+                .map(|(id, entry)| SpellInfo {
+                    id,
+                    effects: vec![SpellEffect {
+                        effect: crate::hunter_pet::EFFECT_SUMMON_PET,
+                        misc_values: [entry, 0],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                })
+                .collect(),
+        ));
+        for (spec, name, entry) in [
+            (265, "sayaad", 1863),
+            (266, "felguard", 17252),
+            (267, "imp", 416),
+            (267, "felhunter", 417),
+        ] {
+            let profile: Profile = serde_json::from_value(serde_json::json!({
+                "spec_id": spec, "level": "90", "race": "human",
+                "equipment": [], "consumables": {}, "warlock.default_pet": name
+            }))
+            .unwrap();
+            assert_eq!(simc_warlock_pet(&world, &profile).unwrap(), Some(entry));
+        }
+    }
 
     #[test]
     fn simc_hunter_pet_resolves_explicit_and_default_aliases() {

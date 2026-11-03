@@ -14,7 +14,7 @@ const PREVENTION_SILENCE: u32 = 1;
 const MECHANIC_INTERRUPT: u32 = 26;
 
 /// The legacy CastState.interruptible field controls damage pushback, not kick authority.
-pub(crate) fn can_interrupt_cast(world: &World, interrupter: Entity, target: Entity) -> bool {
+pub fn can_interrupt_cast(world: &World, interrupter: Entity, target: Entity) -> bool {
     let Some(cast) = world.get::<CastState>(target) else {
         return false;
     };

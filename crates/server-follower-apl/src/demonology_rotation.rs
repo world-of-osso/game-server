@@ -160,6 +160,14 @@ pub fn command_minions(world: &mut World, actor: Entity, targets: &[Entity]) {
             .entity_mut(actor)
             .insert(crate::networking::CombatTarget(target));
     }
+    if target.is_some()
+        && world.get::<server::followers::Follower>(actor).is_some()
+        && server::combat_refs::active_opponents(world, actor)
+            .next()
+            .is_none()
+    {
+        return;
+    }
     if let Some(pet) = crate::hunter_pet::summoned_pet(world, actor) {
         let current = world
             .get::<crate::networking::CombatTarget>(pet)

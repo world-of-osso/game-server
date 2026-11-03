@@ -1001,6 +1001,9 @@ fn read_spell(
         {
             continue;
         }
+        if matches!(id, 119910 | 119914) && !pet_interrupt_ready(world, actor, target, id)? {
+            continue;
+        }
         let native = native_readiness(world, actor, id, target, None, prepared.after_channel)?;
         let resolved = world
             .resource::<crate::spell_info::SpellStore>()
@@ -1035,6 +1038,37 @@ fn read_spell(
     Ok(())
 }
 
+fn pet_interrupt_ready(
+    world: &mut World,
+    actor: Entity,
+    target: Entity,
+    command: u32,
+) -> Result<bool, String> {
+    let Some((pet, spell_id)) = server::pet_control::command_demon_pet(world, actor, command)
+    else {
+        return Ok(false);
+    };
+    if world.get::<server::followers::Follower>(actor).is_some()
+        && server::combat_refs::active_opponents(world, actor)
+            .next()
+            .is_none()
+    {
+        return Ok(false);
+    }
+    if !server::spell_cast::can_interrupt_cast(world, pet, target)
+        || server::auras::has_breakable_by_damage_cc(world, target)
+        || !server::followers::action_safe(world, pet, target, Some(spell_id))
+    {
+        return Ok(false);
+    }
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .cloned()
+        .ok_or_else(|| format!("native pet interrupt spell{spell_id} absent"))?;
+    Ok(server::spell_cast::read_native_cast_start(world, pet, &spell, target).is_ok())
+}
+
 // SimC76f8118 checks the target's casting state in each class's interrupt
 // target_ready override (sc_rogue.cpp4682–4687, sc_warrior.cpp4903–4909,
 // sc_mage.cpp3672–3678, sc_druid.cpp3573–3578). Skull Bash explicitly
@@ -1056,6 +1090,8 @@ fn interrupt_requires_casting_target(name: &str) -> bool {
             | "quell"
             | "solar_beam"
             | "interrupt"
+            | "axe_toss"
+            | "spell_lock"
     )
 }
 
