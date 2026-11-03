@@ -52,46 +52,68 @@ fn dps_parity_engagement_all_opponents_have_mutual_combat_refs() {
     }
 }
 
-fn read_multi_enemy_spells(spec: u32) -> Vec<u32> {
-    let path = std::env::var_os("DPS_PARITY_WORLD_DB").expect("prepared native database");
-    let db = rusqlite::Connection::open_with_flags(
-        std::path::PathBuf::from(path),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let mut query = db
-        .prepare(
-            "SELECT spell_id FROM follower_spec_kit WHERE spec_id=?1
-         AND min_level<=90 AND max_level>=90 AND json_extract(conditions, '$.min_enemies')>=2",
-        )
-        .unwrap();
-    query
-        .query_map([spec], |row| row.get(0))
-        .unwrap()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
+/// Production APL action spells whose own successful cast damaged at least
+/// two distinct fixture opponents.
+fn multi_enemy_casts(run: &Run) -> BTreeMap<u32, usize> {
+    let world = run.app.world();
+    let input =
+        server_follower_apl::action_metadata::read_inputs(world, run.actor, run.profile.spec_id)
+            .unwrap();
+    let actions =
+        server_follower_apl::action_metadata::action_spells(run.profile.spec_id, &input).unwrap();
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let source = Some(run.actor.to_bits());
+    let opponents: Vec<u64> = run.damage_targets.iter().map(|unit| unit.to_bits()).collect();
+    let mut hit: BTreeMap<u32, std::collections::BTreeSet<u64>> = BTreeMap::new();
+    for event in events.iter().filter(|event| {
+        event.source == source
+            && event.kind == shared::protocol::CombatLogKind::Damage
+            && event.amount > 0
+    }) {
+        if let (Some(spell), Some(target)) = (event.spell_id, event.target) {
+            if actions.contains(&spell) && opponents.contains(&target) {
+                hit.entry(spell).or_default().insert(target);
+            }
+        }
+    }
+    let cast = |spell: u32| {
+        events.iter().any(|event| {
+            event.source == source
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+                && event.spell_id == Some(spell)
+        })
+    };
+    hit.into_iter()
+        .filter(|(spell, targets)| targets.len() >= 2 && cast(*spell))
+        .map(|(spell, targets)| (spell, targets.len()))
+        .collect()
 }
 
+/// The production APL follower, driven as in measurement, casts an action
+/// that damages several opponents.
 fn assert_native_aoe_cast(spec: u32) {
     let _seed_scope = crate::random::seed_scope(70_448);
-    let mut run = prepare_follower(spec, 3);
-    let aoe_spells = read_multi_enemy_spells(spec);
+    let mut run = prepare_measurement(spec, 3).unwrap();
     assert!(
-        !aoe_spells.is_empty(),
-        "fixture must have authored multi-enemy entries"
+        run.app
+            .world()
+            .get::<crate::followers::Follower>(run.actor)
+            .is_some(),
+        "spec{spec} multi-enemy check requires a follower actor"
+    );
+    assert!(
+        run.spec_driver.is_some(),
+        "spec{spec} follower must run its registered production APL driver"
     );
     engage(&mut run);
     advance_combat(&mut run).unwrap();
-    let actions = report::combat(run.app.world(), &run.damage_targets, 300.0);
+    let casts = multi_enemy_casts(&run);
     assert!(
-        actions["actions"].as_array().unwrap().iter().any(|action| {
-            action["actor"].as_u64() == Some(run.actor.to_bits())
-                && action["spell_id"]
-                    .as_u64()
-                    .is_some_and(|spell| aoe_spells.contains(&(spell as u32)))
-                && action["count"].as_u64().unwrap() > 0
-        }),
-        "spec{spec} must actually cast an authored min_enemies>=2 entry {aoe_spells:?}; observed {actions}"
+        !casts.is_empty(),
+        "spec{spec} must actually cast an APL action that damages >=2 opponents; observed {}",
+        report::combat(run.app.world(), &run.damage_targets, 300.0)
     );
 }
 
@@ -112,3 +134,4 @@ fn dps_parity_engagement_fire_casts_multi_enemy_aoe() {
 fn dps_parity_engagement_feral_casts_multi_enemy_aoe() {
     assert_native_aoe_cast(103);
 }
+
