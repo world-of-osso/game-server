@@ -76,12 +76,35 @@ fn devastating_crit_multiplier(run: &mut Run) -> f64 {
     use crate::spell_cast::effects::factor_capture::FactorCapture;
     let actor = run.actor;
     let target = run.targets[0];
-    run.app.world_mut().get_mut::<crate::stats::CharacterStats>(actor).unwrap().crit_pct = 100.0;
-    run.app.insert_resource(FactorCapture::new(actor, target, 236282, "devastator", 1));
-    assert!(crate::spell_cast::try_cast_triggered(run.app.world_mut(), actor, 236282, Some(target), 1));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .crit_pct = 100.0;
+    run.app
+        .insert_resource(FactorCapture::new(actor, target, 236282, "devastator", 1));
+    assert!(crate::spell_cast::try_cast_triggered(
+        run.app.world_mut(),
+        actor,
+        236282,
+        Some(target),
+        1
+    ));
     let capture = run.app.world().resource::<FactorCapture>().export();
-    let hit = capture["events"].as_array().unwrap().iter().find(|event| event["event"] == "direct_amount" && event["spell_id"] == 236282).expect("Devastator hit");
-    hit["applied_multipliers"].as_array().unwrap().iter().find(|factor| factor["factor"] == "critical_damage").unwrap()["value"].as_f64().unwrap()
+    let hit = capture["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|event| event["event"] == "direct_amount" && event["spell_id"] == 236282)
+        .expect("Devastator hit");
+    hit["applied_multipliers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|factor| factor["factor"] == "critical_damage")
+        .unwrap()["value"]
+        .as_f64()
+        .unwrap()
 }
 
 #[test]
@@ -93,7 +116,20 @@ fn dps_parity_protection_wrecked_does_not_increase_devastator_crit_multiplier() 
     let actor = run.actor;
     let target = run.targets[0];
     let before = devastating_crit_multiplier(&mut run);
-    assert!(crate::spell_cast::cast_triggered_with_overrides(run.app.world_mut(), actor, 447513, Some(target), 1, crate::spell_cast::TriggeredSpellOverrides { aura_stacks: Some(10), ..Default::default() }));
+    assert!(crate::spell_cast::cast_triggered_with_overrides(
+        run.app.world_mut(),
+        actor,
+        447513,
+        Some(target),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(10),
+            ..Default::default()
+        }
+    ));
     let after = devastating_crit_multiplier(&mut run);
-    assert!((before - after).abs() < 0.001, "Wrecked must not modify Devastator critical damage: {before} -> {after}");
+    assert!(
+        (before - after).abs() < 0.001,
+        "Wrecked must not modify Devastator critical damage: {before} -> {after}"
+    );
 }
