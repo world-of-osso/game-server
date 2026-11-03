@@ -572,6 +572,32 @@ pub fn leader_attack_range(world: &World, owner: Entity) -> Option<f32> {
     super::target_reach::attack_range(world, owner, &leader)
 }
 
+/// Whether all available hostile actions with an explicit enemy target fail native range or sight.
+pub fn leader_requires_target_approach(
+    world: &World,
+    owner: Entity,
+    target: Entity,
+) -> Result<bool, String> {
+    use crate::spell_cast::{CastFailure, Sight, targets::Relation};
+    let actions = super::action_spells::available(world, owner)?;
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let mut blocked = false;
+    for spell in actions.into_iter().filter_map(|id| store.get(id)) {
+        if crate::spell_info::positivity::negative_effects(store, spell) == 0
+            || crate::spell_cast::targets::explicit_requirement(spell.effects.iter())
+                != Some(Relation::Enemy)
+        {
+            continue;
+        }
+        match crate::spell_cast::validate_target(world, owner, spell, Some(target), Sight::Start) {
+            Ok(Some(selected)) if selected == target => return Ok(false),
+            Err(CastFailure::LineOfSight | CastFailure::OutOfRange) => blocked = true,
+            _ => {}
+        }
+    }
+    Ok(blocked)
+}
+
 /// The tank opens a pull with its known native taunt.
 pub fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id =
