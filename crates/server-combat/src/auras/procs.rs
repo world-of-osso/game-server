@@ -604,7 +604,7 @@ fn proc_matches(
         })
 }
 
-pub(super) fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
+pub fn matches_explicit_family(spell: &SpellInfo, family: u32, mask: [u32; 4]) -> bool {
     if family == 0 {
         return true;
     }
