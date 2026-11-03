@@ -24,6 +24,8 @@ mod azure_throughput_tests;
 mod havoc_setup_tests;
 #[path = "keystone_cohesion_tests.rs"]
 mod keystone_cohesion_tests;
+#[path = "party_buff_tests.rs"]
+mod party_buff_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 #[path = "recovery_admission_tests.rs"]
