@@ -12,10 +12,7 @@ const UNDYING: u32 = 1272405;
 // SimC76f8118 sc_demon_hunter.cpp8927–8954: each in-combat aura
 // start or refresh emits its native initial damage, including Embers renewal.
 pub(crate) fn initial_damage(world: &mut World, unit: Entity, aura: &AuraInstance) {
-    if aura.spell_id != IMMOLATION
-        || aura.caster != unit
-        || !super::is_havoc(world, unit)
-    {
+    if aura.spell_id != IMMOLATION || aura.caster != unit || !super::is_havoc(world, unit) {
         return;
     }
     if !spell_cast::try_cast_triggered(world, unit, 258921, None, 1) {

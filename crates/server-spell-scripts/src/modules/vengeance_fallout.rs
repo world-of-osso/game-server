@@ -16,10 +16,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 ];
 
 fn initial_damage(world: &mut World, actor: Entity, aura: &AuraInstance) {
-    if aura.spell_id != 258920
-        || aura.caster != actor
-        || !is_vengeance(world, actor)
-    {
+    if aura.spell_id != 258920 || aura.caster != actor || !is_vengeance(world, actor) {
         return;
     }
     // SimC76f8118 sc_demon_hunter.cpp8927–8954: each functional aura start emits the initial hit.
