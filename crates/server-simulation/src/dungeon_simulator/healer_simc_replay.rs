@@ -625,6 +625,7 @@ fn replay_profile(
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     let mut tank_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut healer_cast_events = Vec::new();
     let mut mitigation_ticks = 0_u32;
     let mut next = 0;
     let mut next_party = 0;
@@ -863,6 +864,7 @@ fn replay_profile(
                 *tank_casts.entry(spell).or_default() += 1;
             } else if event.source == Some(healer.to_bits()) {
                 *healer_casts.entry(spell).or_default() += 1;
+                healer_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell}));
             }
         }
         event_cursor = events.len();
@@ -873,7 +875,8 @@ fn replay_profile(
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
-        "tank_casts":tank_casts,"healer_casts":healer_casts,
+        "tank_casts":tank_casts,"healer_casts":healer_casts,"healer_cast_events":healer_cast_events,
+        "party_entities":slots.map(Entity::to_bits),
         "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
         "metrics":recorder.report(app.world(), duration)});
     if let Some(wcl) = wcl {

@@ -24,6 +24,8 @@ pub(super) struct Recorder {
     initial_absorbs: BTreeMap<u32, f64>,
     party_damage: BTreeMap<u64, u64>,
     party_healing: BTreeMap<u64, (u64, u64)>,
+    healing_events: Vec<Value>,
+    party_health_curve: Vec<Value>,
     mana_curve: Vec<Value>,
     first_death_seconds: Option<f64>,
     party_death_times: BTreeMap<u64, f64>,
@@ -55,6 +57,8 @@ impl Recorder {
             initial_absorbs: healer_absorbs(world, healer),
             party_damage: BTreeMap::new(),
             party_healing: BTreeMap::new(),
+            healing_events: Vec::new(),
+            party_health_curve: Vec::new(),
             mana_curve: Vec::new(),
             first_death_seconds: None,
             party_death_times: BTreeMap::new(),
@@ -132,6 +136,18 @@ impl Recorder {
         let seconds = f64::from(tick) / 20.0;
         if tick % 20 == 0 {
             self.sample_mana(world, seconds);
+            let health: Vec<_> = self
+                .members
+                .iter()
+                .map(|&unit| {
+                    world
+                        .get::<Health>(unit)
+                        .filter(|hp| hp.max > 0.0)
+                        .map(|hp| 100.0 * hp.current.max(0.0) / hp.max)
+                })
+                .collect();
+            self.party_health_curve
+                .push(json!({"time_seconds":seconds,"pct":health}));
         }
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -190,6 +206,14 @@ impl Recorder {
                 let spell = self.spells.entry(event.spell_id.unwrap_or(0)).or_default();
                 spell.0 += raw;
                 spell.1 += effective;
+                let slot = self
+                    .members
+                    .iter()
+                    .position(|unit| Some(*unit) == target)
+                    .unwrap();
+                self.healing_events
+                    .push(json!({"time_seconds":seconds,"slot":slot,
+                    "spell":event.spell_id,"raw":raw,"effective":effective}));
                 let recipient = self
                     .party_healing
                     .entry(target.expect("party heal target").to_bits())
@@ -253,7 +277,8 @@ impl Recorder {
             "overheal_pct":(raw > 0).then(|| 100.0 * (raw - effective) as f64 / raw as f64),
             "idle_gcd_pct":100.0 * f64::from(self.idle_gcd_ticks) / (duration * 20.0),
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
-            "party_death_times":self.party_death_times,
+            "party_death_times":self.party_death_times,"healing_events":self.healing_events,
+            "party_health_curve":self.party_health_curve,
             "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
             "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0,
             "mana_min":self.mana_min,"tank_health_min":self.tank_health_min,

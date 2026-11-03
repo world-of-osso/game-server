@@ -621,6 +621,34 @@ fn wcl_intake_replays_hostile_and_deferred_pressure() {
     let max_hp = report["party_initial_max_hp"].as_array().unwrap();
     assert_eq!(max_hp.len(), 5);
     assert!(max_hp.iter().all(|hp| hp.as_f64().unwrap() > 0.0));
+    let casts = report["healer_cast_events"].as_array().unwrap();
+    let cast_count: u64 = report["healer_casts"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|n| n.as_u64().unwrap())
+        .sum();
+    assert!(cast_count > 0);
+    assert_eq!(casts.len() as u64, cast_count);
+    let heals = report["metrics"]["healing_events"].as_array().unwrap();
+    let effective: u64 = heals
+        .iter()
+        .map(|event| event["effective"].as_u64().unwrap())
+        .sum();
+    let spell_effective: u64 = report["metrics"]["spell_healing"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|spell| spell["effective"].as_u64().unwrap())
+        .sum();
+    assert!(effective > 0);
+    assert_eq!(effective, spell_effective);
+    assert!(
+        !report["metrics"]["party_health_curve"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(report["wcl_intake"]["matches_recorded_party"], true);
     assert_eq!(
         report["wcl_intake"]["party_specs"],
