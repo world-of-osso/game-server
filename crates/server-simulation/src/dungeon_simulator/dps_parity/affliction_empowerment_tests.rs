@@ -180,6 +180,40 @@ fn affliction_empowerment_independent_ua_expiry_updates_and_clears_native_buff()
 
 #[test]
 #[ignore = "requires private265 profile and native70448 world DB"]
+fn affliction_empowerment_ua_expiry_after_caster_death_does_not_panic() {
+    let _seed = crate::random::seed_scope(1);
+    let mut run = prepare_literal(265, 3).unwrap();
+    engage(&mut run);
+    remove_passive(&mut run, 1260229);
+    let (caster, first, second) = (run.actor, run.targets[0], run.targets[1]);
+    cast_ua(&mut run, first);
+    for _ in 0..20 {
+        run.app.update();
+    }
+    cast_ua(&mut run, second);
+    assert_eq!(buff_stacks(&run), 2);
+    crate::combat::kill_unit(run.app.world_mut(), first, caster);
+    assert!(!crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        caster
+    ));
+    assert_eq!(buff_stacks(&run), 0);
+    assert!(crate::auras::has_aura(run.app.world(), caster, FOUR_PIECE));
+    assert_eq!(owned_stacks(&run, second, caster, UA), 1);
+    // The first real UA expires while the dead caster still owns the second.
+    for _ in 0..220 {
+        run.app.update();
+        if owned_stacks(&run, first, caster, UA) == 0 {
+            assert_eq!(owned_stacks(&run, second, caster, UA), 1);
+            assert_eq!(buff_stacks(&run), 0);
+            return;
+        }
+    }
+    panic!("first Unstable Affliction did not expire");
+}
+
+#[test]
+#[ignore = "requires private265 profile and native70448 world DB"]
 fn affliction_empowerment_absent_four_piece_cannot_earn_the_buff() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(265, 1).unwrap();
