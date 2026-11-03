@@ -313,12 +313,16 @@ impl Program {
                             Err(error) if super::is_not_ready(&error) => continue,
                             Err(error) => return Err(error),
                         };
+                        let original = selection.variables.values[name];
                         for target in targets {
                             let mut target_action = action.clone();
                             target_action.target = Some(target);
                             match self.assign(name, assignment, &target_action, selection) {
                                 Ok(()) => {}
-                                Err(error) if super::is_not_ready(&error) => continue 'rules,
+                                Err(error) if super::is_not_ready(&error) => {
+                                    selection.variables.values.insert(name.clone(), original);
+                                    continue 'rules;
+                                }
                                 Err(error) => return Err(error),
                             }
                         }
