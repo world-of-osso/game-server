@@ -3376,6 +3376,7 @@ pub fn kill_unit(world: &mut World, killer: Entity, victim: Entity) {
     world
         .entity_mut(victim)
         .insert((LastDamager(killer), KillingBlow(Some(killer))));
+    crate::auras::remove_on_death(world, victim);
     if world.get::<Npc>(victim).is_some() {
         mark_npc_dead_world(world, victim);
     } else {

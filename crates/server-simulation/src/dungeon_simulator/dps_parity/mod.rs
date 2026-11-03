@@ -394,6 +394,8 @@ pub(super) fn install_fixture_lifetimes(run: &mut Run, started_at: Duration) {
 fn retire_add_wave(run: &mut Run) -> Vec<Entity> {
     let retired = run.targets.split_off(1);
     for &unit in &retired {
+        // SimC raid_event.cpp:_finish -> pet_t::dismiss -> player_t::demise.
+        crate::combat::kill_unit(run.app.world_mut(), run.actor, unit);
         crate::zones::unsummon(run.app.world_mut(), unit);
     }
     run.app
@@ -402,6 +404,53 @@ fn retire_add_wave(run: &mut Run) -> Vec<Entity> {
         .unwrap()
         .expires_at = None;
     retired
+}
+
+#[test]
+#[ignore = "requires prepared265 native profile and world data"]
+fn parity_retired_adds_trigger_native_death_effects() {
+    use shared::components::PowerType;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(265, 3).unwrap();
+    engage(&mut run);
+    let now = run.app.world().resource::<Time>().elapsed();
+    install_fixture_lifetimes(&mut run, now);
+    let actor = run.actor;
+    run.app
+        .world_mut()
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap()
+        .get_mut(PowerType::SoulShards)
+        .unwrap()
+        .current = 0.0;
+    for target in run.targets[1..].to_vec() {
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: actor,
+                target,
+                spell_id: 198590,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(run.app.world(), target, 198590));
+    }
+    let retired = retire_add_wave(&mut run);
+    let shards =
+        crate::spell_cast::powers::power_value(run.app.world(), actor, PowerType::SoulShards)
+            .unwrap()
+            .0;
+    assert_eq!(
+        shards, 20.0,
+        "both native Drain Soul death effects must grant a shard"
+    );
+    assert!(
+        retired
+            .iter()
+            .all(|&target| run.app.world().get_entity(target).is_err())
+    );
 }
 
 fn spawn_add_wave(run: &mut Run, retired: &[Entity], started_at: Duration) -> Result<(), String> {
@@ -1132,7 +1181,8 @@ pub(super) fn apply_fixed_time_target_health(run: &mut Run, at: Duration) -> Res
             .ok_or_else(|| {
                 format!("SIMC_FIXED_TIME_TARGET_HEALTH target{target:?} lacks native Health")
             })?;
-        health.current = (f64::from(health.max) * remaining) as f32;
+        // Keep the target alive until the scheduled demise runs its death hooks.
+        health.current = ((f64::from(health.max) * remaining) as f32).max(1.0);
     }
     Ok(())
 }
