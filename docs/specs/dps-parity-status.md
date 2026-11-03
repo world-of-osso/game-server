@@ -11,6 +11,10 @@ The native follower used the frozen campaign database and ten seeds `70448,1–9
 
 Both point estimates are in the ±5% band. The 1T interval crosses its lower boundary. The 3T measurement predates the Feral-only rebase in `40770835c7`; it was not repeated on that revision. The earlier 3T result of 0.8322 used an older revision, so its improvement cannot be attributed to one fix. The reported fact-error ledgers are empty; potion inventory and external Power Infusion remain unavailable. Evidence: `game-engine/data/diagnostics/parity-253-2026-11-03b/407708-1t/` and `tip-fixed/`.
 
+## Assassination death-refund gap — 2026-11-03
+
+Venomous Wounds (79134) does not yet refund energy when a Rupture target dies. SimC reports 79.8 energy per 300-second 3T fight. Spending that energy on Fan of Knives at its SimC average damage estimates 369 direct DPS (0.14% of reference DPS), excluding indirect effects. The retail refund formula remains unverified; the SimC implementation marks it uncertain. Evidence: `game-engine/data/diagnostics/parity-259-2026-11-03b/refund-evidence.md`.
+
 ## Elemental and Fire remeasure — 2026-11-03
 
 On candidate `1cea56b867` (base `55bd63da49`), the fixture-engagement, Elemental MotE/Fusion and Vile Vial fixes were measured with the frozen campaign database and native follower seeds `70448,1–9`. The SimC `76f8118` references are unchanged. These results include other changes since `389ca621d0`; the difference from the earlier campaign cannot be attributed to one fix.
