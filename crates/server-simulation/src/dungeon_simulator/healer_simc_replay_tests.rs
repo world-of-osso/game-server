@@ -142,9 +142,234 @@ fn grove_nourish_applies_the_owners_harmony() {
     };
     let ratio = normalized(heals[1]) / normalized(heals[0]);
     let expected = 1.0 + mastery / 100.0;
+    let variance = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(422090)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .variance;
+    let lower = expected * (1.0 - variance) / (1.0 + variance);
+    let upper = expected * (1.0 + variance) / (1.0 - variance);
     assert!(
-        (ratio - expected).abs() < 0.02,
-        "one owned HoT: {ratio} vs {expected}"
+        ratio >= lower && ratio <= upper,
+        "one owned HoT: {ratio} not in {lower}..={upper}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_druid_harmony_increases_swiftmend_for_owned_hots() {
+    use shared::protocol::CombatLogKind;
+    let mut run = super::snapshot_party(105, 90, 1);
+    let healer = run.healer;
+    let tank = run.tank;
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let mastery = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .mastery_pct;
+    assert!(mastery > 0.0);
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
+    run.app.world_mut().get_mut::<Health>(tank).unwrap().current *= 0.1;
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(18562)
+        .unwrap()
+        .clone();
+    let ctx = crate::spell_cast::effects::EffectCtx {
+        caster: healer,
+        spell: &spell,
+        depth: 1,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::apply_heal(run.app.world_mut(), &ctx, tank, 10000.0, false, false);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 774, Some(tank), 1);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), healer, 155777, Some(tank), 1);
+    crate::spell_cast::effects::apply_heal(run.app.world_mut(), &ctx, tank, 10000.0, false, false);
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(healer.to_bits())
+                && event.target == Some(tank.to_bits())
+                && event.spell_id == Some(18562)
+        })
+        .collect();
+    assert_eq!(heals.len(), 2, "both Swiftmends must resolve: {events:?}");
+    let normalized = |event: &shared::protocol::CombatLogEvent| {
+        event.amount as f32 / if event.crit { 2.0 } else { 1.0 }
+    };
+    let ratio = normalized(heals[1]) / normalized(heals[0]);
+    let expected = 1.0 + 2.0 * mastery / 100.0;
+    assert!(
+        (ratio - expected).abs() < 0.01,
+        "two owned HoTs: {ratio} vs {expected}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn restoration_harmony_counts_harmonious_lifebloom_and_periodic_heals() {
+    use shared::protocol::CombatLogKind;
+    let bytes = std::fs::read(fixture("wcl_worldnature_builds.json")).unwrap();
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_slice(&bytes).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        105,
+        90,
+        1,
+        Some([66, 105, 70, 1480, 262]),
+        Some(&builds),
+    )
+    .unwrap();
+    let healer = run.healer;
+    let tank = run.tank;
+    let foreign = run.slots[2];
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), healer, 392256));
+    let mastery = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .mastery_pct;
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(healer)
+        .unwrap()
+        .crit_pct = 0.0;
+    run.app.world_mut().get_mut::<Health>(tank).unwrap().current *= 0.1;
+    let spells = run.app.world().resource::<crate::spell_info::SpellStore>();
+    let swiftmend = spells.get(18562).unwrap().clone();
+    let immune = spells.get(474683).unwrap().clone();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::cast_triggered(run.app.world_mut(), foreign, 774, Some(tank), 1);
+    for spell in [&swiftmend, &immune] {
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: healer,
+            spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_heal(
+            run.app.world_mut(),
+            &ctx,
+            tank,
+            10000.0,
+            false,
+            false,
+        );
+        if spell.id == 18562 {
+            crate::spell_cast::effects::apply_heal(
+                run.app.world_mut(),
+                &ctx,
+                tank,
+                10000.0,
+                false,
+                true,
+            );
+        }
+    }
+    for spell in [774, 155777, 33763] {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), healer, spell, Some(tank), 1);
+    }
+    for spell in [&swiftmend, &immune] {
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: healer,
+            spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_heal(
+            run.app.world_mut(),
+            &ctx,
+            tank,
+            10000.0,
+            false,
+            false,
+        );
+        if spell.id == 18562 {
+            crate::spell_cast::effects::apply_heal(
+                run.app.world_mut(),
+                &ctx,
+                tank,
+                10000.0,
+                false,
+                true,
+            );
+        }
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let values = |spell, periodic| {
+        events
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Heal
+                    && event.source == Some(healer.to_bits())
+                    && event.target == Some(tank.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.periodic == periodic
+            })
+            .map(|event| event.amount as f32 / if event.crit { 2.0 } else { 1.0 })
+            .collect::<Vec<_>>()
+    };
+    for periodic in [false, true] {
+        let heals = values(18562, periodic);
+        assert_eq!(heals.len(), 2);
+        let ratio = heals[1] / heals[0];
+        let expected = 1.0 + 5.0 * mastery / 100.0;
+        assert!(
+            (ratio - expected).abs() < 0.01,
+            "Harmony periodic={periodic}: {ratio} vs {expected}"
+        );
+    }
+    let heals = values(474683, false);
+    assert_eq!(heals.len(), 2);
+    assert_eq!(
+        heals[0], heals[1],
+        "modifier-immune percent heal must not gain Harmony"
     );
 }
 
