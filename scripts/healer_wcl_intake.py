@@ -12,6 +12,7 @@ import sqlite3
 from pathlib import Path
 
 ACTORS = {6: 0, 221: 1, 1: 2, 225: 3, 231: 4}
+DEFERRED_ENEMY_DAMAGE = {124255, 361029}
 
 
 def read_max_health(events):
@@ -43,31 +44,35 @@ def convert(events, db):
     max_health = read_max_health(events)
     hits = []
     observed_self = []
+    excluded_self = 0
     for event in events:
         target = event['targetID']
         if target not in ACTORS:
             raise ValueError(f'unknown WCL party target {target}')
         source = event['sourceID']
+        spell = event['abilityGameID']
+        deferred = source == target and spell in DEFERRED_ENEMY_DAMAGE
         if source == target:
             observed_self.append({'time_ms': int(event['fight_ms']), 'slot': ACTORS[target],
-                                  'amount': event.get('amount', 0), 'absorbed': event.get('absorbed', 0),
-                                  'max_hp': max_health[target]})
-            continue
-        if source in ACTORS:
+                                  'spell_id': spell, 'amount': event.get('amount', 0),
+                                  'absorbed': event.get('absorbed', 0), 'max_hp': max_health[target]})
+            if not deferred:
+                excluded_self += 1
+                continue
+        elif source in ACTORS:
             raise ValueError(f'unmapped friendly damage source {source}')
-        spell = event['abilityGameID']
         school, defense = read_spell_metadata(db, spell)
         hits.append({'time_ms': int(event['fight_ms']), 'slot': ACTORS[target],
                      'source_actor': source, 'target_actor': target, 'spell_id': spell,
                      'school': school, 'defense': defense, 'hit_type': event['hitType'],
-                     'periodic': event.get('tick', False), 'amount': event.get('amount', 0),
+                     'periodic': event.get('tick', False), 'deferred': deferred, 'amount': event.get('amount', 0),
                      'absorbed': event.get('absorbed', 0), 'max_hp': max_health[target],
                      'health_after': event.get('hitPoints')})
     if not hits or any(a['time_ms'] > b['time_ms'] for a, b in zip(hits, hits[1:])):
         raise ValueError('WCL damage events must be nonempty and ordered')
     return {'provenance': 'INFERRED_WCL pPFDbkfQK7MACtmY fight 41 pull 1',
             'actor_slots': ACTORS, 'party_specs': [268, 1468, 62, 262, 262],
-            'excluded_self': len(observed_self), 'observed_self': observed_self, 'hits': hits}
+            'excluded_self': excluded_self, 'observed_self': observed_self, 'hits': hits}
 
 
 def main():

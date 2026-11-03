@@ -30,6 +30,8 @@ pub(super) struct RecordedHit {
     defense: Option<u32>,
     hit_type: u8,
     periodic: bool,
+    #[serde(default)]
+    deferred: bool,
     amount: u64,
     absorbed: u64,
     max_hp: u64,
@@ -60,7 +62,9 @@ impl RecordedHit {
             || self.school == 0
             || self.spell_id == 0
             || self.max_hp == 0
-            || self.source_actor == self.target_actor
+            || (self.source_actor == self.target_actor
+                && !(self.deferred && matches!(self.spell_id, 124255 | 361029)))
+            || (self.deferred && self.source_actor != self.target_actor)
         {
             return Err("WCL_INTAKE_INVALID_HIT".into());
         }
@@ -146,8 +150,7 @@ impl RecordedHit {
             "wcl_absorbed_pct":100.0 * self.absorbed as f64 / self.max_hp as f64,
             "native_loss_pct":100.0 * f64::from((before - after) / native_max),
             "native_absorbed_pct":100.0 * f64::from(receipt.absorbed_hp / native_max),
-            "native_deferred_pct":100.0 * f64::from(receipt.deferred_hp / native_max),
-            "native_transferred_pct":100.0 * f64::from(receipt.transferred_hp / native_max)}),
+            "deferred":self.deferred}),
         ))
     }
 }

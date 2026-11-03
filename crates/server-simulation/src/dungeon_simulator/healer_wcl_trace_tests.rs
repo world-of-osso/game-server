@@ -84,6 +84,30 @@ fn wcl_intake_avoided_outcomes_publish_distinct_miss_events() {
 
 #[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
+fn wcl_intake_does_not_stagger_already_mitigated_damage() {
+    use shared::components::Health;
+    let mut party =
+        super::healer_simc_replay::snapshot_party_with_specs(1468, 90, [268, 1468, 62, 262, 262]);
+    let tank = party.tank;
+    let enemy = party.sources[0];
+    let before = *party.app.world().get::<Health>(tank).unwrap();
+    let pool = crate::auras::stagger::pool_size(party.app.world(), tank);
+    let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":0,"slot":0,"source_actor":413,"target_actor":6,"spell_id":1306338,"school":1,"defense":2,"hit_type":1,"periodic":false,"max_hp":100000,"amount":1000,"absorbed":0}"#).unwrap();
+    assert!(matches!(
+        hit.deliver(party.app.world_mut(), enemy, &[tank; 5])
+            .unwrap(),
+        super::healer_wcl_trace::Delivery::Applied(_)
+    ));
+    assert_eq!(
+        crate::auras::stagger::pool_size(party.app.world(), tank),
+        pool
+    );
+    let after = party.app.world().get::<Health>(tank).unwrap().current;
+    assert!((before.current - after - before.max * 0.01).abs() <= 2.0);
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
 fn wcl_intake_dodge_consumes_elusive_brawler_but_miss_does_not() {
     use crate::auras::{self, AuraApplication, AuraSource};
     let _seed = crate::random::seed_scope(70448);

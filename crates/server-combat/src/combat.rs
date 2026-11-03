@@ -3073,8 +3073,6 @@ pub(crate) fn deal_health_damage(
 #[cfg(any(test, feature = "test-support"))]
 pub struct ReplayDamageReceipt {
     pub absorbed_hp: f32,
-    pub deferred_hp: f32,
-    pub transferred_hp: f32,
 }
 
 /// Replay a post-mitigation hostile hit in recipient HP units. Native absorbs
@@ -3107,19 +3105,12 @@ pub fn replay_post_mitigation_hit(
         return Err("WCL_INTAKE_INVALID_HEALTH_MULTIPLIER".into());
     }
     let damage = amount * health_multiplier;
-    let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
-        .map_or((0.0, false), |stagger| stagger.deferred(damage, school));
-    if deferred > 0.0 || consume_ox {
-        crate::auras::stagger::deposit(world, victim, deferred, consume_ox);
-    }
     let (damage, source_absorbed) =
-        crate::auras::source_absorb::absorb(world, victim, attacker, damage - deferred);
+        crate::auras::source_absorb::absorb(world, victim, attacker, damage);
     let (damage, absorbed) =
         crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
     let absorbed = absorbed + source_absorbed;
-    let routed = crate::auras::damage_transfer::route(world, attacker, victim, school, damage);
-    let transferred = damage - routed;
-    deal_health_damage(world, attacker, victim, routed, school, spell_id, absorbed);
+    deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
     let after = world
         .get::<Health>(victim)
         .map_or(0.0, |health| health.current);
@@ -3154,8 +3145,6 @@ pub fn replay_post_mitigation_hit(
     }
     Ok(ReplayDamageReceipt {
         absorbed_hp: absorbed / health_multiplier,
-        deferred_hp: deferred / health_multiplier,
-        transferred_hp: transferred / health_multiplier,
     })
 }
 

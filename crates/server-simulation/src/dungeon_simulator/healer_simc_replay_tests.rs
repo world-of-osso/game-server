@@ -559,7 +559,7 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn wcl_intake_replays_hostile_pressure_and_excludes_self_damage() {
+fn wcl_intake_replays_hostile_and_deferred_pressure() {
     let report = super::replay_simc_party_with_wcl(
         1468,
         90,
@@ -573,7 +573,7 @@ fn wcl_intake_replays_hostile_pressure_and_excludes_self_damage() {
     assert_eq!(report["timeline"], "wcl_damage_taken");
     assert_eq!(report["incoming_events"], 0);
     assert_eq!(report["party_incoming_events"], 0);
-    assert_eq!(report["wcl_intake"]["records"], 40);
+    assert_eq!(report["wcl_intake"]["records"], 64);
     let applied = report["wcl_intake"]["delivered"].as_u64().unwrap();
     let dead = report["wcl_intake"]["events_on_dead_targets_not_replayed"]
         .as_u64()
@@ -581,7 +581,11 @@ fn wcl_intake_replays_hostile_pressure_and_excludes_self_damage() {
     let avoided = report["wcl_intake"]["avoided"].as_u64().unwrap();
     assert!(applied > 0);
     assert!(avoided > 0);
-    assert_eq!(applied + avoided + dead, 40);
+    assert_eq!(applied + avoided + dead, 64);
+    assert_eq!(
+        report["wcl_intake"]["self_rows_excluded_from_full_pull"],
+        68
+    );
     assert_eq!(report["tank_spec"], 268);
     assert_eq!(report["wcl_intake"]["matches_recorded_party"], true);
     assert_eq!(
