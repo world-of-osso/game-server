@@ -34,6 +34,19 @@ DB2 has no `SpellAuraOptions` row for `1307910`; its recorded attributes do not 
 
 DB2 gives each driver 2 RPPM, no haste-modifier rows and a 12-second buff; the SimC debug trace also reports no haste scaling. With independent drivers, bad-luck protection and 30% refresh carryover, a 1,500-run illustrative simulation predicted 79.45% uptime for three drivers and 38.22% for one. Native's ten-seed mean was 78.55%; SimC's 1,000-iteration report was 38.96%. The first native seed alone was 81.37%; the aggregate report retained that seed's uptime rather than averaging it. The reference and native rates therefore represent different models, not evidence that native's three-driver rate is wrong.
 
+## Demon Hunter reach-4 candidate remeasure (2026-11-03)
+
+Candidate `1f6ed648ec` uses the SimC-sourced 4.0 target combat reach and includes the ballistic landing and single-writer movement changes. These are local candidate measurements, not a landed-master result. Each row uses the native production literal follower, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC references use 1,000 iterations. Per-seed reports and logs are in `game-engine/data/diagnostics/parity-577-2026-11-03/simc-reach4/`. The 577 1T aggregate JSON was overwritten by a one-seed probe; its ten seed files and ten-seed log remain intact. All 40 seed reports have empty fact-error ledgers.
+
+| Spec | Targets | Native DPS | Raw SimC DPS | Raw ratio | Raw status |
+|---|---:|---:|---:|---:|---|
+| Havoc (577) | 1T | 199,917 | 214,737 | 0.9310 | **OUT** |
+| Havoc (577) | 3T | 313,027 | 334,847 | 0.9348 | **OUT** |
+| Devourer (1480) | 1T | 214,424 | 214,110 | 1.0015 | in |
+| Devourer (1480) | 3T | 325,406 | 341,884 | 0.9518 | in |
+
+Against the diagnostic SimC control described in [Havoc DPS parity](577.md#simc-without-double-applications), Havoc is **in band**: 199,917 / 207,944 = 0.9614 for 1T and 313,027 / 327,183 = 0.9567 for 3T. The control removes the documented extra Exergy and Eternal Hunt applications and the bugs-mode Soulscar factor; it is not a Retail measurement. The raw SimC comparison remains out of band. Neither candidate 3T measurement includes the separately owned fixture-engagement fix; the candidate also excludes the separately owned Aqirbane fix. These results do not establish post-merge parity.
+
 ## L90 landed-master remeasure (2026-11-03)
 
 Each native row uses a follower actor, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC `76f8118` references use 1,000 iterations, the same fixed duration, seed 70448 and the actor-only raid-buff composition. The 3T reference uses timed add events. Devastation uses its approved MID1 profile. The exact commands, hashes, per-seed reports, logs and world snapshot are in `game-engine/data/diagnostics/dps-parity-landed-master-2026-11-03/` and the references in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/dps/`.
