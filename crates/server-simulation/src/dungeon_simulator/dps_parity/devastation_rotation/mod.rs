@@ -1,37 +1,18 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::devastation_rotation::*;
 use super::literal_rotation::Driver;
 use crate::simc_apl_native::Encounter;
 use bevy::prelude::*;
 use facts::DevFacts;
 use serde_json::Value;
-
+pub(super) use server_follower_apl::devastation_rotation::*;
 
 #[cfg(test)]
 mod channel_tests;
 #[cfg(test)]
 mod fact_tests;
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
-    use super::literal_rotation::PrecombatPoll;
     install_bombardments_simulation(run)?;
-    let encounter = crate::simc_apl_native::Encounter::Fixture {
-        started_at: crate::spell_cast::now(run.app.world()),
-        duration: 300.0,
-        style: crate::simc_apl_native::FightStyle::Patchwerk,
-    };
-    let mut rotation = Rotation::load(run.app.world(), run.actor, encounter)?;
-    // Pinned player.cpp6138–6183: source-order setup, through the first harmful precast.
-    loop {
-        match rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
-            PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
-            PrecombatPoll::Selected { action, execution } => {
-                super::preparation::execute_precombat_plan(run, &mut rotation.driver, action, execution)?
-            }
-            PrecombatPoll::Finished => break,
-        }
-    }
-    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
-    Ok(Box::new(rotation))
+    super::prepare_production_driver(run)
 }
 
 fn install_bombardments_simulation(run: &mut super::Run) -> Result<(), String> {
