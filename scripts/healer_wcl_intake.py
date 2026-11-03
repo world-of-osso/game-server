@@ -75,6 +75,11 @@ def match_deferred_absorbs(events, healing):
 
 
 def convert(events, healing, db, config):
+    duration_ms = config['duration_ms']
+    if duration_ms <= 0:
+        raise ValueError('WCL replay duration must be positive')
+    events = [event for event in events if 0 <= event['fight_ms'] < duration_ms]
+    healing = [event for event in healing if 0 <= event['fight_ms'] < duration_ms]
     actor_slots = {actor: slot for slot, actor in enumerate(config['actors'])}
     if len(actor_slots) != 5 or len(config['party_specs']) != 5:
         raise ValueError('expected five distinct WCL actors and five party specs')

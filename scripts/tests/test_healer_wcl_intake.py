@@ -25,7 +25,8 @@ class WclIntakeTest(unittest.TestCase):
         db.executemany('INSERT INTO spell_misc VALUES (?, 0, 1)', [(1306338,), (124255,)])
         db.execute('INSERT INTO spell_categories VALUES (1306338, 0, 2)')
         config = {'actors': [6, 221, 1, 225, 231], 'party_specs': [268, 1468, 62, 262, 262],
-                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': []}
+                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': [],
+                  'duration_ms': 1000}
         events = []
         for actor in config['actors']:
             events.append({'targetID': actor, 'sourceID': 413, 'sourceInstance': 1,
@@ -36,7 +37,7 @@ class WclIntakeTest(unittest.TestCase):
                        'absorbed': 0, 'maxHitPoints': 1000})
         heals = [{'type': 'absorbed', 'abilityGameID': 115069, 'targetID': 6,
                   'attackerID': 413, 'attackerInstance': 1, 'extraAbilityGameID': 1306338,
-                  'timestamp': 99, 'amount': 200}]
+                  'timestamp': 99, 'fight_ms': 0, 'amount': 200}]
         result = intake.convert(events, heals, db, config)
         first, tick = result['hits'][0], result['hits'][-1]
         self.assertEqual((first['amount'], first['absorbed'], first['deferred_absorbed']), (100, 100, 200))
@@ -59,12 +60,15 @@ class WclIntakeTest(unittest.TestCase):
         db.execute('CREATE TABLE spell_categories (SpellID INTEGER, DifficultyID INTEGER, DefenseType INTEGER)')
         db.execute('INSERT INTO spell_misc VALUES (1306890, 0, 8)')
         config = {'actors': [1, 2, 3, 4, 5], 'party_specs': [104, 270, 258, 253, 252],
-                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': []}
+                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': [],
+                  'duration_ms': 1000}
         events = [{'targetID': actor, 'sourceID': -1, 'abilityGameID': 1306890,
                    'timestamp': 100, 'fight_ms': 0, 'hitType': 1, 'amount': 10,
                    'maxHitPoints': 1000} for actor in config['actors']]
         events.append({'targetID': 3, 'sourceID': -1, 'abilityGameID': 32409,
                        'timestamp': 101, 'fight_ms': 1, 'hitType': 1, 'amount': 50})
+        events.append({'targetID': 3, 'sourceID': -1, 'abilityGameID': 999999,
+                       'timestamp': 1100, 'fight_ms': 1000, 'hitType': 2, 'amount': 50})
         result = intake.convert(events, [], db, config)
         self.assertEqual(result['excluded_self'], 1)
         self.assertEqual([hit['spell_id'] for hit in result['hits']], [1306890] * 5)
