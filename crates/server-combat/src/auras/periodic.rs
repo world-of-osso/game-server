@@ -117,11 +117,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
         .filter(|aura| only.is_none_or(|instance| aura.instance_id == instance))
     {
         let expiry = aura.expires_at.unwrap_or(f64::INFINITY);
-        let stacks = if scripts.counter_only_dot_stacks(aura.spell_id) {
-            1.0
-        } else {
-            aura.stack_multiplier()
-        };
+        let stack_multiplier = aura.stack_multiplier();
         for effect in aura
             .effects
             .iter_mut()
@@ -136,7 +132,13 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                     spell_id: aura.spell_id,
                     effect_index: effect.index,
                     aura_type: effect.aura_type,
-                    amount: effect.amount * stacks,
+                    amount: effect.amount
+                        * periodic_stack_multiplier(
+                            scripts,
+                            aura.spell_id,
+                            stack_multiplier,
+                            effect.index,
+                        ),
                     fraction,
                     scheduled_at,
                     ordinal: effect.periodic_ticks,
@@ -299,14 +301,13 @@ fn run_periodic_tick(world: &mut World, unit: Entity, mut tick: Tick, scheduled:
         .iter()
         .find(|effect| effect.index == tick.effect_index)
         .expect("retained periodic effect");
-    let stacks = if world
-        .resource::<crate::spell_cast::script_registry::SpellScriptRegistry>()
-        .counter_only_dot_stacks(aura.spell_id)
-    {
-        1.0
-    } else {
-        aura.stack_multiplier()
-    };
+    let scripts = *world.resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
+    let stacks = periodic_stack_multiplier(
+        scripts,
+        aura.spell_id,
+        aura.stack_multiplier(),
+        effect.index,
+    );
     tick.amount = periodic_live_amount(world, tick.caster, &spell, effect) * stacks;
     spell.cast_periodic_fraction = Some(tick.fraction);
     spell.cast_periodic_ordinal = Some(tick.ordinal);
@@ -389,6 +390,23 @@ fn end_aura_at_full_health(world: &mut World, unit: Entity, tick: &Tick) -> bool
         crate::spell_cast::end_cast(world, tick.caster);
     }
     true
+}
+
+fn periodic_stack_multiplier(
+    scripts: crate::spell_cast::script_registry::SpellScriptRegistry,
+    spell_id: u32,
+    stacks: f32,
+    effect_index: u8,
+) -> f32 {
+    // VERIFIED: WCL xg1BLjmtwTZPCX3v/112 and q1wLj6rtxvHfJFmd/15 show
+    // Paralyzing Shots effect 1 ticks unchanged at stacks 2–10. Retire this
+    // override when authoritative spell data identifies the suppression flag.
+    let paralyzing_shots_tick = spell_id == 1_294_569 && effect_index == 1;
+    if paralyzing_shots_tick || scripts.counter_only_dot_stacks(spell_id) {
+        1.0
+    } else {
+        stacks
+    }
 }
 
 /// Current per-stack amount for an already applied periodic effect.
