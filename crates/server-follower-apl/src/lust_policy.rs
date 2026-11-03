@@ -84,47 +84,39 @@ fn read_lust_action(world: &World, actor: Entity) -> Option<(Entity, u32)> {
 /// The final boss at any point of its pull (retail final-boss lusts: p10 0.7 s, median
 /// 4.0 s; 11/23 later ones waited for a party lockout), else the first large trash pull.
 fn is_lust_pull(world: &mut World, actor: Entity, targets: &[Entity], elapsed: f64) -> bool {
-    if targets.iter().any(|&target| is_final_boss(world, target)) {
-        return true;
+    let mut boss = false;
+    for &target in targets {
+        match read_encounter_boss(world, target) {
+            Some(EncounterBoss::Final) => return true,
+            Some(EncounterBoss::Other) => boss = true,
+            None => boss |= followers::is_boss(world, target),
+        }
     }
-    let trash = !targets
-        .iter()
-        .any(|&target| followers::is_boss(world, target));
-    trash
+    !boss
         && !first_lust_spent(world, actor)
         && elapsed >= TRASH_DELAY
         && targets.len() >= TRASH_ENGAGED
 }
 
-/// A boss whose instance copy has every other bound boss done.
-fn is_final_boss(world: &mut World, target: Entity) -> bool {
-    if !followers::is_boss(world, target) {
-        return false;
-    }
-    let (Some(map), Some(entry)) = (
-        world.get::<InMap>(target).copied(),
-        world
-            .get::<shared::components::Npc>(target)
-            .map(|npc| npc.template_id),
-    ) else {
-        return false;
-    };
+enum EncounterBoss {
+    /// Every other boss of the instance copy is done.
+    Final,
+    Other,
+}
+
+/// The encounter `target` is bound to in its copy's instance script; retail boss templates
+/// do not all carry the creature boss flags.
+fn read_encounter_boss(world: &mut World, target: Entity) -> Option<EncounterBoss> {
+    let map = world.get::<InMap>(target).copied()?;
+    let entry = world.get::<shared::components::Npc>(target)?.template_id;
     // The public boss-state read creates the copy's instance script when it is missing.
     instance_script::get_boss_state(world, map, 0);
-    let Some(script) = world
-        .get_resource::<InstanceScripts>()
-        .and_then(|scripts| scripts.0.get(&map))
-    else {
-        return false;
-    };
-    let Some(target_boss) = script
+    let script = world.get_resource::<InstanceScripts>()?.0.get(&map)?;
+    let target_boss = script
         .boss_creatures
         .iter()
-        .find_map(|&(creature, boss)| (creature == entry).then_some(boss))
-    else {
-        return false;
-    };
-    script
+        .find_map(|&(creature, boss)| (creature == entry).then_some(boss))?;
+    let others_done = script
         .boss_creatures
         .iter()
         .filter(|&&(_, boss)| boss != target_boss)
@@ -133,7 +125,12 @@ fn is_final_boss(world: &mut World, target: Entity) -> bool {
                 .bosses
                 .get(boss as usize)
                 .is_some_and(|info| info.state == EncounterState::Done)
-        })
+        });
+    Some(if others_done {
+        EncounterBoss::Final
+    } else {
+        EncounterBoss::Other
+    })
 }
 
 fn first_lust_spent(world: &World, actor: Entity) -> bool {
