@@ -35,6 +35,8 @@ mod den_rotten_ground_tests;
 #[cfg(test)]
 mod lethal_absorb_tests;
 #[cfg(test)]
+mod paladin_sentinel_tests;
+#[cfg(test)]
 mod party_reach_tests;
 #[cfg(test)]
 mod policy_order_tests;
