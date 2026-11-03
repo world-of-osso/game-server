@@ -22,6 +22,11 @@ pub fn scripted_proc_mask(id: u32) -> Option<[u32; 2]> {
     }
 }
 
+// VERIFIED_WCL: report 31F8rbhd7VtWTxCH fight 1 pull 11 has 14 fully
+// absorbed melee hits followed by Bone Shield stack loss. Retire if a retail
+// capture contradicts this, or DB2/TC encodes the hit mask.
+const PROC_HIT_MASK_OVERRIDES: &[(u32, u32)] = &[(195181, 0x403)];
+
 const CAN_PROC_FROM_PROCS: u32 = 0x0400_0000;
 // TC DEAL_MELEE_ABILITY/RANGED_ATTACK/RANGED_ABILITY, helpful/harmful
 // ability/spell/periodic flags (SpellMgr.cpp1893–1895).
@@ -58,9 +63,15 @@ pub(super) fn load(conn: &Connection, spells: &mut [SpellInfo]) -> rusqlite::Res
             options.proc_family = explicit
                 .get(&spell.id)
                 .map(|&(family, mask, _)| (family, mask));
-            options.proc_hit_mask = explicit
-                .get(&spell.id)
-                .map_or(generated_hit_mask, |&(_, _, hit_mask)| hit_mask);
+            options.proc_hit_mask = explicit.get(&spell.id).map_or_else(
+                || {
+                    PROC_HIT_MASK_OVERRIDES
+                        .iter()
+                        .find_map(|&(id, mask)| (id == spell.id).then_some(mask))
+                        .unwrap_or(generated_hit_mask)
+                },
+                |&(_, _, hit_mask)| hit_mask,
+            );
         } else if let Some(options) = spell.aura_options.as_mut() {
             // Stacks, charges and raw DB2 fields remain available to non-proc consumers.
             options.proc_definition_source = None;

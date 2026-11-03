@@ -389,6 +389,20 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
             .map_or(0, |aura| aura.stacks)
     };
     assert_eq!(stacks(&run), 3);
+    crate::spell_cast::cast_triggered_with_effect0_amount(
+        run.app.world_mut(),
+        target,
+        77535,
+        Some(target),
+        1,
+        500_000.0,
+    );
+    let health = run
+        .app
+        .world()
+        .get::<shared::components::Health>(target)
+        .unwrap()
+        .current;
     crate::spell_cast::effects::replay_simc_dummy_strike(
         run.app.world_mut(),
         source,
@@ -398,16 +412,14 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
         false,
     );
     run.app.update();
-    assert!(
+    assert_eq!(
         run.app
             .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .iter()
-            .any(|event| event.source == Some(source.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage
-                && event.amount > 0)
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current,
+        health,
+        "Blood Shield absorbs the special attack"
     );
     assert_eq!(
         stacks(&run),
@@ -433,9 +445,25 @@ fn simc_dummy_strike_does_not_trigger_auto_attack_procs() {
     crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
     run.app.update();
     assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::Health>(target)
+            .unwrap()
+            .current,
+        health,
+        "Blood Shield absorbs the auto attack"
+    );
+    assert_eq!(
         stacks(&run),
         2,
-        "landed auto-attack must consume one Bone Shield stack"
+        "fully absorbed auto attack consumes one stack"
+    );
+    crate::combat::replay_healer_hit(run.app.world_mut(), source, target, &hit).unwrap();
+    run.app.update();
+    assert_eq!(
+        stacks(&run),
+        2,
+        "proc cooldown prevents an immediate second stack loss"
     );
 }
 
