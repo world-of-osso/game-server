@@ -128,21 +128,33 @@ fn validate_script_catalog(
     enemy: Entity,
     template: &crate::world_data::CreatureTemplate,
 ) -> Result<(), String> {
-    let entry = template.entry;
-    let scripts = world
-        .get_resource::<crate::scripted_ai::smart_ai::SmartScripts>()
-        .ok_or("source AI catalog unavailable")?;
-    let scripted = !template.script_name.is_empty()
-        || scripts.0.contains_key(&entry)
-        || world
-            .get::<crate::scripted_ai::CreatureScriptName>(enemy)
-            .is_some();
-    if scripted {
+    if source_is_scripted(world, enemy, template)? {
         return Err(format!(
-            "scripted source{entry} requires an explicit pull decision; no numerical forecast"
+            "scripted source{} requires an explicit pull decision; no numerical forecast",
+            template.entry
         ));
     }
     Ok(())
+}
+
+/// A scripted source needs an explicit decision instead of a numerical forecast.
+pub(crate) fn requires_explicit_pull(world: &World, enemy: Entity) -> Result<bool, String> {
+    source_is_scripted(world, enemy, read_source_template(world, enemy)?)
+}
+
+fn source_is_scripted(
+    world: &World,
+    enemy: Entity,
+    template: &crate::world_data::CreatureTemplate,
+) -> Result<bool, String> {
+    let scripts = world
+        .get_resource::<crate::scripted_ai::smart_ai::SmartScripts>()
+        .ok_or("source AI catalog unavailable")?;
+    Ok(!template.script_name.is_empty()
+        || scripts.0.contains_key(&template.entry)
+        || world
+            .get::<crate::scripted_ai::CreatureScriptName>(enemy)
+            .is_some())
 }
 
 fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {

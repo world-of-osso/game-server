@@ -69,6 +69,11 @@ pub(super) fn update(world: &mut World) {
         })
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
+    for (unit, _) in &followers {
+        if let Err(error) = super::pull_set::refresh_boss_units(world, *unit) {
+            warn!(?unit, %error, "Unable to calculate boss pull units");
+        }
+    }
     let owners: std::collections::BTreeSet<_> = followers
         .iter()
         .map(|(_, follower)| follower.owner)
@@ -110,7 +115,15 @@ pub(super) fn update(world: &mut World) {
 }
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    if world.get::<LeaderProfile>(unit).is_some()
+        && let Err(error) = super::pull_set::refresh_boss_units(world, unit)
+    {
+        warn!(?unit, %error, "Unable to calculate boss pull units");
+    }
     if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
+        if let Err(error) = super::pull_set::refresh_boss_units(world, pet) {
+            warn!(?pet, %error, "Unable to calculate boss pull units");
+        }
         super::positioning::update_combat_exclusions(world, pet, follower);
     }
     if world

@@ -257,7 +257,7 @@ impl InstanceScripts {
 }
 
 /// The copy's instance script, created from `instance_template.script` when missing.
-pub(super) fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript> {
+pub(crate) fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript> {
     if !world
         .get_resource_or_init::<InstanceScripts>()
         .0
