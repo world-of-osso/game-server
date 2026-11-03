@@ -1875,6 +1875,8 @@ fn effect_dest_slot(
 ///TC caster-ground62 and destination-ground138 resolve map height (`Map::GetHeight`,
 ///including enabled GO floors in the caster's copy) with mutable ground access.
 ///Destination selection remains independent of ground-cache mutation.
+/// Cursor-targeted jump charges also require ground so an airborne unit's position
+/// cannot become an unsupported landing (World of Osso decision, 2026-11-03).
 pub(super) fn ground_destination(
     world: &mut World,
     caster: Entity,
@@ -1884,7 +1886,8 @@ pub(super) fn ground_destination(
     let requires_ground = effect
         .implicit_targets
         .iter()
-        .any(|id| matches!(id, 62 | 138));
+        .any(|id| matches!(id, 62 | 138))
+        || (effect.effect == 254 && effect.implicit_targets.contains(&87));
     if !requires_ground {
         return Ok(destination);
     }

@@ -3,6 +3,74 @@ use super::*;
 use crate::creature_ai::PetMotion;
 use std::time::Duration;
 
+#[test]
+fn murder_row_owner_approaches_tank_from_connected_surface() {
+    let root = super::super::graph::extraction::asset_root().join("navmesh");
+    let walker = NativeMovement::open(&root, 2813).unwrap();
+    let from = Vec3::new(8722.042, 20.234062, 4878.254);
+    let tank = Vec3::new(8711.105, 13.170672, 4896.1533);
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    world.insert_resource(walker);
+    let owner = world
+        .spawn((
+            Position {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let tank = world
+        .spawn(Position {
+            x: tank.x,
+            y: tank.y,
+            z: tank.z,
+        })
+        .id();
+    move_owner_to_tank(&mut world, owner, tank).unwrap();
+    let destination = world.get::<MoveIntent>(owner).unwrap().0;
+    assert!((destination.y - 19.922_413).abs() < 0.05, "{destination:?}");
+    tick(&mut world);
+    assert!(point(world.get::<Position>(owner).unwrap()).distance(from) > 0.01);
+    assert!(server::simc_apl::collect_fact_errors(&mut world).is_empty());
+}
+
+#[test]
+fn unreachable_owner_destination_records_a_fact_error_instead_of_panicking() {
+    let mut world = World::new();
+    world.insert_resource(Time::<()>::default());
+    super::super::native_movement::install_parity_arena(&mut world).unwrap();
+    let owner = world
+        .spawn((
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            MoveIntent(Vec3::splat(1_000_000.0)),
+        ))
+        .id();
+    tick(&mut world);
+    let errors = server::simc_apl::collect_fact_errors(&mut world);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].fact, "movement.native");
+    assert_eq!(errors[0].actor, owner.to_bits());
+    assert!(errors[0].detail.contains("native walk unreachable"));
+    assert!(errors[0].detail.contains("from="));
+    assert!(errors[0].detail.contains("to="));
+    assert!(world.get::<MoveIntent>(owner).is_none());
+    assert!(world.get::<BlockedWalk>(owner).is_some());
+}
+
 pub(super) fn altar_walker() -> NativeMovement {
     let root = super::super::graph::extraction::asset_root().join("navmesh");
     NativeMovement::open(&root, 2993).unwrap()
