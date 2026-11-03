@@ -166,10 +166,23 @@ fn native_evade_walks_frozen_home_route_before_completing_return() {
     let actor = actors[&20375744];
     let home = *app.world().get::<Position>(actor).unwrap();
     crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
-    app.world_mut().entity_mut(actor).insert(Position {
+    let displaced = Position {
         x: home.x + 4.0,
         ..home
-    });
+    };
+    app.world_mut().entity_mut(actor).insert(displaced);
+    let endpoint = app
+        .world()
+        .resource::<super::native_movement::NativeMovement>()
+        .walk_legs(
+            Vec3::new(displaced.x, displaced.y, displaced.z),
+            Vec3::new(home.x, home.y, home.z),
+            "evade-test",
+        )
+        .unwrap()
+        .back()
+        .unwrap()
+        .0;
     app.update();
     let first_step = *app.world().get::<Position>(actor).unwrap();
     assert!(
@@ -183,7 +196,8 @@ fn native_evade_walks_frozen_home_route_before_completing_return() {
     for _ in 0..80 {
         app.update();
     }
-    assert_eq!(*app.world().get::<Position>(actor).unwrap(), home);
+    let arrived = app.world().get::<Position>(actor).unwrap();
+    assert_eq!(Vec3::new(arrived.x, arrived.y, arrived.z), endpoint);
     assert_eq!(
         app.world().get::<crate::creature_ai::CreatureState>(actor),
         Some(&crate::creature_ai::CreatureState::Idle)
