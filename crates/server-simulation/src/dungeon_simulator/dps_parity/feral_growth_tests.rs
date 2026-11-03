@@ -95,6 +95,55 @@ fn feral_native_vines_applications_expire_independently() {
 
 #[test]
 #[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_vines_death_bursts_at_nearby_survivors() {
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::{components::Position, protocol::CombatLogKind};
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(103, 3).unwrap();
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let dying = run.targets[1];
+    let survivor = run.targets[2];
+    let origin = *run.app.world().get::<Position>(dying).unwrap();
+    run.app.world_mut().entity_mut(survivor).insert(Position {
+        x: origin.x + 1.0,
+        ..origin
+    });
+    assert!(crate::auras::has_aura(run.app.world(), actor, 440120));
+    for _ in 0..2 {
+        crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 439531, Some(dying), 1);
+    }
+    let stack = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(dying)
+        .unwrap()
+        .iter()
+        .find(|a| a.spell_id == 439531 && a.caster == actor)
+        .unwrap()
+        .stacks;
+    assert_eq!(stack, 2);
+    let before = run.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::combat::kill_unit(run.app.world_mut(), actor, dying);
+    let hits = run.app.world().resource::<ObservedCombatEvents>().0[before..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(actor.to_bits())
+                && event.target == Some(survivor.to_bits())
+                && event.spell_id == Some(440122)
+        })
+        .count();
+    assert_eq!(
+        hits, 1,
+        "the removed Vines aura bursts once against a nearby survivor on death"
+    );
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
 fn feral_twin_sprouts_spreads_growth_to_another_enemy() {
     let _scope = crate::random::seed_scope(70448);
     let mut run = prepare_literal(103, 3).unwrap();
