@@ -837,6 +837,18 @@ impl SpellHistory {
         self.gcd_ready_at.clear();
     }
 
+    /// SimC76f8118 dot.cpp841–860 replaces the current GCD when chaining
+    /// the final channel tick. Preserve its deadline if the new cast fails.
+    pub fn take_channel_chain_gcd(&mut self, spell: &SpellInfo) -> Option<f64> {
+        self.gcd_ready_at.remove(&gcd_category(spell))
+    }
+
+    pub fn restore_channel_chain_gcd(&mut self, spell: &SpellInfo, deadline: Option<f64>) {
+        if let Some(deadline) = deadline {
+            self.gcd_ready_at.insert(gcd_category(spell), deadline);
+        }
+    }
+
     pub fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
