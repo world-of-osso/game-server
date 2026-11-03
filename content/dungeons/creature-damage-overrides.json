@@ -1,6 +1,6 @@
 {
   "season_id": 120,
-  "method": "All positive WCL melee unmitigatedAmount hits against players/pets, normalized to +2 by rounded Q(level)/Q(2); exclude known positive damage/attack-power and unknown source aura intervals. IQR is of normalized per-hit modifier values.",
+  "method": "Positive WCL melee unmitigatedAmount hits against players/pets, normalized to +2 by rounded Q(level)/Q(2); exclude known positive damage/attack-power and unknown source aura intervals. IQR is of normalized per-hit modifier values. Entries with a per-entry method identify non-melee spell proxies.",
   "overrides": [
     {
       "map": 2521,
@@ -2101,6 +2101,80 @@
       "excluded_auras": [],
       "provenance": "INFERRED_WCL",
       "retire_when": "replace with sourced server DamageModifier when available"
+    },
+    {
+      "map": 2993,
+      "entry": 261553,
+      "level": 90,
+      "name": "Ravenous Descendant",
+      "prior_value": 1.0,
+      "base_median": 53879.061653090204,
+      "expected_stat_dps": 6855.70312,
+      "map_tuning": 1279,
+      "modifiers": [
+        [
+          280,
+          1.93929994
+        ],
+        [
+          424,
+          1.0
+        ],
+        [
+          448,
+          1.62100005
+        ],
+        [
+          473,
+          1.0
+        ],
+        [
+          474,
+          1.0
+        ],
+        [
+          476,
+          1.0
+        ],
+        [
+          4,
+          1.0
+        ]
+      ],
+      "value": 2.327857,
+      "n": 529,
+      "reports": [
+        {
+          "label": "altar-proxy-1",
+          "code": "y7GBwrAcF1YzNHKq",
+          "fight": 4,
+          "level": 3,
+          "n": 163
+        },
+        {
+          "label": "altar-proxy-2",
+          "code": "xg1BLjmtwTZPCX3v",
+          "fight": 112,
+          "level": 3,
+          "n": 206
+        },
+        {
+          "label": "altar-proxy-3",
+          "code": "q1wLj6rtxvHfJFmd",
+          "fight": 15,
+          "level": 3,
+          "n": 160
+        }
+      ],
+      "iqr": [
+        2.0121991768680667,
+        2.42083023352037
+      ],
+      "excluded_auras": [],
+      "provenance": "INFERRED_WCL",
+      "retire_when": "replace the proxy with sourced swing-override trigger and damage scaling",
+      "method": "INFERRED_WCL spell 1306338 weapon-damage proxy; difficulty 8 resolves to unchanged base template",
+      "limitation": "The swing-override trigger is unsourced; do not schedule this spell as an additional attack."
     }
   ],
   "skipped": [
