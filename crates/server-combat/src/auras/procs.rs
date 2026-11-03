@@ -930,3 +930,36 @@ fn start_proc_cooldown(world: &mut World, unit: Entity, id: u32, now: f64) -> Op
     aura.proc.next_ready_at = now + f64::from(cooldown_ms) / 1000.0;
     Some(aura.clone())
 }
+
+#[cfg(test)]
+mod replay_critical_tests {
+    use super::{PROC_HIT_CRITICAL, PROC_HIT_NORMAL, PendingAuraEvents};
+    use crate::spell_cast::test_harness::harness;
+
+    #[test]
+    fn replayed_critical_damage_emits_critical_proc_outcome() {
+        let mut h = harness(Vec::new(), &[], 10).unwrap();
+        let victim = h.caster;
+        h.app
+            .world_mut()
+            .resource_mut::<PendingAuraEvents>()
+            .events
+            .clear();
+        crate::combat::replay_post_mitigation_hit(
+            h.app.world_mut(),
+            h.npc,
+            victim,
+            None,
+            1,
+            false,
+            true,
+            100.0,
+        )
+        .unwrap();
+        let events = &h.app.world().resource::<PendingAuraEvents>().events;
+        let event = &events.last().expect("damage emits proc event").event;
+        assert_ne!(event.hit_mask & PROC_HIT_CRITICAL, 0);
+        assert_eq!(event.hit_mask & PROC_HIT_NORMAL, 0);
+        assert_eq!(event.damage, 100.0);
+    }
+}

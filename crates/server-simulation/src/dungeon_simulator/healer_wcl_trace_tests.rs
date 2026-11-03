@@ -28,6 +28,24 @@ fn opening_wcl_aura_resolves_reversion_to_merithra() {
 
 #[test]
 #[ignore = "requires native spell data"]
+fn wcl_critical_hit_replays_recorded_damage_without_critical_multiplier() {
+    use crate::spell_cast::test_harness::harness;
+    use shared::components::Health;
+
+    let mut h = harness(Vec::new(), &[], 10).unwrap();
+    let victim = h.caster;
+    let initial = h.app.world().get::<Health>(victim).unwrap().current;
+    let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":0,"slot":0,"source_actor":-1,"target_actor":6,"spell_id":3,"school":1,"defense":null,"hit_type":2,"periodic":false,"max_hp":1000,"amount":100,"absorbed":0}"#).unwrap();
+    assert!(matches!(
+        hit.deliver(h.app.world_mut(), h.npc, &[victim; 5]).unwrap(),
+        super::healer_wcl_trace::Delivery::Applied(_)
+    ));
+    let health = h.app.world().get::<Health>(victim).unwrap();
+    assert!((health.current - (initial - health.max * 0.1)).abs() < 0.01);
+}
+
+#[test]
+#[ignore = "requires native spell data"]
 fn wcl_falling_replays_as_physical_pressure_without_db2_spell_three() {
     use crate::spell_cast::test_harness::harness;
     use shared::components::Health;
