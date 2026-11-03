@@ -67,7 +67,7 @@ pub(crate) use positioning::CombatMovementExclusions;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
-mod recovery_drink;
+pub(crate) mod recovery_drink;
 mod release;
 mod target_reach;
 use server_follower_policy::followers::pull_budget;

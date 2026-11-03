@@ -2787,6 +2787,7 @@ fn begin_cast_with_primary(
     admitted.cast_primary_target = primary;
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
     scripts::snapshot_frost_launch_auras(world, caster, &mut admitted);
+    crate::followers::recovery_drink::interrupt_cast(world, caster);
     crate::stand_state::stand_to_cast(world, caster, attributes(&admitted, 0));
     if !admitted.empower_stages.is_empty() {
         return empower::begin(world, caster, &admitted, target);

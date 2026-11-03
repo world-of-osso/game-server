@@ -9,13 +9,19 @@ use super::pull_budget::{Decision, Reason};
 
 /// Springrunner Sparkling; its ItemEffect provides Drink 1291791.
 #[derive(Component)]
-pub(super) struct RecoveryDrinkItem(pub u32);
+pub(super) struct RecoveryDrinkItem {
+    item_id: u32,
+    remaining: Option<u32>,
+}
 
 #[derive(Component)]
 struct DrinkingAt(Position);
 
 pub(super) fn install(world: &mut World, unit: Entity) {
-    world.entity_mut(unit).insert(RecoveryDrinkItem(260260));
+    world.entity_mut(unit).insert(RecoveryDrinkItem {
+        item_id: 260260,
+        remaining: None,
+    });
 }
 
 /// Called at the actual pull-admission boundary, not by the budget reader.
@@ -55,9 +61,14 @@ fn below_gate(world: &World, unit: Entity) -> bool {
 }
 
 fn try_drink(world: &mut World, unit: Entity) -> Result<(), String> {
-    let Some(item) = world.get::<RecoveryDrinkItem>(unit).map(|item| item.0) else {
+    let Some(supply) = world.get::<RecoveryDrinkItem>(unit) else {
         return Ok(());
     };
+    let item = supply.item_id;
+    let remaining = supply.remaining;
+    if remaining == Some(0) {
+        return Ok(());
+    }
     if !below_gate(world, unit)
         || world.get::<DrinkingAt>(unit).is_some()
         || world
@@ -79,6 +90,10 @@ fn try_drink(world: &mut World, unit: Entity) -> Result<(), String> {
         .ok_or_else(|| format!("drink item {item} missing"))?;
     let on_use = template.on_use.ok_or("drink item has no use spell")?;
     let item_level = template.scaling.item_level;
+    let remaining = remaining.unwrap_or(template.max_stack);
+    if remaining == 0 {
+        return Err(format!("drink item {item} has an empty native stack"));
+    }
     match crate::spell_cast::cast_item_spell(
         world,
         unit,
@@ -89,12 +104,25 @@ fn try_drink(world: &mut World, unit: Entity) -> Result<(), String> {
         Some(item),
     ) {
         Ok(()) => {
+            let mut supply = world.get_mut::<RecoveryDrinkItem>(unit).unwrap();
+            supply.remaining = Some(if on_use.charges < 0 {
+                remaining - 1
+            } else {
+                remaining
+            });
             world.entity_mut(unit).insert(DrinkingAt(position));
         }
         Err(crate::spell_cast::CastFailure::OnCooldown) => {}
         Err(error) => return Err(format!("item {item} cast failed: {error:?}")),
     }
     Ok(())
+}
+
+pub(crate) fn interrupt_cast(world: &mut World, unit: Entity) {
+    if world.get::<DrinkingAt>(unit).is_some() {
+        crate::stand_state::set_stand_state(world, unit, StandState::Stand);
+        world.entity_mut(unit).remove::<DrinkingAt>();
+    }
 }
 
 /// Follower movement is server-driven rather than PlayerMotion-driven.
