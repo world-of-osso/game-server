@@ -607,6 +607,7 @@ fn replay_profile(
     let mut wcl_avoided = 0;
     let mut wcl_dead_targets = 0;
     let mut wcl_health_samples = Vec::new();
+    let mut native_self_damage = Vec::new();
     let mut pain_target_ticks = 0_u64;
     let mut atonement_target_ticks = 0_u64;
     let mut pain_periodic_hits = 0_u64;
@@ -755,6 +756,17 @@ fn replay_profile(
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            if wcl.is_some()
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == event.target
+                && let Some(slot) = slots
+                    .iter()
+                    .position(|unit| Some(unit.to_bits()) == event.target)
+                && let Some(health) = world.get::<Health>(slots[slot])
+            {
+                native_self_damage.push(json!({"time_ms":elapsed_ms,"slot":slot,"spell_id":event.spell_id,
+                    "damage_pct":100.0 * f64::from((event.amount.max(0) + event.absorbed.max(0)) as f32 / health.max)}));
+            }
             if event.kind == shared::protocol::CombatLogKind::Damage
                 && event
                     .target
@@ -836,7 +848,7 @@ fn replay_profile(
             "party_specs":wcl.party_specs,"healer_spec":spec,"matches_recorded_party":spec == wcl.party_specs[1],
             "delivered":wcl_delivered,"avoided":wcl_avoided,
             "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
-            "health_samples":wcl_health_samples});
+            "health_samples":wcl_health_samples,"native_self_damage":native_self_damage});
     }
     if let Some(profile) = profile {
         report["enemy_profile"] =

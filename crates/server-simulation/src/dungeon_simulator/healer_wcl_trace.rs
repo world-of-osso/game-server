@@ -125,7 +125,7 @@ impl RecordedHit {
             )?;
             return Ok(Delivery::Avoided);
         }
-        crate::combat::replay_post_mitigation_hit(
+        let receipt = crate::combat::replay_post_mitigation_hit(
             world,
             enemy,
             target,
@@ -143,7 +143,11 @@ impl RecordedHit {
             "wcl_hp_pct":self.health_after.map(|hp| 100.0 * hp as f64 / self.max_hp as f64),
             "native_hp_pct":100.0 * f64::from(after / native_max),
             "wcl_loss_pct":100.0 * self.amount as f64 / self.max_hp as f64,
-            "native_loss_pct":100.0 * f64::from((before - after) / native_max)}),
+            "wcl_absorbed_pct":100.0 * self.absorbed as f64 / self.max_hp as f64,
+            "native_loss_pct":100.0 * f64::from((before - after) / native_max),
+            "native_absorbed_pct":100.0 * f64::from(receipt.absorbed_hp / native_max),
+            "native_deferred_pct":100.0 * f64::from(receipt.deferred_hp / native_max),
+            "native_transferred_pct":100.0 * f64::from(receipt.transferred_hp / native_max)}),
         ))
     }
 }

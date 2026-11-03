@@ -42,14 +42,16 @@ def read_spell_metadata(db, spell):
 def convert(events, db):
     max_health = read_max_health(events)
     hits = []
-    excluded_self = 0
+    observed_self = []
     for event in events:
         target = event['targetID']
         if target not in ACTORS:
             raise ValueError(f'unknown WCL party target {target}')
         source = event['sourceID']
         if source == target:
-            excluded_self += 1
+            observed_self.append({'time_ms': int(event['fight_ms']), 'slot': ACTORS[target],
+                                  'amount': event.get('amount', 0), 'absorbed': event.get('absorbed', 0),
+                                  'max_hp': max_health[target]})
             continue
         if source in ACTORS:
             raise ValueError(f'unmapped friendly damage source {source}')
@@ -65,7 +67,7 @@ def convert(events, db):
         raise ValueError('WCL damage events must be nonempty and ordered')
     return {'provenance': 'INFERRED_WCL pPFDbkfQK7MACtmY fight 41 pull 1',
             'actor_slots': ACTORS, 'party_specs': [268, 1468, 62, 262, 262],
-            'excluded_self': excluded_self, 'hits': hits}
+            'excluded_self': len(observed_self), 'observed_self': observed_self, 'hits': hits}
 
 
 def main():

@@ -3070,6 +3070,13 @@ pub(crate) fn deal_health_damage(
     crate::spell_cast::log_event(world, death_log_event(attacker, victim));
 }
 
+#[cfg(any(test, feature = "test-support"))]
+pub struct ReplayDamageReceipt {
+    pub absorbed_hp: f32,
+    pub deferred_hp: f32,
+    pub transferred_hp: f32,
+}
+
 /// Replay a post-mitigation hostile hit in recipient HP units. Native absorbs
 /// and proc dispatch still run; armor and damage-taken modifiers do not.
 #[cfg(any(test, feature = "test-support"))]
@@ -3081,7 +3088,7 @@ pub fn replay_post_mitigation_hit(
     school: u32,
     periodic: bool,
     amount: f32,
-) -> Result<(), String> {
+) -> Result<ReplayDamageReceipt, String> {
     if !amount.is_finite() || amount < 0.0 {
         return Err("WCL_INTAKE_INVALID_NORMALIZED_DAMAGE".into());
     }
@@ -3090,7 +3097,7 @@ pub fn replay_post_mitigation_hit(
     };
     let before = health.current;
     if before <= 0.0 {
-        return Ok(());
+        return Err("WCL_INTAKE_TARGET_DEAD".into());
     }
     let (actor_mask, target_mask) = replay_hostile_masks(world, spell_id, periodic)?;
     let attacker_scaling = UnitScaling::of(world, attacker);
@@ -3110,8 +3117,9 @@ pub fn replay_post_mitigation_hit(
     let (damage, absorbed) =
         crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
     let absorbed = absorbed + source_absorbed;
-    let damage = crate::auras::damage_transfer::route(world, attacker, victim, school, damage);
-    deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
+    let routed = crate::auras::damage_transfer::route(world, attacker, victim, school, damage);
+    let transferred = damage - routed;
+    deal_health_damage(world, attacker, victim, routed, school, spell_id, absorbed);
     let after = world
         .get::<Health>(victim)
         .map_or(0.0, |health| health.current);
@@ -3144,7 +3152,11 @@ pub fn replay_post_mitigation_hit(
             },
         );
     }
-    Ok(())
+    Ok(ReplayDamageReceipt {
+        absorbed_hp: absorbed / health_multiplier,
+        deferred_hp: deferred / health_multiplier,
+        transferred_hp: transferred / health_multiplier,
+    })
 }
 
 #[cfg(any(test, feature = "test-support"))]
