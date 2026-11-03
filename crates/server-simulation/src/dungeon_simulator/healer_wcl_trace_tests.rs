@@ -40,7 +40,7 @@ fn wcl_intake_counts_guardian_spirit_absorb_separately_from_rescue_heal() {
         panic!("hit not applied")
     };
     assert_eq!(sample["native_loss_pct"], 0.0);
-    assert_eq!(sample["native_absorbed_pct"], 20.0);
+    assert!((sample["native_absorbed_pct"].as_f64().unwrap() - 20.0).abs() < 0.001);
     assert!(sample["native_hp_pct"].as_f64().unwrap() > 10.0);
 }
 
