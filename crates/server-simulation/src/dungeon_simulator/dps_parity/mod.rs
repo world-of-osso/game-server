@@ -1076,7 +1076,7 @@ fn marksmanship_literal_fixture_casts_reference_actions() {
 
 fn measure_tank_replays(spec: u32, seeds: &str) -> Vec<serde_json::Value> {
     let directory = std::path::Path::new(
-        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank",
     );
     let trace = directory.join(format!("{spec}.simc-trace.log"));
     seeds

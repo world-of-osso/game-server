@@ -2971,7 +2971,7 @@ fn plate_tank_profiles_receive_simc_base_dodge() {
 #[ignore = "runs all six native MID2 tank dummy replays"]
 fn all_tanks_use_dungeon_season_combat_inputs() {
     let directory = Path::new(
-        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay",
+        "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank",
     );
     for spec in [66, 73, 104, 250, 268, 581] {
         let trace = directory.join(format!("{spec}.simc-trace.log"));
