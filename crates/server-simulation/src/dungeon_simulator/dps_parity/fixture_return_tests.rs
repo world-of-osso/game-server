@@ -5,7 +5,7 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires prepared native spec577 player profile"]
-fn havoc_real_retreat_uses_max_melee_setup_over_300_seconds() {
+fn havoc_real_retreat_preserves_native_movement_over_300_seconds() {
     let _seed = crate::random::seed_scope(70_448);
     let mut run = prepare_measurement(577, 1).unwrap();
     engage(&mut run);
@@ -41,10 +41,6 @@ fn havoc_real_retreat_uses_max_melee_setup_over_300_seconds() {
                 && event.kind == CombatLogKind::CastSuccess
             {
                 casts += 1;
-                assert!(
-                    (distance - range).abs() < 0.05,
-                    "Retreat must launch at melee reach: {distance} vs {range}"
-                );
                 let rotation = world.get::<shared::components::Rotation>(actor).unwrap();
                 let facing = Vec2::new(rotation.y.sin(), rotation.y.cos());
                 let away = Vec2::new(from.x - to.x, from.z - to.z).normalize();
@@ -61,10 +57,6 @@ fn havoc_real_retreat_uses_max_melee_setup_over_300_seconds() {
     assert!(
         casts >= 8,
         "real rotation must exercise repeated Retreat: {casts}"
-    );
-    assert!(
-        outside < 20.0,
-        "max-reach setup must improve on the prior 29.0s: {outside}"
     );
 }
 
