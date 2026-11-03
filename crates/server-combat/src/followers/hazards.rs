@@ -144,7 +144,7 @@ fn hostile_cast_telegraphs(
                 .effects
                 .iter()
                 .filter(|effect| {
-                    matches!(effect.effect, 2 | 98) && effect.implicit_targets == [18, 16]
+                    matches!(effect.effect, 2 | 98 | 144) && effect.implicit_targets == [18, 16]
                 })
                 .map(|effect| crate::spell_cast::targets::radius(effect, 1))
                 .filter(|radius| *radius > 0.0 && *radius <= 20.0)
