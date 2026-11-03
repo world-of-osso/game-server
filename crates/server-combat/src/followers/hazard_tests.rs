@@ -144,10 +144,14 @@ fn follower_leaves_fel_nova_before_impact() {
         .world_mut()
         .entity_mut(enemy)
         .insert((FROM, InMap::continent(34)));
-    h.app
-        .world_mut()
-        .entity_mut(h.caster)
-        .insert(crate::networking::CombatTarget(Some(enemy)));
+    h.app.world_mut().entity_mut(h.caster).insert((
+        FROM,
+        shared::components::Health {
+            current: 1_000_000.0,
+            max: 1_000_000.0,
+        },
+        crate::networking::CombatTarget(Some(enemy)),
+    ));
     h.app
         .world_mut()
         .entity_mut(enemy)
@@ -162,6 +166,15 @@ fn follower_leaves_fel_nova_before_impact() {
         "follower failed to leave Fel Nova: {after:?}"
     );
     h.advance(10);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(1223906)
+                && event.target == Some(h.caster.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage),
+        "the stationary owner must take the same nova"
+    );
     assert!(
         !h.inbox
             .log
