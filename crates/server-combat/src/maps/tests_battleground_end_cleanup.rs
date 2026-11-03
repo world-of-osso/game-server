@@ -70,6 +70,7 @@ fn node_fixture() -> CleanupFixture {
 fn prepare_fixture(template: &BgTemplate, starts: [u32; 2]) -> CleanupFixture {
     let mut entered = enter_source_match_with(template, starts, |app| {
         app.add_plugins(crate::death::DeathPlugin);
+        app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
     });
     assert_eq!(
         battleground(&entered.h, &entered.players[0]).phase,
