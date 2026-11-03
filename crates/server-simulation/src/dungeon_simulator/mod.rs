@@ -28,6 +28,8 @@ mod healer_report;
 mod healer_simc_metrics;
 mod healer_simc_replay;
 mod healer_upkeep_tests;
+mod healer_wcl_trace;
+mod healer_wcl_trace_tests;
 mod holy_paladin_replay_tests;
 mod holy_paladin_simc_tests;
 mod holy_priest_replay_tests;

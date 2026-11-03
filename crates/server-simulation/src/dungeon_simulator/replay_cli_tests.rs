@@ -30,7 +30,23 @@ fn native_replay_cli_driver() {
                 .parse()
                 .unwrap();
             let seed = std::env::var("HEALER_TANK_SEED").unwrap().parse().unwrap();
-            if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
+            if let Some(intake) = std::env::var_os("HEALER_WCL_INTAKE") {
+                assert!(
+                    std::env::var_os("HEALER_TANK_PARTY_TRACE").is_none(),
+                    "WCL intake replaces synthetic party pressure"
+                );
+                let profile = std::env::var_os("HEALER_ENEMY_PROFILE")
+                    .expect("WCL intake requires HEALER_ENEMY_PROFILE");
+                super::healer_simc_replay::replay_simc_party_with_wcl(
+                    spec.parse().unwrap(),
+                    level,
+                    Path::new(&path),
+                    duration,
+                    seed,
+                    Path::new(&profile),
+                    Path::new(&intake),
+                )
+            } else if let Some(party_trace) = std::env::var_os("HEALER_TANK_PARTY_TRACE") {
                 if let Some(profile) = std::env::var_os("HEALER_ENEMY_PROFILE") {
                     super::healer_simc_replay::replay_simc_party_with_profile(
                         spec.parse().unwrap(),

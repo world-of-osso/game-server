@@ -558,6 +558,42 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_intake_replays_recorded_hostile_and_self_damage() {
+    let report = super::replay_simc_party_with_wcl(
+        1468,
+        90,
+        Path::new("not-used-for-wcl"),
+        10,
+        1,
+        &fixture("altar_fangs_wcl_pull1.json"),
+        &fixture("altar_fangs_wcl_pull1_damage.json"),
+    )
+    .unwrap();
+    assert_eq!(report["timeline"], "wcl_damage_taken");
+    assert_eq!(report["incoming_events"], 0);
+    assert_eq!(report["party_incoming_events"], 0);
+    assert_eq!(report["wcl_intake"]["records"], 64);
+    let applied = report["wcl_intake"]["delivered"].as_u64().unwrap();
+    let dead = report["wcl_intake"]["hits_on_dead_targets_not_replayed"]
+        .as_u64()
+        .unwrap();
+    assert!(applied > 0);
+    assert_eq!(applied + dead, 52);
+    assert_eq!(
+        report["wcl_intake"]["zero_damage_outcomes_not_replayed"],
+        12
+    );
+    assert!(
+        report["metrics"]["party_damage"]
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|v| v.as_u64().unwrap_or(0) > 0)
+    );
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
     let trace = fixture("healer_simc_fixture.log");

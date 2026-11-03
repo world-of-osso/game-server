@@ -220,6 +220,36 @@ pub(super) fn replay_simc_party_with_profile(
         seed,
         initial,
         Some(profile),
+        None,
+    )
+}
+
+pub(super) fn replay_simc_party_with_wcl(
+    spec: u32,
+    level: u8,
+    trace: &Path,
+    duration: u32,
+    seed: u64,
+    profile: &Path,
+    intake: &Path,
+) -> Result<Value, String> {
+    let profile = EnemyProfile::read(profile, duration)?;
+    let initial = profile
+        .intervals_ms
+        .iter()
+        .filter(|&&(start, _)| start == 0)
+        .count();
+    let intake = super::healer_wcl_trace::Trace::read(intake)?;
+    replay_profile(
+        spec,
+        level,
+        trace,
+        None,
+        duration,
+        seed,
+        initial,
+        Some(profile),
+        Some(intake),
     )
 }
 
@@ -442,6 +472,7 @@ fn replay(
         seed,
         targets,
         None,
+        None,
     )
 }
 
@@ -454,6 +485,7 @@ fn replay_profile(
     seed: u64,
     targets: usize,
     profile: Option<EnemyProfile>,
+    wcl: Option<super::healer_wcl_trace::Trace>,
 ) -> Result<Value, String> {
     if duration == 0 {
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
@@ -465,7 +497,11 @@ fn replay_profile(
         .checked_mul(TICKS_PER_SECOND)
         .ok_or("SIMC_REPLAY_DURATION_OUT_OF_RANGE")?;
     let (snapshot, snapshot_sha256) = read_snapshot()?;
-    let hits = crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?;
+    let hits = if wcl.is_some() {
+        Vec::new()
+    } else {
+        crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?
+    };
     let party_hits = party_trace
         .map(super::healer_party_trace::read)
         .transpose()?
@@ -518,6 +554,10 @@ fn replay_profile(
     let mut mitigation_ticks = 0_u32;
     let mut next = 0;
     let mut next_party = 0;
+    let mut next_wcl = 0;
+    let mut wcl_delivered = 0;
+    let mut wcl_zero_outcomes = 0;
+    let mut wcl_dead_targets = 0;
     let mut pain_target_ticks = 0_u64;
     let mut atonement_target_ticks = 0_u64;
     let mut pain_periodic_hits = 0_u64;
@@ -589,6 +629,23 @@ fn replay_profile(
         } else {
             source
         };
+        if let Some(wcl) = &wcl {
+            while let Some(hit) = wcl
+                .hits
+                .get(next_wcl)
+                .filter(|hit| hit.time_ms <= elapsed_ms)
+            {
+                match hit.deliver(app.world_mut(), source, &slots, tick)? {
+                    super::healer_wcl_trace::Delivery::Applied => {
+                        wcl_delivered += 1;
+                        recorder.sample_minima(app.world());
+                    }
+                    super::healer_wcl_trace::Delivery::ZeroOutcome => wcl_zero_outcomes += 1,
+                    super::healer_wcl_trace::Delivery::TargetDead => wcl_dead_targets += 1,
+                }
+                next_wcl += 1;
+            }
+        }
         while let Some(hit) = hits.get(next).filter(|hit| hit.time_ms <= elapsed_ms) {
             if alive(app.world(), tank) {
                 deliver_hit(app.world_mut(), source, tank, hit, tick)?;
@@ -712,6 +769,12 @@ fn replay_profile(
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
         "metrics":recorder.report(app.world(), duration)});
+    if let Some(wcl) = wcl {
+        report["timeline"] = json!("wcl_damage_taken");
+        report["wcl_intake"] = json!({"provenance":wcl.provenance,"records":next_wcl,
+            "delivered":wcl_delivered,"zero_damage_outcomes_not_replayed":wcl_zero_outcomes,
+            "hits_on_dead_targets_not_replayed":wcl_dead_targets});
+    }
     if let Some(profile) = profile {
         report["enemy_profile"] =
             json!({"provenance":profile.provenance,"samples":enemy_count_samples});
