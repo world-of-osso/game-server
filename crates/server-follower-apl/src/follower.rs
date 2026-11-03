@@ -598,15 +598,30 @@ fn injured_recovery_target(world: &mut World, unit: Entity) -> Option<Entity> {
     if follower.profile.role != shared::group::GroupRole::Healer {
         return None;
     }
-    healing_party(world, unit)
+    let candidates = healing_party(world, unit)
         .into_iter()
         .filter_map(|member| {
             let health = world.get::<shared::components::Health>(member)?;
             (health.current > 0.0 && health.current < health.max)
                 .then_some((member, health.current / health.max))
         })
-        .min_by(|left, right| left.1.total_cmp(&right.1))
-        .map(|(member, _)| member)
+        .collect::<Vec<_>>();
+    lowest_health(world, candidates.into_iter()).map(|(member, _)| member)
+}
+
+/// Select the lowest health fraction; exact ties prefer tanks, then entity order.
+/// INFERRED_WCL: five of seven current-build pulls open targeted healing on the tank.
+pub fn lowest_health(
+    world: &World,
+    candidates: impl Iterator<Item = (Entity, f32)>,
+) -> Option<(Entity, f32)> {
+    candidates.min_by(|(a, ah), (b, bh)| {
+        ah.total_cmp(bh)
+            .then_with(|| {
+                server::followers::is_tank(world, *b).cmp(&server::followers::is_tank(world, *a))
+            })
+            .then_with(|| a.to_bits().cmp(&b.to_bits()))
+    })
 }
 
 fn heal_recovery_target(

@@ -240,7 +240,7 @@ impl Discipline {
                 (h.current > 0.0 && h.max > 0.0).then_some((unit, h.current / h.max))
             })
             .collect();
-        let Some((lowest, ratio)) = living.iter().copied().min_by(|a, b| a.1.total_cmp(&b.1))
+        let Some((lowest, ratio)) = crate::follower::lowest_health(world, living.iter().copied())
         else {
             return Ok(());
         };

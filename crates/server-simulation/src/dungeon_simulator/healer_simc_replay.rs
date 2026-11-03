@@ -220,6 +220,54 @@ pub(super) fn replay_simc_party_with_profile(
         seed,
         initial,
         Some(profile),
+        None,
+        None,
+    )
+}
+
+pub(super) fn replay_simc_party_with_wcl(
+    spec: u32,
+    level: u8,
+    trace: &Path,
+    duration: u32,
+    seed: u64,
+    profile: &Path,
+    intake: &Path,
+    builds: Option<&Path>,
+) -> Result<Value, String> {
+    let profile = EnemyProfile::read(profile, duration)?;
+    let initial = profile
+        .intervals_ms
+        .iter()
+        .filter(|&&(start, _)| start == 0)
+        .count();
+    let intake = super::healer_wcl_trace::Trace::read(intake)?;
+    let builds = builds
+        .map(|path| {
+            let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+            let builds: [crate::followers::simulator::RecordedBuild; 5] =
+                serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+            for (slot, build) in builds.iter().enumerate() {
+                if intake.actor_slots.get(&build.actor_id) != Some(&slot)
+                    || intake.party_specs[slot] != build.spec_id
+                {
+                    return Err(format!("WCL_BUILD_ACTOR_MISMATCH:{slot}"));
+                }
+            }
+            Ok(builds)
+        })
+        .transpose()?;
+    replay_profile(
+        spec,
+        level,
+        trace,
+        None,
+        duration,
+        seed,
+        initial,
+        Some(profile),
+        Some(intake),
+        builds,
     )
 }
 
@@ -242,7 +290,13 @@ pub(super) struct ClassParty {
 #[cfg(test)]
 pub(super) fn snapshot_party(spec: u32, level: u8, targets: usize) -> ClassParty {
     let (path, _) = read_snapshot().unwrap();
-    spawn_class_party(&path, spec, level, targets).unwrap()
+    spawn_class_party(&path, spec, level, targets, None, None).unwrap()
+}
+
+#[cfg(test)]
+pub(super) fn snapshot_party_with_specs(spec: u32, level: u8, specs: [u32; 5]) -> ClassParty {
+    let (path, _) = read_snapshot().unwrap();
+    spawn_class_party(&path, spec, level, 1, Some(specs), None).unwrap()
 }
 
 fn spawn_class_party(
@@ -250,6 +304,8 @@ fn spawn_class_party(
     spec: u32,
     level: u8,
     targets: usize,
+    party_specs: Option<[u32; 5]>,
+    builds: Option<&[crate::followers::simulator::RecordedBuild; 5]>,
 ) -> Result<ClassParty, String> {
     let mut app = super::dps_parity::build_snapshot_app(path)?;
     let copy = super::dps_parity::create_open_follower_copy(&mut app, measurement_map(level)?)?;
@@ -258,15 +314,37 @@ fn spawn_class_party(
         y: 0.0,
         z: 0.0,
     };
-    let party = crate::followers::simulator::spawn_party_with_healer(
-        app.world_mut(),
-        copy,
-        origin,
-        level,
-        spec,
-    )?;
+    let party = if let Some(mut specs) = party_specs {
+        specs[1] = spec;
+        if let Some(builds) = builds {
+            crate::followers::simulator::spawn_test_party_recorded(
+                app.world_mut(),
+                copy,
+                origin,
+                level,
+                specs,
+                builds,
+            )?
+        } else {
+            crate::followers::simulator::spawn_test_party(
+                app.world_mut(),
+                copy,
+                origin,
+                level,
+                specs,
+            )?
+        }
+    } else {
+        crate::followers::simulator::spawn_party_with_healer(
+            app.world_mut(),
+            copy,
+            origin,
+            level,
+            spec,
+        )?
+    };
     let (tank, healer) = (party.tank, party.members[1]);
-    if level == 90 {
+    if level == 90 && builds.is_none() {
         equip_healer_profile(app.world_mut(), healer, spec)?;
     }
     let sources = (0..targets)
@@ -442,7 +520,41 @@ fn replay(
         seed,
         targets,
         None,
+        None,
+        None,
     )
+}
+
+fn install_profile_target(
+    world: &mut World,
+    unit: Entity,
+    (start, end): (u64, u64),
+    now: std::time::Duration,
+) {
+    world
+        .entity_mut(unit)
+        .insert(crate::simc_apl_native::FixtureTarget {
+            expires_at: now + std::time::Duration::from_millis(end),
+            lifetime: std::time::Duration::from_millis(end - start),
+            is_boss: false,
+        });
+}
+
+fn apply_due_bloodlust(
+    world: &mut World,
+    slots: &[Entity; 5],
+    buffs: &[super::healer_wcl_trace::TimedBloodlust],
+    next: &mut usize,
+    elapsed_ms: u64,
+) -> Result<(), String> {
+    while let Some(buff) = buffs
+        .get(*next)
+        .filter(|buff| buff.time_ms < elapsed_ms + 50)
+    {
+        super::tank_replay::apply_replay_bloodlust(world, slots[buff.slot])?;
+        *next += 1;
+    }
+    Ok(())
 }
 
 fn replay_profile(
@@ -454,6 +566,8 @@ fn replay_profile(
     seed: u64,
     targets: usize,
     profile: Option<EnemyProfile>,
+    wcl: Option<super::healer_wcl_trace::Trace>,
+    builds: Option<[crate::followers::simulator::RecordedBuild; 5]>,
 ) -> Result<Value, String> {
     if duration == 0 {
         return Err("SIMC_REPLAY_DURATION_ZERO".into());
@@ -465,13 +579,28 @@ fn replay_profile(
         .checked_mul(TICKS_PER_SECOND)
         .ok_or("SIMC_REPLAY_DURATION_OUT_OF_RANGE")?;
     let (snapshot, snapshot_sha256) = read_snapshot()?;
-    let hits = crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?;
+    let hits = if wcl.is_some() {
+        Vec::new()
+    } else {
+        crate::simc_tank_timeline::read_trace(trace, "Tank_Dummy_Dungeon")?
+    };
     let party_hits = party_trace
         .map(super::healer_party_trace::read)
         .transpose()?
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
-    let mut party = spawn_class_party(&snapshot, spec, level, targets)?;
+    let party_specs = wcl.as_ref().map(|intake| intake.party_specs);
+    let tank_spec = party_specs.map_or(crate::followers::simulator::DEFAULT_PARTY[0], |specs| {
+        specs[0]
+    });
+    let mut party = spawn_class_party(
+        &snapshot,
+        spec,
+        level,
+        targets,
+        party_specs,
+        builds.as_ref(),
+    )?;
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();
@@ -492,18 +621,44 @@ fn replay_profile(
         slots,
     } = party;
     let source = sources[0];
-    apply_optimal_raid_environment(&mut app, source, &slots)?;
+    if wcl.is_none() {
+        apply_optimal_raid_environment(&mut app, source, &slots)?;
+    }
     let debuffs = [("chaos_brand", 1490), ("mystic_touch", 113746)].map(|(name, spell_id)| {
         crate::simc_tank_timeline::RaidBuff {
             name: name.into(),
             spell_id,
         }
     });
-    for &extra in &sources[1..] {
-        super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
+    if wcl.is_none() {
+        for &extra in &sources[1..] {
+            super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
+        }
+    }
+    if let Some(profile) = &profile {
+        let now = app.world().resource::<bevy::prelude::Time>().elapsed();
+        for ((_, &interval), &unit) in profile
+            .intervals_ms
+            .iter()
+            .enumerate()
+            .filter(|(_, (start, _))| *start == 0)
+            .zip(&sources)
+        {
+            install_profile_target(app.world_mut(), unit, interval, now);
+        }
     }
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
+    let profile_start = app.world().resource::<bevy::prelude::Time>().elapsed();
+    let party_max_hp: Vec<f32> = slots
+        .iter()
+        .map(|&unit| {
+            app.world()
+                .get::<Health>(unit)
+                .map(|health| health.max)
+                .ok_or_else(|| format!("HEALER_REPLAY_PARTY_HEALTH_MISSING:{unit}"))
+        })
+        .collect::<Result<_, _>>()?;
     #[cfg(test)]
     report_death_audit(&mut app, &slots);
     let frozen_sources = sources
@@ -514,10 +669,19 @@ fn replay_profile(
     super::healer_replay::freeze_sources(app.world_mut(), &frozen_sources);
     app.init_resource::<server_spell_scripts::test_support::FiendAtonementReceipts>();
     let mut tank_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut tank_cast_events = Vec::new();
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
+    let mut healer_cast_events = Vec::new();
     let mut mitigation_ticks = 0_u32;
     let mut next = 0;
     let mut next_party = 0;
+    let mut next_wcl = 0;
+    let mut next_bloodlust = 0;
+    let mut wcl_delivered = 0;
+    let mut wcl_avoided = 0;
+    let mut wcl_dead_targets = 0;
+    let mut wcl_health_samples = Vec::new();
+    let mut native_self_damage = Vec::new();
     let mut pain_target_ticks = 0_u64;
     let mut atonement_target_ticks = 0_u64;
     let mut pain_periodic_hits = 0_u64;
@@ -532,6 +696,12 @@ fn replay_profile(
             .map(|(i, _)| i)
             .zip(&sources)
         {
+            install_profile_target(
+                app.world_mut(),
+                source,
+                profile.intervals_ms[index],
+                profile_start,
+            );
             active_profile.insert(index, source);
         }
     }
@@ -555,7 +725,12 @@ fn replay_profile(
                     }
                 } else if start <= elapsed_ms && !active_profile.contains_key(&index) {
                     let unit = super::dps_parity::spawn_level_dummy(&mut app, tank, level, index)?;
-                    super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, unit, &debuffs)?;
+                    install_profile_target(app.world_mut(), unit, (start, end), profile_start);
+                    if wcl.is_none() {
+                        super::tank_replay::apply_simc_dummy_debuffs(
+                            &mut app, tank, unit, &debuffs,
+                        )?;
+                    }
                     super::healer_replay::freeze_sources(
                         app.world_mut(),
                         &[(index as u64, unit)].into(),
@@ -589,6 +764,31 @@ fn replay_profile(
         } else {
             source
         };
+        if let Some(wcl) = &wcl {
+            apply_due_bloodlust(
+                app.world_mut(),
+                &slots,
+                &wcl.bloodlust,
+                &mut next_bloodlust,
+                elapsed_ms,
+            )?;
+            while let Some(hit) = wcl
+                .hits
+                .get(next_wcl)
+                .filter(|hit| hit.time_ms < elapsed_ms + 50)
+            {
+                match hit.deliver(app.world_mut(), source, &slots)? {
+                    super::healer_wcl_trace::Delivery::Applied(sample) => {
+                        wcl_delivered += 1;
+                        wcl_health_samples.push(sample);
+                        recorder.sample_minima(app.world());
+                    }
+                    super::healer_wcl_trace::Delivery::Avoided => wcl_avoided += 1,
+                    super::healer_wcl_trace::Delivery::TargetDead => wcl_dead_targets += 1,
+                }
+                next_wcl += 1;
+            }
+        }
         while let Some(hit) = hits.get(next).filter(|hit| hit.time_ms <= elapsed_ms) {
             if alive(app.world(), tank) {
                 deliver_hit(app.world_mut(), source, tank, hit, tick)?;
@@ -637,6 +837,17 @@ fn replay_profile(
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
         for event in &events[event_cursor..] {
+            if wcl.is_some()
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == event.target
+                && let Some(slot) = slots
+                    .iter()
+                    .position(|unit| Some(unit.to_bits()) == event.target)
+                && let Some(health) = world.get::<Health>(slots[slot])
+            {
+                native_self_damage.push(json!({"time_ms":elapsed_ms,"slot":slot,"spell_id":event.spell_id,
+                    "damage_pct":100.0 * f64::from((event.amount.max(0) + event.absorbed.max(0)) as f32 / health.max)}));
+            }
             if event.kind == shared::protocol::CombatLogKind::Damage
                 && event
                     .target
@@ -697,21 +908,34 @@ fn replay_profile(
             };
             if event.source == Some(tank.to_bits()) {
                 *tank_casts.entry(spell).or_default() += 1;
+                tank_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell,
+                    "target_slot":event.target.and_then(|target| slots.iter().position(|unit| unit.to_bits() == target))}));
             } else if event.source == Some(healer.to_bits()) {
                 *healer_casts.entry(spell).or_default() += 1;
+                healer_cast_events.push(json!({"time_seconds":f64::from(tick) / f64::from(TICKS_PER_SECOND), "spell":spell,
+                    "target_slot":event.target.and_then(|target| slots.iter().position(|unit| unit.to_bits() == target))}));
             }
         }
         event_cursor = events.len();
     }
     let mut report = json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
-        "world_db_sha256":snapshot_sha256,
-        "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":crate::followers::simulator::DEFAULT_PARTY[0],
+        "world_db_sha256":snapshot_sha256,"party_initial_max_hp":party_max_hp,
+        "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":tank_spec,
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
-        "tank_casts":tank_casts,"healer_casts":healer_casts,
-        "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
+        "tank_casts":tank_casts,"tank_cast_events":tank_cast_events,"healer_casts":healer_casts,"healer_cast_events":healer_cast_events,
+        "party_entities":slots.map(Entity::to_bits),
+        "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
         "metrics":recorder.report(app.world(), duration)});
+    if let Some(wcl) = wcl {
+        report["timeline"] = json!("wcl_damage_taken");
+        report["wcl_intake"] = json!({"provenance":wcl.provenance,"records":next_wcl,
+            "party_specs":wcl.party_specs,"healer_spec":spec,"matches_recorded_party":spec == wcl.party_specs[1],
+            "delivered":wcl_delivered,"avoided":wcl_avoided,
+            "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
+            "health_samples":wcl_health_samples,"native_self_damage":native_self_damage});
+    }
     if let Some(profile) = profile {
         report["enemy_profile"] =
             json!({"provenance":profile.provenance,"samples":enemy_count_samples});

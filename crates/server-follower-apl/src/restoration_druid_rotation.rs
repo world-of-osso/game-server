@@ -171,7 +171,7 @@ fn rejuvenation_covered(world: &World, healer: Entity, target: Entity) -> bool {
 
 /// The lowest-health living party member without full Rejuvenation coverage.
 fn lowest_uncovered(world: &World, healer: Entity, party: &[Entity]) -> Option<Entity> {
-    party
+    let candidates = party
         .iter()
         .copied()
         .filter(|&unit| !rejuvenation_covered(world, healer, unit))
@@ -180,8 +180,8 @@ fn lowest_uncovered(world: &World, healer: Entity, party: &[Entity]) -> Option<E
             (health.current > 0.0 && health.max > 0.0)
                 .then_some((unit, health.current / health.max))
         })
-        .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(unit, _)| unit)
+        .collect::<Vec<_>>();
+    crate::follower::lowest_health(world, candidates.into_iter()).map(|(unit, _)| unit)
 }
 
 impl Restoration {
@@ -193,7 +193,7 @@ impl Restoration {
         party: &[Entity],
         enemy: Option<Entity>,
     ) -> Result<(), String> {
-        let target = party
+        let candidates = party
             .iter()
             .copied()
             .filter_map(|unit| {
@@ -201,9 +201,9 @@ impl Restoration {
                 (health.current > 0.0 && health.max > 0.0)
                     .then_some((unit, health.current / health.max))
             })
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .map(|(unit, _)| unit);
-        let Some(target) = target else {
+            .collect::<Vec<_>>();
+        let Some((target, _)) = crate::follower::lowest_health(world, candidates.into_iter())
+        else {
             return Ok(());
         };
         let injured = party

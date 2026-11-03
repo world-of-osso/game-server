@@ -558,6 +558,143 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 }
 
 #[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_combatant_build_equips_recorded_items_and_talents() {
+    let bytes = std::fs::read(fixture("wcl_worldnature_builds.json")).unwrap();
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_slice(&bytes).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let party = super::spawn_class_party(
+        &snapshot,
+        105,
+        90,
+        1,
+        Some([66, 105, 70, 1480, 262]),
+        Some(&builds),
+    )
+    .unwrap();
+    let world = party.app.world();
+    let gear = world
+        .get::<crate::stats::EquippedItems>(party.healer)
+        .unwrap();
+    assert!(gear.items.iter().any(|(_, _, item)| *item == 270167));
+    assert!(gear.items.iter().any(|(_, _, item)| *item == 250214));
+    let talents = world
+        .get::<crate::class_progression::TraitLoadout>(party.healer)
+        .unwrap();
+    assert_eq!(talents.talent_rank(1213597), Some(1));
+    assert_eq!(talents.talent_rank(392256), Some(1));
+    assert_eq!(talents.talent_rank(474678), Some(1));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_bloodlust_applies_only_to_the_recorded_slot_at_the_recorded_time() {
+    let mut party = super::snapshot_party(105, 90, 1);
+    let buffs = [super::super::healer_wcl_trace::TimedBloodlust {
+        time_ms: 5000,
+        slot: 1,
+    }];
+    let mut next = 0;
+    super::apply_due_bloodlust(party.app.world_mut(), &party.slots, &buffs, &mut next, 4950)
+        .unwrap();
+    assert!(!crate::auras::has_aura(
+        party.app.world(),
+        party.slots[1],
+        2825
+    ));
+    super::apply_due_bloodlust(party.app.world_mut(), &party.slots, &buffs, &mut next, 5000)
+        .unwrap();
+    assert!(crate::auras::has_aura(
+        party.app.world(),
+        party.slots[1],
+        2825
+    ));
+    assert!(!crate::auras::has_aura(
+        party.app.world(),
+        party.slots[0],
+        2825
+    ));
+    assert_eq!(next, 1);
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_intake_replays_hostile_and_deferred_pressure() {
+    let report = super::replay_simc_party_with_wcl(
+        1468,
+        90,
+        Path::new("not-used-for-wcl"),
+        10,
+        1,
+        &fixture("altar_fangs_wcl_pull1.json"),
+        &fixture("altar_fangs_wcl_pull1_damage.json"),
+        None,
+    )
+    .unwrap();
+    assert_eq!(report["timeline"], "wcl_damage_taken");
+    assert_eq!(report["incoming_events"], 0);
+    assert_eq!(report["party_incoming_events"], 0);
+    assert_eq!(report["wcl_intake"]["records"], 64);
+    let applied = report["wcl_intake"]["delivered"].as_u64().unwrap();
+    let dead = report["wcl_intake"]["events_on_dead_targets_not_replayed"]
+        .as_u64()
+        .unwrap();
+    let avoided = report["wcl_intake"]["avoided"].as_u64().unwrap();
+    assert!(applied > 0);
+    assert!(avoided > 0);
+    assert_eq!(applied + avoided + dead, 64);
+    assert_eq!(
+        report["wcl_intake"]["self_rows_excluded_from_full_pull"],
+        68
+    );
+    assert_eq!(report["tank_spec"], 268);
+    let max_hp = report["party_initial_max_hp"].as_array().unwrap();
+    assert_eq!(max_hp.len(), 5);
+    assert!(max_hp.iter().all(|hp| hp.as_f64().unwrap() > 0.0));
+    let casts = report["healer_cast_events"].as_array().unwrap();
+    let cast_count: u64 = report["healer_casts"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|n| n.as_u64().unwrap())
+        .sum();
+    assert!(cast_count > 0);
+    assert_eq!(casts.len() as u64, cast_count);
+    let heals = report["metrics"]["healing_events"].as_array().unwrap();
+    let effective: u64 = heals
+        .iter()
+        .map(|event| event["effective"].as_u64().unwrap())
+        .sum();
+    let spell_effective: u64 = report["metrics"]["spell_healing"]
+        .as_object()
+        .unwrap()
+        .values()
+        .map(|spell| spell["effective"].as_u64().unwrap())
+        .sum();
+    assert!(effective > 0);
+    assert_eq!(effective, spell_effective);
+    assert!(
+        !report["metrics"]["party_health_curve"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(report["wcl_intake"]["matches_recorded_party"], true);
+    assert_eq!(
+        report["wcl_intake"]["party_specs"],
+        serde_json::json!([268, 1468, 62, 262, 262])
+    );
+    assert!(
+        report["metrics"]["party_damage"]
+            .as_object()
+            .unwrap()
+            .values()
+            .any(|v| v.as_u64().unwrap_or(0) > 0)
+    );
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
     let trace = fixture("healer_simc_fixture.log");
