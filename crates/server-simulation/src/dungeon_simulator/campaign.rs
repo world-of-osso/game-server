@@ -20,6 +20,8 @@ const DECK_GRANT_SECONDS: f64 =
 mod azure_positioning_tests;
 #[path = "azure_throughput_tests.rs"]
 mod azure_throughput_tests;
+#[path = "den_rotten_ground_tests.rs"]
+mod den_rotten_ground_tests;
 #[path = "havoc_setup_tests.rs"]
 mod havoc_setup_tests;
 #[path = "keystone_cohesion_tests.rs"]
