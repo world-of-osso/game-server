@@ -32,6 +32,21 @@ SimC `76f8118` references use 300 seconds, fixed time, 1,000 iterations and seed
 | Devastation Evoker (1467) | 116,836 | 113,728 | +2.73% | `6d6cff57dd` / `eabc2a7a15` | 184,309 | 182,445 | +1.02% | `6d6cff57dd` / `eabc2a7a15` | in band |
 | Devourer Demon Hunter (1480) | 206,035 | 214,110 | -3.77% | `670c613ad8` / `8a7fe346ac` | 329,934 | 341,884 | -3.50% | `670c613ad8` / `8a7fe346ac` | in band |
 
+## Tank outgoing DPS — composition replay, 2026-11-03
+
+These are the latest available measurements, not one common build. Each native result uses 300-second replays with seeds 70448 and 1–9; ± is a 95% Student's t interval for the native mean. References use the pinned SimC `76f8118` composition inputs. The status describes the mean relative to ±5%, not proof that the whole interval is in band.
+
+| Spec | Native DPS ± 95% CI | SimC DPS | Gap | Measured tree | Status |
+|---|---:|---:|---:|---|---|
+| Protection Paladin (66) | 138,609 ± 6,149 | 142,925 | −3.02% | `18bfe3b4c0` | Mean in band; interval crosses boundary |
+| Protection Warrior (73) | 159,976 ± 3,292 | 157,626 | +1.49% | `c692f9a706` | Mean in band; Wrecked differs from SimC as below |
+| Guardian Druid (104) | 101,070 ± 2,258 | 103,423 | −2.27% | `389ca621d0` | Mean in band |
+| Blood Death Knight (250) | 137,000 ± 3,385 | 127,534 | +7.42% | `18bfe3b4c0` | In progress; fixes need remeasurement |
+| Brewmaster Monk (268) | 134,189 ± 2,154 | 140,478 | −4.48% | `ef0cdd5bb4` | Mean in band; interval crosses boundary; Aflame missing |
+| Vengeance Demon Hunter (581) | 126,575 ± 2,974 | 130,306 | −2.86% | `389ca621d0` | Mean in band; interval crosses boundary |
+
+Receipts are under `game-engine/data/diagnostics/`: `tank-remeasure-after-18bfe3b4c0/{66,250}/`, `tank-wrecked-retail-fix-2026-11-03/`, `tank-remeasure-2026-11-03/` (104 and 581), and `tank-brewmaster-harmony-attr-2026-11-03/`. Blood's Bone Shield fix `6dba10334f` and Gift fix `456632351b` are not included in its measurement; the latter is unverified. Brewmaster's unimplemented Aflame field contributes 467 DPS (0.33%) in the reference; see [Brewmaster tank replay](healer-tank-replay/268.md).
+
 ## Protection Warrior Wrecked discrepancy
 
 **VERIFIED_DB2 / INFERRED_WCL:** Wrecked's damage-taken effect has 1% base per stack after the tooltip's 0.1 divisor. Protection Warrior 1258163 effect 16 doubles that value through label 4007, giving 20% at 10 stacks. In WCL reports `WVLfZxkmRFcMjnv9/35`, `RWb3vtjQJnmC9rfG/8`, `ya4H3X78fx19gpJF/1`, and `jxLNVC2MRw8vtJ74/8`, nearby same-target noncritical Devastator hits at inferred 10 stacks had median ratios 1.211, 1.204, 1.218, and 1.216 relative to zero stacks. The observations are not independent and player buffs can differ. SimC `76f8118` `sc_warrior.cpp:1193–1197` instead uses unmodified base points, or 10% at 10 stacks. A resulting native/SimC gap is not grounds to remove the authored modifier.
