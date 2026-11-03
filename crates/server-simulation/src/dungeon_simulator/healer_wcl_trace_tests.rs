@@ -42,6 +42,82 @@ fn wcl_intake_hostile_spell_triggers_prayer_of_mending() {
 }
 
 #[test]
+#[ignore = "requires native spell data"]
+fn wcl_intake_avoided_outcomes_publish_distinct_miss_events() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::Health;
+    use shared::protocol::{CombatLogKind, MissKind};
+    let mut h = harness(Vec::new(), &[], 10).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let victim = h.caster;
+    let initial = h.app.world().get::<Health>(victim).unwrap().current;
+    for (hit_type, expected) in [
+        (0, MissKind::Miss),
+        (7, MissKind::Dodge),
+        (8, MissKind::Parry),
+        (9, MissKind::Deflect),
+        (10, MissKind::Immune),
+    ] {
+        let text = format!(
+            r#"{{"time_ms":0,"slot":0,"source_actor":413,"target_actor":6,"spell_id":1,"school":1,"defense":2,"hit_type":{hit_type},"periodic":false,"max_hp":100000,"amount":0,"absorbed":0}}"#
+        );
+        let hit: RecordedHit = serde_json::from_str(&text).unwrap();
+        assert!(matches!(
+            hit.deliver(h.app.world_mut(), h.npc, &[victim; 5]).unwrap(),
+            super::healer_wcl_trace::Delivery::Avoided
+        ));
+        assert!(
+            h.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Miss(expected)
+                    && event.target == Some(victim.to_bits()))
+        );
+    }
+    assert_eq!(
+        h.app.world().get::<Health>(victim).unwrap().current,
+        initial
+    );
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn wcl_intake_dodge_consumes_elusive_brawler_but_miss_does_not() {
+    use crate::auras::{self, AuraApplication, AuraSource};
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = super::dps_parity::prepare_registered_player(268, 1).unwrap();
+    let tank = run.actor;
+    let source = run.targets[0];
+    for _ in 0..3 {
+        auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: tank,
+                target: tank,
+                spell_id: 195630,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    for (hit_type, expected) in [(0, true), (7, false)] {
+        let text = format!(
+            r#"{{"time_ms":0,"slot":0,"source_actor":413,"target_actor":6,"spell_id":1,"school":1,"defense":2,"hit_type":{hit_type},"periodic":false,"max_hp":100000,"amount":0,"absorbed":0}}"#
+        );
+        let hit: RecordedHit = serde_json::from_str(&text).unwrap();
+        assert!(matches!(
+            hit.deliver(run.app.world_mut(), source, &[tank; 5])
+                .unwrap(),
+            super::healer_wcl_trace::Delivery::Avoided
+        ));
+        run.app.update();
+        assert_eq!(auras::has_aura(run.app.world(), tank, 195630), expected);
+    }
+}
+
+#[test]
 #[ignore = "requires native Altar spell data"]
 fn wcl_intake_normalizes_health_fraction_before_native_absorb() {
     use crate::spell_cast::test_harness::{harness, spawn_player};

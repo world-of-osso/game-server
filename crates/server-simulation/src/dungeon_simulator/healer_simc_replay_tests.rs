@@ -575,14 +575,18 @@ fn wcl_intake_replays_hostile_pressure_and_excludes_self_damage() {
     assert_eq!(report["party_incoming_events"], 0);
     assert_eq!(report["wcl_intake"]["records"], 40);
     let applied = report["wcl_intake"]["delivered"].as_u64().unwrap();
-    let dead = report["wcl_intake"]["hits_on_dead_targets_not_replayed"]
+    let dead = report["wcl_intake"]["events_on_dead_targets_not_replayed"]
         .as_u64()
         .unwrap();
+    let avoided = report["wcl_intake"]["avoided"].as_u64().unwrap();
     assert!(applied > 0);
-    assert_eq!(applied + dead, 28);
+    assert!(avoided > 0);
+    assert_eq!(applied + avoided + dead, 40);
+    assert_eq!(report["tank_spec"], 268);
+    assert_eq!(report["wcl_intake"]["matches_recorded_party"], true);
     assert_eq!(
-        report["wcl_intake"]["zero_damage_outcomes_not_replayed"],
-        12
+        report["wcl_intake"]["party_specs"],
+        serde_json::json!([268, 1468, 62, 262, 262])
     );
     assert!(
         report["metrics"]["party_damage"]

@@ -7,7 +7,7 @@ use std::path::Path;
 
 pub(super) enum Delivery {
     Applied(Value),
-    ZeroOutcome,
+    Avoided,
     TargetDead,
 }
 
@@ -15,6 +15,7 @@ pub(super) enum Delivery {
 pub(super) struct Trace {
     pub provenance: String,
     pub excluded_self: usize,
+    pub party_specs: [u32; 5],
     pub hits: Vec<RecordedHit>,
 }
 
@@ -65,7 +66,7 @@ impl RecordedHit {
         }
         match (self.hit_type, self.amount + self.absorbed) {
             (1, amount) if amount > 0 => Ok(()),
-            (0 | 7 | 8, 0) => Ok(()),
+            (0 | 7 | 8 | 9 | 10, 0) => Ok(()),
             _ => Err("WCL_INTAKE_UNSUPPORTED_AMOUNT_OR_HIT_TYPE".into()),
         }
     }
@@ -77,9 +78,6 @@ impl RecordedHit {
         slots: &[Entity; 5],
     ) -> Result<Delivery, String> {
         let pressure = self.amount + self.absorbed;
-        if pressure == 0 {
-            return Ok(Delivery::ZeroOutcome);
-        }
         let target = slots[self.slot];
         let health = world
             .get::<Health>(target)
@@ -107,6 +105,26 @@ impl RecordedHit {
             }
             Some(self.spell_id)
         };
+        if pressure == 0 {
+            let outcome = match self.hit_type {
+                0 => shared::protocol::MissKind::Miss,
+                7 => shared::protocol::MissKind::Dodge,
+                8 => shared::protocol::MissKind::Parry,
+                9 => shared::protocol::MissKind::Deflect,
+                10 => shared::protocol::MissKind::Immune,
+                _ => return Err("WCL_INTAKE_UNSUPPORTED_AVOIDANCE".into()),
+            };
+            crate::combat::replay_avoided_hit(
+                world,
+                enemy,
+                target,
+                spell_id,
+                self.school,
+                self.periodic,
+                outcome,
+            )?;
+            return Ok(Delivery::Avoided);
+        }
         crate::combat::replay_post_mitigation_hit(
             world,
             enemy,

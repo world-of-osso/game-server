@@ -3092,23 +3092,7 @@ pub fn replay_post_mitigation_hit(
     if before <= 0.0 {
         return Ok(());
     }
-    let (actor_mask, target_mask) = if periodic {
-        (
-            procs::PROC_DEAL_HARMFUL_PERIODIC,
-            procs::PROC_TAKE_HARMFUL_PERIODIC,
-        )
-    } else if let Some(spell_id) = spell_id {
-        let spell = world
-            .resource::<crate::spell_info::SpellStore>()
-            .get(spell_id)
-            .ok_or_else(|| format!("WCL_INTAKE_MISSING_SPELL:{spell_id}"))?;
-        procs::spell_hit_masks(spell, true)
-    } else {
-        (
-            procs::PROC_DEAL_MELEE_SWING | procs::PROC_MAIN_HAND_WEAPON_SWING,
-            procs::PROC_TAKE_MELEE_SWING,
-        )
-    };
+    let (actor_mask, target_mask) = replay_hostile_masks(world, spell_id, periodic)?;
     let attacker_scaling = UnitScaling::of(world, attacker);
     let victim_scaling = UnitScaling::of(world, victim);
     let health_multiplier = victim_scaling.health_multiplier(&attacker_scaling);
@@ -3116,11 +3100,17 @@ pub fn replay_post_mitigation_hit(
         return Err("WCL_INTAKE_INVALID_HEALTH_MULTIPLIER".into());
     }
     let damage = amount * health_multiplier;
+    let (deferred, consume_ox) = crate::auras::stagger::snapshot(world, victim)
+        .map_or((0.0, false), |stagger| stagger.deferred(damage, school));
+    if deferred > 0.0 || consume_ox {
+        crate::auras::stagger::deposit(world, victim, deferred, consume_ox);
+    }
     let (damage, source_absorbed) =
-        crate::auras::source_absorb::absorb(world, victim, attacker, damage);
+        crate::auras::source_absorb::absorb(world, victim, attacker, damage - deferred);
     let (damage, absorbed) =
         crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
     let absorbed = absorbed + source_absorbed;
+    let damage = crate::auras::damage_transfer::route(world, attacker, victim, school, damage);
     deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
     let after = world
         .get::<Health>(victim)
@@ -3154,6 +3144,84 @@ pub fn replay_post_mitigation_hit(
             },
         );
     }
+    Ok(())
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn replay_hostile_masks(
+    world: &World,
+    spell_id: Option<u32>,
+    periodic: bool,
+) -> Result<(u32, u32), String> {
+    if periodic {
+        Ok((
+            procs::PROC_DEAL_HARMFUL_PERIODIC,
+            procs::PROC_TAKE_HARMFUL_PERIODIC,
+        ))
+    } else if let Some(spell_id) = spell_id {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .ok_or_else(|| format!("WCL_INTAKE_MISSING_SPELL:{spell_id}"))?;
+        Ok(procs::spell_hit_masks(spell, true))
+    } else {
+        Ok((
+            procs::PROC_DEAL_MELEE_SWING | procs::PROC_MAIN_HAND_WEAPON_SWING,
+            procs::PROC_TAKE_MELEE_SWING,
+        ))
+    }
+}
+
+/// Replay the recorded hostile miss and its actual native proc flags.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_avoided_hit(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    spell_id: Option<u32>,
+    school: u32,
+    periodic: bool,
+    kind: MissKind,
+) -> Result<(), String> {
+    let (actor_mask, target_mask) = replay_hostile_masks(world, spell_id, periodic)?;
+    crate::spell_cast::log_event(
+        world,
+        CombatLogEvent {
+            source: Some(attacker.to_bits()),
+            target: Some(victim.to_bits()),
+            spell_id,
+            school_mask: school,
+            amount: 0,
+            overflow: 0,
+            absorbed: 0,
+            resisted: 0,
+            blocked: 0,
+            crit: false,
+            glancing: false,
+            periodic,
+            extra_spell_id: None,
+            timestamp_unix_ms: 0,
+            kind: CombatLogKind::Miss(kind),
+        },
+    );
+    procs::push_event(
+        world,
+        AuraEvent {
+            actor: attacker,
+            target: Some(victim),
+            action_target: Some(victim),
+            actor_mask: [actor_mask, 0],
+            target_mask: [target_mask, 0],
+            spell_id,
+            can_proc: true,
+            cast_used_proc_modifier: false,
+            periodic,
+            damage: 0.0,
+            heal: None,
+            hit_mask: procs::miss_hit_mask(kind),
+            reflected: false,
+        },
+    );
     Ok(())
 }
 

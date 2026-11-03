@@ -272,7 +272,7 @@ pub(super) struct ClassParty {
 #[cfg(test)]
 pub(super) fn snapshot_party(spec: u32, level: u8, targets: usize) -> ClassParty {
     let (path, _) = read_snapshot().unwrap();
-    spawn_class_party(&path, spec, level, targets).unwrap()
+    spawn_class_party(&path, spec, level, targets, None).unwrap()
 }
 
 fn spawn_class_party(
@@ -280,6 +280,7 @@ fn spawn_class_party(
     spec: u32,
     level: u8,
     targets: usize,
+    party_specs: Option<[u32; 5]>,
 ) -> Result<ClassParty, String> {
     let mut app = super::dps_parity::build_snapshot_app(path)?;
     let copy = super::dps_parity::create_open_follower_copy(&mut app, measurement_map(level)?)?;
@@ -288,13 +289,18 @@ fn spawn_class_party(
         y: 0.0,
         z: 0.0,
     };
-    let party = crate::followers::simulator::spawn_party_with_healer(
-        app.world_mut(),
-        copy,
-        origin,
-        level,
-        spec,
-    )?;
+    let party = if let Some(mut specs) = party_specs {
+        specs[1] = spec;
+        crate::followers::simulator::spawn_test_party(app.world_mut(), copy, origin, level, specs)?
+    } else {
+        crate::followers::simulator::spawn_party_with_healer(
+            app.world_mut(),
+            copy,
+            origin,
+            level,
+            spec,
+        )?
+    };
     let (tank, healer) = (party.tank, party.members[1]);
     if level == 90 {
         equip_healer_profile(app.world_mut(), healer, spec)?;
@@ -507,7 +513,11 @@ fn replay_profile(
         .transpose()?
         .unwrap_or_default();
     let _rng = crate::random::seed_scope(seed);
-    let mut party = spawn_class_party(&snapshot, spec, level, targets)?;
+    let party_specs = wcl.as_ref().map(|intake| intake.party_specs);
+    let tank_spec = party_specs.map_or(crate::followers::simulator::DEFAULT_PARTY[0], |specs| {
+        specs[0]
+    });
+    let mut party = spawn_class_party(&snapshot, spec, level, targets, party_specs)?;
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();
@@ -528,15 +538,19 @@ fn replay_profile(
         slots,
     } = party;
     let source = sources[0];
-    apply_optimal_raid_environment(&mut app, source, &slots)?;
+    if wcl.is_none() {
+        apply_optimal_raid_environment(&mut app, source, &slots)?;
+    }
     let debuffs = [("chaos_brand", 1490), ("mystic_touch", 113746)].map(|(name, spell_id)| {
         crate::simc_tank_timeline::RaidBuff {
             name: name.into(),
             spell_id,
         }
     });
-    for &extra in &sources[1..] {
-        super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
+    if wcl.is_none() {
+        for &extra in &sources[1..] {
+            super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, extra, &debuffs)?;
+        }
     }
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
@@ -556,7 +570,7 @@ fn replay_profile(
     let mut next_party = 0;
     let mut next_wcl = 0;
     let mut wcl_delivered = 0;
-    let mut wcl_zero_outcomes = 0;
+    let mut wcl_avoided = 0;
     let mut wcl_dead_targets = 0;
     let mut wcl_health_samples = Vec::new();
     let mut pain_target_ticks = 0_u64;
@@ -596,7 +610,11 @@ fn replay_profile(
                     }
                 } else if start <= elapsed_ms && !active_profile.contains_key(&index) {
                     let unit = super::dps_parity::spawn_level_dummy(&mut app, tank, level, index)?;
-                    super::tank_replay::apply_simc_dummy_debuffs(&mut app, tank, unit, &debuffs)?;
+                    if wcl.is_none() {
+                        super::tank_replay::apply_simc_dummy_debuffs(
+                            &mut app, tank, unit, &debuffs,
+                        )?;
+                    }
                     super::healer_replay::freeze_sources(
                         app.world_mut(),
                         &[(index as u64, unit)].into(),
@@ -642,7 +660,7 @@ fn replay_profile(
                         wcl_health_samples.push(sample);
                         recorder.sample_minima(app.world());
                     }
-                    super::healer_wcl_trace::Delivery::ZeroOutcome => wcl_zero_outcomes += 1,
+                    super::healer_wcl_trace::Delivery::Avoided => wcl_avoided += 1,
                     super::healer_wcl_trace::Delivery::TargetDead => wcl_dead_targets += 1,
                 }
                 next_wcl += 1;
@@ -764,18 +782,19 @@ fn replay_profile(
     }
     let mut report = json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
         "world_db_sha256":snapshot_sha256,
-        "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":crate::followers::simulator::DEFAULT_PARTY[0],
+        "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":tank_spec,
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "atonement_target_seconds":atonement_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
         "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
         "tank_casts":tank_casts,"healer_casts":healer_casts,
-        "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
+        "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
         "metrics":recorder.report(app.world(), duration)});
     if let Some(wcl) = wcl {
         report["timeline"] = json!("wcl_damage_taken");
         report["wcl_intake"] = json!({"provenance":wcl.provenance,"records":next_wcl,
-            "delivered":wcl_delivered,"zero_damage_outcomes_not_replayed":wcl_zero_outcomes,
-            "hits_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
+            "party_specs":wcl.party_specs,"healer_spec":spec,"matches_recorded_party":spec == wcl.party_specs[1],
+            "delivered":wcl_delivered,"avoided":wcl_avoided,
+            "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
             "health_samples":wcl_health_samples});
     }
     if let Some(profile) = profile {

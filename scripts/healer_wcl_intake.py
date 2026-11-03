@@ -64,7 +64,8 @@ def convert(events, db):
     if not hits or any(a['time_ms'] > b['time_ms'] for a, b in zip(hits, hits[1:])):
         raise ValueError('WCL damage events must be nonempty and ordered')
     return {'provenance': 'INFERRED_WCL pPFDbkfQK7MACtmY fight 41 pull 1',
-            'actor_slots': ACTORS, 'excluded_self': excluded_self, 'hits': hits}
+            'actor_slots': ACTORS, 'party_specs': [268, 1468, 62, 262, 262],
+            'excluded_self': excluded_self, 'hits': hits}
 
 
 def main():
