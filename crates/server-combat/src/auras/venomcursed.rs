@@ -3,15 +3,24 @@
 use bevy::prelude::*;
 
 use super::{
-    AuraApplication, AuraInstance, AuraSource,
+    AuraApplication, AuraInstance, AuraSource, RemoveReason,
     scripts::{AuraScript, AuraScripts},
 };
 use crate::random::{self, Rng};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 const DRIVERS: &[u32] = &[1307906, 1307923, 1307928];
+const EMPOWERING_VENOM: u32 = 1293316;
+const DEBILITATING_VENOM: u32 = 1295123;
 
 pub(super) fn register(scripts: &mut AuraScripts) {
+    scripts.0.insert(
+        EMPOWERING_VENOM,
+        AuraScript {
+            on_remove: Some(expire_empowering_venom),
+            ..Default::default()
+        },
+    );
     for &id in DRIVERS {
         scripts.0.insert(
             id,
@@ -27,6 +36,72 @@ pub(super) fn register(scripts: &mut AuraScripts) {
             on_proc: Some(apply_random_stat_proc),
             ..Default::default()
         },
+    );
+}
+
+// INFERRED: 70448 Spell.csv describes one random secondary stat; each tooltip
+// conditional identifies one effect. WM76 (70688) found no DB2 selection flag.
+// Upgrade or retire on server or live-tooltip evidence. SimC76f8118
+// unique_gear_midnight.cpp3564–3606 independently rerolls each aura.
+pub(super) fn select_random_effect_mask(
+    application: &AuraApplication,
+    spell: &SpellInfo,
+) -> Option<u32> {
+    if !matches!(spell.id, EMPOWERING_VENOM | DEBILITATING_VENOM) {
+        return None;
+    }
+    let mut candidates: Vec<_> = spell
+        .effects
+        .iter()
+        .filter(|effect| {
+            effect.effect == 6
+                && effect.aura == super::handlers::MOD_RATING
+                && application.effect_mask & (1 << effect.index) != 0
+        })
+        .map(|effect| effect.index)
+        .collect();
+    candidates.sort_unstable();
+    assert!(
+        !candidates.is_empty(),
+        "Venom requires a native rating effect"
+    );
+    let index = candidates[random::thread_rng().gen_range(0..candidates.len())];
+    Some(1 << index)
+}
+
+fn expire_empowering_venom(
+    world: &mut World,
+    unit: Entity,
+    aura: &AuraInstance,
+    reason: RemoveReason,
+) {
+    if reason != RemoveReason::Expired {
+        return;
+    }
+    let store = world.resource::<SpellStore>();
+    let parent = store
+        .get(EMPOWERING_VENOM)
+        .expect("native Empowering Venom");
+    let child = parent
+        .effects
+        .iter()
+        .find(|effect| effect.index == 5)
+        .expect("native Empowering Venom expiry trigger")
+        .trigger_spell;
+    let mut debuff = store.get(child).expect("native Debilitating Venom").clone();
+    debuff.cast_item_level = aura.cast_item_level;
+    debuff.cast_item_inventory_type = aura.cast_item_inventory_type;
+    let effect_mask = super::aura_effect_mask(&debuff);
+    super::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: child,
+            effect_mask,
+            source: AuraSource::Cast,
+        },
+        &debuff,
     );
 }
 

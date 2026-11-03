@@ -620,6 +620,7 @@ impl ActiveAuras {
         coexist: bool,
         unique: bool,
         shared_slot: bool,
+        replace_effects: bool,
     ) -> Stacking {
         let same_slot = |aura: &AuraInstance| {
             aura.spell_id == new.spell_id
@@ -631,6 +632,9 @@ impl ActiveAuras {
                 return Stacking::Ignored;
             }
             let id = existing.instance_id;
+            if replace_effects {
+                existing.effects.clear();
+            }
             existing.refresh_from(new);
             return Stacking::Refreshed(id);
         }
@@ -1596,6 +1600,11 @@ fn apply_aura_inner(
     {
         return;
     }
+    let selected_mask = venomcursed::select_random_effect_mask(application, spell);
+    let application = &AuraApplication {
+        effect_mask: selected_mask.unwrap_or(application.effect_mask),
+        ..*application
+    };
     let now = aura_now(world);
     let mut instance = build_instance(world, application, &spell, now);
     instance.effects.retain(|stored| {
@@ -1701,7 +1710,13 @@ fn apply_aura_inner(
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
-        .stack_or_add(instance, coexist, unique, shared_slot);
+        .stack_or_add(
+            instance,
+            coexist,
+            unique,
+            shared_slot,
+            selected_mask.is_some(),
+        );
     let (id, kind) = match stacking {
         Stacking::Ignored => return,
         Stacking::Applied(id) => (id, CombatLogKind::AuraApplied),
