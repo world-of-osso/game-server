@@ -92,6 +92,73 @@ fn dungeon_owner(h: &mut Harness, map: u32) {
     ));
 }
 
+#[test]
+fn rotation_interrupts_unselected_engaged_channel_without_switching_damage_target() {
+    use server_combat::networking::CombatTarget;
+    use shared::casting::CastState;
+    let mut pull = spawn(581);
+    let actor = pull.follower;
+    let primary = pull.harness.npc;
+    let map = *pull
+        .harness
+        .app
+        .world()
+        .get::<server_combat::maps::InMap>(primary)
+        .unwrap();
+    let position = *pull
+        .harness
+        .app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap();
+    let other = server_combat::spell_cast::test_harness::spawn_npc(&mut pull.harness.app, 0.0);
+    pull.harness.app.world_mut().entity_mut(other).insert((
+        map,
+        position,
+        CombatTarget(Some(actor)),
+    ));
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(CombatTarget(Some(primary)));
+    let mut channel = CastState::channel(1264106, other.to_bits(), 180.0, 1.0, true);
+    channel.elapsed = 2.0;
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(other)
+        .insert(channel);
+    pull.harness.app.update();
+    assert!(
+        pull.harness.app.world().get::<CastState>(other).is_some(),
+        "channel prerequisite"
+    );
+    pull.harness
+        .app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(CombatTarget(Some(primary)));
+    let rotation =
+        server_follower_apl::registry::load(pull.harness.app.world_mut(), actor, 581).unwrap();
+    let mut apl = FollowerApl::new(rotation);
+    apl.tick(pull.harness.app.world_mut(), actor, &[primary, other])
+        .unwrap();
+    assert!(
+        pull.harness.app.world().get::<CastState>(other).is_none(),
+        "unselected channel remains active"
+    );
+    assert_eq!(
+        pull.harness
+            .app
+            .world()
+            .get::<CombatTarget>(actor)
+            .unwrap()
+            .0,
+        Some(primary)
+    );
+}
+
 /// Spawn `spec` through `spawn_class` and run the follower brain and its APL for `FRAMES`.
 fn pull(spec: u32) -> Pull {
     let mut pull = spawn(spec);

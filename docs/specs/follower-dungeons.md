@@ -28,6 +28,10 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - `INFERRED_WCL`: All follower roles leave a hostile normal cast's caster-centered `[18,16]` direct-damage or knockback radius when it is at most 20 yards and the cast lasts at least 2.5 seconds. Use the existing safe-route and margin policy, then return after impact. A non-mobile cast may finish before impact; otherwise interrupt it and move. Continue movement-compatible healing while escaping.
 - Evidence: +2–+6 keys in Murder Row (`p9d1wbR3BFrtjTWY` fight 2, `nHGYVJx9f6LwXbzQ` fight 1, `CWR8AcNXDGyBkVpJ` fight 16, `ZNmM4QGzHTpbV9kP` fight 35, `Pb9MVxQt1fR3XvkZ` fight 1); Kings' Rest (`2L8BJvP1XcbtQ4jd` fight 1, `7GCZYhjJzy9a8f1b` fight 2, `gP1BbtzRyWD42LAG` fight 12, `bHxFty2MV9B8D7Nn` fight 36, `tAYqCBwK4j6ZGmFf` fight 5); Den (`Hx64j9RrfnytB8cA` fight 12, `VxKH96NhkT487pnC` fight 18, `ka1QyTVwKYGbJA4R` fight 2, `kg249LYJ7rBfKCWH` fight 3, `ZHXwbqah1Kc7vdf2` fight 9); Voidscar (`AFV14RDGyHxQhbTB` fight 7, `hALrgaFVTkfJty1w` fight 45, `ZgBCXQvcnhaAYT1r` fight 1, `qjaWfT2AQDcZXBLk` fight 45, `QF2t94YgW1ZBw3XT` fight 2). These rank-selected observations are not proof of Retail follower decisions. Retire this inferred rule when sourced per-spell avoid policy is available.
 
+## Interrupt priority
+
+- `INFERRED_WCL`: A follower rotation checks every engaged enemy's active interruptible cast before damage actions, without changing its damage target. It uses its rotation-bound interrupt spells and native readiness, range, immunity and cast-reaction delay. Murder Row `p9d1wbR3BFrtjTWY` fight 2 pull 4 shows a pet Spell Lock and tank Pummel stopping separate mirror channels; additional samples are `CWR8AcNXDGyBkVpJ` fight 16, `ZNmM4QGzHTpbV9kP` fight 35 and `Pb9MVxQt1fR3XvkZ` fight 1. Retire when sourced per-cast control policy is available.
+
 ## Pet engagement
 
 - A follower-controlled pet must not be ordered into combat solely because another party member engaged an enemy. It may attack after its own owner attacks or is attacked.

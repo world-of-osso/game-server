@@ -405,20 +405,12 @@ impl<'a> NativeFacts<'a> {
     }
 
     fn casting_reaction(&self, target: Entity) -> Result<f64, String> {
-        let Some(cast) = self.world.get::<shared::casting::CastState>(target) else {
-            return Ok(0.0);
-        };
-        self.spell(cast.spell_id)?;
-        if !crate::spell_cast::can_interrupt_cast(self.world, self.actor, target) {
-            return Ok(0.0);
+        if let Some(cast) = self.world.get::<shared::casting::CastState>(target) {
+            self.spell(cast.spell_id)?;
         }
-        let reaction = self
-            .world
-            .get::<reaction::CastingReactionDelay>(target)
-            .ok_or_else(|| {
-                format!("target.debuff.casting.react: target {target:?} lacks reaction snapshot")
-            })?;
-        Ok(bool_value(cast.elapsed >= reaction.0))
+        Ok(bool_value(interrupt_reaction_ready(
+            self.world, self.actor, target,
+        )?))
     }
 
     fn read_owned_auras(&self, target: Entity, spell: u32) -> Vec<&crate::auras::AuraInstance> {
@@ -1423,6 +1415,26 @@ fn buff_remaining(auras: &[&crate::auras::AuraInstance], now: f64) -> f64 {
         })
         .reduce(f64::max)
         .unwrap_or(0.0)
+}
+
+/// Native interrupt eligibility with the cast's existing sampled reaction delay.
+pub fn interrupt_reaction_ready(
+    world: &World,
+    actor: Entity,
+    target: Entity,
+) -> Result<bool, String> {
+    let Some(cast) = world.get::<shared::casting::CastState>(target) else {
+        return Ok(false);
+    };
+    if !crate::spell_cast::can_interrupt_cast(world, actor, target) {
+        return Ok(false);
+    }
+    let reaction = world
+        .get::<reaction::CastingReactionDelay>(target)
+        .ok_or_else(|| {
+            format!("target.debuff.casting.react: target {target:?} lacks reaction snapshot")
+        })?;
+    Ok(cast.elapsed >= reaction.0)
 }
 
 fn bool_value(value: bool) -> f64 {
