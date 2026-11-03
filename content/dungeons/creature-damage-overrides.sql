@@ -121,5 +121,33 @@ UPDATE content_creature_template_difficulty SET DamageModifier=3.213976 WHERE en
 -- Nalorakk (246404): BDjZ2QF6pNr8xV4W/fight 1 (+2), Hx64j9RrfnytB8cA/fight 12 (+2), YaZ7RKjBnp6dyHTG/fight 53 (+2); n=11; see sidecar for IQR/exclusions.
 -- Retirement: replace with sourced server DamageModifier when available.
 UPDATE content_creature_template_difficulty SET DamageModifier=5.405291 WHERE entry=246404 AND DifficultyID=8 AND DamageModifier=1.0;
+-- INFERRED_WCL: 261553's 1306338 has DB2 effect 31 at 100% weapon damage.
+-- Three +3 WCL reports: y7GBwrAcF1YzNHKq/4, xg1BLjmtwTZPCX3v/112,
+-- q1wLj6rtxvHfJFmd/15; n=529 positive unmitigated hits, filtered using
+-- derive_wcl_creature_damage.py from 4d8d667c15 with spell 1306338 as proxy.
+-- The producer normally requires difficulty 8. The runtime falls through to
+-- the base template because this entry has no difficulty rows; derive the
+-- denominator from that base, and project it unchanged except DamageModifier.
+-- This is an approximation: hidden swing-override trigger is unsourced.
+-- Retirement: replace when authoritative override and damage scaling are sourced.
+-- Stop and roll back on any error. Apply only with seasonal damage scaling.
+CREATE TEMP TABLE altar_proxy_guard(ok INTEGER NOT NULL CHECK(ok=1));
+INSERT INTO altar_proxy_guard SELECT CASE WHEN
+ EXISTS(SELECT 1 FROM content_creature_template WHERE entry=261553 AND DamageModifier=1.0 AND AIName='' AND ScriptName='')
+ AND NOT EXISTS(SELECT 1 FROM content_creature_template_difficulty WHERE entry=261553)
+ AND EXISTS(SELECT 1 FROM content_creature WHERE id1=261553 AND map=2993)
+ AND EXISTS(SELECT 1 FROM spell_effect WHERE SpellID=1306338 AND Effect=31 AND EffectBasePointsF=100)
+ THEN 1 ELSE 0 END;
+INSERT INTO content_creature_template_difficulty
+ (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
+ LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
+ DamageModifier,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+ StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8)
+ SELECT entry,8,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
+ LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
+ 2.327857,lootid,mingold,maxgold,StaticFlags1,StaticFlags2,StaticFlags3,StaticFlags4,
+ StaticFlags5,StaticFlags6,StaticFlags7,StaticFlags8
+ FROM content_creature_template WHERE entry=261553;
+DROP TABLE altar_proxy_guard;
 DROP TABLE _wcl_damage_guard;
 COMMIT;
