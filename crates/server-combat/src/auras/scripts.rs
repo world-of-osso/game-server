@@ -43,8 +43,108 @@ pub struct AuraScript {
     pub on_damage_proc: Option<DamageProcHook>,
 }
 
+/// Aura registrations compose apply/remove callbacks in registration order. Other
+/// duplicate hooks fail at startup until their combination has explicit semantics.
+#[derive(Debug, Default)]
+pub struct AuraScriptMap {
+    entries: HashMap<u32, AuraScript>,
+    pending: Option<(u32, AuraScript)>,
+    apply: HashMap<u32, Vec<AuraHook>>,
+    remove: HashMap<u32, Vec<RemoveHook>>,
+}
+
+impl std::ops::Deref for AuraScriptMap {
+    type Target = HashMap<u32, AuraScript>;
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
+}
+
+impl AuraScriptMap {
+    /// Track the previous slot before callers mutate the standard entry.
+    pub fn entry(&mut self, id: u32) -> std::collections::hash_map::Entry<'_, u32, AuraScript> {
+        self.finish();
+        self.pending = self.entries.get(&id).copied().map(|script| (id, script));
+        self.entries.entry(id)
+    }
+
+    pub fn insert(&mut self, id: u32, incoming: AuraScript) -> Option<AuraScript> {
+        self.finish();
+        let previous = self.entries.get(&id).copied();
+        if let Some(old) = previous {
+            let merged = merge_aura_script(id, old, incoming, &mut self.apply, &mut self.remove);
+            self.entries.insert(id, merged);
+        } else {
+            self.entries.insert(id, incoming);
+        }
+        previous
+    }
+
+    /// Check the last entry mutation before another registration or dispatch.
+    fn finish(&mut self) {
+        let Some((id, previous)) = self.pending.take() else {
+            return;
+        };
+        let current = self
+            .entries
+            .get(&id)
+            .copied()
+            .expect("registered aura slot");
+        let merged = merge_aura_script(id, previous, current, &mut self.apply, &mut self.remove);
+        self.entries.insert(id, merged);
+    }
+}
+
+fn merge_aura_script(
+    id: u32,
+    mut previous: AuraScript,
+    incoming: AuraScript,
+    apply: &mut HashMap<u32, Vec<AuraHook>>,
+    remove: &mut HashMap<u32, Vec<RemoveHook>>,
+) -> AuraScript {
+    if let Some(next) = incoming.on_apply {
+        match previous.on_apply {
+            Some(old) if old as usize != next as usize => apply.entry(id).or_default().push(next),
+            None => previous.on_apply = Some(next),
+            _ => {}
+        }
+    }
+    if let Some(next) = incoming.on_remove {
+        match previous.on_remove {
+            Some(old) if old as usize != next as usize => remove.entry(id).or_default().push(next),
+            None => previous.on_remove = Some(next),
+            _ => {}
+        }
+    }
+    macro_rules! unique {
+        ($($field:ident),+ $(,)?) => { $(
+            if let Some(next) = incoming.$field {
+                if let Some(old) = previous.$field {
+                    assert_eq!(old as usize, next as usize, "duplicate aura hook {} for spell {id}", stringify!($field));
+                } else {
+                    previous.$field = Some(next);
+                }
+            }
+        )+ };
+    }
+    unique!(
+        on_refresh,
+        before_remove_reactions,
+        on_stack_loss,
+        on_natural_end,
+        on_periodic,
+        before_periodic_tick,
+        after_periodic_damage,
+        on_proc,
+        check_proc,
+        on_damage_proc
+    );
+    previous.suppress_outgoing_procs |= incoming.suppress_outgoing_procs;
+    previous
+}
+
 #[derive(Resource, Debug, Default)]
-pub struct AuraScripts(pub HashMap<u32, AuraScript>);
+pub struct AuraScripts(pub AuraScriptMap);
 
 fn script(world: &World, spell_id: u32) -> Option<AuraScript> {
     world
@@ -53,7 +153,15 @@ fn script(world: &World, spell_id: u32) -> Option<AuraScript> {
 }
 
 pub(super) fn run_apply(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let additional = world
+        .get_resource::<AuraScripts>()
+        .and_then(|scripts| scripts.0.apply.get(&aura.spell_id))
+        .cloned()
+        .unwrap_or_default();
     if let Some(run) = script(world, aura.spell_id).and_then(|script| script.on_apply) {
+        run(world, unit, aura);
+    }
+    for run in additional {
         run(world, unit, aura);
     }
 }
@@ -79,7 +187,15 @@ pub(super) fn run_remove(
     let Some(script) = script(world, aura.spell_id) else {
         return;
     };
+    let additional = world
+        .get_resource::<AuraScripts>()
+        .and_then(|scripts| scripts.0.remove.get(&aura.spell_id))
+        .cloned()
+        .unwrap_or_default();
     if let Some(run) = script.on_remove {
+        run(world, unit, aura, reason);
+    }
+    for run in additional {
         run(world, unit, aura, reason);
     }
     if reason == super::RemoveReason::Expired {
@@ -788,6 +904,7 @@ pub(super) fn register_class_scripts(
     crate::spell_cast::scripts::register_channel_policies(&mut scripts, &registry);
     registry.register_before_late_auras(&mut scripts);
     registry.register_late_auras(&mut scripts);
+    scripts.0.finish();
 }
 
 /// TC spell_rogue.cpp spell_rog_stealth: 1784's own rows carry no MOD_STEALTH;
