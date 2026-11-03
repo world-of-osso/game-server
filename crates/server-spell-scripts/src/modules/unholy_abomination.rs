@@ -78,18 +78,19 @@ fn initialize(world: &mut World, actor: Entity) {
 
 fn update(world: &mut World) {
     let now = combat::auras::aura_now(world);
-    let due: Vec<_> = world
+    let mut due: Vec<_> = world
         .query::<(Entity, &PendingAbomination)>()
         .iter(world)
         .filter_map(|(owner, pending)| (now >= pending.0).then_some(owner))
         .collect();
+    due.sort_unstable_by_key(|owner| owner.to_bits());
     for owner in due {
         world.entity_mut(owner).remove::<PendingAbomination>();
         if !spell_cast::try_cast_triggered(world, owner, 288853, Some(owner), 1) {
             warn!(?owner, "native Abomination summon refused");
         }
     }
-    let clouds: Vec<_> = world
+    let mut clouds: Vec<_> = world
         .query::<(Entity, &mut DiseaseCloud)>()
         .iter_mut(world)
         .filter_map(|(actor, mut cloud)| {
@@ -100,6 +101,7 @@ fn update(world: &mut World) {
             Some(actor)
         })
         .collect();
+    clouds.sort_unstable_by_key(|actor| actor.to_bits());
     for actor in clouds {
         if !spell_cast::try_cast_triggered(world, actor, 1244347, Some(actor), 1) {
             warn!(?actor, "native Abomination Disease Cloud refused");

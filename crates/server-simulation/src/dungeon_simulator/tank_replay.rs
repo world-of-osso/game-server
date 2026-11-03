@@ -519,15 +519,15 @@ pub(super) fn replay(intake: &Intake) -> Result<Value, String> {
         .consumed_absorbs
         .get(&tank)
         .map_or(0.0, |usage| usage.total);
-    Ok(
-        json!({"spec":66,"source_status":intake.source_status,"duration_seconds":elapsed,
+    let mut report = json!({"spec":66,"source_status":intake.source_status,"duration_seconds":elapsed,
         "raw_damage":raw,"damage_taken":taken,"self_periodic_damage_taken":self_periodic_taken,
         "mitigation_pct":(raw > 0.0).then(|| 100.0 * (raw - taken) / raw),
         "self_heal_per_second":(elapsed > 0.0).then(|| self_healing / elapsed),
         "absorb_per_second":(elapsed > 0.0).then(|| absorbed / elapsed),"time_to_death":death,
         "active_mitigation_spell":SHIELD_OF_THE_RIGHTEOUS,"active_mitigation_uptime":(elapsed > 0.0).then(|| active_seconds / elapsed),
-        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike,"tank_casts":casts}),
-    )
+        "spike_window_seconds":SPIKE_WINDOW_SECONDS,"largest_spike":spike,"tank_casts":casts});
+    super::fact_error_report::attach_fact_errors(app.world_mut(), &mut report)?;
+    Ok(report)
 }
 
 /// Parse every action row from the pinned MID2 Protection profile.
@@ -1547,5 +1547,6 @@ fn replay_registered_run_with_healing(
             .filter_map(|(&(unit, source), &amount)| (unit == tank).then_some((source, amount)))
             .collect::<BTreeMap<_, _>>()
     );
+    super::fact_error_report::attach_fact_errors(run.app.world_mut(), &mut report)?;
     Ok(report)
 }

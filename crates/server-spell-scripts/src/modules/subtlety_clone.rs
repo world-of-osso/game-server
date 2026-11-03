@@ -171,6 +171,7 @@ fn launch_due(world: &mut World) {
             }
         }
     }
+    due.sort_by_key(|(caster, _)| caster.to_bits());
     for (caster, clone) in due {
         if world.get_entity(clone.target).is_err() {
             continue;

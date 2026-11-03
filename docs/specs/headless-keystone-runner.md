@@ -66,6 +66,8 @@ The JSON object has `schema_version`, `seed`, `requested_specs`, `map_id`, `chal
 
 ## Known gaps (current cycle)
 
+- [ ] Kings' Rest route planning aborts at 291/608 forces. The 30-point game-event criterion 64192 has no identified producer or proven route prerequisite.
+- [ ] Temple of Sethraliss route planning aborts at 681/687 forces. The 5-point game-event criterion 63063 has no identified producer, multiplicity or proven route prerequisite.
 - [ ] The existing Azure simulator selects the Normal follower population and Journal gear. Its historical Azure cohorts did not establish a clear.
 - [ ] Native combat-event timestamps are wall-clock values and cannot serve as accelerated simulation time.
 

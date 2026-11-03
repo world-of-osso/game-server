@@ -1,5 +1,7 @@
 //! Literal SimC76f8118 APL decisions; native numeric facts/castability stay caller-owned.
 mod expression;
+mod fact_errors;
+pub use fact_errors::{FactError, FactErrors, collect_fact_errors};
 pub mod gcd_history;
 mod program;
 pub mod ret_bindings;

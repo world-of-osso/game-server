@@ -1,5 +1,97 @@
 use super::*;
 
+#[derive(Component)]
+struct ArchetypeMarker;
+
+#[test]
+#[ignore = "requires private spec253 reference inputs and native world DB"]
+fn wildspeaker_crit_assignment_is_independent_of_archetype_order() {
+    fn run_case(reorder: bool) -> (Vec<u64>, Vec<(u64, bool)>) {
+        let _setup_seed = crate::random::seed_scope(70_448);
+        let mut run = prepare_measurement(253, 1).expect("native BM fixture");
+        engage(&mut run);
+        for _ in 0..8 {
+            assert!(crate::spell_cast::try_cast_triggered(
+                run.app.world_mut(),
+                run.actor,
+                219199,
+                Some(run.targets[0]),
+                1,
+            ));
+        }
+        let critters: Vec<_> = run
+            .app
+            .world_mut()
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(run.app.world())
+            .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
+            .map(|(entity, _)| entity)
+            .collect();
+        assert_eq!(critters.len(), 8);
+        if reorder {
+            for &critter in critters.iter().step_by(2) {
+                run.app
+                    .world_mut()
+                    .entity_mut(critter)
+                    .insert(ArchetypeMarker);
+            }
+        }
+        let order = run
+            .app
+            .world_mut()
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(run.app.world())
+            .filter(|(_, summon)| summon.owner == run.actor && summon.spell_id == 219199)
+            .map(|(entity, _)| entity.to_bits())
+            .collect();
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        let _command_seed = crate::random::seed_scope(10);
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            34026,
+            Some(run.targets[0]),
+            false,
+        )
+        .expect("native Kill Command");
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let mut hits: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.spell_id == Some(1232922)
+                    && event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.source.is_some_and(|source| {
+                        critters.iter().any(|entity| entity.to_bits() == source)
+                    })
+            })
+            .map(|event| (event.source.unwrap(), event.crit))
+            .collect();
+        hits.sort_unstable_by_key(|&(source, _)| source);
+        (order, hits)
+    }
+    let (first_order, first_hits) = run_case(false);
+    let (second_order, second_hits) = run_case(true);
+    assert_ne!(first_order, second_order, "fixture must change query order");
+    assert_eq!(
+        first_hits.len(),
+        8,
+        "each critter must deal its command hit"
+    );
+    assert!(first_hits.iter().any(|(_, crit)| *crit) && first_hits.iter().any(|(_, crit)| !crit));
+    assert_eq!(
+        first_hits, second_hits,
+        "crit rolls must follow critter identity, not archetype order"
+    );
+}
+
 #[test]
 #[ignore = "requires private spec253 reference inputs and native world DB"]
 fn native_bm_wildspeaker_commands_existing_bear_before_consuming_next_howl() {
