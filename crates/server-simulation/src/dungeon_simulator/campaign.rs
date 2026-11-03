@@ -1793,6 +1793,73 @@ fn altar_automatic_drop_discards_upper_floor_travel_before_landing() {
 }
 
 #[test]
+#[ignore = "requires extracted Ruby Life Pools graph, world data and native navigation"]
+fn released_leader_waits_for_party_on_ruby_ferry() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2521);
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let transport = run
+        .graph
+        .transports
+        .iter()
+        .find(|edge| edge.source_guid == 3276417217)
+        .unwrap()
+        .clone();
+    let drake = run.actors[&transport.source_guid];
+    let source = *run.app.world().get::<Position>(drake).unwrap();
+    let map = *run.app.world().get::<crate::maps::InMap>(owner).unwrap();
+    let boss =
+        crate::scripted_ai::instance_script::boss_id_for_encounter(run.app.world(), map, 2609)
+            .unwrap();
+    assert!(crate::scripted_ai::instance_script::set_boss_state(
+        run.app.world_mut(),
+        map,
+        boss,
+        crate::scripted_ai::instance_script::EncounterState::Done
+    ));
+    run.app.world_mut().entity_mut(tank).insert(source);
+    server::test_support::transport::activate(run.app.world_mut(), tank, Some(drake), &transport)
+        .unwrap();
+    let landing = Vec3::from_array(transport.landing);
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: landing.x,
+        y: landing.y,
+        z: landing.z,
+    });
+    run.returning_to_party = true;
+    for _ in 0..100 {
+        run.app.update();
+        let position = *run.app.world().get::<Position>(tank).unwrap();
+        if position.y > 230.0 && position.y < 245.0 {
+            break;
+        }
+    }
+    let in_flight = *run.app.world().get::<Position>(tank).unwrap();
+    assert!(
+        in_flight.y > 230.0 && in_flight.y < 245.0,
+        "tank did not reach the airborne failure boundary: {in_flight:?}"
+    );
+    assert!(server::test_support::transport::in_progress(
+        run.app.world(),
+        tank
+    ));
+    assert!(run.return_to_party().unwrap());
+    assert!(run.app.world().get::<MoveIntent>(owner).is_none());
+    for _ in 0..3000 {
+        if !server::test_support::transport::in_progress(run.app.world(), tank) {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(
+        !server::test_support::transport::in_progress(run.app.world(), tank),
+        "tank never landed"
+    );
+    assert!(!run.return_to_party().unwrap(), "landed party must reunite");
+}
+
+#[test]
 #[ignore = "requires extracted Azure Vault follower graph and native navigation"]
 fn released_leader_rejoins_party_through_azure_book() {
     let mut run = spawn_run(1, &mut None).unwrap();
@@ -5129,6 +5196,13 @@ impl Run {
             self.returning_to_party = false;
             return Ok(false);
         };
+        if server::test_support::transport::in_progress(world, member) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<MoveIntent>();
+            return Ok(true);
+        }
         let target = *world
             .get::<Position>(member)
             .ok_or("party member position absent")?;
