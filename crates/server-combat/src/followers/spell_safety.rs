@@ -10,8 +10,7 @@ pub(super) fn safe(world: &World, caster: Entity, target: Entity, spell: u32) ->
 }
 
 fn controlling_follower(world: &World, actor: Entity) -> Option<Entity> {
-    world
-        .get::<super::Follower>(actor)
+    super::ai::acting_follower(world, actor)
         .map(|_| actor)
         .or_else(|| {
             let owner = world
@@ -22,7 +21,7 @@ fn controlling_follower(world: &World, actor: Entity) -> Option<Entity> {
                         .get::<crate::spell_cast::summon::SummonedCreature>(actor)
                         .map(|pet| pet.owner)
                 })?;
-            world.get::<super::Follower>(owner).map(|_| owner)
+            super::ai::acting_follower(world, owner).map(|_| owner)
         })
 }
 
@@ -48,7 +47,7 @@ pub fn chain_candidate_allowed(
 
 /// `enemy` is in combat with the follower's party.
 fn engaged_with_party(world: &World, follower: Entity, enemy: Entity) -> bool {
-    let Some(owner) = world.get::<super::Follower>(follower).map(|f| f.owner) else {
+    let Some(owner) = super::ai::acting_follower(world, follower).map(|f| f.owner) else {
         return false;
     };
     crate::combat_refs::active_opponents(world, enemy).any(|opponent| {
@@ -92,6 +91,25 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         return true;
     };
     let enemy_target = targets::relation_matches(world, actor, target, targets::Relation::Enemy);
+    if actor != follower
+        && world.get::<crate::hunter_pet::HunterPet>(actor).is_some()
+        && enemy_target
+    {
+        let owner = super::ai::acting_follower(world, follower)
+            .expect("controlling follower")
+            .owner;
+        let owns_run = world.get::<super::party::FollowerRun>(owner).is_some()
+            || world
+                .get::<super::stockade_diagnostic::DiagnosticParty>(owner)
+                .is_some();
+        if owns_run
+            && !world
+                .get::<super::AdmittedPull>(owner)
+                .is_some_and(|pull| pull.0.contains(&target))
+        {
+            return false;
+        }
+    }
     let primary = world
         .get::<crate::networking::CombatTarget>(follower)
         .and_then(|target| target.0)

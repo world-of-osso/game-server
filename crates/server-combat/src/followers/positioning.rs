@@ -68,10 +68,16 @@ pub(super) fn update_combat_exclusions(
             .insert(CombatMovementExclusions(None));
         return;
     };
+    let planned = match world.get::<crate::creature_ai::PetMotion>(unit) {
+        Some(crate::creature_ai::PetMotion::Chase(target)) => {
+            super::pull_set::members(world, *target, unit)
+        }
+        _ => Default::default(),
+    };
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher) && !planned.contains(watcher))
         .collect();
     let exclusions: Result<Vec<_>, String> =
         with_state::<AggroDistance, _>(world, |world, geometry| {
