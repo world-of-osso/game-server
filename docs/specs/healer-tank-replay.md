@@ -22,6 +22,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] `--all` runs all seven healers on the Protection Paladin trace and six tanks on their respective 300-second seed-70448 SimC dummy traces, with both externally healed and no-healer tank runs. Run replays in parallel and print healer and tank summary tables; the healer table includes idle-GCD percentage. Write per-spell details in dated output files.
 - [ ] See [Restoration Shaman (264)](healer-tank-replay/264.md) for its replay policy and data gaps.
 
+WCL replay configurations record each party member's observed Bloodlust application time. Apply the 40-second native haste aura to each recorded recipient at that time. Treat WCL blocked hits as already-mitigated landed pressure. For changing WCL maximum health, use the latest available observation at each hit; if the first observation is later than the hit or pull start, record its timestamp as an inference rather than treating it as an observed starting value. Do not represent friendly damage-transfer events as hostile hits.
+
 ## Healer parity reference population
 
 The [seven-healer hostile-hit recheck](healer-tank-replay/seven-healer-recheck-2026-11-02.md) records the same-binary ratios and the remaining Mistweaver gap.

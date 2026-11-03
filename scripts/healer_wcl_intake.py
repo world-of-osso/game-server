@@ -114,7 +114,8 @@ def convert(events, healing, db, config):
     initial_hp = [max_health_at(observations, actor, 0) for actor in config['actors']]
     return {'provenance': config['provenance'], 'actor_slots': actor_slots,
             'party_specs': config['party_specs'], 'initial_hp_observations': initial_hp,
-            'excluded_self': excluded_self, 'observed_self': observed_self, 'hits': hits}
+            'bloodlust': config['bloodlust'], 'excluded_self': excluded_self,
+            'observed_self': observed_self, 'hits': hits}
 
 
 def read_jsonl(path):

@@ -559,6 +559,37 @@ fn simc_enemy_profile_retires_targets_during_active_casts() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn wcl_bloodlust_applies_only_to_the_recorded_slot_at_the_recorded_time() {
+    let mut party = super::snapshot_party(105, 90, 1);
+    let buffs = [super::super::healer_wcl_trace::TimedBloodlust {
+        time_ms: 5000,
+        slot: 1,
+    }];
+    let mut next = 0;
+    super::apply_due_bloodlust(party.app.world_mut(), &party.slots, &buffs, &mut next, 4950)
+        .unwrap();
+    assert!(!crate::auras::has_aura(
+        party.app.world(),
+        party.slots[1],
+        2825
+    ));
+    super::apply_due_bloodlust(party.app.world_mut(), &party.slots, &buffs, &mut next, 5000)
+        .unwrap();
+    assert!(crate::auras::has_aura(
+        party.app.world(),
+        party.slots[1],
+        2825
+    ));
+    assert!(!crate::auras::has_aura(
+        party.app.world(),
+        party.slots[0],
+        2825
+    ));
+    assert_eq!(next, 1);
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn wcl_intake_replays_hostile_and_deferred_pressure() {
     let report = super::replay_simc_party_with_wcl(
         1468,

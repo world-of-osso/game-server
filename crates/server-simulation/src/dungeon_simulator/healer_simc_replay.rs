@@ -503,6 +503,23 @@ fn install_profile_target(
         });
 }
 
+fn apply_due_bloodlust(
+    world: &mut World,
+    slots: &[Entity; 5],
+    buffs: &[super::healer_wcl_trace::TimedBloodlust],
+    next: &mut usize,
+    elapsed_ms: u64,
+) -> Result<(), String> {
+    while let Some(buff) = buffs
+        .get(*next)
+        .filter(|buff| buff.time_ms < elapsed_ms + 50)
+    {
+        super::tank_replay::apply_replay_bloodlust(world, slots[buff.slot])?;
+        *next += 1;
+    }
+    Ok(())
+}
+
 fn replay_profile(
     spec: u32,
     level: u8,
@@ -612,6 +629,7 @@ fn replay_profile(
     let mut next = 0;
     let mut next_party = 0;
     let mut next_wcl = 0;
+    let mut next_bloodlust = 0;
     let mut wcl_delivered = 0;
     let mut wcl_avoided = 0;
     let mut wcl_dead_targets = 0;
@@ -700,6 +718,13 @@ fn replay_profile(
             source
         };
         if let Some(wcl) = &wcl {
+            apply_due_bloodlust(
+                app.world_mut(),
+                &slots,
+                &wcl.bloodlust,
+                &mut next_bloodlust,
+                elapsed_ms,
+            )?;
             while let Some(hit) = wcl
                 .hits
                 .get(next_wcl)

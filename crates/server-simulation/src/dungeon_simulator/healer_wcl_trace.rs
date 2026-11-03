@@ -16,7 +16,14 @@ pub(super) struct Trace {
     pub provenance: String,
     pub excluded_self: usize,
     pub party_specs: [u32; 5],
+    pub bloodlust: Vec<TimedBloodlust>,
     pub hits: Vec<RecordedHit>,
+}
+
+#[derive(Deserialize)]
+pub(super) struct TimedBloodlust {
+    pub time_ms: u64,
+    pub slot: usize,
 }
 
 #[derive(Deserialize)]
@@ -46,6 +53,11 @@ impl Trace {
         if trace.provenance.is_empty()
             || trace.hits.is_empty()
             || trace.hits.windows(2).any(|p| p[0].time_ms > p[1].time_ms)
+            || trace
+                .bloodlust
+                .windows(2)
+                .any(|p| p[0].time_ms > p[1].time_ms)
+            || trace.bloodlust.iter().any(|buff| buff.slot >= 5)
         {
             return Err("WCL_INTAKE_INVALID_HEADER_OR_ORDER".into());
         }
@@ -53,6 +65,17 @@ impl Trace {
             hit.validate()?;
         }
         Ok(trace)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RecordedHit;
+
+    #[test]
+    fn blocked_wcl_hits_accept_recorded_post_mitigation_damage() {
+        let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":0,"slot":0,"source_actor":1,"target_actor":2,"spell_id":1,"school":1,"defense":2,"hit_type":4,"periodic":false,"amount":150,"absorbed":50,"max_hp":1000,"health_after":800}"#).unwrap();
+        assert!(hit.validate().is_ok());
     }
 }
 
@@ -69,7 +92,7 @@ impl RecordedHit {
             return Err("WCL_INTAKE_INVALID_HIT".into());
         }
         match (self.hit_type, self.amount + self.absorbed) {
-            (1, amount) if amount > 0 => Ok(()),
+            (1 | 4, amount) if amount > 0 => Ok(()),
             (0 | 7 | 8 | 9 | 10, 0) => Ok(()),
             _ => Err("WCL_INTAKE_UNSUPPORTED_AMOUNT_OR_HIT_TYPE".into()),
         }

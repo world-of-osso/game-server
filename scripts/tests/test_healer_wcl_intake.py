@@ -25,7 +25,7 @@ class WclIntakeTest(unittest.TestCase):
         db.executemany('INSERT INTO spell_misc VALUES (?, 0, 1)', [(1306338,), (124255,)])
         db.execute('INSERT INTO spell_categories VALUES (1306338, 0, 2)')
         config = {'actors': [6, 221, 1, 225, 231], 'party_specs': [268, 1468, 62, 262, 262],
-                  'provenance': 'INFERRED_WCL test fight 1 pull 1'}
+                  'provenance': 'INFERRED_WCL test fight 1 pull 1', 'bloodlust': []}
         events = []
         for actor in config['actors']:
             events.append({'targetID': actor, 'sourceID': 413, 'sourceInstance': 1,
