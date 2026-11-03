@@ -55,6 +55,13 @@ impl Trace {
                 .get(aura.spell_id)
                 .ok_or_else(|| format!("WCL_OPENING_AURA_MISSING_SPELL:{}", aura.spell_id))?;
             let mask = auras::aura_effect_mask(spell);
+            if mask == 0 && aura.spell_id == 372014 {
+                eprintln!(
+                    "WCL_OPENING_AURA_SKIPPED:{}:{}:unmodeled_cosmetic_form",
+                    aura.target_actor, aura.spell_id
+                );
+                continue;
+            }
             if mask == 0 || aura.stacks == 0 || aura.evidence.is_empty() {
                 return Err(format!("WCL_OPENING_AURA_INVALID:{}", aura.spell_id));
             }

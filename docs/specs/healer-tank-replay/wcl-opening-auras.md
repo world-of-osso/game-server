@@ -1,6 +1,6 @@
 # WCL opening auras
 
-Matched replay input combines each actor's CombatantInfo auras with party-targeted buffs whose first in-pull event is a removal, stack removal or refresh. Each entry records its WCL source, target, spell, stack count and evidence. Native replay applies these at its first-combat boundary. A removal does not prove expiration rather than consumption, so recorded events do not establish the remaining duration; native duration starts fresh. Unmapped sources and spells that cannot be applied must fail explicitly.
+Matched replay input combines each actor's CombatantInfo auras with party-targeted buffs whose first in-pull event is a removal, stack removal or refresh. Each entry records its WCL source, target, spell, stack count and evidence. Native replay applies these at its first-combat boundary. A removal does not prove expiration rather than consumption, so recorded events do not establish the remaining duration; native duration starts fresh. Unmapped sources and spells that cannot be applied must fail explicitly, except the unmodeled cosmetic Visage form 372014, which is logged and skipped.
 
 ## Preservation Merithra timing
 
