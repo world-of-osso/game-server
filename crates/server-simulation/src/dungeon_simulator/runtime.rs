@@ -319,6 +319,17 @@ fn build_runtime_app(
     if !reused {
         load_gameplay_data(&mut app, path);
     }
+    let wdts = app
+        .world()
+        .resource::<crate::maps::MapStore>()
+        .maps
+        .values()
+        .map(|map| (map.id, map.wdt_file_data_id))
+        .collect();
+    app.insert_resource(server::test_support::GroundMap::new(
+        &super::graph::extraction::asset_root(),
+        wdts,
+    ));
     if !app.world().resource::<super::Space>().0.flights.is_empty() {
         let db =
             rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
