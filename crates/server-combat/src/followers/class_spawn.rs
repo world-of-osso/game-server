@@ -32,6 +32,7 @@ pub enum LoadoutSource {
         items: super::parity_profile::ItemInstances,
         traits: Vec<crate::trait_config::Purchase>,
         pet: Option<u32>,
+        consumables: super::consumables::LoadoutConsumables,
     },
 }
 
@@ -340,6 +341,10 @@ pub fn install_class(
         LoadoutSource::Journal | LoadoutSource::SimcProfile { .. } => None,
     };
     let source = keystone_profile.as_ref().unwrap_or(source);
+    let consumables = match &loadout {
+        LoadoutSource::Journal | LoadoutSource::Wcl(_) => super::consumables::wcl(source.spec_id)?,
+        LoadoutSource::SimcProfile { consumables, .. } => consumables.clone(),
+    };
     let provider = *world
         .get_resource::<super::FollowerActionProvider>()
         .ok_or("class follower action metadata provider unavailable")?;
@@ -516,6 +521,7 @@ pub fn install_class(
         crate::auras::AuraSource::KnownSpell,
         &passives,
     );
+    super::consumables::install(world, entity, &consumables)?;
     spells.extend((provider.equipped_actions)(world, entity, source.spec_id)?);
     for id in &spells {
         let spell = world

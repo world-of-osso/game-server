@@ -29,6 +29,15 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - The simulated owner opens immediately after admission. It does not add a caster-ready delay without evidence for one.
 - WCL non-observation, Midnight Season 2 Ruby Life Pools: reports `VRkJb24B6TY8zHLD` fight 1 and `HdhBJtZGNgmypRFj` fight 31 (Arcane), `Gt9TAHVbDJxQd1mw` fight 2 (Fire), and `Cr7BRxNgYah3AKv9` fight 8 (Balance). In these four high-key runs, no Arcane Blast 30451, Pyroblast 11366 or Wrath 190984 cast began in the six seconds before the tank's first positive damage at the recorded dungeon-pull starts. The sampled source-specific event streams also contained no such cast beginning before the tank's first positive hit on its eventual target. These observations do not prove that players never precast or establish a positive ready window.
 
+## Class-follower consumables
+
+- [x] `INFERRED_WCL`: Journal and WCL loadouts select a flask, food buff, augment, weapon oil/stone and combat potion per specialization. Include a category only when at least half of that spec's observed player-keys have it. Choose the most observed identity; break ties by class-wide share, global share, then lower ID. For weapon oils, apply the same half-of-spec rule independently to each hand. A missing key-start observation is not proof of no use.
+- [x] Use a selected combat potion on the first pull and whenever its native cooldown is ready in combat. This trigger is inferred: 481/554 observed potion users first drank on pull 1, and repeat gaps are consistent with a 300 s cooldown and out-of-combat time. Retire the trigger when evidence identifies actual usage decisions.
+- [x] WCL does not identify flask or potion quality. `INFERRED`: use the highest quality for the observed spell because this rank-selected +3–+21 sample makes the quality price gap small. Retire this assumption when WCL amounts, derived stats or item identity establish quality. Weapon enchant IDs retain observed quality. SimC loadouts retain their profile's explicit consumables and quality.
+- [x] Apply native consumable auras, equipment enchantments and potion item-use effects at actor spawn through the same loadout path for followers and parity players. Do not grant unobserved effects or maintain a separate parity consumable application.
+
+Source: [selected per-spec loadouts](../sources/follower-consumables/selected.md), [per-spec modal table](../sources/follower-consumables/derivation.md), [all observed choices, shares and report/fight:actor citations](../sources/follower-consumables/choice-distributions.md), and [potion usage](../sources/follower-consumables/potion-usage.md). The 955 player-key observations are rank-selected from 191 Ruby Life Pools keys only; they are not an independent or random representation of Season 2. Revisit when broader, representative multi-dungeon observations or quality evidence exist.
+
 ## Raid-haste timing
 
 `INFERRED_WCL` (`lust_policy.rs`; 144 Midnight S2 keys, +2..+10, 16 per level across 8 dungeons; 213 party lust applications):

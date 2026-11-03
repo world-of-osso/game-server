@@ -458,7 +458,7 @@ fn prepare_literal_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_literal_reference(profile, traits, count, identity)?;
-    preparation::consume_profile_food(&mut run)?;
+    preparation::finish_spawn_loadout_setup(&mut run)?;
     Ok(run)
 }
 
@@ -850,7 +850,7 @@ fn prepare_measurement_reference(
     } else if spec_id == 1480 {
         devourer_rotation::configure_actor_reactions(run.app.world_mut(), run.actor)?;
     }
-    preparation::consume_profile_food(&mut run)?;
+    preparation::finish_spawn_loadout_setup(&mut run)?;
     preparation::cast_provided_party_buffs(&mut run)?;
     before_prepare(&mut run)?;
     run.spec_driver = Some((driver.prepare)(&mut run)?);
@@ -864,7 +864,7 @@ fn prepare_reference(
     identity: crate::followers::simulator::ParityActor,
 ) -> Result<Run, String> {
     let mut run = spawn_reference(profile, traits, count, identity)?;
-    preparation::consume_profile_food(&mut run)?;
+    preparation::finish_spawn_loadout_setup(&mut run)?;
     preparation::start_configured_native_pet(&mut run)?;
     preparation::finish_pending_setup(&mut run)?;
     Ok(run)
@@ -934,6 +934,7 @@ fn spawn_reference_actor(
         items: crate::followers::parity_profile::profile_instances(app.world(), profile)?,
         traits: purchases,
         pet: crate::followers::parity_profile::simc_hunter_pet(profile)?,
+        consumables: crate::followers::consumables::simc(&profile.consumables)?,
     };
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
@@ -983,7 +984,6 @@ pub(crate) fn spawn_second_reference_player(run: &mut Run, spec_id: u32) -> Resu
     for _ in 0..4 {
         run.app.update();
     }
-    profile_effects::install_food(run.app.world_mut(), actor, &profile)?;
     preparation::finish_pending_setup(run)?;
     Ok(actor)
 }

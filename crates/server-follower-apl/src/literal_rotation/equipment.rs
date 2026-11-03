@@ -3,11 +3,12 @@
 pub mod metadata;
 #[path = "equipment_sets.rs"]
 mod sets;
-use crate::item_templates::{ItemTemplates, OnUseSpell};
+use crate::item_templates::ItemTemplates;
 use crate::simc_apl_native::{Bindings, NativeFacts};
 use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
 pub use metadata::Metadata;
+pub use server::consumables::{ItemUse, Potion};
 use server::simc_apl::Action;
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::EquipmentSlot;
@@ -20,35 +21,6 @@ pub const SLOTS: &[(&str, EquipmentSlot)] = &[
     ("trinket2", EquipmentSlot::Trinket2),
     ("main_hand", EquipmentSlot::MainHand),
 ];
-
-/// The actor's configured combat potion, used by the APL's potion rows.
-#[derive(Component, Clone, Copy)]
-pub struct Potion(pub ItemUse);
-
-#[derive(Clone, Copy)]
-pub struct ItemUse {
-    pub item_id: u32,
-    pub on_use: OnUseSpell,
-    pub item_level: u16,
-    stat_buff: bool,
-}
-
-impl ItemUse {
-    pub fn consumable(world: &World, item_id: u32) -> Result<Self, String> {
-        let template = world
-            .resource::<ItemTemplates>()
-            .get(ItemDefinitionSource::Retail, item_id)
-            .ok_or_else(|| format!("native consumable item{item_id} absent"))?;
-        Ok(Self {
-            item_id,
-            on_use: template
-                .on_use
-                .ok_or("native consumable has no on-use spell")?,
-            item_level: template.scaling.item_level,
-            stat_buff: true,
-        })
-    }
-}
 
 pub struct Slot {
     pub item_id: u32,

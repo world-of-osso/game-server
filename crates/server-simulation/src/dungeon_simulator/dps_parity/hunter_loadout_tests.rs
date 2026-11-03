@@ -37,6 +37,32 @@ fn simc_hunter_loadout_installs_default_pet_for_follower_and_player() {
             world.get::<crate::class_progression::KnownSpells>(run.actor),
             Some(&known)
         );
+        for spell in [1235108, 1232585, 1264426] {
+            assert!(
+                crate::auras::has_aura(world, run.actor, spell),
+                "missing profile aura {spell}"
+            );
+        }
+        assert_eq!(
+            world
+                .get::<server::consumables::Potion>(run.actor)
+                .unwrap()
+                .0
+                .item_id,
+            241288
+        );
+        assert!(
+            world
+                .get::<server::consumables::WclPotion>(run.actor)
+                .is_none()
+        );
+        assert!(
+            world
+                .get::<crate::stats::EquippedItemModifiers>(run.actor)
+                .unwrap()
+                .temporary_enchants
+                .contains(&(shared::protocol::EquipmentSlot::MainHand, 8052))
+        );
         let stable = world.get::<PetStable>(run.actor).unwrap();
         assert_eq!(
             stable.stored.active[0].as_ref().unwrap().creature_entry,

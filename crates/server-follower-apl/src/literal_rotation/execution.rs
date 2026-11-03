@@ -343,7 +343,9 @@ impl Prepared {
             actions.into_iter().chain([repeated]),
             &mut prepared,
         )?;
-        if let Some(potion) = world.get::<super::equipment::Potion>(actor).copied() {
+        if world.get::<server::consumables::WclPotion>(actor).is_none()
+            && let Some(potion) = world.get::<super::equipment::Potion>(actor).copied()
+        {
             let name = "potion".to_owned();
             prepared.declared.insert(name.clone());
             let state = native_readiness(
