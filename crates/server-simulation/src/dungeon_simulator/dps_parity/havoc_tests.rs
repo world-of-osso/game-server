@@ -3,6 +3,88 @@ use super::*;
 
 #[test]
 #[ignore = "requires native parity fixture"]
+fn havoc_retreat_refuses_an_unpulled_hostile_at_the_landing() {
+    let mut run = prepare_literal(577, 2).unwrap();
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let outsider = run.targets[1];
+    let origin = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap();
+    run.app.world_mut().entity_mut(outsider).insert((
+        shared::components::Position {
+            x: origin.x - 17.0,
+            y: origin.y,
+            z: origin.z,
+        },
+        crate::creature_aggro::AggroRange,
+        crate::creature_ai::CreatureState::Idle,
+        shared::components::UnitFactionTemplate(14),
+    ));
+    assert!(
+        !crate::followers::retreat::prepare_havoc_retreat(run.app.world_mut(), actor, primary)
+            .unwrap(),
+        "an idle hostile at the real landing must prevent the leap"
+    );
+    let encounter =
+        crate::simc_apl_native::Encounter::dungeon(crate::spell_cast::now(run.app.world()));
+    let mut rotation =
+        server_follower_apl::havoc_rotation::Rotation::load(run.app.world_mut(), actor, encounter)
+            .unwrap();
+    let program = server::simc_apl::Program::parse(&[
+        ("default", "vengeful_retreat,use_off_gcd=1"),
+        ("default", "felblade"),
+    ])
+    .unwrap();
+    rotation.driver = server_follower_apl::literal_rotation::Driver::new(program);
+    rotation
+        .drive(run.app.world_mut(), actor, &[primary])
+        .unwrap();
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.spell_id == Some(232893)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess),
+        "the APL must execute the next available action after rejecting the leap"
+    );
+    run.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(outsider)
+        .unwrap()
+        .x -= 100.0;
+    assert!(
+        crate::followers::retreat::prepare_havoc_retreat(run.app.world_mut(), actor, primary)
+            .unwrap(),
+        "the same leap must be admitted after the hostile moves away"
+    );
+    assert_eq!(
+        *run.app
+            .world()
+            .get::<shared::components::Position>(actor)
+            .unwrap(),
+        origin,
+        "admission must not walk before the cast"
+    );
+    run.app
+        .world_mut()
+        .remove_resource::<server::test_support::GroundMap>();
+    assert!(
+        !crate::followers::retreat::prepare_havoc_retreat(run.app.world_mut(), actor, primary)
+            .unwrap(),
+        "a landing without ground data must not be admitted"
+    );
+}
+
+#[test]
+#[ignore = "requires native parity fixture"]
 fn havoc_retreat_setup_completes_during_real_follower_combat() {
     use shared::protocol::CombatLogKind;
     let _seed = crate::random::seed_scope(70_448);
@@ -16,12 +98,20 @@ fn havoc_retreat_setup_completes_during_real_follower_combat() {
             + std::time::Duration::from_millis(50);
         advance_fixture_step(&mut run, end).unwrap();
         drive_player(&mut run).unwrap();
-        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
-        if events.iter().any(|event| event.source == Some(run.actor.to_bits())
-            && event.spell_id == Some(198793) && event.kind == CombatLogKind::CastSuccess)
-        {
-            assert!(crate::auras::has_aura(run.app.world(), run.actor, 208628),
-                "the actual Retreat cast must grant Exergy");
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(198793)
+                && event.kind == CombatLogKind::CastSuccess
+        }) {
+            assert!(
+                crate::auras::has_aura(run.app.world(), run.actor, 208628),
+                "the actual Retreat cast must grant Exergy"
+            );
             return;
         }
     }

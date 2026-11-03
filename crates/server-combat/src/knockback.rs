@@ -128,6 +128,56 @@ fn require_ground_and_collision(world: &mut World, map: InMap, feet: Vec3) -> Re
     Ok(())
 }
 
+/// Project the same fixed-step ballistic flight used by knockback movement.
+pub(crate) fn projected_landing(world: &mut World, target: Entity, velocity: Vec3) -> Option<Vec3> {
+    let position = *world.get::<Position>(target)?;
+    let map = *world.get::<InMap>(target)?;
+    let start = Vec3::new(position.x, position.y, position.z);
+    require_ground_and_collision(world, map, start).ok()?;
+    let delta = world.resource::<Time>().delta_secs();
+    if delta <= 0.0 {
+        return None;
+    }
+    let mut flight = KnockbackFlight {
+        origin: start,
+        velocity,
+        elapsed: 0.0,
+        peak: start.y,
+        map,
+        epoch: 0,
+    };
+    let mut current = start;
+    while flight.elapsed < 60.0 {
+        flight.elapsed += delta;
+        let predicted = flight.at(flight.elapsed);
+        let mut next = crate::spell_cast::teleport::clamp_to_wall(
+            world.resource::<crate::line_of_sight::LineOfSight>(),
+            map,
+            current,
+            predicted,
+        );
+        if flight.vertical_speed() <= 0.0 {
+            next.y = predicted.y;
+        }
+        let feet = Vec3::new(next.x, current.y.max(next.y), next.z);
+        let mut ground = world.resource_mut::<GroundMap>();
+        let probe = ground.ground_in(map, feet);
+        let minimum = ground.min_height(map.map_id, next);
+        if let GroundProbe::Supported(height) = probe
+            && flight.vertical_speed() <= 0.0
+            && next.y <= height
+        {
+            next.y = height;
+            return Some(next);
+        }
+        if probe == GroundProbe::Unloaded || minimum.is_some_and(|height| next.y < height) {
+            return None;
+        }
+        current = next;
+    }
+    None
+}
+
 fn launch_velocity(
     world: &World,
     target: Entity,
@@ -313,6 +363,45 @@ pub(crate) fn cancel(world: &mut World, target: Entity) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn projected_landing_matches_real_ballistic_flight() {
+        let mut world = World::new();
+        world.insert_resource(Time::<()>::default());
+        world
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        world.insert_resource(GroundMap::flat_arena(0.0));
+        world.insert_resource(crate::line_of_sight::LineOfSight::open_arena());
+        let actor = world
+            .spawn((
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                InMap {
+                    map_id: 34,
+                    instance_id: 1,
+                },
+            ))
+            .id();
+        let velocity = Vec3::new(-17.5, 10.0, 0.0);
+        let predicted = projected_landing(&mut world, actor, velocity).unwrap();
+        launch_directed(&mut world, actor, velocity).unwrap();
+        for _ in 0..100 {
+            if world.get::<KnockbackFlight>(actor).is_none() {
+                break;
+            }
+            advance_owned_flight(&mut world, actor, 0.05);
+        }
+        assert!(world.get::<KnockbackFlight>(actor).is_none());
+        let actual = world.get::<Position>(actor).unwrap();
+        assert!(
+            predicted.distance(Vec3::new(actual.x, actual.y, actual.z)) < 0.001,
+            "predicted {predicted:?}, actual {actual:?}"
+        );
+    }
 
     #[test]
     fn knockback_follower_lands_on_uldaman_wmo_floor_after_los_floor_contact() {

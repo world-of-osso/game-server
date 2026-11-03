@@ -1,31 +1,12 @@
-//! Position Havoc actors for a real Vengeful Retreat through their target.
+//! Admit Vengeful Retreat only when its native landing is safe.
 use bevy::prelude::*;
-use shared::components::{MovementControl, Position, Rotation};
+use shared::components::{Position, Rotation};
 
-#[cfg(test)]
-#[path = "retreat_destination_tests.rs"]
-mod destination_tests;
-
-use crate::simc_apl_native::AplMovementIntent;
-
-/// Walk to the edge of melee, then face away so Retreat moves through the target.
-/// Returns false while the actor is still walking or cannot move.
 pub fn prepare_havoc_retreat(
     world: &mut World,
     actor: Entity,
     target: Entity,
 ) -> Result<bool, String> {
-    if world
-        .get::<MovementControl>(actor)
-        .is_some_and(|control| control.controlled)
-        || world
-            .get::<shared::casting::CastState>(actor)
-            .is_some_and(|cast| !cast.cast_while_moving)
-        || world.get::<crate::auras::Confused>(actor).is_some()
-        || world.get::<crate::auras::Feared>(actor).is_some()
-    {
-        return Ok(false);
-    }
     let from = *world
         .get::<Position>(actor)
         .ok_or("Retreat actor lacks position")?;
@@ -33,49 +14,32 @@ pub fn prepare_havoc_retreat(
         .get::<Position>(target)
         .ok_or("Retreat target lacks position")?;
     let offset = Vec3::new(from.x - to.x, 0.0, from.z - to.z);
-    let distance = offset.length();
-    if distance <= f32::EPSILON {
+    if offset.length_squared() <= f32::EPSILON {
         return Err("Retreat actor and target share a position".into());
     }
-    let range = crate::scripted_ai::model_reach::melee_range(world, actor, target)
-        .ok_or("Retreat setup requires native melee reach")?;
-    let desired = (range - 0.02).max(0.0);
-    let difference = desired - distance;
-    if difference.abs() > 0.001 {
-        world.entity_mut(actor).insert(AplMovementIntent);
-        let speed = world
-            .get::<crate::creature_ai::SpawnPoint>(actor)
-            .map_or(1.0, |spawn| spawn.speed_run)
-            * crate::creature_ai::BASE_RUN_SPEED
-            * world
-                .get::<crate::auras::AuraStatMods>(actor)
-                .map_or(1.0, |mods| mods.movement_speed);
-        if speed <= 0.0 {
-            return Ok(false);
-        }
-        let stride = speed * world.resource::<Time>().delta_secs();
-        let step = difference.clamp(-stride, stride);
-        let here = Vec3::new(from.x, from.y, from.z);
-        let point = here + offset * (step / distance);
-        let edge = here + offset * (difference / distance);
-        crate::creature_ai::publish_planned_destination(world, actor, Some(edge));
-        crate::creature_ai::move_follower(
-            world,
-            actor,
-            Position {
-                x: point.x,
-                y: point.y,
-                z: point.z,
-            },
-            speed,
-        );
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(198793)
+        .ok_or("native Vengeful Retreat absent")?
+        .clone();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 144)
+        .ok_or("native Vengeful Retreat knockback absent")?;
+    let horizontal = effect.misc_values[0] as f32 * 0.1;
+    let vertical =
+        crate::spell_cast::effects::modded_base_points(world, actor, &spell, effect) * 0.1;
+    let velocity = -offset.normalize() * horizontal + Vec3::Y * vertical;
+    let Some(landing) = crate::knockback::projected_landing(world, actor, velocity) else {
+        return Ok(false);
+    };
+    if super::positioning::route_enters_unpulled_sight(world, actor, target, &[landing, landing])? {
         return Ok(false);
     }
-    world.entity_mut(actor).remove::<AplMovementIntent>();
-    crate::creature_ai::publish_planned_destination(world, actor, None);
-    let mut rotation = world
+    world
         .get_mut::<Rotation>(actor)
-        .ok_or("Retreat actor lacks rotation")?;
-    rotation.y = offset.x.atan2(offset.z);
+        .ok_or("Retreat actor lacks rotation")?
+        .y = offset.x.atan2(offset.z);
     Ok(true)
 }
