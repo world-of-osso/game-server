@@ -48,8 +48,8 @@ const COPIES: &[SecondaryCopy] = &[SecondaryCopy {
 }];
 
 fn declared_reach(
-    _world: &World,
-    _caster: Entity,
+    world: &World,
+    caster: Entity,
     spell: &combat::spell_info::SpellInfo,
 ) -> combat::spell_cast::script_registry::ScriptReach {
     let caster_radius = COPIES
@@ -57,13 +57,12 @@ fn declared_reach(
         .filter(|policy| policy.aura == spell.id || policy.spells.contains(&spell.id))
         .map(|policy| policy.radius)
         .fold(0.0, f32::max);
-    combat::spell_cast::script_registry::ScriptReach::Area(
-        combat::spell_cast::script_registry::DeclaredReach {
-            caster_radius,
-            target_radius: 0.0,
-            ..Default::default()
-        },
-    )
+    if caster_radius == 0.0 {
+        return Default::default();
+    }
+    let caster_radius = targets::area_combat_reach_bound(world, caster, caster_radius)
+        .expect("secondary-copy reach requires caster map and combat reach");
+    combat::spell_cast::script_registry::ScriptReach::caster(caster_radius)
 }
 
 struct CopySource {
@@ -164,14 +163,13 @@ fn read_secondary_targets(
     policy: &SecondaryCopy,
     cap: usize,
 ) -> Vec<Entity> {
-    let center = targets::position(world, source.caster).expect("secondary-copy caster position");
-    targets::area_units(
+    // TC spell_rogue.cpp:285 and Unit.cpp:10996 select nearby targets using
+    // the nominal melee range and both units' combat reaches.
+    targets::area_units_with_combat_reach(
         world,
         source.caster,
-        center,
         policy.radius,
         targets::Relation::Enemy,
-        0,
     )
     .into_iter()
     .filter(|target| *target != source.primary)

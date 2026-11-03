@@ -729,7 +729,9 @@ fn scan_source(path: &str, source: &str, sites: &mut Sites) {
         if let Some(name) = function_name(line) {
             function = name;
         }
-        let areas = line.matches("area_units(").count() + line.matches("chain_targets(").count();
+        let areas = line.matches("area_units(").count()
+            + line.matches("area_units_with_combat_reach(").count()
+            + line.matches("chain_targets(").count();
         if areas > 0 {
             *sites
                 .entry((path.into(), function.into(), "area".into()))
@@ -858,12 +860,12 @@ fn scanner_detects_new_sites_in_existing_functions() {
     let mut sites = Sites::new();
     scan_source(
         "sample.rs",
-        "fn cast() {\n targets::area_units(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n world.query::<(Entity, &SummonedCreature)>();\n system_states::entities_with::<With<ActiveAuras>>(world);\n}",
+        "fn cast() {\n targets::area_units(world);\n targets::area_units_with_combat_reach(world);\n targets::chain_targets(world);\n world.query::<(Entity, &Health)>();\n world.query::<(Entity, &SummonedCreature)>();\n system_states::entities_with::<With<ActiveAuras>>(world);\n}",
         &mut sites,
     );
     assert_eq!(
         sites.get(&("sample.rs".into(), "cast".into(), "area".into())),
-        Some(&2)
+        Some(&3)
     );
     assert_eq!(
         sites.get(&("sample.rs".into(), "cast".into(), "query".into())),

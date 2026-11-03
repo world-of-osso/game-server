@@ -2061,6 +2061,66 @@ pub fn effect_radius(effect: &SpellEffect) -> f32 {
 
 /// Living units within `radius` of `center` matching `relation`, nearest
 /// first, capped by `max_targets` (0 = no cap).
+/// Conservative center-distance bound for units in the broad area search.
+pub fn area_combat_reach_bound(world: &World, caster: Entity, radius: f32) -> Option<f32> {
+    let map = *world.get::<crate::maps::InMap>(caster)?;
+    let center = position(world, caster)?;
+    let caster_reach = crate::scripted_ai::model_reach::combat_reach(world, caster)?;
+    let models = world.get_resource::<crate::scripted_ai::model_reach::ModelReaches>()?;
+    let scale = world.get_resource::<crate::maps::units::MaximumUnitScale>()?;
+    let broad_radius = radius + caster_reach + models.maximum_unscaled_reach() * scale.0;
+    let units = world.get_resource::<crate::maps::units::MapUnits>()?;
+    let candidate_reach = units
+        .in_map(map)
+        .filter(|&unit| {
+            position(world, unit).is_some_and(|pos| pos.distance(center) <= broad_radius)
+        })
+        .filter_map(|unit| crate::scripted_ai::model_reach::combat_reach(world, unit))
+        .fold(0.0, f32::max);
+    Some(radius + caster_reach + candidate_reach)
+}
+
+/// Find units within a 3D edge-to-edge range of the caster.
+/// TC Object.cpp:408–425 adds both combat reaches to the nominal distance.
+pub fn area_units_with_combat_reach(
+    world: &mut World,
+    caster: Entity,
+    radius: f32,
+    relation: Relation,
+) -> Vec<Entity> {
+    let Some(center) = position(world, caster) else {
+        return Vec::new();
+    };
+    let Some(caster_reach) = crate::scripted_ai::model_reach::combat_reach(world, caster) else {
+        warn!(?caster, "area source lacks combat reach");
+        return Vec::new();
+    };
+    let Some(models) = world.get_resource::<crate::scripted_ai::model_reach::ModelReaches>() else {
+        warn!(?caster, "area search lacks model reach data");
+        return Vec::new();
+    };
+    let Some(scale) = world.get_resource::<crate::maps::units::MaximumUnitScale>() else {
+        warn!(?caster, "area search lacks scale bound");
+        return Vec::new();
+    };
+    let broad_radius = radius + caster_reach + models.maximum_unscaled_reach() * scale.0;
+    area_units(world, caster, center, broad_radius, relation, 0)
+        .into_iter()
+        .filter(|&candidate| {
+            let Some(candidate_reach) =
+                crate::scripted_ai::model_reach::combat_reach(world, candidate)
+            else {
+                warn!(?candidate, "area candidate lacks combat reach");
+                return false;
+            };
+            let Some(candidate_position) = position(world, candidate) else {
+                return false;
+            };
+            candidate_position.distance(center) < radius + caster_reach + candidate_reach
+        })
+        .collect()
+}
+
 pub fn area_units(
     world: &mut World,
     caster: Entity,

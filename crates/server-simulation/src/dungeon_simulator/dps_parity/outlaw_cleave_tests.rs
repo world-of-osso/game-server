@@ -1,6 +1,87 @@
 use super::*;
-use shared::components::PowerType;
+use shared::components::{Position, PowerType, UnitScale};
 use shared::protocol::CombatLogKind;
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
+fn outlaw_blade_flurry_copies_to_targets_within_combat_reach() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(260, 3).unwrap();
+    engage(&mut run);
+    literal_rotation::execution::execute(
+        run.app.world_mut(),
+        run.actor,
+        literal_rotation::execution::Execution::Spell(13877, run.actor, Some(run.targets[0])),
+    )
+    .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+
+    run.app
+        .world_mut()
+        .entity_mut(run.targets[1])
+        .insert(UnitScale(4.0));
+    let actor_reach = crate::scripted_ai::model_reach::combat_reach(run.app.world(), run.actor)
+        .expect("actor combat reach");
+    let target_reach = |target| {
+        crate::scripted_ai::model_reach::combat_reach(run.app.world(), target)
+            .expect("target combat reach")
+    };
+    let inside = 5.0 + actor_reach + target_reach(run.targets[1]) - 0.25;
+    let outside = 5.0 + actor_reach + target_reach(run.targets[2]) + 0.25;
+    for (entity, x) in [
+        (run.actor, 0.0),
+        (run.targets[0], 1.0),
+        (run.targets[1], inside),
+        (run.targets[2], outside),
+    ] {
+        run.app
+            .world_mut()
+            .entity_mut(entity)
+            .insert(Position { x, y: 0.0, z: 0.0 });
+    }
+    let (declared_radius, _) = crate::followers::spell_unintended_reach(
+        run.app.world(),
+        run.actor,
+        193315,
+        run.targets[0],
+    )
+    .expect("Sinister Strike reach declaration");
+    assert!(
+        declared_radius >= inside,
+        "declaration {declared_radius} must cover the large-reach recipient at {inside}"
+    );
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        193315,
+        Some(run.targets[0]),
+        1,
+    );
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let copied = |target: Entity| {
+        events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(22482)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+    };
+    assert!(copied(run.targets[1]), "inside target must receive a copy");
+    assert!(
+        !copied(run.targets[2]),
+        "outside target must not receive a copy"
+    );
+}
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
