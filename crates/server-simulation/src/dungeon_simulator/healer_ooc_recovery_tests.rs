@@ -9,10 +9,15 @@ fn run_in_snapshot_subprocess(test: &str) -> bool {
     }
     let dir = tempfile::tempdir().unwrap();
     let snapshot = dir.path().join("world.db");
-    let source = crate::test_data::world_db_path();
+    let source = crate::test_data::world_db_path().canonicalize().unwrap();
     let db =
-        rusqlite::Connection::open_with_flags(source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        rusqlite::Connection::open_with_flags(&source, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
+    std::fs::copy(
+        source.with_file_name("game_object_locks.json"),
+        dir.path().join("game_object_locks.json"),
+    )
+    .unwrap();
     db.execute("VACUUM INTO ?1", [snapshot.to_str().unwrap()])
         .unwrap();
     let test = test.split_once("::").unwrap().1;
