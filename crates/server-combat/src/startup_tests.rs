@@ -35,6 +35,8 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             family INTEGER NOT NULL DEFAULT 0, type_flags INTEGER NOT NULL DEFAULT 0,
             BaseAttackTime INTEGER NOT NULL
         );
+        CREATE TABLE faction_template (ID INTEGER PRIMARY KEY);
+        INSERT INTO faction_template VALUES (35);
         CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER);
         CREATE TABLE difficulty (ID INTEGER, FallbackDifficultyID INTEGER);
         CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
