@@ -131,4 +131,16 @@ fn cast_protection_child(world: &mut World, ctx: &EffectCtx, target: Entity) {
             false,
         );
     }
+    // SimC76f8118 sc_paladin.cpp1887–1889: Resounding Strike triggers
+    // Hammer and Anvil on each target of Divine Toll.
+    if world
+        .get::<combat::class_progression::TraitLoadout>(ctx.caster)
+        .is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 1271553)
+        })
+    {
+        super::paladin_armaments::cast_hammer_and_anvil(world, ctx.caster, target, ctx.depth + 1);
+    }
 }
