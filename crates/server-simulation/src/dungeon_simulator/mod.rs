@@ -9,6 +9,7 @@ mod discipline_priest_replay_tests;
 mod discipline_shield_priority_tests;
 mod discipline_ultimate_penitence_replay_tests;
 pub(crate) mod dps_parity;
+mod fact_error_report;
 mod flight;
 mod friendly_cone_tests;
 mod graph;
