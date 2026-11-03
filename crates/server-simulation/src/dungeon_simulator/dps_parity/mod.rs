@@ -490,6 +490,87 @@ fn measurement_driver(
 }
 
 #[test]
+#[ignore = "requires the Demonology MID2 profile and native world data"]
+fn production_warlock_waits_for_shards_then_summons_pet() {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(266, 1).unwrap();
+    let current =
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::SoulShards)
+            .unwrap()
+            .0;
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        run.actor,
+        PowerType::SoulShards,
+        -current,
+    )
+    .unwrap();
+    assert_eq!(
+        crate::spell_cast::powers::power_value(run.app.world(), run.actor, PowerType::SoulShards)
+            .unwrap()
+            .0,
+        0.0
+    );
+    let world = run.app.world_mut();
+    world.insert_resource(server_follower_apl::registry::FixedLengthFight {
+        duration: FIGHT_DURATION.as_secs_f64(),
+    });
+    let rotation = server_follower_apl::registry::load(world, run.actor, 266).unwrap();
+    let mut apl = server_follower_apl::FollowerApl::new_for_world(world, rotation);
+    for _ in 0..preparation::MAX_SETUP_TICKS {
+        apl.prepare_tick(run.app.world_mut(), run.actor, &run.targets)
+            .unwrap();
+        if !apl.in_precombat() {
+            break;
+        }
+        run.app.update();
+    }
+    assert!(!apl.in_precombat(), "precombat did not complete");
+    assert!(
+        crate::hunter_pet::summoned_pet(run.app.world(), run.actor).is_some(),
+        "native precombat must summon its Felguard after shards regenerate"
+    );
+}
+
+#[test]
+#[ignore = "requires the Arcane MID2 profile and native world data"]
+fn permanent_unselected_precombat_action_is_skipped() {
+    use server_follower_apl::literal_rotation::execution::{NativeAction, Prepared};
+    let mut run = prepare_literal(62, 1).unwrap();
+    let mut bindings = crate::simc_apl_native::Bindings::default();
+    let equipment =
+        literal_rotation::equipment::Equipment::load(run.app.world_mut(), run.actor, &mut bindings)
+            .unwrap();
+    let mut driver = literal_rotation::Driver::new(
+        server::simc_apl::Program::parse(&[
+            ("precombat", "unselected"),
+            ("precombat", "snapshot_stats"),
+        ])
+        .unwrap(),
+    );
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        run.actor,
+        &run.targets,
+        &equipment,
+        [NativeAction {
+            name: "unselected",
+            spell: 30451,
+            talent: Some(u32::MAX),
+            self_target: false,
+        }],
+        true,
+    )
+    .unwrap();
+    let facts = BTreeMap::<String, f64>::new();
+    let (action, _) = driver
+        .select("precombat", &facts, &prepared, &equipment)
+        .unwrap()
+        .unwrap();
+    assert_eq!(action.name, "snapshot_stats");
+}
+
+#[test]
 #[ignore = "requires the Arcane MID2 profile and native world data"]
 fn production_follower_precasts_only_the_admitted_pull() {
     let mut run = prepare_literal(62, 1).unwrap();

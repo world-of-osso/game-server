@@ -192,7 +192,7 @@ impl FollowerApl {
             return Ok(());
         }
         match self.rotation.poll_precombat(world, actor, targets) {
-            Err(error) if error == literal_rotation::PRECOMBAT_TARGET_PENDING => {
+            Err(error) if error == literal_rotation::PRECOMBAT_READINESS_PENDING => {
                 if let Phase::Precombat { ticks } = &mut self.phase {
                     *ticks = 0;
                 }
