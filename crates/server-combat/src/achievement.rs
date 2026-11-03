@@ -764,6 +764,7 @@ pub(crate) fn record_gain_aura(world: &mut World, target: Entity, spell: u32) {
 pub(crate) fn record_player_game_event(world: &mut World, source: Entity, event: u32) {
     if event != 0 && world.get::<Player>(source).is_some() {
         record_criteria_event(world, source, CriteriaEvent::TriggerGameEvent(event));
+        crate::mythic_plus::record_game_event(world, source, event);
     }
 }
 

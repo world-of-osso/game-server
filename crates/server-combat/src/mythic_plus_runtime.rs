@@ -24,6 +24,7 @@ pub struct Run {
     combat_res_next_ms: u64,
     killed: HashSet<u64>,
     scenario_events: HashSet<u64>,
+    next_scenario_receipt: u64,
 }
 impl Run {
     pub fn new(id: u64, instance: u32, key: KeystoneInfo, definition: ChallengeDefinition) -> Self {
@@ -54,6 +55,7 @@ impl Run {
             combat_res_next_ms: 0,
             killed: HashSet::new(),
             scenario_events: HashSet::new(),
+            next_scenario_receipt: 0,
         }
     }
     pub fn start(&mut self, now: u64) -> Result<(), &'static str> {
@@ -116,6 +118,14 @@ impl Run {
         if let Some(weight) = self.definition.creature_weights.get(&entry) {
             self.snapshot.forces = self.snapshot.forces.saturating_add(*weight);
         }
+    }
+    pub fn emit_scenario_event(&mut self, event: u32) {
+        let receipt = self.next_scenario_receipt;
+        self.next_scenario_receipt = self
+            .next_scenario_receipt
+            .checked_add(1)
+            .expect("scenario event receipts exhausted");
+        self.scenario_event(receipt, event);
     }
     pub fn scenario_event(&mut self, receipt: u64, event: u32) {
         if self.snapshot.phase != ChallengePhase::Running || !self.scenario_events.insert(receipt) {

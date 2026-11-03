@@ -714,6 +714,20 @@ pub(crate) fn record_kill(world: &mut World, npc: Entity) {
     drop(state);
     send_map(world, map);
 }
+/// TC a352b1fa GameEventSender.cpp:43-66 credits player-triggered scenario events.
+pub(crate) fn record_game_event(world: &mut World, player: Entity, event: u32) {
+    let Some(map) = world.get::<InMap>(player).copied() else {
+        return;
+    };
+    let Some(mut challenges) = world.get_resource_mut::<Challenges>() else {
+        return;
+    };
+    if let Some(active) = challenges.runs.get_mut(&map) {
+        active.run.emit_scenario_event(event);
+    }
+    drop(challenges);
+    send_map(world, map);
+}
 pub(crate) fn record_boss(world: &mut World, map: InMap, encounter: u32) {
     if let Some(mut state) = world.get_resource_mut::<Challenges>() {
         if let Some(active) = state.runs.get_mut(&map) {
@@ -833,6 +847,76 @@ pub(crate) mod fixture {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mythic_scenario_send_event_spell_credits_running_copy() {
+        // DB2 spell 123744 sends event 32548; scenario_step82_tests exercises it.
+        let mut h = crate::spell_cast::test_harness::harness_with_plugins(
+            vec![],
+            &[123744],
+            1,
+            false,
+            |_| {},
+        )
+        .unwrap();
+        let map = InMap {
+            map_id: 1031,
+            instance_id: 7,
+        };
+        h.app.world_mut().entity_mut(h.caster).insert(map);
+        let definition = ChallengeDefinition {
+            challenge_id: 1,
+            map_id: map.map_id,
+            name: "event fixture".into(),
+            timers_ms: [100_000; 3],
+            forces_required: 100,
+            creature_weights: HashMap::new(),
+            scenario_event_weights: HashMap::from([(32548, 5)]),
+            bosses: vec![],
+        };
+        let key = KeystoneInfo {
+            item_guid: 1,
+            item_id: KEYSTONE_ITEM,
+            challenge_id: 1,
+            level: 2,
+            affixes: vec![],
+        };
+        let mut run = Run::new(1, map.instance_id, key, definition);
+        run.start(0).unwrap();
+        run.tick(10_000);
+        let mut challenges = Challenges::default();
+        challenges.runs.insert(
+            map,
+            Active {
+                owner: 1,
+                font: h.caster,
+                season_id: 120,
+                run,
+                settled: false,
+            },
+        );
+        h.app.insert_resource(challenges);
+        h.app
+            .world_mut()
+            .entity_mut(h.connection)
+            .remove::<InWorld>();
+        for _ in 0..2 {
+            assert!(crate::spell_cast::try_cast_triggered(
+                h.app.world_mut(),
+                h.caster,
+                123744,
+                None,
+                0,
+            ));
+        }
+        assert_eq!(
+            h.app.world().resource::<Challenges>().runs[&map]
+                .run
+                .snapshot
+                .forces,
+            10
+        );
+    }
 
     #[test]
     fn follower_lethal_damage_counts_once_in_running_challenge() {
