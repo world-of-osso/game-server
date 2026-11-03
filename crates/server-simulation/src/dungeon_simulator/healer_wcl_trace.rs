@@ -1,11 +1,12 @@
-//! WCL damage receipts replayed through native recipient combat handling.
-use super::healer_intake::{Hit, HitKind};
+//! WCL post-mitigation damage receipts, normalized to native recipient HP.
 use bevy::prelude::{Entity, World};
 use serde::Deserialize;
+use serde_json::{Value, json};
+use shared::components::Health;
 use std::path::Path;
 
 pub(super) enum Delivery {
-    Applied,
+    Applied(Value),
     ZeroOutcome,
     TargetDead,
 }
@@ -13,6 +14,7 @@ pub(super) enum Delivery {
 #[derive(Deserialize)]
 pub(super) struct Trace {
     pub provenance: String,
+    pub excluded_self: usize,
     pub hits: Vec<RecordedHit>,
 }
 
@@ -27,9 +29,10 @@ pub(super) struct RecordedHit {
     defense: Option<u32>,
     hit_type: u8,
     periodic: bool,
-    unmitigated: Option<f32>,
     amount: u64,
     absorbed: u64,
+    max_hp: u64,
+    health_after: Option<u64>,
 }
 
 impl Trace {
@@ -52,17 +55,17 @@ impl Trace {
 
 impl RecordedHit {
     fn validate(&self) -> Result<(), String> {
-        if self.slot >= 5 || self.school == 0 || self.spell_id == 0 {
+        if self.slot >= 5
+            || self.school == 0
+            || self.spell_id == 0
+            || self.max_hp == 0
+            || self.source_actor == self.target_actor
+        {
             return Err("WCL_INTAKE_INVALID_HIT".into());
         }
-        match self.unmitigated {
-            Some(raw) if raw.is_finite() && raw >= 0.0 && self.hit_type == 1 => Ok(()),
-            None if self.amount == 0
-                && self.absorbed == 0
-                && matches!(self.hit_type, 0 | 7 | 8) =>
-            {
-                Ok(())
-            }
+        match (self.hit_type, self.amount + self.absorbed) {
+            (1, amount) if amount > 0 => Ok(()),
+            (0 | 7 | 8, 0) => Ok(()),
             _ => Err("WCL_INTAKE_UNSUPPORTED_AMOUNT_OR_HIT_TYPE".into()),
         }
     }
@@ -72,32 +75,23 @@ impl RecordedHit {
         world: &mut World,
         enemy: Entity,
         slots: &[Entity; 5],
-        tick: u32,
     ) -> Result<Delivery, String> {
-        let Some(raw) = self.unmitigated else {
+        let pressure = self.amount + self.absorbed;
+        if pressure == 0 {
             return Ok(Delivery::ZeroOutcome);
-        };
+        }
         let target = slots[self.slot];
-        if !world
-            .get::<shared::components::Health>(target)
-            .is_some_and(|health| health.current > 0.0)
-        {
+        let health = world
+            .get::<Health>(target)
+            .ok_or("WCL_INTAKE_TARGET_HEALTH_MISSING")?;
+        if health.current <= 0.0 {
             return Ok(Delivery::TargetDead);
         }
-        let source = if self.source_actor == self.target_actor {
-            target
-        } else {
-            enemy
-        };
-        let kind = if self.spell_id == 1 {
-            // TC ObjectMgr normalizes the source creatures' zero BaseAttackTime to 2 s.
-            HitKind::Melee {
-                hand: 0,
-                outcome: "Hit".into(),
-                level_difference: 0,
-                critical_multiplier: 1.0,
-                weapon_speed: 2.0,
-            }
+        let before = health.current;
+        let native_max = health.max;
+        let amount = pressure as f32 / self.max_hp as f32 * native_max;
+        let spell_id = if self.spell_id == 1 {
+            None
         } else {
             let spell = world
                 .resource::<crate::spell_info::SpellStore>()
@@ -111,33 +105,27 @@ impl RecordedHit {
                     self.spell_id
                 ));
             }
-            HitKind::Spell {
-                spell_id: self.spell_id,
-                depth: 0,
-                bonus_source_guid: None,
-                effect_index: None,
-                periodic: self.periodic,
-                crit: false,
-                resolved_source: true,
-                blocked: false,
-            }
+            Some(self.spell_id)
         };
-        let hit = Hit {
-            tick,
-            source_guid: 0,
-            pack: 0,
-            target_slot: self.slot,
-            school: self.school,
-            raw,
-            level_scaling_factor: 1.0,
-            kind,
-        };
-        match hit.kind {
-            HitKind::Melee { .. } => crate::combat::replay_healer_hit(world, source, target, &hit)?,
-            HitKind::Spell { .. } => {
-                crate::spell_cast::effects::replay_healer_hit(world, source, target, &hit)?
-            }
-        }
-        Ok(Delivery::Applied)
+        crate::combat::replay_post_mitigation_hit(
+            world,
+            enemy,
+            target,
+            spell_id,
+            self.school,
+            self.periodic,
+            amount,
+        )?;
+        let after = world
+            .get::<Health>(target)
+            .ok_or("WCL_INTAKE_TARGET_HEALTH_MISSING")?
+            .current;
+        Ok(Delivery::Applied(
+            json!({"time_ms":self.time_ms,"slot":self.slot,"spell_id":self.spell_id,
+            "wcl_hp_pct":self.health_after.map(|hp| 100.0 * hp as f64 / self.max_hp as f64),
+            "native_hp_pct":100.0 * f64::from(after / native_max),
+            "wcl_loss_pct":100.0 * self.amount as f64 / self.max_hp as f64,
+            "native_loss_pct":100.0 * f64::from((before - after) / native_max)}),
+        ))
     }
 }

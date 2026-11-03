@@ -3070,6 +3070,93 @@ pub(crate) fn deal_health_damage(
     crate::spell_cast::log_event(world, death_log_event(attacker, victim));
 }
 
+/// Replay a post-mitigation hostile hit in recipient HP units. Native absorbs
+/// and proc dispatch still run; armor and damage-taken modifiers do not.
+#[cfg(any(test, feature = "test-support"))]
+pub fn replay_post_mitigation_hit(
+    world: &mut World,
+    attacker: Entity,
+    victim: Entity,
+    spell_id: Option<u32>,
+    school: u32,
+    periodic: bool,
+    amount: f32,
+) -> Result<(), String> {
+    if !amount.is_finite() || amount < 0.0 {
+        return Err("WCL_INTAKE_INVALID_NORMALIZED_DAMAGE".into());
+    }
+    let Some(health) = world.get::<Health>(victim) else {
+        return Err("WCL_INTAKE_TARGET_HEALTH_MISSING".into());
+    };
+    let before = health.current;
+    if before <= 0.0 {
+        return Ok(());
+    }
+    let (actor_mask, target_mask) = if periodic {
+        (
+            procs::PROC_DEAL_HARMFUL_PERIODIC,
+            procs::PROC_TAKE_HARMFUL_PERIODIC,
+        )
+    } else if let Some(spell_id) = spell_id {
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .ok_or_else(|| format!("WCL_INTAKE_MISSING_SPELL:{spell_id}"))?;
+        procs::spell_hit_masks(spell, true)
+    } else {
+        (
+            procs::PROC_DEAL_MELEE_SWING | procs::PROC_MAIN_HAND_WEAPON_SWING,
+            procs::PROC_TAKE_MELEE_SWING,
+        )
+    };
+    let attacker_scaling = UnitScaling::of(world, attacker);
+    let victim_scaling = UnitScaling::of(world, victim);
+    let health_multiplier = victim_scaling.health_multiplier(&attacker_scaling);
+    if !health_multiplier.is_finite() || health_multiplier <= 0.0 {
+        return Err("WCL_INTAKE_INVALID_HEALTH_MULTIPLIER".into());
+    }
+    let damage = amount * health_multiplier;
+    let (damage, source_absorbed) =
+        crate::auras::source_absorb::absorb(world, victim, attacker, damage);
+    let (damage, absorbed) =
+        crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
+    let absorbed = absorbed + source_absorbed;
+    deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
+    let after = world
+        .get::<Health>(victim)
+        .map_or(0.0, |health| health.current);
+    let loss = (before - after).max(0.0);
+    if loss > 0.0 || absorbed > 0.0 {
+        procs::push_event(
+            world,
+            AuraEvent {
+                actor: attacker,
+                target: Some(victim),
+                action_target: Some(victim),
+                actor_mask: [actor_mask, 0],
+                target_mask: [
+                    target_mask
+                        | if loss > 0.0 {
+                            procs::PROC_TAKE_ANY_DAMAGE
+                        } else {
+                            0
+                        },
+                    0,
+                ],
+                spell_id,
+                can_proc: true,
+                cast_used_proc_modifier: false,
+                periodic,
+                damage: loss,
+                heal: None,
+                hit_mask: procs::landed_hit_mask(false, 0.0, absorbed, loss),
+                reflected: false,
+            },
+        );
+    }
+    Ok(())
+}
+
 /// Roll the native recipient hit table for a SimC tank-dummy melee action.
 #[cfg(any(test, feature = "test-support"))]
 pub fn roll_simc_dummy_outcome(

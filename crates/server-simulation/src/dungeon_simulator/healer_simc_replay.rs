@@ -558,6 +558,7 @@ fn replay_profile(
     let mut wcl_delivered = 0;
     let mut wcl_zero_outcomes = 0;
     let mut wcl_dead_targets = 0;
+    let mut wcl_health_samples = Vec::new();
     let mut pain_target_ticks = 0_u64;
     let mut atonement_target_ticks = 0_u64;
     let mut pain_periodic_hits = 0_u64;
@@ -635,9 +636,10 @@ fn replay_profile(
                 .get(next_wcl)
                 .filter(|hit| hit.time_ms < elapsed_ms + 50)
             {
-                match hit.deliver(app.world_mut(), source, &slots, tick)? {
-                    super::healer_wcl_trace::Delivery::Applied => {
+                match hit.deliver(app.world_mut(), source, &slots)? {
+                    super::healer_wcl_trace::Delivery::Applied(sample) => {
                         wcl_delivered += 1;
+                        wcl_health_samples.push(sample);
                         recorder.sample_minima(app.world());
                     }
                     super::healer_wcl_trace::Delivery::ZeroOutcome => wcl_zero_outcomes += 1,
@@ -773,7 +775,8 @@ fn replay_profile(
         report["timeline"] = json!("wcl_damage_taken");
         report["wcl_intake"] = json!({"provenance":wcl.provenance,"records":next_wcl,
             "delivered":wcl_delivered,"zero_damage_outcomes_not_replayed":wcl_zero_outcomes,
-            "hits_on_dead_targets_not_replayed":wcl_dead_targets});
+            "hits_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
+            "health_samples":wcl_health_samples});
     }
     if let Some(profile) = profile {
         report["enemy_profile"] =
