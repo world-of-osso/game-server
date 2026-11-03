@@ -1504,13 +1504,18 @@ fn follower_dreadstalkers_keep_meleeing() {
         let swings = events
             .iter()
             .filter(|event| {
-                event.source.is_some_and(|source| dogs.iter().any(|dog| dog.to_bits() == source))
+                event
+                    .source
+                    .is_some_and(|source| dogs.iter().any(|dog| dog.to_bits() == source))
                     && event.target == Some(victim.to_bits())
                     && event.spell_id.is_none()
                     && event.kind == CombatLogKind::Damage
             })
             .count();
-        assert!(swings > 0, "follower Dreadstalkers must melee target {victim:?}");
+        assert!(
+            swings > 0,
+            "follower Dreadstalkers must melee target {victim:?}"
+        );
     }
 }
 

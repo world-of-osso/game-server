@@ -23,13 +23,22 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
 struct EarnedBites(u32);
 
 fn start_dreadstalker_attack(world: &mut World, pet: Entity) {
-    if world.get::<Npc>(pet).is_none_or(|npc| npc.template_id != DREADSTALKER) {
+    if world
+        .get::<Npc>(pet)
+        .is_none_or(|npc| npc.template_id != DREADSTALKER)
+    {
         return;
     }
-    let Some(owner) = world.get::<SummonedCreature>(pet).map(|summon| summon.owner) else {
+    let Some(owner) = world
+        .get::<SummonedCreature>(pet)
+        .map(|summon| summon.owner)
+    else {
         return;
     };
-    let Some(target) = world.get::<combat::networking::CombatTarget>(owner).and_then(|target| target.0) else {
+    let Some(target) = world
+        .get::<combat::networking::CombatTarget>(owner)
+        .and_then(|target| target.0)
+    else {
         return;
     };
     // SimC76f8118 pets.cpp1151–1213: Dreadstalkers approach and melee their target.
