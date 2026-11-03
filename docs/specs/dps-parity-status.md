@@ -160,6 +160,14 @@ SimC `76f8118` references use 300 seconds, fixed time, 1,000 iterations and seed
 | Devastation Evoker (1467) | 116,836 | 113,728 | +2.73% | `6d6cff57dd` / `eabc2a7a15` | 184,309 | 182,445 | +1.02% | `6d6cff57dd` / `eabc2a7a15` | in band |
 | Devourer Demon Hunter (1480) | 206,035 | 214,110 | -3.77% | `670c613ad8` / `8a7fe346ac` | 329,934 | 341,884 | -3.50% | `670c613ad8` / `8a7fe346ac` | in band |
 
+## Protection Warrior tank intake — Wrecked reference gap, 2026-11-03
+
+The 300-second player-actor tank-dummy replay with external healing and seeds 70448, 1–9 measured 9,352 ± 286 DTPS native (`d15bf3a59f`) versus 10,622 SimC (`76f8118`, ten measured iterations): native is 11.96% lower. The runs use the frozen campaign world DB `99887e4dfb392b7f2dd93812e29fa4198c9a24ffaa8233445968781bf0c6d9e6`; ± is a 95% Student-t interval. Receipts are in `game-engine/data/diagnostics/tank-ranking-2026-11-03/`.
+
+In seed 70448, both sides receive 145 bleed ticks with a 25,000 base each. Baseline native pre-absorb bleed was 2,398,939; the SimC trace totals 2,708,448. Native's Wrecked 447513 applies −2% damage per stack to its caster, reaching ten stacks for 51 ticks. Reconstructing the captured native factors with only this term removed adds 161,034 pre-absorb bleed damage; this is not an after-absorb DTPS result. The DB2 70448 Spell.csv tooltip explicitly describes affected enemies dealing less damage to the caster; SimC `sc_warrior.cpp:1193–1197` parses only Wrecked's outgoing damage effect and does not implement its incoming damage reduction. Do not remove native Wrecked DR to match that reference.
+
+A separate diagnostic replay zeroed only the Wrecked incoming aura effect; ten native seeds produced 9,983 ± 310 DTPS, 6.01% below the same SimC reference. The mean paired native difference was +632 ± 38 DTPS, explaining about half of the original 1,270-DTPS gap; the remaining difference is unresolved. This counterfactual was built on `ddc53717b6`, which advanced beyond the baseline; the intervening changes were not isolated in this experiment. It had zero deaths and fact errors. Diagnostic change and per-seed receipts are `73.counterfactual.txt` and `73.no-wrecked.<seed>.json`; no diagnostic code was retained.
+
 ## Tank outgoing DPS — composition replay, 2026-11-03
 
 These are the latest available measurements, not one common build. Each native result uses 300-second replays with seeds 70448 and 1–9; ± is a 95% Student's t interval for the native mean. References use the pinned SimC `76f8118` composition inputs. The status describes the mean relative to ±5%, not proof that the whole interval is in band.
