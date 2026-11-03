@@ -411,6 +411,7 @@ register_modules! {
     protection_fueled: (732, "modules/protection_fueled.rs"),
     protection_fray: (1004, "modules/protection_fray.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
+    protection_devastating_focus: (9807, "modules/protection_devastating_focus.rs"),
     protection_tough_as_nails: (9807, "modules/protection_tough_as_nails.rs"),
     protection_revenge: (1003, "modules/protection_revenge.rs"),
     protection_thunderlord: (1005, "modules/protection_thunderlord.rs"),
