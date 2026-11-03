@@ -42,6 +42,16 @@ Level-90 healers wear their own tracked top-character profile gear, not identica
 
 - [Guardian Druid (104)](healer-tank-replay/104.md)
 
+## Composition tank status (2026-11-02)
+
+The 300-second Guardian replay uses external healing and the composition-buffed dummy trace. The native results use seeds `70448, 1–9`; the corrected SimC reference uses seed `70448` and ten measured iterations. These are independent samples. The native intervals below are 95% t intervals and do not include reference uncertainty.
+
+| Tank | Native outgoing DPS | Corrected SimC outgoing DPS | Native taken/s | Corrected SimC dummy DPS | Outgoing / taken delta |
+|---|---:|---:|---:|---:|---:|
+| [Guardian 104](healer-tank-replay/104.md) | 100,461 ± 2,686 | 103,423 | 6,364 ± 971 | 7,007 | −2.86% / −9.18% |
+
+Native binary SHA-256: `608083ea8589e9fec6b03fff09dfb5ee8abc680a818ab8c643df984da30297fb`. SimC binary SHA-256: `583f112321241cb997504978e7365b60540680e69eb8badc25a03acb12036e26`. The comparison reference corrects Ursoc's Fury, Matted Fur, and Lunar Beam self-healing; its full modifier model remains inferred. Native reports and SimC command/proof: `/home/osso/.worktrees/guardian-104-batch/post-callback/`. SimC's player `dtps` field is total damage in this run, so its 2,102,153 mean is divided by 300 seconds and agrees with dummy DPS.
+
 ## GCD-ready timing comparison (2026-10-29)
 
 Healed native replays of each tank's 300-second dummy trace used seeds 70448–70457 on `2341210d2` (50 ms APL checks) and `be3867541` (additional exact GCD-ready checks). The latter still checks non-GCD state on the 50 ms cadence; it is not a fully event-driven APL. The SimC column uses ten independent measured iterations; Guardian uses the corrected single-application Matted Fur and Ursoc's Fury reference. Damage is the mean per fight; all native runs survived.

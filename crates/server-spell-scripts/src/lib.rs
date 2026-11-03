@@ -27,6 +27,8 @@ pub fn registry() -> SpellScriptRegistry {
 pub mod test_support;
 
 #[cfg(test)]
+mod aura_callback_tests;
+#[cfg(test)]
 mod den_cryo_surge_tests;
 #[cfg(test)]
 mod den_rotten_ground_tests;
