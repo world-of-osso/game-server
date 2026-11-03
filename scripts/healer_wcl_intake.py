@@ -127,6 +127,33 @@ def convert(events, healing, db, config):
             'observed_self': observed_self, 'hits': hits}
 
 
+def opening_auras(combatants, buffs, actors):
+    slots = {actor: slot for slot, actor in enumerate(actors)}
+    initial = {}
+    for combatant in combatants:
+        target = combatant['sourceID']
+        if target not in slots:
+            continue
+        for aura in combatant['auras']:
+            key = (aura['source'], target, aura['ability'])
+            initial[key] = {'source_actor': key[0], 'target_actor': target,
+                            'spell_id': key[2], 'stacks': aura['stacks'],
+                            'evidence': 'combatant_info'}
+    first = {}
+    for event in buffs:
+        if event['fight_ms'] < 0 or event.get('targetID') not in slots:
+            continue
+        key = (event['sourceID'], event['targetID'], event['abilityGameID'])
+        first.setdefault(key, event)
+    for key, event in first.items():
+        if key in initial or event['type'] not in ('removebuff', 'refreshbuff', 'removebuffstack'):
+            continue
+        stacks = event.get('stack', 0) + 1 if event['type'] == 'removebuffstack' else 1
+        initial[key] = {'source_actor': key[0], 'target_actor': key[1], 'spell_id': key[2],
+                        'stacks': stacks, 'evidence': 'first_' + event['type']}
+    return list(initial.values())
+
+
 def read_jsonl(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
@@ -138,10 +165,14 @@ def main():
     parser.add_argument('world_db', type=Path)
     parser.add_argument('config', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--combatants', type=Path, required=True)
+    parser.add_argument('--buffs', type=Path, required=True)
     args = parser.parse_args()
     with sqlite3.connect(f'file:{args.world_db}?mode=ro', uri=True) as db:
-        result = convert(read_jsonl(args.events), read_jsonl(args.healing), db,
-                         json.loads(args.config.read_text()))
+        config = json.loads(args.config.read_text())
+        result = convert(read_jsonl(args.events), read_jsonl(args.healing), db, config)
+        result['opening_auras'] = opening_auras(read_jsonl(args.combatants),
+                                               read_jsonl(args.buffs), config['actors'])
     args.output.write_text(json.dumps(result, separators=(',', ':')) + '\n')
 
 

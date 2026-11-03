@@ -650,6 +650,9 @@ fn replay_profile(
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
     let profile_start = app.world().resource::<bevy::prelude::Time>().elapsed();
+    if let Some(trace) = &wcl {
+        trace.apply_opening_auras(app.world_mut(), &slots)?;
+    }
     let party_max_hp: Vec<f32> = slots
         .iter()
         .map(|&unit| {

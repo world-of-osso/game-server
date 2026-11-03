@@ -1,6 +1,32 @@
 use super::healer_wcl_trace::RecordedHit;
 
 #[test]
+#[ignore = "requires native Merithra spell data"]
+fn opening_wcl_aura_resolves_reversion_to_merithra() {
+    use super::dps_parity::literal_rotation::execution::resolve_action;
+    use crate::spell_cast::test_harness::harness;
+    let mut h = harness(Vec::new(), &[1256579, 1256581, 366155], 13).unwrap();
+    let actor = h.caster;
+    let trace: super::healer_wcl_trace::Trace = serde_json::from_str(
+        r#"{
+        "provenance":"test", "excluded_self":0, "party_specs":[1468,1468,1468,1468,1468],
+        "actor_slots":{"2":0}, "bloodlust":[], "hits":[],
+        "opening_auras":[{"source_actor":2,"target_actor":2,"spell_id":1256579,
+        "stacks":1,"evidence":"first_removebuff"}]
+    }"#,
+    )
+    .unwrap();
+    trace
+        .apply_opening_auras(h.app.world_mut(), &[actor; 5])
+        .unwrap();
+    assert!(crate::auras::has_aura(h.app.world(), actor, 1256579));
+    assert_eq!(
+        resolve_action(h.app.world(), actor, 366155).unwrap(),
+        Some(1256581)
+    );
+}
+
+#[test]
 #[ignore = "requires native spell data"]
 fn wcl_falling_replays_as_physical_pressure_without_db2_spell_three() {
     use crate::spell_cast::test_harness::harness;
