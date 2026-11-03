@@ -762,6 +762,41 @@ pub fn leader_requires_target_approach(
     Ok(blocked)
 }
 
+/// Describe native hostile-action validation at the current target position.
+pub fn leader_target_validation_report(
+    world: &World,
+    owner: Entity,
+    target: Entity,
+) -> Result<String, String> {
+    use crate::spell_cast::{Sight, targets::Relation};
+    let actions = super::action_spells::available(world, owner)?;
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let failures: Vec<_> = actions
+        .into_iter()
+        .filter_map(|id| store.get(id))
+        .filter(|spell| {
+            crate::spell_info::positivity::negative_effects(store, spell) != 0
+                && crate::spell_cast::targets::explicit_requirement(spell.effects.iter())
+                    == Some(Relation::Enemy)
+        })
+        .map(|spell| {
+            format!(
+                "{}: {:?}",
+                spell.id,
+                crate::spell_cast::validate_target(world, owner, spell, Some(target), Sight::Start)
+            )
+        })
+        .collect();
+    Ok(format!(
+        "enemy_relation={} alive={} flags={:?} faction={:?} hostile_actions=[{}]",
+        crate::spell_cast::targets::relation_matches(world, owner, target, Relation::Enemy),
+        crate::spell_cast::targets::is_alive(world, target),
+        world.get::<shared::components::UnitFlags>(target),
+        world.get::<shared::components::UnitFactionTemplate>(target),
+        failures.join(", "),
+    ))
+}
+
 /// Read the unadmitted hostiles blocking one owner movement step.
 pub fn owner_step_sight_blockers(
     world: &mut World,

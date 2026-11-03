@@ -545,12 +545,21 @@ fn later_boss_blocking_trash_approach_is_promoted() {
     run.stalled();
     run.last_progress = run.now() - STALL_SECONDS - 1.0;
     assert!(run.stalled());
+    run.record_near_target_validation(target).unwrap();
     let errors = run
         .app
         .world()
         .get::<server::simc_apl::FactErrors>(owner)
         .unwrap()
         .snapshot();
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.fact == "movement.target_validation"
+                && error.target == Some(target.to_bits())
+                && error.detail.contains("hostile_actions=[")
+                && error.detail.contains("enemy_relation="))
+    );
     assert!(
         errors
             .iter()
@@ -5673,6 +5682,9 @@ impl Run {
             .ok_or("native pull opener is absent")?;
         let from = Vec3::new(position.x, position.y, position.z);
         if !attackable {
+            if from.distance(to) < 1.0 {
+                self.record_near_target_validation(target)?;
+            }
             if let Some(step) = server::test_support::objectives::next(
                 self.app.world_mut(),
                 self.party.owner,
@@ -5738,6 +5750,9 @@ impl Run {
                 target,
             )?;
         if from.distance(to) > range || target_obscured {
+            if target_obscured && from.distance(to) < 1.0 {
+                self.record_near_target_validation(target)?;
+            }
             let destination = if self.chain_groups.is_some() && fighting {
                 self.limit_chain_approach(approach)?
             } else {
@@ -5954,6 +5969,31 @@ impl Run {
 
     fn drive_owner_opening(&mut self, target: Entity) -> Result<(), String> {
         drive_owner_apl_opening(self.app.world_mut(), self.party.owner, target)
+    }
+
+    fn record_near_target_validation(&mut self, target: Entity) -> Result<(), String> {
+        let detail = server::followers::simulator::leader_target_validation_report(
+            self.app.world(),
+            self.party.owner,
+            target,
+        )?;
+        let owner = self.party.owner;
+        let world = self.app.world_mut();
+        if world.get::<server::simc_apl::FactErrors>(owner).is_none() {
+            world
+                .entity_mut(owner)
+                .insert(server::simc_apl::FactErrors::default());
+        }
+        world
+            .get::<server::simc_apl::FactErrors>(owner)
+            .unwrap()
+            .record(
+                "movement.target_validation",
+                owner.to_bits(),
+                Some(target.to_bits()),
+                &detail,
+            );
+        Ok(())
     }
 
     fn promote_blocking_route_step(
