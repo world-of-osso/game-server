@@ -69,9 +69,17 @@ fn declared_reach(
         .iter()
         .find(|effect| effect.index == 0)
         .expect("native Tentacle Slam area effect");
+    // DB2 1227621 target 16/134: target-centered area plus the caster-to-target
+    // line. TC 15e0ed76 Spell.cpp:1969–1988 clamps the line to the destination
+    // and uses half SpellTargetRestrictions.Width, rather than a 40-yard sphere.
+    let width = damage
+        .target_restrictions
+        .as_ref()
+        .expect("native Tentacle Slam target restrictions")
+        .width;
     ScriptReach::Area(DeclaredReach {
-        caster_radius: spell_cast::targets::radius(effect, 1),
         target_radius: spell_cast::targets::radius(effect, 0),
+        beam_half_width: width / 2.0,
         ..Default::default()
     })
 }
