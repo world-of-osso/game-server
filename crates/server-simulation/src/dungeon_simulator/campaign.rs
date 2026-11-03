@@ -2836,8 +2836,17 @@ fn recovery_drink_retries_and_interrupts_on_cast_and_combat() {
         run.app.update();
     }
     assert!(crate::auras::has_aura(run.app.world(), healer, 1291791));
-    crate::spell_cast::cast_for_player_with_target(run.app.world_mut(), healer, 774, Some(healer))
-        .unwrap();
+    crate::spell_cast::creature_cast_with_targets(
+        run.app.world_mut(),
+        healer,
+        774,
+        crate::spell_cast::CastTargets {
+            unit: healer,
+            primary: Some(healer),
+            destination: None,
+        },
+    )
+    .unwrap();
     assert!(
         !crate::auras::has_aura(run.app.world(), healer, 1291791),
         "casting must interrupt drinking"
