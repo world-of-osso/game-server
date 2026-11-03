@@ -70,6 +70,59 @@ fn grant_barrier(world: &mut World, owner: Entity, aura: &AuraInstance, index: u
     );
 }
 
+#[cfg(test)]
+#[test]
+fn randomized_recipient_ignores_archetype_order() {
+    #[derive(Component)]
+    struct Marker;
+
+    let mut harness = combat::spell_cast::test_harness::harness(Vec::new(), &[], 5).unwrap();
+    let mut allies = vec![harness.caster];
+    for x in [1.0, 2.0, 3.0, 4.0, 5.0] {
+        allies.push(combat::spell_cast::test_harness::spawn_player(
+            &mut harness.app,
+            5,
+            x,
+        ));
+    }
+    let read = |harness: &mut combat::spell_cast::test_harness::Harness| {
+        (0..16)
+            .map(|seed| {
+                let _seed = combat::random::seed_scope(seed);
+                let recipient = select_recipient(harness.app.world_mut(), harness.caster);
+                (recipient, combat::random::random::<u32>())
+            })
+            .collect::<Vec<_>>()
+    };
+    let before_order: Vec<_> = harness
+        .app
+        .world_mut()
+        .query::<(Entity, &Player)>()
+        .iter(harness.app.world())
+        .filter(|(entity, _)| allies.contains(entity))
+        .map(|(entity, _)| entity)
+        .collect();
+    let before = read(&mut harness);
+    assert!(
+        before
+            .iter()
+            .all(|(recipient, _)| recipient.is_some_and(|unit| allies.contains(&unit)))
+    );
+    for &ally in allies.iter().step_by(2) {
+        harness.app.world_mut().entity_mut(ally).insert(Marker);
+    }
+    let after_order: Vec<_> = harness
+        .app
+        .world_mut()
+        .query::<(Entity, &Player)>()
+        .iter(harness.app.world())
+        .filter(|(entity, _)| allies.contains(entity))
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_ne!(before_order, after_order, "fixture must change query order");
+    assert_eq!(before, read(&mut harness));
+}
+
 fn select_recipient(world: &mut World, owner: Entity) -> Option<Entity> {
     let map = *world.get::<combat::maps::InMap>(owner)?;
     let mut candidates: Vec<_> = world
@@ -94,6 +147,7 @@ fn select_recipient(world: &mut World, owner: Entity) -> Option<Entity> {
             )
         })
         .collect();
+    candidates.sort_unstable_by_key(|candidate| candidate.to_bits());
     candidates.shuffle(&mut combat::random::thread_rng());
     candidates
         .iter()

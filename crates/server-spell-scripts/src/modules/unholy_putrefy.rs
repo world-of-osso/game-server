@@ -174,7 +174,10 @@ fn convert_magi_to_lord(world: &mut World, actor: Entity) {
         if magi.len() < required {
             return;
         }
-        magi.sort_by(|a, b| a.1.total_cmp(&b.1));
+        magi.sort_by(|a, b| {
+            a.1.total_cmp(&b.1)
+                .then_with(|| a.0.to_bits().cmp(&b.0.to_bits()))
+        });
         let duration = magi
             .iter()
             .take(required)

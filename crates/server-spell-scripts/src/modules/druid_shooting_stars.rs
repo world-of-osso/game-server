@@ -110,6 +110,7 @@ fn trigger_stars(world: &mut World, caster: Entity, dot: u32, chance: f32) {
     let procs = (whole + usize::from(combat::random::random::<f32>() < expected.fract()))
         .min(targets.len());
     if targets.len() > 1 {
+        targets.sort_unstable_by_key(|target| target.to_bits());
         targets.shuffle(&mut combat::random::thread_rng());
     }
     for target in targets.into_iter().take(procs) {

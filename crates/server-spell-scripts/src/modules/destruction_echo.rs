@@ -151,7 +151,7 @@ fn is_live_enemy(world: &World, caster: Entity, target: Entity) -> bool {
 
 fn collect_owned_dot_targets(world: &mut World, caster: Entity) -> Vec<Entity> {
     let now = combat::spell_cast::now(world);
-    world
+    let mut targets: Vec<_> = world
         .query::<(Entity, &ActiveAuras)>()
         .iter(world)
         .filter(|(target, auras)| {
@@ -163,7 +163,9 @@ fn collect_owned_dot_targets(world: &mut World, caster: Entity) -> Vec<Entity> {
                 })
         })
         .map(|(target, _)| target)
-        .collect()
+        .collect();
+    targets.sort_unstable_by_key(|target| target.to_bits());
+    targets
 }
 
 fn find_native_target(world: &mut World, caster: Entity, target: Option<Entity>) -> Option<Entity> {

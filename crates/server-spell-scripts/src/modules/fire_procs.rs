@@ -634,7 +634,7 @@ fn trigger_burnout(world: &mut World, caster: Entity) {
     // SimC76f8118 sc_mage.cpp1458–1465: Combustion's end deals the
     // talent fraction of each target's unpaid owned Ignite bank.
     let fraction = script_effect_value(world, caster, BURNOUT_TALENT, 0) / 100.0;
-    let targets: Vec<_> = world
+    let mut targets: Vec<_> = world
         .query_filtered::<Entity, With<auras::ActiveAuras>>()
         .iter(world)
         .map(|target| (target, auras::owned_ignite_bank(world, caster, target)))
@@ -659,6 +659,7 @@ fn trigger_burnout(world: &mut World, caster: Entity) {
         dest: None,
         chain_multiplier: 1.0,
     };
+    targets.sort_unstable_by_key(|(target, _)| target.to_bits());
     for (target, bank) in targets {
         spell_cast::effects::deal_copied_damage(world, &ctx, target, bank as f32 * fraction);
     }

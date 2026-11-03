@@ -98,7 +98,13 @@ fn copy_link(
     deliver_link(world, source, recipients, amount * fraction);
 }
 
-fn deliver_link(world: &mut World, source: &EffectCtx<'_>, recipients: Vec<Entity>, amount: f32) {
+fn deliver_link(
+    world: &mut World,
+    source: &EffectCtx<'_>,
+    mut recipients: Vec<Entity>,
+    amount: f32,
+) {
+    recipients.sort_unstable_by_key(|recipient| recipient.to_bits());
     let spell = world
         .resource::<SpellStore>()
         .get(PAYLOAD)
