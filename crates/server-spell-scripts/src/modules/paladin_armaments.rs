@@ -882,14 +882,9 @@ fn consume_divine_guidance(world: &mut World, caster: Entity) {
     if stacks == 0 {
         return;
     }
-    let store = world.resource::<SpellStore>();
-    let talent = store.get(433106).expect("Divine Guidance talent");
-    let coefficient = talent
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("Divine Guidance AP coefficient")
-        .base_points
+    // SimC76f8118 sc_paladin.cpp381: the Protection passive modifies this
+    // talent effect before it becomes the AP coefficient.
+    let coefficient = combat::spell_cast::scripts::script_effect_value(world, caster, 433106, 0)
         / 10.0
         * f32::from(stacks);
     let target = world
