@@ -1703,9 +1703,15 @@ fn released_leader_waits_for_party_on_ruby_ferry() {
     let drake = run.actors[&transport.source_guid];
     let source = *run.app.world().get::<Position>(drake).unwrap();
     let map = *run.app.world().get::<crate::maps::InMap>(owner).unwrap();
-    let boss =
-        crate::scripted_ai::instance_script::boss_id_for_encounter(run.app.world(), map, 2609)
-            .unwrap();
+    let boss = run
+        .app
+        .world()
+        .resource::<crate::scripted_ai::instance_script::InstanceScripts>()
+        .0[&map]
+        .bosses
+        .iter()
+        .position(|boss| boss.encounter_id == 2609)
+        .unwrap() as u32;
     assert!(crate::scripted_ai::instance_script::set_boss_state(
         run.app.world_mut(),
         map,
