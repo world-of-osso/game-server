@@ -522,7 +522,7 @@ fn drive_follower(world: &mut World, unit: Entity, spec: u32) {
     if targets.is_empty() {
         world
             .entity_mut(unit)
-            .remove::<server::followers::retreat::RetreatSetup>();
+            .remove::<server::simc_apl_native::AplMovementIntent>();
         if let Some(mut apl) = world.get_mut::<FollowerApl>(unit) {
             apl.idle();
         }

@@ -126,7 +126,7 @@ impl Rotation {
         // on the rest of the priority list. It must be revalidated each tick.
         world
             .entity_mut(actor)
-            .remove::<crate::followers::retreat::RetreatSetup>();
+            .remove::<crate::simc_apl_native::AplMovementIntent>();
         let pickup = {
             let facts = HavocFacts {
                 native: NativeFacts::new(

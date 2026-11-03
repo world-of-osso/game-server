@@ -11,6 +11,10 @@ use std::time::Duration;
 /// navigation routes. Each driver inserts it when it starts and removes it when it ends.
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
 pub struct MovementDestination(pub Vec3);
+
+/// An APL-owned movement setup, active until it completes or is abandoned.
+#[derive(Component)]
+pub struct AplMovementIntent;
 /// SimC76f8118 action.cpp1738–1752: open encounter geometry, not a native
 /// map-data fallback. Production worlds do not call this fixture setup.
 #[cfg(any(test, feature = "test-support"))]
