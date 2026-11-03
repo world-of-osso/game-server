@@ -17,6 +17,7 @@ mod follower;
 pub mod hunter_facts;
 pub mod literal_rotation;
 mod lust_policy;
+pub mod party_buffs;
 pub mod profiles;
 pub mod registry;
 

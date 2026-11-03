@@ -88,7 +88,10 @@ impl FollowerApl {
             self.rotation
                 .action_spells()
                 .into_iter()
-                .filter(|&spell| is_maintained_buff(world, spell))
+                .filter(|&spell| {
+                    is_maintained_buff(world, spell)
+                        && !crate::party_buffs::PARTY_BUFFS.contains(&spell)
+                })
                 .collect(),
         );
     }
@@ -162,6 +165,9 @@ impl FollowerApl {
         }
         if let Some((action, execution)) = self.plan.pop_front() {
             return self.rotation.execute(world, actor, action, execution);
+        }
+        if crate::party_buffs::cast_lost_party_buff(world, actor)? {
+            return Ok(());
         }
         let now = crate::spell_cast::now(world);
         let spells = self

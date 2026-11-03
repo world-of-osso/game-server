@@ -1044,7 +1044,8 @@ fn direct_party_member(world: &World, caster: Entity, target: Entity) -> bool {
 }
 
 /// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
-pub(super) fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+/// One unit, or two units in one group or raid: the members a raid-buff target reaches.
+pub fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
     if caster == target {
         return true;
     }
