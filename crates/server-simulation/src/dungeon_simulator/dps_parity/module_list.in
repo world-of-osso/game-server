@@ -367,6 +367,7 @@ mod hunter_pack_mentality_tests;
 mod mage_buff_persistence_tests;
 mod party_buff_fixture_tests;
 mod fixed_fight_lust_tests;
+mod fixed_fight_pet_admission_tests;
 #[cfg(test)]
 mod hunter_persistence_tests;
 mod hunter_salvo_tests;

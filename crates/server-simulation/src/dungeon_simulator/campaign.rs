@@ -2736,7 +2736,37 @@ fn voidscar_hunter_pet_cannot_attack_unadmitted_tuskarr() {
     run.app
         .world_mut()
         .entity_mut(owner)
-        .insert(crate::followers::AdmittedPull(vec![tuskarr]));
+        .insert(crate::networking::CombatTarget(Some(tuskarr)));
+    assert!(
+        !crate::followers::action_safe(run.app.world(), pet, tuskarr, None),
+        "selection alone is not an engaged owner target"
+    );
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, tuskarr);
+    assert!(crate::followers::action_safe(
+        run.app.world(),
+        pet,
+        tuskarr,
+        None
+    ));
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(tuskarr));
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .and_then(|target| target.0),
+        Some(tuskarr)
+    );
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, None);
+    let helper = run.actors[&3276417027];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, helper);
+    assert!(
+        !crate::followers::action_safe(run.app.world(), pet, helper, None),
+        "a planner run must not admit an unrelated target merely because it is engaged"
+    );
+    run.app.world_mut().entity_mut(owner).insert((
+        crate::networking::CombatTarget(None),
+        crate::followers::AdmittedPull(vec![tuskarr]),
+    ));
     crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(tuskarr));
     assert_eq!(
         run.app

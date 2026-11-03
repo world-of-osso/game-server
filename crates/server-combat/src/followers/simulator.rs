@@ -375,13 +375,14 @@ pub fn spawn_parity_attacker(
         z: 0.0,
     });
     // advance_runs removes followers without a real or admitted diagnostic run.
-    world
-        .entity_mut(owner)
-        .insert(stockade_diagnostic::DiagnosticParty {
+    world.entity_mut(owner).insert((
+        stockade_diagnostic::DiagnosticParty {
             copy,
             members: vec![unit],
             player_role: shared::group::GroupRole::Dps,
-        });
+        },
+        super::OwnerEngagedTargets,
+    ));
     Ok(unit)
 }
 

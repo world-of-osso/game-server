@@ -683,4 +683,4 @@ These are position-assignment slots, not proven authored spawn counts. Existing 
 
 Template counts apply only to resolved slots considered by the importer. Kings' Rest Ghostly Brute135231 is a nine-run movement candidate, not a fitted path: its observed points have four unresolved candidate floors. No patrol path was qualified or imported.
 
-Follower-owned hunter pets may attack only targets in the party's admitted pull. Their movement uses the same idle-hostile sight safety as their owner.
+Follower-owned combat pets may attack the party's admitted pull or a target directly engaged and selected by the owner. Without a pull planner, their legal targets are the owner's engaged targets. Their movement uses the same idle-hostile sight safety as their owner.
