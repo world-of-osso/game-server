@@ -1,6 +1,119 @@
 //! Native Feral mechanics, independent of the literal Feral controller.
 use super::*;
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_coiled_to_spring_is_earned_by_overflow_and_consumed_by_bite() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(103449537);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let target_position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: target_position.x - 1.0,
+            ..target_position
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 449537));
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 449538));
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 5221);
+    assert!(
+        crate::auras::has_aura(run.app.world(), actor, 449538),
+        "a real overflow generator must grant Coiled to Spring"
+    );
+    feral_growth_tests::cast_native_spell_after_regeneration(&mut run, 22568);
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 449538),
+        "the real Bite must consume its charge"
+    );
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_coiled_waits_for_berserk_storage_and_free_bite_consumes_it() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(103449538);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pos = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: pos.x - 1.0,
+            ..pos
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 106951, Some(actor), 1);
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        3.0,
+    );
+    assert!(crate::auras::has_aura(run.app.world(), actor, 405189));
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 449538),
+        "stored points are not excess"
+    );
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        1.0,
+    );
+    assert!(crate::auras::has_aura(run.app.world(), actor, 449538));
+    let mut bite = crate::spell_cast::load_triggered_spell(run.app.world(), 22568, 1).unwrap();
+    bite.cast_policy_context = Some(Box::new(crate::spell_info::CastPolicyContext {
+        resources: vec![(PowerType::ComboPoints, 5.0)],
+        free_spender: true,
+        targets: vec![target],
+    }));
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        actor,
+        &bite,
+        Some(target),
+        1
+    ));
+    for _ in 0..3 {
+        run.app.update();
+    }
+    assert!(
+        !crate::auras::has_aura(run.app.world(), actor, 449538),
+        "landed free Bite consumes its bonus"
+    );
+}
+
 fn predator_damage(spell: u32, haste: f32) -> i32 {
     use shared::components::PowerType;
     let mut run = prepare_literal(103, 1).unwrap();
