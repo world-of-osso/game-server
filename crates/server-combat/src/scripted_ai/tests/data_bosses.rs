@@ -5684,6 +5684,44 @@ fn encounter_coverage_nibbles_health_check_starts_authored_light_infusion_phase(
 }
 
 #[test]
+fn kystia_shortened_destabilized_channel_does_not_fire_future_ticks() {
+    let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (nibbles, _) = spawn_authored_actor(&mut h.app, &conn, 234660, map, 1);
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Health {
+        current: 1_000_000_000.0,
+        max: 1_000_000_000.0,
+    });
+    h.engage(kystia);
+    h.advance(0.1);
+    h.hit_pct(nibbles, 2_000.0);
+    h.advance(4.0);
+    assert!(h.has_aura(kystia, 1265412));
+    h.advance(2.0);
+    let before = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(1214959) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert!(before > 0);
+    let mut channel = h.app.world_mut().get_mut::<CastState>(kystia).unwrap();
+    assert_eq!(channel.spell_id, 1265412);
+    channel.elapsed = channel.duration - 0.01;
+    h.advance(0.1);
+    let after = h
+        .inbox(0)
+        .log
+        .iter()
+        .filter(|event| event.spell_id == Some(1214959) && event.kind == CombatLogKind::Damage)
+        .count();
+    assert_eq!(after, before, "completion must not pay future aura ticks");
+    assert!(!h.has_aura(kystia, 1265412));
+}
+
+#[test]
 #[ignore = "authentic infusion cycle blocked: local15s Light/20s self-stun; no approved timer/flag correction"]
 fn encounter_coverage_kystia_full_infusion_cycle_acceptance_gate() {
     let (mut h, kystia, map) = bound_boss(234648, 2813, 0);
