@@ -317,6 +317,8 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     let from = point(world.get::<Position>(unit).unwrap());
     let Some((to, reach)) = destination(world, unit, from) else {
+        // Hazard escape or another driver took the unit's goal over.
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     };
     let in_reach = server::test_support::within_reach(from, to, reach);
@@ -605,6 +607,44 @@ fn flight_starts_only_at_takeoff_and_tracks_the_full_three_dimensional_route() {
     let (goal, remaining) = remaining_route(&world, leader).unwrap();
     assert!(goal == RouteGoal::Point(Vec3::new(5.0, 3.0, 0.0)));
     assert_eq!(remaining, 7.0);
+}
+
+#[test]
+fn travel_without_a_goal_drops_its_destination() {
+    use crate::creature_ai::FollowOwner;
+    use server::simc_apl_native::MovementDestination;
+    let mut world = World::new();
+    let walker = reach_tests::altar_walker();
+    let (from, to) = reach_tests::short_walk(&walker);
+    world.insert_resource(walker);
+    let owner = world
+        .spawn(Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::CreatureMotion::Still,
+            FollowOwner::new(owner),
+        ))
+        .id();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_some());
+    // Hazard escape removes the follow goal and moves through a navigation route.
+    world.entity_mut(follower).remove::<FollowOwner>();
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_none());
 }
 
 #[test]
