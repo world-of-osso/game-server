@@ -2695,6 +2695,79 @@ fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
 }
 
 #[test]
+#[ignore = "requires extracted Murder Row graph and native navigation"]
+fn airborne_tank_defers_cohesion_and_next_pull_estimate() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2813,
+            level: 2,
+            specs: [581, 264, 71, 577, 251],
+        }),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        if !run
+            .keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+        {
+            break;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    assert!(
+        !run.keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+    );
+    let tank = run.party.tank;
+    let owner = run.party.owner;
+    let airborne = Position {
+        x: 8960.85,
+        y: 13.375,
+        z: 4827.968,
+    };
+    let landing = Position {
+        x: 8958.2,
+        y: 22.5,
+        z: 4772.5,
+    };
+    run.app.world_mut().entity_mut(tank).insert(airborne);
+    server::followers::simulator::launch_fixture_jump(run.app.world_mut(), tank, landing);
+    assert!(server::followers::simulator::movement_is_forced(
+        run.app.world(),
+        tank
+    ));
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::simc_apl_native::PlannedNextPull {
+            enemies: Vec::new(),
+            has_boss: false,
+            travel_seconds: 1.0,
+        });
+    run.try_publish_next_pull().unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<crate::simc_apl_native::PlannedNextPull>(owner)
+            .is_none()
+    );
+    run.control()
+        .expect("airborne tank must not be queried against the walk mesh");
+    assert_eq!(*run.app.world().get::<Position>(tank).unwrap(), airborne);
+}
+
+#[test]
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
     let mut run = spawn_run(34, &mut None).unwrap();
@@ -5546,6 +5619,12 @@ impl Run {
         if super::movement::flight_in_progress(self.app.world(), self.party.owner) {
             return Ok(());
         }
+        if [self.party.owner, self.party.tank]
+            .into_iter()
+            .any(|unit| server::followers::simulator::movement_is_forced(self.app.world(), unit))
+        {
+            return Ok(());
+        }
         if self.return_to_party()? {
             return Ok(());
         }
@@ -6436,6 +6515,13 @@ impl Run {
     fn try_publish_next_pull(&mut self) -> Result<(), String> {
         use crate::simc_apl_native::PlannedNextPull;
         let world = self.app.world();
+        if server::followers::simulator::movement_is_forced(world, self.party.tank) {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .remove::<PlannedNextPull>();
+            return Ok(());
+        }
         let engaged = crate::followers::simulator::active_enemies(world, self.party.owner);
         let future: Vec<_> = self
             .graph
