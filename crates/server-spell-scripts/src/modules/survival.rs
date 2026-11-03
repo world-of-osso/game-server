@@ -33,15 +33,6 @@ fn is_survival(world: &World, caster: Entity) -> bool {
         .is_some_and(|spec| spec.0 == 255)
 }
 
-pub(super) fn radiant_edge_percent(world: &World, caster: Entity, native: f32) -> f32 {
-    if is_survival(world, caster) {
-        // SimC76f8118 sc_hunter.cpp9041–9046 hotfixes effect1276513 from 15 to 25.
-        25.0
-    } else {
-        native
-    }
-}
-
 fn apply_self(world: &mut World, caster: Entity, spell_id: u32) {
     auras::apply_aura(
         world,
