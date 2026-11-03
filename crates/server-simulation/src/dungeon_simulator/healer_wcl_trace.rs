@@ -29,6 +29,30 @@ pub(super) struct OpeningAura {
     spell_id: u32,
     stacks: u8,
     evidence: String,
+    remove_ms: Option<u64>,
+}
+
+pub(super) struct OpeningRemoval {
+    time_ms: u64,
+    target: Entity,
+    instance_id: u32,
+}
+
+pub(super) fn remove_due_opening_auras(
+    world: &mut World,
+    removals: &[OpeningRemoval],
+    next: &mut usize,
+    elapsed_ms: u64,
+) {
+    while let Some(removal) = removals.get(*next).filter(|r| r.time_ms <= elapsed_ms) {
+        crate::auras::remove_instance(
+            world,
+            removal.target,
+            removal.instance_id,
+            crate::auras::RemoveReason::Expired,
+        );
+        *next += 1;
+    }
 }
 
 impl Trace {
@@ -36,9 +60,10 @@ impl Trace {
         &self,
         world: &mut World,
         slots: &[Entity; 5],
-    ) -> Result<(), String> {
+    ) -> Result<Vec<OpeningRemoval>, String> {
         use crate::auras::{self, AuraApplication, AuraSource};
         use crate::spell_info::SpellStore;
+        let mut removals = Vec::new();
         for aura in &self.opening_auras {
             let source = *slots
                 .get(*self.actor_slots.get(&aura.source_actor).ok_or_else(|| {
@@ -78,8 +103,25 @@ impl Trace {
             if !auras::set_owned_stacks(world, source, target, aura.spell_id, aura.stacks) {
                 return Err(format!("WCL_OPENING_AURA_NOT_APPLIED:{}", aura.spell_id));
             }
+            if let Some(time_ms) = aura.remove_ms {
+                let instance_id = world
+                    .get::<auras::ActiveAuras>(target)
+                    .and_then(|active| {
+                        active
+                            .iter()
+                            .find(|a| a.caster == source && a.spell_id == aura.spell_id)
+                    })
+                    .ok_or_else(|| format!("WCL_OPENING_AURA_NOT_APPLIED:{}", aura.spell_id))?
+                    .instance_id;
+                removals.push(OpeningRemoval {
+                    time_ms,
+                    target,
+                    instance_id,
+                });
+            }
         }
-        Ok(())
+        removals.sort_by_key(|removal| removal.time_ms);
+        Ok(removals)
     }
 }
 

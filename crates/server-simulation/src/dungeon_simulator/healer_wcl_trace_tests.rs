@@ -1,6 +1,39 @@
 use super::healer_wcl_trace::RecordedHit;
 
 #[test]
+#[ignore = "requires native Ghost Wolf spell data"]
+fn opening_wcl_form_is_removed_at_recorded_time() {
+    use crate::spell_cast::test_harness::harness;
+    let mut h = harness(Vec::new(), &[2645], 7).unwrap();
+    let actor = h.caster;
+    let trace: super::healer_wcl_trace::Trace = serde_json::from_str(
+        r#"{"provenance":"test","excluded_self":0,"party_specs":[264,264,264,264,264],
+        "actor_slots":{"46":0},"bloodlust":[],"hits":[],
+        "opening_auras":[{"source_actor":46,"target_actor":46,"spell_id":2645,
+        "stacks":1,"evidence":"first_removebuff","remove_ms":2535}]}"#,
+    )
+    .unwrap();
+    let removals = trace
+        .apply_opening_auras(h.app.world_mut(), &[actor; 5])
+        .unwrap();
+    let mut next = 0;
+    super::healer_wcl_trace::remove_due_opening_auras(
+        h.app.world_mut(),
+        &removals,
+        &mut next,
+        2534,
+    );
+    assert!(crate::auras::has_aura(h.app.world(), actor, 2645));
+    super::healer_wcl_trace::remove_due_opening_auras(
+        h.app.world_mut(),
+        &removals,
+        &mut next,
+        2535,
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), actor, 2645));
+}
+
+#[test]
 #[ignore = "requires native Merithra spell data"]
 fn opening_wcl_aura_resolves_reversion_to_merithra() {
     use super::dps_parity::literal_rotation::execution::resolve_action;
