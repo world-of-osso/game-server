@@ -39,18 +39,7 @@ mod wdp_window_tests;
 mod xuens_battlegear_tests;
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
-    let encounter = crate::simc_apl_native::Encounter::Fixture {
-        started_at: crate::spell_cast::now(run.app.world()),
-        duration: 300.0,
-        style: crate::simc_apl_native::FightStyle::Patchwerk,
-    };
-    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter)?;
-    super::literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    while rotation.precombat_step(run.app.world_mut(), run.actor, &run.targets)? {
-        super::preparation::finish_pending_setup(run)?;
-    }
-    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
-    Ok(Box::new(rotation))
+    super::prepare_production_driver(run)
 }
 
 pub(super) const REPORT_KEY: Option<&str> = Some("windwalker_rotation");
