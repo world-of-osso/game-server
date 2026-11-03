@@ -18,7 +18,62 @@ pub(super) struct Trace {
     pub party_specs: [u32; 5],
     pub actor_slots: std::collections::BTreeMap<i64, usize>,
     pub bloodlust: Vec<TimedBloodlust>,
+    pub opening_auras: Vec<OpeningAura>,
     pub hits: Vec<RecordedHit>,
+}
+
+#[derive(Deserialize)]
+pub(super) struct OpeningAura {
+    source_actor: i64,
+    target_actor: i64,
+    spell_id: u32,
+    stacks: u8,
+    evidence: String,
+}
+
+impl Trace {
+    pub fn apply_opening_auras(
+        &self,
+        world: &mut World,
+        slots: &[Entity; 5],
+    ) -> Result<(), String> {
+        use crate::auras::{self, AuraApplication, AuraSource};
+        use crate::spell_info::SpellStore;
+        for aura in &self.opening_auras {
+            let source = *slots
+                .get(*self.actor_slots.get(&aura.source_actor).ok_or_else(|| {
+                    format!("WCL_OPENING_AURA_UNKNOWN_SOURCE:{}", aura.source_actor)
+                })?)
+                .ok_or("WCL_OPENING_AURA_INVALID_SOURCE_SLOT")?;
+            let target = *slots
+                .get(*self.actor_slots.get(&aura.target_actor).ok_or_else(|| {
+                    format!("WCL_OPENING_AURA_UNKNOWN_TARGET:{}", aura.target_actor)
+                })?)
+                .ok_or("WCL_OPENING_AURA_INVALID_TARGET_SLOT")?;
+            let spell = world
+                .resource::<SpellStore>()
+                .get(aura.spell_id)
+                .ok_or_else(|| format!("WCL_OPENING_AURA_MISSING_SPELL:{}", aura.spell_id))?;
+            let mask = auras::aura_effect_mask(spell);
+            if mask == 0 || aura.stacks == 0 || aura.evidence.is_empty() {
+                return Err(format!("WCL_OPENING_AURA_INVALID:{}", aura.spell_id));
+            }
+            auras::apply_aura(
+                world,
+                &AuraApplication {
+                    caster: source,
+                    target,
+                    spell_id: aura.spell_id,
+                    effect_mask: mask,
+                    source: AuraSource::Cast,
+                },
+            );
+            if !auras::set_owned_stacks(world, source, target, aura.spell_id, aura.stacks) {
+                return Err(format!("WCL_OPENING_AURA_NOT_APPLIED:{}", aura.spell_id));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Deserialize)]
