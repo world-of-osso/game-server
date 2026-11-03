@@ -251,6 +251,108 @@ fn keystone_owner_opens_first_hostile_pack() {
 }
 
 #[test]
+#[ignore = "requires the Altar Mythic graph, native ground and navigation"]
+fn keystone_owner_walks_until_occluded_opening_is_castable() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2993,
+            level: 2,
+            specs: [104, 256, 254, 260, 262],
+        }),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        if !run
+            .keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+        {
+            break;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    let target = run.actors[&63994065];
+    let other_actors: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| *actor != target)
+        .collect();
+    for actor in other_actors {
+        if let Some(mut health) = run.app.world_mut().get_mut::<Health>(actor) {
+            health.current = 0.0;
+        }
+    }
+    let owner = run.party.owner;
+    let start = Position {
+        x: 1739.2566,
+        y: 31.913038,
+        z: -2118.5251,
+    };
+    let members: Vec<_> = run.members().collect();
+    for unit in members {
+        run.app.world_mut().entity_mut(unit).insert(start);
+    }
+    run.graph.route.retain(|step| step.pack == 63994065);
+    run.chain_groups = None;
+    let spell = run
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(188196)
+        .unwrap()
+        .clone();
+    assert!(matches!(
+        crate::spell_cast::read_native_cast_start(run.app.world_mut(), owner, &spell, target),
+        Err(crate::spell_cast::CastFailure::LineOfSight)
+    ));
+    run.control().unwrap();
+    assert!(
+        run.app.world().get::<MoveIntent>(owner).is_some(),
+        "occluded owner must keep approaching"
+    );
+    for _ in 0..600 {
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+        run.control().unwrap();
+        if crate::spell_cast::validate_target(
+            run.app.world(),
+            owner,
+            &spell,
+            Some(target),
+            crate::spell_cast::Sight::Start,
+        )
+        .is_ok()
+        {
+            assert_ne!(*run.app.world().get::<Position>(owner).unwrap(), start);
+            return;
+        }
+    }
+    panic!(
+        "owner never reached native spell line of sight: position={:?} intent={:?} combat={:?} target={:?}",
+        run.app.world().get::<Position>(owner),
+        run.app
+            .world()
+            .get::<MoveIntent>(owner)
+            .map(|intent| intent.0),
+        run.app
+            .world()
+            .get::<shared::components::CombatStatus>(owner),
+        run.current_pack
+    );
+}
+
+#[test]
 fn chain_approach_stops_where_the_walk_route_leaves_tank_range() {
     let clipped = clip_route_to_tank_range(
         Vec3::ZERO,
@@ -5202,7 +5304,13 @@ impl Run {
             return Ok(());
         }
         self.waiting_objective = None;
-        if from.distance(to) > range {
+        let target_obscured = self.keystone.is_some()
+            && crate::followers::simulator::leader_requires_target_approach(
+                self.app.world(),
+                self.party.owner,
+                target,
+            )?;
+        if from.distance(to) > range || target_obscured {
             let destination = if self.chain_groups.is_some() && fighting {
                 self.limit_chain_approach(approach)?
             } else {
