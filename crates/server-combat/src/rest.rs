@@ -475,6 +475,7 @@ mod tests {
             experience_modifier: 1.0,
             gives_experience: true,
             script_name: String::new(),
+            null_ai: false,
             aggro_mode: crate::creature_aggro::AggroMode::Aggressive,
             trigger: false,
             unit_flags: 0,

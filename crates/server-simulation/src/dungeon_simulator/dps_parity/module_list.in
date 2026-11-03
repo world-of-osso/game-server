@@ -282,6 +282,7 @@ mod firestarter_tests;
 mod fixture_facing_tests;
 mod follower_precombat_contract_tests;
 mod ret_dawnlight_reach_follower_tests;
+mod consecration_stalker_follower_tests;
 mod party_lust_follower_tests;
 mod frost_mage_feedback_tests;
 mod frost_mage_reaction_start_tests;
