@@ -353,6 +353,103 @@ fn keystone_owner_walks_until_occluded_opening_is_castable() {
 }
 
 #[test]
+#[ignore = "requires the Altar Mythic graph, native ground and navigation"]
+fn occluded_owner_approach_stops_before_unadmitted_sight() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2993,
+            level: 2,
+            specs: [104, 256, 254, 260, 262],
+        }),
+    )
+    .unwrap();
+    for _ in 0..300 {
+        if !run
+            .keystone
+            .as_ref()
+            .unwrap()
+            .waiting_for_start(run.app.world())
+            .unwrap()
+        {
+            break;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    let target = run.actors[&63994065];
+    let watcher = run.actors[&63994042];
+    let other_actors: Vec<_> = run
+        .actors
+        .values()
+        .copied()
+        .filter(|actor| *actor != target && *actor != watcher)
+        .collect();
+    for actor in other_actors {
+        if let Some(mut health) = run.app.world_mut().get_mut::<Health>(actor) {
+            health.current = 0.0;
+        }
+    }
+    let owner = run.party.owner;
+    let start = Position {
+        x: 1739.2566,
+        y: 31.913038,
+        z: -2118.5251,
+    };
+    let members: Vec<_> = run.members().collect();
+    for unit in members {
+        run.app.world_mut().entity_mut(unit).insert(start);
+    }
+    run.app.world_mut().entity_mut(watcher).insert(Position {
+        x: 1717.0,
+        y: 31.913038,
+        z: -2118.5251,
+    });
+    run.graph.route.retain(|step| step.pack == 63994065);
+    run.chain_groups = None;
+    run.control().unwrap();
+    assert!(
+        run.app
+            .world()
+            .get::<super::movement::SafeOwnerApproach>(owner)
+            .is_some()
+    );
+    let initial_health = run.app.world().get::<Health>(watcher).unwrap().current;
+    for _ in 0..200 {
+        run.control().unwrap();
+        super::movement::update(run.app.world_mut());
+    }
+    let stopped = *run.app.world().get::<Position>(owner).unwrap();
+    assert_ne!(
+        stopped, start,
+        "the owner should use the safe portion of the route"
+    );
+    for _ in 0..20 {
+        run.control().unwrap();
+        super::movement::update(run.app.world_mut());
+    }
+    assert_eq!(
+        *run.app.world().get::<Position>(owner).unwrap(),
+        stopped,
+        "the owner must hold at the unadmitted sight boundary"
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(watcher).unwrap().current,
+        initial_health
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<shared::components::CombatStatus>(watcher)
+            .is_some_and(|status| status.0)
+    );
+}
+
+#[test]
 fn chain_approach_stops_where_the_walk_route_leaves_tank_range() {
     let clipped = clip_route_to_tank_range(
         Vec3::ZERO,
@@ -5074,6 +5171,10 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<super::movement::SafeOwnerApproach>();
         if let Some(keystone) = &self.keystone
             && keystone.waiting_for_start(self.app.world())?
         {
@@ -5316,10 +5417,11 @@ impl Run {
             } else {
                 approach
             };
-            self.app
-                .world_mut()
-                .entity_mut(self.party.owner)
-                .insert(MoveIntent(destination));
+            let mut owner = self.app.world_mut().entity_mut(self.party.owner);
+            owner.insert(MoveIntent(destination));
+            if target_obscured {
+                owner.insert(super::movement::SafeOwnerApproach(target));
+            }
             return Ok(());
         }
         if !fighting && self.wait_for_tank()? {
