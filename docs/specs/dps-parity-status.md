@@ -32,6 +32,12 @@ SimC `76f8118` references use 300 seconds, fixed time, 1,000 iterations and seed
 | Devastation Evoker (1467) | 116,836 | 113,728 | +2.73% | `6d6cff57dd` / `eabc2a7a15` | 184,309 | 182,445 | +1.02% | `6d6cff57dd` / `eabc2a7a15` | in band |
 | Devourer Demon Hunter (1480) | 206,035 | 214,110 | -3.77% | `670c613ad8` / `8a7fe346ac` | 329,934 | 341,884 | -3.50% | `670c613ad8` / `8a7fe346ac` | in band |
 
+## Protection Warrior Wrecked discrepancy
+
+**VERIFIED_DB2 / INFERRED_WCL:** Wrecked's damage-taken effect has 1% base per stack after the tooltip's 0.1 divisor. Protection Warrior 1258163 effect 16 doubles that value through label 4007, giving 20% at 10 stacks. In WCL reports `WVLfZxkmRFcMjnv9/35`, `RWb3vtjQJnmC9rfG/8`, `ya4H3X78fx19gpJF/1`, and `jxLNVC2MRw8vtJ74/8`, nearby same-target noncritical Devastator hits at inferred 10 stacks had median ratios 1.211, 1.204, 1.218, and 1.216 relative to zero stacks. The observations are not independent and player buffs can differ. SimC `76f8118` `sc_warrior.cpp:1193–1197` instead uses unmodified base points, or 10% at 10 stacks. A resulting native/SimC gap is not grounds to remove the authored modifier.
+
+The same four reports do not show an increased Devastator critical/noncritical ratio with Wrecked. Native excludes its critical-damage effect pending retail evidence that the critical ratio rises with Wrecked stacks; SimC also omits that effect.
+
 ## Reference and measurement provenance
 
 References are under `game-engine/data/diagnostics/dps-parity-2026-10-21/`: `<spec>.reference.single.normalized.json` when present, otherwise `all-spec-expanded-references/<spec>.reference.single.normalized.json`. For 3T use `<spec>.reference-fixed.three.normalized.json` when present, otherwise `all-spec-expanded-references/<spec>.reference.three.normalized.json`. The corresponding `.proof.json` records the add-event command. Train entry files are `/home/osso/.worktrees/train/results/<entry>.json`; archived reports are `/home/osso/.worktrees/train/logs/<entry>.reports/<spec>.native.<targets>.json`.
