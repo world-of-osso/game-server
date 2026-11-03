@@ -3238,6 +3238,7 @@ fn units_with_auras(
             tracking.spec = spec;
         }
     }
+    with_auras.sort_unstable();
     with_auras
 }
 
