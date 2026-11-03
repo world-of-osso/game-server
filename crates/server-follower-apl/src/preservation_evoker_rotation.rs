@@ -49,6 +49,11 @@ pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("default", "emerald_communion,if=mana.pct<65"),
         ("default", "rewind,if=party.injured>=3"),
+        // INFERRED_WCL: median observed cast-target HP from 35 current-build casts.
+        (
+            "default",
+            "reversion,if=merithra.active&target.health.pct<=65.17229577976941",
+        ),
         ("default", "temporal_anomaly,if=party.injured>=2"),
         ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
@@ -95,6 +100,7 @@ pub struct PartyFacts<'a> {
     injured: usize,
     reversion_up: bool,
     echo_up: bool,
+    merithra_active: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -103,6 +109,7 @@ impl Facts for PartyFacts<'_> {
             "party.injured" => Ok(self.injured as f64),
             "target.reversion_up" => Ok(f64::from(self.reversion_up)),
             "target.echo_up" => Ok(f64::from(self.echo_up)),
+            "merithra.active" => Ok(f64::from(self.merithra_active)),
             _ => self.native.value(name),
         }
     }
@@ -111,7 +118,9 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.reversion_up" | "target.echo_up" => self.value(name),
+            "party.injured" | "target.reversion_up" | "target.echo_up" | "merithra.active" => {
+                self.value(name)
+            }
             _ => self.native.value_for(action, name),
         }
     }
@@ -169,6 +178,7 @@ impl Preservation {
             injured,
             reversion_up,
             echo_up,
+            merithra_active: crate::auras::has_aura(world, healer, 1256579),
         };
         if let Some((action, execution)) =
             self.driver
