@@ -359,7 +359,11 @@ fn launch_wave(world: &mut World, caster: Entity, primary: Entity, depth: u8, re
     );
     // INFERRED_WCL: hwxf36VXncWvTPpg fight9, 426 hits, none first friendly
     // damage on its target. Retire on a retail pull by Wave or a client sniff.
-    targets.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
+    targets.retain(|&target| {
+        combat::combat_refs::active_opponents(world, target)
+            .next()
+            .is_some()
+    });
     if let Some(index) = targets.iter().position(|target| *target == primary) {
         targets.swap(0, index);
     }

@@ -110,10 +110,15 @@ fn roll_unseen(world: &mut World, ctx: &EffectCtx<'_>, target: Entity) {
 fn choose_enemy(world: &mut World, caster: Entity) -> Option<Entity> {
     let range = effect(world, caster, UNSEEN, 1).expect("native Unseen range");
     let center = targets::position(world, caster).expect("native Bite caster position");
-    let mut enemies = targets::area_units(world, caster, center, range, targets::Relation::Enemy, 0);
+    let mut enemies =
+        targets::area_units(world, caster, center, range, targets::Relation::Enemy, 0);
     // INFERRED_WCL: JvWkQGTfz47mahtD fight3, 2,606 Slash/Swipe hits,
     // none first friendly damage on its target. Retire on a retail pull or client sniff.
-    enemies.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
+    enemies.retain(|&target| {
+        combat::combat_refs::active_opponents(world, target)
+            .next()
+            .is_some()
+    });
     if enemies.is_empty() {
         return None;
     }

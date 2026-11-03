@@ -134,10 +134,15 @@ fn spirit_attack(world: &mut World, ctx: &EffectCtx<'_>) {
         .and_then(|misc| misc.range)
         .expect("Spirit's Wrath native range")
         .max_hostile;
-    let mut candidates = targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
+    let mut candidates =
+        targets::area_units(world, caster, origin, range, targets::Relation::Enemy, 0);
     // INFERRED_WCL: h82XJKQYxVztdnqv fight1, 406 hits, none first friendly
     // damage on its target. Retire on a retail pull by this spell or a client sniff.
-    candidates.retain(|&target| combat::combat_refs::active_opponents(world, target).next().is_some());
+    candidates.retain(|&target| {
+        combat::combat_refs::active_opponents(world, target)
+            .next()
+            .is_some()
+    });
     if candidates.is_empty() {
         return;
     }

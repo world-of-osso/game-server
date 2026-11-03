@@ -228,7 +228,9 @@ fn spread(world: &mut World, ctx: &EffectCtx<'_>, target: Entity, _: bool) {
     // Retire on a retail pull by Undeath or a client sniff showing idle targets.
     targets.retain(|&candidate| {
         candidate != target
-            && combat::combat_refs::active_opponents(world, candidate).next().is_some()
+            && combat::combat_refs::active_opponents(world, candidate)
+                .next()
+                .is_some()
     });
     targets.sort_by_key(|candidate| owned_stacks(world, ctx.caster, *candidate).unwrap_or(0));
     let Some(other) = targets.first().copied() else {
