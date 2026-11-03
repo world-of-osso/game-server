@@ -81,6 +81,55 @@ fn preservation_leaping_flames_heal_allies_without_hostile_reach() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_living_flame_heals_when_target_is_below_observed_median() {
+    use shared::protocol::CombatLogKind;
+    for (health, expected) in [(0.60, 361469), (0.70, 364343)] {
+        let mut run = super::snapshot_party(1468, 90, 1);
+        let healer = run.healer;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<Health>(run.tank)
+            .unwrap()
+            .current *= health;
+        let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
+            run.app.world_mut(),
+            healer,
+            crate::simc_apl_native::Encounter::dungeon(0.0),
+        )
+        .unwrap();
+        let cursor = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, &run.sources)
+            .unwrap();
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        assert!(
+            events.iter().any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(expected)
+                && e.kind == CombatLogKind::CastSuccess
+                && e.target == Some(run.tank.to_bits())),
+            "health={health}: {events:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
     use shared::protocol::CombatLogKind;
     for (count, elapsed, health, expected) in [
