@@ -601,6 +601,9 @@ fn replay_profile(
         party_specs,
         builds.as_ref(),
     )?;
+    party
+        .app
+        .insert_resource(crate::followers::simulator::DisableFollowerRelease);
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();

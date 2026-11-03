@@ -15,6 +15,10 @@ pub(super) struct ReturningFromGraveyard;
 pub(super) struct ResurrectionApproach;
 
 pub(super) fn update(world: &mut World) {
+    #[cfg(any(test, feature = "test-support"))]
+    if world.contains_resource::<super::simulator::DisableFollowerRelease>() {
+        return;
+    }
     let approaching: Vec<_> = world
         .query_filtered::<Entity, With<ResurrectionApproach>>()
         .iter(world)
