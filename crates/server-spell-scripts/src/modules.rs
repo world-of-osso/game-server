@@ -116,6 +116,7 @@ register_modules! {
     blood_ground: (2501, "modules/blood_ground.rs"),
     blood_mid2: (2502, "modules/blood_mid2.rs"),
     blood_sanlayn: (2503, "modules/blood_sanlayn.rs"),
+    blood_umbilicus: (2511, "modules/blood_umbilicus.rs"),
     blood_boiling: (2504, "modules/blood_boiling.rs"),
     blood_rune_weapon: (2505, "modules/blood_rune_weapon.rs"),
     blood_reflection: (2507, "modules/blood_reflection.rs"),
