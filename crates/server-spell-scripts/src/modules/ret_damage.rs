@@ -572,9 +572,14 @@ fn area_around(world: &mut World, caster: Entity, center: Vec3, radius: f32) -> 
 fn beam_units(world: &mut World, caster: Entity, spell: &SpellInfo, carrier: Vec3) -> Vec<Entity> {
     let origin = targets::position(world, caster).expect("Sun's Avatar caster position");
     let radius = damage_area_radius(spell);
-    let end = origin + (carrier - origin).clamp_length_max(radius);
+    let toward = Vec3::new(carrier.x - origin.x, 0.0, carrier.z - origin.z);
+    let end = origin + toward.clamp_length_max(radius);
     let half_width = avatar_half_width(spell);
-    let mut units = targets::area_units(world, caster, origin, radius, targets::Relation::Enemy, 0);
+    // The sphere only prefilters: it contains TC's cylinder, `radius` plus reach across
+    // and `radius` vertically; within_beam owns the bounds.
+    let prefilter = radius * 2.0;
+    let mut units =
+        targets::area_units(world, caster, origin, prefilter, targets::Relation::Enemy, 0);
     units.retain(|&unit| match targets::within_beam(world, origin, end, half_width, unit) {
         Some(inside) => inside,
         None => {
