@@ -4,6 +4,7 @@ pub mod graph;
 pub mod healer_intake;
 pub use crate::mythic_plus::headless as keystone;
 pub mod objectives;
+pub mod tracing_capture;
 pub mod transport;
 pub use crate::ground::GroundMap;
 pub use crate::line_of_sight::LineOfSight;

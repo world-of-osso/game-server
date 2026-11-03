@@ -595,7 +595,7 @@ fn goal_trace_logs_each_goal_change_once_and_not_a_moving_formation_slot() {
         distance: 0.0,
         reach: 0.0,
     };
-    bevy::log::tracing::subscriber::with_default(subscriber, || {
+    crate::test_support::tracing_capture::with_default(subscriber, || {
         let mut nav = Navigation::new(dir.path());
         nav.advance(tank, request(Goal::FollowFormation(7, Vec3::X), 3.0));
         nav.advance(tank, request(Goal::FollowFormation(7, Vec3::Z), 4.0));

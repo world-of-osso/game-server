@@ -1535,7 +1535,7 @@ mod copy_tests {
             .without_time()
             .with_ansi(false)
             .finish();
-        bevy::log::tracing::subscriber::with_default(subscriber, || {
+        crate::test_support::tracing_capture::with_default(subscriber, || {
             super::super::release::update(app.world_mut());
         });
         let output = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
@@ -1573,7 +1573,7 @@ mod copy_tests {
             .without_time()
             .with_ansi(false)
             .finish();
-        bevy::log::tracing::subscriber::with_default(subscriber, || {
+        crate::test_support::tracing_capture::with_default(subscriber, || {
             super::super::release::update(app.world_mut());
             app.world_mut().get_mut::<CombatStatus>(owner).unwrap().0 = false;
             super::super::release::update(app.world_mut());
