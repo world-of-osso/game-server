@@ -1,0 +1,9 @@
+[
+  {
+    "map_id": 2923,
+    "preferred_entry": 267545,
+    "alternative_entries": [267546],
+    "evidence": "INFERRED_WCL: first 20 distinct report/fight pairs in mplus-population-2026-11-03/rankings-2923-high.json (+23/+24) contain Aegyra pulls (20/20); Method Voidscar Arena recommends left. Six mixed samples favor Raj'kess 4/6, including +3 keys. Pull labels do not prove kills.",
+    "retire_when": "A key-level-stratified WCL sample supports a different choice for the planner's key level."
+  }
+]

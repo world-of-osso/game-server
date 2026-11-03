@@ -35,6 +35,13 @@ struct MappedPull {
 }
 
 #[derive(Deserialize)]
+struct OpeningRouteChoice {
+    map_id: u32,
+    preferred_entry: u32,
+    alternative_entries: Vec<u32>,
+}
+
+#[derive(Deserialize)]
 struct FirstDamageEvidence {
     maps: Vec<MapFirstDamage>,
 }
@@ -602,6 +609,57 @@ fn boss_route(graph: &Graph) -> Result<(Vec<RouteStep>, Option<u64>), String> {
     Ok((graph.route.clone(), final_boss))
 }
 
+/// Select one opening alternative, and exclude the other paths from force planning.
+fn opening_route_choice(
+    graph: &Graph,
+    hostile_sources: &HashSet<u64>,
+) -> Result<Option<(RouteStep, HashSet<u64>)>, String> {
+    let choices: Vec<OpeningRouteChoice> = serde_json::from_str(include_str!(
+        "../../../../content/dungeons/opening-route-choices.json"
+    ))
+    .map_err(|error| format!("parse opening route choices: {error}"))?;
+    let Some(choice) = choices
+        .into_iter()
+        .find(|choice| choice.map_id == graph.map_id)
+    else {
+        return Ok(None);
+    };
+    let find_pack = |entry| {
+        let packs: Vec<_> = graph
+            .packs
+            .iter()
+            .filter(|pack| {
+                pack.spawns
+                    .iter()
+                    .any(|spawn| spawn.entry == entry && hostile_sources.contains(&spawn.guid))
+            })
+            .collect();
+        match packs.as_slice() {
+            [pack] => Ok(*pack),
+            _ => Err(format!(
+                "opening entry {entry} has {} hostile packs",
+                packs.len()
+            )),
+        }
+    };
+    let preferred = find_pack(choice.preferred_entry)?;
+    let mut excluded = HashSet::new();
+    for entry in choice.alternative_entries {
+        let pack = find_pack(entry)?;
+        if pack.id == preferred.id {
+            return Err(format!("opening alternatives share pack{}", pack.id));
+        }
+        excluded.insert(pack.id);
+    }
+    Ok(Some((
+        RouteStep {
+            pack: preferred.id,
+            anchor: preferred.point().to_array(),
+        },
+        excluded,
+    )))
+}
+
 /// Greedily insert the reachable pack with the lowest incremental nav yards per force.
 /// A candidate may be inserted between route steps, never inside or after the final
 /// encounter: retail parties finish forces before the end boss.
@@ -627,6 +685,19 @@ pub(super) fn plan(
     };
     let (mut steps, final_boss) = boss_route(graph)?;
     let mut added_packs = Vec::new();
+    let mut excluded = HashSet::new();
+    if let Some((opening, alternatives)) = opening_route_choice(graph, hostile_sources)? {
+        excluded = alternatives;
+        if steps.iter().any(|step| excluded.contains(&step.pack)) {
+            return Err("boss route includes an unchosen opening alternative".into());
+        }
+        if let Some(index) = steps.iter().position(|step| step.pack == opening.pack) {
+            steps.remove(index);
+        } else {
+            added_packs.push(opening.pack);
+        }
+        steps.insert(0, opening);
+    }
     let mut selected: BTreeSet<_> = steps.iter().map(|step| step.pack).collect();
     if selected
         .iter()
@@ -658,7 +729,7 @@ pub(super) fn plan(
         for pack in graph
             .packs
             .iter()
-            .filter(|pack| !selected.contains(&pack.id))
+            .filter(|pack| !selected.contains(&pack.id) && !excluded.contains(&pack.id))
         {
             let force = points(pack);
             if force == 0 {
@@ -775,6 +846,48 @@ mod tests {
             follower_boss_bits: BTreeMap::new(),
             follower_encounter_actor_bits: BTreeMap::new(),
         }
+    }
+
+    #[test]
+    fn voidscar_plan_uses_aegyra_and_excludes_the_other_opening() {
+        use super::super::graph::Edge;
+        let ids = vec![1, 2, 3, 4, 5, 6, 7];
+        let mut graph = single_spawn_route(2923, &ids);
+        for (id, entry) in [
+            (2, 267545),
+            (3, 267546),
+            (4, 238887),
+            (5, 239008),
+            (6, 239167),
+            (7, 243996),
+        ] {
+            graph
+                .packs
+                .iter_mut()
+                .find(|pack| pack.id == id)
+                .unwrap()
+                .spawns[0]
+                .entry = entry;
+        }
+        graph.route.clear();
+        graph.follower_boss_entries = vec![238887, 239008, 239167];
+        for (i, from) in ids.iter().enumerate() {
+            for to in &ids[i + 1..] {
+                graph.edges.push(Edge {
+                    from: *from,
+                    to: *to,
+                    yards: 1.0,
+                });
+            }
+        }
+        let hostile = ids.iter().copied().collect();
+        let weights = HashMap::from([(267545, 40), (267546, 100), (243996, 1)]);
+        let result = plan(&graph, &weights, 41, &hostile).unwrap();
+        let route: Vec<_> = result.steps.iter().map(|step| step.pack).collect();
+        assert!(route.contains(&2), "Aegyra must be pulled");
+        assert!(!route.contains(&3), "Raj'kess is on the unchosen path");
+        assert!(route.iter().position(|id| *id == 2) < route.iter().position(|id| *id == 4));
+        assert_eq!(result.planned_forces, 41);
     }
 
     fn challenge(map_id: u32) -> server::mythic_plus_runtime::ChallengeDefinition {

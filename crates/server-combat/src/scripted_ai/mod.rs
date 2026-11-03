@@ -85,6 +85,7 @@ pub(crate) mod tww_rookery;
 mod uldaman;
 mod umbrelskul;
 mod vexamus;
+pub(crate) mod voidscar_opening;
 pub(crate) mod voidscar_portal;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
@@ -163,6 +164,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, proximity_unlock::register_actors)
             .add_systems(FixedPostUpdate, proximity_unlock::update)
+            .add_systems(FixedPreUpdate, voidscar_opening::update)
             .add_systems(FixedPostUpdate, tagged_trash_intro::advance)
             .add_systems(FixedPostUpdate, proximity_immunity::update)
             .add_systems(FixedPostUpdate, altar_drop::start_nearby)
