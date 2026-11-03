@@ -277,6 +277,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "finds an owned guardian",
     ),
     (
+        "protection_devastating_focus.rs",
+        "on_devastator",
+        "query",
+        1,
+        "removes this caster's previous owned focus; selects no new recipient",
+    ),
+    (
         "affliction_wrath.rs",
         "land_haunt",
         "query",
