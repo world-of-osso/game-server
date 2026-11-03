@@ -40,12 +40,36 @@ def read_spell_metadata(db, spell):
     return school, row[0] if row else None
 
 
-def convert(events, db):
+def match_deferred_absorbs(events, healing):
+    damage = collections.defaultdict(list)
+    for index, event in enumerate(events):
+        key = (event['targetID'], event['sourceID'], event.get('sourceInstance', 0),
+               event['abilityGameID'], event['timestamp'])
+        damage[key].append(index)
+    deferred = collections.Counter()
+    for absorb in healing:
+        if absorb['type'] != 'absorbed' or absorb.get('abilityGameID') not in (115069, 357170):
+            continue
+        prefix = (absorb['targetID'], absorb['attackerID'], absorb.get('attackerInstance', 0),
+                  absorb['extraAbilityGameID'])
+        candidates = [i for ts in (absorb['timestamp'], absorb['timestamp'] + 1)
+                      for i in damage[(*prefix, ts)]]
+        if len(candidates) != 1:
+            raise ValueError(f'cannot uniquely match deferred absorb: {absorb}')
+        deferred[candidates[0]] += absorb['amount']
+    for index, amount in deferred.items():
+        if amount > events[index].get('absorbed', 0):
+            raise ValueError(f'deferred absorb exceeds recorded absorb: {events[index]}')
+    return deferred
+
+
+def convert(events, healing, db):
     max_health = read_max_health(events)
+    deferred_absorbs = match_deferred_absorbs(events, healing)
     hits = []
     observed_self = []
     excluded_self = 0
-    for event in events:
+    for index, event in enumerate(events):
         target = event['targetID']
         if target not in ACTORS:
             raise ValueError(f'unknown WCL party target {target}')
@@ -66,7 +90,8 @@ def convert(events, db):
                      'source_actor': source, 'target_actor': target, 'spell_id': spell,
                      'school': school, 'defense': defense, 'hit_type': event['hitType'],
                      'periodic': event.get('tick', False), 'deferred': deferred, 'amount': event.get('amount', 0),
-                     'absorbed': event.get('absorbed', 0), 'max_hp': max_health[target],
+                     'absorbed': event.get('absorbed', 0) - deferred_absorbs[index],
+                     'deferred_absorbed': deferred_absorbs[index], 'max_hp': max_health[target],
                      'health_after': event.get('hitPoints')})
     if not hits or any(a['time_ms'] > b['time_ms'] for a, b in zip(hits, hits[1:])):
         raise ValueError('WCL damage events must be nonempty and ordered')
@@ -78,12 +103,14 @@ def convert(events, db):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('events', type=Path)
+    parser.add_argument('healing', type=Path)
     parser.add_argument('world_db', type=Path)
     parser.add_argument('output', type=Path)
     args = parser.parse_args()
     events = [json.loads(line) for line in args.events.read_text().splitlines() if line.strip()]
+    healing = [json.loads(line) for line in args.healing.read_text().splitlines() if line.strip()]
     with sqlite3.connect(f'file:{args.world_db}?mode=ro', uri=True) as db:
-        result = convert(events, db)
+        result = convert(events, healing, db)
     args.output.write_text(json.dumps(result, separators=(',', ':')) + '\n')
 
 
