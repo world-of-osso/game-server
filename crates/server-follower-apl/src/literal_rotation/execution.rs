@@ -89,6 +89,7 @@ type ReadyActions = BTreeMap<ActionKey, Execution>;
 #[derive(Clone, Copy)]
 struct NativeReadiness {
     ready: bool,
+    transient: bool,
     limited: Option<PowerType>,
     queue_delay: Option<f64>,
 }
@@ -109,6 +110,7 @@ pub struct Prepared {
     >,
     declared: BTreeSet<String>,
     awaiting_target: BTreeSet<String>,
+    transient: BTreeSet<ActionKey>,
     moving: bool,
     cast_active: bool,
     pickup_cast_usable: bool,
@@ -303,6 +305,7 @@ impl Prepared {
             limits: BTreeMap::new(),
             pickups: fragment_pickup_plans(world, actor, targets.first().copied())?,
             awaiting_target: BTreeSet::new(),
+            transient: BTreeSet::new(),
             declared: [
                 "snapshot_stats",
                 "auto_attack",
@@ -386,8 +389,10 @@ impl Prepared {
         self.ready.retain(|(action, _), _| action != name);
     }
 
-    pub(super) fn awaits_target(&self, action: &Action) -> bool {
-        self.ordered_targets.is_empty() && self.awaiting_target.contains(&action.name)
+    pub(super) fn awaits_precombat_readiness(&self, action: &Action) -> bool {
+        let target = action.target.and_then(Entity::try_from_bits);
+        (self.ordered_targets.is_empty() && self.awaiting_target.contains(&action.name))
+            || self.transient.contains(&(action.name.clone(), target))
     }
 
     pub fn now(&self) -> f64 {
@@ -793,6 +798,7 @@ fn filter_primary_range(
     }
     NativeReadiness {
         ready: false,
+        transient: true,
         limited: None,
         queue_delay: None,
     }
@@ -876,6 +882,12 @@ fn record_probe(
     state: NativeReadiness,
     execution: Execution,
 ) {
+    if state.transient {
+        prepared.transient.insert(key.clone());
+        if default {
+            prepared.transient.insert((key.0.clone(), None));
+        }
+    }
     if state.ready {
         let execution = match state.queue_delay {
             Some(delay) => Execution::Queue(Box::new(execution), delay),
@@ -1094,6 +1106,7 @@ fn native_readiness(
     if !server::followers::action_safe(world, actor, target, Some(id)) {
         return Ok(NativeReadiness {
             ready: false,
+            transient: false,
             limited: None,
             queue_delay: None,
         });
@@ -1116,6 +1129,7 @@ fn native_readiness(
     match admission {
         Ok(_) => Ok(NativeReadiness {
             ready: true,
+            transient: false,
             limited: None,
             queue_delay: None,
         }),
@@ -1131,6 +1145,7 @@ fn native_readiness(
             ) {
                 Ok(delay) => Ok(NativeReadiness {
                     ready: true,
+                    transient: false,
                     limited: None,
                     queue_delay: Some(delay),
                 }),
@@ -1140,6 +1155,7 @@ fn native_readiness(
         Err(crate::spell_cast::CastFailure::NotEnoughPower(_)) if after_channel => {
             Ok(NativeReadiness {
                 ready: false,
+                transient: false,
                 limited: None,
                 queue_delay: None,
             })
@@ -1150,6 +1166,7 @@ fn native_readiness(
             ) {
                 Ok(_) => Ok(NativeReadiness {
                     ready: false,
+                    transient: power_regenerates(world, actor, power),
                     limited: Some(power),
                     queue_delay: None,
                 }),
@@ -1158,6 +1175,22 @@ fn native_readiness(
         }
         Err(reason) => refused_admission(id, reason),
     }
+}
+
+fn power_regenerates(world: &World, actor: Entity, power: PowerType) -> bool {
+    if power == PowerType::Mana {
+        return true;
+    }
+    let Some(info) = world
+        .resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .get(power)
+    else {
+        return false;
+    };
+    let Some((current, _)) = crate::spell_cast::powers::power_value(world, actor, power) else {
+        return false;
+    };
+    info.regen_peace > 0.0 || (info.regen_peace < 0.0 && current < info.center_power as f32)
 }
 
 /// TC InitExplicitTargets (Spell.cpp666–678): a cursor action supplies HasDst.
@@ -1190,8 +1223,16 @@ fn refused_admission(
         | crate::spell_cast::CastFailure::Unsupported(_)) => Err(format!(
             "NATIVE_LITERAL_ADMISSION_GAP: spell{id}: {reason:?}"
         )),
-        _ => Ok(NativeReadiness {
+        reason => Ok(NativeReadiness {
             ready: false,
+            transient: matches!(
+                reason,
+                crate::spell_cast::CastFailure::OutOfRange
+                    | crate::spell_cast::CastFailure::TooClose
+                    | crate::spell_cast::CastFailure::Moving
+                    | crate::spell_cast::CastFailure::InProgress
+                    | crate::spell_cast::CastFailure::OnGlobalCooldown
+            ),
             limited: None,
             queue_delay: None,
         }),

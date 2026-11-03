@@ -134,6 +134,28 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
     }
     super::tank_pull_back_party::restore_pets(world, unit);
     let mut enemies = engaged_enemies(world, follower, unit, &party);
+    if enemies.is_empty()
+        && let Some(target) = world
+            .get::<super::AdmittedPull>(follower.owner)
+            .and_then(|pull| pull.0.first().copied())
+        && crate::spell_cast::targets::is_alive(world, target)
+        && !world
+            .get::<shared::components::CombatStatus>(target)
+            .is_some_and(|status| status.0)
+    {
+        if world.get::<CastState>(unit).is_none() {
+            let reach = if follower.profile.melee {
+                Some(MELEE_REACH)
+            } else {
+                super::target_reach::attack_range(world, unit, follower)
+                    .map(|range| (range - 1.0).max(MELEE_REACH))
+            };
+            if let Some(reach) = reach {
+                pursue_at_reach(world, unit, target, reach);
+            }
+        }
+        return;
+    }
     let pending = super::target_reach::retain_reachable(world, unit, follower, &mut enemies);
     let lost_target = world
         .get::<CombatTarget>(unit)
