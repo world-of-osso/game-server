@@ -3415,12 +3415,11 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     let mut run = spawn_run(2, &mut None).unwrap();
     let member = run.party.members[1];
     crate::combat::kill_unit(run.app.world_mut(), run.party.owner, member);
-    // Active followers now receive resurrection/release handling; detach this
-    // dead summon so native corpse decay can exercise the missing-member sample.
+    // Model a non-class summon that is no longer an admitted follower.
     run.app
         .world_mut()
         .entity_mut(member)
-        .remove::<crate::followers::Follower>();
+        .remove::<(crate::followers::Follower, crate::followers::ClassCombatant)>();
     for _ in 0..1202 {
         run.app.update();
     }

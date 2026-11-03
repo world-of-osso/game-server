@@ -1612,6 +1612,51 @@ mod copy_tests {
         );
     }
 
+    fn assert_class_corpse_survives_decay(diagnostic: bool) {
+        use bevy::ecs::system::RunSystemOnce;
+        let (mut app, owner, run) = fixture();
+        let member = run.members[0];
+        let copy = run.copy.unwrap();
+        if diagnostic {
+            app.world_mut().entity_mut(owner).insert(
+                super::super::stockade_diagnostic::DiagnosticParty {
+                    copy,
+                    members: run.members.clone(),
+                    player_role: run.player_role,
+                },
+            );
+        } else {
+            app.world_mut().entity_mut(owner).insert(run);
+        }
+        app.world_mut().entity_mut(member).insert((
+            super::super::ClassCombatant,
+            crate::combat::Corpse { remaining: 60.0 },
+            crate::combat::DeathState { respawn_timer: 0.0 },
+        ));
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(61));
+        app.world_mut()
+            .run_system_once(crate::combat::corpse_decay_system)
+            .unwrap();
+        assert!(
+            app.world().get_entity(member).is_ok(),
+            "class follower corpse must not despawn"
+        );
+        assert_eq!(app.world().get::<InMap>(member), Some(&copy));
+        assert!(app.world().get::<crate::combat::Corpse>(member).is_some());
+    }
+
+    #[test]
+    fn production_class_follower_survives_creature_corpse_decay() {
+        assert_class_corpse_survives_decay(false);
+    }
+
+    #[test]
+    fn headless_class_follower_survives_creature_corpse_decay() {
+        assert_class_corpse_survives_decay(true);
+    }
+
     #[test]
     fn follower_release_staggered_deaths_survive_navigation_pruning() {
         use shared::components::{CombatStatus, Health, Position};
