@@ -1,7 +1,7 @@
 //! Complete native walk paths for headless ground movement and live movement decisions.
 use bevy::prelude::*;
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, HashSet, VecDeque},
     path::Path,
     sync::{Mutex, OnceLock},
     time::Instant,
@@ -106,7 +106,7 @@ impl NativeMovement {
             .lock()
             .map_err(|_| "native movement map lock poisoned")?;
         let start = self.measure.then(Instant::now);
-        let result = state.map.complete_walk_path(from, to);
+        let result = complete_walk(&mut state.map, from, to);
         if let Some(start) = start {
             let entry = state.stats.entry(label).or_default();
             entry.0 += 1;
@@ -123,6 +123,47 @@ impl NativeMovement {
                 (point, distance)
             })
             .collect())
+    }
+}
+
+fn complete_walk(
+    map: &mut navigation::NavigationMap,
+    mut from: Vec3,
+    to: Vec3,
+) -> Result<Vec<Vec3>, String> {
+    let mut plan = navigation::NavigationPlan::default();
+    let mut endpoints = HashSet::new();
+    let mut points = Vec::new();
+    loop {
+        let segment = map.walking_path_with_plan(from, to, &mut plan)?;
+        let endpoint = *segment.points.last().ok_or("empty navigation segment")?;
+        points.extend(segment.points);
+        if segment.complete {
+            return Ok(points);
+        }
+        if endpoint == from || !endpoints.insert(endpoint.to_array().map(f32::to_bits)) {
+            return Err(
+                "unreachable target (partial corridor made no progress or repeated)".into(),
+            );
+        }
+        from = endpoint;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "requires map 2923 baked navmesh"]
+    fn voidscar_portal_walk_assembles_partial_corridors() {
+        let root = std::path::PathBuf::from(std::env::var_os("GAME_SERVER_GROUND_DIR").unwrap());
+        let movement = NativeMovement::open(&root.join("navmesh"), 2923).unwrap();
+        let start = Vec3::new(4539.897, -156.55693, 437.53464);
+        let portal = Vec3::new(4615.12, -103.6306, 430.05);
+        let legs = movement.walk_legs(start, portal, "voidscar").unwrap();
+        assert!(legs.len() > 3);
+        assert!(legs.back().unwrap().0.distance(portal) < 0.01);
     }
 }
 

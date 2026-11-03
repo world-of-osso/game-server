@@ -1348,6 +1348,9 @@ fn load_authored_spawn(
             spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap()
 }
 
+#[path = "voidscar_opening.rs"]
+mod voidscar_opening_tests;
+
 fn spawn_authored_actor(
     app: &mut App,
     conn: &Connection,

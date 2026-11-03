@@ -265,7 +265,8 @@ impl NavigationMap {
         self.walking_path_with_plan(start, end, &mut NavigationPlan::default())
     }
 
-    fn walking_path_with_plan(
+    /// Plan a walking-only segment, preserving hierarchy progress between segments.
+    pub fn walking_path_with_plan(
         &mut self,
         start: Vec3,
         end: Vec3,

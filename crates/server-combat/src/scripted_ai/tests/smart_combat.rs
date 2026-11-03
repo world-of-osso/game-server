@@ -89,6 +89,18 @@ fn geomancer_with_inferred(inferred: Option<Vec<smart_ai::SmartEvent>>) -> (Harn
 }
 
 #[test]
+fn creature_self_cast_logs_once_to_visible_player() {
+    let (mut h, creature) = geomancer();
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(creature).insert(visibility);
+    crate::spell_cast::creature_cast(h.app.world_mut(), creature, 1246821, Some(creature), true)
+        .unwrap();
+    h.advance(0.05);
+    assert_eq!(h.casts(0, creature, 1246821), 1);
+}
+
+#[test]
 fn inferred_ability_casts_using_observed_timers() {
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch("CREATE TABLE content_creature_template(entry INTEGER, AIName TEXT, ScriptName TEXT);
