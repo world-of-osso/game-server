@@ -620,6 +620,7 @@ D	enhancement/enhancement_unleashed.rs	cast_pack_pulse	launch_triggered_spell	&p
 D	evoker_flames.rs	cast_scarlet_damage	launch_triggered_spell	&child	1	361500
 D	feral_dreadful_wound.rs	apply_wound	launch_triggered_spell	&spell	1	441812
 D	feral_growth/bursting.rs	roll_rampancy	launch_triggered_spell	&spell	1	440122
+D	feral_growth/bursting.rs	burst_on_death	launch_triggered_spell	&spell	1	440122
 D	feral_sabertooth.rs	apply_sabertooth	launch_triggered_spell	&spell	1	391722
 D	feral_stalking.rs	grant_stalking	launch_triggered_spell	&spell	1	1263962
 D	feral_unseen.rs	apply_craving	launch_triggered_spell	&buff	1	1263939

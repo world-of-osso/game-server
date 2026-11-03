@@ -1,7 +1,7 @@
 //! Selected Bursting Growth from actual owned Vines loss and landed Bite.
 use super::super::combat;
 use bevy::prelude::*;
-use combat::auras::{ActiveAuras, AuraInstance, scripts::AuraScripts};
+use combat::auras::{scripts::AuraScripts, ActiveAuras, AuraInstance};
 use combat::spell_cast::{self, effects::EffectCtx, script_registry::EnemyContextHitHook};
 
 const BURSTING_GROWTH: u32 = 440120;
@@ -42,7 +42,9 @@ pub(super) fn roll_rampancy(
 pub(super) fn register(scripts: &mut AuraScripts) {
     // The existing async scheduler reports every actual expired application,
     // including the last. Do not also attach on_natural_end and double the burst.
-    scripts.0.entry(VINES).or_default().on_stack_loss = Some(burst_expired_stacks);
+    let script = scripts.0.entry(VINES).or_default();
+    script.on_stack_loss = Some(burst_expired_stacks);
+    script.on_remove = Some(burst_on_death);
 }
 
 fn selected(world: &World, caster: Entity) -> bool {
@@ -52,6 +54,25 @@ fn selected(world: &World, caster: Entity) -> bool {
 
 // SimC76f8118 sc_druid.cpp13755–13821 bursts when Vines application
 // stacks expire; the native440122 area payload owns actual damage and targets.
+fn burst_on_death(
+    world: &mut World,
+    target: Entity,
+    aura: &AuraInstance,
+    reason: combat::auras::RemoveReason,
+) {
+    if reason != combat::auras::RemoveReason::Death || !selected(world, aura.caster) {
+        return;
+    }
+    let Some(center) = spell_cast::targets::position(world, target) else {
+        return;
+    };
+    let Some(mut spell) = spell_cast::load_triggered_spell(world, BURST, 1) else {
+        return;
+    };
+    spell.cast_destination = Some(center.to_array());
+    spell_cast::launch_triggered_spell(world, aura.caster, &spell, None, 1);
+}
+
 fn burst_expired_stacks(world: &mut World, target: Entity, aura: &AuraInstance, lost: u8) {
     if !selected(world, aura.caster) {
         return;
