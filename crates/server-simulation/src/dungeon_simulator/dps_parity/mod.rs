@@ -1179,6 +1179,9 @@ fn advance_fixture_frame(
         let boundary = next_fixture_boundary(run, frame_end);
         advance_fixture_step(run, boundary)?;
         apply_fixture_add_events(run, retired, started_at)?;
+        // SimC's active raid-event adds stay in the encounter for their full
+        // lifetime; native training dummies otherwise drop idle combat refs.
+        engage_fixture_opponents(run);
         if run.app.world().resource::<Time>().elapsed() < started_at + FIGHT_DURATION {
             drive_player(run)?;
         }
