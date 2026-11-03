@@ -172,6 +172,9 @@ impl FollowerApl {
         if crate::party_buffs::cast_lost_party_buff(world, actor)? {
             return Ok(());
         }
+        if crate::party_buffs::cast_lost_party_buff(world, actor)? {
+            return Ok(());
+        }
         let now = crate::spell_cast::now(world);
         let spells = self
             .maintained_buffs
