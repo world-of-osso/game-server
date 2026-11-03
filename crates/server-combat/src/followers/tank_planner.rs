@@ -150,7 +150,11 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     // Existing but incomplete run records still go through fail-closed admission.
     let (reason, error) = match read_route_admission(world, tank, target, &follower, None, true) {
         Ok(Some((true, targets))) => {
-            if !targets.is_empty() {
+            if targets.is_empty() {
+                world
+                    .entity_mut(follower.owner)
+                    .remove::<super::AdmittedPull>();
+            } else {
                 world
                     .entity_mut(follower.owner)
                     .insert(super::AdmittedPull(targets));
