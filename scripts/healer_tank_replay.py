@@ -17,6 +17,8 @@ MARKER = 'HEALER_TANK_REPORT='
 WORLD_DB = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
 PROFILE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/dps-parity-2026-10-21')
 TRACE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/healer-tank-replay')
+# Composition raid-buff tank traces; the pinned TRACE_DIR traces carry fixed raid buffs.
+TANK_TRACE_DIR = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/party-buffs-composition-2026-11-02/tank')
 ALL_PROFILES = PROFILE_DIR / 'healer-tank-all-inputs'
 HEALERS = ('65', '105', '256', '257', '264', '270', '1468')
 TANKS = ('66', '73', '104', '250', '268', '581')
@@ -286,7 +288,7 @@ def main():
     parser.add_argument('--all', action='store_true', help='run all healer and tank benchmarks')
     parser.add_argument('--pressure-scale', type=float, default=1.0, help='multiply SimC tank incoming raw damage')
     parser.add_argument('--pressure-sweep', action='store_true', help='rank all tanks over ten no-healer seeds')
-    parser.add_argument('--trace-dir', type=Path, default=TRACE_DIR, help='directory of per-tank --all traces')
+    parser.add_argument('--trace-dir', type=Path, default=TANK_TRACE_DIR, help='directory of per-tank --all traces')
     parser.add_argument('--output-dir', type=Path, help='directory for --all detail JSON reports')
     parser.add_argument('--jobs', type=int, default=min(4, len(os.sched_getaffinity(0))), help='parallel --all replays')
     parser.add_argument('--source', choices=('simc', 'recorded'), default='simc')

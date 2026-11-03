@@ -30,7 +30,7 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - [x] The first lust goes on the first trash pull with at least 8 live engaged enemies, at least 7.7 s into the pull. Both are nearest-rank p10 of the 110 retail trash lusts.
 - [x] After the party has a lust in the instance copy, trash never gets another lust, even when the lockout ends. In 81 retail keys the lockout ended before the final-boss pull; 59 held the lust for that boss and 12 spent it on trash. The trash share does not rise with distance to the final boss (2/16 under 60 s, 2/11 at 240 s or more), and no trash pack recurs more than twice.
 - [x] The final boss gets a lust at any point of its pull while no lockout is active. The final boss is a boss bound in the copy's instance script whose other bosses are all done. Retail final-boss lusts are at p10 0.7 s and median 4.0 s; 11 of 23 later ones waited for a lockout. Other bosses get no lust.
-- [x] A `FixedLengthFight` lusts on its first combat tick, as SimC does.
+- [x] Fixed-length fights never lust from this policy: their lust is the SimC reference's `override.bloodlust`, which the harness applies (tank trace time, healer replay at 0 s, none for DPS rows).
 
 ## Follower death recovery
 

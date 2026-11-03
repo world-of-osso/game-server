@@ -42,9 +42,12 @@ pub(crate) fn try_lust(
         mark_first_lust_spent(world, actor);
         return Ok(false);
     }
-    // SimC fixed-length fights lust at the start; parity keeps that.
-    let fixed = world.contains_resource::<crate::registry::FixedLengthFight>();
-    if !fixed && !is_lust_pull(world, actor, targets, elapsed) {
+    // A fixed-length fight replays a SimC reference, whose lust is its
+    // `override.bloodlust` input; the harness applies that, never this policy.
+    if world.contains_resource::<crate::registry::FixedLengthFight>() {
+        return Ok(false);
+    }
+    if !is_lust_pull(world, actor, targets, elapsed) {
         return Ok(false);
     }
     let native = world

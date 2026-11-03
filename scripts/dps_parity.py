@@ -18,6 +18,16 @@ SPECS = {
 # SimC76f8118 sim/sim.cpp3935–3936: actor directives have no underscores.
 CLASSES = {"paladin", "warrior", "druid", "priest", "shaman", "mage", "hunter",
            "evoker", "monk", "warlock", "rogue", "deathknight", "demonhunter"}
+# SimC76f8118 sim.cpp:3534–3552: optimal_raid sets these overrides. The six raid
+# buffs follow the party composition, as follower party_buffs.rs casts them;
+# server-follower-apl PARTY_BUFFS is the native list of the same buffs.
+RAID_BUFFS = ("arcane_intellect", "battle_shout", "blessing_of_the_bronze",
+              "mark_of_the_wild", "power_word_fortitude", "skyfury")
+CLASS_RAID_BUFF = {"mage": "arcane_intellect", "warrior": "battle_shout",
+                   "evoker": "blessing_of_the_bronze", "druid": "mark_of_the_wild",
+                   "priest": "power_word_fortitude", "shaman": "skyfury"}
+RAID_ENVIRONMENT = ("bloodlust", "chaos_brand", "mystic_touch", "hunters_mark",
+                    "mortal_wounds", "bleeding")
 SLOTS = {"head", "neck", "shoulders", "back", "chest", "wrists", "hands", "waist",
          "legs", "feet", "finger1", "finger2", "trinket1", "trinket2", "main_hand", "off_hand"}
 CONSUMABLES = {"potion", "flask", "food", "augmentation", "temporary_enchant"}
@@ -156,12 +166,28 @@ def compare_stat_sheets(reference, server):
             for name in sorted(reference.keys() | server.keys())]
 
 
+def composition_options(classes, raid_environment):
+    """optimal_raid=1 with each raid buff on only when a composition class provides it.
+
+    raid_environment=False also turns off lust and the raid debuffs, which the
+    solo DPS fixture does not model; tank traces keep them.
+    """
+    provided = {CLASS_RAID_BUFF[name] for name in classes if name in CLASS_RAID_BUFF}
+    options = ["optimal_raid=1"]
+    options += [f"override.{buff}={int(buff in provided)}" for buff in RAID_BUFFS]
+    if not raid_environment:
+        options += [f"override.{name}=0" for name in RAID_ENVIRONMENT]
+    return options
+
+
 def build_simc_arguments(profile, mode, output):
     if mode not in {"single", "three"}:
         raise ValueError(f"Unknown parity scenario: {mode}")
     arguments = [profile["profile"], "desired_targets=1",
                  "max_time=300", "fixed_time=1", "vary_combat_length=0",
-                 "iterations=1000", "threads=1", "optimal_raid=0", "temporary_enchant=disabled", "seed=70448",
+                 "iterations=1000", "threads=1",
+                 *composition_options([profile["class"]], raid_environment=False),
+                 "temporary_enchant=disabled", "seed=70448",
                  f'target_level={int(profile["level"]) + 3}', "report_details=1",
                  f"json={output}.{mode}.json", f"output={output}.{mode}.txt"]
     if mode == "single":

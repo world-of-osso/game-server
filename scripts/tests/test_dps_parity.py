@@ -67,7 +67,8 @@ actions+=/judgment,if=holy_power<5
         self.assertEqual(profile["actions"], ["actions=auto_attack", "actions+=/judgment,if=holy_power<5"])
 
     def test_simc_scenarios_are_fixed_300_seconds_and_capped_at_three_targets(self):
-        profile = {"profile": "/profiles/MID2/MID2_Paladin_Protection.simc", "level": "90"}
+        profile = {"profile": "/profiles/MID2/MID2_Paladin_Protection.simc", "level": "90",
+                   "class": "paladin"}
         single = PARITY.build_simc_arguments(profile, "single", Path("/evidence/66"))
         packs = PARITY.build_simc_arguments(profile, "three", Path("/evidence/66"))
         for arguments in [single, packs]:
@@ -85,6 +86,25 @@ actions+=/judgment,if=holy_power<5
         self.assertIn("raid_events=adds,count=2,count_range=0,first=0,cooldown=30,duration=30,cooldown_stddev=0,duration_stddev=0", packs)
         self.assertIn("json=/evidence/66.single.json", single)
         self.assertIn("json=/evidence/66.three.json", packs)
+
+    def test_reference_raid_buffs_are_exactly_the_composition_provided_set(self):
+        profile = {"profile": "/profiles/MID2/MID2_Warrior_Arms.simc", "level": "90",
+                   "class": "warrior"}
+        arguments = PARITY.build_simc_arguments(profile, "single", Path("/evidence/71"))
+        overrides = {arg.split("=")[0]: arg.split("=")[1] for arg in arguments
+                     if arg.startswith("override.")}
+        self.assertLess(arguments.index("optimal_raid=1"),
+                        min(arguments.index(f"{name}={value}") for name, value in overrides.items()),
+                        "SimC applies options in order; overrides must follow optimal_raid")
+        self.assertEqual({name for name, value in overrides.items() if value == "1"},
+                         {"override.battle_shout"})
+        for off in ["arcane_intellect", "blessing_of_the_bronze", "mark_of_the_wild",
+                    "power_word_fortitude", "skyfury", "bloodlust", "chaos_brand",
+                    "mystic_touch", "hunters_mark", "mortal_wounds", "bleeding"]:
+            self.assertEqual(overrides[f"override.{off}"], "0", off)
+        tank = PARITY.composition_options(["druid"], raid_environment=True)
+        self.assertIn("override.mark_of_the_wild=1", tank)
+        self.assertFalse(any(option.startswith("override.bloodlust") for option in tank))
 
     def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
         selected = PARITY.parse_selected_talents(json.dumps([

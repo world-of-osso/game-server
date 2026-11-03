@@ -194,9 +194,7 @@ fn dummy_pressure_uses_unscaled_same_level_units() {
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn death_audit_records_real_aura_removals() {
     let mut run = super::snapshot_party(105, 70, 1);
-    let actors = run.slots.to_vec();
-    let enemy = run.sources[0];
-    super::apply_optimal_raid_environment(&mut run.app, enemy, &actors).unwrap();
+    super::settle_party_buffs(&mut run).unwrap();
     run.app.init_resource::<crate::auras::DeathAuraAudit>();
     run.app
         .world_mut()
@@ -222,18 +220,35 @@ fn optimal_raid_environment_reaches_all_replay_actors() {
     super::apply_optimal_raid_environment(&mut run.app, enemy, &members).unwrap();
     let world = run.app.world();
     for member in members {
-        for spell in [1459, 1126, 2825] {
-            assert!(
-                crate::auras::has_aura(world, member, spell),
-                "member {member:?} lacks {spell}"
-            );
-        }
+        assert!(
+            crate::auras::has_aura(world, member, 2825),
+            "member {member:?} lacks Bloodlust"
+        );
     }
     for spell in [1490, 113746] {
         assert!(
             crate::auras::has_aura(world, run.sources[0], spell),
             "enemy lacks {spell}"
         );
+    }
+}
+
+/// Party 66/256/262/63/253 provides Power Word: Fortitude (Discipline), Skyfury
+/// (Elemental) and Arcane Intellect (Fire): every slot holds exactly those three.
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn replay_party_holds_exactly_the_buffs_its_composition_casts() {
+    use server_follower_apl::party_buffs::{PARTY_BUFFS, holds_buff};
+    let mut run = super::snapshot_party(256, 90, 1);
+    super::settle_party_buffs(&mut run).unwrap();
+    let world = run.app.world();
+    for unit in run.slots {
+        let held: Vec<u32> = PARTY_BUFFS
+            .into_iter()
+            .map(|(spell, _)| spell)
+            .filter(|&spell| holds_buff(world, unit, spell).unwrap())
+            .collect();
+        assert_eq!(held, [1459, 21562, 462854], "slot {unit:?}");
     }
 }
 

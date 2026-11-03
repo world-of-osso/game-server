@@ -1898,15 +1898,13 @@ fn follower_holds_its_next_lust_for_the_final_boss() {
 }
 
 #[test]
-fn fixed_length_fight_lusts_a_single_dummy_at_start() {
+fn fixed_length_fight_never_lusts_from_the_follower_policy() {
+    // Its lust is the SimC reference's override.bloodlust, applied by the harness.
     let mut pull = lust_pull();
     pull.harness
         .app
         .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 300.0 });
-    let pulled = pull.now();
-    let into = pull
-        .run_until_lust(200)
-        .unwrap_or_else(|| panic!("fixed fight lacks its opening lust: {:?}", pull.casts()))
-        - pulled;
-    assert!(into < 2.0, "lust {into} s into the fight");
+    pull.engage_pack(TRASH_ENGAGED);
+    assert_eq!(pull.run_until_lust(400), None, "casts {:?}", pull.casts());
+    assert!(pull.in_combat());
 }

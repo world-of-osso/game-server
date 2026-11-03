@@ -350,6 +350,8 @@ mod hunter_mark_mask_tests;
 mod hunter_pack_mentality_tests;
 #[cfg(test)]
 mod mage_buff_persistence_tests;
+mod party_buff_fixture_tests;
+mod fixed_fight_lust_tests;
 #[cfg(test)]
 mod hunter_persistence_tests;
 mod hunter_salvo_tests;

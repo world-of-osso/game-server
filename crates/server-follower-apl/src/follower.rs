@@ -91,8 +91,7 @@ impl FollowerApl {
                 .action_spells()
                 .into_iter()
                 .filter(|&spell| {
-                    is_maintained_buff(world, spell)
-                        && !crate::party_buffs::PARTY_BUFFS.contains(&spell)
+                    is_maintained_buff(world, spell) && !crate::party_buffs::is_party_buff(spell)
                 })
                 .collect(),
         );
@@ -212,6 +211,9 @@ impl FollowerApl {
             return Ok(());
         }
         if self.advance_plan(world, actor)? {
+            return Ok(());
+        }
+        if crate::party_buffs::cast_lost_party_buff(world, actor)? {
             return Ok(());
         }
         if crate::party_buffs::cast_lost_party_buff(world, actor)? {

@@ -1,6 +1,7 @@
 //! A keystone follower party casts the raid buffs its classes provide, as players do.
 use super::*;
-use server_follower_apl::{FollowerApl, FollowerAplFailed, party_buffs::PARTY_BUFFS};
+use server_follower_apl::party_buffs::{PARTY_BUFFS, is_party_buff, provided_buffs};
+use server_follower_apl::{FollowerApl, FollowerAplFailed};
 use shared::protocol::CombatLogKind;
 use std::collections::BTreeSet;
 
@@ -69,16 +70,9 @@ fn remove_buff(run: &mut Run, unit: Entity, buff: u32) {
 
 /// Party buffs some party unit knows: the composition's provided set.
 fn provided(run: &Run) -> BTreeSet<u32> {
-    let world = run.app.world();
-    PARTY_BUFFS
+    provided_buffs(run.app.world(), &party(run))
         .into_iter()
-        .filter(|&spell| {
-            party(run).into_iter().any(|unit| {
-                world
-                    .get::<crate::class_progression::KnownSpells>(unit)
-                    .is_some_and(|known| known.contains(spell))
-            })
-        })
+        .map(|(spell, _)| spell)
         .collect()
 }
 
@@ -91,7 +85,7 @@ fn buff_casts(run: &Run, cursor: usize) -> Vec<(u32, u64)> {
         .iter()
         .filter(|event| event.kind == CombatLogKind::CastSuccess)
         .filter_map(|event| {
-            let spell = event.spell_id.filter(|spell| PARTY_BUFFS.contains(spell))?;
+            let spell = event.spell_id.filter(|&spell| is_party_buff(spell))?;
             Some((spell, event.source?))
         })
         .collect()
@@ -134,7 +128,7 @@ fn assert_settled_with(run: &mut Run, expected: &[u32]) {
                 .is_some_and(|apl| !apl.in_combat()),
             "{unit:?} finished precombat out of combat"
         );
-        for spell in PARTY_BUFFS {
+        for (spell, _) in PARTY_BUFFS {
             assert_eq!(
                 holds(world, unit, spell),
                 provided.contains(&spell),
@@ -143,7 +137,7 @@ fn assert_settled_with(run: &mut Run, expected: &[u32]) {
         }
     }
     let casts = buff_casts(run, 0);
-    for spell in PARTY_BUFFS {
+    for (spell, _) in PARTY_BUFFS {
         assert_eq!(
             count(&casts, spell),
             usize::from(provided.contains(&spell)),
