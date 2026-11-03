@@ -315,7 +315,10 @@ impl Driver {
         };
         let facts: &dyn ActionFacts = &item_context;
         let mut usable = |action: &Action| {
-            if list == "precombat" && prepared.awaits_target(action) {
+            if list == "precombat"
+                && prepared.upkeep_actions().is_none()
+                && prepared.awaits_target(action)
+            {
                 return Err(PRECOMBAT_TARGET_PENDING.to_owned());
             }
             if prepared
