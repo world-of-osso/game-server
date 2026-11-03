@@ -6,7 +6,12 @@ use std::path::Path;
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
     use shared::protocol::CombatLogKind;
-    for (count, elapsed, expected) in [(1, 0.0, false), (5, 0.0, true), (1, 27.0, true)] {
+    for (count, elapsed, health, expected) in [
+        (1, 0.0, 1.0, false),
+        (5, 0.0, 0.80, true),
+        (5, 0.0, 0.50, false),
+        (1, 27.0, 0.80, true),
+    ] {
         let mut run = super::snapshot_party(1468, 90, count);
         let healer = run.healer;
         super::hold(&mut run, healer);
@@ -14,6 +19,11 @@ fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
             run.app.update();
         }
         super::engage(&mut run);
+        run.app
+            .world_mut()
+            .get_mut::<Health>(run.tank)
+            .unwrap()
+            .current *= health;
         let now = crate::spell_cast::now(run.app.world());
         let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
             run.app.world_mut(),
@@ -50,7 +60,7 @@ fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
             .collect();
         assert_eq!(
             cast, expected,
-            "count={count} elapsed={elapsed}: casts={casts:?}"
+            "count={count} elapsed={elapsed} health={health}: casts={casts:?}"
         );
     }
 }

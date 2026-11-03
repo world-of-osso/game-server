@@ -47,11 +47,11 @@ pub(crate) fn bindings() -> Bindings {
 pub(crate) fn program() -> Result<Program, String> {
     // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
     Program::parse(&[
-        ("default", "emerald_communion,if=mana.pct<65"),
-        ("default", "rewind,if=party.injured>=3"),
+        ("urgent", "emerald_communion,if=mana.pct<65"),
+        ("urgent", "rewind,if=party.injured>=3"),
         // INFERRED_WCL: median observed cast-target HP from 35 current-build casts.
         (
-            "default",
+            "urgent",
             "reversion,if=merithra.active&target.health.pct<=65.17229577976941",
         ),
         ("default", "temporal_anomaly,if=party.injured>=2"),
@@ -70,7 +70,7 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "living_flame,if=target.health.pct<95"),
         // INFERRED_WCL: p25 five targets, first-cast delay median 26.862 seconds.
         (
-            "damage",
+            "hybrid",
             "fire_breath,empower_to=1,if=active_enemies>=5|time>=26.862",
         ),
         ("damage", "disintegrate"),
@@ -157,7 +157,7 @@ impl Preservation {
                     .then_some((unit, health.current / health.max))
             })
             .collect();
-        let Some((target, _)) = crate::follower::lowest_health(world, living.iter().copied())
+        let Some((target, lowest)) = crate::follower::lowest_health(world, living.iter().copied())
         else {
             return Ok(());
         };
@@ -176,6 +176,41 @@ impl Preservation {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
+        let facts = PartyFacts {
+            native: NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
+                .with_targets(Some(target), &targets),
+            injured,
+            reversion_up,
+            echo_up,
+            merithra_active: crate::auras::has_aura(world, healer, 1256579),
+        };
+        if let Some((action, execution)) =
+            self.driver
+                .select("urgent", &facts, &prepared, &self.equipment)?
+        {
+            self.driver.execute(world, healer, action, execution)?;
+            return Ok(());
+        }
+        // INFERRED_WCL: p10 of 32 lowest-living HP snapshots at Fire Breath start.
+        if lowest * 100.0 >= 51.857_42 && !enemies.is_empty() {
+            let actions = [NativeAction {
+                name: "fire_breath",
+                spell: 357208,
+                self_target: false,
+                talent: None,
+            }];
+            let prepared = Prepared::read(world, healer, enemies, &self.equipment, actions, false)?;
+            let facts =
+                NativeFacts::new(world, healer, &self.bindings, self.encounter, enemies.len())
+                    .with_targets(enemies.first().copied(), enemies);
+            if let Some((action, execution)) =
+                self.driver
+                    .select("hybrid", &facts, &prepared, &self.equipment)?
+            {
+                self.driver.execute(world, healer, action, execution)?;
+                return Ok(());
+            }
+        }
         let facts = PartyFacts {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
                 .with_targets(Some(target), &targets),
