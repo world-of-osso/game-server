@@ -478,9 +478,10 @@ fn class_follower_weapon_spell_block_uses_equipped_shield_amount() {
         .insert((
             crate::followers::ClassCombatant,
             shared::components::Npc {
-                template_id: 31146,
+                template_id: 6,
                 name: "Class follower".into(),
             },
+            shared::components::UnitFactionTemplate(25),
         ));
     let hits = cast_damage_spell(&mut h, defender, 1464, 3);
     assert_eq!(hits.len(), 1);
