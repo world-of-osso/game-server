@@ -274,6 +274,13 @@ fn purified_spirit_hits_survivor_after_combat_target_dies() {
         .world_mut()
         .entity_mut(actor)
         .remove::<crate::combat::AutoAttack>();
+    // Celestial Infusion schedules Special Delivery, which can otherwise spend
+    // the whole small fixture pool before the spender expires.
+    run.app
+        .world_mut()
+        .get_mut::<crate::auras::harmony::HarmonyPools>(actor)
+        .unwrap()
+        .spender = 100_000.0;
     run.app
         .world_mut()
         .get_mut::<Health>(primary)
