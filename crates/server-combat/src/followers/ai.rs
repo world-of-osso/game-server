@@ -284,6 +284,12 @@ fn escape_pet_hazard(world: &mut World, unit: Entity) {
 }
 
 pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
+    if crate::combat_refs::active_opponents(world, unit)
+        .next()
+        .is_none()
+    {
+        return;
+    }
     let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
         return;
     };
