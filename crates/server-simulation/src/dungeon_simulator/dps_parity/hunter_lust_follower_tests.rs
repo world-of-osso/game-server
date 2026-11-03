@@ -24,11 +24,10 @@ fn hunter_pet_lusts_once_and_locks_out_the_whole_party() {
         )
         .unwrap();
         let hunter = party.members[3];
-        let target = spawn_level_dummy(&mut app, hunter, 90, 0).unwrap();
         for _ in 0..5 {
             app.update();
         }
-        start_fixed_time_fight(&mut app, party.owner, hunter, target, 120.0);
+        super::party_lust_follower_tests::start_large_trash_pull(&mut app, party.owner, hunter);
         for _ in 0..300 {
             app.update();
         }

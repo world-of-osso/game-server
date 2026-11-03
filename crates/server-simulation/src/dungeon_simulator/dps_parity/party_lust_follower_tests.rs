@@ -2,6 +2,23 @@ use super::follower_dps_diagnostic::*;
 use super::*;
 use shared::protocol::CombatLogKind;
 
+/// The follower policy lusts only on production pulls (a fixed fight takes its lust
+/// from the SimC reference): engage `lust_policy::TRASH_ENGAGED` (8) non-boss dummies
+/// in front of `anchor`, a large trash pull, which lusts after its 7.7 s delay.
+pub(super) fn start_large_trash_pull(app: &mut App, owner: Entity, anchor: Entity) {
+    let pack: Vec<Entity> = (0..8)
+        .map(|index| spawn_level_dummy(app, anchor, 90, index).unwrap())
+        .collect();
+    let world = app.world_mut();
+    world.entity_mut(owner).insert((
+        crate::networking::CombatTarget(Some(pack[0])),
+        crate::combat::AutoAttack::new(pack[0]),
+    ));
+    for target in pack {
+        crate::combat_refs::set_in_combat_with(world, owner, target);
+    }
+}
+
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
 fn two_lust_followers_cast_once_and_apply_a_party_lockout() {
@@ -23,12 +40,11 @@ fn two_lust_followers_cast_once_and_apply_a_party_lockout() {
     .unwrap();
     let shaman = party.members[2];
     let mage = party.members[3];
-    let target = spawn_level_dummy(&mut app, shaman, 90, 0).unwrap();
     for _ in 0..5 {
         app.update();
     }
-    start_fixed_time_fight(&mut app, party.owner, shaman, target, 120.0);
-    for _ in 0..200 {
+    start_large_trash_pull(&mut app, party.owner, shaman);
+    for _ in 0..300 {
         app.update();
     }
     let events = &app
@@ -51,7 +67,7 @@ fn two_lust_followers_cast_once_and_apply_a_party_lockout() {
 
 #[test]
 #[ignore = "requires FOLLOWER_DPS_WORLD_DB snapshot with class follower data"]
-fn mage_and_devastation_followers_use_native_lust_in_fixed_fights() {
+fn mage_and_devastation_followers_use_native_lust_on_a_large_pull() {
     let path = std::env::var_os("FOLLOWER_DPS_WORLD_DB").expect("measurement snapshot");
     for (spec, spell, lockout) in [
         (62, 80353, 80354),
@@ -62,7 +78,7 @@ fn mage_and_devastation_followers_use_native_lust_in_fixed_fights() {
         let _seed = crate::random::seed_scope(70448);
         let mut app = build_snapshot_app(std::path::Path::new(&path)).unwrap();
         let copy = create_open_follower_copy(&mut app, 2813).unwrap();
-        let (mut app, actor, target, _) = prepare_class_follower(app, copy, spec, 90);
+        let (mut app, actor, _, _) = prepare_class_follower(app, copy, spec, 90);
         let owner = app
             .world()
             .get::<crate::followers::Follower>(actor)
@@ -71,8 +87,8 @@ fn mage_and_devastation_followers_use_native_lust_in_fixed_fights() {
         for _ in 0..5 {
             app.update();
         }
-        start_fixed_time_fight(&mut app, owner, actor, target, 120.0);
-        for _ in 0..120 {
+        start_large_trash_pull(&mut app, owner, actor);
+        for _ in 0..300 {
             app.update();
         }
         assert!(
