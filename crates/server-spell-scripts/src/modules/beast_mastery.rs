@@ -1,10 +1,48 @@
 //! Explicit missing-script relationships; native records retain payload ownership.
-use super::combat::spell_cast::script_registry::{Policy, Relationship, SpellScriptHook};
+use super::combat;
+use bevy::prelude::*;
+use combat::auras::{ActiveAuras, spell_mods};
+use combat::spell_cast::effects::EffectCtx;
+use combat::spell_cast::script_registry::{Policy, Relationship, SpellScriptHook};
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::Policies(POLICIES),
     SpellScriptHook::OwnsPolicyProc(|spell| spell == 407412),
+    SpellScriptHook::ResolvedDamage(refund_serpentine_focus),
 ];
+
+// Retail 70448 Serpentine Strikes names the Focus child but does not link it
+// in SpellEffect. Its native modifier mask identifies both Cobra Shot variants.
+fn refund_serpentine_focus(
+    world: &mut World,
+    ctx: &EffectCtx<'_>,
+    _target: Entity,
+    critical: bool,
+    _damage: f32,
+) {
+    const SERPENTINE_STRIKES: u32 = 468701;
+    const FOCUS_REFUND: u32 = 1282710;
+    let eligible = critical
+        && world.get::<ActiveAuras>(ctx.caster).is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.spell_id == SERPENTINE_STRIKES
+                    && aura.caster == ctx.caster
+                    && aura
+                        .effects
+                        .iter()
+                        .any(|effect| spell_mods::class_mask_affects(aura, effect, ctx.spell))
+            })
+        });
+    if eligible {
+        combat::spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            FOCUS_REFUND,
+            Some(ctx.caster),
+            ctx.depth + 1,
+        );
+    }
+}
 
 const POLICIES: &[Policy] = &[
     // SimC76f8118 sc_hunter.cpp6741–6745: Bestial Wrath, not arbitrary
