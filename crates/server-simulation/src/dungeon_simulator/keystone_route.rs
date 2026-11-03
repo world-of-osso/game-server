@@ -801,16 +801,6 @@ pub(super) fn plan(
     .map_err(|error| format!("parse transport route gates: {error}"))?;
     steps = enforce_transport_prerequisites(graph, steps, &gates.gates)?;
     enforce_preboss_sources(graph, &mut steps, hostile_sources)?;
-    let mut previous = graph.entrance_pack;
-    for step in &steps {
-        if distance(previous, step.pack).is_none() {
-            return Err(format!(
-                "route cannot reach pack{} from pack{previous}",
-                step.pack
-            ));
-        }
-        previous = step.pack;
-    }
     Ok(PlannedRoute {
         steps,
         added_packs,

@@ -2524,6 +2524,133 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
 }
 
 #[test]
+#[ignore = "requires the Ruby Mythic graph, world data and native LOS assets"]
+fn ruby_keystone_initializes_with_native_drop_between_route_packs() {
+    let _rng_scope = crate::random::seed_scope(17742812211184693248);
+    let run = spawn_run_mode(
+        17742812211184693248,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2521,
+            level: 2,
+            specs: [268, 264, 70, 261, 254],
+        }),
+    )
+    .unwrap();
+    assert!(
+        run.graph
+            .route
+            .windows(2)
+            .any(|steps| { steps[0].pack == 3276416179 && steps[1].pack == 3276416181 }),
+        "the native upper-to-lower drop must remain in the initialized route"
+    );
+    assert!(run.keystone.is_some());
+}
+
+#[test]
+#[ignore = "requires Voidscar graph and native world/LOS assets"]
+fn voidscar_single_pull_with_assistance_is_admitted() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2923,
+            level: 2,
+            specs: [268, 270, 261, 70, 253],
+        }),
+    )
+    .unwrap();
+    let caller = run.actors[&3276417060];
+    let helper = run.actors[&3276417027];
+    let mut admitted = false;
+    let mut assistance_scheduled = false;
+    for _ in 0..1400 {
+        run.control().unwrap();
+        if let Some(entry) = run
+            .report
+            .pulls
+            .last()
+            .filter(|entry| entry.pack == 3276417060)
+        {
+            assert!(
+                !entry.decision.contains("FirstSinglePack"),
+                "assistance must not make one intended pull count as two"
+            );
+            admitted |= entry.decision.starts_with("Allow");
+        }
+        assistance_scheduled |=
+            server::test_support::assistance_pending_from(run.app.world(), caller);
+        if admitted
+            && assistance_scheduled
+            && crate::combat_refs::active_opponents(run.app.world(), helper)
+                .next()
+                .is_some()
+        {
+            return;
+        }
+        run.app.update();
+        let mut key = run.keystone.take().unwrap();
+        key.update(run.app.world_mut()).unwrap();
+        run.keystone = Some(key);
+    }
+    panic!(
+        "expected intended pull admission and native helper engagement: admitted={admitted} assistance_scheduled={assistance_scheduled}"
+    );
+}
+
+#[test]
+#[ignore = "requires Voidscar graph and native world/LOS assets"]
+fn voidscar_siphoid_pull_recruits_nearby_helpers() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2923,
+            level: 2,
+            specs: [268, 270, 261, 70, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let caller = run.actors[&3276417105];
+    let caller_position = *run.app.world().get::<Position>(caller).unwrap();
+    let position = Position {
+        x: caller_position.x - 32.0,
+        ..caller_position
+    };
+    for member in run.members().collect::<Vec<_>>() {
+        run.app.world_mut().entity_mut(member).insert(position);
+    }
+    run.app.update();
+    run.app.update();
+    for guid in 3276417106..=3276417109 {
+        assert!(
+            crate::combat_refs::active_opponents(run.app.world(), run.actors[&guid])
+                .next()
+                .is_none(),
+            "helper {guid} already engaged"
+        );
+    }
+    crate::creature_aggro::attack_start(run.app.world_mut(), caller, owner);
+    assert!(
+        server::test_support::assistance_pending_from(run.app.world(), caller),
+        "native assistance was not scheduled"
+    );
+    for _ in 0..40 {
+        run.app.update();
+    }
+    for guid in 3276417106..=3276417109 {
+        assert!(
+            crate::combat_refs::active_opponents(run.app.world(), run.actors[&guid])
+                .next()
+                .is_some(),
+            "helper {guid} did not join the pull"
+        );
+    }
+}
+
+#[test]
 fn forces_complete_skips_unengaged_trash_and_selects_remaining_boss() {
     let run = spawn_run(2, &mut None).unwrap();
     let normal = run.next_pack_with_forces(None, false, false).unwrap();
@@ -4073,6 +4200,13 @@ fn spawn_run_mode_record(
         None
     };
     let mut app = runtime::build_cached_app(catalogs);
+    if options.is_some() {
+        runtime::install_keystone_los(
+            &mut app,
+            &super::graph::extraction::asset_root(),
+            graph.map_id,
+        )?;
+    }
     app.insert_resource(super::Space(graph.clone()));
     let copy = if options.is_some() {
         runtime::create_copy_at_difficulty(&mut app, 23)?
