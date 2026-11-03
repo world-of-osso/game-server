@@ -567,6 +567,49 @@ fn shadow_word_pain_ticks_periodic_damage_then_expires() {
 }
 
 #[test]
+fn paralyzing_shots_periodic_damage_ignores_growing_stacks() {
+    const SPELL: u32 = 1_294_569;
+    let tick = |applications: usize| {
+        let mut h = harness(Vec::new(), &[SPELL], 1).expect("world spell data");
+        let caster = h.caster;
+        let target = h.npc;
+        let health = h
+            .app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .into_inner();
+        health.max = 1_000_000.0;
+        health.current = health.max;
+        for _ in 0..applications {
+            apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster,
+                    target,
+                    spell_id: SPELL,
+                    effect_mask: 2,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let aura = auras_of(&h, target, SPELL);
+        assert_eq!(usize::from(aura[0].stacks), applications);
+        h.advance(frames_for(1000) + 2);
+        let ticks = log_of(&h, CombatLogKind::Damage, SPELL)
+            .into_iter()
+            .filter(|event| event.periodic)
+            .map(|event| event.amount)
+            .collect::<Vec<_>>();
+        assert_eq!(ticks.len(), 1, "{ticks:?}");
+        ticks[0]
+    };
+    let one = tick(1);
+    assert!(one > 0);
+    assert_eq!(tick(10), one);
+}
+
+#[test]
 fn dormant_creature_skips_aura_ticks_then_catches_up_on_reactivation() {
     let Some(mut h) = harness(Vec::new(), &[SHADOW_WORD_PAIN], 5) else {
         return;
