@@ -552,24 +552,42 @@ fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
     .unwrap();
     let mut displaced = false;
     let mut walked_back = false;
+    let mut full_speed_steps = 0;
     for frame in 0..240 {
         let before = *run.app.world().get::<Position>(run.actor).unwrap();
-        let forced = run
-            .app
-            .world()
-            .get::<shared::components::MovementControl>(run.actor)
-            .is_some_and(|control| control.controlled);
+        let target = *run.app.world().get::<Position>(run.targets[0]).unwrap();
+        let range = crate::scripted_ai::model_reach::melee_range(
+            run.app.world(),
+            run.actor,
+            run.targets[0],
+        )
+        .unwrap();
+        let excess = (before.x - target.x).hypot(before.z - target.z) - range;
+        let forced = server_follower_apl::literal_rotation::melee_intent::forced_movement(
+            run.app.world(),
+            run.actor,
+        );
         run.app.update();
         let position = run.app.world().get::<Position>(run.actor).unwrap();
         let step = (position.x - before.x).hypot(position.z - before.z);
-        if !forced && step > 0.0 {
+        if !forced && displaced {
             let speed = super::super::movement::read_speed(run.app.world(), run.actor);
             let delta = run.app.world().resource::<Time>().delta_secs();
-            assert!(
-                step <= speed * delta + 0.001,
-                "return movement must use native run speed, not snap: {step}"
-            );
-            walked_back = true;
+            if excess > speed * delta + 0.01 {
+                assert!(
+                    (step - speed * delta).abs() < 0.002,
+                    "frame {frame}: outside melee return step {step} vs {}",
+                    speed * delta
+                );
+                full_speed_steps += 1;
+            }
+            if step > 0.0 {
+                assert!(
+                    step <= speed * delta + 0.001,
+                    "return movement must use native run speed, not snap: {step}"
+                );
+                walked_back = true;
+            }
         }
         displaced |= (position.x - start.x).hypot(position.z - start.z) > 5.0;
         if frame == 140 {
@@ -585,8 +603,8 @@ fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
         "the real native Retreat must still displace the actor"
     );
     assert!(
-        walked_back,
-        "the fixture must physically walk back after native control releases"
+        walked_back && full_speed_steps > 0,
+        "the fixture must immediately walk back at native speed after control releases"
     );
     let events = &run
         .app
@@ -600,7 +618,9 @@ fn shared_fixture_displacement_returns_to_melee_after_real_retreat() {
                 && event.source == Some(run.actor.to_bits())
                 && event.spell_id.is_none()
                 && event.amount > 0),
-        "native melee swings must resume after the actual flight and finite return walk"
+        "native melee swings must resume after the actual flight and finite return walk; actor={:?} target={:?}",
+        run.app.world().get::<Position>(run.actor),
+        run.app.world().get::<Position>(run.targets[0])
     );
     assert!(
         events

@@ -43,6 +43,14 @@ fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     }
     clear_displacement_return_at_melee(world, actor);
     face_melee_intent(world, actor);
+    if matches!(
+        world.get::<crate::creature_ai::CreatureState>(actor),
+        Some(crate::creature_ai::CreatureState::Pursuing { .. })
+    ) {
+        let walking = read_walk_step(world, actor, delta).is_some();
+        set_return_walking(world, actor, walking);
+        return;
+    }
     let step = read_walk_step(world, actor, delta);
     if step.is_none() && world.get::<ReturningToMelee>(actor).is_none() {
         return;
