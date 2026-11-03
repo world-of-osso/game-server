@@ -129,12 +129,7 @@ pub fn read_inputs(world: &World, actor: Entity, spec: u32) -> Result<ActionInpu
         None
     };
     let (balance_alignment, lunar_calling) = if spec == 102 {
-        let alignment =
-            crate::spell_cast::knowledge::resolve_action(world, actor, 194223)?.unwrap_or(194223);
-        let lunar = world
-            .get::<crate::class_progression::KnownSpells>(actor)
-            .is_some_and(|known| known.contains(429523));
-        (alignment, lunar)
+        crate::balance_rotation::bindings::read_selection(world, actor)?
     } else {
         (194223, false)
     };
