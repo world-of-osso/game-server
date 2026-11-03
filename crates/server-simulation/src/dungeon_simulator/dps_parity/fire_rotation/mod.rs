@@ -1,10 +1,10 @@
 //! Fixture adapter over the production APL.
-pub(super) use server_follower_apl::fire_rotation::*;
 use bevy::prelude::*;
-
+pub(super) use server_follower_apl::fire_rotation::*;
 
 pub(super) fn apply_initial_spheres(world: &mut World, actor: Entity) {
-    let selected = world.get::<crate::class_progression::KnownSpells>(actor)
+    let selected = world
+        .get::<crate::class_progression::KnownSpells>(actor)
         .is_some_and(|known| known.contains(448601));
     if selected {
         // WCL Gt9TAHVbDJxQd1mw fight2 pulls2/4: three earned spheres
@@ -16,35 +16,13 @@ pub(super) fn apply_initial_spheres(world: &mut World, actor: Entity) {
 }
 
 pub(super) fn prepare_driver(run: &mut super::Run) -> Result<Box<dyn super::SpecDriver>, String> {
-    use super::literal_rotation::PrecombatPoll;
     apply_initial_spheres(run.app.world_mut(), run.actor);
-    let encounter = crate::simc_apl_native::Encounter::Fixture {
-        started_at: crate::spell_cast::now(run.app.world()),
-        duration: 300.0,
-        style: crate::simc_apl_native::FightStyle::Patchwerk,
-    };
-    let mut rotation = Rotation::load(run.app.world_mut(), run.actor, encounter, &run.profile)?;
-    super::literal_rotation::capture_fixture(run.app.world_mut(), run.actor, encounter)?;
-    loop {
-        match rotation.poll_precombat(run.app.world_mut(), run.actor, &run.targets)? {
-            PrecombatPoll::Waiting => super::preparation::finish_pending_setup(run)?,
-            PrecombatPoll::Selected { action, execution } => {
-                super::preparation::execute_precombat_plan(
-                    run,
-                    &mut rotation.driver,
-                    action,
-                    execution,
-                )?;
-            }
-            PrecombatPoll::Finished => break,
-        }
-    }
-    rotation.start_combat_at(crate::spell_cast::now(run.app.world()));
+    let driver = super::prepare_production_driver(run)?;
     run.gaps.retain(|gap| {
         !gap.starts_with("NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL")
             && !gap.starts_with("NATIVE_FOLLOWER_KIT_VS_SIMC_APL")
     });
-    Ok(Box::new(rotation))
+    Ok(driver)
 }
 
 pub(super) const REPORT_KEY: Option<&str> = Some("fire_rotation");
