@@ -1,6 +1,80 @@
 //! Native Feral mechanics, independent of the literal Feral controller.
 use super::*;
 
+fn predator_damage(spell: u32, haste: f32) -> i32 {
+    use shared::components::PowerType;
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let target_position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: target_position.x - 1.0,
+            ..target_position
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 449864));
+    run.app
+        .world_mut()
+        .get_mut::<crate::stats::CharacterStats>(actor)
+        .unwrap()
+        .haste_pct = haste;
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 140.0);
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    let _seed = crate::random::seed_scope(103449864);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, spell, Some(target), false)
+        .unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .find(|event| {
+            event.spell_id == Some(spell) && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .expect("actual cast must hit the native dummy")
+        .amount
+}
+
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_predator_scales_generator_but_not_bite_with_melee_haste() {
+    let shred_zero = predator_damage(5221, 0.0);
+    let shred_haste = predator_damage(5221, 50.0);
+    let bite_zero = predator_damage(22568, 0.0);
+    let bite_haste = predator_damage(22568, 50.0);
+    assert!(shred_zero > 0 && bite_zero > 0);
+    assert!(
+        (shred_haste as f32 / shred_zero as f32 - 1.2).abs() < 0.01,
+        "Shred {shred_zero} -> {shred_haste}"
+    );
+    assert_eq!(
+        bite_zero, bite_haste,
+        "Bite does not match the native Predator mask"
+    );
+}
+
 fn taste_for_blood_bite(talent: bool, tigers_fury: bool) -> f32 {
     use shared::components::PowerType;
     let mut run = prepare_literal(103, 1).unwrap();
