@@ -2,8 +2,7 @@
 use shared::components::{ActiveSpec, Health, Mana, Position};
 use shared::protocol::CombatLogKind;
 
-#[test]
-fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
+fn check_full_health_upkeep(spec: u32, excluded_heals: &[u32], check_mark: bool) {
     let _seed = crate::random::seed_scope(2);
     let mut app = super::runtime::build_app();
     let copy = super::runtime::create_copy(&mut app);
@@ -16,7 +15,7 @@ fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
             z: 0.0,
         },
         90,
-        [66, 105, 262, 63, 253],
+        [66, spec, 262, 63, 253],
     )
     .unwrap();
     let healer = *party
@@ -25,7 +24,7 @@ fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
         .find(|&&unit| {
             app.world()
                 .get::<ActiveSpec>(unit)
-                .is_some_and(|spec| spec.0 == 105)
+                .is_some_and(|active| active.0 == spec)
         })
         .unwrap();
     // Let native class initialization finish before setting the recovery state.
@@ -36,12 +35,14 @@ fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
         if let Some(mut health) = app.world_mut().get_mut::<Health>(unit) {
             health.current = health.max;
         }
-        crate::auras::remove_auras(
-            app.world_mut(),
-            unit,
-            crate::auras::RemoveReason::Cancelled,
-            |aura| aura.spell_id == 1126,
-        );
+        if check_mark {
+            crate::auras::remove_auras(
+                app.world_mut(),
+                unit,
+                crate::auras::RemoveReason::Cancelled,
+                |aura| aura.spell_id == 1126,
+            );
+        }
     }
     {
         let mut mana = app.world_mut().get_mut::<Mana>(healer).unwrap();
@@ -62,20 +63,45 @@ fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
         .0[cursor..];
     assert!(
         mana.current / mana.max >= 0.81,
-        "healer failed to recover: {mana:?}"
+        "spec {spec} failed to recover: {mana:?}"
     );
+    let casts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(healer.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .collect();
     assert!(
-        !events
-            .iter()
-            .any(|event| event.source == Some(healer.to_bits())
-                && event.spell_id == Some(774)
-                && event.kind == CombatLogKind::CastSuccess),
-        "full-health upkeep must not cast Rejuvenation"
+        !casts.iter().any(|event| event
+            .spell_id
+            .is_some_and(|spell| excluded_heals.contains(&spell))),
+        "spec {spec} cast healing upkeep: {casts:?}"
     );
-    assert!(
-        events
-            .iter()
-            .any(|event| event.spell_id == Some(1126) && event.kind == CombatLogKind::CastSuccess),
-        "missing Mark of the Wild must be recast"
-    );
+    if check_mark {
+        assert!(
+            events
+                .iter()
+                .any(|event| event.spell_id == Some(1126)
+                    && event.kind == CombatLogKind::CastSuccess),
+            "missing Mark of the Wild must be recast"
+        );
+    }
+}
+
+#[test]
+fn restoration_druid_recovers_mana_without_full_health_hots_and_recasts_mark() {
+    check_full_health_upkeep(105, &[774, 33763, 8936], true);
+}
+
+#[test]
+fn other_healers_do_not_cast_healing_upkeep_on_full_health_party() {
+    // Riptide, Renew, Atonement producers and Echo respectively.
+    for (spec, heals) in [
+        (264, &[61295, 8004, 77472][..]),
+        (257, &[139, 2061, 2060][..]),
+        (256, &[17, 194509, 2061][..]),
+        (1468, &[364343, 361469, 355936][..]),
+    ] {
+        check_full_health_upkeep(spec, heals, false);
+    }
 }
