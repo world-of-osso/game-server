@@ -65,6 +65,7 @@ mod natures_guardian;
 #[cfg(any(test, feature = "test-support"))]
 pub mod observations;
 mod periodic;
+mod periodic_costs;
 pub(crate) mod periodic_snapshot;
 #[cfg(test)]
 mod point_mod_tests;
@@ -399,6 +400,8 @@ pub struct AuraInstance {
     /// Full duration in ms; 0 is permanent.
     pub duration_ms: u32,
     pub expires_at: Option<f64>,
+    /// Next `ManaPerSecond`/`PowerPctPerSecond` charge (TC `m_timeCla`); None never pays.
+    next_cost_at: Option<f64>,
     pub stacks: u8,
     /// `CumulativeAura` (+ MaxAuraStacks mods); 0 does not stack.
     pub max_stacks: u8,
@@ -1132,6 +1135,7 @@ fn build_instance(
         effects,
         duration_ms,
         expires_at,
+        next_cost_at: periodic_costs::first_charge_at(spell, now, expires_at.is_some()),
         stacks,
         max_stacks,
         stack_expirations: async_stacks::initial_expirations(
@@ -3247,6 +3251,8 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
             state_interrupts(world, unit);
             crate::spell_cast::toy_area::remove_outside_auras(world, unit);
             remove_casterless(world, unit);
+            // TC Aura::UpdateOwner: Aura::Update's costs precede the effect periodics.
+            periodic_costs::charge_due(world, unit, now);
             periodic::run_due_ticks(world, unit, now);
         } else {
             remove_on_death(world, unit);

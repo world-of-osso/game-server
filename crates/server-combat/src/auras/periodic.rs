@@ -526,6 +526,11 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
 }
 
 fn run_trigger_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
+    if tick.trigger_spell != 0
+        && !crate::spell_cast::pay_channel_tick(world, tick.caster, spell, tick.trigger_spell)
+    {
+        return;
+    }
     // Additive OnEffectPeriodic still precedes default or registered emission.
     // This also preserves script-only triggers such as Mirror Image1264098.
     run_scripted_tick(world, unit, spell, tick);

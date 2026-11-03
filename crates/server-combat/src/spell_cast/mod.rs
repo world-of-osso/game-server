@@ -171,6 +171,8 @@ mod ferocious_bite;
 mod gcd_haste;
 #[cfg(test)]
 mod gcd_haste_tests;
+#[cfg(test)]
+mod periodic_cost_tests;
 pub use ferocious_bite::{
     read_extra_energy_modifier as read_ferocious_bite_extra_energy_modifier,
     read_maximum_energy as read_ferocious_bite_maximum_energy,
@@ -4514,6 +4516,41 @@ fn take_cast_resources(
     scripts::roll_runic_empowerment(world, caster, spell, costs);
     scripts::empower_gargoyles(world, caster, costs);
     crate::profession::take_reagents(world, caster, spell);
+}
+
+/// SimC76f8118 pets.cpp2852/action.cpp4769: an active channel pays its periodic
+/// child's native `SpellPower` cost on every tick. TC SpellAuras.cpp895–898 order:
+/// the tick is paid before it runs; a caster that cannot pay ends the channel.
+pub(crate) fn pay_channel_tick(
+    world: &mut World,
+    caster: Entity,
+    channel: &SpellInfo,
+    child: u32,
+) -> bool {
+    let channeling = world
+        .get::<CastState>(caster)
+        .is_some_and(|cast| cast.spell_id == channel.id && cast.cast_type == CastType::Channel);
+    if !channeling {
+        return true;
+    }
+    let child = world
+        .resource::<SpellStore>()
+        .get(child)
+        .cloned()
+        .expect("periodic trigger child is a native spell");
+    let costs = applicable_costs(world, caster, &child)
+        .ok()
+        .filter(|costs| costs.iter().all(|(_, amount, current)| current >= amount));
+    let Some(costs) = costs else {
+        end_cast(world, caster);
+        return false;
+    };
+    let costs: Vec<_> = costs
+        .into_iter()
+        .map(|(pool, amount, _)| (pool, amount))
+        .collect();
+    spend_costs(world, caster, &costs);
+    true
 }
 
 fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
