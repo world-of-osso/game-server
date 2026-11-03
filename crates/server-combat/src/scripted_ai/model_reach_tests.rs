@@ -13,7 +13,7 @@ fn read_both_reaches(world: &mut World, unit: Entity) -> (Option<f32>, Option<f3
 fn missing_native_model_info_uses_scaled_player_default_reach() {
     let mut world = World::new();
     // Source Henry215011 display121275 has no encounter model-info row.
-    world.insert_resource(ModelReaches(HashMap::new()));
+    world.insert_resource(ModelReaches::new(HashMap::new()));
     for (scale, expected) in [(0.5, 0.75), (1.0, 1.5), (2.0, 3.0)] {
         let unit = world
             .spawn((ModelDisplay { display_id: 121275 }, UnitScale(scale)))
@@ -59,7 +59,7 @@ fn native_model_geometry_preserves_source_radius_scale_and_unavailable_rows() {
 fn sourced_model_info_preserves_scaled_native_reach() {
     let mut world = World::new();
     // Source Crenna209072 display113757 has native combat reach3yd.
-    world.insert_resource(ModelReaches(
+    world.insert_resource(ModelReaches::new(
         [(
             113757,
             ModelDimensions {

@@ -2,7 +2,7 @@
 use bevy::ecs::entity::{EntityHashMap, EntityHashSet};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use shared::components::Position;
+use shared::components::{Position, UnitScale};
 
 use super::InMap;
 
@@ -25,11 +25,13 @@ pub(crate) fn install(app: &mut App) {
     }
     app.init_resource::<MapUnits>()
         .init_resource::<AreaGrid>()
+        .init_resource::<MaximumUnitScale>()
         .init_resource::<crate::interest::InterestDirtyQueue>()
         .add_observer(index_unit)
         .add_observer(unindex_unit)
         .add_observer(index_position)
-        .add_observer(unindex_position);
+        .add_observer(unindex_position)
+        .add_observer(record_unit_scale);
 }
 
 fn index_unit(
@@ -62,6 +64,26 @@ fn unindex_unit(
         if members.is_empty() {
             units.0.remove(map);
         }
+    }
+}
+
+/// A conservative high-water mark: scale changes can enlarge an existing unit.
+#[derive(Resource)]
+pub(crate) struct MaximumUnitScale(pub(crate) f32);
+
+impl Default for MaximumUnitScale {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
+fn record_unit_scale(
+    trigger: On<Insert, UnitScale>,
+    units: Query<&UnitScale>,
+    mut maximum: ResMut<MaximumUnitScale>,
+) {
+    if let Ok(scale) = units.get(trigger.entity) {
+        maximum.0 = maximum.0.max(scale.0);
     }
 }
 

@@ -1518,8 +1518,29 @@ pub fn chain_targets(
         & SPELL_ATTR2_CHAIN_FROM_CASTER
         != 0;
     let from_initial = effect.attributes & EFFECT_ATTR_CHAIN_FROM_INITIAL_TARGET != 0;
+    let Some(caster_reach) = crate::scripted_ai::model_reach::combat_reach(world, caster) else {
+        warn!(
+            ?caster,
+            spell_id = spell.id,
+            "chain caster lacks combat reach"
+        );
+        return Vec::new();
+    };
+    let Some(target_reach) = crate::scripted_ai::model_reach::combat_reach(world, target) else {
+        warn!(
+            ?target,
+            spell_id = spell.id,
+            "chain primary lacks combat reach"
+        );
+        return Vec::new();
+    };
     let search_radius = if from_caster {
-        spell_range(spell, relation == Relation::Enemy).1
+        let hostile = relation == Relation::Enemy;
+        if uses_melee_range(spell, hostile) {
+            (caster_reach + target_reach + 4.0 / 3.0).max(crate::combat::MELEE_RANGE)
+        } else {
+            spell_range(spell, hostile).1 + caster_reach + target_reach
+        }
     } else if from_initial {
         jump_radius
     } else {
@@ -1529,25 +1550,75 @@ pub fn chain_targets(
     let Some(search_center) = position(world, source) else {
         return Vec::new();
     };
+    // TC's search is a cylinder whose horizontal radius includes the target reach.
+    // Bound its enclosing sphere with the largest loaded model and observed scale.
+    let Some(models) = world.get_resource::<crate::scripted_ai::model_reach::ModelReaches>() else {
+        warn!(
+            spell_id = spell.id,
+            "chain target search lacks model reach data"
+        );
+        return Vec::new();
+    };
+    let Some(scale) = world.get_resource::<crate::maps::units::MaximumUnitScale>() else {
+        warn!(spell_id = spell.id, "chain target search lacks scale bound");
+        return Vec::new();
+    };
+    let max_reach = models.maximum_unscaled_reach() * scale.0;
+    let broad_radius = (search_radius + max_reach).hypot(search_radius);
     let mut candidates: Vec<Entity> =
-        area_units(world, caster, search_center, search_radius, relation, 0)
+        area_units(world, caster, search_center, broad_radius, relation, 0)
             .into_iter()
             .filter(|&unit| unit != target && (unit != caster || !excludes_caster(spell)))
+            .filter(|&unit| {
+                let Some(pos) = position(world, unit) else {
+                    return false;
+                };
+                let Some(reach) = crate::scripted_ai::model_reach::combat_reach(world, unit) else {
+                    warn!(
+                        ?unit,
+                        spell_id = spell.id,
+                        "chain candidate lacks combat reach"
+                    );
+                    return false;
+                };
+                let horizontal = Vec2::new(pos.x - search_center.x, pos.z - search_center.z);
+                horizontal.length() < search_radius + reach
+                    && (pos.y - search_center.y).abs() <= search_radius
+            })
             .filter(|&unit| implicit_target_allowed(world, caster, spell, unit))
             .filter(|&unit| {
                 relation != Relation::Enemy
                     || crate::followers::chain_candidate_allowed(world, caster, target, unit)
             })
             .collect();
+    candidates.sort_unstable();
     let mut chain = Vec::new();
     while chain.len() < jumps {
         let Some(from) = position(world, source) else {
             break;
         };
+        let Some(source_reach) = crate::scripted_ai::model_reach::combat_reach(world, source)
+        else {
+            warn!(
+                ?source,
+                spell_id = spell.id,
+                "chain source lacks combat reach"
+            );
+            break;
+        };
         let eligible = candidates.iter().enumerate().filter_map(|(slot, &unit)| {
             let distance = position(world, unit)?.distance(from);
             let health = world.get::<Health>(unit)?;
-            (distance <= jump_radius).then_some((
+            let Some(unit_reach) = crate::scripted_ai::model_reach::combat_reach(world, unit)
+            else {
+                warn!(
+                    ?unit,
+                    spell_id = spell.id,
+                    "chain candidate lacks combat reach"
+                );
+                return None;
+            };
+            (distance < jump_radius + source_reach + unit_reach).then_some((
                 slot,
                 distance,
                 (health.max - health.current).max(0.0),

@@ -7,6 +7,65 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "private current native DB and exact spec71 inputs"]
+fn arms_sweeping_search_handles_scaled_and_missing_model_reach() {
+    let mut run = prepare_measurement(71, 3).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    let primary = run.targets[0];
+    let missing = run.targets[1];
+    let large = run.targets[2];
+    execute(
+        run.app.world_mut(),
+        actor,
+        Execution::Spell(260708, actor, Some(actor)),
+    )
+    .unwrap();
+    let world = run.app.world_mut();
+    world
+        .entity_mut(missing)
+        .remove::<shared::components::ModelDisplay>();
+    let mut position = *world.get::<shared::components::Position>(large).unwrap();
+    position.x = 200.0;
+    world
+        .entity_mut(large)
+        .insert((position, shared::components::UnitScale(100.0)));
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(12294)
+        .unwrap()
+        .clone();
+    let recipients = crate::spell_cast::targets::chain_targets(
+        world,
+        actor,
+        &spell,
+        &spell.effects[0],
+        primary,
+        crate::spell_cast::targets::Relation::Enemy,
+    );
+    assert_eq!(
+        recipients,
+        vec![large],
+        "scaled target is found and missing geometry is excluded"
+    );
+    world
+        .entity_mut(primary)
+        .remove::<shared::components::ModelDisplay>();
+    assert!(
+        crate::spell_cast::targets::chain_targets(
+            world,
+            actor,
+            &spell,
+            &spell.effects[0],
+            primary,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
+        .is_empty(),
+        "missing primary geometry fails the chain without a panic"
+    );
+}
+
+#[test]
+#[ignore = "private current native DB and exact spec71 inputs"]
 fn arms_sweeping_strikes_missing_aura_does_not_panic_or_reapply() {
     let mut run = prepare_measurement(71, 1).unwrap();
     let actor = run.actor;
@@ -66,6 +125,15 @@ fn arms_sweeping_strikes_grants_native_uses_and_one_secondary_mortal_strike() {
     for _ in 0..60 {
         run.app.update();
     }
+    // Within native melee reach, but beyond five yards between centers.
+    let mut position = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(actor)
+        .unwrap();
+    position.x = 6.6;
+    position.z = 0.0;
+    run.app.world_mut().entity_mut(actor).insert(position);
     execute(
         run.app.world_mut(),
         actor,

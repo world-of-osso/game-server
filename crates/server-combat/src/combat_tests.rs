@@ -28,7 +28,7 @@ fn setup_app() -> App {
     app.init_resource::<CombatLog>();
     app.init_resource::<FactionTemplates>();
     app.init_resource::<crate::spell_cast::script_registry::SpellScriptRegistry>();
-    app.insert_resource(crate::scripted_ai::model_reach::ModelReaches(
+    app.insert_resource(crate::scripted_ai::model_reach::ModelReaches::new(
         std::collections::HashMap::from([(
             1,
             crate::scripted_ai::model_reach::ModelDimensions {

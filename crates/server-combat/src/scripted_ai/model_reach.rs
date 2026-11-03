@@ -24,7 +24,21 @@ pub(crate) struct ModelDimensions {
 /// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
 #[derive(Resource)]
 #[cfg_attr(any(test, feature = "test-support"), derive(Clone))]
-pub struct ModelReaches(pub(crate) HashMap<u32, ModelDimensions>);
+pub struct ModelReaches(pub(crate) HashMap<u32, ModelDimensions>, f32);
+
+impl ModelReaches {
+    pub(crate) fn new(models: HashMap<u32, ModelDimensions>) -> Self {
+        let maximum = models
+            .values()
+            .map(|model| model.combat_reach)
+            .fold(PLAYER_COMBAT_REACH, f32::max);
+        Self(models, maximum)
+    }
+
+    pub(crate) fn maximum_unscaled_reach(&self) -> f32 {
+        self.1
+    }
+}
 
 pub fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
     let mut statement = conn.prepare(
@@ -39,7 +53,7 @@ pub fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<Model
             },
         ))
     })?;
-    Ok(ModelReaches(rows.collect::<rusqlite::Result<_>>()?))
+    Ok(ModelReaches::new(rows.collect::<rusqlite::Result<_>>()?))
 }
 
 /// Pure `MISSING_MODEL_INFO_TC_PLAYER_DEFAULTS_SCALED` dimension decision.
