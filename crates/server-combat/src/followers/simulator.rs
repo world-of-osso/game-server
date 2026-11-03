@@ -762,6 +762,29 @@ pub fn leader_requires_target_approach(
     Ok(blocked)
 }
 
+/// Launch a native jump for a headless movement fixture.
+pub fn launch_fixture_jump(
+    world: &mut World,
+    unit: Entity,
+    destination: shared::components::Position,
+) {
+    crate::scripted_ai::jump_movement::move_jump(world, unit, 0, destination, 20.0, 2.0);
+}
+
+/// Whether a movement generator owns an actor whose position may be off the walk mesh.
+pub fn movement_is_forced(world: &World, unit: Entity) -> bool {
+    world
+        .get::<crate::scripted_ai::jump_movement::JumpMovement>(unit)
+        .is_some()
+        || world
+            .get::<crate::knockback::KnockbackFlight>(unit)
+            .is_some()
+        || world
+            .get::<crate::spell_cast::charge::ChargeMovement>(unit)
+            .is_some()
+        || crate::test_support::transport::in_progress(world, unit)
+}
+
 /// Read the unadmitted hostiles blocking one owner movement step.
 pub fn owner_step_sight_blockers(
     world: &mut World,
