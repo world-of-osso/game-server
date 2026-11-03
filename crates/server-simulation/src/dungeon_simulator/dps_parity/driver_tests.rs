@@ -71,7 +71,7 @@ fn selected_driver_receives_actor_targets_and_reports_only_its_state() {
         run.app.world().get::<Name>(run.actor).unwrap().as_str(),
         "literal decision"
     );
-    let output = driver_report(&run);
+    let output = driver_report(&run).unwrap();
     assert_eq!(output["driver"], "LITERAL_SIMC_FIRE_76f8118");
     assert_eq!(output["fire_rotation"], json!({"decisions": 2}));
     for key in [
@@ -103,16 +103,14 @@ fn selected_driver_errors_are_not_replaced_by_another_rotation() {
     );
     assert!(run.app.world().get::<Name>(run.actor).is_none());
     assert_eq!(
-        driver_report(&run)["fire_rotation"],
+        driver_report(&run).unwrap()["fire_rotation"],
         json!({"decisions": 0})
     );
 }
 
 #[test]
-fn nonliteral_follower_label_and_null_reports_are_unchanged() {
+fn missing_follower_driver_reports_an_explicit_error() {
     let mut run = fixture(false);
     run.spec_driver = None;
-    let output = driver_report(&run);
-    assert_eq!(output["driver"], "NATIVE_FOLLOWER_KIT");
-    assert_eq!(output["fire_rotation"], Value::Null);
+    assert_eq!(driver_report(&run).unwrap_err(), "NATIVE_LITERAL_DRIVER_UNAVAILABLE:63");
 }
