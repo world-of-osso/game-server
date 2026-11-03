@@ -47,6 +47,9 @@ fn demonology_inquisitor_mind_sear_ticks_after_hasted_precast() {
                 && event.spell_id == Some(1280460)),
         "Mind Sear cannot tick before its hasted cast completes"
     );
+    // TC npcs_special.cpp1382–1421: each dummy ends combat 5 s after its last hit, and
+    // follower summons may not hit an unengaged hostile. Keep the pack engaged at channel start.
+    engage_fixture_opponents(&mut run);
     for _ in 0..20 {
         run.app.update();
     }
