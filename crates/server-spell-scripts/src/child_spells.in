@@ -417,7 +417,7 @@ C	outlaw_trickster.rs	441326
 C	outlaw_trickster.rs	441786
 C	outlaw_trickster.rs	459485
 C	outlaw_zero_producer.rs	1259486
-C	paladin_guided_prayer.rs	85673
+D	paladin_guided_prayer.rs	on_damage	cast_triggered_with_overrides	spell	1	85673,156322
 C	paladin_armaments.rs	85673
 C	paladin_armaments.rs	327510
 C	paladin_armaments.rs	379017

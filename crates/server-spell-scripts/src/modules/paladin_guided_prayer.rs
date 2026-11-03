@@ -33,17 +33,36 @@ fn on_damage(world: &mut World, event: &CombatLogEvent) {
         return;
     };
     let threshold = spell_cast::scripts::script_effect_value(world, unit, TALENT, 0);
+    // INFERRED_WCL: 2gBLy8vcfWAHQ7t3/25/1 at 5.696s and
+    // vhKYp3J2BcVdQ7fa/2/1 at 11.180s proc above 25% post-hit HP; subtracting
+    // that hit again crosses the native threshold. Retire when Blizzard's
+    // authoritative proc health calculation becomes available.
     let below_threshold = world.get::<Health>(unit).is_some_and(|health| {
-        health.current > 0.0 && health.current * 100.0 < health.max * threshold
+        health.current > 0.0
+            && (health.current - event.amount as f32) * 100.0 < health.max * threshold
     });
-    if !below_threshold || procs::start_policy_proc(world, unit, instance).is_none() {
+    if !below_threshold || !procs::policy_proc_ready(world, unit, instance) {
+        return;
+    }
+    let spell = match spell_cast::knowledge::resolve_actor_action(world, unit, WORD_OF_GLORY) {
+        Ok(spell) => spell,
+        Err(error) => {
+            warn!(
+                ?unit,
+                ?error,
+                "Guided Prayer cannot resolve its healing action"
+            );
+            return;
+        }
+    };
+    if procs::start_policy_proc(world, unit, instance).is_none() {
         return;
     }
     let effectiveness = spell_cast::scripts::script_effect_value(world, unit, TALENT, 1) / 100.0;
     spell_cast::cast_triggered_with_overrides(
         world,
         unit,
-        WORD_OF_GLORY,
+        spell,
         Some(unit),
         1,
         TriggeredSpellOverrides {
