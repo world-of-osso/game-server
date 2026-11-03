@@ -247,6 +247,7 @@ register_modules! {
     feral_dreadful_wound: (1031, "modules/feral_dreadful_wound.rs"),
     feral_frantic_momentum: (1031, "modules/feral_frantic_momentum.rs"),
     feral_growth: (1031, "modules/feral_growth.rs"),
+    feral_halazzis_fury: (1034, "modules/feral_halazzis_fury.rs"),
     feral_lunar: (1030, "modules/feral_lunar.rs"),
     feral_lycaras: (1035, "modules/feral_lycaras.rs"),
     feral_omen: (1034, "modules/feral_omen.rs"),

@@ -114,6 +114,80 @@ fn feral_coiled_waits_for_berserk_storage_and_free_bite_consumes_it() {
     );
 }
 
+#[test]
+#[ignore = "requires exact spec103 profile/traits and native private DB"]
+fn feral_halazzis_fury_banks_paid_and_free_finisher_points_until_berserk_ends() {
+    use shared::components::PowerType;
+    let _seed = crate::random::seed_scope(1031301600);
+    let mut run = prepare_literal(103, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 768, Some(actor), false).unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let pos = *run
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(actor)
+        .insert(shared::components::Position {
+            x: pos.x - 1.0,
+            ..pos
+        });
+    face_actor_toward_primary(run.app.world_mut(), actor, target);
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1296605));
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 106951, Some(actor), 1);
+    crate::spell_cast::powers::change_power(
+        run.app.world_mut(),
+        actor,
+        PowerType::ComboPoints,
+        5.0,
+    );
+    crate::spell_cast::powers::change_power(run.app.world_mut(), actor, PowerType::Energy, 140.0);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 22568, Some(target), false)
+        .unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let mut bite = crate::spell_cast::load_triggered_spell(run.app.world(), 22568, 1).unwrap();
+    bite.cast_policy_context = Some(Box::new(crate::spell_info::CastPolicyContext {
+        resources: vec![(PowerType::ComboPoints, 5.0)],
+        free_spender: true,
+        targets: vec![target],
+    }));
+    assert!(crate::spell_cast::launch_triggered_spell(
+        run.app.world_mut(),
+        actor,
+        &bite,
+        Some(target),
+        1
+    ));
+    for _ in 0..5 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1301600));
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 106951,
+    );
+    let fury = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1301600)
+        .expect("Berserk ends with Halazzi's Fury");
+    assert_eq!(
+        fury.duration_ms, 10_000,
+        "each paid and free effective point adds one second"
+    );
+}
+
 fn predator_damage(spell: u32, haste: f32) -> i32 {
     use shared::components::PowerType;
     let mut run = prepare_literal(103, 1).unwrap();
