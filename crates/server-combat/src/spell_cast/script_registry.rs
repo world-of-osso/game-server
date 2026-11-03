@@ -2264,11 +2264,15 @@ pub fn guardian_action_eligible(world: &World, actor: Entity, spell: u32, target
         })
 }
 
-// VERIFIED_WCL: Blood Gift selects the 200% variants; the 7-stack cohort
-// tBg8fJZqzyCWX19D/7, jkcwtQYBLVahmpGC/58, waQDVTmFMp1HGnJr/4,
-// 2rA8HYvBPxG1wmpn/8 supports SimC76f8118 sc_death_knight.cpp:7378–7384.
-// Analysis: /home/osso/Projects/world-of-osso/game-engine/data/diagnostics/blood-250-all-ds-d44558/wcl-cohort/analyze.py
-// Retire when DB2/TC encodes effect eligibility or a retail capture contradicts it.
+// SIMC_SOURCED: Blood selects the 200% variants (SimC76f8118
+// sc_death_knight.cpp:7378–7384). Historical WCL 7-stack median: 1.54 in
+// tBg8fJZqzyCWX19D/7, jkcwtQYBLVahmpGC/58, waQDVTmFMp1HGnJr/4, 2rA8HYvBPxG1wmpn/8.
+// Post-2026-10-16 WCL: 11 pairs, median 1.506, player-cluster 95% interval
+// [1.46, 2.16], in 2kgNbLrQGZwzAa1J/21, F9v1HCXTDmawjryL/12,
+// 8RmrTt72LcWqQKXx/8, z1C2HFkf6VpGqWZD/1, bvNHk92hRZX1FVYz/16,
+// LnMDdV3NPCK9J8jG/4. Supportive but not decisive; timestamps are not build IDs.
+// Analysis: game-engine/data/diagnostics/blood-250-all-ds-d44558/wcl-cohort/current/analyze.py
+// Retire when DB2/TC encodes eligibility or a current-build cohort excludes 1.52.
 // (spell, selected spec, indexes disabled for that spec, indexes disabled otherwise)
 const EFFECT_SELECTION_OVERRIDES: &[(u32, u32, u32, u32)] = &[(
     434153,
