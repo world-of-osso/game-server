@@ -11,6 +11,10 @@ The native follower used the frozen campaign database and ten seeds `70448,1–9
 
 Both point estimates are in the ±5% band. The 1T interval crosses its lower boundary. The 3T measurement predates the Feral-only rebase in `40770835c7`; it was not repeated on that revision. The earlier 3T result of 0.8322 used an older revision, so its improvement cannot be attributed to one fix. The reported fact-error ledgers are empty; potion inventory and external Power Infusion remain unavailable. Evidence: `game-engine/data/diagnostics/parity-253-2026-11-03b/407708-1t/` and `tip-fixed/`.
 
+## Assassination death-refund gap — 2026-11-03
+
+Venomous Wounds (79134) does not yet refund energy when a Rupture target dies. SimC reports 79.8 energy per 300-second 3T fight. Spending that energy on Fan of Knives at its SimC average damage estimates 369 direct DPS (0.14% of reference DPS), excluding indirect effects. The retail refund formula remains unverified; the SimC implementation marks it uncertain. Evidence: `game-engine/data/diagnostics/parity-259-2026-11-03b/refund-evidence.md`.
+
 ## Elemental and Fire remeasure — 2026-11-03
 
 On candidate `1cea56b867` (base `55bd63da49`), the fixture-engagement, Elemental MotE/Fusion and Vile Vial fixes were measured with the frozen campaign database and native follower seeds `70448,1–9`. The SimC `76f8118` references are unchanged. These results include other changes since `389ca621d0`; the difference from the earlier campaign cannot be attributed to one fix.
@@ -33,6 +37,19 @@ The reference profile has bonus 13708 on its neck, chest and weapon. Native mode
 DB2 has no `SpellAuraOptions` row for `1307910`; its recorded attributes do not establish an item-source stacking exception. TC `SpellAuras.cpp:1756–1769` rejects the same spell and caster stacking except for a custom enchant-proc case. Retail stacking and amounts remain **unknown**: 4,000 inspected current-build ranking rows yielded no player with two or more bonus-13708 items. Native remains unchanged.
 
 DB2 gives each driver 2 RPPM, no haste-modifier rows and a 12-second buff; the SimC debug trace also reports no haste scaling. With independent drivers, bad-luck protection and 30% refresh carryover, a 1,500-run illustrative simulation predicted 79.45% uptime for three drivers and 38.22% for one. Native's ten-seed mean was 78.55%; SimC's 1,000-iteration report was 38.96%. The first native seed alone was 81.37%; the aggregate report retained that seed's uptime rather than averaging it. The reference and native rates therefore represent different models, not evidence that native's three-driver rate is wrong.
+
+## Demon Hunter reach-4 candidate remeasure (2026-11-03)
+
+Candidate `1f6ed648ec` uses the SimC-sourced 4.0 target combat reach and includes the ballistic landing and single-writer movement changes. These are local candidate measurements, not a landed-master result. Each row uses the native production literal follower, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC references use 1,000 iterations. Per-seed reports and logs are in `game-engine/data/diagnostics/parity-577-2026-11-03/simc-reach4/`. The 577 1T aggregate JSON was overwritten by a one-seed probe; its ten seed files and ten-seed log remain intact. All 40 seed reports have empty fact-error ledgers.
+
+| Spec | Targets | Native DPS | Raw SimC DPS | Raw ratio | Raw status |
+|---|---:|---:|---:|---:|---|
+| Havoc (577) | 1T | 199,917 | 214,737 | 0.9310 | **OUT** |
+| Havoc (577) | 3T | 313,027 | 334,847 | 0.9348 | **OUT** |
+| Devourer (1480) | 1T | 214,424 | 214,110 | 1.0015 | in |
+| Devourer (1480) | 3T | 325,406 | 341,884 | 0.9518 | in |
+
+Against the diagnostic SimC control described in [Havoc DPS parity](577.md#simc-without-double-applications), Havoc is **in band**: 199,917 / 207,944 = 0.9614 for 1T and 313,027 / 327,183 = 0.9567 for 3T. The control removes the documented extra Exergy and Eternal Hunt applications and the bugs-mode Soulscar factor; it is not a Retail measurement. The raw SimC comparison remains out of band. Neither candidate 3T measurement includes the separately owned fixture-engagement fix; the candidate also excludes the separately owned Aqirbane fix. These results do not establish post-merge parity.
 
 ## L90 landed-master remeasure (2026-11-03)
 
