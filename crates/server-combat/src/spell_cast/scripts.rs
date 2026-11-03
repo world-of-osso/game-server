@@ -257,6 +257,7 @@ pub(super) fn finish_scripted_launch(
     );
     elemental_ancestors::after_launch(world, caster, spell, depth, foreground);
     script_registry::after_elemental_launch(world, caster, spell, foreground);
+    script_registry::after_elemental_children_launch(world, caster, spell, depth, foreground);
     script_registry::after_launch_proc_supply(world, caster, spell);
     script_registry::before_execution_counter_launch(world, caster, spell);
     script_registry::after_counter_launch(world, caster, spell.id);

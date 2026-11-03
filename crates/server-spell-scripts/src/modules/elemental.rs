@@ -10,6 +10,7 @@ use combat::spell_info::SpellInfo;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::CaptureConsumedDamageModifier(capture_damage_modifier),
     SpellScriptHook::FinishConsumedDamageModifier(after_launch),
+    SpellScriptHook::AfterElementalChildrenLaunch(after_elemental_children),
     SpellScriptHook::BeforeJudgmentOnCast(before_launch),
     SpellScriptHook::BeforeLateAuraRegistration(register),
 ];
@@ -172,16 +173,28 @@ fn after_launch(
     spell: &SpellInfo,
     consumed: Option<u32>,
     depth: u8,
-    foreground: bool,
+    _foreground: bool,
 ) {
     if let Some(instance) = consumed {
         combat::auras::spend_stack(world, caster, instance);
     }
+    grant_blast_buff(world, caster, spell.id, false, depth);
+    grant_native_uses(world, caster, spell.id);
+}
+
+// INFERRED_WCL: Bn4RGPfkaZjmV2AN fight1 actors25/29; Fusion Blast does not
+// consume the new MotE. SimC76f8118 sc_shaman.cpp3297–3311,7243–7247
+// executes Fusion before Lava Burst grants MotE.
+fn after_elemental_children(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+    foreground: bool,
+) {
     if foreground && !spell.cast_parent_owns_modifier_charges {
         grant_mote(world, caster, spell.id, depth);
     }
-    grant_blast_buff(world, caster, spell.id, false, depth);
-    grant_native_uses(world, caster, spell.id);
 }
 
 fn grant_native_uses(world: &mut World, caster: Entity, spell: u32) {
