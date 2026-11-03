@@ -88,6 +88,7 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     units.extend(pets);
     for unit in units {
         world.entity_mut(unit).remove::<(Travel, FlightTravel)>();
+        crate::creature_ai::publish_planned_destination(world, unit, None);
     }
 }
 
@@ -263,6 +264,7 @@ fn handle_unreachable_movement(
         crate::creature_ai::mark_chase_blocked(world, unit, *target);
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     if (world.get::<MoveIntent>(unit).is_none()
@@ -279,6 +281,7 @@ fn handle_unreachable_movement(
         world.entity_mut(unit).insert(BlockedWalk { reason });
         let position = *world.get::<Position>(unit).unwrap();
         crate::creature_ai::move_follower(world, unit, position, 0.0);
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     Err(format!(
@@ -307,6 +310,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     }
     if server::test_support::transport::in_progress(world, unit) {
         world.entity_mut(unit).remove::<(Travel, MoveIntent)>();
+        crate::creature_ai::publish_planned_destination(world, unit, None);
         return Ok(());
     }
     if !can_move(world, unit) {
@@ -388,6 +392,8 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     } else if !in_reach {
         world.entity_mut(unit).insert(travel);
     }
+    let goal = (!returned_home && !in_reach).then_some(to);
+    crate::creature_ai::publish_planned_destination(world, unit, goal);
     Ok(())
 }
 
@@ -508,6 +514,72 @@ fn travel_updates_follower_motion_flag_on_movement_and_stop() {
     move_one(&mut world, follower, 0.5).unwrap();
     assert_eq!(*world.get::<Position>(follower).unwrap(), position);
     assert!(!world.get::<FollowOwner>(follower).unwrap().is_moving());
+}
+
+#[cfg(test)]
+fn read_apl_distance(world: &World, actor: Entity) -> Result<f64, String> {
+    use server::simc_apl::Facts;
+    use server::simc_apl_native::{Bindings, Encounter, NativeFacts};
+    NativeFacts::new(
+        world,
+        actor,
+        &Bindings::default(),
+        Encounter::dungeon(0.0),
+        1,
+    )
+    .value("movement.distance")
+}
+
+#[test]
+fn travel_publishes_its_goal_while_walking_and_clears_it_on_arrival() {
+    use crate::creature_ai::FollowOwner;
+    use server::simc_apl_native::MovementDestination;
+    let mut world = World::new();
+    let walker = reach_tests::altar_walker();
+    let (from, to) = reach_tests::short_walk(&walker);
+    world.insert_resource(walker);
+    let owner = world
+        .spawn(Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        })
+        .id();
+    let follower = world
+        .spawn((
+            Position {
+                x: from.x,
+                y: from.y,
+                z: from.z,
+            },
+            Health {
+                current: 100.0,
+                max: 100.0,
+            },
+            shared::components::CreatureMotion::Still,
+            FollowOwner::new(owner),
+        ))
+        .id();
+    assert_eq!(read_apl_distance(&world, follower).unwrap(), 0.0, "idle");
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert_eq!(
+        world.get::<MovementDestination>(follower),
+        Some(&MovementDestination(to))
+    );
+    let here = point(world.get::<Position>(follower).unwrap());
+    assert_eq!(
+        read_apl_distance(&world, follower).unwrap(),
+        f64::from(here.distance(to))
+    );
+    assert!(
+        here.distance(to) > 4.0,
+        "still walking toward the follow reach"
+    );
+    let position = *world.get::<Position>(follower).unwrap();
+    world.entity_mut(owner).insert(position);
+    move_one(&mut world, follower, 0.5).unwrap();
+    assert!(world.get::<MovementDestination>(follower).is_none());
+    assert_eq!(read_apl_distance(&world, follower).unwrap(), 0.0);
 }
 
 #[test]
