@@ -670,6 +670,16 @@ fn ret_damage_light_within_buffs_apply_to_blade_before_consumption() {
         engage(&mut run);
         run.app
             .world_mut()
+            .entity_mut(run.actor)
+            .remove::<crate::combat::AutoAttack>();
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            run.actor,
+            crate::auras::RemoveReason::Cancelled,
+            |a| matches!(a.spell_id, 406086 | 402916),
+        );
+        run.app
+            .world_mut()
             .get_mut::<crate::stats::CharacterStats>(run.actor)
             .unwrap()
             .crit_pct = 0.0;
