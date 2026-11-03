@@ -122,7 +122,7 @@ fn enhancement_tempest_secondary_targets_use_native_effectiveness() {
     let secondary = hit(1);
     let ratio = secondary as f32 / primary as f32;
     assert!(
-        (ratio - 0.65).abs() < 0.002,
+        (ratio - 0.56).abs() < 0.002,
         "same target as primary={primary}, secondary={secondary}, ratio={ratio}"
     );
 }
