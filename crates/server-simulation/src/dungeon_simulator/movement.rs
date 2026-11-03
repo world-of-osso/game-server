@@ -316,6 +316,18 @@ fn handle_unreachable_movement(
 }
 
 fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
+    let apl_owns_movement = world
+        .get::<crate::simc_apl_native::AplMovementIntent>(unit)
+        .is_some();
+    if apl_owns_movement
+        && matches!(
+            world.get::<crate::creature_ai::CreatureState>(unit),
+            Some(crate::creature_ai::CreatureState::Pursuing { .. })
+        )
+    {
+        world.entity_mut(unit).remove::<Travel>();
+        return Ok(());
+    }
     if flight_in_progress(world, unit) {
         return advance_flight(world, unit, dt);
     }

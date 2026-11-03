@@ -6,8 +6,7 @@ use shared::components::{MovementControl, Position, Rotation};
 #[path = "retreat_destination_tests.rs"]
 mod destination_tests;
 
-#[derive(Component)]
-pub struct RetreatSetup;
+use crate::simc_apl_native::AplMovementIntent;
 
 /// Walk to the edge of melee, then face away so Retreat moves through the target.
 /// Returns false while the actor is still walking or cannot move.
@@ -43,7 +42,7 @@ pub fn prepare_havoc_retreat(
     let desired = (range - 0.02).max(0.0);
     let difference = desired - distance;
     if difference.abs() > 0.001 {
-        world.entity_mut(actor).insert(RetreatSetup);
+        world.entity_mut(actor).insert(AplMovementIntent);
         let speed = world
             .get::<crate::creature_ai::SpawnPoint>(actor)
             .map_or(1.0, |spawn| spawn.speed_run)
@@ -72,7 +71,7 @@ pub fn prepare_havoc_retreat(
         );
         return Ok(false);
     }
-    world.entity_mut(actor).remove::<RetreatSetup>();
+    world.entity_mut(actor).remove::<AplMovementIntent>();
     crate::creature_ai::publish_planned_destination(world, actor, None);
     let mut rotation = world
         .get_mut::<Rotation>(actor)

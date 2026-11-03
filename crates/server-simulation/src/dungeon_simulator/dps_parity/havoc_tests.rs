@@ -2,6 +2,33 @@
 use super::*;
 
 #[test]
+#[ignore = "requires native parity fixture"]
+fn havoc_retreat_setup_completes_during_real_follower_combat() {
+    use shared::protocol::CombatLogKind;
+    let _seed = crate::random::seed_scope(70_448);
+    let mut run = prepare_measurement(577, 1).unwrap();
+    engage(&mut run);
+    let started = run.app.world().resource::<bevy::time::Time>().elapsed();
+    install_fixture_lifetimes(&mut run, started);
+    drive_player(&mut run).unwrap();
+    for _ in 0..400 {
+        let end = run.app.world().resource::<bevy::time::Time>().elapsed()
+            + std::time::Duration::from_millis(50);
+        advance_fixture_step(&mut run, end).unwrap();
+        drive_player(&mut run).unwrap();
+        let events = &run.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0;
+        if events.iter().any(|event| event.source == Some(run.actor.to_bits())
+            && event.spell_id == Some(198793) && event.kind == CombatLogKind::CastSuccess)
+        {
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 208628),
+                "the actual Retreat cast must grant Exergy");
+            return;
+        }
+    }
+    panic!("eligible real follower never completes Retreat and earns Exergy");
+}
+
+#[test]
 #[ignore = "requires DPS_PARITY_WORLD_DB and DPS_PARITY_OUTPUT with spec577 exact profile/traits"]
 fn havoc_precombat_does_not_run_after_combat_starts() {
     use shared::protocol::CombatLogKind;

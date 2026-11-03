@@ -29,7 +29,7 @@ fn setup() -> (Run, Entity, Entity) {
         tick(&mut run);
         let world = run.app.world();
         if world
-            .get::<crate::followers::retreat::RetreatSetup>(havoc)
+            .get::<crate::simc_apl_native::AplMovementIntent>(havoc)
             .is_some()
         {
             let target = world
@@ -64,6 +64,35 @@ fn cast_after(run: &Run, actor: Entity, cursor: usize) -> bool {
                 && event.kind == CombatLogKind::CastSuccess
                 && event.spell_id != Some(198793)
         })
+}
+
+#[test]
+#[ignore = "requires Murder Row Mythic graph and navmesh"]
+fn havoc_keystone_retreat_setup_completes() {
+    let _rng = crate::random::seed_scope(7809098381633315392);
+    let (mut run, havoc, _) = setup();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..400 {
+        tick(&mut run);
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        if events.iter().any(|event| {
+            event.source == Some(havoc.to_bits())
+                && event.spell_id == Some(198793)
+                && event.kind == CombatLogKind::CastSuccess
+        }) {
+            return;
+        }
+    }
+    panic!("keystone Havoc never completes its selected Retreat");
 }
 
 #[test]

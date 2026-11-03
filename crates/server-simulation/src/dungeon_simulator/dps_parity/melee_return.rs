@@ -27,7 +27,7 @@ pub(super) fn advance(world: &mut World) {
 
 fn advance_actor(world: &mut World, actor: Entity, delta: f32) {
     if world
-        .get::<crate::followers::retreat::RetreatSetup>(actor)
+        .get::<crate::simc_apl_native::AplMovementIntent>(actor)
         .is_some()
     {
         return;

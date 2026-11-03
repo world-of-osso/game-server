@@ -81,6 +81,6 @@ fn retreat_setup_publishes_the_melee_edge_until_it_arrives() {
         }
     }
     assert!(arrived, "reaches the melee edge");
-    assert!(world.get::<RetreatSetup>(actor).is_none());
+    assert!(world.get::<AplMovementIntent>(actor).is_none());
     assert!(world.get::<MovementDestination>(actor).is_none());
 }
