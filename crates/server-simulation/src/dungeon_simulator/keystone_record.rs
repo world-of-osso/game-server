@@ -87,7 +87,16 @@ pub(super) struct RunRecord {
     pub deaths: Vec<Death>,
     pub pulls: Vec<Pull>,
     pub actors: Vec<ActorMetrics>,
+    pub fact_errors: Vec<server::simc_apl::FactError>,
     pub diagnostics: serde_json::Value,
+}
+
+/// Attach every actor's APL fact errors, whatever the run outcome.
+pub(super) fn record_fact_errors(world: &mut bevy::prelude::World, record: RunRecord) -> RunRecord {
+    RunRecord {
+        fact_errors: server::simc_apl::collect_fact_errors(world),
+        ..record
+    }
 }
 
 /// Read native item instances, resolving every equipped item's actual level.
@@ -485,6 +494,7 @@ mod tests {
             deaths: vec![],
             pulls: vec![],
             actors: vec![],
+            fact_errors: vec![],
             diagnostics: serde_json::Value::Null,
         };
         let json = serde_json::to_value(record).unwrap();

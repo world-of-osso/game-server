@@ -3294,7 +3294,7 @@ pub(super) fn run_keystone_ticks(
         "pull_decisions": &run.report.pulls,
     });
     let state = run.keystone.take().expect("keystone state after run");
-    state
+    let record = state
         .finish(
             run.app.world(),
             seed,
@@ -3303,7 +3303,8 @@ pub(super) fn run_keystone_ticks(
             run.report.detail,
             diagnostics,
         )
-        .unwrap_or_else(|error| failed_keystone_record(seed, options, error, planned_route))
+        .unwrap_or_else(|error| failed_keystone_record(seed, options, error, planned_route));
+    super::keystone_record::record_fact_errors(run.app.world_mut(), record)
 }
 
 fn start_with_recorded_route<T>(
@@ -3339,6 +3340,48 @@ fn font_initialization_failure_retains_the_planned_force_route() {
     assert_eq!(json["route"]["added_packs"], serde_json::json!([17, 21]));
 }
 
+#[test]
+fn keystone_record_carries_fact_errors_and_fails_the_run_gate() {
+    let options = super::keystone::Options {
+        map_id: 2825,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut world = World::new();
+    let ledger = server::simc_apl::FactErrors::default();
+    ledger.record("target.time_to_die", 42, Some(77), "no health history");
+    world.spawn(ledger);
+    let failed = failed_keystone_record(3, options, "stalled".into(), None);
+    let record = super::keystone_record::record_fact_errors(&mut world, failed);
+    let failure = super::fact_error_report::check_fact_errors(&record.fact_errors).unwrap_err();
+    assert!(
+        failure.contains("actor=42 target=Some(77) fact=target.time_to_die count=1"),
+        "{failure}"
+    );
+    let json = serde_json::to_value(record).unwrap();
+    assert_eq!(json["outcome"]["status"], "aborted");
+    assert_eq!(
+        json["fact_errors"],
+        serde_json::json!([{"fact":"target.time_to_die","actor":42,"target":77,"detail":"no health history","count":1}])
+    );
+}
+
+#[test]
+fn keystone_record_with_empty_ledger_passes_the_run_gate() {
+    let options = super::keystone::Options {
+        map_id: 2825,
+        level: 2,
+        specs: [66, 105, 262, 63, 253],
+    };
+    let mut world = World::new();
+    world.spawn(server::simc_apl::FactErrors::default());
+    let failed = failed_keystone_record(3, options, "stalled".into(), None);
+    let record = super::keystone_record::record_fact_errors(&mut world, failed);
+    super::fact_error_report::check_fact_errors(&record.fact_errors).unwrap();
+    let json = serde_json::to_value(record).unwrap();
+    assert_eq!(json["fact_errors"], serde_json::json!([]));
+}
+
 fn failed_keystone_record(
     seed: u64,
     options: super::keystone::Options,
@@ -3372,6 +3415,7 @@ fn failed_keystone_record(
         deaths: Vec::new(),
         pulls: Vec::new(),
         actors: Vec::new(),
+        fact_errors: Vec::new(),
         diagnostics: serde_json::Value::Null,
     }
 }

@@ -544,8 +544,7 @@ fn replay(
         }
         event_cursor = events.len();
     }
-    Ok(
-        json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
+    let mut report = json!({"spec":spec,"level":level,"actors":"class_followers","timeline":"simc_tank_dummy",
         "world_db_sha256":snapshot_sha256,
         "duration_seconds":duration,"target_count":targets,"incoming_events":next,"party_incoming_events":next_party,"tank_spec":crate::followers::simulator::DEFAULT_PARTY[0],
         "pain_target_seconds":pain_target_ticks as f64 / f64::from(TICKS_PER_SECOND),
@@ -553,8 +552,9 @@ fn replay(
         "pain_periodic_hits":pain_periodic_hits,"damage_by_dummy":damage_by_dummy,
         "tank_casts":tank_casts,"healer_casts":healer_casts,
         "tank_active_mitigation_seconds":f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND),
-        "metrics":recorder.report(app.world(), duration)}),
-    )
+        "metrics":recorder.report(app.world(), duration)});
+    super::fact_error_report::attach_fact_errors(app.world_mut(), &mut report)?;
+    Ok(report)
 }
 
 pub(super) fn deliver_party_hit(world: &mut World, source: Entity, target: Entity, amount: f32) {

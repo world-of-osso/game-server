@@ -218,6 +218,9 @@ fn run_headless_keystone() {
         output.display(),
         record.outcome.reason
     );
+    if let Err(failure) = super::super::fact_error_report::check_fact_errors(&record.fact_errors) {
+        panic!("native keystone recorded {failure}");
+    }
     assert_eq!(
         record.outcome.status, "completed",
         "native keystone did not complete; inspect the record"
