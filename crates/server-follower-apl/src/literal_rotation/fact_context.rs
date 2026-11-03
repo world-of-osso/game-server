@@ -151,6 +151,68 @@ mod tests {
     }
 
     #[test]
+    fn cycling_variable_does_not_keep_partial_updates_after_a_fact_error() {
+        struct Targets([u64; 2]);
+        impl Facts for Targets {
+            fn value(&self, name: &str) -> Result<f64, String> {
+                match name {
+                    "active_enemies" => Ok(2.0),
+                    _ => Err(format!("unexpected fact {name}")),
+                }
+            }
+        }
+        impl ActionFacts for Targets {
+            fn target_ids(&self, _: &Action) -> Result<Vec<u64>, String> {
+                Ok(self.0.to_vec())
+            }
+            fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
+                if name == "target.health" {
+                    if action.target == Some(self.0[0]) {
+                        Ok(20.0)
+                    } else {
+                        Err("target has no Health".into())
+                    }
+                } else {
+                    self.value(name)
+                }
+            }
+        }
+        let mut world = World::new();
+        let actor = world.spawn_empty().id();
+        let first = world.spawn_empty().id();
+        let second = world.spawn_empty().id();
+        let targets = Targets([first.to_bits(), second.to_bits()]);
+        let errors = FactErrors::default();
+        let facts = FactContext {
+            inner: &targets,
+            errors: &errors,
+            actor,
+            default_target: Some(first),
+        };
+        let program = Program::parse(&[
+            ("default", "variable,name=x,op=set,value=5"),
+            (
+                "default",
+                "cycling_variable,name=x,op=max,value=target.health",
+            ),
+            ("default", "wrong,if=variable.x>10"),
+            ("default", "fallback"),
+        ])
+        .unwrap();
+        let mut state = program.state();
+        let selected = program
+            .select("default", &facts, &mut state, |_| Ok(true))
+            .unwrap()
+            .unwrap();
+        assert_eq!(selected.name, "fallback");
+        assert_eq!(state.value("x"), Some(5.0));
+        let entries = errors.snapshot();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].target, Some(second.to_bits()));
+        assert_eq!(entries[0].count, 1);
+    }
+
+    #[test]
     fn pending_movement_does_not_enter_the_error_ledger() {
         let mut world = World::new();
         let actor = world.spawn_empty().id();
