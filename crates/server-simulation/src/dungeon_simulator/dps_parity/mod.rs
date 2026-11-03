@@ -493,6 +493,8 @@ fn measurement_driver(
 #[ignore = "requires the Arcane MID2 profile and native world data"]
 fn production_follower_precasts_only_the_admitted_pull() {
     let mut run = prepare_literal(62, 1).unwrap();
+    run.app
+        .add_systems(FixedUpdate, server_follower_apl::drive_followers);
     let owner = crate::followers::acting_follower(run.app.world(), run.actor)
         .unwrap()
         .owner;
