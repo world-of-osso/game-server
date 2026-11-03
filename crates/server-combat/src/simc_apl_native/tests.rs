@@ -176,9 +176,20 @@ fn native_apl_facts_read_selected_traits_without_promoting_learned_utility_to_ta
             ranks: entry.total(),
         })
         .collect();
-    let (known, traits) =
-        crate::class_progression::evaluate_reference_traits(classes, &profile, 35, &allocated)
-            .unwrap();
+    let identity = shared::components::Player {
+        name: String::new(),
+        class: profile.class_id,
+        race: 1,
+        appearance: Default::default(),
+    };
+    let (known, traits) = crate::class_progression::evaluate_player_reference_traits(
+        classes,
+        &identity,
+        profile.spec_id,
+        35,
+        &allocated,
+    )
+    .unwrap();
     let selected = traits
         .active_talent_spells()
         .next()

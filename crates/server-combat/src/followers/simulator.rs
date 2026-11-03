@@ -328,15 +328,17 @@ pub fn spawn_parity_attacker(
     level: u8,
     copy: crate::maps::InMap,
     actor: ParityActor,
+    race: u8,
 ) -> Result<Entity, String> {
     let difficulty = copy_difficulty(world, copy)?;
-    if let ParityActor::Player { race } = actor {
+    if let ParityActor::Player { .. } = actor {
         return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
     }
-    let source = super::class_profiles::read_profiles()?
+    let mut source = super::class_profiles::read_profiles()?
         .into_iter()
         .find(|source| source.spec_id == spec_id)
         .ok_or_else(|| format!("class follower spec{spec_id} absent"))?;
+    source.race = race;
     // An inert native Player owns the attacker's party and runs no rotation.
     let owner = spawn_parity_player(world, spec_id, level, source.race, copy, difficulty)?;
     let unit = super::class_spawn::spawn_class(

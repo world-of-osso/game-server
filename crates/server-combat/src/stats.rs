@@ -1279,9 +1279,6 @@ pub(crate) fn update_character_stats(
     spells: Option<Res<SpellStore>>,
     items: ItemData,
     replication_dirty: Option<Res<ReplicationDirtyQueue>>,
-    #[cfg(any(test, feature = "test-support"))] reference_races: Query<
-        &crate::test_support::ReferenceRace,
-    >,
 ) {
     for (
         entity,
@@ -1306,10 +1303,6 @@ pub(crate) fn update_character_stats(
         else {
             continue;
         };
-        #[cfg(any(test, feature = "test-support"))]
-        let race = reference_races
-            .get(entity)
-            .map_or(race, |identity| identity.0);
         let class = class_info(classes.as_deref(), class_id);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec_id, spells.as_deref());
         let gear = items.gear(equipped, instance_modifiers, level.0);

@@ -103,12 +103,19 @@ pub(super) fn prepare_class_follower(
     spec: u32,
     level: u8,
 ) -> (App, Entity, Entity, crate::followers::Profile) {
+    let race = crate::followers::class_profiles::read_profiles()
+        .unwrap()
+        .into_iter()
+        .find(|profile| profile.spec_id == spec)
+        .unwrap()
+        .race;
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         spec,
         level,
         copy,
         crate::followers::simulator::ParityActor::Follower,
+        race,
     )
     .unwrap();
     let profile = app
@@ -1424,6 +1431,7 @@ fn form_override_player_presets_end_with_form() {
         70,
         copy,
         crate::followers::simulator::ParityActor::Player { race: 6 },
+        6,
     )
     .unwrap();
     for _ in 0..5 {

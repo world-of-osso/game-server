@@ -18,6 +18,7 @@ fn matching_blood_builds() -> (App, Entity, Entity) {
         90,
         copy,
         crate::followers::simulator::ParityActor::Follower,
+        source.race,
     )
     .unwrap();
     let player = crate::followers::simulator::spawn_parity_attacker(
@@ -26,6 +27,7 @@ fn matching_blood_builds() -> (App, Entity, Entity) {
         90,
         copy,
         crate::followers::simulator::ParityActor::Player { race: source.race },
+        source.race,
     )
     .unwrap();
     crate::followers::class_spawn::install_class(

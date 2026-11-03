@@ -5,7 +5,8 @@ mod tests;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use bevy::prelude::*;
+#[cfg(test)]
+use bevy::prelude::World;
 use serde::Deserialize;
 use shared::protocol::EquipmentSlot;
 
@@ -219,12 +220,27 @@ fn number(value: &str, context: &str) -> Result<u32, String> {
         .map_err(|_| format!("invalid {context}: {value:?}"))
 }
 
-pub(in crate::followers) fn equip(
-    world: &mut World,
-    actor: Entity,
+#[cfg(test)]
+fn equip(
+    world: &mut bevy::prelude::World,
+    actor: bevy::prelude::Entity,
     spec: u32,
     level: u32,
 ) -> Result<(), String> {
+    let instances = select_instances(spec, level)?;
+    super::super::parity_profile::equip_instances(
+        world,
+        actor,
+        instances.items,
+        instances.modifiers,
+    );
+    Ok(())
+}
+
+pub(in crate::followers) fn select_instances(
+    spec: u32,
+    level: u32,
+) -> Result<super::super::parity_profile::ItemInstances, String> {
     let profile = find_profile(spec, level)?;
     if profile.gear.len() != SLOTS.len() {
         return Err(format!(
@@ -277,15 +293,12 @@ pub(in crate::followers) fn equip(
             },
         ));
     }
-    super::super::parity_profile::equip_instances(
-        world,
-        actor,
+    Ok(super::super::parity_profile::ItemInstances {
         items,
-        crate::stats::EquippedItemModifiers {
+        modifiers: crate::stats::EquippedItemModifiers {
             items: modifiers,
             temporary_enchants,
             ..Default::default()
         },
-    );
-    Ok(())
+    })
 }
