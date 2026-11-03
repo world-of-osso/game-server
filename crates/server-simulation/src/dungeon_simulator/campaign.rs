@@ -3263,11 +3263,130 @@ pub(super) fn run_keystone(
     run_keystone_ticks(seed, options, MAX_TICKS)
 }
 
+pub(super) fn run_keystone_with_journal(
+    seed: u64,
+    options: super::keystone::Options,
+    journal: &mut impl std::io::Write,
+) -> super::keystone_record::RunRecord {
+    run_keystone_ticks_with_journal(seed, options, MAX_TICKS, journal)
+}
+
+#[test]
+fn pull_decision_journal_is_readable_before_the_run_finishes() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("record.json.pulls.jsonl");
+    let mut journal = std::fs::File::create(&path).unwrap();
+    let first = PullDecision {
+        at: 12.0,
+        pack: 42,
+        decision: "Wait(Recovery)".into(),
+    };
+    append_pull_decisions(&mut journal, &[first]).unwrap();
+    let first_read = std::fs::read_to_string(&path).unwrap();
+    let value: serde_json::Value = serde_json::from_str(first_read.trim()).unwrap();
+    assert_eq!(value["pack"], 42);
+    assert_eq!(value["decision"], "Wait(Recovery)");
+    append_pull_decisions(
+        &mut journal,
+        &[PullDecision {
+            at: 13.0,
+            pack: 42,
+            decision: "Allow".into(),
+        }],
+    )
+    .unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    let values: Vec<serde_json::Value> = text
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(values.len(), 2);
+    assert_eq!(values[1]["decision"], "Allow");
+}
+
+#[test]
+fn pull_decision_journal_survives_process_termination() {
+    const CHILD_PATH: &str = "KEYSTONE_JOURNAL_TEST_CHILD";
+    if let Some(path) = std::env::var_os(CHILD_PATH) {
+        let mut journal = std::fs::File::create(path).unwrap();
+        append_pull_decisions(
+            &mut journal,
+            &[PullDecision {
+                at: 12.0,
+                pack: 42,
+                decision: "Wait(Recovery)".into(),
+            }],
+        )
+        .unwrap();
+        std::thread::sleep(std::time::Duration::from_secs(30));
+        return;
+    }
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("record.json.pulls.jsonl");
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "dungeon_simulator::campaign::pull_decision_journal_survives_process_termination",
+            "--nocapture",
+        ])
+        .env(CHILD_PATH, &path)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let text = loop {
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            if text.ends_with('\n') {
+                break text;
+            }
+        }
+        if child.try_wait().unwrap().is_some() || std::time::Instant::now() >= deadline {
+            break String::new();
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    };
+    let still_running = child.try_wait().unwrap().is_none();
+    if still_running {
+        child.kill().unwrap();
+    }
+    child.wait().unwrap();
+    assert!(still_running, "child exited before it could be killed");
+    let value: serde_json::Value = serde_json::from_str(text.trim())
+        .expect("child did not flush a decision before termination");
+    assert_eq!(value["decision"], "Wait(Recovery)");
+    assert_eq!(value["pack"], 42);
+}
+
+fn append_pull_decisions(
+    journal: &mut impl std::io::Write,
+    decisions: &[PullDecision],
+) -> Result<(), String> {
+    for decision in decisions {
+        serde_json::to_writer(&mut *journal, decision)
+            .map_err(|error| format!("serialize pull decision: {error}"))?;
+        writeln!(journal).map_err(|error| format!("write pull decision: {error}"))?;
+        journal
+            .flush()
+            .map_err(|error| format!("flush pull decision: {error}"))?;
+    }
+    Ok(())
+}
+
 /// `run_keystone` stopped after `max_ticks` fixed updates.
 pub(super) fn run_keystone_ticks(
     seed: u64,
     options: super::keystone::Options,
     max_ticks: usize,
+) -> super::keystone_record::RunRecord {
+    run_keystone_ticks_with_journal(seed, options, max_ticks, &mut std::io::sink())
+}
+
+fn run_keystone_ticks_with_journal(
+    seed: u64,
+    options: super::keystone::Options,
+    max_ticks: usize,
+    journal: &mut impl std::io::Write,
 ) -> super::keystone_record::RunRecord {
     let _rng_scope = crate::random::seed_scope(seed);
     let mut planned_route = None;
@@ -3283,13 +3402,28 @@ pub(super) fn run_keystone_ticks(
     };
     run.last_progress = run.now();
     let mut progress = super::keystone::Progress::default();
+    let mut journaled_decisions = 0;
     let outcome =
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<(), String> {
             for _ in 0..max_ticks {
                 if run.finished() {
                     break;
                 }
-                if let Err(error) = run.control() {
+                let control = run.control();
+                append_pull_decisions(journal, &run.report.pulls[journaled_decisions..])?;
+                journaled_decisions = run.report.pulls.len();
+                run.keystone
+                    .as_ref()
+                    .ok_or("keystone state disappeared")?
+                    .report_progress(
+                        &mut progress,
+                        run.app.world(),
+                        run.current_pack,
+                        &run.party,
+                        &run.report.pulls,
+                        &mut std::io::stdout().lock(),
+                    )?;
+                if let Err(error) = control {
                     run.report.status = "blocked".into();
                     run.report.detail = error;
                     break;
@@ -3302,7 +3436,9 @@ pub(super) fn run_keystone_ticks(
                         &mut progress,
                         run.app.world(),
                         run.current_pack,
-                        run.party.tank,
+                        &run.party,
+                        &run.report.pulls,
+                        &mut std::io::stdout().lock(),
                     )
                 });
                 run.keystone = Some(key);

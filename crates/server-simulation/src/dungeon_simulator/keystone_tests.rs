@@ -55,21 +55,62 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
     let idle = crate::creature_ai::CreatureState::Idle;
     let mut world = World::new();
     let follow = crate::creature_ai::FollowOwner::new(world.spawn_empty().id());
+    let owner = world
+        .spawn((
+            shared::components::Health {
+                current: 75.0,
+                max: 100.0,
+            },
+            shared::components::Mana {
+                current: 20.0,
+                max: 100.0,
+            },
+        ))
+        .id();
+    let party = [owner];
     let tank = TankProgress {
         position: Some([1.0, 2.0, 3.0]),
         state: Some(&idle),
         follow: Some(&follow),
     };
+    let observation = |current_pack, decisions| Observation {
+        current_pack,
+        decisions,
+        party: &party,
+        world: &world,
+        owner,
+        tank,
+    };
     reporter
-        .write(&mut output, 0, &snapshot, None, &route, tank)
+        .write(&mut output, 0, &snapshot, &route, observation(None, &[]))
         .unwrap();
     assert!(output.is_empty(), "countdown is not running time");
     snapshot.phase = ChallengePhase::Running;
     reporter
-        .write(&mut output, 0, &snapshot, None, &route, tank)
+        .write(&mut output, 0, &snapshot, &route, observation(None, &[]))
+        .unwrap();
+    let decisions = [super::super::campaign::PullDecision {
+        at: 10.0,
+        pack: 10,
+        decision: "Wait(Recovery)".into(),
+    }];
+    reporter
+        .write(
+            &mut output,
+            10_000,
+            &snapshot,
+            &route,
+            observation(Some(10), &decisions),
+        )
         .unwrap();
     reporter
-        .write(&mut output, 59_999, &snapshot, Some(10), &route, tank)
+        .write(
+            &mut output,
+            59_999,
+            &snapshot,
+            &route,
+            observation(Some(10), &decisions),
+        )
         .unwrap();
     snapshot.forces = 75;
     snapshot.deaths = 1;
@@ -79,9 +120,8 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
             &mut output,
             60_000,
             &snapshot,
-            Some(8_100_243_029),
             &route,
-            tank,
+            observation(Some(8_100_243_029), &decisions),
         )
         .unwrap();
     reporter
@@ -89,23 +129,50 @@ fn keystone_progress_reports_running_state_on_simulated_minute_boundaries() {
             &mut output,
             60_050,
             &snapshot,
-            Some(8_100_243_029),
             &route,
-            tank,
+            observation(Some(8_100_243_029), &decisions),
+        )
+        .unwrap();
+    let decisions = [
+        super::super::campaign::PullDecision {
+            at: 10.0,
+            pack: 10,
+            decision: "Wait(Recovery)".into(),
+        },
+        super::super::campaign::PullDecision {
+            at: 60.1,
+            pack: 10,
+            decision: "Allow".into(),
+        },
+        super::super::campaign::PullDecision {
+            at: 60.1,
+            pack: 11,
+            decision: "Wait(Healer)".into(),
+        },
+    ];
+    reporter
+        .write(
+            &mut output,
+            60_100,
+            &snapshot,
+            &route,
+            observation(Some(11), &decisions),
         )
         .unwrap();
     let output = String::from_utf8(output).unwrap();
-    assert_eq!(
-        output,
-        format!(
-            concat!(
-                "KEYSTONE_PROGRESS sim_ms=0 forces=0/655 bosses=0/2 deaths=0 current_pack=None route_step=None/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow=Some({follow:?})\n",
-                "KEYSTONE_PROGRESS sim_ms=60000 forces=75/655 bosses=1/2 deaths=1 current_pack=Some(8100243029) route_step=Some(2)/2 tank_position=Some([1.0, 2.0, 3.0]) tank_state=Some(Idle) tank_follow=Some({follow:?})\n",
-            ),
-            follow = follow,
-        )
+    let lines: Vec<_> = output.lines().collect();
+    assert_eq!(lines.len(), 5, "{output}");
+    assert!(lines[0].contains("sim_ms=0 forces=0/655 bosses=0/2"));
+    assert!(lines[1].contains("sim_ms=10000"));
+    assert!(
+        lines[1]
+            .contains("route_step=Some(1)/2 decision_pack=Some(10) decision=\"Wait(Recovery)\"")
     );
-    assert!(output.contains("moving: false"));
+    assert!(lines[1].contains(&format!("party={}:75.0:20.0:alive", owner.to_bits())));
+    assert!(lines[1].contains("enemies_in_combat=0"));
+    assert!(lines[2].contains("sim_ms=60000 forces=75/655 bosses=1/2"));
+    assert!(lines[3].contains("decision_pack=Some(10) decision=\"Allow\""));
+    assert!(lines[4].contains("decision_pack=Some(11) decision=\"Wait(Healer)\""));
 }
 
 #[test]
@@ -201,10 +268,13 @@ fn run_headless_keystone() {
     let output = std::path::PathBuf::from(
         std::env::var_os("KEYSTONE_SIMULATOR_OUTPUT").expect("keystone record path"),
     );
-    let record = super::super::campaign::run_keystone(seed, options);
     if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).expect("create record directory");
     }
+    let mut journal_path = output.as_os_str().to_os_string();
+    journal_path.push(".pulls.jsonl");
+    let mut journal = std::fs::File::create(&journal_path).expect("create pull decision journal");
+    let record = super::super::campaign::run_keystone_with_journal(seed, options, &mut journal);
     std::fs::write(
         &output,
         serde_json::to_vec_pretty(&record).expect("serialize keystone record"),
