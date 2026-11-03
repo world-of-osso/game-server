@@ -1,5 +1,16 @@
 # DPS parity status
 
+## Arms Warrior remeasure — 2026-11-03
+
+The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds on candidate `7131ba15ea`. SimC `76f8118` references match the landed-master table below.
+
+| Targets | Native DPS | SimC DPS | Ratio | Flag |
+|---|---:|---:|---:|---|
+| 1T | 194,113 | 197,315 | 0.9838 | in |
+| 3T | 349,783 | 344,060 | 1.0166 | in |
+
+Both point estimates are within the ±5% band. The earlier geometry candidate `4530502682` measured 194,113 and 351,396 DPS on the same seeds; the revised results are close but not identical. The revisions also have different master bases, so this comparison does not isolate the geometry change. All twenty per-seed fact-error ledgers are empty. Evidence: `game-engine/data/diagnostics/parity-71-2026-11-03b/fix-7131ba15/`.
+
 ## Beast Mastery remeasure — 2026-11-03
 
 The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds. The SimC `76f8118` references and confidence-interval method match the landed-master table below.
