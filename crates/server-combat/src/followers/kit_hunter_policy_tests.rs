@@ -80,6 +80,78 @@ pub(super) fn prepare_native_duck(
 }
 
 #[test]
+fn hunter_pet_chase_respects_idle_hostile_sight() {
+    use crate::followers::positioning::{CombatMovementExclusions, SightExclusion};
+    use crate::maps::InMap;
+    use shared::components::Position;
+    let (mut h, hunter, pet) = prepare_native_duck(70);
+    let root =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data");
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let maps = crate::maps::store::load_map_store(&db).unwrap();
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &root,
+        std::collections::HashMap::from([(34, maps.map(34).unwrap().wdt_file_data_id)]),
+    ));
+    let nav =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh");
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&nav));
+    let map = InMap::continent(34);
+    let target = Position {
+        x: 103.0,
+        y: -34.85623,
+        z: -76.0,
+    };
+    let start = Position {
+        x: 150.557,
+        y: -34.85624,
+        z: -45.8164,
+    };
+    for unit in [hunter, h.caster, h.npc] {
+        h.app.world_mut().entity_mut(unit).insert((map, target));
+    }
+    h.app.world_mut().entity_mut(pet).insert((
+        map,
+        start,
+        CombatMovementExclusions(Some(vec![SightExclusion {
+            center: bevy::math::Vec3::new(target.x, target.y, target.z),
+            radius: 12.0,
+            sight: crate::line_of_sight::ProjectedSight::Open,
+        }])),
+    ));
+    crate::pet_control::order_companion_pet(h.app.world_mut(), hunter, Some(h.npc));
+    for _ in 0..500 {
+        h.advance(1);
+    }
+    let held = *h.app.world().get::<Position>(pet).unwrap();
+    assert!(
+        (held.x - target.x).hypot(held.z - target.z) >= 12.0,
+        "pet crossed idle hostile sight"
+    );
+    assert!(
+        (held.x - start.x).hypot(held.z - start.z) > 1.0,
+        "pet never attempted its chase"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(pet)
+        .remove::<CombatMovementExclusions>();
+    for _ in 0..500 {
+        h.advance(1);
+    }
+    let reached = *h.app.world().get::<Position>(pet).unwrap();
+    assert!(
+        (reached.x - target.x).hypot(reached.z - target.z) < 4.0,
+        "pet failed to resume after sight exclusion was removed"
+    );
+}
+
+#[test]
 fn ruby_taxi_temporarily_unsummons_and_restores_follower_pet() {
     use shared::components::{MovementControl, Position, Rotation};
     let (mut h, follower, old_pet) = prepare_native_duck(70);

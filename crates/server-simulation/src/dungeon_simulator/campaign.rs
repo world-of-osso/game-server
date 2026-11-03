@@ -2549,6 +2549,59 @@ fn ruby_keystone_initializes_with_native_drop_between_route_packs() {
 
 #[test]
 #[ignore = "requires Voidscar graph and native world/LOS assets"]
+fn voidscar_hunter_pet_cannot_attack_unadmitted_tuskarr() {
+    let mut run = spawn_run_mode(
+        1,
+        &mut None,
+        Some(super::keystone::Options {
+            map_id: 2923,
+            level: 2,
+            specs: [268, 270, 261, 70, 253],
+        }),
+    )
+    .unwrap();
+    let owner = run.party.owner;
+    let tuskarr = run.actors[&3276417060];
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), owner).expect("hunter pet");
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .remove::<crate::followers::AdmittedPull>();
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(tuskarr));
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert_ne!(
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .and_then(|target| target.0),
+        Some(tuskarr)
+    );
+    assert!(!crate::combat_refs::has_active_reference_to(
+        run.app.world(),
+        pet,
+        tuskarr
+    ));
+    run.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::followers::AdmittedPull(vec![tuskarr]));
+    crate::pet_control::order_companion_pet(run.app.world_mut(), owner, Some(tuskarr));
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::networking::CombatTarget>(pet)
+            .and_then(|target| target.0),
+        Some(tuskarr)
+    );
+}
+
+#[test]
+#[ignore = "requires Voidscar graph and native world/LOS assets"]
 fn voidscar_single_pull_with_assistance_is_admitted() {
     let _rng_scope = crate::random::seed_scope(1);
     let mut run = spawn_run_mode(
@@ -5183,10 +5236,6 @@ impl Run {
             .entity_mut(self.party.owner)
             .insert(crate::followers::AdmittedPull(prospective));
         server_follower_apl::drive_followers(self.app.world_mut());
-        self.app
-            .world_mut()
-            .entity_mut(self.party.owner)
-            .remove::<crate::followers::AdmittedPull>();
         if self.keystone.is_some() {
             return self.drive_owner_opening(target);
         }

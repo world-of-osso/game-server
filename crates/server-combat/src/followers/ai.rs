@@ -110,6 +110,9 @@ pub(super) fn update(world: &mut World) {
 }
 
 pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+    if let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) {
+        super::positioning::update_combat_exclusions(world, pet, follower);
+    }
     if world
         .get::<super::release::ResurrectionApproach>(unit)
         .is_some()

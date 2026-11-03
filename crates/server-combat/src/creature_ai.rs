@@ -1812,6 +1812,9 @@ fn pet_motion_system(
             }
         };
         let mut next = next_position;
+        if companion_pet.is_some() && !queues.combat_step_safe(entity, here, next) {
+            next = here;
+        }
         if next != here {
             next.y = if companion_pet.is_some() {
                 let Some(height) =
