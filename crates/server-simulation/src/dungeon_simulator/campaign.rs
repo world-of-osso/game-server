@@ -1205,6 +1205,131 @@ fn keystone_death_time_starts_after_native_countdown() {
 }
 
 #[test]
+#[ignore = "requires Stockade data and DUNGEON_SIMULATOR_PARTY_SPECS=66,105,262,62,253"]
+fn admitted_campaign_pull_reaches_follower_before_opening() {
+    use server::simc_apl::Action;
+    use server_follower_apl::{
+        SpecRotation,
+        literal_rotation::{PrecombatPoll, execution::Execution},
+    };
+    use std::sync::{Arc, Mutex};
+
+    struct Observe {
+        inner: Box<dyn SpecRotation>,
+        owner: Entity,
+        seen: Arc<Mutex<Vec<(Vec<Entity>, Vec<Entity>, bool)>>>,
+    }
+    impl SpecRotation for Observe {
+        fn action_spells(&self) -> Vec<u32> {
+            self.inner.action_spells()
+        }
+        fn drive_upkeep(&mut self, world: &mut World, actor: Entity) -> Result<(), String> {
+            self.inner.drive_upkeep(world, actor)
+        }
+        fn poll_precombat(
+            &mut self,
+            world: &mut World,
+            actor: Entity,
+            targets: &[Entity],
+        ) -> Result<PrecombatPoll, String> {
+            if !targets.is_empty() {
+                let published = world
+                    .get::<crate::followers::AdmittedPull>(self.owner)
+                    .unwrap()
+                    .0
+                    .clone();
+                let engaged = world
+                    .get::<shared::components::CombatStatus>(targets[0])
+                    .is_some_and(|status| status.0);
+                self.seen
+                    .lock()
+                    .unwrap()
+                    .push((targets.to_vec(), published, engaged));
+            }
+            self.inner.poll_precombat(world, actor, targets)
+        }
+        fn execute(
+            &mut self,
+            world: &mut World,
+            actor: Entity,
+            action: Action,
+            execution: Execution,
+        ) -> Result<(), String> {
+            self.inner.execute(world, actor, action, execution)
+        }
+        fn start_combat_at(&mut self, at: f64) {
+            self.inner.start_combat_at(at);
+        }
+        fn drive(
+            &mut self,
+            world: &mut World,
+            actor: Entity,
+            targets: &[Entity],
+        ) -> Result<(), String> {
+            self.inner.drive(world, actor, targets)
+        }
+    }
+
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let mage = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<shared::components::ActiveSpec>(*unit)
+                .is_some_and(|spec| spec.0 == 62)
+        })
+        .expect("the test party must include Arcane");
+    let observed = Arc::new(Mutex::new(Vec::new()));
+    let world = run.app.world_mut();
+    let rotation = server_follower_apl::registry::load(world, mage, 62).unwrap();
+    let apl = server_follower_apl::FollowerApl::new_for_world(
+        world,
+        Box::new(Observe {
+            inner: rotation,
+            owner: run.party.owner,
+            seen: observed.clone(),
+        }),
+    );
+    world.entity_mut(mage).insert(apl);
+    for _ in 0..6000 {
+        run.control().unwrap();
+        if let Some((targets, published, engaged)) = observed.lock().unwrap().first().cloned() {
+            assert!(
+                !engaged,
+                "target was already in combat when the follower read admission"
+            );
+            assert_eq!(targets, published);
+            let guid = run
+                .app
+                .world()
+                .get::<crate::zones::CreatureOrigin>(targets[0])
+                .unwrap()
+                .guid;
+            let admitted = run.report.pulls.iter().any(|pull| {
+                pull.decision.starts_with("Allow")
+                    && run
+                        .graph
+                        .packs
+                        .iter()
+                        .find(|pack| pack.id == pull.pack)
+                        .is_some_and(|pack| pack.spawns.iter().any(|spawn| spawn.guid == guid))
+            });
+            assert!(
+                admitted,
+                "the observed target must belong to the allowed campaign pack"
+            );
+            return;
+        }
+        run.app.update();
+    }
+    panic!("the admitted pack was not delivered to the Arcane follower");
+}
+
+#[test]
 #[ignore = "requires Azure Vault keystone data and class follower gear"]
 fn keystone_two_pulls_do_not_repeat_precombat_setup() {
     const CHILD: &str = "AZURE_TWO_PULL_FIXTURE_CHILD";
@@ -4471,26 +4596,7 @@ impl Run {
             .world_mut()
             .entity_mut(self.party.owner)
             .insert(crate::followers::AdmittedPull(prospective));
-        if self
-            .party
-            .members
-            .iter()
-            .copied()
-            .chain(std::iter::once(self.party.owner))
-            .any(|unit| {
-                self.app
-                    .world()
-                    .get::<crate::followers::AplControlled>(unit)
-                    .is_some()
-                    && self
-                        .app
-                        .world()
-                        .get::<server_follower_apl::FollowerApl>(unit)
-                        .is_none_or(|apl| apl.in_precombat())
-            })
-        {
-            return Ok(());
-        }
+        server_follower_apl::drive_followers(self.app.world_mut());
         self.app
             .world_mut()
             .entity_mut(self.party.owner)

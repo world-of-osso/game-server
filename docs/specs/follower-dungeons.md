@@ -23,6 +23,12 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - [x] Actual Austin ST never casts1264359;2+ engaged enemies retain ordinary command and real pet-child damage. Genuine native4da3b88d0 RED: ST29commands/21pet hits versus0, two-target25/9 and three-target29/24 controlsPASS (2PASS/1FAIL23.01s); earlier NPC-KnownSpells assertion failure is not gameplay RED. Serialized producer9ebfc4d5f separately fails missing minimum. Implementation uses the existing current `ai::engaged_enemies` set and vendored pinned76f8118 BM source, not historical pull observations or a new APL runtime. Source revision/SHA/derived minima accompany normal preparation receipts. At a451878e4 native3GREEN24.63s: ST0commands/0hits, two25/9 and three17/4; source/serialized12GREEN1.270s. [Exact proof, private source preparation and matched single-seed limits](../handoffs/bm-active-enemy-proof-ledger.md). Parent broad integration/publication pending. No spell, priority, resource, cooldown or damage tuning. Dispersion is outside this BM scope.
 
 
+## Pull opening timing
+
+- A human owner is never delayed for follower precombat. A follower can use an admitted target before combat starts; if the owner engages first, it proceeds directly to combat.
+- The simulated owner opens immediately after admission. It does not add a caster-ready delay without evidence for one.
+- WCL non-observation, Midnight Season 2 Ruby Life Pools: reports `VRkJb24B6TY8zHLD` fight 1 and `HdhBJtZGNgmypRFj` fight 31 (Arcane), `Gt9TAHVbDJxQd1mw` fight 2 (Fire), and `Cr7BRxNgYah3AKv9` fight 8 (Balance). In these four high-key runs, no Arcane Blast 30451, Pyroblast 11366 or Wrath 190984 cast began in the six seconds before the tank's first positive damage at the recorded dungeon-pull starts. The sampled source-specific event streams also contained no such cast beginning before the tank's first positive hit on its eventual target. These observations do not prove that players never precast or establish a positive ready window.
+
 ## Raid-haste timing
 
 `INFERRED_WCL` (`lust_policy.rs`; 144 Midnight S2 keys, +2..+10, 16 per level across 8 dungeons; 213 party lust applications):
