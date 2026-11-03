@@ -920,9 +920,18 @@ fn load_actor_powers(world: &World, entry: u32, spells: &[u32]) -> super::powers
             warn!("Guardian creature {entry}: bound spell {id} absent");
             continue;
         };
-        for power in spell
-            .power_costs
+        // A bound channel also pays its periodic children (`pay_channel_tick`).
+        let children = spell
+            .effects
             .iter()
+            .filter(|effect| {
+                super::is_channeled(spell)
+                    && effect.aura == crate::auras::handlers::PERIODIC_TRIGGER_SPELL
+            })
+            .filter_map(|effect| store.get(effect.trigger_spell));
+        for power in std::iter::once(spell)
+            .chain(children)
+            .flat_map(|spell| &spell.power_costs)
             .filter_map(|cost| PowerType::from_db(cost.power_type))
         {
             if !powers.contains(&power) {

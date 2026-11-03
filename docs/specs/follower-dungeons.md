@@ -23,6 +23,15 @@ Follower queues use each entry's base ContentTuning level range. Conditional Con
 - [x] Actual Austin ST never casts1264359;2+ engaged enemies retain ordinary command and real pet-child damage. Genuine native4da3b88d0 RED: ST29commands/21pet hits versus0, two-target25/9 and three-target29/24 controlsPASS (2PASS/1FAIL23.01s); earlier NPC-KnownSpells assertion failure is not gameplay RED. Serialized producer9ebfc4d5f separately fails missing minimum. Implementation uses the existing current `ai::engaged_enemies` set and vendored pinned76f8118 BM source, not historical pull observations or a new APL runtime. Source revision/SHA/derived minima accompany normal preparation receipts. At a451878e4 native3GREEN24.63s: ST0commands/0hits, two25/9 and three17/4; source/serialized12GREEN1.270s. [Exact proof, private source preparation and matched single-seed limits](../handoffs/bm-active-enemy-proof-ledger.md). Parent broad integration/publication pending. No spell, priority, resource, cooldown or damage tuning. Dispersion is outside this BM scope.
 
 
+## Raid-haste timing
+
+`INFERRED_WCL` (`lust_policy.rs`; 144 Midnight S2 keys, +2..+10, 16 per level across 8 dungeons; 213 party lust applications):
+- [x] A follower casts Bloodlust, Heroism, Time Warp, Fury of the Aspects or its pet's Primal Rage only while no party member has a lust lockout.
+- [x] The first lust goes on the first trash pull with at least 8 live engaged enemies, at least 7.7 s into the pull. Both are nearest-rank p10 of the 110 retail trash lusts.
+- [x] After the party has a lust in the instance copy, trash never gets another lust, even when the lockout ends. In 81 retail keys the lockout ended before the final-boss pull; 59 held the lust for that boss and 12 spent it on trash. The trash share does not rise with distance to the final boss (2/16 under 60 s, 2/11 at 240 s or more), and no trash pack recurs more than twice.
+- [x] The final boss gets a lust at any point of its pull while no lockout is active. The final boss is a boss bound in the copy's instance script whose other bosses are all done. Retail final-boss lusts are at p10 0.7 s and median 4.0 s; 11 of 23 later ones waited for a lockout. Other bosses get no lust.
+- [x] A `FixedLengthFight` lusts on its first combat tick, as SimC does.
+
 ## Follower death recovery
 
 - Outside combat, living party members with a resurrection spell use it on a dead member. Otherwise the dead follower releases at the instance graveyard and follows a native navigable route back. A new pull waits for every member to be alive and returned.
