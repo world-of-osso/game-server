@@ -184,7 +184,7 @@ fn native_bm_leader_summons_and_uses_its_pet_without_transport_identity() {
         assert!(
             damaged,
             "native BM leader must summon through Call Pet and deal real pet damage in cached world{iteration}; preparation={:?}",
-            crate::hunter_pet::provision_follower_duck(run.app.world_mut(), owner)
+            run.app.world().get::<crate::hunter_pet::PetStable>(owner)
         );
         // Observe the existing pet-spell path after ownership is real. Missing
         // Wild Thrash damage is reported to its mechanics owner, not fixed here.

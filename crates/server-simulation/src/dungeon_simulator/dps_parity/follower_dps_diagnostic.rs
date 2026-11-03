@@ -116,6 +116,7 @@ pub(super) fn prepare_class_follower(
         copy,
         crate::followers::simulator::ParityActor::Follower,
         race,
+        crate::followers::class_spawn::GearSource::Journal,
     )
     .unwrap();
     let profile = app
@@ -1432,6 +1433,7 @@ fn form_override_player_presets_end_with_form() {
         copy,
         crate::followers::simulator::ParityActor::Player { race: 6 },
         6,
+        crate::followers::class_spawn::GearSource::Journal,
     )
     .unwrap();
     for _ in 0..5 {

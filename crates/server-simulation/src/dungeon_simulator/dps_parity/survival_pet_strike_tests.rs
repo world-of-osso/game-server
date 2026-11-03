@@ -37,7 +37,7 @@ fn assert_owned_tip_strike(seed: u64) -> bool {
     // SimC76f8118 sc_hunter.cpp1367–1372: earned Tip consumption orders
     // the real main pet, preserving that pet as the native damage source.
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
@@ -67,7 +67,7 @@ fn survival_native_tipped_rank_three_swipe_adds_separate_pet_strike() {
     // SimC76f8118 sc_hunter.cpp6181–6186: actual rank3 Swipe with an
     // earned Tip supplies its additional effectiveness attack before ordinary Tip impact.
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);
@@ -97,7 +97,7 @@ fn survival_native_actual_pet_strike_crits_produce_selected_sic_em_bleed() {
     // crits execute the selected native pet bleed, without forcing a crit.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);

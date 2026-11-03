@@ -493,24 +493,17 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
     })
 }
 
-/// FOLLOWER_HUNTER_PET_SIMC_DEFAULT: SimC76f8118 sc_hunter.cpp1052 selects duck.
-/// Provision a normal runtime stable record; AI still casts learned Call Pet883.
-pub fn provision_follower_duck(world: &mut World, owner: Entity) -> Result<(), &'static str> {
-    provision_follower_pet(world, owner, 174884)
-}
-
-/// Provision an ordinary native pet record; its family controls specialization.
-pub fn provision_follower_pet(
+/// Install the loadout's native pet record in the first stable slot.
+pub fn install_follower_pet(
     world: &mut World,
     owner: Entity,
-    entry: u32,
+    entry: Option<u32>,
 ) -> Result<(), &'static str> {
+    let stored = entry
+        .map(|entry| roll_follower_pet_record(world, owner, entry))
+        .transpose()?;
     init_pet_stable(world, owner).ok_or("follower stable could not be initialized")?;
-    if world.get::<PetStable>(owner).unwrap().stored.active[0].is_some() {
-        return Ok(());
-    }
-    let stored = roll_follower_pet_record(world, owner, entry)?;
-    world.get_mut::<PetStable>(owner).unwrap().stored.active[0] = Some(stored);
+    world.get_mut::<PetStable>(owner).unwrap().stored.active[0] = stored;
     Ok(())
 }
 

@@ -6,7 +6,7 @@ use shared::protocol::CombatLogKind;
 fn pet_periodic_hits(spell: u32, haste: f32) -> usize {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor).unwrap();
     engage(&mut run);

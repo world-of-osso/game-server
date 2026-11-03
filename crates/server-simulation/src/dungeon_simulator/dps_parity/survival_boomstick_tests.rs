@@ -10,7 +10,7 @@ fn survival_native_boomstick_spends_one_earned_tip_and_applies_channel_buff() {
     // execution consumes one earned Tip and grants native471536 during its channel.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     cast(&mut run, 259489, false);
@@ -60,7 +60,7 @@ fn survival_boomstick_extends_existing_mongoose_stacks_only_with_four_piece() {
     for equipped in [false, true] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(255, 1).unwrap();
-        hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+        hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
         cast(&mut run, 883, true);
         engage(&mut run);
         if !equipped {

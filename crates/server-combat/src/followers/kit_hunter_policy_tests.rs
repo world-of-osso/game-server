@@ -42,7 +42,7 @@ pub(super) fn prepare_native_duck(
             .get::<shared::components::Player>(caster)
             .is_none()
     );
-    crate::hunter_pet::provision_follower_duck(h.app.world_mut(), caster).unwrap();
+    crate::hunter_pet::install_follower_pet(h.app.world_mut(), caster, Some(NATIVE_DUCK)).unwrap();
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, 883, Some(caster), false).unwrap();
     for _ in 0..200 {
         h.advance(1);

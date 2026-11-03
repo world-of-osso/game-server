@@ -10,7 +10,7 @@ fn survival_native_raptor_and_swipe_earn_owned_armaments_for_real_recipients() {
     // impact banks selected effect2 into the native rolling residual on its recipient.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 3).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     assert!(crate::auras::has_aura(run.app.world(), run.actor, 1253831));

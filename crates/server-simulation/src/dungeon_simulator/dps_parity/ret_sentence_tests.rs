@@ -221,6 +221,7 @@ fn dps_parity_ret_sentence_native_accumulation_excludes_foreign_actor_damage() {
         copy,
         crate::followers::simulator::ParityActor::Follower,
         inputs::read_reference_race(&run.profile.race).unwrap(),
+        crate::followers::class_spawn::GearSource::Journal,
     )
     .unwrap();
     inputs::equip(run.app.world_mut(), other, &run.profile).unwrap();

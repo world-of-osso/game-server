@@ -10,7 +10,7 @@ fn survival_native_chakram_spends_earned_tip_and_grants_its_native_buff() {
     // earned Tip, grants native1280140 and does not roll a Sentinel mark.
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(255, 1).unwrap();
-    hunter_fixture::provision_pet(run.app.world_mut(), run.actor).unwrap();
+    hunter_fixture::require_profile_pet(run.app.world(), run.actor).unwrap();
     cast(&mut run, 883, true);
     engage(&mut run);
     cast(&mut run, 1250646, false);

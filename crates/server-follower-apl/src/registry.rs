@@ -29,12 +29,6 @@ pub fn load(world: &mut World, actor: Entity, spec: u32) -> Result<Box<dyn SpecR
         },
         None => Encounter::dungeon(started_at),
     };
-    if matches!(spec, 253 | 255) {
-        // INFERRED_WCL: Ferocity with Primal Rage and Mortal Wounds observed;
-        // the species is unobserved. Retire when family observations are available.
-        // 154 is a native tameable Carrion Bird with a world.db model.
-        crate::hunter_pet::provision_follower_pet(world, actor, 154)?;
-    }
     use crate::*;
     Ok(match spec {
         62 => Box::new(arcane_rotation::Rotation::load(
