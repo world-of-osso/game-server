@@ -1,5 +1,15 @@
 # DPS parity status
 
+## Marksmanship diagnostic — 2026-11-03
+
+The fixture-engagement and Radiant Edge fixes were measured locally with the frozen campaign database and seeds `70448,1–9`. On `561f69a99c`, native 1T was 177,957 versus SimC 192,745 (0.9233 ± 0.0149); native 3T was 263,329 versus 280,759 (0.9379 ± 0.0203). Both point estimates remain outside the ±5% band. The earlier campaign at `389ca621d0` measured 175,234 and 218,752 respectively; the different master revisions prevent attribution of the full change to one fix. Applying `edb3688d1d` locally did not change any seed: this profile uses fixed-stat neck bonus 13708, not that commit's random-stat bonus. Evidence: `game-engine/data/diagnostics/parity-254-2026-11-03/`.
+
+The reference profile has bonus 13708 on its neck, chest and weapon. Native models three independent 2 RPPM drivers refreshing one single-strength `1307910` aura. SimC `76f8118` instead sums all three item amounts into that buff while its reported effective proc rate matches one driver: the debug trace shows +1,305 crit rating and −217 to each other rating versus a native captured proc of about +393/−63. Through Penetrating Shots, the extra crit rating also raises SimC's critical-damage multiplier. This is a **reference-model difference**, not a measured correction for the remaining DPS gap; it also affects other profiles with multiple bonus-13708 items.
+
+DB2 has no `SpellAuraOptions` row for `1307910`; its recorded attributes do not establish an item-source stacking exception. TC `SpellAuras.cpp:1756–1769` rejects the same spell and caster stacking except for a custom enchant-proc case. Retail stacking and amounts remain **unknown**: 4,000 inspected current-build ranking rows yielded no player with two or more bonus-13708 items. Native remains unchanged.
+
+DB2 gives each driver 2 RPPM, no haste-modifier rows and a 12-second buff; the SimC debug trace also reports no haste scaling. With independent drivers, bad-luck protection and 30% refresh carryover, a 1,500-run illustrative simulation predicted 79.45% uptime for three drivers and 38.22% for one. Native's ten-seed mean was 78.55%; SimC's 1,000-iteration report was 38.96%. The first native seed alone was 81.37%; the aggregate report retained that seed's uptime rather than averaging it. The reference and native rates therefore represent different models, not evidence that native's three-driver rate is wrong.
+
 ## L90 landed-master remeasure (2026-11-03)
 
 Each native row uses a follower actor, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC `76f8118` references use 1,000 iterations, the same fixed duration, seed 70448 and the actor-only raid-buff composition. The 3T reference uses timed add events. Devastation uses its approved MID1 profile. The exact commands, hashes, per-seed reports, logs and world snapshot are in `game-engine/data/diagnostics/dps-parity-landed-master-2026-11-03/` and the references in `game-engine/data/diagnostics/party-buffs-composition-2026-11-02/dps/`.
