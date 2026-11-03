@@ -916,6 +916,11 @@ fn prepare_measurement_reference(
     }
     preparation::finish_spawn_loadout_setup(&mut run)?;
     preparation::cast_provided_party_buffs(&mut run)?;
+    profile_initialization::initialize_regenerating_powers(
+        run.app.world_mut(),
+        run.actor,
+        &run.profile,
+    )?;
     before_prepare(&mut run)?;
     run.spec_driver = Some((driver.prepare)(&mut run)?);
     Ok(run)
@@ -1068,6 +1073,7 @@ pub(crate) fn spawn_second_reference_player(run: &mut Run, spec_id: u32) -> Resu
         run.app.update();
     }
     preparation::finish_pending_setup(run)?;
+    profile_initialization::initialize_regenerating_powers(run.app.world_mut(), actor, &profile)?;
     Ok(actor)
 }
 

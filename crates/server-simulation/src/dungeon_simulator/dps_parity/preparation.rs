@@ -91,7 +91,12 @@ fn read_precast_readiness(run: &mut Run, id: u32) -> Result<bool, String> {
 
 pub(super) fn finish_spawn_loadout_setup(run: &mut Run) -> Result<(), String> {
     warm_up_reference(run)?;
-    finish_pending_setup(run)
+    finish_pending_setup(run)?;
+    super::profile_initialization::initialize_regenerating_powers(
+        run.app.world_mut(),
+        run.actor,
+        &run.profile,
+    )
 }
 
 /// Production followers cast the party buffs their composition provides out of combat

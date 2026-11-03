@@ -33,6 +33,49 @@ pub(super) fn initialize_declared_powers(
     Ok(())
 }
 
+/// SimC76f8118 player.cpp1586–1615,2274–2304 initializes default-full
+/// resources after maximum-power modifiers and before the precombat actions.
+pub(super) fn initialize_regenerating_powers(
+    world: &mut World,
+    actor: Entity,
+    profile: &Profile,
+) -> Result<(), String> {
+    let declared = read_declared_powers(profile)?;
+    let table = world.resource::<crate::spell_cast::powers::PowerTypeTable>();
+    let pools = world
+        .get::<crate::spell_cast::powers::PowerPools>(actor)
+        .ok_or("reference actor lacks native PowerPools")?;
+    let fill_mana = pools.order.contains(&PowerType::Mana)
+        && !declared.iter().any(|(power, _)| *power == PowerType::Mana);
+    let mut powers = Vec::new();
+    for pool in &pools.pools {
+        let info = table
+            .get(pool.power)
+            .ok_or_else(|| format!("native starting-power metadata absent: {:?}", pool.power))?;
+        if pool.power != PowerType::Runes
+            && info.regen_peace > 0.0
+            && info.default_power == info.max_base_power
+            && !declared.iter().any(|(power, _)| *power == pool.power)
+        {
+            powers.push(pool.power);
+        }
+    }
+    let mut pools = world
+        .get_mut::<crate::spell_cast::powers::PowerPools>(actor)
+        .unwrap();
+    for power in powers {
+        let pool = pools.get_mut(power).unwrap();
+        pool.current = pool.max;
+    }
+    if fill_mana {
+        let mut mana = world
+            .get_mut::<Mana>(actor)
+            .ok_or("reference actor lacks native Mana")?;
+        mana.current = mana.max;
+    }
+    Ok(())
+}
+
 fn read_declared_powers(profile: &Profile) -> Result<Vec<(PowerType, f32)>, String> {
     let class = profile
         .options
