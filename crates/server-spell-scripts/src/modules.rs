@@ -227,6 +227,7 @@ register_modules! {
     evoker_eye_infinity: (1000, "modules/evoker_eye_infinity.rs"),
     evoker_dragonrage: (1000, "modules/evoker_dragonrage.rs"),
     evoker_flames: (430, "modules/evoker_flames.rs"),
+    evoker_golden_hour: (1000, "modules/evoker_golden_hour.rs"),
     evoker_imminent: (1000, "modules/evoker_imminent.rs"),
     evoker_merithra: (1000, "modules/evoker_merithra.rs"),
     evoker_onslaught: (1000, "modules/evoker_onslaught.rs"),

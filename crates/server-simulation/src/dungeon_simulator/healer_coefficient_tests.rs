@@ -3,6 +3,168 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native Golden Hour, Echo, and Reversion spell data"]
+fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    let mut h = harness(Vec::new(), &[378196, 378213, 364343, 366155], 13).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let primary = spawn_player(&mut h.app, 13, 1.0);
+    let echo = spawn_player(&mut h.app, 13, 2.0);
+    for target in [primary, echo] {
+        *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+            current: 100_000.0,
+            max: 100_000.0,
+        };
+        crate::combat::replay_post_mitigation_hit(
+            h.app.world_mut(),
+            h.npc,
+            target,
+            None,
+            1,
+            false,
+            10_000.0,
+        )
+        .unwrap();
+    }
+    for (target, spell) in [(h.caster, 378196), (echo, 364343)] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: h.caster,
+                target,
+                spell_id: spell,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    h.cast_and_deliver(366155, Some(primary));
+    h.advance(10);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(378213)
+            && e.target == Some(echo.to_bits())
+            && e.amount == 1050),
+        "{events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Golden Hour and Merithra spell data"]
+fn golden_hour_also_triggers_on_upgraded_merithra() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    let mut h = harness(Vec::new(), &[378196, 378213, 1256581], 13).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let target = spawn_player(&mut h.app, 13, 2.0);
+    *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 378196,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        target,
+        None,
+        1,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    h.cast_and_deliver(1256581, Some(target));
+    h.advance(10);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    assert!(
+        events.iter().any(|e| e.kind == CombatLogKind::Heal
+            && e.spell_id == Some(378213)
+            && e.target == Some(target.to_bits())
+            && e.amount == 1500),
+        "{events:?}"
+    );
+}
+
+#[test]
+#[ignore = "requires native Golden Hour and Reversion spell data"]
+fn golden_hour_heals_recent_damage_including_absorbs() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    let mut h = harness(Vec::new(), &[17, 378196, 378213, 366155], 13).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let target = spawn_player(&mut h.app, 13, 2.0);
+    *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+        current: 100_000.0,
+        max: 100_000.0,
+    };
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 378196,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        target,
+        None,
+        1,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    h.advance(130);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target,
+            spell_id: 17,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let receipt = crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        target,
+        None,
+        1,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    assert!(receipt.absorbed_hp > 0.0);
+    h.cast_and_deliver(366155, Some(target));
+    h.advance(10);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+    let heals: Vec<_> = events
+        .iter()
+        .filter(|e| {
+            e.kind == CombatLogKind::Heal
+                && e.spell_id == Some(378213)
+                && e.target == Some(target.to_bits())
+        })
+        .collect();
+    assert_eq!(heals.len(), 1, "{events:?}");
+    assert!((heals[0].amount - 1500).abs() <= 1, "{heals:?}");
+}
+
+#[test]
 #[ignore = "requires native Essence Burst and Twin Flame spell data"]
 fn preservation_twin_flame_requires_consuming_essence_burst() {
     use crate::auras::{AuraApplication, AuraSource};
