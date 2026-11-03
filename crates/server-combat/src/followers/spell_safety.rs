@@ -1,5 +1,6 @@
 //! Avoid secondary spell hits on hostiles unrelated to the follower's party.
 use crate::maps::InMap;
+use crate::spell_cast::script_registry::DeclaredReach;
 use crate::spell_cast::targets;
 use bevy::prelude::*;
 use shared::components::Npc;
@@ -103,37 +104,27 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         return false;
     }
     let Some(spell) = spell else { return true };
-    let Some((caster_radius, target_radius)) =
-        super::unintended_reach::spell_unintended_reach(world, actor, spell, target)
+    let Some(reach) = super::unintended_reach::action_reach(world, actor, spell, target, true)
     else {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_unintended_reach", "follower action refused");
         return false;
     };
-    if caster_radius <= 0.0 && target_radius <= 0.0 {
+    if reach_is_empty(reach) {
         return true;
     }
-    if pending.iter().any(|&helper| {
-        let Some(helper_position) = targets::position(world, helper) else {
-            return true;
-        };
-        let caster_reaches = caster_radius > 0.0
-            && targets::position(world, actor)
-                .is_none_or(|position| position.distance(helper_position) <= caster_radius);
-        let target_reaches = target_radius > 0.0
-            && targets::position(world, target)
-                .is_none_or(|position| position.distance(helper_position) <= target_radius);
-        caster_reaches || target_reaches
-    }) {
-        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, caster_radius, target_radius, reason = "pending_helper_in_reach", "follower action refused");
+    if pending
+        .iter()
+        .any(|&helper| reaches_unit(world, reach, actor, target, helper))
+    {
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?pending, ?reach, reason = "pending_helper_in_reach", "follower action refused");
         return false;
     }
-    let Some((caster_radius, target_radius)) =
-        super::unintended_reach::spell_reach_without_chain(world, actor, spell, target)
+    let Some(reach) = super::unintended_reach::action_reach(world, actor, spell, target, false)
     else {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_nonchain_reach", "follower action refused");
         return false;
     };
-    if caster_radius <= 0.0 && target_radius <= 0.0 {
+    if reach_is_empty(reach) {
         return true;
     }
     let caster = actor;
@@ -141,14 +132,14 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_map", "follower action refused");
         return false;
     };
-    let Some(caster_position) = targets::position(world, caster) else {
+    if targets::position(world, caster).is_none() {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_caster_position", "follower action refused");
         return false;
-    };
-    let Some(target_position) = targets::position(world, target) else {
+    }
+    if targets::position(world, target).is_none() {
         debug!(target: "game_server::follower_safety", ?actor, ?target, spell, reason = "missing_target_position", "follower action refused");
         return false;
-    };
+    }
     let mut planned = primary
         .map(|primary| super::pull_set::members(world, primary, caster))
         .unwrap_or_default();
@@ -163,14 +154,42 @@ pub fn action_safe(world: &World, actor: Entity, target: Entity, spell: Option<u
                 && world.get::<Npc>(actor).is_some()
                 && !engaged_with_party(world, follower, actor)
                 && targets::relation_matches(world, caster, actor, targets::Relation::Enemy)
-                && targets::position(world, actor).is_none_or(|point| {
-                    (caster_radius > 0.0 && caster_position.distance(point) <= caster_radius)
-                        || (target_radius > 0.0 && target_position.distance(point) <= target_radius)
-                })
+                && reaches_unit(world, reach, caster, target, actor)
         });
     if let Some(outsider) = outsider {
-        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, caster_radius, target_radius, reason = "unengaged_outsider", "follower action refused");
+        debug!(target: "game_server::follower_safety", ?actor, ?target, spell, ?primary, ?outsider, ?reach, reason = "unengaged_outsider", "follower action refused");
         return false;
     }
     true
+}
+
+fn reach_is_empty(reach: DeclaredReach) -> bool {
+    reach.caster_radius <= 0.0 && reach.target_radius <= 0.0 && reach.beam_half_width <= 0.0
+}
+
+/// A missing position or unsourced beam size counts as reached.
+fn reaches_unit(
+    world: &World,
+    reach: DeclaredReach,
+    caster: Entity,
+    target: Entity,
+    unit: Entity,
+) -> bool {
+    let Some(point) = targets::position(world, unit) else {
+        return true;
+    };
+    let caster_position = targets::position(world, caster);
+    let target_position = targets::position(world, target);
+    let within = |center: Option<Vec3>, radius: f32| {
+        radius > 0.0 && center.is_none_or(|center| center.distance(point) <= radius)
+    };
+    within(caster_position, reach.caster_radius)
+        || within(target_position, reach.target_radius)
+        || (reach.beam_half_width > 0.0
+            && caster_position
+                .zip(target_position)
+                .and_then(|(origin, end)| {
+                    targets::within_beam(world, origin, end, reach.beam_half_width, unit)
+                })
+                .unwrap_or(true))
 }

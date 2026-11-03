@@ -1204,6 +1204,34 @@ fn within_directed_shape(
     }
 }
 
+/// TC 15e0ed76 RECT target134 toward a unit destination: Spell.cpp1969–1971 clamps the
+/// radius to the destination's 2D distance and :1988 passes half the native Width.
+/// Spell.cpp9426 and Object.cpp615–631 keep units in that cylinder, widened by their
+/// reach; Position.cpp192–199 HasInLine keeps the front half-plane, also widened.
+/// `None`: the unit has no position or no sourced combat reach.
+pub fn within_beam(
+    world: &World,
+    origin: Vec3,
+    end: Vec3,
+    half_width: f32,
+    unit: Entity,
+) -> Option<bool> {
+    let point = position(world, unit)?;
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, unit)?;
+    let flat = |vector: Vec3| Vec3::new(vector.x, 0.0, vector.z);
+    let length = flat(end - origin).length();
+    let offset = flat(point - origin);
+    let forward = flat(end - origin).normalize_or_zero();
+    let along = offset.dot(forward);
+    let across = (offset.x * forward.z - offset.z * forward.x).abs();
+    Some(
+        along >= 0.0
+            && offset.length() < length + reach
+            && (point.y - origin.y).abs() <= length
+            && across < half_width + reach,
+    )
+}
+
 /// Source7/8: spherical same-copy area with authored entry conditions, not faction substitution.
 fn entry_area_units(
     world: &mut World,

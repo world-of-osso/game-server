@@ -74,6 +74,7 @@ fn declared_reach(
         combat::spell_cast::script_registry::DeclaredReach {
             caster_radius: 0.0,
             target_radius: jumps as f32 * jump_radius + payload_radius,
+            ..Default::default()
         },
     )
 }
