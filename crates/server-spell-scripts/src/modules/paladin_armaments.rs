@@ -1290,7 +1290,42 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
     }
 }
 
+fn grant_solidarity_self(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 432459 | 432472)
+        || !spell
+            .cast_primary_target
+            .is_some_and(|target| target != caster)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            traits
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 432802)
+        })
+    {
+        return;
+    }
+    // DB2 70448 Solidarity: an ally Armament also grants its benefits to self.
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3: self at 10.339s, ally at 11.599s.
+    // Grant at cast success; the ordinary ally projectile keeps its native timing.
+    let armament = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("Holy Armament trigger effect")
+        .trigger_spell;
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: armament,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    grant_solidarity_self(world, caster, spell);
     // SimC76f8118 sc_paladin.hpp:1730–1735: Protection SotR grants selected Faith's Armor.
     if spell.id == 53600 && selected(world, caster, 406101) {
         combat::auras::apply_aura(
