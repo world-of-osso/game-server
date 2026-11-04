@@ -113,7 +113,8 @@ def convert(events, healing, db, config):
         school, defense = read_spell_metadata(db, spell)
         health_after = event.get('hitPoints') if event.get('resourceActor') == 2 else None
         hits.append({'time_ms': time_ms, 'slot': actor_slots[target],
-                     'source_actor': source, 'target_actor': target, 'spell_id': spell,
+                     'source_actor': source, 'source_instance': event.get('sourceInstance', 0),
+                     'target_actor': target, 'spell_id': spell,
                      'school': school, 'defense': defense, 'hit_type': event['hitType'],
                      'periodic': event.get('tick', False), 'deferred': deferred,
                      'amount': event.get('amount', 0),
@@ -336,6 +337,7 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('--combatants', type=Path, required=True)
     parser.add_argument('--buffs', type=Path, required=True)
+    parser.add_argument('--debuffs', type=Path, required=True)
     parser.add_argument('--mode', choices=('healer', 'tank'), default='healer')
     args = parser.parse_args()
     with sqlite3.connect(f'file:{args.world_db}?mode=ro', uri=True) as db:
@@ -346,6 +348,9 @@ def main():
         result['opening_auras'] = opening_auras(read_jsonl(args.combatants), buffs,
                                                config['actors'])
         result['replayed_casts'] = replayed_casts(buffs, config['actors'], config['duration_ms'])
+        from healer_wcl_debuffs import convert as convert_debuffs
+        result['debuffs'] = convert_debuffs(read_jsonl(args.debuffs), result['hits'], db,
+                                           config['actors'], config['duration_ms'])
         if args.mode == 'tank':
             result['opening_auras'] = infer_exhausted_opening_absorbs(
                 result['opening_auras'], read_jsonl(args.events), read_jsonl(args.healing), config, db, buffs)

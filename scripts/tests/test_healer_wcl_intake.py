@@ -92,7 +92,7 @@ class WclIntakeTest(unittest.TestCase):
                        'hitPoints': 950, 'resourceActor': 2} for actor in range(1, 6)]
             combatants = [{'sourceID': actor, 'auras': []} for actor in range(1, 6)]
             for name, rows in [('events', events), ('healing', []),
-                               ('combatants', combatants), ('buffs', [])]:
+                               ('combatants', combatants), ('buffs', []), ('debuffs', [])]:
                 (path / f'{name}.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in rows))
             config = {'actors': [1, 2, 3, 4, 5], 'party_specs': [73, 264, 70, 103, 261],
                       'provenance': 'compatibility fixture', 'bloodlust': [], 'duration_ms': 5000}
@@ -100,7 +100,8 @@ class WclIntakeTest(unittest.TestCase):
             args = [sys.executable, str(SCRIPTS / 'healer_wcl_intake.py'),
                     str(path / 'events.jsonl'), str(path / 'healing.jsonl'),
                     str(path / 'world.db'), str(path / 'config.json'), str(path / 'output.json'),
-                    '--combatants', str(path / 'combatants.jsonl'), '--buffs', str(path / 'buffs.jsonl')]
+                    '--combatants', str(path / 'combatants.jsonl'), '--buffs', str(path / 'buffs.jsonl'),
+                    '--debuffs', str(path / 'debuffs.jsonl')]
             expected = (SCRIPTS / 'tests/fixtures/healer-wcl-output.json').read_bytes()
             for mode in [[], ['--mode', 'healer']]:
                 subprocess.run(args + mode, check=True, capture_output=True)

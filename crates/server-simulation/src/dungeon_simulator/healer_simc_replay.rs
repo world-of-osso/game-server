@@ -693,6 +693,9 @@ fn replay_profile(
     } else {
         Vec::new()
     };
+    let mut debuff_replay = wcl
+        .as_ref()
+        .map(|trace| super::healer_wcl_debuffs::DebuffReplay::new(app.world_mut(), trace, &slots));
     let mut next_opening_removal = 0;
     if let Some(trace) = &wcl {
         super::healer_wcl_trace::hold_replayed_casts(
@@ -833,6 +836,11 @@ fn replay_profile(
             source
         };
         if let Some(wcl) = &wcl {
+            debuff_replay.as_mut().expect("WCL debuff replay").advance(
+                app.world_mut(),
+                &wcl.debuffs,
+                elapsed_ms,
+            )?;
             let events = &app
                 .world()
                 .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -895,6 +903,14 @@ fn replay_profile(
                     continue;
                 }
                 let Some(hit) = hit else { break };
+                if debuff_replay
+                    .as_mut()
+                    .expect("WCL debuff replay")
+                    .drop_tick(hit.debuff_episode)
+                {
+                    next_wcl += 1;
+                    continue;
+                }
                 let delivery = if wcl.mode == "tank_raw" {
                     let profile = profile.as_ref().ok_or("WCL_RAW_PROFILE_REQUIRED")?;
                     let index = profile
@@ -1073,6 +1089,8 @@ fn replay_profile(
         report["wcl_intake"] = json!({"provenance":wcl.provenance,"records":next_wcl,
             "party_specs":wcl.party_specs,"healer_spec":spec,"matches_recorded_party":spec == wcl.party_specs[1],
             "delivered":wcl_delivered,"avoided":wcl_avoided,
+            "debuff_episodes":wcl.debuffs.len(),
+            "ticks_dropped_after_native_dispel":debuff_replay.as_ref().expect("WCL debuff replay").dropped_ticks,
             "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
             "health_samples":wcl_health_samples,"native_self_damage":native_self_damage,
             "external_shield_schedule_records_processed":next_external_shield,

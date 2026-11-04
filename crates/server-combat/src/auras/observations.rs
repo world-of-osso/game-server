@@ -5,6 +5,10 @@ use std::collections::BTreeMap;
 
 use super::{ActiveAuras, AuraInstance, RemoveReason};
 
+/// Exact native removal receipts for replay episode accounting. Opt-in, test-support only.
+#[derive(Resource, Default)]
+pub struct ObservedAuraRemovals(pub Vec<(Entity, u32, RemoveReason)>);
+
 const TRACKED: &[(u32, u32)] = &[(16870, 113043), (114108, 158478)];
 
 #[derive(Default, Serialize)]
@@ -109,6 +113,9 @@ pub(super) fn removed(
     aura: &AuraInstance,
     reason: RemoveReason,
 ) {
+    if let Some(mut receipts) = world.get_resource_mut::<ObservedAuraRemovals>() {
+        receipts.0.push((target, aura.instance_id, reason));
+    }
     record_loss(
         world,
         target,

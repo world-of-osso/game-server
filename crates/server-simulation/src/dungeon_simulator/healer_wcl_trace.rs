@@ -25,6 +25,8 @@ pub(super) struct Trace {
     pub replayed_casts: Vec<ReplayedCast>,
     pub hits: Vec<RecordedHit>,
     #[serde(default)]
+    pub debuffs: Vec<super::healer_wcl_debuffs::DebuffEpisode>,
+    #[serde(default)]
     pub external_heals: Vec<RecordedHeal>,
     #[serde(default)]
     pub external_shields: Vec<RecordedShield>,
@@ -447,6 +449,8 @@ pub(super) struct RecordedHit {
     hit_type: u8,
     periodic: bool,
     #[serde(default)]
+    pub debuff_episode: Option<usize>,
+    #[serde(default)]
     deferred: bool,
     amount: u64,
     absorbed: u64,
@@ -480,8 +484,20 @@ impl Trace {
         {
             return Err("WCL_INTAKE_INVALID_HEADER_OR_ORDER".into());
         }
+        super::healer_wcl_debuffs::validate(&trace.debuffs, &trace.actor_slots)?;
         for hit in &trace.hits {
             hit.validate()?;
+            if let Some(index) = hit.debuff_episode {
+                let episode = trace
+                    .debuffs
+                    .get(index)
+                    .ok_or("WCL_DEBUFF_EPISODE_INDEX_INVALID")?;
+                if !hit.periodic
+                    || !episode.accepts_tick(hit.source_key(), hit.target_actor, hit.time_ms)
+                {
+                    return Err("WCL_DEBUFF_TICK_IDENTITY_INVALID".into());
+                }
+            }
             if trace.mode == "tank_raw" && hit.amount + hit.absorbed > 0 && hit.raw.is_none() {
                 return Err("WCL_INTAKE_RAW_MISSING".into());
             }
