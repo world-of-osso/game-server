@@ -25,6 +25,41 @@ fn holy_priest_uses_serenity_and_benediction_in_party_pulse() {
 
 #[test]
 #[ignore = "requires native Holy Priest spell data"]
+fn lights_resurgence_applies_renew_from_mending_heals_only() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    let _seed = crate::random::seed_scope(70448);
+    let mut h = harness(Vec::new(), &[193157, 33110, 139, 2061], 5).unwrap();
+    let target = spawn_player(&mut h.app, 5, 3.0);
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 33110, Some(target), 0);
+    }
+    assert!(!crate::auras::has_aura(h.app.world(), target, 139));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 193157,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    for _ in 0..30 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 2061, Some(target), 0);
+    }
+    assert!(!crate::auras::has_aura(h.app.world(), target, 139));
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 33110, Some(target), 0);
+        if crate::auras::has_aura(h.app.world(), target, 139) {
+            return;
+        }
+    }
+    panic!("selected Light's Resurgence did not apply Renew from Mending heals");
+}
+
+#[test]
+#[ignore = "requires native Holy Priest spell data"]
 fn divine_hymn_pulses_emit_scaled_cosmic_ripple() {
     use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
     use shared::components::Health;

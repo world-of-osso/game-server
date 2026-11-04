@@ -345,6 +345,7 @@ register_modules! {
     hellcaller_wither: (2665, "modules/hellcaller_wither.rs"),
     enhancement_overcharge: (2634, "modules/enhancement_overcharge.rs"),
     holy_runtime: (2570, "modules/holy_runtime.rs"),
+    holy_lights_resurgence: (2571, "modules/holy_lights_resurgence.rs"),
     hot_streak: (1000, "modules/hot_streak.rs"),
     enhancement_converging: (2635, "modules/enhancement_converging.rs"),
     hunter_bear: (2532, "modules/hunter_bear.rs"),
