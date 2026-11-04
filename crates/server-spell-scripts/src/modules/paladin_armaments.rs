@@ -800,7 +800,11 @@ fn consumed_shining_light(cast: &SpellInfo) -> bool {
 /// SimC76f8118 sc_paladin.cpp1263–1268: selected Valiance shortens Holy Armaments
 /// whenever a Word of Glory executes with free Shining Light.
 fn apply_valiance(world: &mut World, caster: Entity) {
-    if !selected(world, caster, 432919) {
+    if !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 432919)
+    }) {
         return;
     }
     let milliseconds = combat::spell_cast::scripts::script_effect_value(world, caster, 432919, 0);
@@ -810,6 +814,41 @@ fn apply_valiance(world: &mut World, caster: Entity) {
         432459,
         f64::from(milliseconds) / 1000.0,
     );
+}
+
+// VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1 and six current-build
+// Altar reports: Flash of Light and Judgment consume Infusion. DB2 70448
+// Valiance 432919 reduces Holy Armaments recharge by effect 0 per consumption.
+fn advance_holy_valiance(world: &mut World, caster: Entity, cast: &SpellInfo) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 65)
+    {
+        return;
+    }
+    let modifier_consumed = cast
+        .cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == 54149);
+    let judgment_infusion = matches!(cast.id, 275773 | 1241413)
+        .then(|| {
+            world
+                .get::<combat::auras::ActiveAuras>(caster)
+                .and_then(|auras| {
+                    auras
+                        .iter()
+                        .find(|aura| aura.spell_id == 54149 && aura.caster == caster)
+                        .map(|aura| aura.instance_id)
+                })
+        })
+        .flatten();
+    if let Some(instance) = judgment_infusion {
+        combat::auras::spend_stack(world, caster, instance);
+    }
+    if modifier_consumed || judgment_infusion.is_some() {
+        apply_valiance(world, caster);
+    }
 }
 
 fn owned_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
@@ -1284,6 +1323,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     summon_forge(world, caster, spell.id);
     echo_forge_spender(world, caster, spell);
     advance_shining_light(world, caster, spell);
+    advance_holy_valiance(world, caster, spell);
     advance_divine_guidance(world, caster, spell);
     heal_from_armament(world, caster, spell);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.

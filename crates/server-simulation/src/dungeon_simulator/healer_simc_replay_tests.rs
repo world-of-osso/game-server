@@ -4,6 +4,89 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_valiance_consumes_infusion_and_reduces_armament_recharge() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::{SpellHistory, test_harness::charge_recovery};
+    // VERIFIED_WCL 1AWhVvdLbpy2gPak fight 36: 54149 is consumed by Flash
+    // and Judgment; DB2 70448 432919 reduces recharge by three seconds.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for action in [19750, 275773] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let healer = run.healer;
+        let target = if action == 19750 {
+            run.tank
+        } else {
+            run.sources[0]
+        };
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, 432459, Some(healer), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: healer,
+                target: healer,
+                spell_id: 54149,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(run.app.world(), healer, 54149));
+        let before = charge_recovery(run.app.world().get::<SpellHistory>(healer).unwrap(), 2220)
+            .1
+            .unwrap();
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, action, Some(target), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let after = charge_recovery(run.app.world().get::<SpellHistory>(healer).unwrap(), 2220)
+            .1
+            .unwrap();
+        assert!(
+            (before - after - 3.0).abs() < 0.001,
+            "action={action} before={before} after={after}"
+        );
+        assert!(!crate::auras::has_aura(run.app.world(), healer, 54149));
+        if action == 19750 {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                healer,
+                action,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+            let without_infusion =
+                charge_recovery(run.app.world().get::<SpellHistory>(healer).unwrap(), 2220)
+                    .1
+                    .unwrap();
+            assert!((without_infusion - after).abs() < 0.001);
+        }
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn boundless_moonlight_heals_only_damage_inside_lunar_beam() {
     use shared::components::Position;
     use shared::protocol::CombatLogKind;
