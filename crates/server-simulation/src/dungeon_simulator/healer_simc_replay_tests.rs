@@ -4,6 +4,41 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn retribution_divine_protection_casts_selected_shield_of_vengeance() {
+    use crate::class_progression::TraitLoadout;
+    for selected in [true, false] {
+        let mut run = super::snapshot_party_with_specs(65, 90, [104, 65, 70, 251, 62]);
+        let paladin = run.slots[2];
+        let talents = run.app.world().get::<TraitLoadout>(paladin).unwrap();
+        assert!(
+            talents
+                .active_talent_spells()
+                .any(|talent| talent.spell_id == 1261562)
+        );
+        if !selected {
+            run.app
+                .world_mut()
+                .entity_mut(paladin)
+                .remove::<TraitLoadout>();
+        }
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            paladin,
+            403876,
+            Some(paladin),
+            false,
+        )
+        .expect("Divine Protection must be cast successfully");
+        assert!(crate::auras::has_aura(run.app.world(), paladin, 403876));
+        assert_eq!(
+            crate::auras::has_aura(run.app.world(), paladin, 184662),
+            selected
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn opening_prismatic_barrier_absorbs_matched_mage_health_and_versatility() {
     use shared::components::Health;
     // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: actor 2 has an opening

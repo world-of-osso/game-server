@@ -327,6 +327,10 @@ fn ignores_cooldown(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
 }
 
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    // DB2 70448 spell1261562: Divine Protection casts Shield of Vengeance.
+    if spell.id == 403876 && has_talent(world, caster, 1261562) {
+        spell_cast::cast_triggered(world, caster, 184662, Some(caster), 1);
+    }
     super::marksmanship_sentinel::after_cast(world, caster, spell);
     for rule in RULES.iter().filter(|rule| rule.cast == spell.id) {
         if !selected(world, caster, rule) {
