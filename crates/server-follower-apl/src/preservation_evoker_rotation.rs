@@ -157,7 +157,7 @@ impl Preservation {
                     .then_some((unit, health.current / health.max))
             })
             .collect();
-        let Some((target, lowest)) = crate::follower::lowest_health(world, living.iter().copied())
+        let Some((target, _)) = crate::follower::lowest_health(world, living.iter().copied())
         else {
             return Ok(());
         };
@@ -191,8 +191,8 @@ impl Preservation {
             self.driver.execute(world, healer, action, execution)?;
             return Ok(());
         }
-        // INFERRED_WCL: p10 of 32 lowest-living HP snapshots at Fire Breath start.
-        if lowest * 100.0 >= 51.857_42 && !enemies.is_empty() {
+        // Retail Fire Breath starts do not depend on party health; see preservation-fire-breath.md.
+        if !enemies.is_empty() {
             let actions = [NativeAction {
                 name: "fire_breath",
                 spell: 357208,

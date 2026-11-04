@@ -392,7 +392,7 @@ fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
     for (count, elapsed, health, expected) in [
         (1, 0.0, 1.0, false),
         (5, 0.0, 0.80, true),
-        (5, 0.0, 0.50, false),
+        (5, 0.0, 0.50, true),
         (1, 27.0, 0.80, true),
     ] {
         let mut run = super::snapshot_party(1468, 90, count);
