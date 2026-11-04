@@ -16,6 +16,8 @@ class TempleAnomalyImportTests(unittest.TestCase):
             for table in ('content_creature_template', 'tdb_creature_template',
                           'tdb_creature_template_difficulty', 'content_tuning_level'):
                 db.execute(fixture[table]['sql'])
+            for index in range(1, 9):
+                db.execute(f'ALTER TABLE content_creature_template ADD COLUMN StaticFlags{index} INTEGER DEFAULT 0')
             db.execute('CREATE TABLE creature_template (entry INTEGER PRIMARY KEY)')
             db.executemany(
                 'INSERT INTO tdb_creature_template (entry,name,unit_flags) VALUES (?,?,?)',
