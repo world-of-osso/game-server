@@ -79,6 +79,7 @@ pub(super) fn prepare_application(
         HOLY_BULWARK_ABSORB => accumulate_holy_bulwark(world, target, new),
         1241866 => accumulate_glistening_radiance(world, target, new),
         77535 => accumulate_blood_shield(world, target, new),
+        1265857 => accumulate_revel_in_pain(world, target, new),
         372505 | 47753 => accumulate_capped_absorb(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
@@ -497,6 +498,30 @@ fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance
     if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
         shield.absorb_remaining =
             (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
+    }
+}
+
+/// DB2 70448 343014: carry the earned shield, capped at 10% HP, doubled during Brand.
+fn accumulate_revel_in_pain(world: &World, target: Entity, new: &mut AuraInstance) {
+    let cap_percent = crate::spell_cast::scripts::script_effect_value(world, new.caster, 343014, 1);
+    let brand = if super::has_aura(world, new.caster, 207771) {
+        2.0
+    } else {
+        1.0
+    };
+    let maximum = world
+        .get::<Health>(target)
+        .expect("living Revel in Pain target")
+        .max;
+    let previous = previous(world, target, new).map_or(0.0, |old| {
+        old.effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .map_or(0.0, |effect| effect.absorb_remaining)
+    });
+    if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
+        shield.absorb_remaining =
+            (shield.absorb_remaining + previous).min(maximum * cap_percent * brand / 100.0);
     }
 }
 

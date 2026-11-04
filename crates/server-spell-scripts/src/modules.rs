@@ -169,6 +169,7 @@ register_modules! {
     vengeance_fracture: (5811, "modules/vengeance_fracture.rs"),
     vengeance_frailty: (5815, "modules/vengeance_frailty.rs"),
     vengeance_last_resort: (5824, "modules/vengeance_last_resort.rs"),
+    vengeance_revel_in_pain: (5825, "modules/vengeance_revel_in_pain.rs"),
     vengeance_mass_acceleration: (5816, "modules/vengeance_mass_acceleration.rs"),
     vengeance_mid2: (5822, "modules/vengeance_mid2.rs"),
     vengeance_sigil: (5822, "modules/vengeance_sigil.rs"),

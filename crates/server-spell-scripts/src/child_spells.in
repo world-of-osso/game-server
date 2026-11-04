@@ -594,6 +594,8 @@ C	unrelenting_onslaught.rs	445836
 C	vengeance_fallout.rs	258921
 C	vengeance_fel_devastation.rs	212106
 C	vengeance_fiery_brand.rs	207771
+C	vengeance_revel_in_pain.rs	1265857
+D	vengeance_revel_in_pain.rs	shield_fire_damage	launch_triggered_spell	&shield	1	1265857
 C	vengeance_frailty.rs	227255
 C	vengeance_frailty.rs	247456
 C	vengeance_last_resort.rs	187827

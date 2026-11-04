@@ -77,6 +77,106 @@ fn protection_indomitable_heals_actual_paid_rage_only_when_selected() {
 }
 
 #[test]
+#[ignore = "requires native Vengeance and Fire damage spell data"]
+fn vengeance_revel_shields_fire_damage_with_carry_consumption_and_brand_caps() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents, harness};
+    fn fire(h: &mut Harness, amount: f32) -> f32 {
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(1216570)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.caster,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        let cursor = h.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            h.npc,
+            amount,
+            false,
+            false,
+        );
+        h.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(1216570))
+            .unwrap()
+            .amount as f32
+    }
+    fn drain(h: &mut Harness) -> f32 {
+        crate::auras::absorb_damage(h.app.world_mut(), h.caster, Some(h.npc), 1, 1_000_000.0).1
+    }
+    let mut h = harness(Vec::new(), &[343014, 1265857, 207771, 1216570], 12).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 100_000.0,
+        max: 200_000.0,
+    };
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000_000.0,
+        max: 100_000_000.0,
+    };
+    assert_eq!(fire(&mut h, 10_000.0) > 0.0, true);
+    assert_eq!(drain(&mut h), 0.0, "unselected talent must not shield");
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 343014,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let first = fire(&mut h, 10_000.0);
+    let receipt = crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        h.caster,
+        None,
+        1,
+        false,
+        false,
+        250.0,
+    )
+    .unwrap();
+    assert_eq!(receipt.damage_hp, 0.0);
+    assert_eq!(receipt.absorbed_hp, 250.0);
+    let second = fire(&mut h, 20_000.0);
+    assert!((drain(&mut h) - ((first + second) * 0.06 - 250.0)).abs() <= 2.0);
+    fire(&mut h, 1_000_000.0);
+    assert!(
+        (drain(&mut h) - 20_000.0).abs() <= 2.0,
+        "normal cap is 10% max health"
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 207771,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let branded = fire(&mut h, 10_000.0);
+    assert!((drain(&mut h) - branded * 0.12).abs() <= 2.0);
+    fire(&mut h, 1_000_000.0);
+    assert!(
+        (drain(&mut h) - 40_000.0).abs() <= 2.0,
+        "Brand cap is 20% max health"
+    );
+}
+
+#[test]
 #[ignore = "requires native Golden Hour, Echo, and Reversion spell data"]
 fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
     use crate::auras::{AuraApplication, AuraSource};
