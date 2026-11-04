@@ -22,6 +22,8 @@ Replay recorded incoming damage in the native server combat simulation to compar
 - [ ] `--all` runs all seven healers on the Protection Paladin trace and six tanks on their respective 300-second seed-70448 SimC dummy traces, with both externally healed and no-healer tank runs. Run replays in parallel and print healer and tank summary tables; the healer table includes idle-GCD percentage. Write per-spell details in dated output files.
 - [ ] See [Restoration Shaman (264)](healer-tank-replay/264.md) for its replay policy and data gaps.
 
+Selected Solidarity (432802) grants the caster a copy when Holy Bulwark or Sacred Weapon is cast on an ally. The self-copy applies at cast success; the ally keeps the ordinary projectile delay (VERIFIED_WCL `dtmp7Lg2abzyZVBG`, fight 3: self 10.339s, ally 11.599s). This is not a target-selection policy.
+
 Matched WCL replays require all five actors' recorded CombatantInfo talent entries and gear, including item levels, bonus IDs, enchants, gems and trinkets. The unmatched replay retains its reference profiles. Report race as unmatched when the combatant data does not identify it.
 
 For selected Refractive Images, native incoming damage defers 10%, or 30% while Mirror Image's Amplified Refraction is active, into eight one-second ticks. A new hit preserves tick phase and redistributes the unpaid damage over eight ticks. WCL reports the deferred portion as an absorb; self-sourced Refraction ticks are excluded from intake because native damage generates them. VERIFIED_WCL: `dtmp7Lg2abzyZVBG`, fight 3, pull 1.
