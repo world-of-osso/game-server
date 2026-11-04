@@ -6,7 +6,7 @@ use combat::auras::{
 };
 use combat::class_progression::KnownSpells;
 use combat::spell_cast::{
-    self, CostPool, TriggeredSpellOverrides, script_registry::SpellScriptHook,
+    self, CostPool, TriggeredSpellOverrides, script_registry::SpellScriptHook, scripts,
 };
 use combat::spell_info::{SpellInfo, SpellStore};
 use shared::components::{ActiveSpec, Npc, PowerType, UnitSummonedBy};
@@ -23,6 +23,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(consume_dance),
     SpellScriptHook::AfterPayment(spawn_dance_weapon),
     SpellScriptHook::AfterSpellPayment(track_mist_spending),
+    SpellScriptHook::AfterSpellPayment(red_thirst),
     SpellScriptHook::AfterPolicyDirectDamage(grant_mist_power),
     SpellScriptHook::AfterCastUpdate(sync_rune_weapon_buff),
     SpellScriptHook::AsynchronousAuras(&[1264407, 1265577]),
@@ -97,6 +98,35 @@ fn track_mist_spending(
     spell: &SpellInfo,
     costs: &[(CostPool, f32)],
 ) {
+    let spent = final_runic_spend(world, caster, spell, costs);
+    if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
+        state.spent += spent;
+    }
+}
+
+// SimC76f8118 sc_death_knight.cpp13191–13196: each Runic Power spend shortens
+// Vampiric Blood by Red Thirst's effect 0 time per effect 1 Runic Power.
+fn red_thirst(world: &mut World, caster: Entity, spell: &SpellInfo, costs: &[(CostPool, f32)]) {
+    const RED_THIRST: u32 = 205723;
+    if !auras::has_aura(world, caster, RED_THIRST) {
+        return;
+    }
+    let spent = final_runic_spend(world, caster, spell, costs);
+    if spent <= 0.0 {
+        return;
+    }
+    let seconds = scripts::script_effect_value(world, caster, RED_THIRST, 0) / 1000.0 * spent
+        / scripts::script_effect_value(world, caster, RED_THIRST, 1);
+    scripts::reduce_cooldown(world, caster, 55233, f64::from(seconds));
+}
+
+/// Displayed Runic Power paid, as SimC's `final_spend`.
+fn final_runic_spend(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) -> f32 {
     let mut spent: f32 = costs
         .iter()
         .filter_map(|(pool, amount)| {
@@ -117,9 +147,7 @@ fn track_mist_spending(
             .base_points;
         spent -= reduction / 10.0;
     }
-    if let Some(mut state) = world.get_mut::<BloodMistState>(caster) {
-        state.spent += spent;
-    }
+    spent
 }
 
 fn finish_mist(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
