@@ -4,6 +4,8 @@ Shared native decision evaluation interprets pinned SimC76f8118 conditions and s
 
 ## What it must do
 
+- [x] Multiple APL actors can register distinct reaction-tracked debuffs on the same enemy when their reaction settings agree. Preserve existing acquisition deadlines and reject new tracking after that aura is acquired; reject conflicting reaction settings.
+
 - [x] Interpret numeric truth, OR/AND/NOT, arithmetic and comparisons with pinned SimC precedence. Single `%` divides; `%%` is modulo. `>?` takes the minimum and `<?` takes the maximum, below sums and above comparisons; ties and unordered comparisons preserve the left operand, as pinned C++ std::min/max.
 - [ ] Read explicit native facts for buff stacks/remains/up, cooldown remains/charges/duration, resources, talents, equipment/trinkets, target count/TTD, fight remains, raid-event adds, dots/debuffs and gcd. Unknown operands fail explicitly, including in otherwise inactive condition branches; never silently become false.
 - [ ] Share native equipment identities/stat-buff metadata, on-use vs proc cooldown sources and native tier facts across spec adapters. Reject unknown native stat/tier metadata; preserve original IDs and trinket1→trinket2→other use order.

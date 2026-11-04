@@ -95,8 +95,8 @@ struct BuffReactions {
 }
 
 /// Configure before tracked buffs exist: a late query cannot reconstruct acquisition.
-/// Repeating the same policy keeps the observed state, as a follower's APL is
-/// reloaded every pull.
+/// Shared targets can register additional spells under the same policy without
+/// resetting observed state. Newly tracked spells must precede acquisition.
 pub fn configure(
     world: &mut World,
     actor: Entity,
@@ -105,17 +105,23 @@ pub fn configure(
 ) -> Result<(), String> {
     let settings = settings.validate()?;
     let spells: BTreeSet<_> = spells.iter().copied().collect();
-    if let Some(existing) = world.get::<BuffReactions>(actor) {
-        if existing.settings == settings && existing.spells == spells {
-            return Ok(());
+    let added = if let Some(existing) = world.get::<BuffReactions>(actor) {
+        if existing.settings != settings {
+            return Err("native APL buff reaction policy already configured differently".into());
         }
-        return Err("native APL buff reaction policy already configured differently".into());
-    }
+        spells.difference(&existing.spells).copied().collect()
+    } else {
+        spells.clone()
+    };
     let active = world
         .get::<crate::auras::ActiveAuras>(actor)
-        .is_some_and(|auras| auras.iter().any(|aura| spells.contains(&aura.spell_id)));
+        .is_some_and(|auras| auras.iter().any(|aura| added.contains(&aura.spell_id)));
     if active {
         return Err("native APL reaction policy must precede tracked aura acquisition".into());
+    }
+    if let Some(mut existing) = world.get_mut::<BuffReactions>(actor) {
+        existing.spells.extend(added);
+        return Ok(());
     }
     world.entity_mut(actor).insert(BuffReactions {
         settings,

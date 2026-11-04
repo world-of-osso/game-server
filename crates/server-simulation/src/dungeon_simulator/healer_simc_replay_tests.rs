@@ -4,6 +4,56 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn frost_mage_and_death_knight_share_reaction_targets_without_stopping() {
+    use shared::protocol::CombatLogKind;
+    let mut party = super::snapshot_party_with_specs(65, 90, [104, 65, 64, 251, 62]);
+    let mage = party.slots[2];
+    let death_knight = party.slots[3];
+    assert!(
+        party
+            .app
+            .world()
+            .get_resource::<server_follower_apl::registry::FixedLengthFight>()
+            .is_none()
+    );
+    super::engage(&mut party);
+    for _ in 0..800 {
+        party.app.update();
+    }
+    for actor in [mage, death_knight] {
+        assert!(
+            party
+                .app
+                .world()
+                .get::<server_follower_apl::FollowerAplFailed>(actor)
+                .is_none(),
+            "shared enemy reaction registration must not stop {actor}"
+        );
+        let events = &party
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.kind == CombatLogKind::CastSuccess),
+            "{actor} must execute its real production APL"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(actor.to_bits())
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
+            "{actor} must damage the shared enemy"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn retribution_divine_protection_casts_selected_shield_of_vengeance() {
     use crate::class_progression::TraitLoadout;
     for selected in [true, false] {
