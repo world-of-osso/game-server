@@ -465,6 +465,14 @@ impl Driver {
         } else {
             None
         };
+        let mut action = action;
+        if self.selected_precombat && action.name == "potion" {
+            // SimC76f8118 consumable.cpp435 defaults precombat potions to two seconds.
+            action
+                .options
+                .entry("pre_pot_time".into())
+                .or_insert_with(|| "2".into());
+        }
         let continues_tick = !matches!(execution, Execution::Wait(_));
         match execution {
             Execution::Snapshot => self.snapshot = Some(snapshot::stats(world, actor)?),

@@ -380,6 +380,35 @@ impl Prepared {
                 state,
                 Execution::Item(potion.0, actor),
             );
+            for &(token, id) in server::followers::consumables::SIMC_POTIONS {
+                let Ok(item) = server::consumables::ItemUse::consumable(world, id) else {
+                    continue;
+                };
+                if world
+                    .resource::<crate::spell_info::SpellStore>()
+                    .get(item.on_use.spell_id)
+                    .is_none()
+                {
+                    continue;
+                }
+                let name = format!("potion:{token}");
+                prepared.declared.insert(name.clone());
+                let state = native_readiness(
+                    world,
+                    actor,
+                    item.on_use.spell_id,
+                    actor,
+                    Some(item),
+                    after_channel,
+                )?;
+                record_probe(
+                    &mut prepared,
+                    (name, None),
+                    false,
+                    state,
+                    Execution::Item(item, actor),
+                );
+            }
         }
         for item in equipment.uses() {
             read_item(world, actor, &targets, item, &mut prepared)?;
@@ -539,6 +568,12 @@ impl Prepared {
         let Some(key) = action_key(action, equipment)? else {
             return Ok(None);
         };
+        if action.name == "potion"
+            && action.options.contains_key("name")
+            && !self.declared.contains(&key.0)
+        {
+            return Err(format!("named native potion unavailable: {}", key.0));
+        }
         let execution = self.ready.get(&key).cloned();
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
             || intrinsic_off_gcd(self.spec_id, &action.name);
@@ -695,6 +730,11 @@ fn action_key(action: &Action, equipment: &Equipment) -> Result<Option<ActionKey
             return Ok(None);
         };
         format!("item:{slot}")
+    } else if action.name == "potion" {
+        action
+            .options
+            .get("name")
+            .map_or_else(|| action.name.clone(), |name| format!("potion:{name}"))
     } else {
         action.name.clone()
     };

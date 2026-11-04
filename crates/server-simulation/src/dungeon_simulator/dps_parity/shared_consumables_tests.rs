@@ -205,6 +205,61 @@ fn shared_consumables_thalassian_resistance_quality2_grants_native_versatility()
 
 #[test]
 #[ignore = "native70448 profile and consumable catalogs"]
+fn named_potion_uses_its_item_and_shares_cooldown_with_profile_potion() {
+    let mut run = prepare("potion", "potion_of_recklessness_2");
+    let actor = run.actor;
+    let mut bindings = crate::simc_apl_native::Bindings::default();
+    let equipment = Equipment::load(run.app.world(), actor, &mut bindings).unwrap();
+    let named = server::simc_apl::Action {
+        source_row: None,
+        name: "potion".into(),
+        target: None,
+        options: [("name".into(), "liquid_luster_2".into())].into(),
+    };
+    let configured = server::simc_apl::Action {
+        options: Default::default(),
+        ..named.clone()
+    };
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        std::iter::empty::<NativeAction>(),
+        false,
+    )
+    .unwrap();
+    let selected = prepared
+        .execution(&named, &equipment)
+        .unwrap()
+        .expect("named potion ready");
+    match selected {
+        execution::Execution::Item(item, _) => assert_eq!(item.item_id, 271887),
+        _ => panic!("named potion must select its item"),
+    }
+    execution::execute(run.app.world_mut(), actor, selected).unwrap();
+    super::preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1295132));
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        actor,
+        &run.targets,
+        &equipment,
+        std::iter::empty::<NativeAction>(),
+        false,
+    )
+    .unwrap();
+    assert!(
+        prepared
+            .execution(&configured, &equipment)
+            .unwrap()
+            .is_none(),
+        "shared cooldown must block the configured potion"
+    );
+}
+
+#[test]
+#[ignore = "native70448 profile and consumable catalogs"]
 fn shared_consumables_lights_potential_quality2_cast_grants_native_primary() {
     let mut run = prepare("potion", "lights_potential_2");
     let actor = run.actor;

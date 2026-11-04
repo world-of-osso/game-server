@@ -203,7 +203,7 @@ impl Rotation {
     pub fn report(&self) -> serde_json::Value {
         serde_json::json!({"driver": "LITERAL_SIMC_ARMS_76f8118", "decisions": self.driver.decisions,
             "native_precombat_snapshot": self.driver.snapshot,
-            "gaps": ["NATIVE_POTION_INVENTORY_UNAVAILABLE", "EXTERNAL_BUFF_PROVIDER_UNAVAILABLE:power_infusion"]})
+            "gaps": [ "EXTERNAL_BUFF_PROVIDER_UNAVAILABLE:power_infusion"]})
     }
 }
 
