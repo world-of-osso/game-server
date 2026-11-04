@@ -39,6 +39,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **VERIFIED_WCL** `dtmp7Lg2abzyZVBG` fight 3 pull 1: the selected Glistening Radiance 1241805 grants absorb 1241866 to a Beacon of Faith recipient. DB2 70448 adds 2% of the recipient's maximum health at each Beacon tick while at full health, up to 6%; unspent absorb carries into each refresh.
 
+The [current-build Priest and Shaman matched-pull ledger](healer-tank-replay/priest-shaman-matched-2026-11-03.md) records five-seed outcomes, healing attribution and remaining policy gaps.
+
 ## Equal-health healer target ties
 
 Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:
