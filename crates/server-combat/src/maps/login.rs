@@ -90,7 +90,13 @@ impl LoginMaps<'_> {
         }
         let place = match self.enter(map_id, entrant) {
             Some(resolved) => {
-                let position = match (resolved.created, self.is_dungeon(map_id)) {
+                let has_progress = self.instances.initial_done_bosses(resolved.map) != 0
+                    || self.instances.completed_encounters(resolved.map) != 0;
+                let restoring_checkpoint =
+                    has_progress && checkpoint.is_some_and(|(map, _)| map == resolved.map);
+                // Empty saved copies still need the authored entrance after a restart.
+                let reset_position = resolved.created && !restoring_checkpoint;
+                let position = match (reset_position, self.is_dungeon(map_id)) {
                     (true, true) => self.reset_entrance(map_id)?.bevy_position(),
                     _ => position,
                 };
