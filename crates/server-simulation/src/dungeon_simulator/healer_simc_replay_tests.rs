@@ -335,9 +335,11 @@ fn preservation_leaping_flames_heal_allies_without_hostile_reach() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn preservation_living_flame_heals_when_target_is_below_observed_median() {
+fn preservation_keeps_routine_heals_before_living_flame_at_moderate_injury() {
     use shared::protocol::CombatLogKind;
-    for (health, expected) in [(0.60, 361469), (0.70, 364343)] {
+    // No retail trigger separates Living Flame casts from ready-but-uncast moments;
+    // see docs/specs/healer-tank-replay/preservation-living-flame.md.
+    for health in [0.60, 0.70] {
         let mut run = super::snapshot_party(1468, 90, 1);
         let healer = run.healer;
         super::hold(&mut run, healer);
@@ -367,17 +369,18 @@ fn preservation_living_flame_heals_when_target_is_below_observed_median() {
         for _ in 0..80 {
             run.app.update();
         }
-        let events = &run
+        let first = run
             .app
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0[cursor..];
-        assert!(
-            events.iter().any(|e| e.source == Some(healer.to_bits())
-                && e.spell_id == Some(expected)
-                && e.kind == CombatLogKind::CastSuccess
-                && e.target == Some(run.tank.to_bits())),
-            "health={health}: {events:?}"
+            .0[cursor..]
+            .iter()
+            .find(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
+            .map(|e| (e.spell_id, e.target));
+        assert_eq!(
+            first,
+            Some((Some(364343), Some(run.tank.to_bits()))),
+            "health={health}: Echo, not Living Flame, on the injured tank"
         );
     }
 }
