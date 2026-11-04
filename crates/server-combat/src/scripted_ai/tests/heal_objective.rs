@@ -40,7 +40,11 @@ fn temple_add_database() -> Connection {
 }
 
 fn avatar_with_adds() -> (Harness, Entity, InMap) {
-    let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, 8, None);
+    avatar_with_adds_at_difficulty(8)
+}
+
+fn avatar_with_adds_at_difficulty(difficulty: u32) -> (Harness, Entity, InMap) {
+    let (mut h, avatar, map) = bound_boss_at_difficulty(133392, 1877, 3, difficulty, None);
     let db = temple_add_database();
     {
         let mut data = h.app.world_mut().resource_mut::<WorldData>();
@@ -66,6 +70,32 @@ fn avatar_with_adds() -> (Harness, Entity, InMap) {
         health.current = health.max;
     }
     (h, avatar, map)
+}
+
+#[test]
+fn temple_avatar_mythic_actor_starts_waves_after_keystone_retune() {
+    let (mut h, avatar, map) = avatar_with_adds_at_difficulty(23);
+    let difficulty = *h
+        .app
+        .world()
+        .resource::<MapStore>()
+        .map_difficulty(1877, 8)
+        .unwrap();
+    h.app
+        .world_mut()
+        .resource_mut::<crate::maps::InstanceManager>()
+        .activate_challenge_difficulty(map, difficulty)
+        .unwrap();
+    crate::scripted_ai::heal_objective::start(h.app.world_mut(), avatar);
+    h.advance(4.3);
+    assert!(
+        h.app
+            .world_mut()
+            .query::<(&shared::components::Npc, &InMap)>()
+            .iter(h.app.world())
+            .any(|(npc, copy)| *copy == map && npc.template_id == 268344),
+        "the pre-existing Mythic Avatar must spawn its first Guardian after the Font retune"
+    );
 }
 
 #[test]

@@ -38,18 +38,20 @@ pub(super) fn is_encounter_add(world: &World, actor: Entity) -> bool {
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
     let map = *world.get::<crate::maps::InMap>(actor)?;
-    if map.map_id != 1877 || crate::zones::map_difficulty_id(world, map) != 8 {
+    if map.map_id != 1877 {
         return None;
     }
+    let difficulty = crate::zones::map_difficulty_id(world, map);
     let entry = world.get::<Npc>(actor)?.template_id;
-    if entry == AVATAR {
+    // The Font changes the existing Mythic copy from 23 to 8 without respawning its actors.
+    if entry == AVATAR && matches!(difficulty, 8 | 23) {
         return Some(Box::new(Avatar {
             boss: super::instance_script::bound_boss(world, actor)?,
             summons: SummonList::default(),
             started: false,
         }));
     }
-    matches!(entry, GUARDIAN | DEFILER | HEXXER).then(|| {
+    (difficulty == 8 && matches!(entry, GUARDIAN | DEFILER | HEXXER)).then(|| {
         Box::new(Add {
             entry,
             events: EventMap::default(),
@@ -107,6 +109,9 @@ impl CreatureAi for Avatar {
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         let Some(map) = ctx.map() else { return };
+        if crate::zones::map_difficulty_id(ctx.world, map) != 8 {
+            return;
+        }
         if instance_script::get_boss_state(ctx.world, map, self.boss.boss_id)
             != Some(EncounterState::InProgress)
         {
