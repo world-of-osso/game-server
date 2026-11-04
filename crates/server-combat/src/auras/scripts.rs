@@ -457,6 +457,9 @@ pub(super) fn absorb_amount(
         // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1; DB2 70448
         // 235450 DescriptionVariables: maximum health * effect 1 * versatility.
         (235450, 0) => Some(1),
+        // DB2 70448 DescriptionVariables: $shield = $s2 / 100 * $MHP * (1 + $@versadmg)
+        // for player Barrier variants and Shield of Vengeance.
+        (11426 | 235313 | 184662 | 414661 | 414662 | 414663, 0) => Some(1),
         (406139 | 406220 | 1260681, 0) => Some(1),
         _ => None,
     };
