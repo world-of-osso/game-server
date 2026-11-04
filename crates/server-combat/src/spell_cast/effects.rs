@@ -2815,6 +2815,109 @@ pub fn apply_calculated_heal(world: &mut World, ctx: &EffectCtx, target: Entity,
     );
 }
 
+/// A raw tank replay accepts only its logged non-self heal receipts, not native HoT procs.
+#[cfg(any(test, feature = "test-support"))]
+#[derive(bevy::prelude::Resource)]
+pub struct LoggedExternalHealing {
+    target: Entity,
+    permitted: Option<(Entity, u32)>,
+    permitted_shield: Option<(Entity, u32)>,
+    pub suppressed_by_spell: std::collections::BTreeMap<u32, u64>,
+    pub suppressed_shields_by_spell: std::collections::BTreeMap<u32, u64>,
+}
+
+#[cfg(any(test, feature = "test-support"))]
+impl LoggedExternalHealing {
+    pub fn new(target: Entity) -> Self {
+        Self {
+            target,
+            permitted: None,
+            permitted_shield: None,
+            suppressed_by_spell: Default::default(),
+            suppressed_shields_by_spell: Default::default(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "test-support"))]
+fn consume_external_heal_permission(world: &mut World, ctx: &EffectCtx, target: Entity) -> bool {
+    let Some(mut logged) = world.get_resource_mut::<LoggedExternalHealing>() else {
+        return true;
+    };
+    if target != logged.target {
+        return true;
+    }
+    if logged.permitted == Some((ctx.caster, ctx.spell.id)) {
+        logged.permitted = None;
+        return true;
+    }
+    if ctx.caster == target {
+        return true;
+    }
+    *logged.suppressed_by_spell.entry(ctx.spell.id).or_default() += 1;
+    false
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn permit_logged_external_shield(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) {
+    let mut logged = world.resource_mut::<LoggedExternalHealing>();
+    assert_eq!(
+        logged.target, target,
+        "logged external shield target changed"
+    );
+    assert!(
+        logged.permitted_shield.is_none(),
+        "nested logged external shield"
+    );
+    logged.permitted_shield = Some((caster, spell));
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn consume_external_shield_permission(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> bool {
+    let Some(mut logged) = world.get_resource_mut::<LoggedExternalHealing>() else {
+        return true;
+    };
+    if target != logged.target {
+        return true;
+    }
+    if logged.permitted_shield == Some((caster, spell)) {
+        logged.permitted_shield = None;
+        return true;
+    }
+    if caster == target {
+        return true;
+    }
+    *logged.suppressed_shields_by_spell.entry(spell).or_default() += 1;
+    false
+}
+
+/// The single authorized heal consumes its permission before dispatching any native child procs.
+#[cfg(any(test, feature = "test-support"))]
+pub fn apply_logged_external_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
+    let mut logged = world.resource_mut::<LoggedExternalHealing>();
+    assert_eq!(logged.target, target, "logged external heal target changed");
+    assert!(logged.permitted.is_none(), "nested logged external heal");
+    logged.permitted = Some((ctx.caster, ctx.spell.id));
+    apply_fixed_heal(world, ctx, target, amount);
+    assert!(
+        world
+            .resource::<LoggedExternalHealing>()
+            .permitted
+            .is_none(),
+        "logged heal permission not consumed"
+    );
+}
+
 /// A named transfer already computed from effective healing; no second spell-power,
 /// healing multiplier or crit roll on the copied amount.
 pub fn apply_fixed_heal(world: &mut World, ctx: &EffectCtx, target: Entity, amount: f32) {
@@ -2848,6 +2951,10 @@ fn apply_resolved_heal(
     crit: bool,
     periodic: bool,
 ) {
+    #[cfg(any(test, feature = "test-support"))]
+    if !consume_external_heal_permission(world, ctx, target) {
+        return;
+    }
     if !world
         .get::<Health>(target)
         .is_some_and(|health| health.current > 0.0)

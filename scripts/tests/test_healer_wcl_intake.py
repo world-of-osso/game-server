@@ -34,17 +34,53 @@ class WclIntakeTest(unittest.TestCase):
                    {'type': 'absorbed', 'sourceID': 1, 'targetID': 1, 'abilityGameID': 1235568,
                     'fight_ms': 100, 'timestamp': 100, 'amount': 40, 'attackerID': 10, 'extraAbilityGameID': 1}]
         config = {'actors': [1, 2, 3, 4, 5]}
-        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE spell_effect (SpellID INTEGER, DifficultyID INTEGER, EffectAura INTEGER, EffectAuraPeriod INTEGER)')
+        db.execute('INSERT INTO spell_effect VALUES (1235568, 0, 69, 0)')
+        buffs = [{'type': 'removebuff', 'sourceID': 1, 'targetID': 1, 'abilityGameID': 1235568,
+                  'fight_ms': 100, 'absorb': 0}]
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config, db, buffs)
         self.assertEqual(result[0]['absorb_balance']['amount'], 100)
         self.assertEqual(result[0]['absorb_balance']['max_hp'], 1000)
         self.assertNotIn('absorb_balance', aura)
         damage[-1]['amount'] = 0
-        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config, db, buffs)
         self.assertNotIn('absorb_balance', result[0])
         aura['remove_ms'] = 300
         damage[-1]['amount'] = 40
-        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config, db, buffs)
         self.assertNotIn('absorb_balance', result[0])
+
+    def test_external_shield_grants_and_static_opening_remainders(self):
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE spell_effect (SpellID INTEGER, DifficultyID INTEGER, EffectAura INTEGER, EffectAuraPeriod INTEGER)')
+        db.executemany('INSERT INTO spell_effect VALUES (?, 0, ?, ?)',
+                       [(1255200, 69, 0), (1266619, 69, 0), (1266619, 226, 200)])
+        config = {'actors': [1, 2, 3, 4, 5], 'duration_ms': 5000}
+        damage = [{'sourceID': 10, 'targetID': 1, 'fight_ms': 0, 'maxHitPoints': 100000}]
+        buffs = [{'type': 'applybuff', 'sourceID': 2, 'targetID': 1, 'abilityGameID': 1255200,
+                  'fight_ms': 1000, 'absorb': 9000},
+                 {'type': 'refreshbuff', 'sourceID': 2, 'targetID': 1, 'abilityGameID': 1255200,
+                  'fight_ms': 2000, 'absorb': 12000},
+                 {'type': 'applybuff', 'sourceID': 1, 'targetID': 1, 'abilityGameID': 1255200,
+                  'fight_ms': 2500, 'absorb': 15000}]
+        grants = intake.logged_external_shields(buffs, damage, [], db, config)
+        self.assertEqual([(g['time_ms'], g['source_actor'], g['amount']) for g in grants],
+                         [(1000, 2, 9000), (2000, 2, 12000)])
+        auras = [{'source_actor': 2, 'target_actor': 1, 'spell_id': spell, 'stacks': 1,
+                  'evidence': 'first_removebuff', 'remove_ms': 100} for spell in (1255200, 1266619)]
+        removed = [{'type': 'removebuff', 'sourceID': 2, 'targetID': 1, 'abilityGameID': spell,
+                    'fight_ms': 100, 'absorb': 2000} for spell in (1255200, 1266619)]
+        consumed = [{'type': 'absorbed', 'sourceID': 2, 'targetID': 1, 'abilityGameID': 1255200,
+                     'fight_ms': 50, 'amount': 4000}]
+        opening = intake.infer_exhausted_opening_absorbs(auras, damage, consumed, config, db, removed)
+        self.assertEqual(opening[0]['absorb_balance']['amount'], 6000)
+        self.assertEqual(opening[0]['absorb_balance']['remaining_on_removal'], 2000)
+        self.assertNotIn('absorb_balance', opening[1], 'do not infer an unobserved decaying pool')
+        empty = dict(auras[0], remove_ms=0)
+        empty_removed = dict(removed[0], fight_ms=0, absorb=0)
+        opening = intake.infer_exhausted_opening_absorbs([empty], damage, [], config, db, [empty_removed])
+        self.assertEqual(opening[0]['skip_reason'], 'observed_empty_shield_removed_at_pull_start')
 
     def test_default_healer_output_is_byte_identical(self):
         with tempfile.TemporaryDirectory() as temp:

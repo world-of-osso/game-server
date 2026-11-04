@@ -27,6 +27,7 @@ pub(super) struct Recorder {
     healing_events: Vec<Value>,
     self_healing_events: Vec<Value>,
     self_absorb_events: Vec<Value>,
+    external_absorb_events: Vec<Value>,
     previous_self_absorbs: BTreeMap<(Entity, Entity, u32), f64>,
     party_health_curve: Vec<Value>,
     mana_curve: Vec<Value>,
@@ -63,6 +64,7 @@ impl Recorder {
             healing_events: Vec::new(),
             self_healing_events: Vec::new(),
             self_absorb_events: Vec::new(),
+            external_absorb_events: Vec::new(),
             previous_self_absorbs: world
                 .get_resource::<super::healer_intake::Capture>()
                 .map(|capture| capture.consumed_absorbs_by_target.clone())
@@ -162,13 +164,17 @@ impl Recorder {
             for (&key, &total) in &capture.consumed_absorbs_by_target {
                 let (caster, target, spell) = key;
                 let previous = self.previous_self_absorbs.get(&key).copied().unwrap_or(0.0);
-                if caster == target
-                    && total > previous
+                if total > previous
                     && let Some(slot) = self.members.iter().position(|&member| member == target)
                 {
-                    self.self_absorb_events
-                        .push(json!({"time_seconds":seconds,"slot":slot,
-                        "spell":spell,"amount":total - previous}));
+                    if caster == target {
+                        self.self_absorb_events
+                            .push(json!({"time_seconds":seconds,"slot":slot,
+                            "spell":spell,"amount":total - previous}));
+                    } else {
+                        self.external_absorb_events.push(json!({"time_seconds":seconds,"slot":slot,
+                            "source_entity":caster.to_bits(),"spell":spell,"amount":total - previous}));
+                    }
                 }
             }
             self.previous_self_absorbs
@@ -319,6 +325,7 @@ impl Recorder {
             "spell_healing":spells,"mana_curve":self.mana_curve,"first_death_seconds":self.first_death_seconds,
             "party_death_times":self.party_death_times,"healing_events":self.healing_events,
             "self_healing_events":self.self_healing_events,"self_absorb_events":self.self_absorb_events,
+            "external_absorb_events":self.external_absorb_events,
             "party_health_curve":self.party_health_curve,
             "tank_dtps":self.tank_damage as f64 / duration,"tank_health_curve":self.tank_health_curve,
             "tank_minimum_health_pct":self.tank_minimum_pct,"tank_seconds_below_35_alive":f64::from(self.tank_below_35_ticks) / 20.0,

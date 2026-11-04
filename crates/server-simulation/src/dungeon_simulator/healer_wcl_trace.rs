@@ -1,4 +1,4 @@
-//! WCL post-mitigation damage receipts, normalized to native recipient HP.
+//! WCL healer and raw-tank receipts, normalized to native recipient HP with observed support state.
 use bevy::prelude::{Entity, World};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -26,6 +26,8 @@ pub(super) struct Trace {
     pub hits: Vec<RecordedHit>,
     #[serde(default)]
     pub external_heals: Vec<RecordedHeal>,
+    #[serde(default)]
+    pub external_shields: Vec<RecordedShield>,
 }
 
 /// Matched-pull replay input: a party member's logged cast of a spell its APL must not choose.
@@ -105,6 +107,7 @@ struct OpeningAbsorb {
     amount: u64,
     max_hp: u64,
     evidence: String,
+    remaining_on_removal: u64,
 }
 
 pub(super) struct OpeningRemoval {
@@ -192,6 +195,25 @@ impl Trace {
             if mask == 0 || aura.stacks == 0 || aura.evidence.is_empty() {
                 return Err(format!("WCL_OPENING_AURA_INVALID:{}", aura.spell_id));
             }
+            let external_shield = source != target
+                && target == slots[0]
+                && spell.effects.iter().any(|effect| effect.aura == 69);
+            if external_shield
+                && world.contains_resource::<crate::spell_cast::effects::LoggedExternalHealing>()
+            {
+                if aura.absorb_balance.is_none() {
+                    return Err(format!(
+                        "WCL_OPENING_EXTERNAL_SHIELD_BALANCE_UNKNOWN:{}",
+                        aura.spell_id
+                    ));
+                }
+                crate::spell_cast::effects::permit_logged_external_shield(
+                    world,
+                    source,
+                    target,
+                    aura.spell_id,
+                );
+            }
             let application = AuraApplication {
                 caster: source,
                 target,
@@ -220,8 +242,10 @@ impl Trace {
                 {
                     return Err(format!("WCL_OPENING_ABSORB_NOT_RESTORED:{}", aura.spell_id));
                 }
-                // This removal was observed consumption, not expiration. Native hits spend the pool.
-                continue;
+                // A zero remainder was consumption, not expiration. Native hits spend that pool.
+                if balance.remaining_on_removal == 0 {
+                    continue;
+                }
             }
             if let Some(time_ms) = aura.remove_ms {
                 let instance_id = world
@@ -289,6 +313,78 @@ fn apply_opening_bulwark(world: &mut World, application: &crate::auras::AuraAppl
 }
 
 #[derive(Deserialize)]
+pub(super) struct RecordedShield {
+    pub time_ms: u64,
+    source_actor: i64,
+    target_actor: i64,
+    spell_id: u32,
+    amount: u64,
+    max_hp: u64,
+    evidence: String,
+}
+
+impl RecordedShield {
+    pub fn deliver(
+        &self,
+        world: &mut World,
+        slots: &[Entity; 5],
+        actors: &std::collections::BTreeMap<i64, usize>,
+    ) -> Result<(), String> {
+        use crate::auras::{self, AuraApplication, AuraSource};
+        let source = slots[*actors
+            .get(&self.source_actor)
+            .ok_or("WCL_EXTERNAL_SHIELD_SOURCE_UNKNOWN")?];
+        let target = slots[*actors
+            .get(&self.target_actor)
+            .ok_or("WCL_EXTERNAL_SHIELD_TARGET_UNKNOWN")?];
+        let health = world
+            .get::<Health>(target)
+            .ok_or("WCL_EXTERNAL_SHIELD_HEALTH_MISSING")?;
+        if health.current <= 0.0 {
+            return Ok(());
+        }
+        if self.max_hp == 0 || self.evidence.is_empty() {
+            return Err("WCL_EXTERNAL_SHIELD_INVALID".into());
+        }
+        if self.amount == 0 {
+            auras::remove_auras(world, target, auras::RemoveReason::Expired, |aura| {
+                aura.spell_id == self.spell_id && aura.caster == source
+            });
+            return Ok(());
+        }
+        let points = self.amount as f32 / self.max_hp as f32 * health.max;
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(self.spell_id)
+            .cloned()
+            .ok_or_else(|| format!("WCL_EXTERNAL_SHIELD_MISSING_SPELL:{}", self.spell_id))?;
+        crate::spell_cast::effects::permit_logged_external_shield(
+            world,
+            source,
+            target,
+            self.spell_id,
+        );
+        auras::apply_aura(
+            world,
+            &AuraApplication {
+                caster: source,
+                target,
+                spell_id: self.spell_id,
+                effect_mask: auras::aura_effect_mask(&spell),
+                source: AuraSource::Cast,
+            },
+        );
+        if !auras::restore_owned_absorb_points(world, source, target, self.spell_id, points) {
+            return Err(format!(
+                "WCL_EXTERNAL_SHIELD_NOT_RESTORED:{}",
+                self.spell_id
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
 pub(super) struct RecordedHeal {
     pub time_ms: u64,
     pub source_actor: i64,
@@ -326,7 +422,7 @@ impl RecordedHeal {
             dest: None,
             chain_multiplier: 1.0,
         };
-        crate::spell_cast::effects::apply_fixed_heal(world, &ctx, target, amount);
+        crate::spell_cast::effects::apply_logged_external_heal(world, &ctx, target, amount);
         Ok(())
     }
 }
@@ -390,7 +486,32 @@ impl Trace {
                 return Err("WCL_INTAKE_RAW_MISSING".into());
             }
         }
+        trace.validate_external_shields()?;
         Ok(trace)
+    }
+
+    fn validate_external_shields(&self) -> Result<(), String> {
+        if self.external_shields.is_empty() {
+            return Ok(());
+        }
+        let ordered = self
+            .external_shields
+            .windows(2)
+            .all(|pair| pair[0].time_ms <= pair[1].time_ms);
+        let valid = self.external_shields.iter().all(|shield| {
+            shield.max_hp > 0
+                && !shield.evidence.is_empty()
+                && self.actor_slots.get(&shield.target_actor) == Some(&0)
+                && self
+                    .actor_slots
+                    .get(&shield.source_actor)
+                    .is_some_and(|slot| *slot < 5)
+                && shield.source_actor != shield.target_actor
+        });
+        if self.mode != "tank_raw" || !ordered || !valid {
+            return Err("WCL_EXTERNAL_SHIELDS_INVALID".into());
+        }
+        Ok(())
     }
 }
 

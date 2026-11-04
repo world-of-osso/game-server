@@ -1677,6 +1677,17 @@ fn apply_aura_inner(
         effect_mask: selected_mask.unwrap_or(application.effect_mask),
         ..*application
     };
+    #[cfg(any(test, feature = "test-support"))]
+    if spell.effects.iter().any(|effect| {
+        effect.aura == handlers::SCHOOL_ABSORB && application.effect_mask & (1 << effect.index) != 0
+    }) && !crate::spell_cast::effects::consume_external_shield_permission(
+        world,
+        application.caster,
+        target,
+        spell.id,
+    ) {
+        return;
+    }
     let now = aura_now(world);
     let mut instance = build_instance(world, application, &spell, now);
     instance.effects.retain(|stored| {

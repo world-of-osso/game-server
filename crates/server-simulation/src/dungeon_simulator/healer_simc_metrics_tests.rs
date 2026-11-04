@@ -316,6 +316,47 @@ fn healer_report_counts_only_consumed_owned_shields() {
         200.0,
         "the other healer's consumed shield must not be attributed to this healer"
     );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        h.caster,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == 17,
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: other_healer,
+            target: h.caster,
+            spell_id: 17,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    crate::spell_cast::effects::deal_damage_shield(
+        h.app.world_mut(),
+        &crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 1,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        h.npc,
+        h.caster,
+        100.0,
+    );
+    recorder.observe_frame(h.app.world(), 2);
+    let report = recorder.report(h.app.world(), 1);
+    assert_eq!(report["external_absorb_events"][0]["spell"], 17);
+    assert_eq!(report["external_absorb_events"][0]["amount"], 100.0);
+    assert_eq!(
+        report["external_absorb_events"][0]["source_entity"],
+        other_healer.to_bits()
+    );
+    assert_eq!(
+        report["consumed_absorbs_by_spell"]["17"], 200.0,
+        "external support is reported separately, never as this healer's shield"
+    );
 }
 
 #[test]

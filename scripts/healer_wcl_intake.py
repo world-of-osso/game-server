@@ -226,38 +226,90 @@ def opening_auras(combatants, buffs, actors):
     return list(initial.values())
 
 
-def infer_exhausted_opening_absorbs(auras, damage, healing, config):
-    """Restore only a shield whose final partial hit proves its opening pool was spent."""
+def read_absorb_metadata(db, spell):
+    rows = db.execute('SELECT EffectAura, EffectAuraPeriod FROM spell_effect '
+                      'WHERE SpellID=? AND DifficultyID=0', (spell,)).fetchall()
+    return any(aura == 69 for aura, _ in rows), all(period == 0 for _, period in rows)
+
+
+def has_exhausting_partial_hit(absorbs, damage, tank, removal):
+    return any(
+        abs(absorb['fight_ms'] - removal) <= 1 and any(
+            event.get('targetID') == tank and event.get('sourceID') == absorb['attackerID']
+            and event.get('sourceInstance', 0) == absorb.get('attackerInstance', 0)
+            and event.get('abilityGameID') == absorb['extraAbilityGameID']
+            and abs(event['timestamp'] - absorb['timestamp']) <= 1
+            and event.get('amount', 0) > 0 and event.get('absorbed', 0) >= absorb['amount']
+            for event in damage)
+        for absorb in absorbs)
+
+
+def infer_exhausted_opening_absorbs(auras, damage, healing, config, db, buffs):
+    """Static external shields retain consumed points plus their observed removal remainder."""
     tank = config['actors'][0]
     observations = read_health_observations(damage + healing, {tank: 0})
     result = []
     for aura in auras:
         entry = dict(aura)
+        result.append(entry)
         removal = aura.get('remove_ms')
-        # 1235568 is a static potion shield. Do not infer starting pools for decaying shields.
-        if (aura['target_actor'] != tank or aura['spell_id'] != 1235568 or removal is None
-                or aura['evidence'] != 'first_removebuff'):
-            result.append(entry)
+        owned = aura['source_actor'] == tank
+        if (aura['target_actor'] != tank or removal is None
+                or aura['evidence'] != 'first_removebuff' or owned and aura['spell_id'] != 1235568):
             continue
+        shield, static = read_absorb_metadata(db, aura['spell_id'])
+        if not shield or not static:
+            continue
+        removed = next((event for event in buffs if event['type'] == 'removebuff'
+                        and event.get('sourceID') == aura['source_actor'] and event.get('targetID') == tank
+                        and event.get('abilityGameID') == aura['spell_id']
+                        and int(event['fight_ms']) == removal), None)
+        if removed is None or 'absorb' not in removed:
+            continue
+        remaining = removed['absorb']
+        if remaining < 0:
+            raise ValueError('negative remaining opening shield')
         absorbs = [event for event in healing if event['type'] == 'absorbed'
                    and event.get('sourceID') == aura['source_actor']
                    and event.get('targetID') == tank and event.get('abilityGameID') == aura['spell_id']
                    and 0 <= event['fight_ms'] <= removal]
-        exhausted = any(
-            abs(absorb['fight_ms'] - removal) <= 1 and any(
-                event.get('targetID') == tank and event.get('sourceID') == absorb['attackerID']
-                and event.get('sourceInstance', 0) == absorb.get('attackerInstance', 0)
-                and event.get('abilityGameID') == absorb['extraAbilityGameID']
-                and abs(event['timestamp'] - absorb['timestamp']) <= 1
-                and event.get('amount', 0) > 0 and event.get('absorbed', 0) >= absorb['amount']
-                for event in damage)
-            for absorb in absorbs)
-        if exhausted:
-            maximum, _ = max_health_at(observations, tank, 0)
-            entry['absorb_balance'] = {'amount': sum(event['amount'] for event in absorbs),
-                                       'max_hp': maximum, 'evidence': 'INFERRED_WCL_exhausted_by_partial_hit'}
-        result.append(entry)
+        if owned and not has_exhausting_partial_hit(absorbs, damage, tank, removal):
+            continue
+        total = sum(event['amount'] for event in absorbs) + remaining
+        if total <= 0:
+            if not owned and removal == 0 and remaining == 0:
+                entry['skip_reason'] = 'observed_empty_shield_removed_at_pull_start'
+            continue
+        maximum, _ = max_health_at(observations, tank, 0)
+        entry['absorb_balance'] = {'amount': total, 'max_hp': maximum,
+                                   'remaining_on_removal': remaining,
+                                   'evidence': 'INFERRED_WCL_static_shield_receipts_and_remainder'}
     return result
+
+
+def logged_external_shields(buffs, damage, healing, db, config):
+    tank = config['actors'][0]
+    observations = read_health_observations(damage + healing, {tank: 0})
+    result = []
+    metadata = {}
+    for event in buffs:
+        time_ms = int(event['fight_ms'])
+        if (event['type'] not in ('applybuff', 'refreshbuff') or 'absorb' not in event
+                or event.get('sourceID') == tank or event.get('targetID') != tank
+                or not 0 <= time_ms < config['duration_ms']):
+            continue
+        spell = event['abilityGameID']
+        if spell not in metadata:
+            metadata[spell] = read_absorb_metadata(db, spell)
+        if not metadata[spell][0]:
+            continue
+        if event['absorb'] < 0:
+            raise ValueError('negative logged shield grant')
+        maximum, _ = max_health_at(observations, tank, time_ms)
+        result.append({'time_ms': time_ms, 'source_actor': event['sourceID'],
+                       'target_actor': tank, 'spell_id': spell, 'amount': event['absorb'],
+                       'max_hp': maximum, 'evidence': 'WCL_' + event['type'] + '_absorb'})
+    return sorted(result, key=lambda event: event['time_ms'])
 
 
 def replayed_casts(buffs, actors, duration_ms):
@@ -296,7 +348,11 @@ def main():
         result['replayed_casts'] = replayed_casts(buffs, config['actors'], config['duration_ms'])
         if args.mode == 'tank':
             result['opening_auras'] = infer_exhausted_opening_absorbs(
-                result['opening_auras'], read_jsonl(args.events), read_jsonl(args.healing), config)
+                result['opening_auras'], read_jsonl(args.events), read_jsonl(args.healing), config, db, buffs)
+            result['empty_opening_shields'] = [aura for aura in result['opening_auras'] if 'skip_reason' in aura]
+            result['opening_auras'] = [aura for aura in result['opening_auras'] if 'skip_reason' not in aura]
+            result['external_shields'] = logged_external_shields(
+                buffs, read_jsonl(args.events), read_jsonl(args.healing), db, config)
     args.output.write_text(json.dumps(result, separators=(',', ':')) + '\n')
 
 
