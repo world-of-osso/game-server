@@ -8,6 +8,8 @@ import sqlite3
 from pathlib import Path
 
 DEFERRED_ENEMY_DAMAGE = {124255, 361029}
+# Replay inputs: the tank's pull-specific Vampiric Blood timing (see healer-tank-replay/250.md).
+REPLAYED_SELF_BUFFS = {55233}
 
 
 def read_health_observations(events, actor_slots):
@@ -158,6 +160,17 @@ def opening_auras(combatants, buffs, actors):
     return list(initial.values())
 
 
+def replayed_casts(buffs, actors, duration_ms):
+    slots = {actor: slot for slot, actor in enumerate(actors)}
+    casts = [{'time_ms': int(event['fight_ms']), 'slot': slots[event['targetID']],
+              'spell_id': event['abilityGameID'], 'evidence': 'applybuff'}
+             for event in buffs
+             if event['type'] == 'applybuff' and event['abilityGameID'] in REPLAYED_SELF_BUFFS
+             and event.get('sourceID') == event.get('targetID') and event['targetID'] in slots
+             and 0 <= event['fight_ms'] < duration_ms]
+    return sorted(casts, key=lambda cast: cast['time_ms'])
+
+
 def read_jsonl(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
@@ -175,8 +188,10 @@ def main():
     with sqlite3.connect(f'file:{args.world_db}?mode=ro', uri=True) as db:
         config = json.loads(args.config.read_text())
         result = convert(read_jsonl(args.events), read_jsonl(args.healing), db, config)
-        result['opening_auras'] = opening_auras(read_jsonl(args.combatants),
-                                               read_jsonl(args.buffs), config['actors'])
+        buffs = read_jsonl(args.buffs)
+        result['opening_auras'] = opening_auras(read_jsonl(args.combatants), buffs,
+                                               config['actors'])
+        result['replayed_casts'] = replayed_casts(buffs, config['actors'], config['duration_ms'])
     args.output.write_text(json.dumps(result, separators=(',', ':')) + '\n')
 
 

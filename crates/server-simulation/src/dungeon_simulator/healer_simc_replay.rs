@@ -659,6 +659,14 @@ fn replay_profile(
         Vec::new()
     };
     let mut next_opening_removal = 0;
+    if let Some(trace) = &wcl {
+        super::healer_wcl_trace::hold_replayed_casts(
+            app.world_mut(),
+            &slots,
+            &trace.replayed_casts,
+        );
+    }
+    let mut next_replayed_cast = 0;
     let mut opening_event_cursor = app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -799,6 +807,13 @@ fn replay_profile(
                 &slots,
                 &wcl.bloodlust,
                 &mut next_bloodlust,
+                elapsed_ms,
+            )?;
+            super::healer_wcl_trace::cast_due_replayed_casts(
+                app.world_mut(),
+                &slots,
+                &wcl.replayed_casts,
+                &mut next_replayed_cast,
                 elapsed_ms,
             )?;
             while let Some(hit) = wcl

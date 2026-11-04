@@ -19,7 +19,65 @@ pub(super) struct Trace {
     pub actor_slots: std::collections::BTreeMap<i64, usize>,
     pub bloodlust: Vec<TimedBloodlust>,
     pub opening_auras: Vec<OpeningAura>,
+    #[serde(default)]
+    pub replayed_casts: Vec<ReplayedCast>,
     pub hits: Vec<RecordedHit>,
+}
+
+/// Matched-pull replay input: a party member's logged cast of a spell its APL must not choose.
+#[derive(Deserialize)]
+pub(super) struct ReplayedCast {
+    time_ms: u64,
+    slot: usize,
+    spell_id: u32,
+    evidence: String,
+}
+
+/// Longer than any replay, so Red Thirst-style reductions cannot make a held spell ready.
+const REPLAY_HOLD_MS: f32 = 1.0e9;
+
+/// Keep each replayed spell on cooldown so only `cast_due_replayed_casts` casts it.
+pub(super) fn hold_replayed_casts(world: &mut World, slots: &[Entity; 5], casts: &[ReplayedCast]) {
+    for cast in casts {
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            world,
+            slots[cast.slot],
+            cast.spell_id,
+            REPLAY_HOLD_MS,
+        );
+    }
+}
+
+pub(super) fn cast_due_replayed_casts(
+    world: &mut World,
+    slots: &[Entity; 5],
+    casts: &[ReplayedCast],
+    next: &mut usize,
+    elapsed_ms: u64,
+) -> Result<(), String> {
+    use server_follower_apl::literal_rotation::execution::{Execution, execute};
+    while let Some(cast) = casts
+        .get(*next)
+        .filter(|cast| cast.time_ms < elapsed_ms + 50)
+    {
+        let unit = slots[cast.slot];
+        // Clears the hold exactly; a finite reduction can leave rounding residue.
+        crate::spell_cast::scripts::reduce_cooldown(world, unit, cast.spell_id, f64::INFINITY);
+        execute(world, unit, Execution::Spell(cast.spell_id, unit, None)).map_err(|error| {
+            format!(
+                "WCL_REPLAYED_CAST_REFUSED:{}:{}:{error:?}",
+                cast.time_ms, cast.spell_id
+            )
+        })?;
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            world,
+            unit,
+            cast.spell_id,
+            REPLAY_HOLD_MS,
+        );
+        *next += 1;
+    }
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -190,6 +248,14 @@ impl Trace {
                 .windows(2)
                 .any(|p| p[0].time_ms > p[1].time_ms)
             || trace.bloodlust.iter().any(|buff| buff.slot >= 5)
+            || trace
+                .replayed_casts
+                .windows(2)
+                .any(|p| p[0].time_ms > p[1].time_ms)
+            || trace
+                .replayed_casts
+                .iter()
+                .any(|cast| cast.slot >= 5 || cast.evidence.is_empty())
         {
             return Err("WCL_INTAKE_INVALID_HEADER_OR_ORDER".into());
         }

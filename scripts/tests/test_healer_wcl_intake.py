@@ -18,6 +18,21 @@ gate = load('healer_wcl_intake_gate')
 
 
 class WclIntakeTest(unittest.TestCase):
+    def test_replayed_casts_take_self_applied_vampiric_blood_times(self):
+        buffs = [
+            {'fight_ms': 38927, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 55233, 'type': 'applybuff'},
+            {'fight_ms': 4323, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 55233, 'type': 'applybuff'},
+            {'fight_ms': 14323, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 55233, 'type': 'removebuff'},
+            {'fight_ms': 5000, 'sourceID': 2, 'targetID': 4, 'abilityGameID': 55233, 'type': 'applybuff'},
+            {'fight_ms': 6000, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 48707, 'type': 'applybuff'},
+            {'fight_ms': 80000, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 55233, 'type': 'applybuff'},
+        ]
+        casts = intake.replayed_casts(buffs, [4, 2, 1, 5, 3], 75000)
+        self.assertEqual(casts, [
+            {'time_ms': 4323, 'slot': 0, 'spell_id': 55233, 'evidence': 'applybuff'},
+            {'time_ms': 38927, 'slot': 0, 'spell_id': 55233, 'evidence': 'applybuff'},
+        ])
+
     def test_opening_auras_combine_combatants_and_first_removals(self):
         combatants = [{'sourceID': 2, 'auras': [{'source': 1, 'ability': 465, 'stacks': 1}]}]
         buffs = [
