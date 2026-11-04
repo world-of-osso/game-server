@@ -380,6 +380,20 @@ impl<'a> NativeFacts<'a> {
                 .map(|health| f64::from(health.current))
                 .ok_or_else(|| format!("target.health: target {target:?} lacks Health")),
             "health.pct" => self.target_health_pct(target),
+            "dispellable_debuffs" => {
+                let action = action.ok_or("target.dispellable_debuffs requires an action")?;
+                let spell = self.action_spell(&action.name)?;
+                Ok(self
+                    .world
+                    .get::<crate::auras::ActiveAuras>(target)
+                    .map_or(0.0, |auras| {
+                        crate::auras::dispellable::debuff_count(
+                            auras,
+                            spell,
+                            crate::spell_cast::now(self.world),
+                        ) as f64
+                    }))
+            }
             // SimC76f8118 player.cpp11813–11814: query the actual target's live shield.
             "has_absorb" => Ok(bool_value(
                 self.world
