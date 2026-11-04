@@ -106,10 +106,14 @@ fn hunter_bounce_reach_includes_native_chain_and_finisher_area() {
 fn blade_flurry_declares_the_caster_centered_copy_radius() {
     let data = crate::test_support::world_db().expect("native world data");
     let spell = data.spell_store().get(13877).expect("native Blade Flurry");
-    let mut world = World::new();
-    let caster = world.spawn_empty().id();
-    let reach = crate::registry().declared_reach(&world, caster, spell);
-    assert_eq!(reach.caster_radius, 5.0);
+    let mut harness =
+        combat::spell_cast::test_harness::harness_with_plugins(vec![], &[], 4, false, |_| {})
+            .expect("native combat fixture");
+    harness.app.world_mut().despawn(harness.npc);
+    combat::spell_cast::test_harness::spawn_player(&mut harness.app, 4, 4.0);
+    let reach = crate::registry().declared_reach(harness.app.world(), harness.caster, spell);
+    // Five yards plus the 1.5-yard combat reach of each player.
+    assert_eq!(reach.caster_radius, 8.0);
     assert_eq!(reach.target_radius, 0.0);
 }
 
