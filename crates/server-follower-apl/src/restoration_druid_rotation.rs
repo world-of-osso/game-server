@@ -58,6 +58,11 @@ pub(crate) fn program() -> Result<Program, String> {
         ),
         ("default", "ironbark,if=target.health.pct<35"),
         ("default", "swiftmend,if=target.health.pct<100"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         ("default", "wild_growth,if=party.injured>=2"),
         (
             "default",
