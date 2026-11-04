@@ -223,6 +223,71 @@ fn opening_holy_bulwark_matches_initial_cast_without_double_counting() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn solidarity_grants_self_before_ally_armament_arrives_only_when_selected() {
+    use shared::components::Position;
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for (cast, aura) in [(432459, 432496), (432472, 432502)] {
+        for selected in [true, false] {
+            let mut run = super::spawn_class_party(
+                &snapshot,
+                65,
+                90,
+                1,
+                Some([104, 65, 266, 251, 62]),
+                Some(&builds),
+            )
+            .unwrap();
+            for actor in run.slots {
+                super::hold(&mut run, actor);
+            }
+            for _ in 0..10 {
+                run.app.update();
+            }
+            let caster = run.slots[1];
+            let ally = run.slots[0];
+            if !selected {
+                run.app
+                    .world_mut()
+                    .entity_mut(caster)
+                    .remove::<crate::class_progression::TraitLoadout>();
+            }
+            let origin = *run.app.world().get::<Position>(caster).unwrap();
+            let mut position = run.app.world_mut().get_mut::<Position>(ally).unwrap();
+            position.x = origin.x + 20.0;
+            position.y = origin.y;
+            position.z = origin.z;
+            crate::spell_cast::creature_cast(run.app.world_mut(), caster, cast, Some(ally), false)
+                .unwrap();
+            for _ in 0..3 {
+                run.app.update();
+            }
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), caster, aura),
+                selected,
+                "cast={cast} selected={selected}"
+            );
+            assert!(
+                !crate::auras::has_aura(run.app.world(), ally, aura),
+                "ally must await projectile"
+            );
+            for _ in 0..40 {
+                run.app.update();
+            }
+            assert!(crate::auras::has_aura(run.app.world(), ally, aura));
+            if selected && cast == 432459 {
+                let max = run.app.world().get::<Health>(caster).unwrap().max;
+                let (_, absorbed) =
+                    crate::auras::absorb_damage(run.app.world_mut(), caster, None, 1, max);
+                assert!(absorbed > max * 0.15, "self Bulwark must absorb {absorbed}");
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent
