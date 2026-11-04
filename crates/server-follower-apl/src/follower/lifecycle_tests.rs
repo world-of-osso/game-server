@@ -1,6 +1,12 @@
 use super::*;
 use std::sync::{Arc, Mutex};
 
+fn world_with_spell_store() -> World {
+    let mut world = World::new();
+    world.init_resource::<server::spell_info::SpellStore>();
+    world
+}
+
 struct Probe(Arc<Mutex<Vec<&'static str>>>);
 
 impl SpecRotation for Probe {
@@ -31,7 +37,7 @@ impl SpecRotation for Probe {
 
 #[test]
 fn same_rotation_runs_three_pulls_without_precombat_during_combat() {
-    let mut world = World::new();
+    let mut world = world_with_spell_store();
     world.insert_resource(Time::<()>::default());
     let actor = world.spawn_empty().id();
     let target = world.spawn_empty().id();
@@ -83,7 +89,7 @@ impl SpecRotation for TargetProbe {
 
 #[test]
 fn precombat_reads_prospective_targets_but_never_polls_in_combat() {
-    let mut world = World::new();
+    let mut world = world_with_spell_store();
     let actor = world.spawn_empty().id();
     let target = world.spawn_empty().id();
     let calls = Arc::new(Mutex::new(0));
@@ -151,7 +157,7 @@ impl SpecRotation for EncounterProbe {
 fn second_pull_ttd(first_pull_seconds: u64) -> f64 {
     use shared::components::Health;
     use std::time::Duration;
-    let mut world = World::new();
+    let mut world = world_with_spell_store();
     world.insert_resource(Time::<()>::default());
     let actor = world.spawn_empty().id();
     let target = world
@@ -188,7 +194,7 @@ fn second_pull_ttd_is_independent_of_first_pull_duration() {
 
 #[test]
 fn early_pull_skips_unfinished_precombat() {
-    let mut world = World::new();
+    let mut world = world_with_spell_store();
     world.insert_resource(Time::<()>::default());
     let actor = world.spawn_empty().id();
     let target = world.spawn_empty().id();
