@@ -1155,6 +1155,19 @@ fn reanchored_objective_stays_at_its_reachable_point_until_source_moves() {
             .0,
         anchor
     );
+    run.app
+        .world_mut()
+        .entity_mut(run.party.owner)
+        .remove::<MoveIntent>();
+    run.wait_at_objective_anchor(source, boss).unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        anchor
+    );
 
     run.app
         .world_mut()
@@ -1164,7 +1177,7 @@ fn reanchored_objective_stays_at_its_reachable_point_until_source_moves() {
             y: anchor.y,
             z: anchor.z,
         });
-    run.control().unwrap();
+    run.wait_at_objective_anchor(source, boss).unwrap();
     assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_none());
 
     let moved = Position {
@@ -5863,10 +5876,7 @@ impl Run {
                         )?;
                     }
                     server::test_support::objectives::InteractionStep::Wait => {
-                        self.app
-                            .world_mut()
-                            .entity_mut(self.party.owner)
-                            .remove::<MoveIntent>();
+                        self.wait_at_objective_anchor(pack_id, target)?;
                     }
                 }
                 return Ok(());
@@ -6383,6 +6393,33 @@ impl Run {
             .world_mut()
             .entity_mut(self.party.owner)
             .remove::<MoveIntent>();
+    }
+
+    /// Keep moving to an objective's arena anchor after its interaction starts.
+    fn wait_at_objective_anchor(&mut self, pack_id: u64, target: Entity) -> Result<(), String> {
+        let target_at = *self
+            .app
+            .world()
+            .get::<Position>(target)
+            .ok_or("objective target absent")?;
+        let live = Vec3::new(target_at.x, target_at.y, target_at.z);
+        let destination = self.reanchored_objective_position(pack_id, target, live);
+        let owner = *self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .ok_or("objective owner absent")?;
+        let owner_at = Vec3::new(owner.x, owner.y, owner.z);
+        let mut owner = self.app.world_mut().entity_mut(self.party.owner);
+        match destination.filter(|point| point.distance(owner_at) > 1.0) {
+            Some(point) => {
+                owner.insert(MoveIntent(point));
+            }
+            None => {
+                owner.remove::<MoveIntent>();
+            }
+        }
+        Ok(())
     }
 
     /// Preserve the extracted reachable point for an unmoved, reanchored boss source.
