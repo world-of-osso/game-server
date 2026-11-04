@@ -714,12 +714,12 @@ pub(super) fn advance_grounded_route(
             reach: 0.0,
         },
     );
-    if let Step::Moved { position, .. } = step {
-        let Some(position) = resolve_follower_step(world, map, from, position) else {
-            world.resource_mut::<Navigation>().cancel_route(unit);
-            error!("Follower {unit} admitted route lost ground support");
-            return;
-        };
+    if let Step::Moved { mut position, .. } = step {
+        position.y = crate::creature_ai::admitted_route_ground(
+            &mut world.resource_mut::<crate::ground::GroundMap>(),
+            map,
+            position,
+        );
         crate::creature_ai::move_follower(world, unit, position, speed);
     }
 }
