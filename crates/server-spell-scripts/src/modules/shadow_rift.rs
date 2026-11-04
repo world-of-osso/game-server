@@ -23,6 +23,8 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ConsumedEffectValues(&[(VOID_FLAY, 1)]),
 ];
 const TORRENT: u32 = 263165;
+const DISC_RIFT_TALENT: u32 = 447444;
+const MIND_BLAST: u32 = 8092;
 const DRIVER: u32 = 459314;
 const OBJECT: u32 = 447445;
 const DAMAGE: u32 = 447448;
@@ -64,8 +66,10 @@ fn start_rift(world: &mut World, primary: Entity, aura: &AuraInstance) {
     if !shadow {
         return;
     }
-    // Native aura effects bypass ordinary EffectHit dispatch. The stored enemy
-    // Torrent aura supplies its actual recipient before its first periodic update.
+    begin_rift(world, caster, primary);
+}
+
+fn begin_rift(world: &mut World, caster: Entity, primary: Entity) {
     // SimC1677–1681 expires the old window before starting the new driver clock.
     auras::remove_auras(world, caster, RemoveReason::Cancelled, |aura| {
         aura.spell_id == DRIVER && aura.caster == caster
@@ -112,10 +116,27 @@ fn pulse(world: &mut World, unit: Entity, _: &AuraInstance, index: u8) {
 }
 
 fn grow_rift(world: &mut World, caster: Entity, spell: &SpellInfo, foreground: bool) {
-    if !foreground || spell.id != 335467 || !auras::has_aura(world, caster, 448403) {
-        return;
+    let discipline = world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 256);
+    // SimC76f8118 sc_priest.cpp354–359: Discipline Mind Blast opens the actual Rift.
+    if discipline
+        && foreground
+        && spell.id == MIND_BLAST
+        && auras::has_aura(world, caster, DISC_RIFT_TALENT)
+    {
+        let primary = spell
+            .cast_primary_target
+            .expect("Mind Blast hostile primary");
+        begin_rift(world, caster, primary);
     }
-    if let Some(mut rift) = world.get_mut::<Rift>(caster) {
+    // SimC sc_priest_discipline.cpp481/692 expands on each Penance/Ultimate bolt.
+    let grows =
+        (foreground && spell.id == 335467) || (discipline && matches!(spell.id, 47666 | 421543));
+    if grows
+        && auras::has_aura(world, caster, 448403)
+        && let Some(mut rift) = world.get_mut::<Rift>(caster)
+    {
         rift.growth = (rift.growth + 1).min(MAX_GROWTH);
     }
 }

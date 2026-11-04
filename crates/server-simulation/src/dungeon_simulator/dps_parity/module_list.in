@@ -36,6 +36,7 @@ mod mistweaver_ancient_party_tests;
 mod mistweaver_ancient_pulse_tests;
 mod mistweaver_elixir_jadefire_tests;
 mod mistweaver_elixir_soothing_tests;
+mod discipline_rift_follower_tests;
 mod mistweaver_gift_priority_tests;
 mod mistweaver_sheilun_cloud_tests;
 mod mistweaver_soothing_channel_tests;
