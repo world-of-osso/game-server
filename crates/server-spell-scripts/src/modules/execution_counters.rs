@@ -11,6 +11,10 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::AfterForegroundSpecial(consume_after_foreground_cast),
     SpellScriptHook::AfterCounterLaunch(after_launch),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
+    // No DB2 overflow-policy field. WCL avMJBWp9GkC6YFnc actor23 (2026-11-01):
+    // capped refresh6843327ms retains old expiry6843338ms and adds expiry6855333ms.
+    // SimC76f8118 sc_warrior.cpp8411–8413 likewise retains Frenzy expiries.
+    SpellScriptHook::KeepAsyncOverflowAuras(&[335082]),
 ];
 
 struct ExecutionCounter {

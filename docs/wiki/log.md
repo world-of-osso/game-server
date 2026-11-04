@@ -1,3 +1,4 @@
+- 2026-11-04: Recorded [Frenzy overflow](systems/auras.md#frenzy-overflow--2026-11-04) from a current-build capped-grant timeline and an actual Rampage producer test.
 - 2026-11-04: Recorded [caster-owned ability critical chance](systems/auras.md#caster-owned-ability-critical-chance--2026-11-04), current-build WCL versus TC's magic-only gate and the retired Aimed Shot duplicate hook.
 - 2026-11-04: Recorded [Executioner overflow](systems/auras.md#executioner-overflow--2026-11-04), retail18s expirations, generic per-aura overflow policy and unchanged follow-up candidates.
 - 2026-11-02: Recorded [headless simulation performance](investigations/headless-simulation-performance.md): override, navigation-startup, hook-index and movement-state speedups with byte-identical keystone and parity output.

@@ -215,7 +215,13 @@ Executioner445584 uses the retained-expiry policy. DB2 has no separate overflow-
 
 Native Deadly Focus1270718 adds6000ms to label5931 on Executioner's12000ms duration; the pinned SimC talent is NYI (`sc_warrior.cpp:801`). Preserve this retail-backed reference difference, not a duration override. The old oldest-replacement behavior inflated Executioner stacks and therefore Unrelenting Onslaught's Bladestorm cooldown reduction. [Behavioral test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/arms_executioner_overflow_follower_tests.rs) exercises both the old and capped incoming expiries.
 
-Other explicit SimC users, not changed here: DK pet Unholy Devotion, Dance of Midnight2, Killing Streak, Ancient Power, Forbidden Sacrifice; DH Feast of Souls; Warrior Frenzy, Berserk, Master of Warfare. `buff.cpp:777–782` also enables retained expiries for native async auras when `bugs=true`; those other policies need separate qualification.
+Other explicit SimC users, not changed here: DK pet Unholy Devotion, Dance of Midnight2, Killing Streak, Ancient Power, Forbidden Sacrifice; DH Feast of Souls; Warrior Berserk, Master of Warfare. `buff.cpp:777–782` also enables retained expiries for native async auras when `bugs=true`; those other policies need separate qualification.
+
+### Frenzy overflow — 2026-11-04
+
+Fury's Frenzy335082 selects the same generic retained-expiry policy. WCL `avMJBWp9GkC6YFnc` actor23 (2026-11-01) applies a stack at6831353ms, reaches its native10-stack cap at6842583ms and refreshes at cap6843327ms. The old stack expires6843338ms, about12000ms after its grant; the capped refresh has its own expiry6855333ms. Replacing the oldest deadline would instead defer that first expiry. DB2 has no separate overflow-policy field; SimC76f8118 `sc_warrior.cpp:8411–8413` explicitly retains Frenzy expiry events.
+
+The [real Rampage producer test](../../../crates/server-simulation/src/dungeon_simulator/dps_parity/fury_frenzy_overflow_follower_tests.rs) earns11 grants and checks both the old expiry and incoming capped expiry. Keep native duration, cap and per-stack haste unchanged. [Contract](../../specs/auras.md#feel-the-burn-and-asynchronous-stacks).
 
 ## Pyroclasm Hot Streak policy — 2026-10-21
 
