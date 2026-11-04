@@ -861,6 +861,13 @@ pub(super) fn register_class_scripts(
         },
     );
     scripts.0.insert(
+        1266619,
+        AuraScript {
+            on_periodic: Some(decay_first_in_last_out),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         TIGER_DASH,
         AuraScript {
             on_periodic: Some(decay_tiger_dash),
@@ -943,6 +950,33 @@ fn remove_rogue_stealth(
 fn barkskin_brambles(world: &mut World, unit: Entity, _aura: &AuraInstance, effect_index: u8) {
     if effect_index == 2 && super::has_aura(world, unit, BRAMBLES) {
         crate::spell_cast::cast_triggered(world, unit, BRAMBLES_DAMAGE, Some(unit), 1);
+    }
+}
+
+/// VERIFIED_WCL (sampled level90): four post-2026-10-16 Vengeance players lose 800 shield points per
+/// authored 200ms tick. Refresh retains the native periodic phase, not an exponential curve.
+fn decay_first_in_last_out(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
+    if index != 1 {
+        return;
+    }
+    let empty = {
+        let Some(mut auras) = world.get_mut::<super::ActiveAuras>(unit) else {
+            return;
+        };
+        let Some(shield) = auras
+            .get_mut(aura.instance_id)
+            .and_then(|live| live.effects.iter_mut().find(|effect| effect.index == 0))
+        else {
+            return;
+        };
+        shield.absorb_remaining = (shield.absorb_remaining - 800.0).max(0.0);
+        shield.absorb_remaining == 0.0
+    };
+    if empty {
+        super::remove_instance(world, unit, aura.instance_id, super::RemoveReason::Expired);
+    } else {
+        super::auras_changed(world, unit);
+        crate::spell_cast::mark_dirty(world, unit);
     }
 }
 
