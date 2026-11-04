@@ -14,6 +14,98 @@ fn read_full_escalation(run: &Run) -> bool {
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
+fn outlaw_coup_grants_ruthlessness_for_paid_and_fang_finishers() {
+    for fang in [false, true] {
+        let _seed = crate::random::seed_scope(70448);
+        let mut run = prepare_literal(260, 1).unwrap();
+        engage(&mut run);
+        for _ in 0..200 {
+            if read_full_escalation(&run)
+                && (!fang || crate::auras::has_aura(run.app.world(), run.actor, 1301405))
+            {
+                break;
+            }
+            {
+                let mut powers = run
+                    .app
+                    .world_mut()
+                    .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                    .unwrap();
+                let energy = powers.get_mut(PowerType::Energy).unwrap();
+                energy.current = energy.max;
+            }
+            literal_rotation::execution::execute(
+                run.app.world_mut(),
+                run.actor,
+                literal_rotation::execution::Execution::Spell(
+                    193315,
+                    run.targets[0],
+                    Some(run.targets[0]),
+                ),
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        assert!(read_full_escalation(&run), "Coup must be earned");
+        if fang {
+            assert!(crate::auras::has_aura(run.app.world(), run.actor, 1301405));
+        } else {
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                run.actor,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1301405 && aura.caster == run.actor,
+            );
+        }
+        {
+            let mut powers = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap();
+            let energy = powers.get_mut(PowerType::Energy).unwrap();
+            energy.current = if fang { 0.0 } else { energy.max };
+            powers.get_mut(PowerType::ComboPoints).unwrap().current = if fang { 0.0 } else { 6.0 };
+        }
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                441776,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let grants = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.target == Some(run.actor.to_bits())
+                    && event.spell_id == Some(1258235)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count();
+        assert!(
+            (2..=3).contains(&grants),
+            "Coup must award Ruthlessness once with its native bonus points; fang={fang}, grants={grants}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
 fn outlaw_earned_coup_executes_three_native_children_and_consumes_escalation() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(260, 1).unwrap();
