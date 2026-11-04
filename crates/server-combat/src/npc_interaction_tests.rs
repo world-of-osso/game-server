@@ -330,6 +330,7 @@ fn crafting_broker_opens_customer_service_and_revalidates_range() {
                 name,
             },
             NpcFlags(flags),
+            shared::components::ModelDisplay { display_id: 117678 },
             Position {
                 x: 0.0,
                 y: 0.0,

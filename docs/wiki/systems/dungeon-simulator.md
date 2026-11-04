@@ -414,3 +414,13 @@ Post-change batch11 atf3b7b8295/P03cebdb:10/10clears,0wipes/stalls/blocks/timeou
 ## Darkflame opening timeout
 
 Map 2651 seed 1 at binary `745abbe4e1` timed out with 0/4 credits and 0 deaths. Pack 30002585 repeatedly re-entered pull and recovery; its Menial Laborer 210810 produced 7,512 Evade misses. Runtime `CannotReachTarget` makes a blocked chase evade attacks immediately. The baked navigation query reports `hierarchy disconnected` in both directions between the enemy at `[245.144, 92.1301, -31.0903]` and the tank at `[248.542, 88.581, -59.973]`, and from the enemy to the frozen approach anchor. Whether this is a physical navmesh disconnect or a hierarchy error is not yet proven. Evidence is under `game-engine/data/diagnostics/simmaps-2026-10-29/2651-745abbe-seed1/`.
+
+## Temple healing objective and live interaction reach — 2026-11-04
+
+NPC interaction uses the existing authored model reach in both request and service revalidation paths: `4 + 2 * npc_reach + player_reach` center distance (TC ea5113cc `Player.cpp:1865–1867`, `Object.cpp:408–413,499–501`). Avatar display83203 has source reach17, scaled by its1.2 display scale. The headless objective driver selects the authored start-gossip action through this same live validation, walks to the extracted reachable arena anchor after starting, and leaves native healer APLs to heal the friendly objective. It does not auto-start from proximity. The Avatar AI attaches before the Mythic23→Keystone8 transition; its updates remain difficulty8-only so Font retuning cannot omit encounter waves.
+
+Current-build WCL `F1vmzABpngjq4rw2/1` pull10 (2026-10-26) records start at7115599, first Avatar-targeted cast+502ms and healing+1477ms. A direct heal at+1716ms is17.61horizontal yd from the Avatar; first/last sampled HP are25.011%/98.964%, end success at+211605ms. WCL does not record the initiating gossip or exact completion threshold; LittleWigs `Avatar.lua:256–259` identifies gossip48126. Inferred starting health and full-health completion remain the existing data contract.
+
+Private anomaly-patched DB, fresh difficulty8 topology plus journal enrichment, roster268/264/70/261/63, +2 seed1 at3f47547913: completed26:10/32:00,687/687,4/4,zero deaths/fact errors. Native trace includes Guardian1300803/1303446 damage,15 add Death events, and healer output to a full-health Avatar. An earlier no-add completion is invalid and retained as diagnostic evidence. Source packets and raw run: sibling `game-engine/data/diagnostics/kr-temple-forces-2026-11-04/avatar-retune/` and `avatar-retail-timeline.md`.
+
+Sources: [runner contract](../../specs/headless-keystone-runner.md), `npc_interaction.rs`, `test_support/objectives.rs`, `scripted_ai/temple_avatar.rs`, `campaign.rs::wait_at_objective_anchor`.
