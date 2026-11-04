@@ -399,6 +399,8 @@ C	mistweaver_emperors_elixir.rs	274062
 C	mistweaver_gust.rs	191894
 C	mistweaver_mana_tea.rs	115867
 C	mistweaver_rushing_wind.rs	1269159
+C	mistweaver_sheilun.rs	399494
+D	mistweaver_sheilun.rs	generate_cloud	try_cast_triggered	spell	1	399497,399510
 C	mistweaver_spiritfont.rs	1260565
 C	mistweaver_spiritfont.rs	1260617
 C	mistweaver_spiritfont.rs	1260670
