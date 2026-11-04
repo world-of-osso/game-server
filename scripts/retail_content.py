@@ -453,6 +453,8 @@ def insert_tdb_templates(conn, entries, *, replace_legacy=False):
     # Instance imports replace same-ID legacy templates with their authentic Retail identity.
     legacy_filter = "" if replace_legacy else "AND t.entry NOT IN (SELECT entry FROM creature_template)"
     # npcflag's high word is npcflag2. Levels are the ContentTuning range (level 1 without one).
+    # INFERRED: WCL F1vmzABpngjq4rw2/1/7 shows 134691 taking lethal damage.
+    # Retire when a retail capture showing the pre-combat state is available.
     conn.execute(f"""INSERT INTO content_creature_template (entry, KillCredit1, KillCredit2, name, subname, IconName,
             minlevel, maxlevel, exp, faction, npcflag, speed_walk, speed_run, scale, rank, dmgschool, DamageModifier,
             BaseAttackTime, RangeAttackTime, BaseVariance, RangeVariance, unit_class, unit_flags, unit_flags2, family,
@@ -464,7 +466,10 @@ def insert_tdb_templates(conn, entries, *, replace_legacy=False):
             COALESCE(l.minlevel, 1), COALESCE(l.maxlevel, 1), health_expansion(d.HealthScalingExpansion), t.faction,
             t.npcflag & (4294967295 | {TRADING_POST_NPC_FLAG}), t.speed_walk, t.speed_run, t.scale,
             t.Classification, t.dmgschool, d.DamageModifier, t.BaseAttackTime, t.RangeAttackTime, t.BaseVariance,
-            t.RangeVariance, t.unit_class, t.unit_flags, t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
+            t.RangeVariance, t.unit_class,
+            CASE WHEN t.entry=134691 AND t.unit_flags=33554960
+                 THEN t.unit_flags & ~33554432 ELSE t.unit_flags END,
+            t.unit_flags2, t.family, t.type, d.TypeFlags, t.VehicleId,
             d.GoldMin, d.GoldMax, t.AIName, t.MovementType, d.HealthModifier, d.ManaModifier, d.ArmorModifier,
             t.ExperienceModifier, t.RacialLeader, t.movementId, t.RegenHealth, t.flags_extra, t.ScriptName, t.VerifiedBuild,
             d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin, d.LevelScalingDeltaMax,
