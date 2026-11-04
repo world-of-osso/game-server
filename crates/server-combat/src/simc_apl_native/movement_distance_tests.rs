@@ -64,13 +64,9 @@ fn native_movement_distance_explicit_zero_does_not_follow_actor_motion() {
 }
 
 #[test]
-fn native_movement_distance_missing_configuration_remains_a_named_gap() {
+fn native_movement_distance_without_an_event_is_zero() {
     let (world, actor, _) = fixture();
-    let error = read_distance(&world, actor, patchwerk()).unwrap_err();
-    assert!(
-        error.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
-        "unconfigured movement must not invent zero: {error}",
-    );
+    assert_eq!(read_distance(&world, actor, patchwerk()).unwrap(), 0.0);
 }
 
 #[test]
@@ -115,30 +111,28 @@ fn native_movement_remains_divides_remaining_configured_distance_by_live_speed()
 }
 
 #[test]
-fn class_follower_movement_predicates_keep_missing_configuration_explicit() {
+fn class_follower_movement_predicates_work_without_a_movement_event() {
     let (world, actor, _) = fixture();
     let bindings = Bindings::default();
     for operand in ["movement.remains", "movement.speed"] {
-        let missing = NativeFacts::new(&world, actor, &bindings, patchwerk(), 1)
+        let fixture = NativeFacts::new(&world, actor, &bindings, patchwerk(), 1)
             .value(operand)
-            .unwrap_err();
-        assert!(
-            missing.contains("NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE"),
-            "{missing}"
-        );
+            .unwrap();
         let dungeon = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1)
             .value(operand)
             .unwrap();
         if operand == "movement.remains" {
+            assert_eq!(fixture, 0.0);
             assert_eq!(dungeon, 0.0);
         } else {
+            assert_eq!(fixture, dungeon);
             assert!(dungeon > 0.0);
         }
     }
 }
 
 #[test]
-fn dungeon_movement_distance_distinguishes_pending_route_from_missing_destination() {
+fn dungeon_movement_distance_distinguishes_pending_route_from_idle() {
     use crate::navigation::{Goal, MoveRequest, Navigation, Step};
     let (mut world, actor, target) = fixture();
     world
@@ -166,10 +160,9 @@ fn dungeon_movement_distance_distinguishes_pending_route_from_missing_destinatio
         server::simc_apl::not_ready("DUNGEON_MOVEMENT_DESTINATION_PENDING")
     );
     world.resource_mut::<Navigation>().cancel_route(actor);
-    let missing = read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap_err();
     assert_eq!(
-        missing,
-        format!("movement.distance: actor {actor:?} has no destination")
+        read_distance(&world, actor, Encounter::dungeon(0.0)).unwrap(),
+        0.0
     );
 }
 
@@ -189,9 +182,11 @@ fn dungeon_movement_distance_reads_driver_destination_before_navigation() {
     world.insert_resource(crate::navigation::Navigation::new(std::path::Path::new(
         "/nonexistent-navigation-fixture",
     )));
+    assert_eq!(read(&world).unwrap(), 0.0);
+    world.entity_mut(actor).remove::<Position>();
     assert_eq!(
         read(&world).unwrap_err(),
-        format!("movement.distance: actor {actor:?} has no destination")
+        "NATIVE_APL_POSITION_UNAVAILABLE: actor position missing"
     );
 }
 
