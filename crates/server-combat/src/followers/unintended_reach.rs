@@ -78,6 +78,7 @@ pub(super) fn action_reach(
 ) -> Option<DeclaredReach> {
     world.get_entity(target).ok()?;
     let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
+    spell.cast_primary_target = Some(target);
     spell.cast_single_target |= !chain;
     let registry = *world.resource::<SpellScriptRegistry>();
     Some(spell_reach(

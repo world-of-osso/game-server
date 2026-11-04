@@ -4,6 +4,132 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_leaping_flames_heal_allies_without_hostile_reach() {
+    use shared::protocol::CombatLogKind;
+    let mut run = super::snapshot_party(1468, 90, 1);
+    let healer = run.healer;
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    for unit in run.slots {
+        run.app.world_mut().get_mut::<Health>(unit).unwrap().current *= 0.5;
+    }
+    assert!(crate::spell_cast::cast_triggered_with_overrides(
+        run.app.world_mut(),
+        healer,
+        370901,
+        Some(healer),
+        1,
+        crate::spell_cast::TriggeredSpellOverrides {
+            aura_stacks: Some(2),
+            ..Default::default()
+        },
+    ));
+    let world = run.app.world();
+    let ally_reach =
+        crate::followers::spell_unintended_reach(world, healer, 361469, run.tank).unwrap();
+    let enemy_reach =
+        crate::followers::spell_unintended_reach(world, healer, 361469, run.sources[0]).unwrap();
+    assert_eq!(ally_reach, (0.0, 0.0));
+    assert!(
+        enemy_reach.0 > 0.0,
+        "enemy-targeted jumps retain hostile reach"
+    );
+    assert!(crate::followers::action_safe(
+        world,
+        healer,
+        run.tank,
+        Some(361469)
+    ));
+    let cursor = world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 361469, Some(run.tank), false)
+        .unwrap();
+    for _ in 0..60 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let healed: std::collections::HashSet<_> = events
+        .iter()
+        .filter(|e| {
+            e.source == Some(healer.to_bits())
+                && e.spell_id == Some(361509)
+                && e.kind == CombatLogKind::Heal
+        })
+        .filter_map(|e| e.target)
+        .collect();
+    assert_eq!(
+        healed.len(),
+        3,
+        "primary and two different allies: {healed:?}"
+    );
+    assert!(healed.contains(&run.tank.to_bits()));
+    assert!(
+        healed
+            .iter()
+            .all(|target| run.slots.iter().any(|unit| unit.to_bits() == *target))
+    );
+    assert!(!crate::auras::has_aura(run.app.world(), healer, 370901));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_living_flame_heals_when_target_is_below_observed_median() {
+    use shared::protocol::CombatLogKind;
+    for (health, expected) in [(0.60, 361469), (0.70, 364343)] {
+        let mut run = super::snapshot_party(1468, 90, 1);
+        let healer = run.healer;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<Health>(run.tank)
+            .unwrap()
+            .current *= health;
+        let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
+            run.app.world_mut(),
+            healer,
+            crate::simc_apl_native::Encounter::dungeon(0.0),
+        )
+        .unwrap();
+        let cursor = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, &run.sources)
+            .unwrap();
+        for _ in 0..80 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        assert!(
+            events.iter().any(|e| e.source == Some(healer.to_bits())
+                && e.spell_id == Some(expected)
+                && e.kind == CombatLogKind::CastSuccess
+                && e.target == Some(run.tank.to_bits())),
+            "health={health}: {events:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
     use shared::protocol::CombatLogKind;
     for (count, elapsed, health, expected) in [

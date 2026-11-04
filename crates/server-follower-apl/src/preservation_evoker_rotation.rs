@@ -54,6 +54,11 @@ pub(crate) fn program() -> Result<Program, String> {
             "urgent",
             "reversion,if=merithra.active&target.health.pct<=65.17229577976941",
         ),
+        // INFERRED_WCL: median target HP observed at 23 friendly Living Flame completions.
+        (
+            "urgent",
+            "living_flame,if=target.health.pct<=61.82649164264719",
+        ),
         ("default", "temporal_anomaly,if=party.injured>=2"),
         ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
