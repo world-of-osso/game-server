@@ -1,3 +1,4 @@
+- [Executioner overflow](systems/auras.md#executioner-overflow--2026-11-04) — capped refreshes retain earlier expiry events; current-build WCL supports native18s Deadly Focus duration.
 - [Elemental class-follower DPS parity](systems/dungeon-simulator.md#elemental-class-follower-dps-parity--2026-10-31) — landed Ancestor, Flametongue and Unity fixes; level90 and70 10-seed point estimates within ±5%, intervals wider.
 - [Encounter boss immunity](systems/encounter-boss-immunity.md) — DungeonEncounter bosses reject stun, fear, root, disorient and incapacitate mechanics; snares land. Derived from 10 retail Mythic+ logs.
 - [Follower flight](systems/follower-flight.md) — area-gated 3D follow, follower identities, and navmesh landing.

@@ -7,7 +7,13 @@ use combat::spell_cast::script_registry::SpellScriptHook;
 use combat::spell_cast::scripts::script_effect_value;
 use combat::spell_info::SpellInfo;
 
-pub(super) const HOOKS: &[SpellScriptHook] = &[SpellScriptHook::AfterSpenderProc(after_execute)];
+pub(super) const HOOKS: &[SpellScriptHook] = &[
+    SpellScriptHook::AfterSpenderProc(after_execute),
+    // DB2 has no overflow-policy field. WCL t1jTkcCWa6dLgyv3 fight1 actor11:
+    // the capped refresh at 18.126s leaves the 1.444s stack to expire at 19.448s.
+    // SimC76f8118 sc_warrior.cpp8518–8520 likewise keeps all expiry events.
+    SpellScriptHook::KeepAsyncOverflowAuras(&[EXECUTIONER]),
+];
 
 const ONSLAUGHT: u32 = 444780;
 const EXECUTIONER: u32 = 445584;
