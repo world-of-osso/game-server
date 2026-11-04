@@ -615,6 +615,7 @@ C	windwalker_tigereye.rs	1261724
 C	zathatek_breath.rs	1305391
 C	zathatek_breath.rs	1305395
 C	warrior_overwhelming_blades.rs	445836
+C	warrior_pain_and_gain.rs	382551
 D	arms_concussive_slam.rs	cast_after_slam	launch_triggered_spell_with_primary	&child	1	1300660
 D	arms_fatality.rs	cast_mark_damage	launch_triggered_spell	&payload	1	383706
 D	assassination_runtime/rogue_children.rs	grant_regicide	launch_triggered_spell	&buff	1	1250331
