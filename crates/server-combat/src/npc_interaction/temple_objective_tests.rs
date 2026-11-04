@@ -11,6 +11,8 @@ fn healing_objective_uses_native_gossip_then_waits_for_healing() {
         CREATE TEMP TABLE content_gossip_menu AS SELECT * FROM main.content_gossip_menu; \
         CREATE TEMP TABLE content_gossip_menu_option AS SELECT * FROM main.content_gossip_menu_option; \
         UPDATE content_creature_template SET gossip_menu_id=22561 WHERE entry=133392; \
+        DELETE FROM content_gossip_menu WHERE MenuID=22561; \
+        DELETE FROM content_gossip_menu_option WHERE MenuID=22561; \
         INSERT INTO content_gossip_menu (MenuID,TextID) VALUES (22561,34714); \
         INSERT INTO content_gossip_menu_option (MenuID,OptionID,OptionIcon,OptionText,OptionBroadcastTextID,OptionType,OptionNpcFlag,ActionMenuID) \
         SELECT MenuID,OptionID,0,OptionText,OptionBroadcastTextID,1,1,0 FROM tdb_gossip_menu_option WHERE MenuID=22561 AND OptionID=0;").unwrap();
