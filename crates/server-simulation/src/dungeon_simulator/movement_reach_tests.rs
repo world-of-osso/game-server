@@ -32,9 +32,9 @@ fn murder_row_owner_approaches_tank_from_connected_surface() {
             z: tank.z,
         })
         .id();
-    move_owner_to_tank(&mut world, owner, tank).unwrap();
+    move_owner_to_tank(&mut world, owner, tank, 30.0).unwrap();
     let destination = world.get::<MoveIntent>(owner).unwrap().0;
-    assert!((destination.y - 19.922_413).abs() < 0.05, "{destination:?}");
+    assert!(destination.distance(Vec3::new(8711.105, 13.170672, 4896.1533)) <= 30.0);
     tick(&mut world);
     assert!(point(world.get::<Position>(owner).unwrap()).distance(from) > 0.01);
     assert!(server::simc_apl::collect_fact_errors(&mut world).is_empty());

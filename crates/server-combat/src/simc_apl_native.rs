@@ -641,6 +641,7 @@ impl<'a> NativeFacts<'a> {
         )
     }
 
+    // SimC player.cpp:1288,12148 initializes distance_to_move to zero and reads it directly.
     fn movement_distance(&self) -> Result<f64, String> {
         if matches!(self.encounter, Encounter::Dungeon { .. }) {
             let moving = self
@@ -673,22 +674,15 @@ impl<'a> NativeFacts<'a> {
                         "DUNGEON_MOVEMENT_DESTINATION_PENDING",
                     ));
                 }
-                // Moving without a navigation route, e.g. under another movement driver.
-                None => {
-                    return Err(format!(
-                        "movement.distance: actor {:?} has no destination",
-                        self.actor
-                    ));
-                }
+                // A stale motion flag does not constitute an active movement event.
+                None => return Ok(0.0),
             };
             return Ok(f64::from(position.distance(destination)));
         }
-        self.world
+        Ok(self
+            .world
             .get::<FixtureMovement>(self.actor)
-            .map(|movement| movement.distance_to_move)
-            .ok_or_else(|| {
-                "NATIVE_MOVEMENT_DISTANCE_UNAVAILABLE: configure fixture distance_to_move".into()
-            })
+            .map_or(0.0, |movement| movement.distance_to_move))
     }
 
     fn movement_value(&self, property: &str) -> Result<f64, String> {

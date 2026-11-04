@@ -6024,7 +6024,14 @@ impl Run {
     }
 
     fn move_owner_to_tank(&mut self) -> Result<(), String> {
-        super::movement::move_owner_to_tank(self.app.world_mut(), self.party.owner, self.party.tank)
+        let (_, range) =
+            crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
+        super::movement::move_owner_to_tank(
+            self.app.world_mut(),
+            self.party.owner,
+            self.party.tank,
+            range,
+        )
     }
 
     fn return_after_chain_tag(&mut self) -> Result<bool, String> {
