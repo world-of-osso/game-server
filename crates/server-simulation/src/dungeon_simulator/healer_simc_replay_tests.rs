@@ -1441,7 +1441,12 @@ fn preservation_uses_dream_breath_without_foreground_echo_at_moderate_injury() {
     }
 }
 
-fn first_preservation_cast(injured_slots: &[usize], held_spells: &[u32]) -> Option<u32> {
+fn assert_first_preservation_cast(
+    injured_slots: &[usize],
+    held_spells: &[u32],
+    expected_spell: u32,
+    enemy_target: bool,
+) {
     use shared::protocol::CombatLogKind;
     let mut run = super::snapshot_party(1468, 90, 1);
     let healer = run.healer;
@@ -1483,30 +1488,31 @@ fn first_preservation_cast(injured_slots: &[usize], held_spells: &[u32]) -> Opti
     for _ in 0..80 {
         run.app.update();
     }
-    run.app
+    let first = run
+        .app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0[cursor..]
         .iter()
         .find(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
-        .and_then(|e| e.spell_id)
+        .map(|e| (e.spell_id, e.target));
+    let target = if enemy_target { run.sources[0] } else { healer };
+    assert_eq!(first, Some((Some(expected_spell), Some(target.to_bits()))));
 }
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_uses_temporal_anomaly_without_urgent_rewind() {
     // Three injured units and both spells ready: avoid the unsourced urgent Rewind priority.
-    assert_eq!(first_preservation_cast(&[0, 2, 3], &[]), Some(373861));
+    assert_first_preservation_cast(&[0, 2, 3], &[], 373861, false);
 }
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn preservation_uses_living_flame_without_plain_reversion_maintenance() {
-    // One injured tank, ready Reversion and Living Flame; higher-priority healing cooldowns held.
-    assert_eq!(
-        first_preservation_cast(&[0], &[355936, 360995, 367226]),
-        Some(361469)
-    );
+fn preservation_fills_with_enemy_living_flame_while_an_ally_is_injured() {
+    // One injured tank and ready Living Flame; healing CDs and Disintegrate held.
+    // The filler must damage the enemy, not heal the tank or stop because it is injured.
+    assert_first_preservation_cast(&[0], &[355936, 360995, 367226, 356995], 361469, true);
 }
 
 #[test]
