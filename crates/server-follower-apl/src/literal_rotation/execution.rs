@@ -360,26 +360,26 @@ impl Prepared {
             actions.into_iter().chain([repeated]),
             &mut prepared,
         )?;
-        if world.get::<server::consumables::WclPotion>(actor).is_none()
-            && let Some(potion) = world.get::<super::equipment::Potion>(actor).copied()
-        {
-            let name = "potion".to_owned();
-            prepared.declared.insert(name.clone());
-            let state = native_readiness(
-                world,
-                actor,
-                potion.0.on_use.spell_id,
-                actor,
-                Some(potion.0),
-                after_channel,
-            )?;
-            record_probe(
-                &mut prepared,
-                (name, None),
-                false,
-                state,
-                Execution::Item(potion.0, actor),
-            );
+        if let Some(potion) = world.get::<super::equipment::Potion>(actor).copied() {
+            if world.get::<server::consumables::WclPotion>(actor).is_none() {
+                let name = "potion".to_owned();
+                prepared.declared.insert(name.clone());
+                let state = native_readiness(
+                    world,
+                    actor,
+                    potion.0.on_use.spell_id,
+                    actor,
+                    Some(potion.0),
+                    after_channel,
+                )?;
+                record_probe(
+                    &mut prepared,
+                    (name, None),
+                    false,
+                    state,
+                    Execution::Item(potion.0, actor),
+                );
+            }
             for &(token, id) in server::followers::consumables::SIMC_POTIONS {
                 let Ok(item) = server::consumables::ItemUse::consumable(world, id) else {
                     continue;
@@ -568,12 +568,6 @@ impl Prepared {
         let Some(key) = action_key(action, equipment)? else {
             return Ok(None);
         };
-        if action.name == "potion"
-            && action.options.contains_key("name")
-            && !self.declared.contains(&key.0)
-        {
-            return Err(format!("named native potion unavailable: {}", key.0));
-        }
         let execution = self.ready.get(&key).cloned();
         let off_gcd = read_boolean_option(action, "use_off_gcd")?.unwrap_or(false)
             || intrinsic_off_gcd(self.spec_id, &action.name);

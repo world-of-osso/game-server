@@ -148,6 +148,74 @@ fn assert_settled_with(run: &mut Run, expected: &[u32]) {
 
 #[test]
 #[ignore = "requires Blinding Vale graph and navmesh"]
+fn marksmanship_keystone_owner_opens_with_named_potion_inventory() {
+    use server_follower_apl::literal_rotation::{
+        equipment::Equipment,
+        execution::{NativeAction, Prepared},
+    };
+
+    let mut run = spawn_vale([268, 264, 70, 261, 254]);
+    let owner = run.party.owner;
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Player>(owner)
+            .is_some()
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<server::consumables::WclPotion>(owner)
+            .is_some()
+    );
+    let target =
+        crate::dungeon_simulator::dps_parity::spawn_level_dummy(&mut run.app, owner, 90, 0)
+            .unwrap();
+    let equipment = Equipment::load(run.app.world(), owner, &mut Default::default()).unwrap();
+    let action = server::simc_apl::Action {
+        source_row: None,
+        name: "potion".into(),
+        target: None,
+        options: [("name".into(), "liquid_luster_2".into())].into(),
+    };
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        owner,
+        &[target],
+        &equipment,
+        std::iter::empty::<NativeAction>(),
+        false,
+    )
+    .unwrap();
+    assert!(
+        prepared.execution(&action, &equipment).unwrap().is_some(),
+        "named potion is provisioned for the owner"
+    );
+    let potion = run
+        .app
+        .world_mut()
+        .entity_mut(owner)
+        .take::<server::consumables::Potion>()
+        .unwrap();
+    let prepared = Prepared::read(
+        run.app.world_mut(),
+        owner,
+        &[target],
+        &equipment,
+        std::iter::empty::<NativeAction>(),
+        false,
+    )
+    .unwrap();
+    assert!(
+        prepared.execution(&action, &equipment).unwrap().is_none(),
+        "unavailable potion is not ready"
+    );
+    run.app.world_mut().entity_mut(owner).insert(potion);
+    super::campaign::drive_owner_apl_opening(run.app.world_mut(), owner, target).unwrap();
+}
+
+#[test]
+#[ignore = "requires Blinding Vale graph and navmesh"]
 fn vale_party_gets_every_buff_its_classes_provide() {
     let mut run = spawn_vale([104, 1468, 265, 70, 254]);
     assert_settled_with(&mut run, &[MARK_OF_THE_WILD, BRONZE]);
