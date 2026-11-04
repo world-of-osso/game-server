@@ -71,7 +71,7 @@ fn qualified_healer_items_are_used_only_in_combat() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
 
-    for spec in [256, 257, 264, 1468] {
+    for spec in [105, 256, 257, 264, 270, 1468] {
         let _seed = crate::random::seed_scope(1);
         let mut run = super::healer_simc_replay::snapshot_party(spec, 90, 1);
         let healer = run.healer;

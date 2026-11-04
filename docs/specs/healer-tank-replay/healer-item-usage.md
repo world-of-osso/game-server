@@ -40,7 +40,7 @@ All 31 tracked DPS/tank profile APLs already contain sourced item actions: 16 co
 
 Preservation selects qualified items after its urgent list and hybrid Fire Breath, before routine Temporal Anomaly. Holy Priest retains Guardian Spirit and major/charge-based healing above items. Disc selects pain suppression, barrier, emergency Penance/shields/Radiance/Flash Heal before the generic default item row; its separate Soulcoiler/GCD list is removed. Resto Shaman retains its existing cooldowns, maintenance and urgent Healing Surge above items. No specific item ID or GCD condition remains in these lists.
 
-Druid, Mistweaver and Holy Paladin use the same qualified row through their owners; coordinate those splices with the lead. The policy does not add a use condition for the unqualified Idol.
+Druid selects the same qualified row after Tranquility, Ironbark and Swiftmend, before routine group heals. Mistweaver selects it after Cocoon, Chi-Ji, Conduit and Revival, before Mana Tea and maintenance. Their six-spec profile fixture proves no out-of-combat use and a real Soulcoil Barrier after engagement. Holy Paladin uses the row through its owner. The policy does not add a use condition for the unqualified Idol.
 
 ## Matched replay result
 

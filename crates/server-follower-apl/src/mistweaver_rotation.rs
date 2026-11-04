@@ -58,6 +58,11 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "invoke_chi_ji,if=target.health.pct<90"),
         ("default", "celestial_conduit,if=target.health.pct<90"),
         ("default", "revival,if=party.injured>=3"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         (
             "default",
             "mana_tea,if=mana.pct<65&player.mana_tea_stacks>=4",
