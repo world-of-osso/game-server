@@ -43,6 +43,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **VERIFIED_WCL** `1AWhVvdLbpy2gPak` fight 36 (2026-10-28): Flash of Light and Judgment consume Infusion of Light 54149. When the caster selected Valiance 432919, each consumption reduces Holy Armaments recharge by DB2 70448 effect 0's three seconds.
 
+**INFERRED_WCL** Holy Paladins use available Holy Armaments in combat without an HP threshold. Six +24 Altar reports from 2026-10-23 through 2026-11-03 contain 396 casts: `1AWhVvdLbpy2gPak/36`, `yWF7rmM2BTtzP41Q/37`, `TAV2jtzKNxkh93Xy/25`, `MzD8pFb9YaW6fA1K/15`, `R1CFqtgYMBpKQ9Xy/5`, `3pqXKmWHy12kGj7c/18`. In four reports whose reconstructed two-charge timers fit every cast, 260 casts leave charges capped for 6.0% of observed time; median ready-to-cast delay is 13.24 seconds. This supports avoiding prolonged caps, not exact cast timing. Cast targets across the six reports are 301 DPS, 28 tank, and 67 self; recipient selection remains separately unqualified.
+
 The [current-build Priest and Shaman matched-pull ledger](healer-tank-replay/priest-shaman-matched-2026-11-03.md) records five-seed outcomes, healing attribution and remaining policy gaps.
 **VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2: the matched Guardian selects Elune's Favored 370586 and receives 370602 healing at approximately one-second intervals. DB2 70448 supplies its 18% of Arcane damage in Bear Form and the one-second 370588 timer. The Guardian's WCL Frenzied Regeneration casts do not establish a general cast threshold; the native Guardian APL does not currently select it.
 
