@@ -78,9 +78,9 @@ pub(crate) fn program() -> Result<Program, String> {
         ),
         ("priority_damage", "rising_sun_kick"),
         ("damage", "rising_sun_kick"),
-        // INFERRED_WCL: six is the population-median SCK proximity and the
-        // first count where the actor-median SCK share exceeds the other fillers.
-        ("damage", "spinning_crane_kick,if=active_enemies>=6"),
+        // INFERRED_WCL: pooled pre-cast exposure crosses 50% at five enemies
+        // (101 SCK versus 99 BoK/TP casts); individual players differ. See 270.md.
+        ("damage", "spinning_crane_kick,if=active_enemies>=5"),
         ("damage", "blackout_kick"),
         ("damage", "tiger_palm"),
     ])
