@@ -416,6 +416,7 @@ mod item_stat_proc_tests;
 mod lightwood_tests;
 mod literal_ranged_attack_tests;
 pub(crate) mod literal_rotation;
+mod marksmanship_bulletstorm_follower_tests;
 mod marksmanship_fact_tests;
 mod marksmanship_mechanics_tests;
 mod marksmanship_surging_tests;
