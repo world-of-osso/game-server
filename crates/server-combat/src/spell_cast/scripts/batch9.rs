@@ -5,6 +5,7 @@ use crate::spell_cast::effects::{CastEffectHandler, EffectCtx};
 use crate::spell_cast::{self, PlannedEffect, targets};
 use crate::spell_info::SpellStore;
 use bevy::prelude::*;
+use rand::seq::SliceRandom;
 use shared::components::Health;
 use std::collections::HashSet;
 
@@ -27,6 +28,8 @@ pub(super) const WINTER_DAMAGE: u32 = 196771;
 pub(super) const VOID_STEP: u32 = 1234796;
 pub(super) const RADIANCE: u32 = 194509;
 const RAIN_HEAL: u32 = 73921;
+const RESTORATION_FOUR_PIECE: u32 = 1296630;
+const RAIN_SHIELD: u32 = 1300642;
 const QUAKE_DAMAGE: u32 = 77478;
 const QUAKE_KNOCKDOWN: u32 = 77505;
 const BLOSSOM_HEAL: u32 = 355916;
@@ -652,6 +655,7 @@ fn update_ground_pulse(world: &mut World, entity: Entity) {
     update_consecration_targets(world, entity, &pulses);
     // Include the final authored tick at expiry; never emit catch-up ticks after it.
     if now >= pulses.next_tick && pulses.next_tick <= pulses.expires_at {
+        cast_rain_shield(world, entity, &pulses);
         cast_ground_pulse(world, entity, &pulses);
         if pulses.period > 0.0 {
             world
@@ -663,6 +667,36 @@ fn update_ground_pulse(world: &mut World, entity: Entity) {
     if now >= pulses.expires_at {
         clear_consecration_targets(world, entity, pulses.caster);
         world.entity_mut(entity).despawn();
+    }
+}
+
+fn cast_rain_shield(world: &mut World, entity: Entity, pulses: &GroundPulses) {
+    if pulses.root != HEALING_RAIN
+        || !crate::auras::has_aura(world, pulses.caster, RESTORATION_FOUR_PIECE)
+    {
+        return;
+    }
+    // WCL mHcDYRVyprndwjFC f2 p2 actor46: all 45 shield applications
+    // coincide with a 73921 rain tick within 18ms, including Surging Totem.
+    let center = targets::position(world, entity).expect("ground pulse anchor");
+    let mut units = targets::area_units(
+        world,
+        pulses.caster,
+        center,
+        pulses.radius,
+        targets::Relation::Ally,
+        0,
+    );
+    units.retain(|&unit| !targets::is_non_follower_summon(world, unit));
+    // INFERRED_WCL: 15/37 comparable shield recipients had the lowest HP
+    // among observed same-tick rain targets; the exact selection is unknown.
+    units.sort_unstable();
+    units.shuffle(&mut crate::random::thread_rng());
+    let count = script_effect_value(world, pulses.caster, RESTORATION_FOUR_PIECE, 1) as usize;
+    for target in units.into_iter().take(count) {
+        if !spell_cast::try_cast_triggered(world, pulses.caster, RAIN_SHIELD, Some(target), 1) {
+            warn!(caster = ?pulses.caster, ?target, "Healing Rain shield refused");
+        }
     }
 }
 

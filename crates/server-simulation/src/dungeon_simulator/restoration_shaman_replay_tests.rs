@@ -466,6 +466,87 @@ fn healing_rain_triggers_tidewaters_on_owned_riptides() {
 }
 
 #[test]
+#[ignore = "requires native Restoration Shaman spell data"]
+fn restoration_four_piece_shields_an_ally_inside_each_healing_rain() {
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{harness, spawn_player},
+    };
+    use shared::components::{Health, Mana};
+
+    for spell in [73920, 444995] {
+        for equipped in [false, true] {
+            let mut h = harness(Vec::new(), &[73920, 73921, 444995, 1296630, 1300642], 7).unwrap();
+            h.app
+                .insert_resource(crate::test_data::world_data().clone());
+            // The harness learns every supplied spell, including passive set bonuses.
+            let known = h
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(h.caster)
+                .unwrap()
+                .iter()
+                .filter(|&id| id != 1296630)
+                .collect();
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                h.caster,
+                crate::auras::RemoveReason::Consumed,
+                |aura| aura.spell_id == 1296630,
+            );
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(shared::components::ActiveSpec(264));
+            let inside = spawn_player(&mut h.app, 7, 20.0);
+            let outside = spawn_player(&mut h.app, 7, 40.0);
+            *h.app.world_mut().get_mut::<Health>(inside).unwrap() = Health {
+                current: 1.0,
+                max: 100_000.0,
+            };
+            *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+                current: 250_000.0,
+                max: 250_000.0,
+            };
+            if equipped {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &crate::auras::AuraApplication {
+                        caster: h.caster,
+                        target: h.caster,
+                        spell_id: 1296630,
+                        effect_mask: u32::MAX,
+                        source: crate::auras::AuraSource::Cast,
+                    },
+                );
+            }
+            cast_for_player_with_targets(
+                h.app.world_mut(),
+                h.caster,
+                spell,
+                CastTargets {
+                    unit: h.caster,
+                    primary: Some(h.caster),
+                    destination: Some([20.0, 0.0, 0.0]),
+                },
+            )
+            .unwrap();
+            h.advance(110);
+            assert_eq!(
+                crate::auras::has_aura(h.app.world(), inside, 1300642),
+                equipped,
+                "shield requires the equipped set and an actual rain pulse: {spell}"
+            );
+            assert!(!crate::auras::has_aura(h.app.world(), outside, 1300642));
+        }
+    }
+}
+
+#[test]
 fn zero_capacity_charge_category_keeps_native_spell_cooldown() {
     use crate::spell_cast::test_harness::{Inbox, harness};
     // Native Dark Soul: Instability has category1447 with zero base charges
