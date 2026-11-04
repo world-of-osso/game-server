@@ -534,6 +534,97 @@ fn solidarity_grants_self_before_ally_armament_arrives_only_when_selected() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn solidarity_self_cast_grants_one_living_nearby_ally_with_role_preference() {
+    use shared::components::Position;
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for (cast, aura) in [(432459, 432496), (432472, 432502)] {
+        for case in [
+            "preferred",
+            "preferred_far",
+            "preferred_dead",
+            "alone",
+            "unselected",
+        ] {
+            let mut run = super::spawn_class_party(
+                &snapshot,
+                65,
+                90,
+                1,
+                Some([104, 65, 266, 251, 62]),
+                Some(&builds),
+            )
+            .unwrap();
+            for actor in run.slots {
+                super::hold(&mut run, actor);
+            }
+            for _ in 0..10 {
+                run.app.update();
+            }
+            let caster = run.slots[1];
+            let origin = *run.app.world().get::<Position>(caster).unwrap();
+            if case == "unselected" {
+                run.app
+                    .world_mut()
+                    .entity_mut(caster)
+                    .remove::<crate::class_progression::TraitLoadout>();
+            }
+            let preferred: Vec<_> = if cast == 432459 {
+                vec![run.slots[0]]
+            } else {
+                run.slots[2..].to_vec()
+            };
+            for ally in run.slots.into_iter().filter(|&ally| ally != caster) {
+                let far = case == "alone" || (case == "preferred_far" && preferred.contains(&ally));
+                let mut position = run.app.world_mut().get_mut::<Position>(ally).unwrap();
+                position.x = origin.x + if far { 100.0 } else { 5.0 };
+                position.y = origin.y;
+                position.z = origin.z;
+                if case == "preferred_dead" && preferred.contains(&ally) {
+                    run.app.world_mut().get_mut::<Health>(ally).unwrap().current = 0.0;
+                }
+            }
+            let expected = if case == "alone" || case == "unselected" {
+                None
+            } else if case == "preferred" {
+                preferred.iter().copied().min()
+            } else {
+                run.slots
+                    .into_iter()
+                    .filter(|ally| *ally != caster && !preferred.contains(ally))
+                    .min()
+            };
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                caster,
+                cast,
+                Some(caster),
+                false,
+            )
+            .unwrap();
+            for _ in 0..3 {
+                run.app.update();
+            }
+            let recipients: Vec<_> = run
+                .slots
+                .into_iter()
+                .filter(|&ally| {
+                    ally != caster && crate::auras::has_aura(run.app.world(), ally, aura)
+                })
+                .collect();
+            assert_eq!(
+                recipients,
+                expected.into_iter().collect::<Vec<_>>(),
+                "cast={cast} case={case}"
+            );
+            assert!(crate::auras::has_aura(run.app.world(), caster, aura));
+        }
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent

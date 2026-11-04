@@ -1290,11 +1290,8 @@ fn reset_avengers_shield(world: &mut World, caster: Entity) {
     }
 }
 
-fn grant_solidarity_self(world: &mut World, caster: Entity, spell: &SpellInfo) {
+fn grant_solidarity_copy(world: &mut World, caster: Entity, spell: &SpellInfo) {
     if !matches!(spell.id, 432459 | 432472)
-        || !spell
-            .cast_primary_target
-            .is_some_and(|target| target != caster)
         || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
             traits
                 .active_talent_spells()
@@ -1303,7 +1300,18 @@ fn grant_solidarity_self(world: &mut World, caster: Entity, spell: &SpellInfo) {
     {
         return;
     }
-    // DB2 70448 Solidarity: an ally Armament also grants its benefits to self.
+    let Some(primary) = spell.cast_primary_target else {
+        return;
+    };
+    let recipient = if primary == caster {
+        let Some(ally) = choose_solidarity_ally(world, caster, spell) else {
+            return;
+        };
+        ally
+    } else {
+        caster
+    };
+    // DB2 70448 Solidarity: either recipient also grants a copy to the other.
     // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3: self at 10.339s, ally at 11.599s.
     // Grant at cast success; the ordinary ally projectile keeps its native timing.
     let armament = spell
@@ -1316,7 +1324,7 @@ fn grant_solidarity_self(world: &mut World, caster: Entity, spell: &SpellInfo) {
         world,
         &AuraApplication {
             caster,
-            target: caster,
+            target: recipient,
             spell_id: armament,
             effect_mask: u32::MAX,
             source: AuraSource::Cast,
@@ -1324,8 +1332,32 @@ fn grant_solidarity_self(world: &mut World, caster: Entity, spell: &SpellInfo) {
     );
 }
 
+fn choose_solidarity_ally(world: &mut World, caster: Entity, spell: &SpellInfo) -> Option<Entity> {
+    use combat::spell_cast::targets::{self, Relation};
+    use shared::class_spec::{Role, spec_by_id};
+    let center = targets::position(world, caster)?;
+    // INFERRED_WCL: no DB2 Solidarity selector/radius. Use Armaments' 40yd
+    // cast range and cohort majority: Bulwark tank29/37; Weapon DPS17/30.
+    let range = targets::spell_range(spell, false).1;
+    let mut allies = targets::area_units(world, caster, center, range, Relation::Raid, 0);
+    allies.retain(|&ally| ally != caster);
+    allies.sort();
+    let preferred = allies.iter().copied().find(|&ally| {
+        let role = world
+            .get::<ActiveSpec>(ally)
+            .and_then(|spec| spec_by_id(spec.0))
+            .map(|spec| spec.role);
+        if spell.id == 432459 {
+            role == Some(Role::Tank)
+        } else {
+            matches!(role, Some(Role::MeleeDps | Role::RangedDps))
+        }
+    });
+    preferred.or_else(|| allies.first().copied())
+}
+
 fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
-    grant_solidarity_self(world, caster, spell);
+    grant_solidarity_copy(world, caster, spell);
     // SimC76f8118 sc_paladin.hpp:1730–1735: Protection SotR grants selected Faith's Armor.
     if spell.id == 53600 && selected(world, caster, 406101) {
         combat::auras::apply_aura(
