@@ -318,34 +318,6 @@ impl Mistweaver {
         {
             return Ok(());
         }
-        if lowest_ratio >= 0.65
-            && let Some(enemy) = enemy
-            && self.interrupt_soothing_for_kick(world, healer, enemy)?
-        {
-            return Ok(());
-        }
-        if lowest_ratio >= 0.65
-            && let Some(enemy) = enemy
-        {
-            let enemies = [enemy];
-            let action = NativeAction {
-                name: "rising_sun_kick",
-                spell: 107428,
-                self_target: false,
-                talent: None,
-            };
-            let prepared =
-                Prepared::read(world, healer, &enemies, &self.equipment, [action], false)?;
-            let facts = NativeFacts::new(world, healer, &self.bindings, self.encounter, 1)
-                .with_targets(Some(enemy), &enemies);
-            if let Some((action, execution)) =
-                self.driver
-                    .select("priority_damage", &facts, &prepared, &self.equipment)?
-            {
-                self.driver.execute(world, healer, action, execution)?;
-                return Ok(());
-            }
-        }
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -406,7 +378,7 @@ impl Mistweaver {
         Ok(())
     }
 
-    /// Honor the existing kick priority after a Soothing Mist tick, when its GCD is ready.
+    /// Interrupt Soothing Mist for a ready kick after healing actions have been considered.
     fn interrupt_soothing_for_kick(
         &mut self,
         world: &mut World,
