@@ -21,6 +21,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResolvedDamage(hammer_and_anvil_from_critical),
     SpellScriptHook::ResolvedDamage(grant_bulwark_of_righteous_fury),
     SpellScriptHook::OnCast(glory_on_cast),
+    SpellScriptHook::OnCast(holy_guidance_triggered_consecration),
     SpellScriptHook::EffectHandler(armament_energize_handler),
     SpellScriptHook::EffectHandler(rite_of_sanctification_handler),
     SpellScriptHook::AuraEvent(divine_inspiration_event),
@@ -858,7 +859,14 @@ fn advance_afterimage(world: &mut World, caster: Entity, spell: &SpellInfo) {
     combat::auras::spend_stack(world, caster, shining_light);
 }
 
-fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {
+fn advance_divine_guidance(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 65)
+    {
+        advance_holy_divine_guidance(world, caster, spell);
+        return;
+    }
     if !world
         .get::<ActiveSpec>(caster)
         .is_some_and(|spec| spec.0 == 66)
@@ -870,13 +878,87 @@ fn advance_divine_guidance(world: &mut World, caster: Entity, spell: u32) {
     {
         return;
     }
-    match spell {
+    match spell.id {
         // SimC76f8118 sc_paladin.hpp1738–1740: successful Holy Power spenders grant a stack.
         53600 | 85673 => grant_divine_guidance(world, caster),
         // sc_paladin.cpp562–569: a hardcast consumes the accumulated stacks.
         26573 => consume_divine_guidance(world, caster),
         _ => {}
     }
+}
+
+// INFERRED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: Holy Guidance 1310389 at 37.911s.
+// DB2 70448 433106: each Holy Power ability adds one stack; Consecration heals
+// up to three nearby allies for effect 4's percentage of the stored damage.
+fn advance_holy_divine_guidance(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let selected = world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == 433106)
+    });
+    if !selected {
+        return;
+    }
+    if spell.id == 26573 {
+        consume_holy_divine_guidance(world, caster);
+    } else if spell
+        .power_costs
+        .iter()
+        .any(|cost| cost.power_type == 9 && cost.mana_cost > 0)
+    {
+        grant_divine_guidance(world, caster);
+    }
+}
+
+fn holy_guidance_triggered_consecration(world: &mut World, caster: Entity, spell: u32, depth: u8) {
+    if spell == 26573
+        && depth > 0
+        && world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 65)
+    {
+        consume_holy_divine_guidance(world, caster);
+    }
+}
+
+fn consume_holy_divine_guidance(world: &mut World, caster: Entity) {
+    let stacks = world
+        .get::<combat::auras::ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras.iter().find(|aura| {
+                aura.spell_id == 433106 && aura.caster == caster && aura.source == AuraSource::Cast
+            })
+        })
+        .map_or(0, |aura| aura.stacks);
+    if stacks == 0 {
+        return;
+    }
+    let coefficient = combat::spell_cast::scripts::script_effect_value(world, caster, 433106, 0)
+        / 10.0
+        * f32::from(stacks);
+    let percent =
+        combat::spell_cast::scripts::script_effect_value(world, caster, 433106, 4) / 100.0;
+    let mut damage = world
+        .resource::<SpellStore>()
+        .get(433808)
+        .expect("Divine Guidance damage")
+        .clone();
+    damage.effects[0].bonus_coefficient = coefficient;
+    let amount =
+        combat::spell_cast::effects::scaled_amount(world, caster, &damage, &damage.effects[0])
+            * percent;
+    let Some(mut heal) = combat::spell_cast::load_triggered_spell(world, 1310389, 1) else {
+        return;
+    };
+    let Some(position) = combat::spell_cast::targets::position(world, caster) else {
+        return;
+    };
+    heal.cast_destination = Some(position.to_array());
+    heal.cast_effect0_amount = Some(amount);
+    combat::spell_cast::launch_triggered_spell(world, caster, &heal, Some(caster), 1);
+    combat::auras::remove_auras(world, caster, RemoveReason::Consumed, |aura| {
+        aura.spell_id == 433106 && aura.caster == caster && aura.source == AuraSource::Cast
+    });
 }
 
 fn grant_divine_guidance(world: &mut World, caster: Entity) {
@@ -1157,7 +1239,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     summon_forge(world, caster, spell.id);
     echo_forge_spender(world, caster, spell);
     advance_shining_light(world, caster, spell);
-    advance_divine_guidance(world, caster, spell.id);
+    advance_divine_guidance(world, caster, spell);
     heal_from_armament(world, caster, spell);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.

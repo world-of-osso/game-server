@@ -4,6 +4,130 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_divine_guidance_heals_three_allies_per_spender() {
+    use crate::auras::{ActiveAuras, AuraSource};
+    use crate::spell_cast::powers::PowerPools;
+    use shared::components::PowerType;
+    use shared::protocol::CombatLogKind;
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1, 37.911s.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut amounts = Vec::new();
+    for spender_count in [1, 2] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let healer = run.healer;
+        let tank = run.tank;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        run.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(healer)
+            .unwrap()
+            .crit_pct = 0.0;
+        for _ in 0..spender_count {
+            let mut pools = run.app.world_mut().get_mut::<PowerPools>(healer).unwrap();
+            let pool = pools
+                .pools
+                .iter_mut()
+                .find(|pool| pool.power == PowerType::HolyPower)
+                .unwrap();
+            pool.current = pool.max;
+            crate::spell_cast::creature_cast(run.app.world_mut(), healer, 85673, Some(tank), false)
+                .unwrap();
+            for _ in 0..40 {
+                run.app.update();
+            }
+        }
+        let aura = run
+            .app
+            .world()
+            .get::<ActiveAuras>(healer)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 433106 && aura.source == AuraSource::Cast)
+            .unwrap();
+        assert_eq!(aura.stacks, spender_count);
+        for unit in run.slots {
+            run.app.world_mut().get_mut::<Health>(unit).unwrap().current *= 0.1;
+        }
+        let cursor = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        assert!(crate::spell_cast::try_cast_triggered(
+            run.app.world_mut(),
+            healer,
+            26573,
+            Some(healer),
+            1
+        ));
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        let heals: Vec<_> = events
+            .iter()
+            .filter(|event| {
+                event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(1310389)
+                    && event.kind == CombatLogKind::Heal
+            })
+            .collect();
+        assert_eq!(heals.len(), 3, "{events:?}");
+        assert!(heals.iter().all(|event| event.amount > 0));
+        let received: Vec<_> = heals
+            .iter()
+            .filter_map(|event| {
+                let slot = run
+                    .slots
+                    .iter()
+                    .position(|unit| Some(unit.to_bits()) == event.target)?;
+                let amount =
+                    (event.amount + event.overflow) as f32 / if event.crit { 2.0 } else { 1.0 };
+                Some((slot, amount))
+            })
+            .collect();
+        amounts.push(received);
+        assert!(
+            !run.app
+                .world()
+                .get::<ActiveAuras>(healer)
+                .unwrap()
+                .iter()
+                .any(|aura| aura.spell_id == 433106 && aura.source == AuraSource::Cast)
+        );
+    }
+    let (first, second) = amounts[0]
+        .iter()
+        .find_map(|(slot, first)| {
+            amounts[1]
+                .iter()
+                .find(|(other, _)| slot == other)
+                .map(|(_, second)| (*first, *second))
+        })
+        .expect("both casts must heal at least one common party member");
+    assert!((second / first - 2.0).abs() < 0.05, "{amounts:?}");
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armaments_trigger_hammer_and_anvil_healing() {
     use shared::protocol::CombatLogKind;
     // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1, 10.339s and 13.904s.
