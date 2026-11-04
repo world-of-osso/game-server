@@ -292,6 +292,14 @@ fn outlaw_earned_fang_strike_finisher_deals_damage_and_consumes_the_use() {
         "a free Fang Strike finisher uses effective combo points, not zero paid cost"
     );
     assert!(
+        !events.iter().any(|event| {
+            event.source == Some(run.actor.to_bits())
+                && event.spell_id == Some(1258235)
+                && event.kind == CombatLogKind::Energize
+        }),
+        "Fang's free Dispatch must not grant Ruthlessness for its maximum-point substitution"
+    );
+    assert!(
         !run.app
             .world()
             .get::<crate::auras::ActiveAuras>(run.actor)

@@ -27,10 +27,20 @@ pub(super) fn award_finisher(world: &mut World, ctx: &EffectCtx) {
     }) else {
         return;
     };
+    let points = super::resource_values::ruthlessness_points(
+        world,
+        ctx.caster,
+        ctx.spell,
+        PowerType::ComboPoints,
+        points,
+    );
     award_finisher_points(world, ctx, points);
 }
 
 pub(super) fn award_finisher_points(world: &mut World, ctx: &EffectCtx, points: f32) {
+    if points <= 0.0 {
+        return;
+    }
     if !world
         .get::<KnownSpells>(ctx.caster)
         .is_some_and(|known| known.contains(TALENT))

@@ -11,6 +11,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ResourceValueAfterCast(after_cast_hook),
     SpellScriptHook::TriggeredResourceProducer(apply_producers),
     SpellScriptHook::EffectiveResourceValue(effective_value),
+    SpellScriptHook::PreparePolicySpell(snapshot_maximum_sources),
     SpellScriptHook::ConsumeResourceValueSources(consume_sources),
     SpellScriptHook::OwnsPolicyProc(owns_proc),
 ];
@@ -129,6 +130,35 @@ fn effective_value(
             .1;
     }
     paid
+}
+
+fn snapshot_maximum_sources(world: &World, caster: Entity, spell: &mut SpellInfo) {
+    let sources: Vec<_> = RULES
+        .iter()
+        .filter(|rule| matches(world, caster, spell, rule))
+        .map(|rule| rule.aura)
+        .collect();
+    spell.cast_launch_auras.extend(sources);
+}
+
+/// Ruthlessness excludes Fang's maximum-value grant, but keeps added points.
+pub(super) fn ruthlessness_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    resource: PowerType,
+    effective: f32,
+) -> f32 {
+    let has_maximum_grant = RULES
+        .iter()
+        .any(|rule| rule.resource == resource && spell.cast_launch_auras.contains(&rule.aura));
+    if !has_maximum_grant {
+        return effective;
+    }
+    let maximum = spell_cast::powers::power_value(world, caster, resource)
+        .expect("effective maximum resource requires the native pool")
+        .1;
+    (effective - maximum).max(0.0)
 }
 
 fn consume_sources(world: &mut World, caster: Entity, spell: &SpellInfo) {

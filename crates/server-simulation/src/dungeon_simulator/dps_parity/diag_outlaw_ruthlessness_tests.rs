@@ -77,6 +77,94 @@ fn outlaw_ruthlessness_finisher_requires_known_talent() {
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
+fn outlaw_fang_supercharger_ruthlessness_uses_only_bonus_points() {
+    let mut total_grants = 0;
+    for seed in [70448, 1, 2, 3, 4] {
+        let _seed = crate::random::seed_scope(seed);
+        let mut run = prepare_literal(260, 1).unwrap();
+        engage(&mut run);
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(13750, run.actor, Some(run.targets[0])),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 470398));
+        for _ in 0..32 {
+            if crate::auras::has_aura(run.app.world(), run.actor, 1301405) {
+                break;
+            }
+            {
+                let mut powers = run
+                    .app
+                    .world_mut()
+                    .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                    .unwrap();
+                let energy = powers.get_mut(PowerType::Energy).unwrap();
+                energy.current = energy.max;
+            }
+            literal_rotation::execution::execute(
+                run.app.world_mut(),
+                run.actor,
+                literal_rotation::execution::Execution::Spell(
+                    193315,
+                    run.targets[0],
+                    Some(run.targets[0]),
+                ),
+            )
+            .unwrap();
+            preparation::finish_pending_setup(&mut run).unwrap();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), run.actor, 1301405));
+        {
+            let mut powers = run
+                .app
+                .world_mut()
+                .get_mut::<crate::spell_cast::powers::PowerPools>(run.actor)
+                .unwrap();
+            powers.get_mut(PowerType::Energy).unwrap().current = 0.0;
+            powers.get_mut(PowerType::ComboPoints).unwrap().current = 0.0;
+        }
+        run.app
+            .world_mut()
+            .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .clear();
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(
+                2098,
+                run.targets[0],
+                Some(run.targets[0]),
+            ),
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+        let grants = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| {
+                event.source == Some(run.actor.to_bits())
+                    && event.spell_id == Some(1258235)
+                    && event.kind == CombatLogKind::Energize
+            })
+            .count();
+        assert!(grants <= 1, "only Supercharger's extra points may roll");
+        total_grants += grants;
+    }
+    assert!(
+        total_grants > 0,
+        "Supercharger must retain its chance to grant a point"
+    );
+}
+
+#[test]
+#[ignore = "requires private native260 player profile and traits"]
 fn diag_outlaw_ruthlessness_counts_native_finisher_gains() {
     let mut total = 0;
     for targets in [1, 3] {
