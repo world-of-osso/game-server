@@ -1,3 +1,4 @@
+- [Caster-owned ability critical chance](systems/auras.md#caster-owned-ability-critical-chance--2026-11-04) — Retail Rend and Spotter marks establish melee/ranged308 eligibility; native family masks still filter recipients.
 - [Executioner overflow](systems/auras.md#executioner-overflow--2026-11-04) — capped refreshes retain earlier expiry events; current-build WCL supports native18s Deadly Focus duration.
 - [Temple healing objective](systems/dungeon-simulator.md#temple-healing-objective-and-live-interaction-reach--2026-11-04) — live reach-based gossip,23→8 AI lifetime and private full-key proof.
 - [Elemental class-follower DPS parity](systems/dungeon-simulator.md#elemental-class-follower-dps-parity--2026-10-31) — landed Ancestor, Flametongue and Unity fixes; level90 and70 10-seed point estimates within ±5%, intervals wider.

@@ -11,7 +11,6 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::ArmorIgnoredSpells(ARMOR_IGNORED),
     SpellScriptHook::ResolvedDamage(after_damage),
     SpellScriptHook::AfterQueuedTriggers(roll_queued_tip_marks),
-    SpellScriptHook::ActualCriticalChanceBonus(aimed_mark_crit),
 ];
 use bevy::prelude::*;
 
@@ -35,27 +34,9 @@ const ARMAMENTS_DOT: u32 = 1253836;
 const PRECISE_SHOTS: u32 = 260242;
 const TAKE_AIM_RANK_THREE: u32 = 1273132;
 const RAPID_MARK: u32 = 1301098;
-const ARCANE_TALONS: u32 = 1253846;
 
 #[derive(Resource, Default)]
 struct RapidMarkedTargets(Vec<(Entity, Entity)>);
-
-fn aimed_mark_crit(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell: &SpellInfo,
-    _: f32,
-) -> f32 {
-    if spell.id == AIMED
-        && selected(world, caster, ARCANE_TALONS)
-        && owns_mark(world, caster, target, RAPID_MARK)
-    {
-        script_effect_value(world, caster, ARCANE_TALONS, 1)
-    } else {
-        0.0
-    }
-}
 
 pub(super) fn snapshot_rapid_mark(world: &mut World, caster: Entity, target: Entity) -> f32 {
     // SimC snapshots each target before the tick's missile travels. A mark

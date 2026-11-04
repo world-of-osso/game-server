@@ -32,6 +32,14 @@ fn fixture() -> Harness {
             118253,
             5,
             209140,
+            383154,
+            388539,
+            12294,
+            7384,
+            1464,
+            1296658,
+            204242,
+            53595,
         ],
         7,
     )
@@ -90,17 +98,77 @@ fn census_tail_308_native_vital_clarity_reads_both_mask_words_and_removes() {
 }
 
 #[test]
-fn census_tail_308_native_matching_factors_sum_and_exclude_ranged_and_none() {
+fn census_tail_308_native_matching_factors_sum_for_magic_ranged_and_none() {
     let mut h = fixture();
     let caster = h.caster;
     let target = h.npc;
     apply(&mut h, SPEARHEAD, caster, target);
     apply(&mut h, PREDATOR_CLOAK, caster, target);
     assert_eq!(chance(&h, WILDFIRE_BOMB), 40.0);
-    assert_eq!(chance(&h, 19434), 0.0, "native ranged Aimed Shot");
-    assert_eq!(chance(&h, 118253), 0.0, "native ranged Serpent Sting");
-    assert_eq!(chance(&h, 34026), 0.0, "native defense0 Kill Command");
+    assert_eq!(chance(&h, 19434), 40.0, "native ranged Aimed Shot");
+    assert_eq!(chance(&h, 118253), 40.0, "native ranged Serpent Sting");
+    assert_eq!(chance(&h, 34026), 40.0, "native defense0 Kill Command");
     assert_eq!(chance(&h, VIVIFY), 0.0, "unrelated class family");
+}
+
+#[test]
+fn native_rend_critical_bonus_matches_warrior_abilities_not_other_families() {
+    let mut h = fixture();
+    let caster = h.caster;
+    let target = h.npc;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 383154,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: 388539,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    for spell in [12294, 7384, 1464] {
+        assert_eq!(chance(&h, spell), 5.0, "native Bloodletting Rend bonus");
+    }
+    assert_eq!(chance(&h, 19434), 0.0, "unrelated Hunter family");
+}
+
+#[test]
+fn native_consecration_retains_set_critical_bonus_on_matching_melee() {
+    let mut h = fixture();
+    let caster = h.caster;
+    let target = h.npc;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: 1296658,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: 204242,
+            effect_mask: 1 << 2,
+            source: AuraSource::Cast,
+        },
+    );
+    assert_eq!(chance(&h, 53595), 5.0, "native Consecration set bonus");
+    assert_eq!(chance(&h, 12294), 0.0, "unrelated Warrior family");
 }
 
 #[test]
