@@ -14,7 +14,7 @@ fn read_full_escalation(run: &Run) -> bool {
 
 #[test]
 #[ignore = "requires private native260 player profile and traits"]
-fn outlaw_coup_grants_ruthlessness_for_paid_and_fang_finishers() {
+fn outlaw_coup_grants_ruthlessness_and_bonus_cdr_for_paid_and_fang_finishers() {
     for fang in [false, true] {
         let _seed = crate::random::seed_scope(70448);
         let mut run = prepare_literal(260, 1).unwrap();
@@ -67,6 +67,20 @@ fn outlaw_coup_grants_ruthlessness_for_paid_and_fang_finishers() {
             energy.current = if fang { 0.0 } else { energy.max };
             powers.get_mut(PowerType::ComboPoints).unwrap().current = if fang { 0.0 } else { 6.0 };
         }
+        literal_rotation::execution::execute(
+            run.app.world_mut(),
+            run.actor,
+            literal_rotation::execution::Execution::Spell(2983, run.actor, Some(run.targets[0])),
+        )
+        .unwrap();
+        let before = sprint_cooldown_ms(&run);
+        let per_point =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 79096, 0)
+                / 10.0;
+        let bonus =
+            crate::spell_cast::scripts::script_effect_value(run.app.world(), run.actor, 441423, 2);
+        assert_eq!(bonus, 5.0, "native Coup effective point bonus");
+        let expected = ((if fang { 7.0 } else { 6.0 }) + bonus) * per_point * 1000.0;
         run.app
             .world_mut()
             .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -82,6 +96,11 @@ fn outlaw_coup_grants_ruthlessness_for_paid_and_fang_finishers() {
             ),
         )
         .unwrap();
+        let reduction = before.saturating_sub(sprint_cooldown_ms(&run));
+        assert!(
+            (reduction as f32 - expected).abs() <= 2.0,
+            "earned Coup refunds its bonus once: fang={fang}, reduction={reduction}, expected={expected}"
+        );
         preparation::finish_pending_setup(&mut run).unwrap();
         let events = &run
             .app
@@ -102,6 +121,18 @@ fn outlaw_coup_grants_ruthlessness_for_paid_and_fang_finishers() {
             "Coup must award Ruthlessness once with its native bonus points; fang={fang}, grants={grants}"
         );
     }
+}
+
+fn sprint_cooldown_ms(run: &Run) -> u64 {
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(2983)
+        .unwrap();
+    world
+        .get::<crate::spell_cast::SpellHistory>(run.actor)
+        .unwrap()
+        .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
 }
 
 #[test]

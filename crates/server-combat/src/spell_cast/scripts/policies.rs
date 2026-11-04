@@ -882,6 +882,7 @@ fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo
         resource,
         cooldowns,
         tenths_effect,
+        bonus_points_effect,
         ..
     } = policy.relationship
     else {
@@ -913,7 +914,10 @@ fn refund_spender_cooldowns(world: &mut World, caster: Entity, spell: &SpellInfo
     // SimC76f8118 sc_rogue.cpp8284–8295: cooldown reduction is per
     // effective point. Native spell modifiers already apply the RtB bonus.
     let per_point = super::script_effect_value(world, caster, policy.talent, tenths_effect) / 10.0;
-    let seconds = f64::from(points * per_point);
+    let bonus_points = bonus_points_effect.map_or(0.0, |(spell, effect)| {
+        super::script_effect_value(world, caster, spell, effect)
+    });
+    let seconds = f64::from((points + bonus_points) * per_point);
     for &cooldown in cooldowns {
         super::reduce_cooldown(world, caster, cooldown, seconds);
     }
