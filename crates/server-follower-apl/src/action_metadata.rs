@@ -76,12 +76,7 @@ fn cached_actions(
         Some(cached) => cached,
         None => {
             let (program, bindings) = parse(spec, &input)?;
-            let spells = crate::literal_rotation::program_action_spells_with_composite(
-                &program,
-                &bindings,
-                "apply_poison",
-                input.coatings.iter().copied(),
-            );
+            let spells = source_action_spells(spec, &program, &bindings, &input.coatings);
             let cached = Arc::new(CachedActions { program, spells });
             world
                 .resource_mut::<ActionCache>()
@@ -386,15 +381,33 @@ pub fn equipped_action_spells(
     Ok(spells)
 }
 
-/// Read a class's program-bound native action IDs without initializing its runtime.
+fn source_action_spells(
+    spec: u32,
+    program: &server::simc_apl::Program,
+    bindings: &crate::simc_apl_native::Bindings,
+    coatings: &[u32],
+) -> Vec<u32> {
+    let mut spells = crate::literal_rotation::program_action_spells_with_composite(
+        program,
+        bindings,
+        "apply_poison",
+        coatings.iter().copied(),
+    );
+    if spec == 250 {
+        spells.push(crate::blood_tank_rotation::ANTI_MAGIC_SHELL);
+        spells.sort_unstable();
+        spells.dedup();
+    }
+    spells
+}
+
+/// Read a class's native action IDs without initializing its runtime.
 pub fn action_spells(spec: u32, input: &ActionInputs<'_>) -> Result<Vec<u32>, String> {
     let (program, bindings) = parse(spec, input)?;
-    Ok(
-        crate::literal_rotation::program_action_spells_with_composite(
-            &program,
-            &bindings,
-            "apply_poison",
-            input.coatings.iter().copied(),
-        ),
-    )
+    Ok(source_action_spells(
+        spec,
+        &program,
+        &bindings,
+        &input.coatings,
+    ))
 }

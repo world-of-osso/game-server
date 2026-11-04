@@ -206,6 +206,8 @@ impl Rotation {
     }
 }
 
+pub(crate) const ANTI_MAGIC_SHELL: u32 = 48707;
+
 // INFERRED_WCL: JpHdnbhYD8ZFWvma/1, z1C2HFkf6VpGqWZD/1,
 // MzD8pFb9YaW6fA1K/15 and LnMDdV3NPCK9J8jG/4 contain 91 AMS casts.
 // In fixed-timeline simulation, this magic-signal rule gave 1.334 casts/min
@@ -217,7 +219,7 @@ fn try_anti_magic_shell(
     actor: Entity,
     targets: &[Entity],
 ) -> Result<bool, String> {
-    const AMS: u32 = 48707;
+    const AMS: u32 = ANTI_MAGIC_SHELL;
     const MAGIC: u32 = 126;
     crate::followers::observe_unit(world, actor);
     if targets.is_empty()
@@ -345,7 +347,9 @@ mod anti_magic_shell_tests {
 impl crate::follower::SpecRotation for Rotation {
     fn action_spells(&self) -> Vec<u32> {
         let mut spells = self.driver.action_spells(&self.bindings);
-        spells.push(48707);
+        spells.push(ANTI_MAGIC_SHELL);
+        spells.sort_unstable();
+        spells.dedup();
         spells
     }
 
