@@ -3,8 +3,8 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires the level-90 follower snapshot"]
-fn mistweaver_uses_fistweaving_below_six_enemies_and_sck_at_six() {
-    for enemy_count in [1, 2, 5, 6] {
+fn mistweaver_uses_fistweaving_below_five_enemies_and_sck_at_five() {
+    for enemy_count in [1, 2, 4, 5] {
         let mut party = super::super::healer_simc_replay::snapshot_party(270, 90, enemy_count);
         super::super::healer_simc_replay::engage(&mut party);
         let healer = party.healer;
@@ -28,10 +28,10 @@ fn mistweaver_uses_fistweaving_below_six_enemies_and_sck_at_six() {
             })
             .filter_map(|event| event.spell_id)
             .collect();
-        if enemy_count < 6 {
+        if enemy_count < 5 {
             assert!(
                 !casts.contains(&101546),
-                "SCK must wait for six enemies: {enemy_count} {casts:?}"
+                "SCK must wait for five enemies: {enemy_count} {casts:?}"
             );
             assert!(
                 casts.contains(&100784),
@@ -44,7 +44,7 @@ fn mistweaver_uses_fistweaving_below_six_enemies_and_sck_at_six() {
         } else {
             assert!(
                 casts.contains(&101546),
-                "SCK must be available with six enemies: {casts:?}"
+                "SCK must be available with five enemies: {casts:?}"
             );
         }
     }
