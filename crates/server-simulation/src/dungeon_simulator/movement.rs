@@ -157,6 +157,7 @@ pub(super) fn move_owner_to_tank(
     world: &mut World,
     owner: Entity,
     tank: Entity,
+    range: f32,
 ) -> Result<(), String> {
     let from = point(
         world
@@ -167,7 +168,7 @@ pub(super) fn move_owner_to_tank(
     let destination = world
         .get_resource::<NativeMovement>()
         .ok_or("native movement map is not installed")?
-        .cohesion_destination(from, target)
+        .cohesion_destination(from, target, range)
         .map_err(|error| format!("cohesion approach from {from:?} toward {target:?}: {error}"))?;
     world.entity_mut(owner).insert(MoveIntent(destination));
     Ok(())

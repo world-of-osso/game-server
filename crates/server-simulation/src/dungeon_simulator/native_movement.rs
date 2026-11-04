@@ -76,23 +76,42 @@ impl NativeMovement {
     }
 
     /// Resolve a moving tank's position onto a surface the owner can reach.
-    pub(super) fn cohesion_destination(&self, from: Vec3, tank: Vec3) -> Result<Vec3, String> {
+    pub(super) fn cohesion_destination(
+        &self,
+        from: Vec3,
+        tank: Vec3,
+        range: f32,
+    ) -> Result<Vec3, String> {
         let mut state = self
             .state
             .lock()
             .map_err(|_| "native movement map lock poisoned")?;
-        if let Some(surface) = state.map.floor_polygon(tank)? {
-            state.map.complete_walk_path(from, surface)?;
-            return Ok(surface);
+        let mut radius = 0.0_f32;
+        loop {
+            let samples = if radius == 0.0 { 1 } else { 16 };
+            for sample in 0..samples {
+                let angle = sample as f32 * std::f32::consts::TAU / samples as f32;
+                let candidate = tank + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
+                let Some(surface) = state.map.floor_polygon(candidate)? else {
+                    continue;
+                };
+                if surface.distance(tank) > range {
+                    continue;
+                }
+                match complete_walk(&mut state.map, from, surface) {
+                    Ok(_) => return Ok(surface),
+                    Err(error) if error.starts_with("unreachable target") => continue,
+                    Err(error) => return Err(error),
+                }
+            }
+            if radius >= range {
+                break;
+            }
+            radius = (radius + 2.0).min(range);
         }
-        let toward_tank = Vec3::new(tank.x, from.y, tank.z);
-        let destination = state.map.first_collision(from, toward_tank)?;
-        if destination.distance(from) < 0.01 && toward_tank.distance(from) >= 0.01 {
-            return Err(format!(
-                "no reachable cohesion approach from {from:?} toward {tank:?}"
-            ));
-        }
-        Ok(destination)
+        Err(format!(
+            "no reachable cohesion approach from {from:?} toward {tank:?} within {range} yards"
+        ))
     }
 
     pub(super) fn walk_legs(
@@ -153,6 +172,23 @@ fn complete_walk(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn murder_row_cohesion_reaches_near_an_off_mesh_tank_around_a_wall() {
+        let root = super::super::graph::extraction::asset_root().join("navmesh");
+        let movement = NativeMovement::open(&root, 2813).unwrap();
+        let from = Vec3::new(8959.077, 22.708261, 4785.4277);
+        let tank = Vec3::new(8955.481, 20.498585, 4835.8545);
+        let destination = movement.cohesion_destination(from, tank, 10.0).unwrap();
+        assert!(destination.distance(tank) <= 10.0, "{destination:?}");
+        assert!(
+            movement
+                .walk_legs(from, destination, "cohesion-test")
+                .unwrap()
+                .len()
+                > 1
+        );
+    }
 
     #[test]
     #[ignore = "requires map 2923 baked navmesh"]
