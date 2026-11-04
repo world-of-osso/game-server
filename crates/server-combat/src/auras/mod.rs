@@ -34,6 +34,7 @@ pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+pub mod dispellable;
 mod earthen_rage;
 pub(crate) mod ebon_might;
 mod echo_of_light;

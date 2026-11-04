@@ -327,6 +327,8 @@ mod charge_snapshot_tests;
 #[cfg(test)]
 mod combat_area_target_tests;
 #[cfg(test)]
+mod dispel_fact_tests;
+#[cfg(test)]
 mod history_apl_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
