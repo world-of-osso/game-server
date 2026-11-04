@@ -10,7 +10,7 @@ use server::simc_apl::{Action, ActionFacts, Facts};
 
 pub fn execution_actions()
 -> impl Iterator<Item = crate::literal_rotation::execution::NativeAction<'static>> {
-    // Inventory is not provisioned for the native potion; no fictitious admission.
+    // Potion readiness uses the configured item, not this static spell binding.
     ACTIONS
         .iter()
         .filter(|(name, _, _)| *name != "potion")

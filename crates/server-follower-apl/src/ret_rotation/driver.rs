@@ -111,7 +111,7 @@ impl Rotation {
     pub fn report(&self) -> Value {
         json!({"driver":"LITERAL_SIMC_RETRIBUTION_76f8118", "decisions":self.driver.decisions,
             "native_precombat_snapshot":self.driver.snapshot,
-            "gaps":["NATIVE_POTION_INVENTORY_UNAVAILABLE", "EXTERNAL_BUFF_PROVIDER_UNAVAILABLE:power_infusion",
+            "gaps":[ "EXTERNAL_BUFF_PROVIDER_UNAVAILABLE:power_infusion",
                 "NATIVE_RET_PER_ABILITY_QUALIFICATION_OPEN", "NATIVE_ITEM_PROC_QUALIFICATION_OPEN"]})
     }
 }
