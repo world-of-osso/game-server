@@ -7,18 +7,23 @@ use combat::auras::{
 };
 use combat::class_progression::TraitLoadout;
 use combat::spell_cast::script_registry::SpellScriptHook;
-use combat::spell_cast::targets::{Relation, relation_matches};
-use combat::spell_info::SpellInfo;
+use combat::spell_cast::targets::{self, Relation, relation_matches};
+use combat::spell_info::{SpellInfo, SpellStore};
+use shared::components::ActiveSpec;
 
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::SuccessfulCastRelationships(after_cast),
     SpellScriptHook::LateAuraRegistration(register),
     // Hammer casts spend Masterwork: Weapon; its native cast proc never fires.
-    SpellScriptHook::OwnsPolicyProc(|spell| spell == MASTERWORK_WEAPON),
+    SpellScriptHook::OwnsPolicyProc(|spell| {
+        matches!(spell, MASTERWORK_WEAPON | MASTERWORK_BULWARK)
+    }),
 ];
 
 const MASTERWORK: u32 = 1271387;
 const MASTERWORK_WEAPON: u32 = 1271436;
+const MASTERWORK_BULWARK: u32 = 1271383;
+const LESSER_BULWARK: u32 = 1239002;
 const LESSER_WEAPON: u32 = 1239091;
 const LESSER_WEAPON_DAMAGE: u32 = 1239282;
 const LESSER_WEAPON_HEAL: u32 = 1239276;
@@ -33,10 +38,102 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     match spell.id {
         // Sacred Weapon hardcasts; Divine Inspiration applies the aura without a cast.
         432472 => grant_masterwork_weapon(world, caster),
+        432459 => grant_masterwork_bulwark(world, caster),
         // Blessed Hammer and Hammer of the Righteous.
-        204019 | 53595 => forge_lesser_weapon(world, caster),
+        204019 | 53595 => {
+            forge_lesser_weapon(world, caster);
+            forge_lesser_armament(world, caster, MASTERWORK_BULWARK, LESSER_BULWARK);
+        }
+        20473 | 35395 => forge_holy_lesser_armaments(world, caster),
         _ => {}
     }
+}
+
+fn grant_masterwork_bulwark(world: &mut World, caster: Entity) {
+    if !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+        traits
+            .active_talent_spells()
+            .any(|talent| talent.spell_id == MASTERWORK)
+    }) {
+        return;
+    }
+    let stacks = combat::spell_cast::scripts::script_effect_value(world, caster, MASTERWORK, 0);
+    add_stacks(world, caster, MASTERWORK_BULWARK, stacks as u8);
+}
+
+// INFERRED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: Holy Shock at 12.701s
+// spends Bulwark Masterwork and shields the Frost DK at 12.717s. SimC76f8118
+// sc_paladin.cpp2757–2798 prefers other damage dealers for Lesser Armaments.
+fn forge_holy_lesser_armaments(world: &mut World, caster: Entity) {
+    if !world
+        .get::<ActiveSpec>(caster)
+        .is_some_and(|spec| spec.0 == 65)
+    {
+        return;
+    }
+    for (counter, child) in [
+        (MASTERWORK_BULWARK, LESSER_BULWARK),
+        (MASTERWORK_WEAPON, LESSER_WEAPON),
+    ] {
+        forge_lesser_armament(world, caster, counter, child);
+    }
+}
+
+fn forge_lesser_armament(world: &mut World, caster: Entity, counter: u32, child: u32) {
+    let Some((instance, _)) = owned_stacks(world, caster, counter) else {
+        return;
+    };
+    let Some(target) = find_lesser_armament_target(world, caster, child) else {
+        return;
+    };
+    combat::auras::spend_stack(world, caster, instance);
+    combat::auras::apply_aura(
+        world,
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: child,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    if child == LESSER_WEAPON {
+        combat::auras::set_owned_stacks(world, caster, target, child, LESSER_WEAPON_CHARGES);
+    }
+}
+
+fn find_lesser_armament_target(world: &mut World, caster: Entity, child: u32) -> Option<Entity> {
+    let origin = targets::position(world, caster)?;
+    let radius = {
+        let spell = world.resource::<SpellStore>().get(child)?;
+        targets::radius(&spell.effects[0], 1)
+    };
+    let mut units = targets::area_units(world, caster, origin, radius, Relation::Ally, 0);
+    units.retain(|unit| world.get::<ActiveSpec>(*unit).is_some());
+    units.sort_by_key(|unit| {
+        let role = world
+            .get::<ActiveSpec>(*unit)
+            .and_then(|spec| {
+                shared::class_spec::SPECIALIZATIONS
+                    .iter()
+                    .find(|entry| entry.id == spec.0)
+            })
+            .map(|entry| entry.role);
+        let role_order = match role {
+            Some(shared::class_spec::Role::MeleeDps | shared::class_spec::Role::RangedDps) => 0,
+            Some(shared::class_spec::Role::Healer) => 1,
+            _ => 2,
+        };
+        let already_has = world
+            .get::<combat::auras::ActiveAuras>(*unit)
+            .is_some_and(|auras| {
+                auras
+                    .iter()
+                    .any(|aura| aura.spell_id == child && aura.caster == caster)
+            });
+        (*unit == caster, already_has, role_order, unit.to_bits())
+    });
+    units.first().copied()
 }
 
 /// sc_paladin.cpp2740–2747: hardcast and Blessing of the Forge Sacred Weapons.

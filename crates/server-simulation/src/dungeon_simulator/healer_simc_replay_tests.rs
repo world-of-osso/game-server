@@ -4,6 +4,86 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_masterwork_spends_armament_charges_on_nearby_allies() {
+    use crate::auras::ActiveAuras;
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: Holy Shock at 12.701s
+    // consumes Masterwork: Bulwark; Lesser Bulwark reaches actor 58 at 12.717s.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for (armament, counter, child) in [(432459, 1271383, 1239002), (432472, 1271436, 1239091)] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let healer = run.healer;
+        let tank = run.tank;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, armament, Some(tank), false)
+            .unwrap();
+        for _ in 0..40 {
+            run.app.update();
+        }
+        let stacks = |run: &super::ClassParty| {
+            run.app
+                .world()
+                .get::<ActiveAuras>(healer)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == counter && aura.caster == healer)
+                .map_or(0, |aura| aura.stacks)
+        };
+        assert_eq!(stacks(&run), 3);
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, 20473, Some(tank), false)
+            .unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        assert_eq!(stacks(&run), 2);
+        let recipients: Vec<_> = run
+            .slots
+            .into_iter()
+            .filter(|unit| {
+                run.app
+                    .world()
+                    .get::<ActiveAuras>(*unit)
+                    .is_some_and(|auras| {
+                        auras
+                            .iter()
+                            .any(|aura| aura.spell_id == child && aura.caster == healer)
+                    })
+            })
+            .collect();
+        assert_eq!(recipients.len(), 1, "armament={armament}");
+        assert!(
+            run.slots[2..].contains(&recipients[0]),
+            "expected nearby damage dealer"
+        );
+        if child == 1239091 {
+            let stacks = run
+                .app
+                .world()
+                .get::<ActiveAuras>(recipients[0])
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == child && aura.caster == healer)
+                .unwrap()
+                .stacks;
+            assert_eq!(stacks, 5);
+        }
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn glistening_radiance_accumulates_only_at_full_health_and_caps() {
     use crate::auras::{AuraApplication, AuraSource};
     // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: 1241866 absorbs on actor 1.
