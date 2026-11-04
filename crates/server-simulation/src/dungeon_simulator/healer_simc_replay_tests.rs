@@ -4,6 +4,113 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn boundless_moonlight_heals_only_damage_inside_lunar_beam() {
+    use shared::components::Position;
+    use shared::protocol::CombatLogKind;
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: 425206 ticks from 15.382s.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    let tank = run.tank;
+    let target = run.sources[0];
+    for unit in run.slots {
+        super::hold(&mut run, unit);
+    }
+    for _ in 0..5 {
+        run.app.update();
+    }
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 5487, Some(tank), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    run.app.world_mut().get_mut::<Health>(tank).unwrap().current *= 0.1;
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 204066, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), tank, 425217));
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 33917, Some(target), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(tank.to_bits())
+                && event.spell_id == Some(33917)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(tank.to_bits())
+                && event.spell_id == Some(425206)
+                && event.kind == CombatLogKind::Heal
+                && event.amount > 0),
+        "{events:?}"
+    );
+    run.app.world_mut().get_mut::<Position>(target).unwrap().x += 15.0;
+    // Let the previous inside-beam damage flush before the outside-only window.
+    for _ in 0..25 {
+        run.app.update();
+    }
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    crate::spell_cast::creature_cast(run.app.world_mut(), tank, 8921, Some(target), false).unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(tank.to_bits())
+                && event.spell_id == Some(164812)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "{events:?}"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(tank.to_bits()) && event.spell_id == Some(425206)),
+        "outside beam: {events:?}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_masterwork_spends_armament_charges_on_nearby_allies() {
     use crate::auras::ActiveAuras;
     // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: Holy Shock at 12.701s
