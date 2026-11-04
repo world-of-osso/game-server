@@ -12,7 +12,6 @@ use shared::components::{Health, PowerType};
 
 pub const SPELLS: &[(&str, u32, bool)] = &[
     ("emerald_communion", 370960, true),
-    ("rewind", 363534, true),
     ("dream_breath", 355936, true),
     ("temporal_anomaly", 373861, true),
     ("verdant_embrace", 360995, false),
@@ -47,7 +46,6 @@ pub(crate) fn program() -> Result<Program, String> {
     // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
     Program::parse(&[
         ("urgent", "emerald_communion,if=mana.pct<65"),
-        ("urgent", "rewind,if=party.injured>=3"),
         ("default", "temporal_anomaly,if=party.injured>=2"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
         (
