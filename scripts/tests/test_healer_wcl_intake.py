@@ -22,6 +22,30 @@ gate = load('healer_wcl_intake_gate')
 
 
 class WclIntakeTest(unittest.TestCase):
+    def test_opening_shield_balance_requires_a_final_partial_hit(self):
+        aura = {'source_actor': 1, 'target_actor': 1, 'spell_id': 1235568,
+                'stacks': 1, 'evidence': 'first_removebuff', 'remove_ms': 100}
+        damage = [{'sourceID': 10, 'targetID': 1, 'abilityGameID': 1, 'fight_ms': 90,
+                   'timestamp': 90, 'amount': 0, 'absorbed': 60, 'maxHitPoints': 1000},
+                  {'sourceID': 10, 'targetID': 1, 'abilityGameID': 1, 'fight_ms': 100,
+                   'timestamp': 100, 'amount': 40, 'absorbed': 40, 'maxHitPoints': 1000}]
+        healing = [{'type': 'absorbed', 'sourceID': 1, 'targetID': 1, 'abilityGameID': 1235568,
+                    'fight_ms': 90, 'timestamp': 90, 'amount': 60, 'attackerID': 10, 'extraAbilityGameID': 1},
+                   {'type': 'absorbed', 'sourceID': 1, 'targetID': 1, 'abilityGameID': 1235568,
+                    'fight_ms': 100, 'timestamp': 100, 'amount': 40, 'attackerID': 10, 'extraAbilityGameID': 1}]
+        config = {'actors': [1, 2, 3, 4, 5]}
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        self.assertEqual(result[0]['absorb_balance']['amount'], 100)
+        self.assertEqual(result[0]['absorb_balance']['max_hp'], 1000)
+        self.assertNotIn('absorb_balance', aura)
+        damage[-1]['amount'] = 0
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        self.assertNotIn('absorb_balance', result[0])
+        aura['remove_ms'] = 300
+        damage[-1]['amount'] = 40
+        result = intake.infer_exhausted_opening_absorbs([aura], damage, healing, config)
+        self.assertNotIn('absorb_balance', result[0])
+
     def test_default_healer_output_is_byte_identical(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)

@@ -156,6 +156,7 @@ register_modules! {
     destruction_crit_scaling: (2673, "modules/destruction_crit_scaling.rs"),
     demon_hunter_catastrophe: (5819, "modules/demon_hunter_catastrophe.rs"),
     demon_hunter_fragments: (5777, "modules/demon_hunter_fragments.rs"),
+    demon_hunter_first_in_last_out: (5826, "modules/demon_hunter_first_in_last_out.rs"),
     demon_hunter_meteor_shower: (5820, "modules/demon_hunter_meteor_shower.rs"),
     demon_hunter_reactive: (5823, "modules/demon_hunter_reactive.rs"),
     demon_hunter_otherworldly_focus: (5821, "modules/demon_hunter_otherworldly_focus.rs"),

@@ -598,6 +598,8 @@ C	unrelenting_onslaught.rs	445836
 C	vengeance_fallout.rs	258921
 C	vengeance_fel_devastation.rs	212106
 C	vengeance_fiery_brand.rs	207771
+C	demon_hunter_first_in_last_out.rs	1266619
+D	demon_hunter_first_in_last_out.rs	grant_mobility_shield	launch_triggered_spell	&shield	1	1266619
 C	vengeance_revel_in_pain.rs	1265857
 D	vengeance_revel_in_pain.rs	shield_fire_damage	launch_triggered_spell	&shield	1	1265857
 C	vengeance_frailty.rs	227255
@@ -615,6 +617,7 @@ C	windwalker_tigereye.rs	1261724
 C	zathatek_breath.rs	1305391
 C	zathatek_breath.rs	1305395
 C	warrior_overwhelming_blades.rs	445836
+C	warrior_pain_and_gain.rs	382551
 D	arms_concussive_slam.rs	cast_after_slam	launch_triggered_spell_with_primary	&child	1	1300660
 D	arms_fatality.rs	cast_mark_damage	launch_triggered_spell	&payload	1	383706
 D	assassination_runtime/rogue_children.rs	grant_regicide	launch_triggered_spell	&buff	1	1250331

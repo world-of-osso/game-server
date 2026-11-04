@@ -1420,6 +1420,52 @@ pub fn limit_owned_stacks(
     true
 }
 
+/// Restore an observed opening shield pool without applying its launch modifiers again.
+#[cfg(any(test, feature = "test-support"))]
+pub fn restore_owned_absorb_points(
+    world: &mut World,
+    caster: Entity,
+    unit: Entity,
+    spell_id: u32,
+    points: f32,
+) -> bool {
+    assert!(
+        points.is_finite() && points > 0.0,
+        "opening shield points must be positive"
+    );
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return false;
+    };
+    let Some(aura) = auras
+        .auras
+        .iter_mut()
+        .find(|aura| aura.spell_id == spell_id && aura.caster == caster)
+    else {
+        return false;
+    };
+    if aura
+        .effects
+        .iter()
+        .filter(|effect| effect.aura_type == handlers::SCHOOL_ABSORB)
+        .count()
+        != 1
+    {
+        return false;
+    }
+    let shield = aura
+        .effects
+        .iter_mut()
+        .find(|effect| effect.aura_type == handlers::SCHOOL_ABSORB)
+        .expect("one opening absorb effect");
+    shield.absorb_remaining = points;
+    shield.amount = points;
+    auras.dirty = true;
+    drop(auras);
+    auras_changed(world, unit);
+    crate::spell_cast::mark_dirty(world, unit);
+    true
+}
+
 /// Set a caster-owned counter without changing its lifetime or periodic phase.
 pub fn set_owned_stacks(
     world: &mut World,

@@ -8,6 +8,81 @@ const ARMORED_TO_THE_TEETH: u32 = 384124;
 const BATTLEFIELD_COMMANDER: u32 = 424742;
 
 #[test]
+#[ignore = "requires native Warrior and damage spell data"]
+fn warrior_pain_and_gain_zero_damage_preserves_recovery_for_real_damage() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::Health;
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[382549, 382551, 1216570], 1).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 382549,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let maximum = h.app.world().get::<Health>(h.caster).unwrap().max;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = maximum * 0.5;
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(1216570)
+        .unwrap()
+        .clone();
+    for (damage, expected_heals) in [(0.0, 0), (100.0, 1), (100.0, 1)] {
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        if damage == 0.0 {
+            crate::spell_cast::effects::replay_simc_dummy_strike(
+                h.app.world_mut(),
+                h.npc,
+                h.caster,
+                0.0,
+                false,
+                false,
+            );
+        } else {
+            crate::spell_cast::effects::deal_damage(
+                h.app.world_mut(),
+                &ctx,
+                h.caster,
+                damage,
+                false,
+                false,
+            );
+        }
+        h.advance(5);
+        let heals = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(382551))
+            .count();
+        assert_eq!(
+            heals, expected_heals,
+            "damage={damage}: zero damage must not spend the ICD; a real hit must heal once"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires Protection Warrior MID2 profile and native world data"]
 fn warrior_pain_and_gain_real_damage_heals_observed_health_fraction() {
     use shared::{components::Health, protocol::CombatLogKind};

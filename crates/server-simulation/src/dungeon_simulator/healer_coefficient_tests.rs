@@ -177,6 +177,77 @@ fn vengeance_revel_shields_fire_damage_with_carry_consumption_and_brand_caps() {
 }
 
 #[test]
+#[ignore = "requires native Vengeance profile and mobility spell data"]
+fn first_in_last_out_infernal_strike_grants_then_linearly_decays_and_expires() {
+    use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+    for elapsed_ticks in [8, 161] {
+        let mut run =
+            super::healer_simc_replay::snapshot_party_with_specs(264, 90, [581, 264, 70, 71, 261]);
+        let actor = run.tank;
+        let target = run.sources[0];
+        super::healer_simc_replay::hold(&mut run, actor);
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id: 1266497,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        let destination = crate::spell_cast::targets::position(run.app.world(), target).unwrap();
+        crate::spell_cast::creature_cast_with_targets(
+            run.app.world_mut(),
+            actor,
+            189110,
+            crate::spell_cast::CastTargets {
+                unit: target,
+                primary: Some(target),
+                destination: Some(destination.to_array()),
+            },
+        )
+        .unwrap();
+        let initial = run
+            .app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1266619)
+            .expect("Infernal Strike must earn its shield")
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount;
+        assert!(initial > 1600.0);
+        for _ in 0..elapsed_ticks {
+            run.app.update();
+        }
+        if elapsed_ticks == 8 {
+            let remaining = crate::auras::absorb_damage(
+                run.app.world_mut(),
+                actor,
+                Some(target),
+                1,
+                1_000_000.0,
+            )
+            .1;
+            assert!(
+                (initial - remaining - 1600.0).abs() <= 2.0,
+                "two authored 200ms ticks must remove 1600 points: initial={initial}, remaining={remaining}"
+            );
+        } else {
+            assert!(
+                !crate::auras::has_aura(run.app.world(), actor, 1266619),
+                "the authored 8-second duration expires the shield even with points left"
+            );
+        }
+    }
+}
+
+#[test]
 #[ignore = "requires native Golden Hour, Echo, and Reversion spell data"]
 fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
     use crate::auras::{AuraApplication, AuraSource};

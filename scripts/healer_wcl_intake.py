@@ -226,6 +226,40 @@ def opening_auras(combatants, buffs, actors):
     return list(initial.values())
 
 
+def infer_exhausted_opening_absorbs(auras, damage, healing, config):
+    """Restore only a shield whose final partial hit proves its opening pool was spent."""
+    tank = config['actors'][0]
+    observations = read_health_observations(damage + healing, {tank: 0})
+    result = []
+    for aura in auras:
+        entry = dict(aura)
+        removal = aura.get('remove_ms')
+        # 1235568 is a static potion shield. Do not infer starting pools for decaying shields.
+        if (aura['target_actor'] != tank or aura['spell_id'] != 1235568 or removal is None
+                or aura['evidence'] != 'first_removebuff'):
+            result.append(entry)
+            continue
+        absorbs = [event for event in healing if event['type'] == 'absorbed'
+                   and event.get('sourceID') == aura['source_actor']
+                   and event.get('targetID') == tank and event.get('abilityGameID') == aura['spell_id']
+                   and 0 <= event['fight_ms'] <= removal]
+        exhausted = any(
+            abs(absorb['fight_ms'] - removal) <= 1 and any(
+                event.get('targetID') == tank and event.get('sourceID') == absorb['attackerID']
+                and event.get('sourceInstance', 0) == absorb.get('attackerInstance', 0)
+                and event.get('abilityGameID') == absorb['extraAbilityGameID']
+                and abs(event['timestamp'] - absorb['timestamp']) <= 1
+                and event.get('amount', 0) > 0 and event.get('absorbed', 0) >= absorb['amount']
+                for event in damage)
+            for absorb in absorbs)
+        if exhausted:
+            maximum, _ = max_health_at(observations, tank, 0)
+            entry['absorb_balance'] = {'amount': sum(event['amount'] for event in absorbs),
+                                       'max_hp': maximum, 'evidence': 'INFERRED_WCL_exhausted_by_partial_hit'}
+        result.append(entry)
+    return result
+
+
 def replayed_casts(buffs, actors, duration_ms):
     slots = {actor: slot for slot, actor in enumerate(actors)}
     casts = [{'time_ms': int(event['fight_ms']), 'slot': slots[event['targetID']],
@@ -260,6 +294,9 @@ def main():
         result['opening_auras'] = opening_auras(read_jsonl(args.combatants), buffs,
                                                config['actors'])
         result['replayed_casts'] = replayed_casts(buffs, config['actors'], config['duration_ms'])
+        if args.mode == 'tank':
+            result['opening_auras'] = infer_exhausted_opening_absorbs(
+                result['opening_auras'], read_jsonl(args.events), read_jsonl(args.healing), config)
     args.output.write_text(json.dumps(result, separators=(',', ':')) + '\n')
 
 

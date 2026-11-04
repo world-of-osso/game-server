@@ -299,6 +299,60 @@ fn wcl_intake_avoided_outcomes_publish_distinct_miss_events() {
 }
 
 #[test]
+#[ignore = "requires native Light's Preservation spell data"]
+fn opening_wcl_exhausted_shield_restores_observed_points_and_consumes_natively() {
+    use crate::spell_cast::test_harness::harness;
+    use shared::components::Health;
+    let mut h = harness(Vec::new(), &[1235568], 1).unwrap();
+    let actor = h.caster;
+    *h.app.world_mut().get_mut::<Health>(actor).unwrap() = Health {
+        current: 200_000.0,
+        max: 200_000.0,
+    };
+    let trace: super::healer_wcl_trace::Trace = serde_json::from_str(r#"{
+        "mode":"tank_raw","provenance":"test","excluded_self":0,
+        "party_specs":[73,264,70,103,261],"actor_slots":{"1":0},"bloodlust":[],"hits":[],
+        "opening_auras":[{"source_actor":1,"target_actor":1,"spell_id":1235568,"stacks":1,
+        "evidence":"first_removebuff","remove_ms":100,
+        "absorb_balance":{"amount":100,"max_hp":1000,"evidence":"INFERRED_WCL_exhausted_by_partial_hit"}}]}
+    "#).unwrap();
+    let removals = trace
+        .apply_opening_auras(h.app.world_mut(), &[actor; 5])
+        .unwrap();
+    assert!(removals.is_empty(), "consumption is not an observed expiry");
+    let first = crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        actor,
+        None,
+        1,
+        false,
+        false,
+        15_000.0,
+    )
+    .unwrap();
+    assert_eq!(first.absorbed_hp, 15_000.0);
+    assert_eq!(first.damage_hp, 0.0);
+    let second = crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        actor,
+        None,
+        1,
+        false,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    assert_eq!(second.absorbed_hp, 5_000.0);
+    assert_eq!(second.damage_hp, 5_000.0);
+    assert_eq!(
+        h.app.world().get::<Health>(actor).unwrap().current,
+        195_000.0
+    );
+}
+
+#[test]
 #[ignore = "requires native Flash Heal spell data"]
 fn wcl_logged_external_heal_keeps_effective_amount_without_second_modifiers() {
     use crate::spell_cast::test_harness::{harness, spawn_player};
