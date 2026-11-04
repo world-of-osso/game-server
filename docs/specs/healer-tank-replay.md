@@ -34,6 +34,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **SOUL_LEECH_FEL_SYNERGY_GAP:** `VERIFIED_WCL` `mHcDYRVyprndwjFC` fight 2 pull 2 (2026-10-31) actor 2 selects Soul Leech 1311653, Demon Skin 219272 and Fel Synergy 389367; actor 3 is its pet. Soul Leech 108366 is consumed at 16.863 seconds; actor 2 deals multiple Agony ticks from 16.930 to 17.196 seconds, but 108366 and the 389372 heal reappear at 17.247 seconds. DB2 70448 describes single-target damage shields, periodic recharge and distinct owner/pet healing fractions. Native code has no corresponding shield generator or Fel Synergy heal. The observed cadence does not establish whether damage-grant batching is general or specific to Demon Skin. Recharge depends on the same accumulating, capped shield state, so no recharge-only approximation is installed. Evidence: `game-engine/data/diagnostics/healer-priest-shaman-2026-11-03/264-{combatants,buffs,damage-done,healing}.jsonl` and `264-actor-metadata.json`.
 
+The [current-build Priest and Shaman matched-pull ledger](healer-tank-replay/priest-shaman-matched-2026-11-03.md) records five-seed outcomes, healing attribution and remaining policy gaps.
+
 ## Equal-health healer target ties
 
 Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:
