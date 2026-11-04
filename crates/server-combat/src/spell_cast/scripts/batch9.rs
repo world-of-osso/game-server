@@ -262,6 +262,45 @@ fn spawn_ground_pulses(
     }
 }
 
+/// Spawn a separate tier rain at the healed target without replacing the owned field.
+pub fn spawn_restoration_tier_rain(world: &mut World, caster: Entity, center: Vec3) {
+    let rain = world
+        .resource::<SpellStore>()
+        .get(HEALING_RAIN)
+        .expect("Restoration tier rain requires Healing Rain")
+        .clone();
+    let duration_ms = script_effect_value(world, caster, 1296629, 0);
+    let context = EffectCtx {
+        caster,
+        spell: &rain,
+        depth: 1,
+        dest: Some(targets::Dest {
+            position: center,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    let mut pulses = read_ground_pulses(world, &context);
+    pulses.expires_at = crate::auras::aura_now(world) + f64::from(duration_ms) / 1000.0;
+    let map = *world
+        .get::<crate::maps::InMap>(caster)
+        .expect("tier rain owner map");
+    let field = world
+        .spawn((
+            pulses.clone(),
+            shared::components::Position {
+                x: center.x,
+                y: center.y,
+                z: center.z,
+            },
+            map,
+        ))
+        .id();
+    // WCL mHcDYRVyprndwjFC f2 p2: new rain heals at the triggering
+    // Chain Heal or Healing Wave and overlaps the existing Totem rain.
+    cast_ground_pulse(world, field, &pulses);
+}
+
 pub(in crate::spell_cast) fn spawn_surging_rain(world: &mut World, ctx: &EffectCtx, totem: Entity) {
     let center = ctx.dest.expect("Surging Totem requires a destination");
     let rain = world

@@ -467,6 +467,140 @@ fn healing_rain_triggers_tidewaters_on_owned_riptides() {
 
 #[test]
 #[ignore = "requires native Restoration Shaman spell data"]
+fn restoration_two_piece_heals_immediately_and_preserves_existing_rain() {
+    use crate::auras::{AuraApplication, AuraSource, RemoveReason};
+    use crate::spell_cast::{
+        CastTargets, cast_for_player_with_targets,
+        test_harness::{ObservedCombatEvents, harness, spawn_player},
+    };
+    use bevy::prelude::Entity;
+    use shared::components::{Health, Mana};
+    use shared::protocol::CombatLogKind;
+
+    for source in [77472, 1064] {
+        for equipped in [false, true] {
+            let mut h = harness(Vec::new(), &[73920, 73921, 77472, 1064, 1296629], 7).unwrap();
+            h.app.init_resource::<ObservedCombatEvents>();
+            let known = h
+                .app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(h.caster)
+                .unwrap()
+                .iter()
+                .filter(|&id| id != 1296629)
+                .collect();
+            h.app
+                .world_mut()
+                .entity_mut(h.caster)
+                .insert(crate::class_progression::KnownSpells::fixture(known));
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                h.caster,
+                RemoveReason::Consumed,
+                |aura| aura.spell_id == 1296629,
+            );
+            let old_target = spawn_player(&mut h.app, 7, -20.0);
+            let new_target = spawn_player(&mut h.app, 7, 20.0);
+            for target in [old_target, new_target] {
+                *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+                    current: 1.0,
+                    max: 100_000.0,
+                };
+            }
+            *h.app.world_mut().get_mut::<Mana>(h.caster).unwrap() = Mana {
+                current: 250_000.0,
+                max: 250_000.0,
+            };
+            if equipped {
+                crate::auras::apply_aura(
+                    h.app.world_mut(),
+                    &AuraApplication {
+                        caster: h.caster,
+                        target: h.caster,
+                        spell_id: 1296629,
+                        effect_mask: u32::MAX,
+                        source: AuraSource::Cast,
+                    },
+                );
+            }
+            let has_rain_heal = |h: &crate::spell_cast::test_harness::Harness, target: Entity| {
+                h.app
+                    .world()
+                    .resource::<ObservedCombatEvents>()
+                    .0
+                    .iter()
+                    .any(|event| {
+                        event.kind == CombatLogKind::Heal
+                            && event.spell_id == Some(73921)
+                            && event.target == Some(target.to_bits())
+                    })
+            };
+            let _seed = crate::random::seed_scope(u64::from(source));
+            let mut proc_seen = false;
+            for _ in 0..if equipped { 16 } else { 1 } {
+                h.advance(200);
+                for target in [old_target, new_target] {
+                    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+                }
+                h.app.world_mut().get_mut::<Mana>(h.caster).unwrap().current = 250_000.0;
+                cast_for_player_with_targets(
+                    h.app.world_mut(),
+                    h.caster,
+                    73920,
+                    CastTargets {
+                        unit: h.caster,
+                        primary: Some(h.caster),
+                        destination: Some([-20.0, 0.0, 0.0]),
+                    },
+                )
+                .unwrap();
+                h.advance(50);
+                h.app
+                    .world_mut()
+                    .resource_mut::<ObservedCombatEvents>()
+                    .0
+                    .clear();
+                crate::spell_cast::creature_cast(
+                    h.app.world_mut(),
+                    h.caster,
+                    source,
+                    Some(new_target),
+                    true,
+                )
+                .unwrap();
+                let immediate = has_rain_heal(&h, new_target);
+                h.app
+                    .world_mut()
+                    .resource_mut::<ObservedCombatEvents>()
+                    .0
+                    .clear();
+                h.advance(50);
+                assert!(
+                    has_rain_heal(&h, old_target),
+                    "the original rain must continue"
+                );
+                if immediate {
+                    assert!(equipped, "tier rain without the set");
+                    assert!(has_rain_heal(&h, new_target), "tier rain must pulse");
+                    h.advance(130);
+                    h.app
+                        .world_mut()
+                        .resource_mut::<ObservedCombatEvents>()
+                        .0
+                        .clear();
+                    h.advance(45);
+                    assert!(!has_rain_heal(&h, new_target), "tier rain must expire");
+                    proc_seen = true;
+                    break;
+                }
+            }
+            assert_eq!(proc_seen, equipped, "native RPPM tier rain: {source}");
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires native Restoration Shaman spell data"]
 fn restoration_four_piece_shields_an_ally_inside_each_healing_rain() {
     use crate::spell_cast::{
         CastTargets, cast_for_player_with_targets,
