@@ -703,6 +703,7 @@ fn replay_profile(
     }
     let mut next_replayed_cast = 0;
     let mut next_external_heal = 0;
+    let mut next_external_shield = 0;
     if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
         for &unit in &slots[1..] {
             app.world_mut()
@@ -870,6 +871,18 @@ fn replay_profile(
                     .external_heals
                     .get(next_external_heal)
                     .filter(|heal| heal.time_ms < elapsed_ms + 50);
+                let shield = wcl
+                    .external_shields
+                    .get(next_external_shield)
+                    .filter(|shield| shield.time_ms < elapsed_ms + 50);
+                if let Some(shield) = shield.filter(|shield| {
+                    hit.is_none_or(|hit| shield.time_ms <= hit.time_ms)
+                        && heal.is_none_or(|heal| shield.time_ms <= heal.time_ms)
+                }) {
+                    shield.deliver(app.world_mut(), &slots, &wcl.actor_slots)?;
+                    next_external_shield += 1;
+                    continue;
+                }
                 if let Some(heal) =
                     heal.filter(|heal| hit.is_none_or(|hit| heal.time_ms < hit.time_ms))
                 {
@@ -1062,9 +1075,13 @@ fn replay_profile(
             "delivered":wcl_delivered,"avoided":wcl_avoided,
             "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
             "health_samples":wcl_health_samples,"native_self_damage":native_self_damage,
+            "external_shield_schedule_records_processed":next_external_shield,
             "native_external_heal_attempts_suppressed":app.world()
                 .get_resource::<crate::spell_cast::effects::LoggedExternalHealing>()
-                .map(|logged| &logged.suppressed_by_spell)});
+                .map(|logged| &logged.suppressed_by_spell),
+            "native_external_shield_attempts_suppressed":app.world()
+                .get_resource::<crate::spell_cast::effects::LoggedExternalHealing>()
+                .map(|logged| &logged.suppressed_shields_by_spell)});
     }
     if let Some(profile) = profile {
         report["enemy_profile"] =

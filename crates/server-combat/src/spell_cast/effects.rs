@@ -2821,7 +2821,9 @@ pub fn apply_calculated_heal(world: &mut World, ctx: &EffectCtx, target: Entity,
 pub struct LoggedExternalHealing {
     target: Entity,
     permitted: Option<(Entity, u32)>,
+    permitted_shield: Option<(Entity, u32)>,
     pub suppressed_by_spell: std::collections::BTreeMap<u32, u64>,
+    pub suppressed_shields_by_spell: std::collections::BTreeMap<u32, u64>,
 }
 
 #[cfg(any(test, feature = "test-support"))]
@@ -2830,13 +2832,15 @@ impl LoggedExternalHealing {
         Self {
             target,
             permitted: None,
+            permitted_shield: None,
             suppressed_by_spell: Default::default(),
+            suppressed_shields_by_spell: Default::default(),
         }
     }
 }
 
 #[cfg(any(test, feature = "test-support"))]
-fn permits_external_heal(world: &mut World, ctx: &EffectCtx, target: Entity) -> bool {
+fn consume_external_heal_permission(world: &mut World, ctx: &EffectCtx, target: Entity) -> bool {
     let Some(mut logged) = world.get_resource_mut::<LoggedExternalHealing>() else {
         return true;
     };
@@ -2851,6 +2855,49 @@ fn permits_external_heal(world: &mut World, ctx: &EffectCtx, target: Entity) -> 
         return true;
     }
     *logged.suppressed_by_spell.entry(ctx.spell.id).or_default() += 1;
+    false
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn permit_logged_external_shield(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) {
+    let mut logged = world.resource_mut::<LoggedExternalHealing>();
+    assert_eq!(
+        logged.target, target,
+        "logged external shield target changed"
+    );
+    assert!(
+        logged.permitted_shield.is_none(),
+        "nested logged external shield"
+    );
+    logged.permitted_shield = Some((caster, spell));
+}
+
+#[cfg(any(test, feature = "test-support"))]
+pub fn consume_external_shield_permission(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+) -> bool {
+    let Some(mut logged) = world.get_resource_mut::<LoggedExternalHealing>() else {
+        return true;
+    };
+    if target != logged.target {
+        return true;
+    }
+    if logged.permitted_shield == Some((caster, spell)) {
+        logged.permitted_shield = None;
+        return true;
+    }
+    if caster == target {
+        return true;
+    }
+    *logged.suppressed_shields_by_spell.entry(spell).or_default() += 1;
     false
 }
 
@@ -2905,7 +2952,7 @@ fn apply_resolved_heal(
     periodic: bool,
 ) {
     #[cfg(any(test, feature = "test-support"))]
-    if !permits_external_heal(world, ctx, target) {
+    if !consume_external_heal_permission(world, ctx, target) {
         return;
     }
     if !world
