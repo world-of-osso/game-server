@@ -18,7 +18,6 @@ pub const SPELLS: &[(&str, u32, bool)] = &[
     ("verdant_embrace", 360995, false),
     ("spiritbloom", 367226, false),
     ("emerald_blossom", 355913, false),
-    ("echo", 364343, false),
     ("reversion", 366155, false),
     ("living_flame", 361469, false),
     ("fire_breath", 357208, false),
@@ -50,7 +49,6 @@ pub(crate) fn program() -> Result<Program, String> {
         ("urgent", "emerald_communion,if=mana.pct<65"),
         ("urgent", "rewind,if=party.injured>=3"),
         ("default", "temporal_anomaly,if=party.injured>=2"),
-        ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
         (
             "default",
@@ -97,7 +95,6 @@ pub struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
     reversion_up: bool,
-    echo_up: bool,
     merithra_active: bool,
 }
 
@@ -106,7 +103,6 @@ impl Facts for PartyFacts<'_> {
         match name {
             "party.injured" => Ok(self.injured as f64),
             "target.reversion_up" => Ok(f64::from(self.reversion_up)),
-            "target.echo_up" => Ok(f64::from(self.echo_up)),
             "merithra.active" => Ok(f64::from(self.merithra_active)),
             _ => self.native.value(name),
         }
@@ -116,9 +112,7 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.reversion_up" | "target.echo_up" | "merithra.active" => {
-                self.value(name)
-            }
+            "party.injured" | "target.reversion_up" | "merithra.active" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -158,7 +152,6 @@ impl Preservation {
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.95).count();
         let reversion_up = crate::auras::has_aura(world, target, 366155)
             || crate::auras::has_aura(world, target, 367364);
-        let echo_up = crate::auras::has_aura(world, target, 364343);
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -175,7 +168,6 @@ impl Preservation {
                 .with_targets(Some(target), &targets),
             injured,
             reversion_up,
-            echo_up,
             merithra_active: crate::auras::has_aura(world, healer, 1256579),
         };
         if let Some((action, execution)) =
@@ -210,7 +202,6 @@ impl Preservation {
                 .with_targets(Some(target), &targets),
             injured,
             reversion_up,
-            echo_up,
             merithra_active: crate::auras::has_aura(world, healer, 1256579),
         };
         if let Some((action, execution)) =

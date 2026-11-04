@@ -335,7 +335,7 @@ fn preservation_leaping_flames_heal_allies_without_hostile_reach() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn preservation_keeps_routine_heals_before_living_flame_at_moderate_injury() {
+fn preservation_uses_dream_breath_without_foreground_echo_at_moderate_injury() {
     use shared::protocol::CombatLogKind;
     // No retail trigger separates Living Flame casts from ready-but-uncast moments;
     // see docs/specs/healer-tank-replay/preservation-living-flame.md.
@@ -379,8 +379,8 @@ fn preservation_keeps_routine_heals_before_living_flame_at_moderate_injury() {
             .map(|e| (e.spell_id, e.target));
         assert_eq!(
             first,
-            Some((Some(364343), Some(run.tank.to_bits()))),
-            "health={health}: Echo, not Living Flame, on the injured tank"
+            Some((Some(355936), Some(healer.to_bits()))),
+            "health={health}: Dream Breath, without spending Essence on foreground Echo"
         );
     }
 }
