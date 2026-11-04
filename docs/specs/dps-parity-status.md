@@ -244,7 +244,17 @@ The same four reports do not show an increased Devastator critical/noncritical r
 
 References are under `game-engine/data/diagnostics/dps-parity-2026-10-21/`: `<spec>.reference.single.normalized.json` when present, otherwise `all-spec-expanded-references/<spec>.reference.single.normalized.json`. For 3T use `<spec>.reference-fixed.three.normalized.json` when present, otherwise `all-spec-expanded-references/<spec>.reference.three.normalized.json`. The corresponding `.proof.json` records the add-event command. Train entry files are `/home/osso/.worktrees/train/results/<entry>.json`; archived reports are `/home/osso/.worktrees/train/logs/<entry>.reports/<spec>.native.<targets>.json`.
 
-**Missing reference and measurement — Balance Druid (102):** This additional DPS spec is outside the 25-profile comparison: `all-spec-current-reference-manifests/102.profile.json` records no shipped current-tier reference and no native harness profile; its MID1 candidate was not selected. It has no valid 1T or 3T comparison.
+**Balance Druid (102), approved top-character comparison:** SimC `76f8118` has no shipped MID2 Balance profile. The approved replacement uses WCL Altar of Fangs ranking #1 Dwilkz, report `fgXxRTNdyPqvcLab`, fight 13, actor 5, recorded on October 23, 2026. All 78 non-selector talent entries and ranks from combatantInfo survive the pinned SimC export; the native harness reads those allocations and the same 16 equipped items. The reference uses SimC's default Balance APL and the solo composition rule. The observed potion is Light's Potential and the weapon consumable is rank-two Thalassian Phoenix Oil. Flask and potion quality and food are explicitly labelled `SIMC_SOURCED` assumptions. Replace this constructed reference when SimC ships MID2 Balance.
+
+Ten paired 300-second seeds (`70448,1–9`) against the frozen campaign database give the following results. These candidates use different master bases, so the changes are not isolated same-master attribution tests. All sixty fact-error lists are empty.
+
+| Native stage | 1T native / SimC DPS | Paired gap ±95% CI | 3T native / SimC DPS | Paired gap ±95% CI |
+|---|---:|---:|---:|---:|
+| Adapter `ff9e1b3fa2` (measured before squash) | 160,232 / 181,058 | −11.46% ±2.74pp | 239,405 / 329,676 | −27.35% ±2.02pp |
+| Instant Starfall 2pc `c83b19f8cb` | 160,232 / 181,058 | −11.46% ±2.74pp | 241,214 / 329,676 | −26.79% ±2.08pp |
+| Eclipse Clarity 4pc `6136176f46` | 170,185 / 181,058 | −6.01% ±1.73pp | 257,281 / 329,676 | −21.91% ±1.83pp |
+
+Both rows remain outside the mean gate. The largest demonstrated remaining 3T gap is periodic Starfall: native casts 191034 but emits no 191037 damage; SimC attributes about 73,974 DPS to that path. Its implementation and current-tip measurement are separate work. Inputs, raw WCL events, per-seed reports, and the full comparison are under `game-engine/data/diagnostics/tier-sets-2026-11-04/` (`balance-summary.md`). Augmentation 1473 still has no supplied current-tier reference or native harness profile; it has not been substituted or measured.
 
 ## Party-buff composition remeasure (2026-11-02)
 

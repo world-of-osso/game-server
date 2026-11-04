@@ -1,6 +1,7 @@
 // Child module declarations of dps_parity, one per line in alphabetical order.
 // .gitattributes merges this file with merge=union so concurrent spec branches that
 // each add a module line do not conflict; a duplicate line fails to compile (E0428).
+#[cfg(test)] mod balance_starfall_follower_tests;
 #[cfg(test)] mod balance_tier_follower_tests;
 #[cfg(test)] mod brewmaster_balanced_stratagem_follower_tests;
 #[cfg(test)] mod brewmaster_keg_primary_follower_tests;

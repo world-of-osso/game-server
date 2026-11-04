@@ -315,6 +315,7 @@ register_modules! {
     druid_shooting_stars: (1054, "modules/druid_shooting_stars.rs"),
     druid_star_cascade: (1054, "modules/druid_star_cascade.rs"),
     druid_starlord: (1054, "modules/druid_starlord.rs"),
+    druid_starfall: (1054, "modules/druid_starfall.rs"),
     balance_mid2: (1054, "modules/balance_mid2.rs"),
     balance_clarity: (1054, "modules/balance_clarity.rs"),
     druid_sundered_firmament: (1054, "modules/druid_sundered_firmament.rs"),
