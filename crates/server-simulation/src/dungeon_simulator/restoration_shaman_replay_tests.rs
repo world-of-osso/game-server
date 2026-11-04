@@ -512,7 +512,12 @@ fn restoration_shaman_replay_native_mana_regeneration() {
         .get::<crate::spell_cast::powers::PowerPools>(healer)
         .unwrap()
         .mana_regen_per_sec;
-    assert!((rate - 2000.0).abs() < 0.01, "actual mana regen: {rate}");
+    assert!(
+        crate::auras::has_aura(run.app.world(), healer, 52127),
+        "the idle follower maintains Water Shield"
+    );
+    // Native 52127 effect1 adds 714.149 mana per five seconds at level 90.
+    assert!((rate - 2142.8298).abs() < 0.01, "actual mana regen: {rate}");
 }
 
 #[test]
