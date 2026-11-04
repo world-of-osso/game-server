@@ -30,6 +30,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2 (2026-10-31): the matched Affliction actor selects Siphon Life 452999 and receives 453000 heals after Wither 445474 ticks. DB2 70448 effect 1 supplies 5% of eligible periodic damage; the effect 0 class mask identifies eligible spells.
 
+**VERIFIED_WCL** `dtmp7Lg2abzyZVBG` fight 3 pull 1 (2026-10-24): the matched Holy Paladin selects Hammer and Anvil 433718 and Resounding Strike 1271553. Holy Armament casts trigger healing 433722 with the DB2 70448 radius, target cap and effectiveness. Four heal groups within 75 seconds coincide with Armament casts; six other heal groups have unproven triggers and remain a gap.
+
 ## Equal-health healer target ties
 
 Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:

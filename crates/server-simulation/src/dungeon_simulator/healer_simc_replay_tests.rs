@@ -4,6 +4,74 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_armaments_trigger_hammer_and_anvil_healing() {
+    use shared::protocol::CombatLogKind;
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1, 10.339s and 13.904s.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for armament in [432459, 432472] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let healer = run.healer;
+        let tank = run.tank;
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let traits = run
+            .app
+            .world()
+            .get::<crate::class_progression::TraitLoadout>(healer)
+            .unwrap();
+        for talent in [433718, 1271553] {
+            assert!(
+                traits
+                    .active_talent_spells()
+                    .any(|entry| entry.spell_id == talent)
+            );
+        }
+        run.app.world_mut().get_mut::<Health>(tank).unwrap().current *= 0.1;
+        let before = run.app.world().get::<Health>(tank).unwrap().current;
+        let cursor = run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .len();
+        crate::spell_cast::creature_cast(run.app.world_mut(), healer, armament, Some(tank), false)
+            .unwrap();
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        assert!(
+            events
+                .iter()
+                .any(|event| event.source == Some(healer.to_bits())
+                    && event.target == Some(tank.to_bits())
+                    && event.spell_id == Some(433722)
+                    && event.kind == CombatLogKind::Heal
+                    && event.amount > 0),
+            "armament={armament}: {events:?}"
+        );
+        assert!(run.app.world().get::<Health>(tank).unwrap().current > before);
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_leaping_flames_heal_allies_without_hostile_reach() {
     use shared::protocol::CombatLogKind;
     let mut run = super::snapshot_party(1468, 90, 1);
