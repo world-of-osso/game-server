@@ -2384,8 +2384,15 @@ fn deal_source_damage_and_report(
     if deferred > 0.0 || consume_ox {
         crate::auras::stagger::deposit(world, target, deferred, consume_ox);
     }
+    let amount = amount - deferred;
+    let refracted = if ctx.spell.id == 1309786 {
+        0.0
+    } else {
+        crate::auras::refractive::snapshot(world, target).unwrap_or(0.0) * amount
+    };
+    crate::auras::refractive::deposit(world, target, refracted);
     let (amount, source_absorbed) =
-        crate::auras::source_absorb::absorb(world, target, ctx.caster, amount - deferred);
+        crate::auras::source_absorb::absorb(world, target, ctx.caster, amount - refracted);
     let (amount, absorbed) =
         crate::auras::absorb_damage(world, target, Some(ctx.caster), school, amount);
     let absorbed = absorbed + source_absorbed;

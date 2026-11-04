@@ -223,6 +223,202 @@ fn opening_holy_bulwark_matches_initial_cast_without_double_counting() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn refractive_images_defers_replay_damage_and_ticks_after_mirror_image() {
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3: 30% during Mirror Image,
+    // first deferred tick one second later; DB2 70448 gives 10% base, +20%.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    for actor in run.slots {
+        super::hold(&mut run, actor);
+    }
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let mage = run.slots[4];
+    let enemy = run.sources[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        mage,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.effects.iter().any(|effect| effect.aura_type == 69),
+    );
+    let first = crate::combat::replay_post_mitigation_hit(
+        run.app.world_mut(),
+        enemy,
+        mage,
+        None,
+        1,
+        false,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    assert!(
+        (first.damage_hp - 9_000.0).abs() < 2.0,
+        "{}",
+        first.damage_hp
+    );
+    assert!(
+        (first.absorbed_hp - 1_000.0).abs() < 2.0,
+        "{}",
+        first.absorbed_hp
+    );
+    let before_tick = run.app.world().get::<Health>(mage).unwrap().current;
+    for _ in 0..21 {
+        run.app.update();
+    }
+    let after_tick = run.app.world().get::<Health>(mage).unwrap().current;
+    assert!(
+        (before_tick - after_tick - 125.0).abs() < 2.0,
+        "tick {before_tick} -> {after_tick}"
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), mage, 55342, Some(mage), false).unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    assert!(crate::auras::has_aura(run.app.world(), mage, 1309793));
+    let second = crate::combat::replay_post_mitigation_hit(
+        run.app.world_mut(),
+        enemy,
+        mage,
+        None,
+        1,
+        false,
+        false,
+        10_000.0,
+    )
+    .unwrap();
+    assert!(
+        (second.damage_hp - 7_000.0).abs() < 2.0,
+        "{}",
+        second.damage_hp
+    );
+    assert!(
+        (second.absorbed_hp - 3_000.0).abs() < 2.0,
+        "{}",
+        second.absorbed_hp
+    );
+    // The remaining 875 and the new 3000 roll over eight ticks, without
+    // restarting the one-second phase.
+    let before_roll = run.app.world().get::<Health>(mage).unwrap().current;
+    for _ in 0..21 {
+        run.app.update();
+    }
+    let after_roll = run.app.world().get::<Health>(mage).unwrap().current;
+    assert!(
+        (before_roll - after_roll - 484.375).abs() < 2.0,
+        "rolling tick {before_roll} -> {after_roll}"
+    );
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..145 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let ticks: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(1309786)
+                && event.target == Some(mage.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::Damage
+        })
+        .collect();
+    assert_eq!(ticks.len(), 7, "{ticks:?}");
+    let paid: i32 = ticks.iter().map(|event| event.amount).sum();
+    assert!((paid as f32 - 7.0 * 484.375).abs() < 10.0, "paid={paid}");
+    assert!(!crate::auras::has_aura(run.app.world(), mage, 1309786));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn refractive_images_defers_native_melee_damage() {
+    use server::test_support::healer_intake::{Hit, HitKind};
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    for actor in run.slots {
+        super::hold(&mut run, actor);
+    }
+    for _ in 0..10 {
+        run.app.update();
+    }
+    let mage = run.slots[4];
+    let enemy = run.sources[0];
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        mage,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.effects.iter().any(|effect| effect.aura_type == 69),
+    );
+    let hit = Hit {
+        tick: 0,
+        source_guid: 1,
+        pack: 0,
+        target_slot: 4,
+        school: 1,
+        raw: 100_000.0,
+        level_scaling_factor: 1.0,
+        kind: HitKind::Melee {
+            hand: 0,
+            outcome: "Hit".into(),
+            level_difference: 0,
+            critical_multiplier: 1.0,
+            weapon_speed: 2.0,
+        },
+    };
+    let before = run.app.world().get::<Health>(mage).unwrap().current;
+    crate::combat::replay_healer_hit(run.app.world_mut(), enemy, mage, &hit).unwrap();
+    let immediate = before - run.app.world().get::<Health>(mage).unwrap().current;
+    let auras = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(mage)
+        .unwrap();
+    let tick = auras
+        .iter()
+        .find(|aura| aura.spell_id == 1309786)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert!(immediate > 0.0 && tick > 0.0);
+    assert!(
+        (immediate - tick * 72.0).abs() < 10.0,
+        "immediate={immediate}, tick={tick}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent

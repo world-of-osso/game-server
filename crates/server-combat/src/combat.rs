@@ -931,6 +931,7 @@ pub(crate) fn auto_attack_system(world: &mut World) {
         let owner_crit = read_pet_owner_critical_chance(world, attacker);
         let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
         let stagger = crate::auras::stagger::snapshot(world, target);
+        let refractive = crate::auras::refractive::snapshot(world, target);
         world
             .run_system_cached_with(
                 auto_attack_unit,
@@ -940,6 +941,7 @@ pub(crate) fn auto_attack_system(world: &mut World) {
                     owner_hit_expertise,
                     melee_range,
                     stagger,
+                    refractive,
                     None,
                 ),
             )
@@ -959,6 +961,7 @@ pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, h
     let owner_crit = read_pet_owner_critical_chance(world, attacker);
     let owner_hit_expertise = read_pet_owner_hit_expertise(world, attacker);
     let stagger = crate::auras::stagger::snapshot(world, target);
+    let refractive = crate::auras::refractive::snapshot(world, target);
     world
         .run_system_cached_with(
             auto_attack_unit,
@@ -968,6 +971,7 @@ pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, h
                 owner_hit_expertise,
                 melee_range,
                 stagger,
+                refractive,
                 Some((hand, target)),
             ),
         )
@@ -975,12 +979,21 @@ pub fn repeat_melee_swing(world: &mut World, attacker: Entity, target: Entity, h
 }
 
 fn auto_attack_unit(
-    In((attacker_entity, owner_crit, owner_hit_expertise, melee_range, stagger, repeat)): In<(
+    In((
+        attacker_entity,
+        owner_crit,
+        owner_hit_expertise,
+        melee_range,
+        stagger,
+        refractive,
+        repeat,
+    )): In<(
         Entity,
         Option<f32>,
         Option<f32>,
         f32,
         Option<crate::auras::stagger::Snapshot>,
+        Option<f32>,
         Option<(Hand, Entity)>,
     )>,
     time: Res<Time>,
@@ -1184,6 +1197,7 @@ fn auto_attack_unit(
             now: time.elapsed_secs_f64(),
             melee_range,
             stagger: stagger.as_ref(),
+            refractive,
             scaling: &params.scaling,
             summon_modifiers: &params.summon_modifiers,
             sight: &params.sight,
@@ -1637,6 +1651,7 @@ pub(crate) struct SwingContext<'a, 'w, 's> {
     now: f64,
     pub melee_range: f32,
     stagger: Option<&'a crate::auras::stagger::Snapshot>,
+    refractive: Option<f32>,
     pub scaling: &'a Query<'w, 's, ScalingItem<'static>>,
     summon_modifiers: &'a crate::auras::summon_damage::SummonDamageModifiers<'w, 's>,
     pub armor_constants: Option<&'a ArmorConstants>,
@@ -2547,6 +2562,13 @@ fn resolve_swing(
         });
     }
     let mut outcome_damage = outcome_damage - deferred;
+    let refracted = context.refractive.unwrap_or(0.0) * outcome_damage;
+    if refracted > 0.0 {
+        commands.queue(move |world: &mut World| {
+            crate::auras::refractive::deposit(world, target_entity, refracted);
+        });
+    }
+    outcome_damage -= refracted;
     let mut source_absorbed = 0.0;
     if let Some((spell, absorbed)) = crate::auras::source_absorb::consume(
         source_absorbs.as_deref_mut(),
@@ -3109,11 +3131,15 @@ pub fn replay_post_mitigation_hit(
         return Err("WCL_INTAKE_INVALID_HEALTH_MULTIPLIER".into());
     }
     let damage = amount * health_multiplier;
+    let refracted = crate::auras::refractive::snapshot(world, victim).unwrap_or(0.0) * damage;
+    crate::auras::refractive::deposit(world, victim, refracted);
+    let damage = damage - refracted;
     let (damage, source_absorbed) =
         crate::auras::source_absorb::absorb(world, victim, attacker, damage);
     let (damage, absorbed) =
         crate::auras::absorb_damage(world, victim, Some(attacker), school, damage);
-    let absorbed = absorbed + source_absorbed;
+    // WCL reports Refraction's deferred portion as an absorb on the original hit.
+    let absorbed = absorbed + source_absorbed + refracted;
     let (loss, absorbed) =
         deal_health_damage(world, attacker, victim, damage, school, spell_id, absorbed);
     if loss > 0.0 || absorbed > 0.0 {
@@ -3461,8 +3487,11 @@ fn replay_healer_hit_inner(
     if deferred > 0.0 || consume_ox {
         crate::auras::stagger::deposit(world, victim, deferred, consume_ox);
     }
+    let amount = amount - deferred;
+    let refracted = crate::auras::refractive::snapshot(world, victim).unwrap_or(0.0) * amount;
+    crate::auras::refractive::deposit(world, victim, refracted);
     let (amount, source_absorbed) =
-        crate::auras::source_absorb::absorb(world, victim, attacker, amount - deferred);
+        crate::auras::source_absorb::absorb(world, victim, attacker, amount - refracted);
     let (amount, absorbed) = crate::auras::absorb_damage(world, victim, Some(attacker), 1, amount);
     let absorbed = absorbed + source_absorbed;
     let amount = crate::auras::damage_transfer::route(world, attacker, victim, 1, amount);

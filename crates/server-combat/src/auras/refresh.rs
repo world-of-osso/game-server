@@ -36,6 +36,7 @@ pub(super) fn prepare_application(
     new: &mut AuraInstance,
     spell: &SpellInfo,
     forced_rolling: bool,
+    fixed_ticks: bool,
 ) {
     let fresh_duration_ms = new.duration_ms;
     let sourced_rolling =
@@ -50,6 +51,15 @@ pub(super) fn prepare_application(
         settle_previous_ticks(world, target, new);
     }
     prepare_periodic_phase(world, target, new, spell, sourced_rolling || forced_rolling);
+    if fixed_ticks {
+        let effect = new
+            .effects
+            .iter()
+            .find(|effect| effect.period_ms > 0)
+            .expect("fixed rolling periodic effect");
+        new.expires_at =
+            Some(effect.next_tick_at() + f64::from(fresh_duration_ms - effect.period_ms) / 1000.0);
+    }
     if crate::spell_cast::scripts::extends_reapplication(world, new.caster, new.spell_id) {
         carry_duration(world, target, new, DurationCarry::Extend);
     } else if matches!(new.spell_id, HOLY_BULWARK | SACRED_WEAPON) {
@@ -80,12 +90,12 @@ pub(super) fn prepare_application(
     if rolling {
         // SimC76f8118 action.cpp2730–2734/4995–5015 uses the same
         // next-tick schedule and remaining-plus-fresh budget for both.
-        if forced_rolling {
+        if forced_rolling && !fixed_ticks {
             carry_duration(world, target, new, DurationCarry::Pandemic);
-        } else {
+        } else if !forced_rolling {
             carry_rolling_duration(world, target, new);
         }
-        roll_remaining_periodic(world, target, new, fresh_duration_ms);
+        roll_remaining_periodic(world, target, new, fresh_duration_ms, fixed_ticks);
     }
     preserve_counter_only_stacks(world, target, new, spell);
     super::enhancement_power::preserve_refresh_duration(world, target, new);
@@ -308,6 +318,7 @@ fn roll_remaining_periodic(
     target: Entity,
     new: &mut AuraInstance,
     fresh_duration_ms: u32,
+    fixed_ticks: bool,
 ) {
     let Some(old) = previous(world, target, new) else {
         return;
@@ -326,12 +337,27 @@ fn roll_remaining_periodic(
         if prior.period_ms == 0 {
             continue;
         }
-        let unpaid = (1.0
-            + (old_expiry - prior.next_tick_at()) * 1000.0 / f64::from(prior.period_ms))
-        .max(0.0);
-        let future = (1.0
-            + (new_expiry - fresh.next_tick_at()) * 1000.0 / f64::from(fresh.period_ms))
-        .max(0.0);
+        let (unpaid, future) = if fixed_ticks {
+            (
+                f64::from(remaining_ticks(
+                    prior.next_tick_at(),
+                    old_expiry,
+                    prior.period_ms,
+                )),
+                f64::from(remaining_ticks(
+                    fresh.next_tick_at(),
+                    new_expiry,
+                    fresh.period_ms,
+                )),
+            )
+        } else {
+            (
+                (1.0 + (old_expiry - prior.next_tick_at()) * 1000.0 / f64::from(prior.period_ms))
+                    .max(0.0),
+                (1.0 + (new_expiry - fresh.next_tick_at()) * 1000.0 / f64::from(fresh.period_ms))
+                    .max(0.0),
+            )
+        };
         if future > 0.0 {
             let fresh_ticks = f64::from(fresh_duration_ms) / f64::from(fresh.period_ms);
             let spell = world
