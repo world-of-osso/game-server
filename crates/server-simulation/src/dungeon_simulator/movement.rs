@@ -199,7 +199,12 @@ fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
                 .get::<crate::combat::AutoAttack>(unit)
                 .is_some_and(|attack| attack.victim == target);
         let reach = if fixture_melee_target {
-            crate::scripted_ai::model_reach::melee_range(world, unit, target)?
+            // TC ChaseMovementGenerator.cpp:115–118, 180–205: path toward
+            // contact plus both combat reaches, not the melee admission edge.
+            const CONTACT_DISTANCE: f32 = 0.5;
+            let attacker = crate::scripted_ai::model_reach::combat_reach(world, unit)?;
+            let victim = crate::scripted_ai::model_reach::combat_reach(world, target)?;
+            attacker + victim + CONTACT_DISTANCE
         } else {
             world
                 .get::<crate::followers::FollowerReach>(unit)
