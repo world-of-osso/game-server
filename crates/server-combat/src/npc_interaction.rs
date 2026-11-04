@@ -274,7 +274,7 @@ struct InteractionWorld<'w, 's> {
         ),
     >,
     templates: Res<'w, FactionTemplates>,
-    reach: crate::creature_aggro_distance::AggroDistance<'w, 's>,
+    reach: crate::creature_aggro::AggroDistance<'w, 's>,
     catalog: Res<'w, GossipCatalog>,
 }
 
