@@ -434,3 +434,30 @@ fn replayed_vampiric_blood_is_cast_only_at_its_logged_time() {
         .is_err()
     );
 }
+
+#[test]
+#[ignore = "requires native Vampiric Blood spell data"]
+fn replayed_cast_of_a_unit_that_died_earlier_is_skipped() {
+    use super::healer_wcl_trace::{ReplayedCast, cast_due_replayed_casts, hold_replayed_casts};
+    let mut h = crate::spell_cast::test_harness::harness(Vec::new(), &[55233], 6).unwrap();
+    let actor = h.caster;
+    let slots = [actor; 5];
+    let casts: Vec<ReplayedCast> = serde_json::from_str(
+        r#"[{"time_ms":4323,"slot":0,"spell_id":55233,"evidence":"applybuff"},
+        {"time_ms":9000,"slot":0,"spell_id":55233,"evidence":"applybuff"}]"#,
+    )
+    .unwrap();
+    hold_replayed_casts(h.app.world_mut(), &slots, &casts);
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(actor)
+        .unwrap()
+        .current = 0.0;
+    let mut next = 0;
+    cast_due_replayed_casts(h.app.world_mut(), &slots, &casts, &mut next, 4300).unwrap();
+    assert_eq!(
+        next, 1,
+        "the dead unit's due cast is consumed, the later one is not"
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), actor, 55233));
+}

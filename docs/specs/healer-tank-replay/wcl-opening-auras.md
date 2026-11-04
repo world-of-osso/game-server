@@ -5,7 +5,7 @@ Matched replay input combines each actor's CombatantInfo auras with party-target
 
 ## Replayed tank casts
 
-Matched replay input also lists the tank's self-applied Vampiric Blood (55233) `applybuff` times inside the measured interval, with evidence `applybuff`. Native replay holds the spell on cooldown from its first-combat boundary, so the tank's APL cannot choose it. At each logged time the replay clears the hold, casts it through the normal follower execution path, and holds it again. A refused cast fails the replay. The healer replay then measures healer fidelity against the logged tank timing; tank cooldown fidelity is measured separately by the tank ranking. Reason: [Blood opener timing](250.md#matched-vampiric-blood-timing-gap).
+Matched replay input also lists the tank's self-applied Vampiric Blood (55233) `applybuff` times inside the measured interval, with evidence `applybuff`. Native replay holds the spell on cooldown from its first-combat boundary, so the tank's APL cannot choose it. At each logged time the replay clears the hold, casts it through the normal follower execution path, and holds it again. A tank that died earlier than in the log skips its later logged casts, because deaths are outcomes; any other refused cast fails the replay. The healer replay then measures healer fidelity against the logged tank timing; tank cooldown fidelity is measured separately by the tank ranking. Reason: [Blood opener timing](250.md#matched-vampiric-blood-timing-gap).
 
 ## Preservation Merithra timing
 

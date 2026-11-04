@@ -184,10 +184,10 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     let scarlet = take_scarlet(world, caster);
     if relation_matches(world, caster, target, Relation::Ally) {
         spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(target), depth + 1);
-        super::essence_burst::roll_ruby_essence_burst(world, caster);
+        super::essence_burst::roll_living_flame_essence_burst(world, caster);
         for extra in leaping_extras(world, caster, target, stacks, Relation::Ally) {
             spell_cast::cast_triggered(world, caster, LIVING_FLAME_HEAL, Some(extra), depth + 1);
-            super::essence_burst::roll_ruby_essence_burst(world, caster);
+            super::essence_burst::roll_living_flame_essence_burst(world, caster);
         }
         return;
     }
@@ -209,7 +209,7 @@ fn living_flame(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     }
     // sc_evoker.cpp7004–7023: one Ruby roll per damage hit and counted heal hit.
     for _ in 0..1 + extras.len() + heal_hits {
-        super::essence_burst::roll_ruby_essence_burst(world, caster);
+        super::essence_burst::roll_living_flame_essence_burst(world, caster);
     }
 }
 

@@ -78,7 +78,9 @@ fn release_dream(
         .expect("Dream Breath native cone")
         .max_targets = allies + 1;
     heal.cast_empower_level = Some(rank);
-    spell_cast::execute_cast(world, caster, &heal, Some(caster))
+    spell_cast::execute_cast(world, caster, &heal, Some(caster))?;
+    super::essence_burst::roll_essence_well(world, caster);
+    Ok(())
 }
 
 fn release_spirit(

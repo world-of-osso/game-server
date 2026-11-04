@@ -169,6 +169,9 @@ pub(super) fn release(
     spell_cast::execute_cast(world, caster, &child, target)?;
     extend_dragonrage(world, caster);
     grant_empower_buffs(world, caster);
+    if matches!(spell.id, 357208 | 382266) {
+        super::essence_burst::roll_essence_well(world, caster);
+    }
     if matches!(spell.id, 357208 | 382266) && combat::auras::has_aura(world, caster, 369939) {
         combat::auras::remove_auras(
             world,

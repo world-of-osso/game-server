@@ -61,6 +61,11 @@ pub(super) fn cast_due_replayed_casts(
         .filter(|cast| cast.time_ms < elapsed_ms + 50)
     {
         let unit = slots[cast.slot];
+        *next += 1;
+        // A unit that died earlier than in the log cannot make its logged cast.
+        if !crate::spell_cast::targets::is_alive(world, unit) {
+            continue;
+        }
         // Clears the hold exactly; a finite reduction can leave rounding residue.
         crate::spell_cast::scripts::reduce_cooldown(world, unit, cast.spell_id, f64::INFINITY);
         execute(world, unit, Execution::Spell(cast.spell_id, unit, None)).map_err(|error| {
@@ -75,7 +80,6 @@ pub(super) fn cast_due_replayed_casts(
             cast.spell_id,
             REPLAY_HOLD_MS,
         );
-        *next += 1;
     }
     Ok(())
 }
