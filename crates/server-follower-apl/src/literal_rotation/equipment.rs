@@ -22,6 +22,14 @@ pub const SLOTS: &[(&str, EquipmentSlot)] = &[
     ("main_hand", EquipmentSlot::MainHand),
 ];
 
+// INFERRED_WCL: items whose measured combat-ready share is <= about 30%.
+// Keep this single qualification list aligned with docs/specs/healer-tank-replay/healer-item-usage.md.
+const HEALER_RATE_QUALIFIED_ITEMS: &[u32] = &[270162];
+
+pub(super) fn healer_rate_qualified(item_id: u32) -> bool {
+    HEALER_RATE_QUALIFIED_ITEMS.contains(&item_id)
+}
+
 pub struct Slot {
     pub item_id: u32,
     pub item_level: u16,
@@ -213,6 +221,7 @@ impl Equipment {
         native: &NativeFacts<'_>,
     ) -> Result<f64, String> {
         match field {
+            "healer_rate_qualified" => Ok(boolean(healer_rate_qualified(item.item_id))),
             "ilvl" => Ok(f64::from(item.item_level)),
             "cast_time" => Ok(item.metadata.cast_time),
             "proc.any_dps.default_value" => item.metadata.proc_default_value(),

@@ -33,6 +33,22 @@ fn native_apl_weapon_group_reads_actual_main_hand() {
     }
 }
 
+#[test]
+fn native_apl_in_combat_reads_actor_combat_status() {
+    use shared::components::CombatStatus;
+    let mut world = World::new();
+    let actor = world.spawn_empty().id();
+    let bindings = Bindings::default();
+    let encounter = Encounter::dungeon(0.0);
+    let read =
+        |world: &World| NativeFacts::new(world, actor, &bindings, encounter, 1).value("in_combat");
+    assert_eq!(read(&world), Ok(0.0));
+    world.entity_mut(actor).insert(CombatStatus(true));
+    assert_eq!(read(&world), Ok(1.0));
+    world.entity_mut(actor).insert(CombatStatus(false));
+    assert_eq!(read(&world), Ok(0.0));
+}
+
 const TIGER_PALM: u32 = 100780;
 const BLACKOUT_KICK: u32 = 100784;
 const HIT_COMBO: u32 = 196740;
