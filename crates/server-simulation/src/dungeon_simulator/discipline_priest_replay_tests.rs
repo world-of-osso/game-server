@@ -1,6 +1,197 @@
 use std::path::Path;
 
 #[test]
+#[ignore = "requires native Discipline Priest spell data"]
+fn discipline_two_piece_penance_advances_mind_blast_cooldown() {
+    use crate::auras::{AuraApplication, AuraSource, RemoveReason};
+    use crate::spell_cast::{SpellHistory, test_harness::harness};
+
+    for (equipped, action) in [(false, 47540), (true, 47540), (true, 585)] {
+        let mut h = harness(Vec::new(), &[1296577, 47540, 8092, 585], 5).unwrap();
+        let known = h
+            .app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(h.caster)
+            .unwrap()
+            .iter()
+            .filter(|&id| id != 1296577)
+            .collect();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(crate::class_progression::KnownSpells::fixture(known))
+            .insert(shared::components::ActiveSpec(256));
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            RemoveReason::Consumed,
+            |aura| aura.spell_id == 1296577,
+        );
+        if equipped {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 1296577,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            h.app.world_mut(),
+            h.caster,
+            8092,
+            12000.0,
+        );
+        let read_remaining = |h: &crate::spell_cast::test_harness::Harness| {
+            let world = h.app.world();
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(8092)
+                .unwrap();
+            world
+                .get::<SpellHistory>(h.caster)
+                .unwrap()
+                .remaining_cooldown_ms(spell, crate::spell_cast::history_now(world))
+        };
+        let before = read_remaining(&h);
+        let start = crate::spell_cast::history_now(h.app.world());
+        h.cast_and_deliver(action, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let elapsed = (crate::spell_cast::history_now(h.app.world()) - start) * 1000.0;
+        let reduction = before as f64 - read_remaining(&h) as f64 - elapsed;
+        let expected = if equipped && action == 47540 {
+            2000.0
+        } else {
+            0.0
+        };
+        assert!(
+            (reduction - expected).abs() < 2.0,
+            "{action} set={equipped}: {reduction}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires the native Discipline Priest replay snapshot"]
+fn discipline_two_piece_increases_real_penance_damage_and_healing() {
+    use super::dps_parity::literal_rotation::execution::{Execution, execute};
+    use crate::auras::{AuraApplication, AuraSource, RemoveReason};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    use shared::protocol::CombatLogKind;
+
+    for healing in [false, true] {
+        let mut samples = Vec::new();
+        for equipped in [false, true] {
+            let _seed = crate::random::seed_scope(70448);
+            let mut run = super::healer_simc_replay::snapshot_party(256, 90, 1);
+            let healer = run.healer;
+            let target = if healing { run.tank } else { run.sources[0] };
+            super::healer_simc_replay::hold(&mut run, healer);
+            run.app
+                .world_mut()
+                .entity_mut(healer)
+                .insert(crate::stats::EquippedItems::default());
+            for _ in 0..6 {
+                run.app.update();
+            }
+            run.app
+                .world_mut()
+                .get_mut::<crate::stats::CharacterStats>(healer)
+                .unwrap()
+                .crit_pct = 0.0;
+            if healing {
+                *run.app
+                    .world_mut()
+                    .get_mut::<shared::components::Health>(target)
+                    .unwrap() = shared::components::Health {
+                    current: 1.0,
+                    max: 10_000_000.0,
+                };
+            }
+            crate::auras::remove_auras(
+                run.app.world_mut(),
+                healer,
+                RemoveReason::Consumed,
+                |aura| aura.spell_id == 1296577,
+            );
+            if equipped {
+                crate::auras::apply_aura(
+                    run.app.world_mut(),
+                    &AuraApplication {
+                        caster: healer,
+                        target: healer,
+                        spell_id: 1296577,
+                        effect_mask: u32::MAX,
+                        source: AuraSource::Cast,
+                    },
+                );
+            }
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), healer, 1296577),
+                equipped
+            );
+            run.app
+                .world_mut()
+                .resource_mut::<ObservedCombatEvents>()
+                .0
+                .clear();
+            execute(
+                run.app.world_mut(),
+                healer,
+                Execution::Spell(47540, target, Some(target)),
+            )
+            .unwrap();
+            for _ in 0..100 {
+                run.app.update();
+            }
+            assert_eq!(
+                crate::auras::has_aura(run.app.world(), healer, 1296577),
+                equipped
+            );
+            let hits: Vec<_> = run
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .filter(|event| {
+                    event.target == Some(target.to_bits())
+                        && if healing {
+                            event.kind == CombatLogKind::Heal && event.spell_id == Some(47750)
+                        } else {
+                            event.kind == CombatLogKind::Damage && event.spell_id == Some(47666)
+                        }
+                })
+                .map(|event| (event.amount, event.crit))
+                .collect();
+            assert!(
+                !hits.is_empty(),
+                "the actual Penance channel must affect its target"
+            );
+            samples.push(hits);
+        }
+        assert_eq!(samples[0].len(), samples[1].len());
+        let mut compared = 0;
+        for (base, tier) in samples[0].iter().zip(&samples[1]) {
+            if base.1 || tier.1 {
+                continue;
+            }
+            let ratio = tier.0 as f64 / base.0 as f64;
+            // Both native payloads have 5% variance; compare matching noncrit bolts.
+            assert!(
+                (1.2 * 0.95 / 1.05..=1.2 * 1.05 / 0.95).contains(&ratio),
+                "native set modifier healing={healing}: {base:?} -> {tier:?}"
+            );
+            compared += 1;
+        }
+        assert!(compared >= 2, "need two matching noncritical Penance bolts");
+    }
+}
+
+#[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn discipline_soulcoiler_real_item_channels_five_fractional_barriers() {
     use super::dps_parity::literal_rotation::{Driver, equipment::Equipment, execution::Prepared};
