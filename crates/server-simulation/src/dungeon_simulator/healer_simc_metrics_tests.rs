@@ -96,6 +96,13 @@ fn healer_report_records_real_mana_payment_by_spell() {
             .as_array()
             .unwrap()
             .iter()
+            .all(|event| { event["max_hp"].as_f64().is_some_and(|max_hp| max_hp > 0.0) })
+    );
+    assert!(
+        report["self_healing_events"]
+            .as_array()
+            .unwrap()
+            .iter()
             .any(|event| event["spell"] == 2061
                 && event["slot"] == 0
                 && event["effective"].as_u64().unwrap() > 0)

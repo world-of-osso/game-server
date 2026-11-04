@@ -299,6 +299,52 @@ fn wcl_intake_avoided_outcomes_publish_distinct_miss_events() {
 }
 
 #[test]
+#[ignore = "requires native Flash Heal spell data"]
+fn wcl_logged_external_heal_keeps_effective_amount_without_second_modifiers() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    use shared::components::Health;
+    let mut h = harness(Vec::new(), &[2061], 10).unwrap();
+    let target = spawn_player(&mut h.app, 10, 3.0);
+    *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
+        current: 100_000.0,
+        max: 200_000.0,
+    };
+    let heal: super::healer_wcl_trace::RecordedHeal = serde_json::from_str(
+        r#"{"time_ms":1500,"source_actor":2,"spell_id":2061,"amount":25000,"max_hp":100000}"#,
+    )
+    .unwrap();
+    heal.deliver(h.app.world_mut(), h.caster, target).unwrap();
+    assert_eq!(
+        h.app.world().get::<Health>(target).unwrap().current,
+        150_000.0
+    );
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 0.0;
+    heal.deliver(h.app.world_mut(), h.caster, target).unwrap();
+    assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
+}
+
+#[test]
+#[ignore = "requires canonical Brewmaster profile and world database"]
+fn wcl_raw_tank_hit_runs_native_stagger() {
+    use shared::components::Health;
+    let mut party =
+        super::healer_simc_replay::snapshot_party_with_specs(1468, 90, [268, 1468, 62, 262, 262]);
+    let tank = party.tank;
+    let enemy = party.sources[0];
+    party.app.init_resource::<super::healer_intake::Capture>();
+    let before = party.app.world().get::<Health>(tank).unwrap().current;
+    let pool = crate::auras::stagger::pool_size(party.app.world(), tank);
+    let hit: RecordedHit = serde_json::from_str(r#"{"time_ms":0,"slot":0,"source_actor":413,"target_actor":6,"spell_id":1306338,"school":1,"defense":2,"hit_type":1,"periodic":false,"max_hp":100000,"amount":1000,"absorbed":0,"raw":10000}"#).unwrap();
+    assert!(matches!(
+        hit.deliver_raw(party.app.world_mut(), enemy, &[tank; 5])
+            .unwrap(),
+        super::healer_wcl_trace::Delivery::Applied(_)
+    ));
+    assert!(crate::auras::stagger::pool_size(party.app.world(), tank) > pool);
+    assert!(party.app.world().get::<Health>(tank).unwrap().current < before);
+}
+
+#[test]
 #[ignore = "requires canonical Brewmaster profile and world database"]
 fn wcl_intake_does_not_stagger_already_mitigated_damage() {
     use shared::components::Health;
