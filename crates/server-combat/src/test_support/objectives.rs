@@ -10,6 +10,14 @@ pub enum InteractionStep {
     Wait,
 }
 
+pub fn install_heal_gossip(app: &mut App, db: &rusqlite::Connection) -> Result<(), String> {
+    app.insert_resource(
+        crate::npc_interaction::load_gossip_catalog(db)
+            .map_err(|error| format!("objective gossip catalog: {error}"))?,
+    );
+    Ok(())
+}
+
 pub fn install(app: &mut App, db: &rusqlite::Connection) -> Result<(), String> {
     app.insert_resource(
         crate::npc_interaction::spellclick::load_spellclick_catalog(db)
@@ -39,6 +47,25 @@ pub fn next(
     let map = *world
         .get::<InMap>(owner)
         .ok_or("interaction owner lacks map")?;
+    if let Some(state) = crate::scripted_ai::heal_objective::encounter_state(world, objective) {
+        use crate::scripted_ai::instance_script::EncounterState;
+        if state != EncounterState::NotStarted {
+            return Ok(Some(InteractionStep::Wait));
+        }
+        let step = match crate::npc_interaction::find_interactable_flag(
+            world,
+            owner,
+            objective,
+            shared::protocol::NpcFlags::GOSSIP,
+        ) {
+            Ok(_) => InteractionStep::Interact { target: objective },
+            Err(shared::protocol::InteractionError::TooFarAway) => {
+                InteractionStep::Approach { target: objective }
+            }
+            Err(error) => return Err(format!("objective gossip: {error:?}")),
+        };
+        return Ok(Some(step));
+    }
     let Some(npc) = world.get::<Npc>(objective) else {
         return Ok(None);
     };
@@ -107,6 +134,9 @@ pub fn next(
 }
 
 pub fn interact(world: &mut World, owner: Entity, target: Entity) -> Result<(), String> {
+    if crate::scripted_ai::heal_objective::encounter_state(world, target).is_some() {
+        return crate::npc_interaction::select_healing_objective_gossip(world, owner, target);
+    }
     let entry = world
         .get::<Npc>(target)
         .ok_or("interaction source lacks NPC")?

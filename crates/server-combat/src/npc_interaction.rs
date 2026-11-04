@@ -188,7 +188,7 @@ pub(crate) fn find_interactable_trading_vendor(
     find_interactable_flag(world, player, npc, NpcFlags::TRADING_POST)
 }
 
-fn find_interactable_flag(
+pub(crate) fn find_interactable_flag(
     world: &World,
     player: Entity,
     npc: Entity,
@@ -237,6 +237,46 @@ fn find_interactable_flag(
         reaches,
     )?;
     Ok(target)
+}
+
+/// Select the data-backed healing-objective gossip action without a client transport.
+pub(crate) fn select_healing_objective_gossip(
+    world: &mut World,
+    player: Entity,
+    npc: Entity,
+) -> Result<(), String> {
+    let entry = find_interactable_flag(world, player, npc, NpcFlags::GOSSIP)
+        .map_err(|error| format!("objective gossip interaction: {error:?}"))?
+        .template_id;
+    if world.get::<crate::maps::InMap>(player) != world.get::<crate::maps::InMap>(npc)
+        || world.get::<crate::maps::InMap>(npc).is_none()
+    {
+        return Err("objective gossip belongs to another copy".into());
+    }
+    let flags = *world
+        .get::<NpcFlags>(npc)
+        .ok_or("objective has no NPC flags")?;
+    let opening = world
+        .get_resource::<GossipCatalog>()
+        .ok_or("objective gossip catalog missing")?
+        .open(entry, flags)
+        .ok_or("objective gossip menu missing")?;
+    if opening
+        .actions
+        .iter()
+        .filter(|(_, action)| *action == GossipAction::TempleAvatarStart)
+        .count()
+        != 1
+    {
+        return Err("objective gossip start option missing or ambiguous".into());
+    }
+    crate::scripted_ai::heal_objective::start(world, npc);
+    if crate::scripted_ai::heal_objective::encounter_state(world, npc)
+        != Some(crate::scripted_ai::instance_script::EncounterState::InProgress)
+    {
+        return Err("objective gossip did not start encounter".into());
+    }
+    Ok(())
 }
 
 #[derive(SystemParam)]

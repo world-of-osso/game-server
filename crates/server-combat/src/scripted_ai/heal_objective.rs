@@ -31,6 +31,14 @@ pub(crate) fn initialize(world: &mut World, unit: Entity) {
         .remove::<crate::spell_cast::powers::CreatureHealthRegenTimer>();
 }
 
+/// Read the native state of a data-backed healing objective.
+pub fn encounter_state(world: &mut World, unit: Entity) -> Option<EncounterState> {
+    start_percent(world, unit)?;
+    let map = *world.get::<InMap>(unit)?;
+    let boss = instance_script::bound_boss(world, unit)?;
+    instance_script::get_boss_state(world, map, boss.boss_id)
+}
+
 /// Start the bound objective after its encounter-specific interaction.
 pub(crate) fn start(world: &mut World, unit: Entity) {
     if start_percent(world, unit).is_none() {

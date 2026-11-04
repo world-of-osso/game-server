@@ -421,6 +421,19 @@ fn build_runtime_app(
     if !reused {
         load_gameplay_data(&mut app, path);
     }
+    let has_heal_objective = app
+        .world()
+        .resource::<crate::maps::MapStore>()
+        .encounter_heal_objectives
+        .keys()
+        .any(|(map, _)| *map == map_id);
+    if has_heal_objective {
+        let db =
+            rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+                .expect("open healing objective gossip catalog");
+        server::test_support::objectives::install_heal_gossip(&mut app, &db)
+            .expect("install healing objective gossip");
+    }
     let wdts = app
         .world()
         .resource::<crate::maps::MapStore>()

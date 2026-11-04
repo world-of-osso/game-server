@@ -5842,10 +5842,14 @@ impl Run {
                             .world()
                             .get::<Position>(target)
                             .ok_or("interaction target lacks position")?;
+                        let live = Vec3::new(at.x, at.y, at.z);
+                        let destination = self
+                            .reanchored_objective_position(pack_id, target, live)
+                            .unwrap_or(live);
                         self.app
                             .world_mut()
                             .entity_mut(self.party.owner)
-                            .insert(MoveIntent(Vec3::new(at.x, at.y, at.z)));
+                            .insert(MoveIntent(destination));
                     }
                     server::test_support::objectives::InteractionStep::Interact { target } => {
                         self.app
