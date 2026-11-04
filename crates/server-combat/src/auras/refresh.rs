@@ -67,6 +67,7 @@ pub(super) fn prepare_application(
     match new.spell_id {
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
         HOLY_BULWARK_ABSORB => accumulate_holy_bulwark(world, target, new),
+        1241866 => accumulate_glistening_radiance(world, target, new),
         77535 => accumulate_blood_shield(world, target, new),
         372505 | 47753 => accumulate_capped_absorb(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
@@ -414,6 +415,28 @@ fn accumulate_holy_bulwark(world: &World, target: Entity, new: &mut AuraInstance
     let max_health = world
         .get::<Health>(target)
         .expect("living Holy Bulwark target")
+        .max;
+    let previous = previous(world, target, new)
+        .and_then(|old| {
+            old.effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .map(|effect| effect.absorb_remaining)
+        })
+        .unwrap_or(0.0);
+    if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
+        shield.absorb_remaining =
+            (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
+    }
+}
+
+/// DB2 70448 Glistening Radiance 1241805: carry remaining shields up to effect 1's cap.
+fn accumulate_glistening_radiance(world: &World, target: Entity, new: &mut AuraInstance) {
+    let cap_percent =
+        crate::spell_cast::scripts::script_effect_value(world, new.caster, 1241805, 1);
+    let max_health = world
+        .get::<Health>(target)
+        .expect("living Beacon target")
         .max;
     let previous = previous(world, target, new)
         .and_then(|old| {
