@@ -431,6 +431,36 @@ fn consume_bulwark_of_righteous_fury(
     }
 }
 
+// VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1 at 10.339s and 13.904s;
+// DB2 70448 spells 433718 and 1271553: Holy Armaments activate the healing shockwave.
+fn heal_from_armament(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    if !matches!(spell.id, 432459 | 432472)
+        || !world
+            .get::<ActiveSpec>(caster)
+            .is_some_and(|spec| spec.0 == 65)
+        || !world.get::<TraitLoadout>(caster).is_some_and(|traits| {
+            [433718, 1271553].iter().all(|id| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == *id)
+            })
+        })
+    {
+        return;
+    }
+    let Some(target) = spell.cast_primary_target else {
+        return;
+    };
+    let Some(mut heal) = combat::spell_cast::load_triggered_spell(world, 433722, 1) else {
+        return;
+    };
+    let effectiveness = combat::spell_cast::scripts::script_effect_value(world, caster, 1271553, 0);
+    heal.effects[0].bonus_coefficient *= effectiveness / 100.0;
+    let cap = combat::spell_cast::scripts::script_effect_value(world, caster, 433718, 2);
+    heal.target_restrictions.get_or_insert_default().max_targets = cap as u32;
+    combat::spell_cast::launch_triggered_spell(world, caster, &heal, Some(target), 1);
+}
+
 fn hammer_and_anvil_from_critical(
     world: &mut World,
     ctx: &combat::spell_cast::effects::EffectCtx<'_>,
@@ -1128,6 +1158,7 @@ fn after_cast(world: &mut World, caster: Entity, spell: &SpellInfo) {
     echo_forge_spender(world, caster, spell);
     advance_shining_light(world, caster, spell);
     advance_divine_guidance(world, caster, spell.id);
+    heal_from_armament(world, caster, spell);
     // Native70448 spell432478 effect0 is aura332: misc432459 -> amount432472.
     // SimC76f8118 sc_paladin.cpp2748–2752 alternates only on actual hardcasts.
     let Some(override_spell) = world.resource::<SpellStore>().get(432478) else {
