@@ -283,6 +283,34 @@ fn preservation_set_2pc_sends_living_flame_when_essence_burst_is_consumed() {
 }
 
 #[test]
+#[ignore = "requires native Essence Burst and Preservation 12.1 set spell data"]
+fn preservation_set_4pc_grants_essence_burst_only_from_verdant_embrace() {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    for (spell, expected) in [
+        (360995, true),
+        (355913, false),
+        (361469, false),
+        (366155, false),
+    ] {
+        let spells = [
+            1296642, 369299, 360995, 361195, 355913, 355916, 361469, 361509, 366155,
+        ];
+        let mut h = harness(Vec::new(), &spells, 13).unwrap();
+        let target = spawn_player(&mut h.app, 13, 2.0);
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+        h.advance(100);
+        h.cast_and_deliver(spell, Some(target));
+        h.advance(100);
+        assert_eq!(
+            crate::auras::has_aura(h.app.world(), h.caster, 369299),
+            expected,
+            "spell {spell}, failed casts: {:?}",
+            h.inbox.failed
+        );
+    }
+}
+
+#[test]
 #[ignore = "checks native Emerald Blossom and Fluttering Seedlings"]
 fn preservation_blossom_generates_seedlings_for_unfilled_slots() {
     let spells = [359793, 355913, 355916, 361361];

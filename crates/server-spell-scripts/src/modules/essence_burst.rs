@@ -11,6 +11,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(hook),
     SpellScriptHook::AfterForegroundSpender(cast_twin_flame),
     SpellScriptHook::AfterForegroundSpender(cast_set_living_flame),
+    SpellScriptHook::EarlyAuraRegistration(register),
 ];
 
 fn hook(spell: u32) -> Option<AfterCastHook> {
@@ -32,6 +33,8 @@ const ESSENCE_BURST: u32 = 359618;
 const DRAGONRAGE: u32 = 375087;
 
 const PRESERVATION_SET_2PC: u32 = 1296641;
+const PRESERVATION_SET_4PC: u32 = 1296642;
+const VERDANT_EMBRACE: u32 = 360995;
 const LIVING_FLAME: u32 = 361469;
 const LIVING_FLAME_DAMAGE: u32 = 361500;
 const LIVING_FLAME_HEAL: u32 = 361509;
@@ -119,6 +122,25 @@ fn nearby_injured_ally(
     targets::area_units(world, caster, center, range, Relation::Ally, 0)
         .into_iter()
         .find(|&unit| unit != target && injured(world, unit))
+}
+
+fn register(scripts: &mut combat::auras::scripts::AuraScripts) {
+    scripts
+        .0
+        .entry(PRESERVATION_SET_4PC)
+        .or_insert(combat::auras::scripts::AuraScript::default())
+        .check_proc = Some(is_own_verdant_embrace);
+}
+
+/// Native 1296642 description: only Verdant Embrace can grant Essence Burst.
+/// DB2 1296642 effect 1 has empty SpellClassMask fields, so the spell is matched by ID;
+/// the generic successful-cast proc would otherwise accept any cast.
+fn is_own_verdant_embrace(
+    _: &World,
+    aura: &combat::auras::AuraInstance,
+    event: &combat::auras::procs::AuraEvent,
+) -> bool {
+    event.actor == aura.caster && event.spell_id == Some(VERDANT_EMBRACE)
 }
 
 fn roll_azure_essence_burst(world: &mut World, caster: Entity, _: &SpellInfo) {
