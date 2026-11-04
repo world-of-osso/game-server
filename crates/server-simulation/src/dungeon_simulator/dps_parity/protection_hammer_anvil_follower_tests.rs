@@ -80,6 +80,45 @@ fn assert_hammer_and_anvil(producer: u32, critical: bool) {
 
 #[test]
 #[ignore = "requires canonical world database and MID2 Protection inputs"]
+fn protection_masterwork_bulwark_spends_a_charge_on_blessed_hammer() {
+    use crate::auras::ActiveAuras;
+    let mut run = prepare_registered_player(66, 1).unwrap();
+    let actor = run.actor;
+    let target = run.targets[0];
+    engage(&mut run);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 432459, Some(actor), false)
+        .unwrap();
+    for _ in 0..40 {
+        run.app.update();
+    }
+    let stacks = |run: &Run| {
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1271383 && aura.caster == actor)
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(stacks(&run), 3);
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 204019, Some(target), false)
+        .unwrap();
+    for _ in 0..10 {
+        run.app.update();
+    }
+    assert_eq!(stacks(&run), 2);
+    assert!(
+        run.app
+            .world()
+            .get::<ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 1239002 && aura.caster == actor)
+    );
+}
+
+#[test]
+#[ignore = "requires canonical world database and MID2 Protection inputs"]
 fn judgment_critical_strike_triggers_hammer_and_anvil() {
     assert_hammer_and_anvil(275779, true);
 }

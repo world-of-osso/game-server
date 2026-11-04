@@ -102,6 +102,13 @@ const DECLARED: &[(&str, &str, &str, usize)] = &[
 // function fail the audit instead of silently inheriting an old exception.
 const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
     (
+        "paladin_masterwork.rs",
+        "find_lesser_armament_target",
+        "area",
+        1,
+        "selects allies for Lesser Armaments",
+    ),
+    (
         "discipline_atonement.rs",
         "random_enemy_selectors_ignore_archetype_order",
         "query",
