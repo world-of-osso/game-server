@@ -222,6 +222,7 @@ C	enhancement/maelstrom_weapon.rs	384451
 C	enhancement_converging.rs	198300
 C	enhancement_crackling.rs	224127
 C	essence_burst.rs	359618
+C	essence_burst.rs	369299
 C	essence_burst.rs	361500
 C	essence_burst.rs	361509
 C	essence_burst.rs	1265980
@@ -671,6 +672,7 @@ D	survival_pet.rs	launch_strike	launch_triggered_spell	&spell	1	1251779
 D	survival_takedown.rs	cast_pet_damage	launch_triggered_spell	&spell	1	1253862
 D	essence_burst.rs	cast_twin_flame	try_cast_triggered	child	1	1265980,1265991
 D	essence_burst.rs	cast_set_living_flame	cast_triggered	child	1	361500,361509
+D	essence_burst.rs	roll_essence_burst	cast_triggered	buff	1	359618,369299
 D	destruction_rift.rs	roll_rift	try_cast_triggered	summon	1	387979,394235,394243,434587
 D	destruction_rift.rs	barrage_tick	try_cast_triggered	child	1	387985,394238
 D	affliction_grasp.rs	copy_owned_ticks	cast_triggered_with_effect0_amount	child	1	1261158,1261166,1261176,1279686

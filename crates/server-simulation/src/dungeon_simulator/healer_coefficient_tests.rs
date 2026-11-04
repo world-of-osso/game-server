@@ -310,6 +310,100 @@ fn preservation_set_4pc_grants_essence_burst_only_from_verdant_embrace() {
     }
 }
 
+/// Share of `trials` foreground casts of `spell` (empowered to rank 1 when `empower`, always
+/// critical when `crit`) after which the caster holds Preservation Essence Burst.
+fn preservation_essence_burst_share(talents: &[u32], spell: u32, empower: bool, crit: bool) -> f64 {
+    use crate::spell_cast::test_harness::{harness, spawn_player};
+    const TRIALS: usize = 200;
+    let _seed = crate::random::seed_scope(1468);
+    let mut spells = vec![369299, spell, 361509, 355941, 359115];
+    spells.extend_from_slice(talents);
+    let mut h = harness(Vec::new(), &spells, 13).unwrap();
+    let target = spawn_player(&mut h.app, 13, 2.0);
+    if crit {
+        h.app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(h.caster)
+            .unwrap()
+            .crit_pct = 100.0;
+    }
+    let mut gains = 0;
+    for _ in 0..TRIALS {
+        h.app.world_mut().get_mut::<Health>(target).unwrap().current = 1.0;
+        h.app
+            .world_mut()
+            .get_mut::<shared::components::Mana>(h.caster)
+            .unwrap()
+            .current = 1e9;
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            h.caster,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == 369299,
+        );
+        crate::spell_cast::scripts::reduce_cooldown(
+            h.app.world_mut(),
+            h.caster,
+            spell,
+            f64::INFINITY,
+        );
+        if empower {
+            let targets = crate::spell_cast::CastTargets {
+                unit: h.caster,
+                primary: None,
+                destination: None,
+            };
+            crate::spell_cast::creature_cast_empowered_with_targets(
+                h.app.world_mut(),
+                h.caster,
+                spell,
+                targets,
+                1,
+            )
+            .unwrap();
+        } else {
+            h.cast_and_deliver(spell, Some(target));
+        }
+        h.advance(80);
+        gains += usize::from(crate::auras::has_aura(h.app.world(), h.caster, 369299));
+    }
+    assert!(
+        h.inbox.failed.is_empty(),
+        "failed casts: {:?}",
+        h.inbox.failed
+    );
+    gains as f64 / TRIALS as f64
+}
+
+#[test]
+#[ignore = "requires native Preservation Essence Burst, Essence Well and Living Flame data"]
+fn preservation_essence_burst_sources_roll_their_native_chances() {
+    let share = preservation_essence_burst_share;
+    // 369297 effect 0: Living Flame 20% per hit; effect 1: Reversion 15% per cast.
+    let living_flame = share(&[369297], 361469, false, false);
+    assert!(
+        (0.13..0.27).contains(&living_flame),
+        "Living Flame {living_flame}"
+    );
+    let reversion = share(&[369297], 366155, false, false);
+    assert!((0.09..0.21).contains(&reversion), "Reversion {reversion}");
+    // 445625: a critical Living Flame hit rolls again, 1 - 0.8^2 = 36%; crits alone add nothing.
+    let critical = share(&[369297], 361469, false, true);
+    assert!(
+        (0.13..0.27).contains(&critical),
+        "critical Living Flame {critical}"
+    );
+    let titanic = share(&[369297, 445625], 361469, false, true);
+    assert!(
+        (0.28..0.44).contains(&titanic),
+        "Titanic Precision {titanic}"
+    );
+    // 1265993 effect 0: 50% per Dream Breath release; nothing without the talent.
+    let well = share(&[369297, 1265993], 355936, true, false);
+    assert!((0.40..0.60).contains(&well), "Essence Well {well}");
+    assert_eq!(share(&[369297], 355936, true, false), 0.0);
+}
+
 #[test]
 #[ignore = "checks native Emerald Blossom and Fluttering Seedlings"]
 fn preservation_blossom_generates_seedlings_for_unfilled_slots() {
