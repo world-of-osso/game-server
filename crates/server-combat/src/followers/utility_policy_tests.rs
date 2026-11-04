@@ -78,6 +78,96 @@ fn follower_utility_policy_native_resurrection_effect_restores_a_dead_follower()
 }
 
 #[test]
+fn follower_native_mass_resurrection_restores_only_its_raid_corpses() {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use shared::group::GroupRole;
+
+    let (mut h, caster) = super::kit_tests::at_level_unengaged(215011, 90, |_| {});
+    let target = add_follower(&mut h, 209072);
+    let outsider = add_follower(&mut h, 209059);
+    let fillers = [add_follower(&mut h, 209059), add_follower(&mut h, 209059)];
+    let filler_ids = fillers.map(super::Follower::member_id);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::persistence::ClientId(1));
+    let caster_id = super::Follower::member_id(caster);
+    let target_id = super::Follower::member_id(target);
+    let online: OnlineView = [
+        (1, h.caster),
+        (caster_id, caster),
+        (target_id, target),
+        (filler_ids[0], fillers[0]),
+        (filler_ids[1], fillers[1]),
+    ]
+    .into_iter()
+    .map(|(id, unit)| {
+        (
+            id,
+            OnlineMember {
+                entity: unit.to_bits(),
+                name: format!("Member{id}"),
+                class: 5,
+                level: 90,
+                portrait: Default::default(),
+                dungeon_difficulty: 0,
+                raid_difficulty: Default::default(),
+            },
+        )
+    })
+    .collect();
+    h.app
+        .world_mut()
+        .resource_mut::<GroupRegistry>()
+        .create_companion_party(
+            1,
+            GroupRole::Dps,
+            &[
+                (caster_id, GroupRole::Healer),
+                (target_id, GroupRole::Tank),
+                (filler_ids[0], GroupRole::Dps),
+                (filler_ids[1], GroupRole::Dps),
+            ],
+            &online,
+        )
+        .unwrap();
+    for unit in [target, outsider] {
+        h.app.world_mut().get_mut::<Position>(unit).unwrap().x = 3.0;
+        h.app
+            .world_mut()
+            .entity_mut(unit)
+            .insert(crate::combat::CorpseDelay(60.0));
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, unit);
+    }
+    let body = *h.app.world().get::<Position>(target).unwrap();
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(212036)
+        .unwrap()
+        .clone();
+    crate::spell_cast::execute_cast(h.app.world_mut(), caster, &spell, None).unwrap();
+    assert!(
+        h.health(target) > 0.0,
+        "native Mass Resurrection must reach a follower corpse"
+    );
+    assert!(h.app.world().get::<crate::combat::Corpse>(target).is_none());
+    assert_eq!(*h.app.world().get::<Position>(target).unwrap(), body);
+    assert_eq!(
+        h.health(outsider),
+        0.0,
+        "an unrelated follower must remain dead"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(outsider)
+            .is_some()
+    );
+}
+
+#[test]
 fn follower_utility_policy_native_resurrection_from_follower_retains_player_acceptance() {
     use lightyear::prelude::{MessageReceiver, MessageSender};
     use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
