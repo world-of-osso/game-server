@@ -48,8 +48,9 @@ const SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS: u32 = 0x0000_0100;
 /// Explicit user policy, not an invented SpellAttr. See follower-dungeons spec.
 ///70448/pinned TC expose no recognized combat-only marker for these current areas.
 const AOE_HITS_ONLY_IN_COMBAT_UNITS: &[u32] = &[
-    375576, // Divine Toll: hostile implicit area; explicit primary/friendly area unchanged.
-    50286,  // Starfall's periodic area:191034 ->50286 ->191037.
+    375576,  // Divine Toll: hostile implicit area; explicit primary/friendly area unchanged.
+    50286,   // Starfall's periodic area:191034 ->50286 ->191037.
+    1301747, // Starfall's MID2 instant area:191034 ->1301747 ->1301742.
 ];
 
 fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, unit: Entity) -> bool {
