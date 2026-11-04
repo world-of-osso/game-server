@@ -1073,12 +1073,6 @@ fn raid_corpses(
     radius: f32,
     cap: u32,
 ) -> Vec<Entity> {
-    let Some(id) = world.get::<crate::persistence::ClientId>(caster) else {
-        return Vec::new();
-    };
-    let members = world
-        .resource::<crate::group::GroupRegistry>()
-        .group_members(id.0);
     let Some(origin) = position(world, caster) else {
         return Vec::new();
     };
@@ -1087,15 +1081,14 @@ fn raid_corpses(
     };
     let mut query = world.query_filtered::<(
         Entity,
-        &crate::persistence::ClientId,
         &crate::death::PlayerDeathState,
         &crate::maps::InMap,
     ), With<Player>>();
     let mut bodies: Vec<_> = query
         .iter(world)
-        .filter_map(|(unit, id, death, owner_map)| {
+        .filter_map(|(unit, death, owner_map)| {
             if *owner_map != map
-                || !members.contains(&id.0)
+                || !shares_raid(world, caster, unit)
                 || death.state == shared::death::DeathState::Alive
             {
                 return None;
@@ -1108,6 +1101,17 @@ fn raid_corpses(
             (distance <= radius).then_some((distance, unit))
         })
         .collect();
+    let mut followers = world.query_filtered::<(Entity, &Position, &crate::maps::InMap), (
+        With<crate::followers::Follower>,
+        With<crate::combat::Corpse>,
+    )>();
+    bodies.extend(followers.iter(world).filter_map(|(unit, body, owner_map)| {
+        if *owner_map != map || !shares_raid(world, caster, unit) {
+            return None;
+        }
+        let distance = origin.distance(Vec3::new(body.x, body.y, body.z));
+        (distance <= radius).then_some((distance, unit))
+    }));
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     bodies
         .retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit, caster));
