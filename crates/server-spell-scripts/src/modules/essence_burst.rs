@@ -10,6 +10,7 @@ use combat::spell_cast::scripts::AfterCastHook;
 pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::NativeAfterCast(hook),
     SpellScriptHook::AfterForegroundSpender(cast_twin_flame),
+    SpellScriptHook::AfterForegroundSpender(cast_set_living_flame),
 ];
 
 fn hook(spell: u32) -> Option<AfterCastHook> {
@@ -30,14 +31,21 @@ const RUBY_ESSENCE_BURST: u32 = 376872;
 const ESSENCE_BURST: u32 = 359618;
 const DRAGONRAGE: u32 = 375087;
 
+const PRESERVATION_SET_2PC: u32 = 1296641;
+const LIVING_FLAME: u32 = 361469;
+const LIVING_FLAME_DAMAGE: u32 = 361500;
+const LIVING_FLAME_HEAL: u32 = 361509;
+
+fn consumes_essence_burst(spell: &SpellInfo) -> bool {
+    spell
+        .cast_charge_mods
+        .iter()
+        .flatten()
+        .any(|modifier| modifier.aura_spell_id == 369299)
+}
+
 fn cast_twin_flame(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
-    if !has_aura(world, caster, 1265979)
-        || !spell
-            .cast_charge_mods
-            .iter()
-            .flatten()
-            .any(|modifier| modifier.aura_spell_id == 369299)
-    {
+    if !has_aura(world, caster, 1265979) || !consumes_essence_burst(spell) {
         return;
     }
     let Some(target) = target else {
@@ -57,6 +65,60 @@ fn cast_twin_flame(world: &mut World, caster: Entity, spell: &SpellInfo, target:
     if !combat::spell_cast::try_cast_triggered(world, caster, child, Some(target), 1) {
         warn!(?caster, ?target, child, "Twin Flame cast refused");
     }
+}
+
+/// Native 1296641 description: consuming Essence Burst sends forth a Living Flame at the target
+/// (effect 0: 100% effectiveness), or at a nearby injured ally when the target is at full health.
+fn cast_set_living_flame(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Option<Entity>,
+) {
+    use combat::spell_cast::targets::{self, Relation};
+    if !has_aura(world, caster, PRESERVATION_SET_2PC) || !consumes_essence_burst(spell) {
+        return;
+    }
+    let Some(target) = target else {
+        warn!(
+            ?caster,
+            "Preservation 2pc Living Flame lacks a primary target"
+        );
+        return;
+    };
+    let injured = |world: &World, unit: Entity| {
+        world
+            .get::<shared::components::Health>(unit)
+            .is_some_and(|health| health.current < health.max)
+    };
+    let (child, recipient) = if !targets::relation_matches(world, caster, target, Relation::Ally) {
+        (LIVING_FLAME_DAMAGE, target)
+    } else if injured(world, target) {
+        (LIVING_FLAME_HEAL, target)
+    } else {
+        let nearby = nearby_injured_ally(world, caster, target, injured);
+        (LIVING_FLAME_HEAL, nearby.unwrap_or(target))
+    };
+    combat::spell_cast::cast_triggered(world, caster, child, Some(recipient), 1);
+}
+
+/// Nearest injured ally to the target within Living Flame's range.
+fn nearby_injured_ally(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    injured: impl Fn(&World, Entity) -> bool,
+) -> Option<Entity> {
+    use combat::spell_cast::targets::{self, Relation};
+    let center = targets::position(world, target)?;
+    let spell = world
+        .resource::<combat::spell_info::SpellStore>()
+        .get(LIVING_FLAME)
+        .expect("native Living Flame");
+    let (_, range) = targets::spell_range(spell, true);
+    targets::area_units(world, caster, center, range, Relation::Ally, 0)
+        .into_iter()
+        .find(|&unit| unit != target && injured(world, unit))
 }
 
 fn roll_azure_essence_burst(world: &mut World, caster: Entity, _: &SpellInfo) {

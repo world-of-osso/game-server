@@ -230,6 +230,59 @@ fn preservation_twin_flame_requires_consuming_essence_burst() {
 }
 
 #[test]
+#[ignore = "requires native Essence Burst and Preservation 12.1 set spell data"]
+fn preservation_set_2pc_sends_living_flame_when_essence_burst_is_consumed() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness, spawn_player};
+    let mut h = harness(
+        Vec::new(),
+        &[1296641, 369299, 355913, 355916, 361469, 361509],
+        13,
+    )
+    .unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let full = spawn_player(&mut h.app, 13, 2.0);
+    let injured = spawn_player(&mut h.app, 13, 4.0);
+    *h.app.world_mut().get_mut::<Health>(injured).unwrap() = Health {
+        current: 1.0,
+        max: 100_000.0,
+    };
+    let cast_blossom = |h: &mut crate::spell_cast::test_harness::Harness, auras: &[u32]| {
+        for &spell_id in auras {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id,
+                    effect_mask: u32::MAX,
+                    source: AuraSource::Cast,
+                },
+            );
+        }
+        let cursor = h.app.world().resource::<ObservedCombatEvents>().0.len();
+        h.cast_and_deliver(355913, Some(full));
+        h.advance(50);
+        let heals: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .filter(|e| e.kind == CombatLogKind::Heal && e.spell_id == Some(361509))
+            .map(|e| e.target)
+            .collect();
+        h.advance(700);
+        heals
+    };
+    // Without consuming Essence Burst, the set bonus sends nothing.
+    assert_eq!(cast_blossom(&mut h, &[1296641]), Vec::new());
+    // Consuming it sends Living Flame to the nearby injured ally because the target is full.
+    assert_eq!(
+        cast_blossom(&mut h, &[369299]),
+        vec![Some(injured.to_bits())],
+        "failed casts: {:?}",
+        h.inbox.failed
+    );
+}
+
+#[test]
 #[ignore = "checks native Emerald Blossom and Fluttering Seedlings"]
 fn preservation_blossom_generates_seedlings_for_unfilled_slots() {
     let spells = [359793, 355913, 355916, 361361];
