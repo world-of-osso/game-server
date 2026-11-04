@@ -20,7 +20,7 @@ pub const SPELLS: &[(&str, u32, bool)] = &[
     ("renewing_mist", 115151, false),
     ("enveloping_mist", 124682, false),
     ("soothing_mist", 115175, false),
-    ("sheiluns_gift", 205406, false),
+    ("sheiluns_gift", 399491, false),
     ("vivify", 116670, false),
     ("rising_sun_kick", 107428, false),
     ("spinning_crane_kick", 101546, true),
@@ -71,8 +71,11 @@ pub(crate) fn program() -> Result<Program, String> {
             "default",
             "enveloping_mist,if=target.health.pct<65&target.enveloping_mist_up=0",
         ),
-        ("default", "sheiluns_gift,if=party.heal_worthwhile"),
-        ("default", "vivify,if=party.heal_worthwhile"),
+        ("healing_fallback", "sheiluns_gift,if=party.heal_worthwhile"),
+        (
+            "default",
+            "vivify,if=party.heal_worthwhile&party.gift_replaces_vivify=0",
+        ),
         ("priority_damage", "rising_sun_kick"),
         ("damage", "rising_sun_kick"),
         // INFERRED_WCL: six is the population-median SCK proximity and the
@@ -114,6 +117,7 @@ pub struct PartyFacts<'a> {
     enveloping_up: bool,
     worthwhile: bool,
     mana_tea_stacks: u8,
+    gift_replaces_vivify: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -124,6 +128,7 @@ impl Facts for PartyFacts<'_> {
             "target.enveloping_mist_up" => Ok(f64::from(self.enveloping_up)),
             "party.heal_worthwhile" => Ok(f64::from(self.worthwhile)),
             "player.mana_tea_stacks" => Ok(f64::from(self.mana_tea_stacks)),
+            "party.gift_replaces_vivify" => Ok(f64::from(self.gift_replaces_vivify)),
             _ => self.native.value(name),
         }
     }
@@ -136,7 +141,8 @@ impl ActionFacts for PartyFacts<'_> {
             | "target.renewing_mist_up"
             | "target.enveloping_mist_up"
             | "party.heal_worthwhile"
-            | "player.mana_tea_stacks" => self.value(name),
+            | "player.mana_tea_stacks"
+            | "party.gift_replaces_vivify" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -333,6 +339,9 @@ impl Mistweaver {
                 talent: None,
             });
         let prepared = Prepared::read(world, healer, &targets, &self.equipment, actions, false)?;
+        let gift_replaces_vivify =
+            crate::literal_rotation::execution::resolve_action(world, healer, 116670)?
+                == Some(399491);
         let facts = PartyFacts {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
                 .with_targets(Some(target), &targets),
@@ -341,6 +350,7 @@ impl Mistweaver {
             enveloping_up,
             worthwhile,
             mana_tea_stacks,
+            gift_replaces_vivify,
         };
         if let Some((action, execution)) =
             self.driver
@@ -349,11 +359,17 @@ impl Mistweaver {
             self.driver.execute(world, healer, action, execution)?;
             return Ok(());
         }
-        if let Some(enemy) = enemy {
-            if self.interrupt_soothing_for_kick(world, healer, enemy)? {
-                return Ok(());
-            }
-            self.select_damage(world, healer, enemy)?;
+        let fallback =
+            self.driver
+                .select("healing_fallback", &facts, &prepared, &self.equipment)?;
+        if let Some(enemy) = enemy
+            && (self.interrupt_soothing_for_kick(world, healer, enemy)?
+                || self.select_damage(world, healer, enemy)?)
+        {
+            return Ok(());
+        }
+        if let Some((action, execution)) = fallback {
+            self.driver.execute(world, healer, action, execution)?;
         }
         Ok(())
     }
