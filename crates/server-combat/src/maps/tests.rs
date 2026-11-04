@@ -583,6 +583,9 @@ fn uldaman_login_after_restart_uses_authored_entrance() {
     assert_eq!(place.map.map_id, 2451);
     assert!(wow(&place.position).distance(Vec3::new(204.89, -1017.31, 219.656)) < 0.01);
     assert_ne!(place.position, saved);
+    let instances = restarted.app.world().resource::<InstanceManager>();
+    assert_eq!(instances.initial_done_bosses(place.map), 0);
+    assert_eq!(instances.completed_encounters(place.map), 0);
 }
 
 #[test]
