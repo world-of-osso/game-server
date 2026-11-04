@@ -2697,45 +2697,13 @@ fn apply_heal_with_raw(
     periodic: bool,
     raw: Option<f32>,
 ) {
-    // TC a352b1fa Unit.cpp7464–7470: attr6 bypasses healing-done bonuses.
-    const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;
-    let ignore_healing = super::attributes(ctx.spell, 6) & IGNORE_HEALING_MODIFIERS != 0;
-    let done = if ignore_healing {
-        1.0
-    } else {
-        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
-            * versatility_multiplier(world, ctx.caster)
-            * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell)
-    };
-    let periodic_taken = if periodic {
-        crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
-    } else {
-        1.0
-    };
-    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
-        world, ctx.caster, target, ctx.spell,
-    );
-    let general_taken = if ignore_healing {
-        crate::auras::combat_stats::ignored_healing_taken_multiplier(world, target, ctx.spell)
-    } else {
-        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
-    };
-    let taken = general_taken * periodic_taken * caster_taken;
-    let named = super::scripts::healing_multiplier(world, ctx.caster, target, ctx.spell)
-        * super::scripts::soul_of_the_forest_direct_multiplier(
-            world, ctx.caster, ctx.spell, periodic,
-        );
     let fraction = ctx.spell.cast_periodic_fraction.unwrap_or(1.0);
     // SimC action.cpp1473 records periodic result_raw before the partial-tick multiplier.
-    let source = raw.map(|raw| {
-        (modded_amount(world, ctx, raw, periodic) * done * taken * named)
-            .max(0.0)
-            .round()
-    });
+    let source = raw.map(|raw| calculate_healing_amount(world, ctx, target, raw, periodic).round());
     let alive = world
         .get::<Health>(target)
         .is_some_and(|health| health.current > 0.0);
-    let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named * fraction)
+    let amount = (calculate_healing_amount(world, ctx, target, amount, periodic) * fraction)
         .max(0.0)
         .round();
     // TC SpellAuraEffects.cpp5893–5897: healing bonuses precede the tick roll.
@@ -2747,6 +2715,82 @@ fn apply_heal_with_raw(
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
     if alive && let Some(source) = source {
         super::script_registry::raw_heal(world, ctx, source);
+    }
+}
+
+fn ignores_healing_modifiers(spell: &SpellInfo) -> bool {
+    // TC a352b1fa Unit.cpp7464–7470: attr6 bypasses healing-done bonuses.
+    const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;
+    super::attributes(spell, 6) & IGNORE_HEALING_MODIFIERS != 0
+}
+
+fn healing_done_multiplier(world: &World, ctx: &EffectCtx, target: Entity) -> f32 {
+    if ignores_healing_modifiers(ctx.spell) {
+        return 1.0;
+    }
+    stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
+        * versatility_multiplier(world, ctx.caster)
+        * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell)
+}
+
+fn healing_taken_multiplier(world: &World, ctx: &EffectCtx, target: Entity, periodic: bool) -> f32 {
+    let periodic_taken = if periodic {
+        crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
+    } else {
+        1.0
+    };
+    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
+        world, ctx.caster, target, ctx.spell,
+    );
+    let general_taken = if ignores_healing_modifiers(ctx.spell) {
+        crate::auras::combat_stats::ignored_healing_taken_multiplier(world, target, ctx.spell)
+    } else {
+        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+    };
+    general_taken * periodic_taken * caster_taken
+}
+
+/// Ordinary noncritical healing, before final tick fractions and rounding.
+fn calculate_healing_amount(
+    world: &World,
+    ctx: &EffectCtx,
+    target: Entity,
+    amount: f32,
+    periodic: bool,
+) -> f32 {
+    let done = healing_done_multiplier(world, ctx, target);
+    let taken = healing_taken_multiplier(world, ctx, target, periodic);
+    let named = super::scripts::healing_multiplier(world, ctx.caster, target, ctx.spell)
+        * super::scripts::soul_of_the_forest_direct_multiplier(
+            world, ctx.caster, ctx.spell, periodic,
+        );
+    (modded_amount(world, ctx, amount, periodic) * done * taken * named).max(0.0)
+}
+
+/// Detonate a noncritical HoT amount with its source modifiers and a fresh detonation crit.
+/// General healing multipliers are already included, so they must not apply a second time.
+pub(crate) fn detonate_periodic_heal(
+    world: &mut World,
+    source: &EffectCtx,
+    detonation: &EffectCtx,
+    target: Entity,
+    amount: f32,
+) {
+    let alive = world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0);
+    let raw = calculate_healing_amount(world, source, target, amount, true);
+    let (amount, crit) = with_crit(world, detonation.caster, target, detonation.spell, raw);
+    apply_resolved_heal(
+        world,
+        detonation,
+        target,
+        amount.max(0.0).round(),
+        crit,
+        false,
+    );
+    if alive {
+        super::script_registry::raw_heal(world, detonation, raw.round());
     }
 }
 
