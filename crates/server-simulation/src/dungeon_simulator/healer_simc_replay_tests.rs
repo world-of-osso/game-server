@@ -135,6 +135,94 @@ fn player_barriers_absorb_matched_db2_health_and_versatility() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn opening_holy_bulwark_matches_initial_cast_without_double_counting() {
+    // DB2 70448 432496s2: initial 15% target health. Opening remaining
+    // capacity is unknown; reconstructing a fresh grant is INFERRED_WCL.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for mode in ["cast", "opening", "opening_with_parent"] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let caster = run.slots[1];
+        let target = run.slots[0];
+        super::hold(&mut run, caster);
+        for _ in 0..10 {
+            run.app.update();
+        }
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Consumed,
+            |aura| aura.effects.iter().any(|effect| effect.aura_type == 69),
+        );
+        if mode == "cast" {
+            crate::spell_cast::creature_cast(
+                run.app.world_mut(),
+                caster,
+                432459,
+                Some(target),
+                false,
+            )
+            .unwrap();
+            for _ in 0..5 {
+                run.app.update();
+            }
+        } else {
+            let parent = if mode == "opening_with_parent" {
+                r#",{"source_actor":3,"target_actor":57,"spell_id":432496,
+                "stacks":1,"evidence":"first_removebuff","remove_ms":20000}"#
+            } else {
+                ""
+            };
+            let input = format!(
+                r#"{{"provenance":"INFERRED_WCL test",
+                "excluded_self":0,"party_specs":[104,65,266,251,62],
+                "actor_slots":{{"57":0,"3":1,"1":2,"58":3,"2":4}},
+                "bloodlust":[],"hits":[],"opening_auras":[
+                {{"source_actor":3,"target_actor":57,"spell_id":432607,
+                "stacks":1,"evidence":"first_removebuff","remove_ms":20000}}{parent}]}}"#
+            );
+            let trace: super::super::healer_wcl_trace::Trace =
+                serde_json::from_str(&input).unwrap();
+            trace
+                .apply_opening_auras(run.app.world_mut(), &run.slots)
+                .unwrap();
+        }
+        let max = run.app.world().get::<Health>(target).unwrap().max;
+        let vers = crate::spell_cast::effects::versatility_multiplier(run.app.world(), caster);
+        let taken = run
+            .app
+            .world()
+            .get::<crate::auras::AuraStatMods>(target)
+            .unwrap()
+            .absorb_taken_mult;
+        crate::auras::remove_auras(
+            run.app.world_mut(),
+            target,
+            crate::auras::RemoveReason::Consumed,
+            |aura| {
+                aura.spell_id != 432607 && aura.effects.iter().any(|effect| effect.aura_type == 69)
+            },
+        );
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), target, None, 1, max);
+        let expected = (max * 0.15 * vers * taken).round();
+        assert!(
+            (absorbed - expected).abs() < 2.0,
+            "{mode}: {absorbed} != {expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent

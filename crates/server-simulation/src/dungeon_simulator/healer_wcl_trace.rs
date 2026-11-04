@@ -150,7 +150,10 @@ impl Trace {
         use crate::auras::{self, AuraApplication, AuraSource};
         use crate::spell_info::SpellStore;
         let mut removals = Vec::new();
-        for aura in &self.opening_auras {
+        let mut opening_auras: Vec<_> = self.opening_auras.iter().collect();
+        // Apply Bulwark's parent before its separately recorded absorb aura.
+        opening_auras.sort_by_key(|aura| aura.spell_id == 432607);
+        for aura in opening_auras {
             let source = *slots
                 .get(*self.actor_slots.get(&aura.source_actor).ok_or_else(|| {
                     format!("WCL_OPENING_AURA_UNKNOWN_SOURCE:{}", aura.source_actor)
@@ -176,16 +179,18 @@ impl Trace {
             if mask == 0 || aura.stacks == 0 || aura.evidence.is_empty() {
                 return Err(format!("WCL_OPENING_AURA_INVALID:{}", aura.spell_id));
             }
-            auras::apply_aura(
-                world,
-                &AuraApplication {
-                    caster: source,
-                    target,
-                    spell_id: aura.spell_id,
-                    effect_mask: mask,
-                    source: AuraSource::Cast,
-                },
-            );
+            let application = AuraApplication {
+                caster: source,
+                target,
+                spell_id: aura.spell_id,
+                effect_mask: mask,
+                source: AuraSource::Cast,
+            };
+            if aura.spell_id == 432607 {
+                apply_opening_bulwark(world, &application);
+            } else {
+                auras::apply_aura(world, &application);
+            }
             if !auras::set_owned_stacks(world, source, target, aura.spell_id, aura.stacks) {
                 return Err(format!("WCL_OPENING_AURA_NOT_APPLIED:{}", aura.spell_id));
             }
@@ -212,6 +217,46 @@ impl Trace {
         removals.sort_by_key(|removal| removal.time_ms);
         Ok(removals)
     }
+}
+
+fn apply_opening_bulwark(world: &mut World, application: &crate::auras::AuraApplication) {
+    use crate::auras::ActiveAuras;
+    use crate::spell_info::SpellStore;
+    if world
+        .get::<ActiveAuras>(application.target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|aura| aura.spell_id == 432607 && aura.caster == application.caster)
+        })
+    {
+        return;
+    }
+    // INFERRED_WCL: remaining opening capacity is not recorded. Reconstruct a
+    // fresh grant, as for other opening shields, without changing periodic grants.
+    // DB2 70448 432496s2 / 10 is the initial percentage of target max health.
+    let store = world.resource::<SpellStore>();
+    let percent = store
+        .get(432496)
+        .expect("Holy Bulwark source")
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("Holy Bulwark initial amount")
+        .base_points;
+    let mut shield = store.get(432607).expect("Holy Bulwark absorb").clone();
+    let health = world
+        .get::<Health>(application.target)
+        .expect("Holy Bulwark target health")
+        .max;
+    let versatility = crate::spell_cast::effects::versatility_multiplier(world, application.caster);
+    shield
+        .effects
+        .iter_mut()
+        .find(|effect| effect.index == 0)
+        .expect("Holy Bulwark absorb effect")
+        .base_points = health * percent / 1000.0 * versatility;
+    crate::auras::apply_aura_with_spell(world, application, &shield);
 }
 
 #[derive(Deserialize)]
