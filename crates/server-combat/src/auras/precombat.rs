@@ -23,7 +23,7 @@ pub(crate) fn age(
         })?;
     let aura = auras
         .get_mut(instance)
-        .expect("owned consumable instance just resolved");
+        .ok_or("resolved precombat consumable aura is unavailable")?;
     let elapsed = seconds.min(f64::from(aura.duration_ms) / 1000.0);
     let expiry = aura
         .expires_at
