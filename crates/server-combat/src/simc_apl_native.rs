@@ -1313,6 +1313,11 @@ impl Facts for NativeFacts<'_> {
             return self.target_ids(&action).map(|targets| targets.len() as f64);
         }
         match name {
+            "in_combat" => Ok(f64::from(
+                self.world
+                    .get::<shared::components::CombatStatus>(self.actor)
+                    .is_some_and(|status| status.0),
+            )),
             "time" => Ok(self.elapsed()),
             // dot.cpp671: tick_time is the channel's current native tick period.
             "tick_time" => self

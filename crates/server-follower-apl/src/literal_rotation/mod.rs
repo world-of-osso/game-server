@@ -6,6 +6,8 @@ pub use channel::Decision as ChannelDecision;
 pub mod default_pet;
 pub mod equipment;
 pub mod execution;
+#[cfg(test)]
+mod healer_item_qualification_tests;
 mod item_context;
 pub mod melee_intent;
 mod precombat_potion;

@@ -40,6 +40,12 @@ impl ActionFacts for ItemContext<'_> {
                 ));
             }
         };
+        if field == "healer_rate_qualified" {
+            let slot = if index == 1 { "trinket1" } else { "trinket2" };
+            return Ok(f64::from(super::equipment::healer_rate_qualified(
+                self.equipment.slots[slot].item_id,
+            )));
+        }
         self.facts
             .value_for(action, &format!("trinket.{index}.{field}"))
     }
