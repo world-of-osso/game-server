@@ -1697,7 +1697,8 @@ fn wcl_intake_replays_hostile_and_deferred_pressure() {
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot and SimC traces"]
 fn simc_class_healer_replays_damage_and_reports_receipts() {
-    let trace = fixture("healer_simc_fixture.log");
+    // The regular low-pressure trace leaves the tank above Holy Shock's healing threshold.
+    let trace = fixture("healer_simc_healing_pressure.log");
     assert_eq!(
         super::replay_simc(66, 90, &trace, 12, 70448).unwrap_err(),
         "Simulator party slot2 requiresHealer, spec66 isTank",
