@@ -4,7 +4,7 @@ use crate::spell_cast::test_harness::ObservedCombatEvents;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
-fn retail_traits() -> Vec<inputs::AllocatedTrait> {
+pub(super) fn retail_traits() -> Vec<inputs::AllocatedTrait> {
     let profiles: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../scripts/reference/follower-wcl-candidates.json"
