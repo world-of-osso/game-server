@@ -123,13 +123,14 @@ fn run_case(strong_plague: bool) {
         .get::<crate::auras::AuraStatMods>(actor)
         .unwrap()
         .absorb_taken_mult;
-    let max_after_vampiric = run.app.world().get::<Health>(actor).unwrap().max;
+    // INFERRED_WCL cap: 1.193 times the maximum health after Vampiric Blood (250.md).
+    let cap = run.app.world().get::<Health>(actor).unwrap().max * 1.193;
     assert_eq!(
-        damage as f32 * 6.0 >= max_after_vampiric,
+        damage as f32 * 6.0 >= cap,
         strong_plague,
         "exercise the selected cap case"
     );
-    let expected = (damage as f32 * 6.0).min(max_after_vampiric) * target_multiplier;
+    let expected = (damage as f32 * 6.0).min(cap) * target_multiplier;
     crate::auras::remove_auras(
         run.app.world_mut(),
         actor,
@@ -151,6 +152,6 @@ fn run_case(strong_plague: bool) {
     );
     assert!(
         (actual - expected).abs() <= 1.0,
-        "actual={actual} expected={expected} damage={damage} cap={max_after_vampiric} multiplier={target_multiplier}"
+        "actual={actual} expected={expected} damage={damage} cap={cap} multiplier={target_multiplier}"
     );
 }
