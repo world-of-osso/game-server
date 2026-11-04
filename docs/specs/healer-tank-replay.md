@@ -41,6 +41,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **INFERRED_WCL** `dtmp7Lg2abzyZVBG` fight 3 pull 1: the selected Masterwork 1271387 grants three charges per Holy Armament; Holy Shock spends one of each active kind to grant Lesser Bulwark 1239002 or Lesser Weapon 1239091 to a nearby ally. A Holy Shock at 12.701s consumes a Bulwark charge and the Frost DK receives the shield at 12.717s. Ally preference follows SimC76f8118; the pull alone does not establish the full target policy.
 
+**VERIFIED_WCL** `1AWhVvdLbpy2gPak` fight 36 (2026-10-28): Flash of Light and Judgment consume Infusion of Light 54149. When the caster selected Valiance 432919, each consumption reduces Holy Armaments recharge by DB2 70448 effect 0's three seconds.
+
 The [current-build Priest and Shaman matched-pull ledger](healer-tank-replay/priest-shaman-matched-2026-11-03.md) records five-seed outcomes, healing attribution and remaining policy gaps.
 **VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2: the matched Guardian selects Elune's Favored 370586 and receives 370602 healing at approximately one-second intervals. DB2 70448 supplies its 18% of Arcane damage in Bear Form and the one-second 370588 timer. The Guardian's WCL Frenzied Regeneration casts do not establish a general cast threshold; the native Guardian APL does not currently select it.
 
