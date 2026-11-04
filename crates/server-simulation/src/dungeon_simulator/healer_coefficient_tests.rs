@@ -3,6 +3,80 @@ use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
 #[test]
+#[ignore = "requires native Protection Warrior spell data"]
+fn protection_indomitable_heals_actual_paid_rage_only_when_selected() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    use shared::components::{ActiveSpec, PowerType};
+    let mut h = harness(Vec::new(), &[190456, 202095, 316643], 1).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ActiveSpec(73));
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 202095,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    for selected in [true, false] {
+        if !selected {
+            crate::auras::remove_auras(
+                h.app.world_mut(),
+                h.caster,
+                crate::auras::RemoveReason::Unlearned,
+                |aura| aura.spell_id == 202095,
+            );
+        }
+        let maximum = h.app.world().get::<Health>(h.caster).unwrap().max;
+        h.app
+            .world_mut()
+            .get_mut::<Health>(h.caster)
+            .unwrap()
+            .current = maximum * 0.5;
+        crate::spell_cast::powers::change_power(
+            h.app.world_mut(),
+            h.caster,
+            PowerType::Rage,
+            1000.0,
+        );
+        let cursor = h.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::scripts::reduce_cooldown(
+            h.app.world_mut(),
+            h.caster,
+            190456,
+            f64::INFINITY,
+        );
+        h.cast_and_deliver(190456, Some(h.caster));
+        assert!(
+            h.inbox.failed.is_empty(),
+            "paid Ignore Pain: {:?}",
+            h.inbox.failed
+        );
+        let heals: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(316643))
+            .collect();
+        if selected {
+            assert_eq!(heals.len(), 1);
+            let expected = maximum * 0.01 * 350.0 / 150.0;
+            assert!(
+                (heals[0].amount as f32 - expected).abs() <= 2.0,
+                "35 Rage must heal 2 1/3 percent, got {} expected {expected}",
+                heals[0].amount
+            );
+        } else {
+            assert!(heals.is_empty(), "unselected Indomitable must not heal");
+        }
+    }
+}
+
+#[test]
 #[ignore = "requires native Golden Hour, Echo, and Reversion spell data"]
 fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
     use crate::auras::{AuraApplication, AuraSource};

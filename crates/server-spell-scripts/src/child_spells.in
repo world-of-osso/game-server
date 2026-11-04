@@ -455,6 +455,8 @@ C	paladin_strength_adversity.rs	393038
 C	protection_demolish.rs	262115
 C	protection_fray.rs	202602
 C	protection_fueled.rs	383104
+C	protection_indomitable.rs	316643
+D	protection_indomitable.rs	heal_paid_rage	launch_triggered_spell	&heal	1	316643
 C	protection_outburst.rs	190456
 C	protection_outburst.rs	386478
 C	protection_outburst.rs	386486
