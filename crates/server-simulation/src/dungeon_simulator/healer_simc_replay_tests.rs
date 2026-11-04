@@ -385,6 +385,67 @@ fn preservation_uses_dream_breath_without_foreground_echo_at_moderate_injury() {
     }
 }
 
+fn first_preservation_cast(injured_slots: &[usize], held_spells: &[u32]) -> Option<u32> {
+    use shared::protocol::CombatLogKind;
+    let mut run = super::snapshot_party(1468, 90, 1);
+    let healer = run.healer;
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    for &slot in injured_slots {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<Health>(run.slots[slot])
+            .unwrap();
+        health.current = health.max * 0.70;
+    }
+    for &spell in held_spells {
+        crate::spell_cast::scripts::start_hasted_cooldown(
+            run.app.world_mut(),
+            healer,
+            spell,
+            1.0e9,
+        );
+    }
+    let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
+        run.app.world_mut(),
+        healer,
+        crate::simc_apl_native::Encounter::dungeon(0.0),
+    )
+    .unwrap();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    rotation
+        .drive(run.app.world_mut(), healer, &run.slots, &run.sources)
+        .unwrap();
+    for _ in 0..80 {
+        run.app.update();
+    }
+    run.app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..]
+        .iter()
+        .find(|e| e.source == Some(healer.to_bits()) && e.kind == CombatLogKind::CastSuccess)
+        .and_then(|e| e.spell_id)
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_uses_living_flame_without_plain_reversion_maintenance() {
+    // One injured tank, ready Reversion and Living Flame; higher-priority healing cooldowns held.
+    assert_eq!(
+        first_preservation_cast(&[0], &[355936, 360995, 367226]),
+        Some(361469)
+    );
+}
+
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_fire_breath_waits_for_observed_timeout() {

@@ -58,10 +58,6 @@ pub(crate) fn program() -> Result<Program, String> {
         // INFERRED_WCL: lowest slot that still spends retail's ~99% of procs; see preservation-merithra-policy.md.
         ("default", "reversion,if=merithra.active"),
         ("default", "emerald_blossom,if=party.injured>=2"),
-        (
-            "default",
-            "reversion,if=target.health.pct<95&target.reversion_up=0",
-        ),
         ("default", "living_flame,if=target.health.pct<95"),
         // INFERRED_WCL: first-cast delay median 26.862 seconds; see preservation-fire-breath.md.
         ("hybrid", "fire_breath,empower_to=1,if=time>=26.862"),
@@ -94,7 +90,6 @@ impl Preservation {
 pub struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     injured: usize,
-    reversion_up: bool,
     merithra_active: bool,
 }
 
@@ -102,7 +97,6 @@ impl Facts for PartyFacts<'_> {
     fn value(&self, name: &str) -> Result<f64, String> {
         match name {
             "party.injured" => Ok(self.injured as f64),
-            "target.reversion_up" => Ok(f64::from(self.reversion_up)),
             "merithra.active" => Ok(f64::from(self.merithra_active)),
             _ => self.native.value(name),
         }
@@ -112,7 +106,7 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "party.injured" | "target.reversion_up" | "merithra.active" => self.value(name),
+            "party.injured" | "merithra.active" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
@@ -150,8 +144,6 @@ impl Preservation {
             return Ok(());
         };
         let injured = living.iter().filter(|(_, ratio)| *ratio < 0.95).count();
-        let reversion_up = crate::auras::has_aura(world, target, 366155)
-            || crate::auras::has_aura(world, target, 367364);
         let targets = [target];
         let actions = SPELLS
             .iter()
@@ -167,7 +159,6 @@ impl Preservation {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
                 .with_targets(Some(target), &targets),
             injured,
-            reversion_up,
             merithra_active: crate::auras::has_aura(world, healer, 1256579),
         };
         if let Some((action, execution)) =
@@ -201,7 +192,6 @@ impl Preservation {
             native: NativeFacts::new(world, healer, &self.bindings, self.encounter, targets.len())
                 .with_targets(Some(target), &targets),
             injured,
-            reversion_up,
             merithra_active: crate::auras::has_aura(world, healer, 1256579),
         };
         if let Some((action, execution)) =
