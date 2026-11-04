@@ -191,6 +191,16 @@ rounding; no test oracle was weakened to fix it.
 [Contract](../../specs/auras.md#native-rolling-periodic-refresh),
 [proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md),
 [Echo investigation](../investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22).
+## Caster-owned ability critical chance — 2026-11-04
+
+Aura308 matches the owning caster and native `SpellClassSet`/`SpellClassMask`, without a magic/melee/ranged restriction. TC a352b1fa `Unit.cpp:7264–7270` restricts it to magic; current Retail is the authority for this difference. Native history494cfb1d8a introduced that gate with the original implementation;4268c71a23 later exempted Consecration204242. The generic reader replaces both restrictions.
+
+Current-build WCL Arms reports `t1jTkcCWa6dLgyv3` actor11 (2026-10-27) and `24rVfa9TZhWk8BXv` actor17 (2026-11-01) contain80,181 damage events. Stratifying Mortal Strike, Overpower, Slam, Cleave, Bladestorm, Slayer's Strike and Reap by player, ability and exact active-buff signature gives2176 hits with owned Rend and2048 without: weighted critical-rate difference+4.29percentage points, conservative95% half-width3.35points. This supports Bloodletting's native5point bonus. The second player's Mortal Strike alone is1322/2535 critical with Rend versus173/369 without.
+
+Marksmanship report `pmP7qMARzJWFfjZy` actor20 (2026-10-31), with Arcane Talons, has450/451 critical Aimed Shots while owned1301098 is active and585/858 without. Native Arcane Talons modifies that aura's308 effect by50points; the critical chance caps at100%. Remove the parallel `aimed_mark_crit` hook when the generic reader admits ranged attacks. A real Aimed Shot factor-capture test checks that this is one bonus, not two.
+
+Evidence and the full22-row native308 census: `game-engine/data/diagnostics/parity-71-2026-11-04/`. Eighteen aura rows have matching non-magic spell definitions; many are old talents/items rather than current profile producers. Consecration already worked and retains its native matching behavior. [Contract](../../specs/auras.md#caster-owned-ability-critical-chance).
+
 ## Native asynchronous stack expirations — 2026-10-22
 
 Native attribute490 is `Attributes_15 & 0x400`: SimC76f8118 `data_enums.hh:1910` names `SX_ASYNCHRONOUS_STACKING_AURA`; `buff.cpp:777–782` enables asynchronous lifetimes when native maximum stacks exceed1. Pinned TC a352 labels the same bit `ATTR15_UNK10`; no TC semantic claim is inferred from that label.

@@ -173,6 +173,10 @@ Lava damage285452 and Overload damage285466 share one caster-owned188389 Flame S
 
 `INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS` limits actual378776→378777 procs to successful Purge370, Cleanse Spirit51886, Healing Stream Totem5394, Hex51514 and Wind Shear57994 casts while the caster is in combat. Use the existing successful-cast event once, not every hit/target or ordinary damaging spell; actual passive presence and native child amount8 remain authoritative. Native70448 description names this list. Pinned TC a352 `spell_shaman.cpp` has no matching script, and TDB1210.26091 `spell_proc` has neither signed378776 row, so this is a named source-description policy, not a fabricated family mask. SimC76f8118 `sc_shaman.cpp:8527–8534,9367–9374` supplies utility execute/gain boundaries. This does not certify broad utility AI decisions or all five spells' downstream effect behavior.
 
+## Caster-owned ability critical chance
+
+Aura308 applies to all matching abilities, regardless of magic/melee/ranged damage class. Retain caster ownership and native family-mask filtering; do not affect unrelated spells or white swings. Rend with selected Bloodletting adds its native5percentage points to matching Warrior specials. Consecration retains its selected set bonus. Marksmanship's native Arcane Talons/1301098 bonus is counted once, not again through a separate scripted critical-chance hook. [Current-build WCL and TC reference difference](../wiki/systems/auras.md#caster-owned-ability-critical-chance--2026-11-04).
+
 ## Feel the Burn and asynchronous stacks
 
 Native383391 procs383395 only from actual Fire Blast108853, not arbitrary harmful spells (native70448 description; SimC76f8118 `sc_mage.cpp:4583`). Retain its native100ms proc recovery,2 mastery per stack,4s duration and100-stack cap. Each application expires independently rather than refreshing every existing stack.
