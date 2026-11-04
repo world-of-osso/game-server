@@ -20,7 +20,7 @@ For Warrior `CZ6jq9Q8DJHapMBc` f24 p1, 1235568 absorbs 88,947 and 43,707 at pull
 
 ## Evidence and limits
 
-The report retains native heal/absorb spell receipts, per-hit health loss, tank cast timing and five-second mitigation frame counts for Shield Block (73) or Demon Spikes (581). Self-heal receipts include frame-end maximum health for normalization. This is a 50 ms simulation, not sub-frame event timing. WCL maximum health observations and opening aura remaining duration are not exact state snapshots. Excluded damage, unresolved external defenses and source scaling must accompany comparisons. Observed cast timing is not a new cooldown trigger policy.
+The report retains native heal/absorb spell receipts, per-hit health loss, tank cast timing and five-second mitigation frame counts for Shield Block (73/132404), Demon Spikes (581/203819), Shield of the Righteous (66/132403), Shuffle (268/215479), Ironfur (104/192081), or Bone Shield (250/195181). The report identifies the tracked aura; these are presence/absence counts, not stack-weighted mitigation. Self-heal receipts include frame-end maximum health for normalization. This is a 50 ms simulation, not sub-frame event timing. WCL maximum health observations and opening aura remaining duration are not exact state snapshots. Excluded damage, unresolved external defenses and source scaling must accompany comparisons. Observed cast timing is not a new cooldown trigger policy.
 
 ## Verification
 

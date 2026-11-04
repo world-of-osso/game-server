@@ -15,6 +15,18 @@ const TICKS_PER_SECOND: u32 = 20;
 /// Bound on the party's APL precombat before the recorded clock starts.
 const MAX_PRECOMBAT_TICKS: u32 = 800;
 
+fn tank_raw_mitigation_aura(spec: u32) -> Option<u32> {
+    match spec {
+        73 => Some(132404),
+        581 => Some(203819),
+        66 => Some(132403),
+        268 => Some(215479),
+        104 => Some(192081),
+        250 => Some(195181),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 pub(super) fn report_death_audit(app: &mut App, actors: &[Entity]) {
     let Some(mut audit) = app
@@ -916,11 +928,7 @@ fn replay_profile(
         let world = app.world();
         recorder.observe_frame(world, tick);
         if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
-            let aura = match tank_spec {
-                73 => Some(132404),
-                581 => Some(203819),
-                _ => None,
-            };
+            let aura = tank_raw_mitigation_aura(tank_spec);
             if aura.is_some_and(|spell| crate::auras::has_aura(world, tank, spell)) {
                 raw_mitigation_windows[((tick - 1) / 100) as usize] += 1;
             }
@@ -1038,6 +1046,7 @@ fn replay_profile(
         "party_entities":slots.map(Entity::to_bits),
         "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
         "tank_raw_mitigation_window_ticks":raw_mitigation_windows,
+        "tank_raw_mitigation_spell":tank_raw_mitigation_aura(tank_spec),
         "metrics":recorder.report(app.world(), duration)});
     if let Some(wcl) = wcl {
         report["timeline"] = json!("wcl_damage_taken");
