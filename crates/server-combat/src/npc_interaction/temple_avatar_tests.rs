@@ -40,10 +40,8 @@ fn temple_avatar_gossip_starts_only_its_encounter_copy() {
     let avatar = h.spawn_real_npc(133392, 46.31);
     h.app.world_mut().entity_mut(h.player).insert(copy);
     h.app.world_mut().entity_mut(avatar).insert(copy);
-    assert_eq!(
-        crate::scripted_ai::model_reach::combat_reach(h.app.world(), avatar),
-        Some(20.4)
-    );
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), avatar).unwrap();
+    assert!((reach - 20.4).abs() < 0.001);
     h.interact(avatar);
     assert_eq!(
         h.take::<InteractionFailed>(),
