@@ -1195,6 +1195,13 @@ fn first_preservation_cast(injured_slots: &[usize], held_spells: &[u32]) -> Opti
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn preservation_uses_temporal_anomaly_without_urgent_rewind() {
+    // Three injured units and both spells ready: avoid the unsourced urgent Rewind priority.
+    assert_eq!(first_preservation_cast(&[0, 2, 3], &[]), Some(373861));
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn preservation_uses_living_flame_without_plain_reversion_maintenance() {
     // One injured tank, ready Reversion and Living Flame; higher-priority healing cooldowns held.
     assert_eq!(
