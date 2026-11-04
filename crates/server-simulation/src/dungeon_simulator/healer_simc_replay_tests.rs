@@ -625,6 +625,99 @@ fn solidarity_self_cast_grants_one_living_nearby_ally_with_role_preference() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_items_use_only_rate_qualified_trinkets_in_combat() {
+    use shared::protocol::CombatLogKind;
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for qualified in [true, false] {
+        let mut fixture: serde_json::Value =
+            serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+        if !qualified {
+            let gear = fixture[1]["gear"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|item| item["id"] == 270162)
+                .unwrap();
+            gear["id"] = serde_json::json!(270169);
+        }
+        let recorded: [crate::followers::simulator::RecordedBuild; 5] =
+            serde_json::from_value(fixture).unwrap();
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&recorded),
+        )
+        .unwrap();
+        let healer = run.healer;
+        super::hold(&mut run, healer);
+        for _ in 0..10 {
+            run.app.update();
+        }
+        let mut rotation = server_follower_apl::holy_paladin_rotation::HolyPaladin::load(
+            run.app.world_mut(),
+            healer,
+            crate::simc_apl_native::Encounter::dungeon(0.0),
+        )
+        .unwrap();
+        for _ in 0..80 {
+            rotation
+                .drive(run.app.world_mut(), healer, &run.slots, None)
+                .unwrap();
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.source == Some(healer.to_bits())
+                    && matches!(event.spell_id, Some(1291894 | 1295885))
+                    && event.kind == CombatLogKind::CastSuccess)
+        );
+        let cursor = events.len();
+        super::engage(&mut run);
+        for _ in 0..220 {
+            rotation
+                .drive(
+                    run.app.world_mut(),
+                    healer,
+                    &run.slots,
+                    Some(run.sources[0]),
+                )
+                .unwrap();
+            run.app.update();
+        }
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0[cursor..];
+        assert_eq!(
+            events
+                .iter()
+                .any(|event| event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(1291894)
+                    && event.kind == CombatLogKind::CastSuccess),
+            qualified
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| event.source == Some(healer.to_bits())
+                    && event.spell_id == Some(1295885)
+                    && event.kind == CombatLogKind::CastSuccess)
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent

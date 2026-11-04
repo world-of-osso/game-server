@@ -62,6 +62,11 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "word_of_glory,if=target.health.pct<90"),
         ("default", "holy_shock,if=target.health.pct<95"),
         ("default", "flash_of_light,if=target.health.pct<50"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         ("default", "holy_light,if=target.health.pct<80"),
         ("damage", "holy_shock"),
         ("damage", "hammer_of_wrath"),
