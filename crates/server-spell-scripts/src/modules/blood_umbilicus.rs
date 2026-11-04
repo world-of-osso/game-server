@@ -13,6 +13,11 @@ const ACCUMULATOR: u32 = 391519;
 const SHIELD: u32 = 391527;
 const VAMPIRIC_BLOOD: u32 = 55233;
 const BLOOD_PLAGUE: u32 = 55078;
+/// DB2 defines no cap. INFERRED_WCL: fitted on 108 JpHdnbhYD8ZFWvma/1 and z1C2HFkf6VpGqWZD/1
+/// shields; 117 held-out LnMDdV3NPCK9J8jG/4, MzD8pFb9YaW6fA1K/15 and vhKYp3J2BcVdQ7fa/2
+/// shields have median absolute error 2.54%, p90 14.15% (estimated absorb scaling; 250.md).
+/// Retire when replaced by a DB2/source-defined cap.
+const CAP_MAX_HEALTH: f32 = 1.193;
 
 #[derive(Component)]
 struct PendingUmbilicus(f32);
@@ -130,11 +135,6 @@ fn apply_shield(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         .get::<Health>(target)
         .expect("Umbilicus target health")
         .max;
-    // INFERRED_WCL: JpHdnbhYD8ZFWvma/1, z1C2HFkf6VpGqWZD/1,
-    // MzD8pFb9YaW6fA1K/15, LnMDdV3NPCK9J8jG/4. Post-expiry cap and
-    // absorb modifiers fit at median 0.948, p10–p90 0.890–1.124; 24/149
-    // shields were within 5%. Retire when retail decompilation or server
-    // evidence resolves the formula.
     if !spell_cast::cast_triggered_with_overrides(
         world,
         caster,
@@ -142,7 +142,7 @@ fn apply_shield(world: &mut World, caster: Entity, target: Entity, depth: u8) {
         Some(target),
         depth,
         spell_cast::TriggeredSpellOverrides {
-            effect0_amount: Some(amount.min(max_health)),
+            effect0_amount: Some(amount.min(max_health * CAP_MAX_HEALTH)),
             ..Default::default()
         },
     ) {
