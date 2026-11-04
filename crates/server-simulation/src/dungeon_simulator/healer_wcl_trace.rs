@@ -96,6 +96,15 @@ pub(super) struct OpeningAura {
     stacks: u8,
     evidence: String,
     remove_ms: Option<u64>,
+    #[serde(default)]
+    absorb_balance: Option<OpeningAbsorb>,
+}
+
+#[derive(Deserialize)]
+struct OpeningAbsorb {
+    amount: u64,
+    max_hp: u64,
+    evidence: String,
 }
 
 pub(super) struct OpeningRemoval {
@@ -197,6 +206,22 @@ impl Trace {
             }
             if !auras::set_owned_stacks(world, source, target, aura.spell_id, aura.stacks) {
                 return Err(format!("WCL_OPENING_AURA_NOT_APPLIED:{}", aura.spell_id));
+            }
+            if let Some(balance) = &aura.absorb_balance {
+                if balance.amount == 0 || balance.max_hp == 0 || balance.evidence.is_empty() {
+                    return Err("WCL_OPENING_ABSORB_INVALID".into());
+                }
+                let maximum = world
+                    .get::<Health>(target)
+                    .ok_or("WCL_OPENING_ABSORB_HEALTH_MISSING")?
+                    .max;
+                let points = balance.amount as f32 / balance.max_hp as f32 * maximum;
+                if !auras::restore_owned_absorb_points(world, source, target, aura.spell_id, points)
+                {
+                    return Err(format!("WCL_OPENING_ABSORB_NOT_RESTORED:{}", aura.spell_id));
+                }
+                // This removal was observed consumption, not expiration. Native hits spend the pool.
+                continue;
             }
             if let Some(time_ms) = aura.remove_ms {
                 let instance_id = world
