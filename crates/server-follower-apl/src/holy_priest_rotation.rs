@@ -47,17 +47,16 @@ pub(crate) fn bindings() -> Bindings {
 pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("default", "guardian_spirit,if=target.health.pct<30"),
-        // VERIFIED_WCL 8y14PQpvDYj6NWgz f40 a1040 and LxbznMG7QFvg8Tyj
-        // f43 a1297 use Soulcoiler. The GCD timing is the Disc APL policy.
-        (
-            "default",
-            "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
-        ),
         ("default", "divine_hymn,if=party.injured>=3"),
         ("default", "apotheosis,if=target.health.pct<35"),
         ("default", "symbol_of_hope,if=mana.pct<60"),
         ("default", "serenity,if=party.heal_worthwhile"),
         ("default", "sanctify,if=party.injured>=3"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         ("default", "circle,if=party.injured>=3"),
         ("default", "prayer_of_healing,if=party.injured>=3"),
         ("default", "prayer_of_mending"),

@@ -46,6 +46,11 @@ pub(crate) fn program() -> Result<Program, String> {
     // SimC76f8118 apl_evoker.cpp160–162 has an empty Preservation default.
     Program::parse(&[
         ("urgent", "emerald_communion,if=mana.pct<65"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         ("default", "temporal_anomaly,if=party.injured>=2"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
         (

@@ -35,3 +35,9 @@ In `vhKYp3J2BcVdQ7fa` fight 2 pull 1, healer item 270162 is item level 341. Its 
 ## DPS/tank source audit
 
 All 31 tracked DPS/tank profile APLs already contain sourced item actions: 16 contain generic `use_items`, 15 use explicit `use_item` entries. Their conditions and item eligibility remain unchanged. The audit checks the actual `actions` arrays under `crates/server-follower-apl/profiles`, not healer source comments; retaining source lines alone is not a fresh runtime parity test.
+
+## Native list splice
+
+Preservation selects qualified items after its urgent list and hybrid Fire Breath, before routine Temporal Anomaly. Holy Priest retains Guardian Spirit and major/charge-based healing above items. Disc selects pain suppression, barrier, emergency Penance/shields/Radiance/Flash Heal before the generic default item row; its separate Soulcoiler/GCD list is removed. Resto Shaman retains its existing cooldowns, maintenance and urgent Healing Surge above items. No specific item ID or GCD condition remains in these lists.
+
+Druid, Mistweaver and Holy Paladin use the same qualified row through their owners; coordinate those splices with the lead. The policy does not add a use condition for the unqualified Idol.
