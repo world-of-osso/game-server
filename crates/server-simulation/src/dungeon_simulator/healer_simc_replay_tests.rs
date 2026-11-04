@@ -54,6 +54,52 @@ fn opening_prismatic_barrier_absorbs_matched_mage_health_and_versatility() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn player_barriers_absorb_matched_db2_health_and_versatility() {
+    use crate::auras::{AuraApplication, AuraSource};
+    // DB2 70448 DescriptionVariables use s2 * MHP * (1 + versadmg) / 100.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    for (actor, spell_id, fraction) in [
+        (run.slots[4], 11426, 0.35),
+        (run.slots[4], 235313, 0.30),
+        (run.slots[1], 184662, 0.30),
+        (run.slots[4], 414661, 0.24),
+        (run.slots[4], 414662, 0.20),
+        (run.slots[4], 414663, 0.20),
+    ] {
+        let max = run.app.world().get::<Health>(actor).unwrap().max;
+        let vers = crate::spell_cast::effects::versatility_multiplier(run.app.world(), actor);
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: actor,
+                target: actor,
+                spell_id,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), actor, None, 1, max);
+        let expected = max * fraction * vers;
+        assert!(
+            (absorbed - expected).abs() < 2.0,
+            "spell {spell_id} absorbed {absorbed}, expected {expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent
