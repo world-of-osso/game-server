@@ -4,6 +4,78 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn holy_armament_policy_uses_charges_only_in_combat() {
+    use shared::protocol::CombatLogKind;
+    // INFERRED_WCL: 260 casts by four current-build players with consistent
+    // charge reconstructions spent 6.0% of the observed time at two charges.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    let healer = run.healer;
+    let enemy = run.sources[0];
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let mut rotation = server_follower_apl::holy_paladin_rotation::HolyPaladin::load(
+        run.app.world_mut(),
+        healer,
+        crate::simc_apl_native::Encounter::dungeon(0.0),
+    )
+    .unwrap();
+    for _ in 0..80 {
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, None)
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && matches!(event.spell_id, Some(432459 | 432472))
+                && event.kind == CombatLogKind::CastSuccess)
+    );
+    let cursor = events.len();
+    for _ in 0..180 {
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, Some(enemy))
+            .unwrap();
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..];
+    let casts: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.source == Some(healer.to_bits())
+                && matches!(event.spell_id, Some(432459 | 432472))
+                && event.kind == CombatLogKind::CastSuccess
+        })
+        .map(|event| event.spell_id.unwrap())
+        .collect();
+    assert_eq!(casts, [432459, 432472], "{events:?}");
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_valiance_consumes_infusion_and_reduces_armament_recharge() {
     use crate::auras::{AuraApplication, AuraSource};
     use crate::spell_cast::{SpellHistory, test_harness::charge_recovery};

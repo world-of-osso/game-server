@@ -11,6 +11,7 @@ use shared::components::{Health, PowerType};
 
 const SPELLS: &[(&str, u32, bool)] = &[
     ("beacon_of_light", 53563, false),
+    ("holy_armaments", 432459, false),
     ("lay_on_hands", 633, false),
     ("holy_shock", 20473, false),
     ("word_of_glory", 85673, false),
@@ -53,6 +54,9 @@ pub(crate) fn program() -> Result<Program, String> {
         // SimC76f8118 sc_paladin_holy.cpp:668–671 maintains Beacon before combat.
         ("default", "beacon_of_light,if=target.beacon_up=0"),
         ("default", "lay_on_hands,if=target.health.pct<20"),
+        // INFERRED_WCL: six current-build Altar reports show low time at charge cap;
+        // use available Armaments in combat rather than adding an HP threshold.
+        ("default", "holy_armaments,if=armament_combat"),
         ("default", "avenging_wrath"),
         ("default", "light_of_dawn,if=party.injured>=2"),
         ("default", "word_of_glory,if=target.health.pct<90"),
@@ -139,6 +143,10 @@ impl HolyPaladin {
                 .with_targets(Some(target), &targets),
             beacon_up,
             injured,
+            armament_combat: enemy.is_some()
+                || world
+                    .get::<shared::components::CombatStatus>(healer)
+                    .is_some_and(|status| status.0),
         };
         if let Some((action, execution)) =
             self.driver
@@ -186,6 +194,7 @@ struct PartyFacts<'a> {
     native: NativeFacts<'a>,
     beacon_up: bool,
     injured: usize,
+    armament_combat: bool,
 }
 
 impl Facts for PartyFacts<'_> {
@@ -193,6 +202,7 @@ impl Facts for PartyFacts<'_> {
         match name {
             "target.beacon_up" => Ok(f64::from(self.beacon_up)),
             "party.injured" => Ok(self.injured as f64),
+            "armament_combat" => Ok(f64::from(self.armament_combat)),
             _ => self.native.value(name),
         }
     }
@@ -201,7 +211,7 @@ impl Facts for PartyFacts<'_> {
 impl ActionFacts for PartyFacts<'_> {
     fn value_for(&self, action: &Action, name: &str) -> Result<f64, String> {
         match name {
-            "target.beacon_up" | "party.injured" => self.value(name),
+            "target.beacon_up" | "party.injured" | "armament_combat" => self.value(name),
             _ => self.native.value_for(action, name),
         }
     }
