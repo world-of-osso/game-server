@@ -90,6 +90,22 @@ fn wcl_potion(spell: u32) -> Result<(u32, String), String> {
     Ok((item, name.into()))
 }
 
+/// Supported SimC potion tokens and their native item identities.
+pub const SIMC_POTIONS: &[(&str, u32)] = &[
+    ("lights_potential_2", 241308),
+    ("lights_potential_1", 241309),
+    ("potion_of_recklessness_2", 241288),
+    ("potion_of_recklessness_1", 241289),
+    ("draught_of_rampant_abandon_2", 241292),
+    ("draught_of_rampant_abandon_1", 241293),
+    ("potion_of_devoured_dreams_2", 241294),
+    ("potion_of_devoured_dreams_1", 241295),
+    ("potion_of_zealotry_2", 241296),
+    ("potion_of_zealotry_1", 241297),
+    ("liquid_luster_2", 271887),
+    ("liquid_luster_1", 271886),
+];
+
 /// Resolve the exact configured SimC identities; unsupported tokens fail explicitly.
 pub fn simc(values: &BTreeMap<String, String>) -> Result<LoadoutConsumables, String> {
     let mut result = LoadoutConsumables::default();
@@ -127,21 +143,10 @@ pub fn simc(values: &BTreeMap<String, String>) -> Result<LoadoutConsumables, Str
                 })
             }
             "potion" => {
-                let item = match value.as_str() {
-                    "lights_potential_2" => 241308,
-                    "lights_potential_1" => 241309,
-                    "potion_of_recklessness_2" => 241288,
-                    "potion_of_recklessness_1" => 241289,
-                    "draught_of_rampant_abandon_2" => 241292,
-                    "draught_of_rampant_abandon_1" => 241293,
-                    "potion_of_devoured_dreams_2" => 241294,
-                    "potion_of_devoured_dreams_1" => 241295,
-                    "potion_of_zealotry_2" => 241296,
-                    "potion_of_zealotry_1" => 241297,
-                    "liquid_luster_2" => 271887,
-                    "liquid_luster_1" => 271886,
-                    _ => return Err(format!("unsupported SimC potion {value:?}")),
-                };
+                let item = SIMC_POTIONS
+                    .iter()
+                    .find_map(|&(name, item)| (name == value).then_some(item))
+                    .ok_or_else(|| format!("unsupported SimC potion {value:?}"))?;
                 result.potion = Some((item, value.clone()));
             }
             "temporary_enchant" => result.temporary_enchant = parse_enchants(value)?,
