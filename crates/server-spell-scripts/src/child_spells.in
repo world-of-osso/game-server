@@ -433,6 +433,7 @@ C	paladin_armaments.rs	433106
 C	paladin_armaments.rs	433717
 C	paladin_armaments.rs	433722
 C	paladin_armaments.rs	1310389
+C	paladin_armaments.rs	1241866
 D	paladin_armaments.rs	heal_from_armament	launch_triggered_spell	&heal	1	433722
 D	paladin_armaments.rs	consume_holy_divine_guidance	launch_triggered_spell	&heal	1	1310389
 C	paladin_armaments.rs	1268810

@@ -4,6 +4,68 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn glistening_radiance_accumulates_only_at_full_health_and_caps() {
+    use crate::auras::{AuraApplication, AuraSource};
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: 1241866 absorbs on actor 1.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    for beacon in [53563, 156910] {
+        let mut run = super::spawn_class_party(
+            &snapshot,
+            65,
+            90,
+            1,
+            Some([104, 65, 266, 251, 62]),
+            Some(&builds),
+        )
+        .unwrap();
+        let healer = run.healer;
+        let target = run.slots[4];
+        super::hold(&mut run, healer);
+        for _ in 0..5 {
+            run.app.update();
+        }
+        let max = run.app.world().get::<Health>(target).unwrap().max;
+        run.app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .current = max * 0.8;
+        crate::auras::apply_aura(
+            run.app.world_mut(),
+            &AuraApplication {
+                caster: healer,
+                target,
+                spell_id: beacon,
+                effect_mask: u32::MAX,
+                source: AuraSource::Cast,
+            },
+        );
+        for _ in 0..120 {
+            run.app.update();
+        }
+        assert!(!crate::auras::has_aura(run.app.world(), target, 1241866));
+        run.app
+            .world_mut()
+            .get_mut::<Health>(target)
+            .unwrap()
+            .current = max;
+        for _ in 0..400 {
+            run.app.update();
+        }
+        assert!(crate::auras::has_aura(run.app.world(), target, 1241866));
+        let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), target, None, 1, max);
+        let expected = max * 0.06;
+        assert!(
+            (absorbed - expected).abs() < 2.0,
+            "beacon={beacon} absorbed={absorbed} expected={expected}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_divine_guidance_heals_three_allies_per_spender() {
     use crate::auras::{ActiveAuras, AuraSource};
     use crate::spell_cast::powers::PowerPools;

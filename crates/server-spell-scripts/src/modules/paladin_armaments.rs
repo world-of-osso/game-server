@@ -45,6 +45,9 @@ fn register_bulwark(scripts: &mut AuraScripts) {
         script.on_refresh = Some(lay_down_refreshed_armament);
         script.on_remove = Some(lay_down_removed_armament);
     }
+    for beacon in [53563, 156910] {
+        scripts.0.entry(beacon).or_default().on_periodic = Some(periodic_glistening_radiance);
+    }
     let grand = scripts.0.entry(85043).or_default();
     grand.check_proc = Some(grand_crusader_is_avoidance);
     grand.on_damage_proc = Some(grand_crusader_from_avoidance);
@@ -634,6 +637,48 @@ fn lay_down_arms(world: &mut World, unit: Entity, aura: &AuraInstance) {
         unit,
         633,
         f64::from(milliseconds) / 1000.0,
+    );
+}
+
+// VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: the selected talent 1241805
+// supplies shield 1241866 to the opening Beacon of Faith recipient.
+fn periodic_glistening_radiance(world: &mut World, target: Entity, aura: &AuraInstance, index: u8) {
+    let dummy_index = if aura.spell_id == 53563 { 5 } else { 6 };
+    if index != dummy_index
+        || !world
+            .get::<TraitLoadout>(aura.caster)
+            .is_some_and(|traits| {
+                traits
+                    .active_talent_spells()
+                    .any(|talent| talent.spell_id == 1241805)
+            })
+    {
+        return;
+    }
+    let Some(health) = world.get::<Health>(target) else {
+        return;
+    };
+    if health.current < health.max || health.max <= 0.0 {
+        return;
+    }
+    let max_health = health.max;
+    let percent = combat::spell_cast::scripts::script_effect_value(world, aura.caster, 1241805, 0);
+    let mut shield = world
+        .resource::<SpellStore>()
+        .get(1241866)
+        .expect("Glistening Radiance shield")
+        .clone();
+    shield.effects[0].base_points = max_health * percent / 100.0;
+    combat::auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: aura.caster,
+            target,
+            spell_id: 1241866,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+        &shield,
     );
 }
 
