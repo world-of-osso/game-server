@@ -5,8 +5,8 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires the level-90 follower snapshot"]
-fn mistweaver_interrupts_soothing_for_ready_kick_only_without_emergency() {
-    for (health_fraction, should_kick) in [(0.8, true), (0.3, false)] {
+fn mistweaver_does_not_interrupt_soothing_for_kick_before_healing() {
+    for (health_fraction, should_kick) in [(0.7, false), (0.3, false)] {
         let mut party = super::super::healer_simc_replay::snapshot_party(270, 90, 1);
         let healer = party.healer;
         let target = party.tank;
