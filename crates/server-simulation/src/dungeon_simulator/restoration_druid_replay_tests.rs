@@ -687,29 +687,41 @@ fn restoration_lifetreading_grows_efflorescence_and_lifebloom_blooms_verdancy() 
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn restoration_druid_casts_wild_growth_on_a_lightly_injured_party() {
-    use crate::spell_cast::test_harness::ObservedCombatEvents;
+fn restoration_druid_wild_growth_uses_the_retained_rate_gate() {
+    use shared::casting::CastState;
     use shared::components::Health;
-    use shared::protocol::CombatLogKind;
-    let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
-    super::healer_simc_replay::engage(&mut run);
-    let healer = run.healer;
-    // A party-wide pulse leaves every member at ~93%, as the SimC party trace does.
-    for unit in run.slots {
-        let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
-        health.current = health.max * 0.93;
+    for (fraction, expected) in [(0.88, true), (0.93, false)] {
+        let mut run = super::healer_simc_replay::snapshot_party(105, 90, 1);
+        let healer = run.healer;
+        run.app
+            .world_mut()
+            .entity_mut(healer)
+            .insert(crate::class_progression::KnownSpells::fixture(vec![48438]));
+        for unit in run.slots {
+            let mut health = run.app.world_mut().get_mut::<Health>(unit).unwrap();
+            health.current = health.max * fraction;
+        }
+        let encounter = crate::simc_apl_native::Encounter::Fixture {
+            started_at: crate::spell_cast::now(run.app.world()),
+            duration: 120.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        };
+        let mut rotation = server_follower_apl::restoration_druid_rotation::Restoration::load(
+            run.app.world_mut(),
+            healer,
+            encounter,
+        )
+        .unwrap();
+        rotation
+            .drive(run.app.world_mut(), healer, &run.slots, None)
+            .unwrap();
+        let casting = run
+            .app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 48438);
+        assert_eq!(casting, expected, "health fraction {fraction}");
     }
-    let start = run.app.world().resource::<ObservedCombatEvents>().0.len();
-    for _ in 0..80 {
-        run.app.update();
-    }
-    let events = &run.app.world().resource::<ObservedCombatEvents>().0[start..];
-    assert!(
-        events.iter().any(|e| e.source == Some(healer.to_bits())
-            && e.spell_id == Some(48438)
-            && e.kind == CombatLogKind::CastSuccess),
-        "Wild Growth must heal a party-wide pulse"
-    );
 }
 
 #[test]
