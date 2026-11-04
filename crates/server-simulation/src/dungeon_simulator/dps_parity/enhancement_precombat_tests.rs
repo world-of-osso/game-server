@@ -75,6 +75,71 @@ fn enhancement_precombat_poll_selects_and_only_trait_execute_casts() {
 
 #[test]
 #[ignore = "native263 reference inputs and private world database"]
+fn enhancement_precombat_default_potion_ages_buff_and_shared_cooldown() {
+    use server::simc_apl::Facts;
+
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(263, 1).unwrap();
+    let mut rotation = load(&mut run);
+    let mut selected_potion = false;
+    while let PrecombatPoll::Selected { action, execution } =
+        SpecRotation::poll_precombat(&mut rotation, run.app.world_mut(), run.actor, &run.targets)
+            .unwrap()
+    {
+        selected_potion |= action.name == "potion";
+        SpecRotation::execute(
+            &mut rotation,
+            run.app.world_mut(),
+            run.actor,
+            action,
+            execution,
+        )
+        .unwrap();
+        preparation::finish_pending_setup(&mut run).unwrap();
+    }
+    assert!(
+        selected_potion,
+        "the configured APL must select its precombat potion"
+    );
+    let world = run.app.world();
+    let now = crate::spell_cast::now(world);
+    let aura = world
+        .get::<crate::auras::ActiveAuras>(run.actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 1236994)
+        .expect("native potion aura");
+    assert!(
+        aura.effects
+            .iter()
+            .any(|effect| effect.aura_type == 189 && effect.amount > 0.0)
+    );
+    let remains = aura.expires_at.unwrap() - now;
+    assert!(
+        (27.0..=28.0).contains(&remains),
+        "aged DB2 aura duration: {remains}"
+    );
+    let bindings = crate::simc_apl_native::Bindings::default();
+    let facts = crate::simc_apl_native::NativeFacts::new(
+        world,
+        run.actor,
+        &bindings,
+        crate::simc_apl_native::Encounter::Fixture {
+            started_at: now,
+            duration: 300.0,
+            style: crate::simc_apl_native::FightStyle::Patchwerk,
+        },
+        1,
+    );
+    let cooldown = facts.value("cooldown.potion.remains").unwrap();
+    assert!(
+        (297.0..=298.0).contains(&cooldown),
+        "aged shared cooldown: {cooldown}"
+    );
+}
+
+#[test]
+#[ignore = "native263 reference inputs and private world database"]
 fn enhancement_trait_execute_switches_thorims_invocation_to_chain_lightning() {
     let _seed = crate::random::seed_scope(70448);
     let mut run = prepare_literal(263, 3).unwrap();
