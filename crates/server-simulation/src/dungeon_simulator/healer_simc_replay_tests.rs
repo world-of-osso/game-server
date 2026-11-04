@@ -387,13 +387,13 @@ fn preservation_keeps_routine_heals_before_living_flame_at_moderate_injury() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
+fn preservation_fire_breath_waits_for_observed_timeout() {
     use shared::protocol::CombatLogKind;
     for (count, elapsed, health, expected) in [
         (1, 0.0, 1.0, false),
-        (5, 0.0, 0.80, true),
-        (5, 0.0, 0.50, true),
+        (5, 0.0, 0.80, false),
         (1, 27.0, 0.80, true),
+        (5, 27.0, 0.50, true),
     ] {
         let mut run = super::snapshot_party(1468, 90, count);
         let healer = run.healer;

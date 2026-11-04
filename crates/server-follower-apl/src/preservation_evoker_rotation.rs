@@ -65,11 +65,8 @@ pub(crate) fn program() -> Result<Program, String> {
             "reversion,if=target.health.pct<95&target.reversion_up=0",
         ),
         ("default", "living_flame,if=target.health.pct<95"),
-        // INFERRED_WCL: p25 five targets, first-cast delay median 26.862 seconds.
-        (
-            "hybrid",
-            "fire_breath,empower_to=1,if=active_enemies>=5|time>=26.862",
-        ),
+        // INFERRED_WCL: first-cast delay median 26.862 seconds; see preservation-fire-breath.md.
+        ("hybrid", "fire_breath,empower_to=1,if=time>=26.862"),
         ("damage", "disintegrate"),
         ("damage", "living_flame"),
     ])
