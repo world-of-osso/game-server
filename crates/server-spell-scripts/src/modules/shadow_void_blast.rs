@@ -21,6 +21,14 @@ const VOID_BLAST: u32 = 450983;
 const OVERWHELMING_SHADOWS: u32 = 1266883;
 
 fn overwhelming_shadows_effect(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    if spell == OVERRIDE {
+        // Native450404 e0 replaces Disc Smite; e1/e2 are Shadow Mind Blast/charges.
+        return match world.get::<ActiveSpec>(caster).map(|spec| spec.0) {
+            Some(256) => index == 0,
+            Some(258) => index != 0,
+            _ => false,
+        };
+    }
     if spell != OVERWHELMING_SHADOWS {
         return true;
     }

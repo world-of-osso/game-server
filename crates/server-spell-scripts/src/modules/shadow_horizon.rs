@@ -18,7 +18,7 @@ struct Extensions {
 }
 
 fn after_cast(spell: u32) -> Option<spell_cast::scripts::AfterCastHook> {
-    (spell == VOID_BLAST).then_some(extend_rift)
+    matches!(spell, VOID_BLAST | 450215).then_some(extend_rift)
 }
 
 fn extend_rift(world: &mut World, caster: Entity, _: &SpellInfo) {
