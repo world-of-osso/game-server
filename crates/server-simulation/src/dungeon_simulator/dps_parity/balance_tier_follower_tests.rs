@@ -74,3 +74,121 @@ fn balance_mid2_starfall_instant_hits_engaged_enemies_only_with_two_piece() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires native Balance102 WCL profile and frozen world data"]
+fn balance_mid2_clarity_wanes_and_waxes_with_eclipse_and_ends_with_last_eclipse() {
+    let _seed = crate::random::seed_scope(70448);
+    let mut run = prepare_literal(102, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1296604));
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1233272, Some(actor), false)
+        .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    let clarity = |run: &Run| {
+        run.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1301768)
+            .cloned()
+    };
+    let start = clarity(&run).expect("Eclipse grants Clarity");
+    assert_eq!(start.stacks, 10);
+    assert_eq!(
+        start
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount,
+        10.0
+    );
+    let eclipse = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 48518)
+        .unwrap()
+        .clone();
+    let expires = eclipse.expires_at.unwrap();
+    let middle_at = expires - f64::from(eclipse.duration_ms) / 2000.0;
+    while crate::spell_cast::now(run.app.world()) < middle_at {
+        run.app.update();
+    }
+    let middle = clarity(&run).unwrap();
+    assert_eq!(middle.stacks, 2, "midpoint: {middle:?}");
+    assert_eq!(
+        middle
+            .effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount,
+        2.0
+    );
+    while crate::spell_cast::now(run.app.world()) < expires - 0.1 {
+        run.app.update();
+    }
+    let end = clarity(&run).unwrap();
+    assert_eq!(end.stacks, 10, "last second: {end:?}");
+    crate::spell_cast::cast_triggered(run.app.world_mut(), actor, 48517, Some(actor), 1);
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 48518,
+    );
+    assert!(clarity(&run).is_some(), "opposite Eclipse retains Clarity");
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 48517,
+    );
+    assert!(
+        clarity(&run).is_none(),
+        "last Eclipse removes Clarity immediately"
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 1296604,
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 102560, Some(actor), false)
+        .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(clarity(&run).is_none(), "no Clarity without four-piece");
+}
+
+#[test]
+#[ignore = "requires native Balance102 WCL profile and frozen world data"]
+fn balance_mid2_clarity_expires_with_eclipse_on_a_periodic_tick() {
+    let mut run = prepare_literal(102, 1).unwrap();
+    engage(&mut run);
+    let actor = run.actor;
+    crate::spell_cast::creature_cast(run.app.world_mut(), actor, 1233272, Some(actor), false)
+        .unwrap();
+    preparation::finish_pending_setup(&mut run).unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), actor, 1301768));
+    let expires = run
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 48518)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    while crate::spell_cast::now(run.app.world()) <= expires + 0.1 {
+        run.app.update();
+    }
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 48518));
+    assert!(!crate::auras::has_aura(run.app.world(), actor, 1301768));
+}
