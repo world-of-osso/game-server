@@ -1,6 +1,5 @@
 //! SimC76f8118 data_enums.hh1910/buff.cpp777–782: native flag490.
-//! Each application expires separately; overflow replaces oldest deadlines
-//! (buff.cpp2649–2692). No spell-ID whitelist or invented duration.
+//! Each application expires separately; overflow policy is selected per aura.
 use bevy::prelude::*;
 
 use super::{ActiveAuras, AuraInstance};
@@ -23,10 +22,25 @@ pub(super) fn initial_expirations(
     expires_at.map_or_else(Vec::new, |expiry| vec![expiry; usize::from(stacks)])
 }
 
-pub(super) fn merge_expirations(existing: &[f64], incoming: &[f64], overflow: usize) -> Vec<f64> {
+#[derive(Clone, Copy)]
+pub(super) enum OverflowPolicy {
+    ReplaceOldest,
+    KeepExpirations,
+}
+
+pub(super) fn merge_expirations(
+    existing: &[f64],
+    incoming: &[f64],
+    overflow: usize,
+    policy: OverflowPolicy,
+) -> Vec<f64> {
+    let removed = match policy {
+        OverflowPolicy::ReplaceOldest => overflow,
+        OverflowPolicy::KeepExpirations => 0,
+    };
     let mut expirations: Vec<_> = existing
         .iter()
-        .skip(overflow)
+        .skip(removed)
         .chain(incoming)
         .copied()
         .collect();

@@ -469,7 +469,7 @@ impl AuraInstance {
         }
     }
 
-    fn refresh_stacks(&mut self, new: &Self) {
+    fn refresh_stacks(&mut self, new: &Self, policy: async_stacks::OverflowPolicy) {
         self.max_stacks = new.max_stacks;
         if self.max_stacks == 0 {
             return;
@@ -481,6 +481,7 @@ impl AuraInstance {
                 &self.stack_expirations,
                 &new.stack_expirations,
                 usize::from(overflow),
+                policy,
             );
             self.expires_at = self.stack_expirations.last().copied();
         }
@@ -494,10 +495,10 @@ impl AuraInstance {
     }
 
     /// Refresh duration/amounts/charges; add requested stacks except Agony's preserved floor.
-    fn refresh_from(&mut self, new: AuraInstance) {
+    fn refresh_from(&mut self, new: AuraInstance, policy: async_stacks::OverflowPolicy) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;
-        self.refresh_stacks(&new);
+        self.refresh_stacks(&new, policy);
         self.charges = new.charges;
         self.guardian_heal_pct = new.guardian_heal_pct;
         self.cast_primary_target = new.cast_primary_target;
@@ -621,6 +622,7 @@ impl ActiveAuras {
         unique: bool,
         shared_slot: bool,
         replace_effects: bool,
+        policy: async_stacks::OverflowPolicy,
     ) -> Stacking {
         let same_slot = |aura: &AuraInstance| {
             aura.spell_id == new.spell_id
@@ -635,7 +637,7 @@ impl ActiveAuras {
             if replace_effects {
                 existing.effects.clear();
             }
-            existing.refresh_from(new);
+            existing.refresh_from(new, policy);
             return Stacking::Refreshed(id);
         }
         if !coexist
@@ -1707,6 +1709,12 @@ fn apply_aura_inner(
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
     #[cfg(any(test, feature = "test-support"))]
     let observed_previous = observations::previous_stacks(world, target, &instance);
+    let overflow_policy =
+        if crate::spell_cast::script_registry::keeps_async_overflow(world, spell.id) {
+            async_stacks::OverflowPolicy::KeepExpirations
+        } else {
+            async_stacks::OverflowPolicy::ReplaceOldest
+        };
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
@@ -1716,6 +1724,7 @@ fn apply_aura_inner(
             unique,
             shared_slot,
             selected_mask.is_some(),
+            overflow_policy,
         );
     let (id, kind) = match stacking {
         Stacking::Ignored => return,

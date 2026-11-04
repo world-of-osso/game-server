@@ -416,6 +416,8 @@ spell_script_hooks! {
     ConsumedEffectValues(&'static [(u32, u8)]),
     /// Explicit source-script override of synchronous native stacking.
     AsynchronousAuras(&'static [u32]),
+    /// Capped asynchronous applications keep all existing expiry events.
+    KeepAsyncOverflowAuras(&'static [u32]),
     /// Stored target uses do not multiply an incoming damage effect's magnitude.
     NonStackingIncomingAuras(&'static [u32]),
     /// Source scripts that consume the existing frozen effective-resource snapshot.
@@ -929,6 +931,19 @@ pub(crate) fn asynchronous_aura(world: &World, spell: u32) -> bool {
         .any(|hook| match hook {
             SpellScriptHook::AsynchronousAuras(spells) => spells.contains(&spell),
             _ => false,
+        })
+}
+
+pub(crate) fn keeps_async_overflow(world: &World, spell: u32) -> bool {
+    world
+        .get_resource::<SpellScriptRegistry>()
+        .is_some_and(|registry| {
+            registry
+                .hooks(HookKind::KeepAsyncOverflowAuras)
+                .any(|hook| match hook {
+                    SpellScriptHook::KeepAsyncOverflowAuras(spells) => spells.contains(&spell),
+                    _ => false,
+                })
         })
 }
 
