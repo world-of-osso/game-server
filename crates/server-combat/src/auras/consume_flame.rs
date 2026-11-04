@@ -45,7 +45,14 @@ pub(crate) fn consume_dream_breath(world: &mut World, ctx: &EffectCtx<'_>, targe
     }
     let multiplier =
         crate::spell_cast::scripts::script_effect_value(world, caster, TALENT, 5) / 100.0;
-    let amount = periodic.amount * consumed as f32 / periodic.period_ms as f32 * multiplier;
+    let source_spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(DREAM_BREATH)
+        .expect("Consume Flame source Dream Breath")
+        .clone();
+    let tick = super::periodic::periodic_live_amount(world, caster, &source_spell, periodic)
+        * aura.stack_multiplier();
+    let amount = tick * consumed as f32 / periodic.period_ms as f32 * multiplier;
     if consumed == remaining {
         super::remove_instance(world, target, aura.instance_id, RemoveReason::Cancelled);
     } else {
@@ -63,5 +70,12 @@ pub(crate) fn consume_dream_breath(world: &mut World, ctx: &EffectCtx<'_>, targe
         dest: None,
         chain_multiplier: 1.0,
     };
-    effects::apply_calculated_heal(world, &transfer, target, amount);
+    let source = EffectCtx {
+        caster,
+        spell: &source_spell,
+        depth: ctx.depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    effects::detonate_periodic_heal(world, &source, &transfer, target, amount);
 }

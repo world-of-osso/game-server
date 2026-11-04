@@ -1080,3 +1080,74 @@ fn healer_benchmark_core_direct_heal_amounts_match_db2_tc_ledger() {
         "native core-heal coefficient mismatches: {mismatches:?}"
     );
 }
+
+#[test]
+#[ignore = "requires native Dream Breath, Consume Flame and Merithra modifier data"]
+fn preservation_consume_flame_inherits_source_modifiers_once() {
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    for (merithra, versatility) in [(false, 0.0), (true, 0.0), (false, 50.0), (true, 50.0)] {
+        let mut spells = vec![444088, 355941, 360995, 361195, 445495];
+        if merithra {
+            spells.push(1256689);
+        }
+        let mut h = harness(Vec::new(), &spells, 13).unwrap();
+        h.app.init_resource::<ObservedCombatEvents>();
+        *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+            current: 1.0,
+            max: 1_000_000.0,
+        };
+        let mut stats = h
+            .app
+            .world_mut()
+            .get_mut::<crate::stats::CharacterStats>(h.caster)
+            .unwrap();
+        stats.crit_pct = 0.0;
+        stats.versatility_pct = versatility;
+        h.advance(2);
+        let mut dream = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(355941)
+            .unwrap()
+            .clone();
+        let duration = dream.misc.as_mut().unwrap().duration.as_mut().unwrap();
+        duration.duration_ms = 16_000;
+        duration.max_duration_ms = 16_000;
+        crate::spell_cast::execute_cast(h.app.world_mut(), h.caster, &dream, Some(h.caster))
+            .unwrap();
+        h.advance(45);
+        let tick = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|e| e.spell_id == Some(355941) && e.kind == CombatLogKind::Heal && e.periodic)
+            .unwrap()
+            .amount;
+        crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 360995, Some(h.caster), 1);
+        h.advance(3);
+        let detonation = h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .find(|e| e.spell_id == Some(445495) && e.kind == CombatLogKind::Heal)
+            .unwrap()
+            .amount;
+        // 100 SP x 0.5352, with the selected Dream-only 60% and general versatility each once.
+        let source_modifier = if merithra { 1.6 } else { 1.0 };
+        let expected_tick: f32 = 53.52 * source_modifier * (1.0 + versatility / 100.0);
+        let expected_detonation = expected_tick * 2.0 * 2.9; // four consumed seconds / two-second tick
+        assert!(
+            (tick as f32 - expected_tick).abs() <= 1.0,
+            "merithra={merithra} versatility={versatility}: tick={tick} expected={expected_tick}"
+        );
+        assert!(
+            (detonation as f32 - expected_detonation).abs() <= 1.0,
+            "merithra={merithra} versatility={versatility}: detonation={detonation} expected={expected_detonation}"
+        );
+    }
+}
