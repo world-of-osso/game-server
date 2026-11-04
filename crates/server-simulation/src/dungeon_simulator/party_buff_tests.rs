@@ -211,7 +211,7 @@ fn marksmanship_keystone_owner_opens_with_named_potion_inventory() {
         "unavailable potion is not ready"
     );
     run.app.world_mut().entity_mut(owner).insert(potion);
-    super::campaign::drive_owner_apl_opening(run.app.world_mut(), owner, target).unwrap();
+    super::drive_owner_apl_opening(run.app.world_mut(), owner, target).unwrap();
 }
 
 #[test]
