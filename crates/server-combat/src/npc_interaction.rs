@@ -132,6 +132,7 @@ fn validate_npc_view(
     (player_position, player_health, player_faction): (&Position, &Health, &UnitFactionTemplate),
     (_, _, npc_position, npc_health, npc_faction, combat): NpcView<'_>,
     templates: &FactionTemplates,
+    reaches: Option<(f32, f32)>,
 ) -> Result<(), InteractionError> {
     if player_health.current <= 0.0 {
         return Err(InteractionError::PlayerDead);
@@ -145,7 +146,10 @@ fn validate_npc_view(
     if combat.is_some_and(|status| status.0) {
         return Err(InteractionError::TargetInCombat);
     }
-    if distance(player_position, npc_position) > INTERACTION_DISTANCE {
+    let (player_reach, npc_reach) = reaches.ok_or(InteractionError::InvalidTarget)?;
+    // TC ea5113cc Player.cpp:1865-1867; Object.cpp:408-413,499-501.
+    let interaction_range = 4.0 + 2.0 * npc_reach + player_reach;
+    if distance(player_position, npc_position) > interaction_range {
         return Err(InteractionError::TooFarAway);
     }
     Ok(())
@@ -224,7 +228,14 @@ fn find_interactable_flag(
             .ok_or(InteractionError::InvalidTarget)?,
         world.get::<CombatStatus>(npc),
     );
-    validate_npc_view(player_view, npc_view, world.resource::<FactionTemplates>())?;
+    let reaches = crate::scripted_ai::model_reach::combat_reach(world, player)
+        .zip(crate::scripted_ai::model_reach::combat_reach(world, npc));
+    validate_npc_view(
+        player_view,
+        npc_view,
+        world.resource::<FactionTemplates>(),
+        reaches,
+    )?;
     Ok(target)
 }
 
@@ -263,6 +274,7 @@ struct InteractionWorld<'w, 's> {
         ),
     >,
     templates: Res<'w, FactionTemplates>,
+    reach: crate::creature_aggro_distance::AggroDistance<'w, 's>,
     catalog: Res<'w, GossipCatalog>,
 }
 
@@ -277,7 +289,11 @@ impl InteractionWorld<'_, '_> {
             .players
             .get(player)
             .map_err(|_| InteractionError::InvalidTarget)?;
-        validate_npc_view(player_view, npc_view, &self.templates)?;
+        let reaches = self
+            .reach
+            .combat_reach(player)
+            .zip(self.reach.combat_reach(npc));
+        validate_npc_view(player_view, npc_view, &self.templates, reaches)?;
         Ok(npc_view)
     }
 
