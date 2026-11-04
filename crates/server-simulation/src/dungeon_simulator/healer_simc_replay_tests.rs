@@ -450,61 +450,59 @@ fn preservation_fire_breath_waits_for_pack_or_observed_timeout() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn preservation_spends_merithra_at_inferred_health_threshold() {
+fn preservation_spends_merithra_above_the_old_health_cutoff() {
     use crate::auras::{AuraApplication, AuraSource};
     use shared::protocol::CombatLogKind;
-    for (health_pct, expected_spell) in [(0.65, 1256581), (0.66, 364343)] {
-        let mut run = super::snapshot_party(1468, 90, 1);
-        let healer = run.healer;
-        super::hold(&mut run, healer);
-        for _ in 0..5 {
-            run.app.update();
-        }
-        let target = run.tank;
-        let health = run.app.world_mut().get_mut::<Health>(target).unwrap();
-        health.into_inner().current *= health_pct;
-        crate::auras::apply_aura(
-            run.app.world_mut(),
-            &AuraApplication {
-                caster: healer,
-                target: healer,
-                spell_id: 1256579,
-                effect_mask: 1,
-                source: AuraSource::Cast,
-            },
-        );
-        let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
-            run.app.world_mut(),
-            healer,
-            crate::simc_apl_native::Encounter::dungeon(0.0),
-        )
-        .unwrap();
-        let cursor = run
-            .app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0
-            .len();
+    let mut run = super::snapshot_party(1468, 90, 1);
+    let healer = run.healer;
+    super::hold(&mut run, healer);
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let health = run.app.world_mut().get_mut::<Health>(run.tank).unwrap();
+    health.into_inner().current *= 0.90;
+    crate::auras::apply_aura(
+        run.app.world_mut(),
+        &AuraApplication {
+            caster: healer,
+            target: healer,
+            spell_id: 1256579,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let mut rotation = server_follower_apl::preservation_evoker_rotation::Preservation::load(
+        run.app.world_mut(),
+        healer,
+        crate::simc_apl_native::Encounter::dungeon(0.0),
+    )
+    .unwrap();
+    let cursor = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
+    for _ in 0..8 {
         rotation
             .drive(run.app.world_mut(), healer, &run.slots, &[run.sources[0]])
             .unwrap();
-        for _ in 0..10 {
+        for _ in 0..40 {
             run.app.update();
         }
-        let events = &run
-            .app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0[cursor..];
-        assert!(
-            events
-                .iter()
-                .any(|event| event.source == Some(healer.to_bits())
-                    && event.spell_id == Some(expected_spell)
-                    && event.kind == CombatLogKind::CastSuccess),
-            "health={health_pct}: {events:?}"
-        );
     }
+    let casts: Vec<_> = run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0[cursor..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(healer.to_bits()) && event.kind == CombatLogKind::CastSuccess
+        })
+        .filter_map(|event| event.spell_id)
+        .collect();
+    assert!(casts.contains(&1256581), "casts={casts:?}");
 }
 
 #[test]
