@@ -66,6 +66,11 @@ pub(crate) fn program() -> Result<Program, String> {
         ("default", "healing_stream_totem,if=target.health.pct<90"),
         ("default", "riptide"),
         ("default", "healing_surge,if=target.health.pct<45"),
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
+        (
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
+        ),
         ("default", "unleash_life,if=target.health.pct<90"),
         (
             "default",

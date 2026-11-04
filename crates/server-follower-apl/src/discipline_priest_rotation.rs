@@ -55,13 +55,14 @@ pub(crate) fn bindings() -> Bindings {
 
 pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
+        // INFERRED_WCL: kept for use rate; timing unsupported. See healer-item-usage.md.
         (
-            "item",
-            "use_item,name=soulcoiler_ritual_vessel,use_off_gcd=1,if=gcd.remains>=0.75*gcd.max",
+            "default",
+            "use_items,slots=trinket1:trinket2,if=in_combat&this_trinket.healer_rate_qualified",
         ),
         ("dot", "shadow_word_pain,if=refreshable"),
-        ("default", "pain_suppression,if=target.health.pct<35"),
-        ("default", "barrier,if=party.injured>=3"),
+        ("urgent", "pain_suppression,if=target.health.pct<35"),
+        ("urgent", "barrier,if=party.injured>=3"),
         ("ramp", "evangelism"),
         // SimC76f8118 apl_priest.cpp:245 places uppies after Evangelism. VERIFIED_WCL
         // KWw69CqBnf3Tpk8L f4 a4: no Void Shield inside any of 5 channels, so the
@@ -275,21 +276,10 @@ impl Discipline {
         if self.select(
             world,
             healer,
-            healer,
-            injured,
-            active_atonements,
-            "item",
-            &[],
-        )? {
-            return Ok(());
-        }
-        if self.select(
-            world,
-            healer,
             target,
             injured,
             active_atonements,
-            "default",
+            "urgent",
             &["pain_suppression", "barrier"],
         )? {
             return Ok(());
@@ -342,6 +332,17 @@ impl Discipline {
             active_atonements,
             "emergency",
             &["flash_heal"],
+        )? {
+            return Ok(());
+        }
+        if self.select(
+            world,
+            healer,
+            healer,
+            injured,
+            active_atonements,
+            "default",
+            &[],
         )? {
             return Ok(());
         }

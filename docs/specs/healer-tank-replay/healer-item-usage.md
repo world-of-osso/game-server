@@ -35,3 +35,15 @@ In `vhKYp3J2BcVdQ7fa` fight 2 pull 1, healer item 270162 is item level 341. Its 
 ## DPS/tank source audit
 
 All 31 tracked DPS/tank profile APLs already contain sourced item actions: 16 contain generic `use_items`, 15 use explicit `use_item` entries. Their conditions and item eligibility remain unchanged. The audit checks the actual `actions` arrays under `crates/server-follower-apl/profiles`, not healer source comments; retaining source lines alone is not a fresh runtime parity test.
+
+## Native list splice
+
+Preservation selects qualified items after its urgent list and hybrid Fire Breath, before routine Temporal Anomaly. Holy Priest retains Guardian Spirit and major/charge-based healing above items. Disc selects pain suppression, barrier, emergency Penance/shields/Radiance/Flash Heal before the generic default item row; its separate Soulcoiler/GCD list is removed. Resto Shaman retains its existing cooldowns, maintenance and urgent Healing Surge above items. No specific item ID or GCD condition remains in these lists.
+
+Druid, Mistweaver and Holy Paladin use the same qualified row through their owners; coordinate those splices with the lead. The policy does not add a use condition for the unqualified Idol.
+
+## Matched replay result
+
+`ccae3d6695`, five 75-second seeds of vhKY 2/1 in `healer-wcl-current-v18/qualified-items`, versus `no-rewind`: all intake gates pass. Soulcoiler is used once in every seed (0.8/min), matching the same retail opening's one use (0.8/min), but native starts at the opening and applies barriers at 0.05–2.0 s, not retail's 47.223–49.333 s. This short-window count is not a steady-state comparison to the whole-key retail rate. First deaths are 34.3/34.4/42.3/34.4/34.4 s, versus 36.4/35.3/34.4/20.4/35.3 s without items. The tank survives all five seeds; party deaths remain, and the 53-second timing gap is not solved.
+
+Behavioral proof: the combat-state fact follows false/true/false actor state; item context admits Soulcoiler and rejects Idol/unknown items; real 256/257/264/1468 profile fixtures do not use Soulcoiler out of combat and do apply its barriers after engagement. Reach audit and simulation test check pass. This proves the local four-list splice, not deployment of the other three owner-controlled lists or full healer parity.

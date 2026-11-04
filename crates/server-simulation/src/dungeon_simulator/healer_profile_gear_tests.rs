@@ -67,16 +67,32 @@ fn discipline_profile_crit_applies_inner_focus_once() {
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
-fn priest_replay_healers_use_their_equipped_soulcoiler() {
+fn qualified_healer_items_are_used_only_in_combat() {
     use crate::spell_cast::test_harness::ObservedCombatEvents;
     use shared::protocol::CombatLogKind;
 
-    for spec in [256, 257] {
+    for spec in [256, 257, 264, 1468] {
         let _seed = crate::random::seed_scope(1);
         let mut run = super::healer_simc_replay::snapshot_party(spec, 90, 1);
         let healer = run.healer;
         run.app
             .insert_resource(server_follower_apl::registry::FixedLengthFight { duration: 120.0 });
+        for _ in 0..40 {
+            run.app.update();
+        }
+        assert!(
+            !run.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.source == Some(healer.to_bits())
+                        && event.spell_id == Some(1291894)
+                        && event.kind == CombatLogKind::CastSuccess
+                }),
+            "spec {spec} must not use Soulcoiler out of combat"
+        );
         super::healer_simc_replay::engage(&mut run);
         let cursor = run.app.world().resource::<ObservedCombatEvents>().0.len();
         for _ in 0..600 {
