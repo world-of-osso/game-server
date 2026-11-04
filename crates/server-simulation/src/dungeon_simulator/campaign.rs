@@ -1121,6 +1121,69 @@ fn unattackable_objective_is_approached_using_its_live_position() {
 }
 
 #[test]
+fn reanchored_objective_stays_at_its_reachable_point_until_source_moves() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let source = 20375720;
+    let boss = run.actors[&source];
+    let original = *run.app.world().get::<Position>(boss).unwrap();
+    let anchor = Vec3::new(original.x + 14.0, original.y, original.z);
+    let pack = run
+        .graph
+        .packs
+        .iter_mut()
+        .find(|pack| pack.id == source)
+        .unwrap();
+    pack.position = [anchor.x, anchor.z];
+    pack.height = anchor.y;
+    run.graph.route = vec![server::test_support::graph::RouteStep {
+        pack: source,
+        anchor: anchor.to_array(),
+    }];
+    run.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(shared::components::UnitFlags(
+            shared::components::UnitFlags::IMMUNE_TO_PC,
+        ));
+
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        anchor
+    );
+
+    run.app
+        .world_mut()
+        .entity_mut(run.party.owner)
+        .insert(Position {
+            x: anchor.x,
+            y: anchor.y,
+            z: anchor.z,
+        });
+    run.control().unwrap();
+    assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_none());
+
+    let moved = Position {
+        x: original.x - 2.0,
+        ..original
+    };
+    run.app.world_mut().entity_mut(boss).insert(moved);
+    run.control().unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<MoveIntent>(run.party.owner)
+            .unwrap()
+            .0,
+        Vec3::new(moved.x, moved.y, moved.z)
+    );
+}
+
+#[test]
 fn off_graph_source_is_approached_at_its_anchor_when_translocations_exist() {
     let mut run = spawn_run(1, &mut None).unwrap();
     let source = 20375720;
@@ -5810,12 +5873,15 @@ impl Run {
                 .get::<Position>(self.party.owner)
                 .ok_or("objective owner absent")?;
             let owner_position = Vec3::new(owner.x, owner.y, owner.z);
-            if owner_position.distance(to) > 1.0 {
+            let destination = self
+                .reanchored_objective_position(pack_id, target, to)
+                .unwrap_or(to);
+            if owner_position.distance(destination) > 1.0 {
                 self.waiting_objective = None;
                 self.app
                     .world_mut()
                     .entity_mut(self.party.owner)
-                    .insert(MoveIntent(to));
+                    .insert(MoveIntent(destination));
             } else {
                 self.hold_for_objective(pack_id);
             }
@@ -6306,6 +6372,28 @@ impl Run {
             .world_mut()
             .entity_mut(self.party.owner)
             .remove::<MoveIntent>();
+    }
+
+    /// Preserve the extracted reachable point for an unmoved, reanchored boss source.
+    fn reanchored_objective_position(
+        &self,
+        pack_id: u64,
+        target: Entity,
+        live: Vec3,
+    ) -> Option<Vec3> {
+        if self.actors.get(&pack_id) != Some(&target) || !self.is_required_boss(target) {
+            return None;
+        }
+        let pack = self.graph.packs.iter().find(|pack| pack.id == pack_id)?;
+        let spawn = pack.spawns.iter().find(|spawn| spawn.guid == pack_id)?;
+        let source = Vec3::new(spawn.position[0], live.y, spawn.position[1]);
+        let anchor = pack.point();
+        if source.distance(live) > 1.0 || source.distance(anchor.with_y(live.y)) <= 1.0 {
+            return None;
+        }
+        let step = self.graph.route.iter().find(|step| step.pack == pack_id)?;
+        let destination = Vec3::from_array(step.anchor);
+        (destination.distance(anchor) <= 1.0).then_some(destination)
     }
 
     /// An unmoved source is approached at its frozen route anchor, which lies on the walk graph
