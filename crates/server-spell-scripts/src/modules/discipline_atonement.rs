@@ -37,7 +37,7 @@ pub(super) const HOOKS: &[SpellScriptHook] = &[
     SpellScriptHook::MeleeResidual(fiend_mana_on_landed_melee),
     SpellScriptHook::SummonInitialized(initialize_fiend),
     SpellScriptHook::AfterNativeCastUpdate(update_voidwraith),
-    SpellScriptHook::ConsumedEffectValues(&[(81749, 0)]),
+    SpellScriptHook::ConsumedEffectValues(&[(81749, 0), (450612, 1)]),
 ];
 
 fn declared_reach(
@@ -758,12 +758,13 @@ fn transfer_damage(
             }
             (source, false)
         };
+    let transfer = raw * void_infusion_multiplier(world, caster, damage.spell.id);
     transfer_atonement(
         world,
         caster,
         target,
         crit,
-        raw,
+        transfer,
         damage.spell.school_mask(),
         pet_spell,
         false,
@@ -774,6 +775,19 @@ fn transfer_damage(
             finish_penance_bolt(world, caster);
         }
     }
+}
+
+fn void_infusion_multiplier(world: &World, caster: Entity, spell: u32) -> f32 {
+    // SimC76f8118 sc_priest.cpp893–898 and sc_priest_discipline.cpp281–289/648:
+    // Void Blast and Penance (including Twinsight/Ultimate) boost the transfer, not damage.
+    if !matches!(spell, 450215 | 47666 | 1232571 | 421543)
+        || !auras::has_aura(world, caster, 450612)
+        || !auras::has_aura(world, caster, 459314)
+    {
+        return 1.0;
+    }
+    let percent = combat::spell_cast::scripts::script_effect_value(world, caster, 450612, 1);
+    1.0 + percent / 100.0
 }
 
 fn bank_searing_light(
