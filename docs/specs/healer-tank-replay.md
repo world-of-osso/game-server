@@ -30,6 +30,8 @@ Opening auras with a recorded full removal are removed at that WCL timestamp, at
 
 **VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2 (2026-10-31): the matched Affliction actor selects Siphon Life 452999 and receives 453000 heals after Wither 445474 ticks. DB2 70448 effect 1 supplies 5% of eligible periodic damage; the effect 0 class mask identifies eligible spells.
 
+**VERIFIED_WCL** `BCX8v3VPd6pnyzM4` fight 1 pull 1 (2026-11-01): the matched Holy Priest selects Light's Resurgence 193157; Prayer of Mending 33110 and Renew 139 land on the Priest at 16.224 seconds. DB2 70448 supplies its 12% chance per Mending heal.
+
 ## Equal-health healer target ties
 
 Healer target selection chooses the lowest health fraction. On exact ties it chooses the tank, then the lowest entity ID; it does not use a near-equal threshold. **INFERRED_WCL:** in seven current-build Altar Ritual Chieftain pulls, five first directed heals or HoTs targeted the tank. First three directed targets (T=tank, H=healer, D=DPS), excluding triggered duplicate casts and utility:
