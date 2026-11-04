@@ -381,3 +381,56 @@ fn wcl_intake_normalizes_health_fraction_before_native_absorb() {
         198_500.0
     );
 }
+
+#[test]
+#[ignore = "requires native Vampiric Blood spell data"]
+fn replayed_vampiric_blood_is_cast_only_at_its_logged_time() {
+    use super::healer_wcl_trace::{cast_due_replayed_casts, hold_replayed_casts};
+    use crate::spell_cast::test_harness::harness;
+    use server_follower_apl::literal_rotation::execution::{Execution, execute};
+    let mut h = harness(Vec::new(), &[55233], 6).unwrap();
+    let actor = h.caster;
+    let slots = [actor; 5];
+    let trace: super::healer_wcl_trace::Trace = serde_json::from_str(
+        r#"{"provenance":"test","excluded_self":0,"party_specs":[250,250,250,250,250],
+        "actor_slots":{"4":0},"bloodlust":[],"hits":[],"opening_auras":[],
+        "replayed_casts":[{"time_ms":4323,"slot":0,"spell_id":55233,"evidence":"applybuff"}]}"#,
+    )
+    .unwrap();
+    hold_replayed_casts(h.app.world_mut(), &slots, &trace.replayed_casts);
+    assert!(
+        execute(
+            h.app.world_mut(),
+            actor,
+            Execution::Spell(55233, actor, None)
+        )
+        .is_err()
+    );
+    let mut next = 0;
+    cast_due_replayed_casts(
+        h.app.world_mut(),
+        &slots,
+        &trace.replayed_casts,
+        &mut next,
+        4250,
+    )
+    .unwrap();
+    assert!(!crate::auras::has_aura(h.app.world(), actor, 55233));
+    cast_due_replayed_casts(
+        h.app.world_mut(),
+        &slots,
+        &trace.replayed_casts,
+        &mut next,
+        4300,
+    )
+    .unwrap();
+    assert!(crate::auras::has_aura(h.app.world(), actor, 55233));
+    assert!(
+        execute(
+            h.app.world_mut(),
+            actor,
+            Execution::Spell(55233, actor, None)
+        )
+        .is_err()
+    );
+}
