@@ -355,10 +355,71 @@ fn opening_wcl_exhausted_shield_restores_observed_points_and_consumes_natively()
 #[test]
 #[ignore = "requires native Flash Heal spell data"]
 fn wcl_logged_external_heal_keeps_effective_amount_without_second_modifiers() {
+    use crate::spell_cast::effects::{EffectCtx, LoggedExternalHealing};
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
     use crate::spell_cast::test_harness::{harness, spawn_player};
     use shared::components::Health;
-    let mut h = harness(Vec::new(), &[2061], 10).unwrap();
-    let target = spawn_player(&mut h.app, 10, 3.0);
+    use shared::protocol::CombatLogKind;
+    let mut h = harness(Vec::new(), &[2061, 139], 5).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let target = spawn_player(&mut h.app, 5, 3.0);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: h.caster,
+            target,
+            spell_id: 139,
+            effect_mask: u32::MAX,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    h.advance(80);
+    let renew_before = h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(139)
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        })
+        .count();
+    assert!(
+        renew_before > 0,
+        "ordinary native Renew must really heal before the replay lock"
+    );
+    h.app.insert_resource(LoggedExternalHealing::new(target));
+    h.advance(60);
+    let renew_after = h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(139)
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        })
+        .count();
+    assert_eq!(
+        renew_before, renew_after,
+        "an existing native HoT must not add to logged external healing"
+    );
+    assert!(
+        h.app
+            .world()
+            .resource::<LoggedExternalHealing>()
+            .suppressed_by_spell
+            .get(&139)
+            .copied()
+            .unwrap_or(0)
+            > 0
+    );
     *h.app.world_mut().get_mut::<Health>(target).unwrap() = Health {
         current: 100_000.0,
         max: 200_000.0,
@@ -371,6 +432,41 @@ fn wcl_logged_external_heal_keeps_effective_amount_without_second_modifiers() {
     assert_eq!(
         h.app.world().get::<Health>(target).unwrap().current,
         150_000.0
+    );
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(2061)
+        .unwrap()
+        .clone();
+    let ctx = EffectCtx {
+        caster: h.caster,
+        spell: &spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    crate::spell_cast::effects::apply_fixed_periodic_heal(
+        h.app.world_mut(),
+        &ctx,
+        target,
+        10_000.0,
+    );
+    assert_eq!(
+        h.app.world().get::<Health>(target).unwrap().current,
+        150_000.0,
+        "permission must be consumed once"
+    );
+    let self_ctx = EffectCtx {
+        caster: target,
+        ..ctx
+    };
+    crate::spell_cast::effects::apply_fixed_heal(h.app.world_mut(), &self_ctx, target, 10_000.0);
+    assert_eq!(
+        h.app.world().get::<Health>(target).unwrap().current,
+        160_000.0,
+        "native self healing must remain active"
     );
     h.app.world_mut().get_mut::<Health>(target).unwrap().current = 0.0;
     heal.deliver(h.app.world_mut(), h.caster, target).unwrap();

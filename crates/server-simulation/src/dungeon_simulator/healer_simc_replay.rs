@@ -621,6 +621,13 @@ fn replay_profile(
     party
         .app
         .insert_resource(crate::followers::simulator::DisableFollowerRelease);
+    if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
+        party
+            .app
+            .insert_resource(crate::spell_cast::effects::LoggedExternalHealing::new(
+                party.tank,
+            ));
+    }
     #[cfg(test)]
     if std::env::var_os("FOLLOWER_AUDIT_DEATH").is_some() {
         party.app.init_resource::<crate::auras::DeathAuraAudit>();
@@ -1054,7 +1061,10 @@ fn replay_profile(
             "party_specs":wcl.party_specs,"healer_spec":spec,"matches_recorded_party":spec == wcl.party_specs[1],
             "delivered":wcl_delivered,"avoided":wcl_avoided,
             "events_on_dead_targets_not_replayed":wcl_dead_targets,"self_rows_excluded_from_full_pull":wcl.excluded_self,
-            "health_samples":wcl_health_samples,"native_self_damage":native_self_damage});
+            "health_samples":wcl_health_samples,"native_self_damage":native_self_damage,
+            "native_external_heal_attempts_suppressed":app.world()
+                .get_resource::<crate::spell_cast::effects::LoggedExternalHealing>()
+                .map(|logged| &logged.suppressed_by_spell)});
     }
     if let Some(profile) = profile {
         report["enemy_profile"] =

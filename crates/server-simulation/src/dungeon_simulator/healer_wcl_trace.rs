@@ -326,7 +326,7 @@ impl RecordedHeal {
             dest: None,
             chain_multiplier: 1.0,
         };
-        crate::spell_cast::effects::apply_fixed_heal(world, &ctx, target, amount);
+        crate::spell_cast::effects::apply_logged_external_heal(world, &ctx, target, amount);
         Ok(())
     }
 }
