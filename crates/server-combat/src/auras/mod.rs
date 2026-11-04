@@ -86,6 +86,7 @@ mod gebbos_bag;
 pub mod harmony;
 mod janthrazet;
 pub(crate) mod midnight_stat_procs;
+pub(crate) mod refractive;
 pub(crate) mod reward_mods;
 pub mod rogue;
 #[cfg(test)]
@@ -1585,14 +1586,36 @@ pub fn apply_rolling_periodic_deposit(
     deposit: f32,
 ) {
     assert!(duration_ms > 0 && deposit.is_finite() && deposit >= 0.0);
-    apply_aura_inner(world, application, spell, Some((duration_ms, deposit)));
+    apply_aura_inner(
+        world,
+        application,
+        spell,
+        Some((duration_ms, deposit, false)),
+    );
+}
+
+/// Refraction rolls a fixed eight-tick budget without Pandemic extension.
+pub(crate) fn apply_refraction_deposit(
+    world: &mut World,
+    application: &AuraApplication,
+    spell: &SpellInfo,
+    duration_ms: u32,
+    deposit: f32,
+) {
+    assert!(duration_ms > 0 && deposit.is_finite() && deposit >= 0.0);
+    apply_aura_inner(
+        world,
+        application,
+        spell,
+        Some((duration_ms, deposit, true)),
+    );
 }
 
 fn apply_aura_inner(
     world: &mut World,
     application: &AuraApplication,
     spell: &SpellInfo,
-    rolling_deposit: Option<(u32, f32)>,
+    rolling_deposit: Option<(u32, f32, bool)>,
 ) {
     let target = application.target;
     if world.get_entity(target).is_err() || world.get_entity(application.caster).is_err() {
@@ -1658,7 +1681,7 @@ fn apply_aura_inner(
     if instance.effects.is_empty() {
         return;
     }
-    if let Some((duration_ms, deposit)) = rolling_deposit {
+    if let Some((duration_ms, deposit, _)) = rolling_deposit {
         refresh::set_rolling_deposit(&mut instance, duration_ms, deposit, now);
     }
     refresh::prepare_application(
@@ -1667,6 +1690,7 @@ fn apply_aura_inner(
         &mut instance,
         spell,
         rolling_deposit.is_some(),
+        rolling_deposit.is_some_and(|(_, _, fixed_ticks)| fixed_ticks),
     );
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);

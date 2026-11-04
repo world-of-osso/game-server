@@ -375,6 +375,7 @@ register_modules! {
     midnight_stormbound: (1000, "modules/midnight_stormbound.rs"),
     soulcoiler_ritual: (1000, "modules/soulcoiler_ritual.rs"),
     midnight_tendril: (1000, "modules/midnight_tendril.rs"),
+    mage_refractive: (1000, "modules/mage_refractive.rs"),
     mistweaver_ancient_teachings: (2700, "modules/mistweaver_ancient_teachings.rs"),
     mistweaver_celestial_conduit: (2700, "modules/mistweaver_celestial_conduit.rs"),
     mistweaver_chiji: (2700, "modules/mistweaver_chiji.rs"),

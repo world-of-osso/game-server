@@ -107,12 +107,15 @@ pub(crate) fn deliver(
         if deferred > 0.0 || consume_ox {
             super::stagger::deposit(world, split.recipient, deferred, consume_ox);
         }
+        let amount = amount - deferred;
+        let refracted = super::refractive::snapshot(world, split.recipient).unwrap_or(0.0) * amount;
+        super::refractive::deposit(world, split.recipient, refracted);
         let (remaining, absorbed) = super::absorb_damage(
             world,
             split.recipient,
             Some(attacker),
             school,
-            amount - deferred,
+            amount - refracted,
         );
         crate::combat::deal_health_damage(
             world,

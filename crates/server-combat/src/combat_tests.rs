@@ -120,6 +120,7 @@ fn run_attack_tick(app: &mut App) {
                 now: time.elapsed_secs_f64(),
                 melee_range: MELEE_RANGE,
                 stagger: None,
+                refractive: None,
                 scaling: &scaling,
                 summon_modifiers: &summon_modifiers,
                 sight: &sight,
