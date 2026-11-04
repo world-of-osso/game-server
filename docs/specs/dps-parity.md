@@ -1,6 +1,6 @@
 # Native item-instance DPS parity
 
-Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 profiles; Evoker uses its explicitly approved prior-tier MID1 reference. Sources: `scripts/dps_parity.py`, `scripts/item_instance_data.py`, `crates/server/src/item_instance.rs`; [character stats](../wiki/systems/character-stats.md) describes the existing production stat path.
+Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 profiles; Evoker uses its explicitly approved prior-tier MID1 reference. Balance uses the approved current-build WCL top-character reference until SimC ships a MID2 profile. Balance MID2 two-piece Starfall casts an additional instant, unsplit native damage impact on each eligible engaged enemy (SimC `sc_druid.cpp8372–8459`). Sources: `scripts/dps_parity.py`, `scripts/item_instance_data.py`, `crates/server/src/item_instance.rs`; [character stats](../wiki/systems/character-stats.md) describes the existing production stat path.
 
 ## What it must do
 
