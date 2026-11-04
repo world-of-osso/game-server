@@ -690,6 +690,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "selects existing owned Echo holders",
     ),
     (
+        "paladin_armaments.rs",
+        "choose_solidarity_ally",
+        "area",
+        1,
+        "selects living raid allies for the Solidarity armament copy",
+    ),
+    (
         "evoker_temporal_anomaly.rs",
         "shield_allies",
         "area",
