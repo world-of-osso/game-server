@@ -2,7 +2,7 @@
 use bevy::prelude::*;
 use server_combat::simc_apl::Facts;
 use server_combat::simc_apl_native::{Bindings, Encounter, NativeFacts};
-use shared::components::{Health, Position};
+use shared::components::{CharacterAppearance, CharacterVisual, Health, Position};
 
 #[test]
 fn class_follower_live_apl_reads_real_target_health_distance_and_count() {
@@ -28,12 +28,19 @@ fn class_follower_live_apl_reads_real_target_health_distance_and_count() {
             },
         ))
         .id();
+    for unit in [actor, target] {
+        world.entity_mut(unit).insert(CharacterVisual {
+            race: 1,
+            class: 1,
+            appearance: CharacterAppearance::default(),
+        });
+    }
     let targets = [target];
     let bindings = Bindings::default();
     let facts = NativeFacts::new(&world, actor, &bindings, Encounter::dungeon(0.0), 1)
         .with_targets(Some(target), &targets);
     assert_eq!(facts.value("target.health.pct").unwrap(), 25.0);
-    assert_eq!(facts.value("target.distance").unwrap(), 5.0);
+    assert_eq!(facts.value("target.distance").unwrap(), 2.0);
     assert_eq!(facts.value("active_enemies").unwrap(), 1.0);
     assert_eq!(facts.value("raid_event.adds.exists").unwrap(), 0.0);
 }
