@@ -5,8 +5,8 @@ use shared::protocol::CombatLogKind;
 
 #[test]
 #[ignore = "requires the level-90 follower snapshot"]
-fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
-    for (fraction, expected) in [(0.50, 115175), (0.80, 107428)] {
+fn mistweaver_does_not_manually_prepare_heals_with_soothing_mist() {
+    for fraction in [0.50, 0.80] {
         let mut party = super::super::healer_simc_replay::snapshot_party(270, 90, 1);
         let healer = party.healer;
         let target = party.tank;
@@ -42,57 +42,25 @@ fn soothing_prepares_a_ready_heal_below_sampled_health_otherwise_kicks() {
             .unwrap();
         let events = &party.app.world().resource::<ObservedCombatEvents>().0[start..];
         assert!(
-            events
+            !events
                 .iter()
                 .any(|event| event.kind == CombatLogKind::CastSuccess
                     && event.source == Some(healer.to_bits())
-                    && event.spell_id == Some(expected)),
-            "health={fraction} expected {expected}: {events:?}"
+                    && event.spell_id == Some(115175))
         );
-        if expected == 115175 {
+        if fraction == 0.50 {
             assert_eq!(
                 party.app.world().get::<CastState>(healer).unwrap().spell_id,
-                115175
+                124682
             );
-            for _ in 0..35 {
-                party.app.update();
-            }
-            // SpellHistory uses the real clock, not the fixture's fixed virtual time.
-            party
-                .app
-                .world_mut()
-                .resource_mut::<bevy::prelude::Time<bevy::time::Real>>()
-                .advance_by(std::time::Duration::from_secs(2));
-            let mut health = party.app.world_mut().get_mut::<Health>(target).unwrap();
-            health.current = health.max * fraction;
-            let start = party.app.world().resource::<ObservedCombatEvents>().0.len();
-            rotation
-                .drive(party.app.world_mut(), healer, &party.slots, Some(enemy))
-                .unwrap();
-            let spell = party
-                .app
-                .world()
-                .resource::<crate::spell_info::SpellStore>()
-                .get(124682)
-                .unwrap()
-                .clone();
-            let readiness = crate::spell_cast::read_native_cast_start(
-                party.app.world_mut(),
-                healer,
-                &spell,
-                target,
-            );
-            let mist = crate::auras::has_aura(party.app.world(), target, 124682);
-            let events = &party.app.world().resource::<ObservedCombatEvents>().0[start..];
+        } else {
             assert!(
                 events
                     .iter()
                     .any(|event| event.kind == CombatLogKind::CastSuccess
-                        && event.spell_id == Some(124682)
-                        && event.target == Some(target.to_bits())),
-                "ready Enveloping must follow the channel: readiness={readiness:?}, mist={mist}, health={:?}, cast={:?}",
-                party.app.world().get::<Health>(target),
-                party.app.world().get::<CastState>(healer)
+                        && event.source == Some(healer.to_bits())
+                        && matches!(event.spell_id, Some(107428 | 467307))),
+                "ready kick missing: {events:?}"
             );
         }
     }
