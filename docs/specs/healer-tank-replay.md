@@ -28,6 +28,8 @@ Gate normalized WCL intake for each party member in 15-second windows up to the 
 
 Opening auras with a recorded full removal are removed at that WCL timestamp, at the next replay tick, from the exact applied instance. A later native reapplication is not removed. **VERIFIED_WCL:** in `mHcDYRVyprndwjFC` fight 2 pull 2 (report start 2026-10-31), the Shaman's opening Ghost Wolf 2645 is removed at 2.535 seconds.
 
+**VERIFIED_WCL** `dtmp7Lg2abzyZVBG` fight 3 pull 1 (2026-10-24): the Arcane Mage's opening Prismatic Barrier 235450 absorbs incoming damage. DB2 70448 DescriptionVariables defines its fresh capacity as 30% of caster maximum health times versatility. The remaining shield at pull start is not recorded, so replayed opening capacity is an estimate.
+
 **VERIFIED_WCL** `mHcDYRVyprndwjFC` fight 2 pull 2 (2026-10-31): the matched Affliction actor selects Siphon Life 452999 and receives 453000 heals after Wither 445474 ticks. DB2 70448 effect 1 supplies 5% of eligible periodic damage; the effect 0 class mask identifies eligible spells.
 
 **VERIFIED_WCL** `BCX8v3VPd6pnyzM4` fight 1 pull 1 (2026-11-01): the matched Holy Priest selects Light's Resurgence 193157; Prayer of Mending 33110 and Renew 139 land on the Priest at 16.224 seconds. DB2 70448 supplies its 12% chance per Mending heal.

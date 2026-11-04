@@ -4,6 +4,56 @@ use std::path::Path;
 
 #[test]
 #[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
+fn opening_prismatic_barrier_absorbs_matched_mage_health_and_versatility() {
+    use shared::components::Health;
+    // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1: actor 2 has an opening
+    // 235450 barrier; DB2 70448 DescriptionVariables define its full capacity.
+    let builds: [crate::followers::simulator::RecordedBuild; 5] =
+        serde_json::from_str(include_str!("fixtures/wcl_holy_paladin_builds.json")).unwrap();
+    let (snapshot, _) = super::read_snapshot().unwrap();
+    let mut run = super::spawn_class_party(
+        &snapshot,
+        65,
+        90,
+        1,
+        Some([104, 65, 266, 251, 62]),
+        Some(&builds),
+    )
+    .unwrap();
+    let mage = run.slots[4];
+    let trace: super::super::healer_wcl_trace::Trace = serde_json::from_str(
+        r#"{"provenance":"VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1",
+        "excluded_self":0,"party_specs":[104,65,266,251,62],
+        "actor_slots":{"57":0,"3":1,"1":2,"58":3,"2":4},"bloodlust":[],"hits":[],
+        "opening_auras":[{"source_actor":2,"target_actor":2,"spell_id":235450,
+        "stacks":1,"evidence":"first_removebuff","remove_ms":17924}]}"#,
+    )
+    .unwrap();
+    trace
+        .apply_opening_auras(run.app.world_mut(), &run.slots)
+        .unwrap();
+    assert!(crate::auras::has_aura(run.app.world(), mage, 235450));
+    let max = run.app.world().get::<Health>(mage).unwrap().max;
+    let vers = crate::spell_cast::effects::versatility_multiplier(run.app.world(), mage);
+    let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), mage, None, 1, max);
+    let expected = max * 0.3 * vers;
+    assert!(
+        (absorbed - expected).abs() < 2.0,
+        "opening barrier={absorbed} expected={expected}"
+    );
+    crate::spell_cast::creature_cast(run.app.world_mut(), mage, 235450, Some(mage), false).unwrap();
+    for _ in 0..5 {
+        run.app.update();
+    }
+    let (_, absorbed) = crate::auras::absorb_damage(run.app.world_mut(), mage, None, 1, max);
+    assert!(
+        (absorbed - expected).abs() < 2.0,
+        "cast barrier={absorbed} expected={expected}"
+    );
+}
+
+#[test]
+#[ignore = "class party: requires the FOLLOWER_DPS_WORLD_DB snapshot"]
 fn holy_armament_policy_uses_charges_only_in_combat() {
     use shared::protocol::CombatLogKind;
     // INFERRED_WCL: 260 casts by four current-build players with consistent

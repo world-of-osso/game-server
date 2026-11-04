@@ -454,6 +454,9 @@ pub(super) fn absorb_amount(
     // `$newshield` for the Chi Cocoons (effect 2).
     let cocoon_percent = match (spell.id, effect.index) {
         (116849, 0) => Some(2),
+        // VERIFIED_WCL dtmp7Lg2abzyZVBG fight 3 pull 1; DB2 70448
+        // 235450 DescriptionVariables: maximum health * effect 1 * versatility.
+        (235450, 0) => Some(1),
         (406139 | 406220 | 1260681, 0) => Some(1),
         _ => None,
     };
