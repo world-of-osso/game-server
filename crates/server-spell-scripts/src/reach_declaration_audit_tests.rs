@@ -529,6 +529,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "selects allies for healing",
     ),
     (
+        "essence_burst.rs",
+        "nearby_injured_ally",
+        "area",
+        1,
+        "selects allies for healing",
+    ),
+    (
         "preservation_empower.rs",
         "spirit_targets",
         "area",
