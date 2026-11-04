@@ -155,6 +155,12 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
             .get::<super::AdmittedPull>(follower.owner)
             .and_then(|pull| pull.0.first().copied())
         && crate::spell_cast::targets::is_alive(world, target)
+        && crate::spell_cast::targets::relation_matches(
+            world,
+            unit,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
         && !world
             .get::<shared::components::CombatStatus>(target)
             .is_some_and(|status| status.0)

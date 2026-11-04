@@ -90,6 +90,57 @@ fn powers_follower_initialization_without_catalog_returns_error_without_mutation
 }
 
 #[test]
+fn follower_regroups_when_admitted_enemy_surrenders_alive() {
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let owner = h.caster;
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(AdmittedPull(vec![enemy]));
+    let follower = Follower { owner, profile };
+    ai::update_follower(h.app.world_mut(), unit, &follower);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .unwrap()
+            .0,
+        Some(enemy),
+        "a hostile admitted target must still be approached"
+    );
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(shared::components::UnitFactionTemplate(35));
+    assert!(crate::spell_cast::targets::is_alive(h.app.world(), enemy));
+    assert!(!crate::spell_cast::targets::relation_matches(
+        h.app.world(),
+        unit,
+        enemy,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
+    ai::update_follower(h.app.world_mut(), unit, &follower);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .unwrap()
+            .0,
+        None,
+        "a living surrender must not pin the party to its previous pull"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .unwrap()
+            .owner,
+        owner,
+    );
+}
+
+#[test]
 fn follower_selection_does_not_engage_but_owner_attack_does() {
     let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
