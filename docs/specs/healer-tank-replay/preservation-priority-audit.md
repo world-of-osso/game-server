@@ -32,3 +32,8 @@ SimC `76f8118` `apl_evoker.cpp:160–162` has an empty Preservation default, so 
 - Preserve Blossom and Living Flame's existing conditions; improve access only by removing unsupported priorities. [Fire Breath](preservation-fire-breath.md) and [Merithra](preservation-merithra-policy.md) have separate measured policies.
 
 Raw retail casts: `/home/osso/.worktrees/healer-merithra-wcl/*-pull1-all-casts.jsonl`. Native casts: healer-source `CastSuccess` events in the baseline traces. Compare each subsequent change using the same intake and five seeds, and retain death outcomes rather than filtering them out.
+
+## Separate removal results
+
+- Foreground Echo removal: `v18/no-echo`, compared with `v18/umbilicus-heldout`. Blossom casts rise from 1/0/0/1/2 to 11/14/8/23/17; Living Flame rises from 1/0/4/2/3 to 7/18/3/9/14. First deaths move from 34.3/34.4/30.45/35.3/34.4 to 38.4/42.3/34.4/35.3/37.3 seconds. All five intake gates pass.
+- Plain Reversion maintenance is removed independently; the Merithra rule and Reversion cast binding remain. This makes Living Flame available when routine healing cooldowns are held and only one unit is injured, without adding any new condition.
