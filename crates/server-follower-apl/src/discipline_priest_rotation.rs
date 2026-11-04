@@ -295,8 +295,8 @@ impl Discipline {
         )? {
             return Ok(());
         }
-        // INFERRED: 20 key-17 Disc actors had a 32.92% median post-hit
-        // health at recipient-confirmed saves; see healer-tank-replay/256.md.
+        // Unsupported cutoff kept only for healing/cast rate; removing it
+        // collapses matched healing. Cast/non-cast health overlaps; see 256.md.
         if critical
             && self.select(
                 world,
