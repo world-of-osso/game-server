@@ -493,6 +493,9 @@ fn class_follower_spawn_has_visual_real_gear_progression_and_no_story_kit() {
             crate::auras::AuraSource::KnownSpell,
             &passives,
         );
+        // Journal followers receive WCL consumables; the mirror needs the same loadout.
+        let consumables = super::super::consumables::wcl(spec).unwrap();
+        super::super::consumables::install(h.app.world_mut(), player, &consumables).unwrap();
         h.app.update();
         let world = h.app.world();
         let follower_stats = world.get::<crate::stats::CharacterStats>(unit).unwrap();
