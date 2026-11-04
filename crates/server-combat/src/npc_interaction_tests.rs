@@ -63,6 +63,8 @@ mod azure_book_tests;
 mod nalorakk_pyre_tests;
 #[path = "npc_interaction/temple_avatar_tests.rs"]
 mod temple_avatar_tests;
+#[path = "npc_interaction/temple_objective_tests.rs"]
+mod temple_objective_tests;
 
 struct Harness {
     app: App,
@@ -92,6 +94,7 @@ fn harness_with(player_faction: u32, extra: impl FnOnce(&mut App)) -> Option<Har
     add_inbox::<AuctionSearchResults>(&mut app);
     add_inbox::<AuctionOperationResponse>(&mut app);
     app.insert_resource(templates);
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(crate::persistence::GameDatabase::new(
         crate::persistence::temp_database(),
     ));
@@ -117,6 +120,12 @@ fn harness_with(player_faction: u32, extra: impl FnOnce(&mut App)) -> Option<Har
                 max: 100.0,
             },
             UnitFactionTemplate(player_faction),
+            shared::components::Player {
+                name: "Interaction test".into(),
+                race: 1,
+                class: 1,
+                appearance: Default::default(),
+            },
             crate::maps::InMap::continent(0),
         ))
         .id();
@@ -194,6 +203,12 @@ impl Harness {
                 },
             )
             .unwrap();
+        let (display, scale): (u32, f32) = self.conn.query_row(
+            "SELECT m.CreatureDisplayID, t.scale * m.DisplayScale FROM content_creature_template t \
+             JOIN content_creature_template_model m ON m.CreatureID=t.entry \
+             WHERE t.entry=?1 ORDER BY m.Probability DESC, m.Idx LIMIT 1",
+            [entry], |row| Ok((row.get(0)?, row.get(1)?)),
+        ).unwrap();
         let (bx, by, bz) = crate::terrain_height::wow_to_bevy(x, y, z);
         let npc = self
             .app
@@ -204,6 +219,10 @@ impl Harness {
                     name,
                 },
                 NpcFlags(u64::from(npcflag)),
+                shared::components::ModelDisplay {
+                    display_id: display,
+                },
+                shared::components::UnitScale(scale),
                 Position {
                     x: bx,
                     y: by,
@@ -311,6 +330,7 @@ fn crafting_broker_opens_customer_service_and_revalidates_range() {
                 name,
             },
             NpcFlags(flags),
+            shared::components::ModelDisplay { display_id: 117678 },
             Position {
                 x: 0.0,
                 y: 0.0,

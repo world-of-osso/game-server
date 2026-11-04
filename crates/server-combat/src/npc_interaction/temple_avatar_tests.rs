@@ -37,9 +37,21 @@ fn temple_avatar_gossip_starts_only_its_encounter_copy() {
     h.app.insert_resource(load_gossip_catalog(&h.conn).unwrap());
     h.app.insert_resource(maps);
     h.app.insert_resource(instances);
-    let avatar = h.spawn_real_npc(133392, 1.0);
+    let avatar = h.spawn_real_npc(133392, 46.31);
     h.app.world_mut().entity_mut(h.player).insert(copy);
     h.app.world_mut().entity_mut(avatar).insert(copy);
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), avatar).unwrap();
+    assert!((reach - 20.4).abs() < 0.001);
+    h.interact(avatar);
+    assert_eq!(
+        h.take::<InteractionFailed>(),
+        vec![InteractionFailed {
+            npc: avatar.to_bits(),
+            error: InteractionError::TooFarAway,
+        }]
+    );
+    h.place_player(avatar, 15.17);
+    h.app.world_mut().entity_mut(h.player).insert(copy);
     assert_eq!(
         instance_script::get_boss_state(h.app.world_mut(), copy, 3),
         Some(EncounterState::NotStarted)

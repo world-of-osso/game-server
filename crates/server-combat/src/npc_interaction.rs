@@ -132,6 +132,7 @@ fn validate_npc_view(
     (player_position, player_health, player_faction): (&Position, &Health, &UnitFactionTemplate),
     (_, _, npc_position, npc_health, npc_faction, combat): NpcView<'_>,
     templates: &FactionTemplates,
+    reaches: Option<(f32, f32)>,
 ) -> Result<(), InteractionError> {
     if player_health.current <= 0.0 {
         return Err(InteractionError::PlayerDead);
@@ -145,7 +146,10 @@ fn validate_npc_view(
     if combat.is_some_and(|status| status.0) {
         return Err(InteractionError::TargetInCombat);
     }
-    if distance(player_position, npc_position) > INTERACTION_DISTANCE {
+    let (player_reach, npc_reach) = reaches.ok_or(InteractionError::InvalidTarget)?;
+    // TC ea5113cc Player.cpp:1865-1867; Object.cpp:408-413,499-501.
+    let interaction_range = 4.0 + 2.0 * npc_reach + player_reach;
+    if distance(player_position, npc_position) > interaction_range {
         return Err(InteractionError::TooFarAway);
     }
     Ok(())
@@ -184,7 +188,7 @@ pub(crate) fn find_interactable_trading_vendor(
     find_interactable_flag(world, player, npc, NpcFlags::TRADING_POST)
 }
 
-fn find_interactable_flag(
+pub(crate) fn find_interactable_flag(
     world: &World,
     player: Entity,
     npc: Entity,
@@ -224,8 +228,55 @@ fn find_interactable_flag(
             .ok_or(InteractionError::InvalidTarget)?,
         world.get::<CombatStatus>(npc),
     );
-    validate_npc_view(player_view, npc_view, world.resource::<FactionTemplates>())?;
+    let reaches = crate::scripted_ai::model_reach::combat_reach(world, player)
+        .zip(crate::scripted_ai::model_reach::combat_reach(world, npc));
+    validate_npc_view(
+        player_view,
+        npc_view,
+        world.resource::<FactionTemplates>(),
+        reaches,
+    )?;
     Ok(target)
+}
+
+/// Select the data-backed healing-objective gossip action without a client transport.
+pub(crate) fn select_healing_objective_gossip(
+    world: &mut World,
+    player: Entity,
+    npc: Entity,
+) -> Result<(), String> {
+    let entry = find_interactable_flag(world, player, npc, NpcFlags::GOSSIP)
+        .map_err(|error| format!("objective gossip interaction: {error:?}"))?
+        .template_id;
+    if world.get::<crate::maps::InMap>(player) != world.get::<crate::maps::InMap>(npc)
+        || world.get::<crate::maps::InMap>(npc).is_none()
+    {
+        return Err("objective gossip belongs to another copy".into());
+    }
+    let flags = *world
+        .get::<NpcFlags>(npc)
+        .ok_or("objective has no NPC flags")?;
+    let opening = world
+        .get_resource::<GossipCatalog>()
+        .ok_or("objective gossip catalog missing")?
+        .open(entry, flags)
+        .ok_or("objective gossip menu missing")?;
+    if opening
+        .actions
+        .iter()
+        .filter(|(_, action)| *action == GossipAction::TempleAvatarStart)
+        .count()
+        != 1
+    {
+        return Err("objective gossip start option missing or ambiguous".into());
+    }
+    crate::scripted_ai::heal_objective::start(world, npc);
+    if crate::scripted_ai::heal_objective::encounter_state(world, npc)
+        != Some(crate::scripted_ai::instance_script::EncounterState::InProgress)
+    {
+        return Err("objective gossip did not start encounter".into());
+    }
+    Ok(())
 }
 
 #[derive(SystemParam)]
@@ -263,6 +314,7 @@ struct InteractionWorld<'w, 's> {
         ),
     >,
     templates: Res<'w, FactionTemplates>,
+    reach: crate::creature_aggro::AggroDistance<'w, 's>,
     catalog: Res<'w, GossipCatalog>,
 }
 
@@ -277,7 +329,11 @@ impl InteractionWorld<'_, '_> {
             .players
             .get(player)
             .map_err(|_| InteractionError::InvalidTarget)?;
-        validate_npc_view(player_view, npc_view, &self.templates)?;
+        let reaches = self
+            .reach
+            .combat_reach(player)
+            .zip(self.reach.combat_reach(npc));
+        validate_npc_view(player_view, npc_view, &self.templates, reaches)?;
         Ok(npc_view)
     }
 
