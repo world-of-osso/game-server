@@ -704,6 +704,13 @@ const ALLOWED: &[(&str, &str, &str, usize, &str)] = &[
         "keeps only the caster's active combat opponents",
     ),
     (
+        "mistweaver_sheilun.rs",
+        "update_timers",
+        "query",
+        1,
+        "finds talent owners to update their own combat timer",
+    ),
+    (
         "mistweaver_spiritfont.rs",
         "find_injured_allies",
         "area",
