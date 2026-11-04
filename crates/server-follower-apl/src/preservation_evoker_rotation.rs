@@ -49,11 +49,6 @@ pub(crate) fn program() -> Result<Program, String> {
     Program::parse(&[
         ("urgent", "emerald_communion,if=mana.pct<65"),
         ("urgent", "rewind,if=party.injured>=3"),
-        // INFERRED_WCL: median observed cast-target HP from 35 current-build casts.
-        (
-            "urgent",
-            "reversion,if=merithra.active&target.health.pct<=65.17229577976941",
-        ),
         ("default", "temporal_anomaly,if=party.injured>=2"),
         ("default", "echo,if=target.health.pct<95&target.echo_up=0"),
         ("default", "dream_breath,empower_to=1,if=party.injured>=1"),
@@ -62,6 +57,8 @@ pub(crate) fn program() -> Result<Program, String> {
             "spiritbloom,empower_to=1,if=target.health.pct<55",
         ),
         ("default", "verdant_embrace,if=target.health.pct<85"),
+        // INFERRED_WCL: lowest slot that still spends retail's ~99% of procs; see preservation-merithra-policy.md.
+        ("default", "reversion,if=merithra.active"),
         ("default", "emerald_blossom,if=party.injured>=2"),
         (
             "default",
