@@ -85,8 +85,10 @@ fn base_effect(world: &World, spell: u32, index: u8) -> f32 {
         .base_points
 }
 
-// SimC76f8118 player.cpp8317–8331 records post-absorb damage before health loss,
-// including damage beyond the recipient's remaining health.
+// Damage beyond the recipient's remaining health counts. INFERRED_WCL vhKYp3J2BcVdQ7fa
+// f2 p1: absorbed damage also counts, unlike SimC76f8118 player.cpp8331 post-absorb
+// `incoming_damage`. Across 34 retail heals the absorb-inclusive residual is median
+// 1.168 outside Vampiric Blood (native 1.18); post-absorb only spans 1.27–7.05.
 fn record_incoming_damage(world: &mut World, event: &CombatLogEvent) {
     if event.kind != CombatLogKind::Damage {
         return;
@@ -97,7 +99,7 @@ fn record_incoming_damage(world: &mut World, event: &CombatLogEvent) {
     if !blood(world, unit) {
         return;
     }
-    let amount = event.amount.max(0) as f32;
+    let amount = (event.amount.max(0) + event.absorbed.max(0)) as f32;
     if amount == 0.0 {
         return;
     }
