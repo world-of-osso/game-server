@@ -20,12 +20,6 @@ fn after_finisher_hit(world: &mut World, ctx: &EffectCtx, target: Entity, _: boo
 }
 
 pub(super) fn award_finisher(world: &mut World, ctx: &EffectCtx) {
-    if !world
-        .get::<KnownSpells>(ctx.caster)
-        .is_some_and(|known| known.contains(TALENT))
-    {
-        return;
-    }
     let Some(points) = ctx.spell.cast_policy_context.as_ref().and_then(|context| {
         context.resources.iter().find_map(|(power, amount)| {
             (*power == PowerType::ComboPoints && *amount > 0.0).then_some(*amount)
@@ -33,6 +27,16 @@ pub(super) fn award_finisher(world: &mut World, ctx: &EffectCtx) {
     }) else {
         return;
     };
+    award_finisher_points(world, ctx, points);
+}
+
+pub(super) fn award_finisher_points(world: &mut World, ctx: &EffectCtx, points: f32) {
+    if !world
+        .get::<KnownSpells>(ctx.caster)
+        .is_some_and(|known| known.contains(TALENT))
+    {
+        return;
+    }
     let chance_per_point = world
         .resource::<SpellStore>()
         .get(TALENT)

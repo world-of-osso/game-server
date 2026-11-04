@@ -3626,6 +3626,7 @@ fn resolve_effects(
             spell_id: spell.id,
             depth,
             selected,
+            landed: hit_units(plan),
             damage: Vec::new(),
             healing: Vec::new(),
             hit_masks: Vec::new(),
@@ -3971,6 +3972,8 @@ struct HitFrame {
     depth: u8,
     /// Native TargetInfo order, including misses before defense filtering.
     selected: Vec<Entity>,
+    /// Units remaining after native defense filtering.
+    landed: Vec<Entity>,
     damage: Vec<(Entity, f32)>,
     healing: Vec<(Entity, f32)>,
     hit_masks: Vec<(Entity, u32)>,
@@ -3987,6 +3990,11 @@ pub fn resolving_spell_targets(world: &World, caster: Entity, spell: u32) -> Opt
 /// The first entry owns native primary impact even when it misses.
 pub fn resolving_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
     Some(resolving_frame(world, ctx)?.selected.as_slice())
+}
+
+/// Units that passed native defense filtering in this resolution.
+pub fn resolving_landed_targets<'w>(world: &'w World, ctx: &EffectCtx<'_>) -> Option<&'w [Entity]> {
+    Some(resolving_frame(world, ctx)?.landed.as_slice())
 }
 
 /// Actual direct damage of this native resolution, isolated from nested child casts.

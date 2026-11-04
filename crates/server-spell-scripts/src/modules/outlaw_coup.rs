@@ -39,6 +39,14 @@ fn execute_coup(world: &mut World, ctx: &EffectCtx) {
             })
             .expect("Coup retains its effective combo points");
     let bonus_points = spell_cast::scripts::script_effect_value(world, ctx.caster, COUP_TALENT, 2);
+    // WCL T9M3am2H8Bz6p7g4/fight10 and DVj36xhzXyvWdLYt/fight5:
+    // Coup's successful dummy finisher earns Ruthlessness using bonus points,
+    // including when Fang Strike makes the actual payment zero.
+    if spell_cast::resolving_landed_targets(world, ctx)
+        .is_some_and(|targets| targets.contains(&target))
+    {
+        super::rogue_ruthlessness::award_finisher_points(world, ctx, points + bonus_points);
+    }
     let fazed = world.get::<ActiveAuras>(target).is_some_and(|auras| {
         auras
             .iter()
