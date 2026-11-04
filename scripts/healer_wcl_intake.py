@@ -129,6 +129,72 @@ def convert(events, healing, db, config):
             'observed_self': observed_self, 'hits': hits}
 
 
+def convert_tank(events, healing, db, config):
+    """Retain WCL source pressure; the native tank supplies recipient mitigation."""
+    actors = config['actors']
+    tank = actors[0]
+    duration = config['duration_ms']
+    observations = read_health_observations(events + healing, {tank: 0})
+    hits = []
+    excluded = collections.Counter()
+    for event in events:
+        time_ms = int(event['fight_ms'])
+        if not 0 <= time_ms < duration or event.get('targetID') != tank:
+            continue
+        source = event['sourceID']
+        if source == tank:
+            excluded['self_events'] += 1
+            continue
+        raw = event.get('unmitigatedAmount')
+        amount = event.get('amount', 0)
+        absorbed = event.get('absorbed', 0)
+        if source in actors:
+            excluded['friendly_events'] += 1
+            excluded['friendly_observed_pressure'] += amount + absorbed
+            if raw is not None:
+                excluded['known_raw'] += raw
+            continue
+        if raw is None and amount + absorbed > 0:
+            excluded['missing_raw_events'] += 1
+            excluded['missing_raw_observed_pressure'] += amount + absorbed
+            continue
+        if raw is not None and raw != amount + absorbed + event.get('mitigated', 0):
+            excluded['inconsistent_events'] += 1
+            excluded['known_raw'] += raw
+            continue
+        school, defense = read_spell_metadata(db, event['abilityGameID'])
+        maximum, observed_ms = max_health_at(observations, tank, time_ms)
+        hits.append({'time_ms': time_ms, 'slot': 0, 'source_actor': source,
+                     'source_instance': event.get('sourceInstance', 0), 'target_actor': tank,
+                     'spell_id': event['abilityGameID'], 'school': school, 'defense': defense,
+                     'hit_type': event['hitType'], 'periodic': event.get('tick', False),
+                     'raw': raw, 'amount': amount, 'absorbed': absorbed, 'max_hp': maximum,
+                     'max_hp_observed_ms': observed_ms,
+                     'health_after': event.get('hitPoints') if event.get('resourceActor') == 2 else None})
+    external_heals = []
+    for event in healing:
+        time_ms = int(event['fight_ms'])
+        if (0 <= time_ms < duration and event.get('type') == 'heal'
+                and event.get('targetID') == tank and event.get('sourceID') != tank):
+            maximum, _ = max_health_at(observations, tank, time_ms)
+            external_heals.append({'time_ms': time_ms, 'source_actor': event['sourceID'],
+                                   'spell_id': event['abilityGameID'],
+                                   'amount': event.get('amount', 0), 'max_hp': maximum})
+    included_raw = sum(hit['raw'] or 0 for hit in hits)
+    actor_slots = {actor: slot for slot, actor in enumerate(actors)}
+    for pet, owner in config.get('pet_owners', {}).items():
+        if owner in actor_slots:
+            actor_slots[int(pet)] = actor_slots[owner]
+    known_raw_total = included_raw + excluded['known_raw']
+    excluded_raw_share = excluded['known_raw'] / known_raw_total if known_raw_total else None
+    return {'mode': 'tank_raw', 'provenance': config['provenance'],
+            'excluded_known_raw_share': excluded_raw_share,
+            'actor_slots': actor_slots,
+            'party_specs': config['party_specs'], 'bloodlust': config['bloodlust'],
+            'excluded_self': excluded['self_events'], 'excluded': dict(excluded),
+            'included_raw': included_raw, 'hits': hits, 'external_heals': external_heals}
+
+
 def opening_auras(combatants, buffs, actors):
     slots = {actor: slot for slot, actor in enumerate(actors)}
     initial = {}
@@ -184,10 +250,12 @@ def main():
     parser.add_argument('output', type=Path)
     parser.add_argument('--combatants', type=Path, required=True)
     parser.add_argument('--buffs', type=Path, required=True)
+    parser.add_argument('--mode', choices=('healer', 'tank'), default='healer')
     args = parser.parse_args()
     with sqlite3.connect(f'file:{args.world_db}?mode=ro', uri=True) as db:
         config = json.loads(args.config.read_text())
-        result = convert(read_jsonl(args.events), read_jsonl(args.healing), db, config)
+        converter = convert_tank if args.mode == 'tank' else convert
+        result = converter(read_jsonl(args.events), read_jsonl(args.healing), db, config)
         buffs = read_jsonl(args.buffs)
         result['opening_auras'] = opening_auras(read_jsonl(args.combatants), buffs,
                                                config['actors'])

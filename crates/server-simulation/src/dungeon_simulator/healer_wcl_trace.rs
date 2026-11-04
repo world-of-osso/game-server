@@ -14,6 +14,8 @@ pub(super) enum Delivery {
 #[derive(Deserialize)]
 pub(super) struct Trace {
     pub provenance: String,
+    #[serde(default)]
+    pub mode: String,
     pub excluded_self: usize,
     pub party_specs: [u32; 5],
     pub actor_slots: std::collections::BTreeMap<i64, usize>,
@@ -22,6 +24,8 @@ pub(super) struct Trace {
     #[serde(default)]
     pub replayed_casts: Vec<ReplayedCast>,
     pub hits: Vec<RecordedHit>,
+    #[serde(default)]
+    pub external_heals: Vec<RecordedHeal>,
 }
 
 /// Matched-pull replay input: a party member's logged cast of a spell its APL must not choose.
@@ -260,6 +264,49 @@ fn apply_opening_bulwark(world: &mut World, application: &crate::auras::AuraAppl
 }
 
 #[derive(Deserialize)]
+pub(super) struct RecordedHeal {
+    pub time_ms: u64,
+    pub source_actor: i64,
+    spell_id: u32,
+    amount: u64,
+    max_hp: u64,
+}
+
+impl RecordedHeal {
+    pub fn deliver(&self, world: &mut World, source: Entity, target: Entity) -> Result<(), String> {
+        let health = world
+            .get::<Health>(target)
+            .ok_or("WCL_HEAL_TARGET_MISSING")?;
+        if health.current <= 0.0 {
+            return Ok(());
+        }
+        if self.max_hp == 0 {
+            return Err("WCL_HEAL_MAX_HEALTH_MISSING".into());
+        }
+        let amount = self.amount as f32 / self.max_hp as f32 * health.max;
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(self.spell_id)
+            .cloned()
+            .ok_or_else(|| {
+                format!(
+                    "WCL_HEAL_MISSING_SPELL:{}:{}",
+                    self.source_actor, self.spell_id
+                )
+            })?;
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: source,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        crate::spell_cast::effects::apply_fixed_heal(world, &ctx, target, amount);
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
 pub(super) struct TimedBloodlust {
     pub time_ms: u64,
     pub slot: usize,
@@ -270,6 +317,8 @@ pub(super) struct RecordedHit {
     pub time_ms: u64,
     slot: usize,
     source_actor: i64,
+    #[serde(default)]
+    source_instance: u64,
     target_actor: i64,
     spell_id: u32,
     school: u32,
@@ -280,6 +329,8 @@ pub(super) struct RecordedHit {
     deferred: bool,
     amount: u64,
     absorbed: u64,
+    #[serde(default)]
+    raw: Option<u64>,
     max_hp: u64,
     health_after: Option<u64>,
 }
@@ -310,6 +361,9 @@ impl Trace {
         }
         for hit in &trace.hits {
             hit.validate()?;
+            if trace.mode == "tank_raw" && hit.amount + hit.absorbed > 0 && hit.raw.is_none() {
+                return Err("WCL_INTAKE_RAW_MISSING".into());
+            }
         }
         Ok(trace)
     }
@@ -333,6 +387,10 @@ mod tests {
 }
 
 impl RecordedHit {
+    pub fn source_key(&self) -> (i64, u64) {
+        (self.source_actor, self.source_instance)
+    }
+
     fn validate(&self) -> Result<(), String> {
         if self.slot >= 5
             || self.school == 0
@@ -349,6 +407,129 @@ impl RecordedHit {
             (0 | 7 | 8 | 9 | 10, 0) => Ok(()),
             _ => Err("WCL_INTAKE_UNSUPPORTED_AMOUNT_OR_HIT_TYPE".into()),
         }
+    }
+
+    fn raw_hit_kind(
+        &self,
+        world: &World,
+        enemy: Entity,
+        target: Entity,
+    ) -> Result<crate::dungeon_simulator::healer_intake::HitKind, String> {
+        use crate::dungeon_simulator::healer_intake::HitKind;
+        use shared::components::UnitLevel;
+        if self.spell_id == 1 {
+            let outcome = match self.hit_type {
+                1 => "Hit",
+                2 => "Crit",
+                4 => "Block",
+                _ => return Err("WCL_RAW_MELEE_OUTCOME_UNSUPPORTED".into()),
+            };
+            let attacker_level = world
+                .get::<UnitLevel>(enemy)
+                .ok_or("WCL_RAW_SOURCE_LEVEL_MISSING")?
+                .0;
+            let target_level = world
+                .get::<UnitLevel>(target)
+                .ok_or("WCL_RAW_TARGET_LEVEL_MISSING")?
+                .0;
+            return Ok(HitKind::Melee {
+                hand: 0,
+                outcome: outcome.into(),
+                level_difference: i32::from(attacker_level) - i32::from(target_level),
+                // WCL raw includes the logged crit; native's outcome resolver adds it again.
+                critical_multiplier: if self.hit_type == 2 { 0.5 } else { 1.0 },
+                weapon_speed: 2.0,
+            });
+        }
+        let spell = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(self.spell_id)
+            .ok_or_else(|| format!("WCL_INTAKE_MISSING_SPELL:{}", self.spell_id))?;
+        if spell.school_mask() != self.school
+            || spell.categories.as_ref().map(|c| c.defense_type) != self.defense
+        {
+            return Err(format!(
+                "WCL_INTAKE_SPELL_METADATA_CHANGED:{}",
+                self.spell_id
+            ));
+        }
+        let effect = spell.effects.iter().find(|effect| {
+            if self.periodic {
+                effect.aura == 3
+            } else {
+                effect.effect == 2
+            }
+        });
+        Ok(HitKind::Spell {
+            spell_id: self.spell_id,
+            depth: 0,
+            bonus_source_guid: None,
+            effect_index: effect.map(|effect| u32::from(effect.index)),
+            periodic: self.periodic,
+            crit: self.hit_type == 2,
+            resolved_source: self.periodic,
+            blocked: self.hit_type == 4,
+        })
+    }
+
+    pub fn deliver_raw(
+        &self,
+        world: &mut World,
+        enemy: Entity,
+        slots: &[Entity; 5],
+    ) -> Result<Delivery, String> {
+        let target = slots[self.slot];
+        let health = world
+            .get::<Health>(target)
+            .ok_or("WCL_INTAKE_TARGET_HEALTH_MISSING")?;
+        if health.current <= 0.0 {
+            return Ok(Delivery::TargetDead);
+        }
+        if self.raw.is_none() {
+            return self.deliver(world, enemy, slots);
+        }
+        let native_max = health.max;
+        let before = health.current;
+        let scale = crate::level_scaling::damage_to_hp_scale(world, enemy, target);
+        if !scale.is_finite() || scale <= 0.0 {
+            return Err("WCL_INTAKE_INVALID_HEALTH_MULTIPLIER".into());
+        }
+        let raw = self.raw.unwrap() as f32 / self.max_hp as f32 * native_max / scale;
+        let kind = self.raw_hit_kind(world, enemy, target)?;
+        let hit = crate::dungeon_simulator::healer_intake::Hit {
+            tick: 0,
+            source_guid: 0,
+            pack: 0,
+            target_slot: self.slot,
+            school: self.school,
+            raw,
+            level_scaling_factor: scale,
+            kind,
+        };
+        world
+            .resource_mut::<crate::dungeon_simulator::healer_intake::Capture>()
+            .active_hit_scale = Some((target, scale));
+        let result = if self.spell_id == 1 {
+            crate::combat::replay_healer_hit(world, enemy, target, &hit)
+        } else {
+            crate::spell_cast::effects::replay_healer_hit(world, enemy, target, &hit)
+        };
+        world
+            .resource_mut::<crate::dungeon_simulator::healer_intake::Capture>()
+            .active_hit_scale = None;
+        result?;
+        let after = world
+            .get::<Health>(target)
+            .ok_or("WCL_INTAKE_TARGET_HEALTH_MISSING")?
+            .current;
+        Ok(Delivery::Applied(
+            json!({"time_ms":self.time_ms,"slot":self.slot,"spell_id":self.spell_id,
+            "wcl_hp_pct":self.health_after.map(|hp| 100.0 * hp as f64 / self.max_hp as f64),
+            "native_hp_pct":100.0 * f64::from(after / native_max),
+            "wcl_loss_pct":100.0 * self.amount as f64 / self.max_hp as f64,
+            "wcl_absorbed_pct":100.0 * self.absorbed as f64 / self.max_hp as f64,
+            "native_loss_pct":100.0 * f64::from((before-after) / native_max)}),
+        ))
     }
 
     pub fn deliver(

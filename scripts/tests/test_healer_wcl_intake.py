@@ -1,5 +1,9 @@
 import importlib.util
+import json
 import sqlite3
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -18,6 +22,53 @@ gate = load('healer_wcl_intake_gate')
 
 
 class WclIntakeTest(unittest.TestCase):
+    def test_default_healer_output_is_byte_identical(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            sqlite3.connect(path / 'world.db').close()
+            events = [{'targetID': actor, 'sourceID': 10, 'abilityGameID': 1,
+                       'timestamp': 100, 'fight_ms': 0, 'hitType': 1, 'amount': 50,
+                       'absorbed': 10, 'unmitigatedAmount': 100, 'maxHitPoints': 1000,
+                       'hitPoints': 950, 'resourceActor': 2} for actor in range(1, 6)]
+            combatants = [{'sourceID': actor, 'auras': []} for actor in range(1, 6)]
+            for name, rows in [('events', events), ('healing', []),
+                               ('combatants', combatants), ('buffs', [])]:
+                (path / f'{name}.jsonl').write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            config = {'actors': [1, 2, 3, 4, 5], 'party_specs': [73, 264, 70, 103, 261],
+                      'provenance': 'compatibility fixture', 'bloodlust': [], 'duration_ms': 5000}
+            (path / 'config.json').write_text(json.dumps(config))
+            args = [sys.executable, str(SCRIPTS / 'healer_wcl_intake.py'),
+                    str(path / 'events.jsonl'), str(path / 'healing.jsonl'),
+                    str(path / 'world.db'), str(path / 'config.json'), str(path / 'output.json'),
+                    '--combatants', str(path / 'combatants.jsonl'), '--buffs', str(path / 'buffs.jsonl')]
+            expected = (SCRIPTS / 'tests/fixtures/healer-wcl-output.json').read_bytes()
+            for mode in [[], ['--mode', 'healer']]:
+                subprocess.run(args + mode, check=True, capture_output=True)
+                self.assertEqual((path / 'output.json').read_bytes(), expected)
+
+    def test_tank_raw_intake_keeps_outcomes_and_counts_exclusions(self):
+        db = sqlite3.connect(':memory:')
+        config = {'actors': [1, 2, 3, 4, 5], 'party_specs': [73, 264, 70, 103, 261],
+                  'provenance': 'test', 'bloodlust': [], 'duration_ms': 5000}
+        common = {'targetID': 1, 'sourceID': 10, 'abilityGameID': 1,
+                  'fight_ms': 100, 'hitType': 1, 'maxHitPoints': 1000}
+        events = [dict(common, amount=50, absorbed=20, mitigated=30, unmitigatedAmount=100),
+                  dict(common, fight_ms=200, hitType=7, amount=0),
+                  dict(common, fight_ms=300, amount=50, unmitigatedAmount=40),
+                  dict(common, fight_ms=400, sourceID=2, amount=15)]
+        healing = [{'type': 'heal', 'fight_ms': 150, 'targetID': 1, 'sourceID': 2,
+                    'abilityGameID': 123, 'amount': 25},
+                   {'type': 'heal', 'fight_ms': 160, 'targetID': 1, 'sourceID': 1,
+                    'abilityGameID': 456, 'amount': 10}]
+        result = intake.convert_tank(events, healing, db, config)
+        self.assertEqual([hit['raw'] for hit in result['hits']], [100, None])
+        self.assertEqual([hit['hit_type'] for hit in result['hits']], [1, 7])
+        self.assertEqual(result['excluded']['known_raw'], 40)
+        self.assertEqual(result['excluded']['friendly_observed_pressure'], 15)
+        self.assertEqual(result['included_raw'], 100)
+        self.assertEqual(result['external_heals'][0]['amount'], 25)
+        self.assertEqual(len(result['external_heals']), 1)
+
     def test_replayed_casts_take_self_applied_vampiric_blood_times(self):
         buffs = [
             {'fight_ms': 38927, 'sourceID': 4, 'targetID': 4, 'abilityGameID': 55233, 'type': 'applybuff'},

@@ -170,6 +170,8 @@ pub(super) fn replay_simc_party_with_targets(
 struct EnemyProfile {
     provenance: String,
     intervals_ms: Vec<(u64, u64)>,
+    #[serde(default)]
+    source_keys: Vec<(i64, u64)>,
 }
 
 impl EnemyProfile {
@@ -242,6 +244,9 @@ pub(super) fn replay_simc_party_with_wcl(
         .filter(|&&(start, _)| start == 0)
         .count();
     let intake = super::healer_wcl_trace::Trace::read(intake)?;
+    if intake.mode == "tank_raw" && profile.source_keys.len() != profile.intervals_ms.len() {
+        return Err("WCL_RAW_PROFILE_SOURCE_KEYS_REQUIRED".into());
+    }
     let builds = builds
         .map(|path| {
             let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
@@ -614,7 +619,18 @@ fn replay_profile(
         .insert_resource(server_follower_apl::registry::FixedLengthFight {
             duration: f64::from(duration),
         });
-    settle_party_buffs(&mut party)?;
+    if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
+        for &unit in &party.slots[2..] {
+            party
+                .app
+                .world_mut()
+                .entity_mut(unit)
+                .remove::<crate::followers::AplControlled>()
+                .insert(server::test_support::LiteralParityFixture);
+        }
+    } else {
+        settle_party_buffs(&mut party)?;
+    }
     engage(&mut party);
     let ClassParty {
         mut app,
@@ -667,6 +683,15 @@ fn replay_profile(
         );
     }
     let mut next_replayed_cast = 0;
+    let mut next_external_heal = 0;
+    if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
+        for &unit in &slots[1..] {
+            app.world_mut()
+                .entity_mut(unit)
+                .remove::<crate::followers::AplControlled>()
+                .insert(server::test_support::LiteralParityFixture);
+        }
+    }
     let mut opening_event_cursor = app
         .world()
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -695,6 +720,7 @@ fn replay_profile(
     let mut healer_casts = std::collections::BTreeMap::<u32, u32>::new();
     let mut healer_cast_events = Vec::new();
     let mut mitigation_ticks = 0_u32;
+    let mut raw_mitigation_windows = vec![0_u32; duration.div_ceil(5) as usize];
     let mut next = 0;
     let mut next_party = 0;
     let mut next_wcl = 0;
@@ -816,12 +842,42 @@ fn replay_profile(
                 &mut next_replayed_cast,
                 elapsed_ms,
             )?;
-            while let Some(hit) = wcl
-                .hits
-                .get(next_wcl)
-                .filter(|hit| hit.time_ms < elapsed_ms + 50)
-            {
-                match hit.deliver(app.world_mut(), source, &slots)? {
+            loop {
+                let hit = wcl
+                    .hits
+                    .get(next_wcl)
+                    .filter(|hit| hit.time_ms < elapsed_ms + 50);
+                let heal = wcl
+                    .external_heals
+                    .get(next_external_heal)
+                    .filter(|heal| heal.time_ms < elapsed_ms + 50);
+                if let Some(heal) =
+                    heal.filter(|heal| hit.is_none_or(|hit| heal.time_ms < hit.time_ms))
+                {
+                    let source_slot = wcl
+                        .actor_slots
+                        .get(&heal.source_actor)
+                        .ok_or_else(|| format!("WCL_HEAL_UNKNOWN_SOURCE:{}", heal.source_actor))?;
+                    heal.deliver(app.world_mut(), slots[*source_slot], tank)?;
+                    next_external_heal += 1;
+                    continue;
+                }
+                let Some(hit) = hit else { break };
+                let delivery = if wcl.mode == "tank_raw" {
+                    let profile = profile.as_ref().ok_or("WCL_RAW_PROFILE_REQUIRED")?;
+                    let index = profile
+                        .source_keys
+                        .iter()
+                        .position(|key| *key == hit.source_key())
+                        .ok_or_else(|| format!("WCL_RAW_SOURCE_UNMAPPED:{:?}", hit.source_key()))?;
+                    let enemy = *active_profile.get(&index).ok_or_else(|| {
+                        format!("WCL_RAW_SOURCE_INACTIVE:{index}:{}", hit.time_ms)
+                    })?;
+                    hit.deliver_raw(app.world_mut(), enemy, &slots)?
+                } else {
+                    hit.deliver(app.world_mut(), source, &slots)?
+                };
+                match delivery {
                     super::healer_wcl_trace::Delivery::Applied(sample) => {
                         wcl_delivered += 1;
                         wcl_health_samples.push(sample);
@@ -859,6 +915,16 @@ fn replay_profile(
         report_death_audit(&mut app, &slots);
         let world = app.world();
         recorder.observe_frame(world, tick);
+        if wcl.as_ref().is_some_and(|trace| trace.mode == "tank_raw") {
+            let aura = match tank_spec {
+                73 => Some(132404),
+                581 => Some(203819),
+                _ => None,
+            };
+            if aura.is_some_and(|spell| crate::auras::has_aura(world, tank, spell)) {
+                raw_mitigation_windows[((tick - 1) / 100) as usize] += 1;
+            }
+        }
         let marked = |unit: &Entity, spell| {
             world
                 .get::<crate::auras::ActiveAuras>(*unit)
@@ -971,6 +1037,7 @@ fn replay_profile(
         "tank_casts":tank_casts,"tank_cast_events":tank_cast_events,"healer_casts":healer_casts,"healer_cast_events":healer_cast_events,
         "party_entities":slots.map(Entity::to_bits),
         "tank_active_mitigation_seconds":(tank_spec == 66).then(|| f64::from(mitigation_ticks) / f64::from(TICKS_PER_SECOND)),
+        "tank_raw_mitigation_window_ticks":raw_mitigation_windows,
         "metrics":recorder.report(app.world(), duration)});
     if let Some(wcl) = wcl {
         report["timeline"] = json!("wcl_damage_taken");

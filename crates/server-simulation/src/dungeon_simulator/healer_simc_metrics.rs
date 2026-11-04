@@ -210,9 +210,12 @@ impl Recorder {
                     .iter()
                     .position(|unit| Some(*unit) == target)
                     .unwrap();
+                let max_hp = target
+                    .and_then(|unit| world.get::<Health>(unit))
+                    .map(|health| health.max);
                 self.self_healing_events
                     .push(json!({"time_seconds":seconds,"slot":slot,
-                    "spell":event.spell_id,"raw":raw,"effective":effective}));
+                    "spell":event.spell_id,"raw":raw,"effective":effective,"max_hp":max_hp}));
             }
             if event.kind == CombatLogKind::Death {
                 self.first_death_seconds.get_or_insert(seconds);
