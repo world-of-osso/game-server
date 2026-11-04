@@ -73,6 +73,23 @@ DB2 has no `SpellAuraOptions` row for `1307910`; its recorded attributes do not 
 
 DB2 gives each driver 2 RPPM, no haste-modifier rows and a 12-second buff; the SimC debug trace also reports no haste scaling. With independent drivers, bad-luck protection and 30% refresh carryover, a 1,500-run illustrative simulation predicted 79.45% uptime for three drivers and 38.22% for one. Native's ten-seed mean was 78.55%; SimC's 1,000-iteration report was 38.96%. The first native seed alone was 81.37%; the aggregate report retained that seed's uptime rather than averaging it. The reference and native rates therefore represent different models, not evidence that native's three-driver rate is wrong.
 
+## Marksmanship Bulletstorm and 3T residual — 2026-11-04
+
+A real Rapid Fire/Aimed Shot test reproduced loss of the final Bulletstorm use's native1.2 damage modifier before projectile impact. Scripted decrements now share the existing consumed-modifier snapshot. SimC `sc_hunter.cpp5337,5596` establishes that damage before consumption. No coefficient, recipient or gear behavior changed.
+
+Ten paired native seeds `70448,1–9`, 300 seconds and the frozen landed-master DB, measured source `aa773528bd` versus `bf3e48f8b1`:
+
+| Targets | Before DPS | Fixed DPS | Original SimC DPS | Fixed ratio | Raw status |
+|---|---:|---:|---:|---:|---|
+| 1T | 183,621.979 | 185,650.896 | 192,745.335 | 0.963193 | in |
+| 3T | 264,399.332 | 266,632.102 | 280,759.392 | 0.949682 | **OUT** |
+
+All paired seeds improve; all40 fact ledgers are empty. The raw3T result misses the95% boundary by89.32 DPS. Aggregate recipients match: Aimed1.176 versus1.172 per cast; Rapid13.238 versus13.253 hits per channel; Volley36 per field; Explosive3 per primary pulse. Multi-Shot and Wind Arrow appear in neither executed damage ledger.
+
+The earlier gear explanation was rechecked on3T, not assumed. Removing only bonus13708 from neck/chest/weapon in both diagnostic profiles gives fixed native260,171.215 versus SimC271,839.242 (0.957077). The modeled bonus therefore adds6,460.887 native versus8,920.150 SimC DPS: a net2,459.264 DPS model difference, not the entire14,127.290 raw deficit. The control's remaining4.2923% deficit is within tolerance and remains unproven. Original references are unchanged and raw3T remains OUT; this control is not a replacement acceptance result. Retail multi-item stacking is still unverified, so native gear behavior is unchanged.
+
+Evidence and full named-ability breakdown: `game-engine/data/diagnostics/parity-254-2026-11-04/breakdown.md`, `baseline/`, `bulletstorm-after/`, `without-13708/`, `without-13708-after/` and `simc-3t-debug.txt`. Native controls use ten seeds; SimC controls use1000 iterations.
+
 ## Demon Hunter reach-4 candidate remeasure (2026-11-03)
 
 Candidate `1f6ed648ec` uses the SimC-sourced 4.0 target combat reach and includes the ballistic landing and single-writer movement changes. These are local candidate measurements, not a landed-master result. Each row uses the native production literal follower, ten seeds `70448,1–9`, 300 seconds and the frozen world database. SimC references use 1,000 iterations. Per-seed reports and logs are in `game-engine/data/diagnostics/parity-577-2026-11-03/simc-reach4/`. The 577 1T aggregate JSON was overwritten by a one-seed probe; its ten seed files and ten-seed log remain intact. All 40 seed reports have empty fact-error ledgers.

@@ -292,12 +292,13 @@ fn is_owned_successful_cast(event: &AuraEvent, caster: Entity) -> bool {
     owned && successful
 }
 
-/// sc_hunter.cpp3640–3647: damage is established before Precise Shots expires.
-/// Reuse the native launch snapshot rather than letting flight lose its modifier.
+/// SimC76f8118 sc_hunter.cpp3640–3647/5337/5596: Precise Shots and
+/// Bulletstorm empower the launched shot before their uses are consumed.
 pub(super) fn snapshots_modifier(id: u32) -> bool {
-    RULES
-        .iter()
-        .any(|rule| matches!(rule.operation, Operation::Consume { aura, .. } if aura == id))
+    RULES.iter().any(|rule| {
+        matches!(rule.operation,
+            Operation::Consume { aura, .. } | Operation::Decrement { aura, .. } if aura == id)
+    })
 }
 
 fn used_modifier(spell: &SpellInfo, aura: u32) -> bool {
