@@ -61,7 +61,6 @@ pub(crate) fn program() -> Result<Program, String> {
         // INFERRED_WCL: lowest slot that still spends retail's ~99% of procs; see preservation-merithra-policy.md.
         ("default", "reversion,if=merithra.active"),
         ("default", "emerald_blossom,if=party.injured>=2"),
-        ("default", "living_flame,if=target.health.pct<95"),
         // INFERRED_WCL: first-cast delay median 26.862 seconds; see preservation-fire-breath.md.
         ("hybrid", "fire_breath,empower_to=1,if=time>=26.862"),
         ("damage", "disintegrate"),
@@ -202,9 +201,6 @@ impl Preservation {
                 .select("default", &facts, &prepared, &self.equipment)?
         {
             self.driver.execute(world, healer, action, execution)?;
-            return Ok(());
-        }
-        if injured != 0 {
             return Ok(());
         }
         let Some(&enemy) = enemies.first() else {
