@@ -1,5 +1,16 @@
 # DPS parity status
 
+## Survival Hunter regression remeasure — 2026-11-03
+
+Candidate `009be6614a` restores follower target admission at melee reach. The frozen campaign database, profile and active traits were measured for 300 seconds with seeds `70448,1–9`. SimC `76f8118` references match the landed-master table below.
+
+| Targets | Native DPS | SimC DPS | Ratio | Flag |
+|---|---:|---:|---:|---|
+| 1T | 193,478 | 198,514 | 0.9746 | in |
+| 3T | 302,511 | 318,630 | 0.9494 | **OUT** |
+
+The 3T point estimate is 0.06 percentage points below the 0.95 boundary. These are candidate measurements, not a landed-master result; the twenty per-seed fact-error ledgers are empty. First-parent merge `ece982f11d` caused the regression; the integration campaign measured 95,214 and 139,683 DPS respectively. The 1T fix is on master; the 3T follow-up was submitted to the train as `edc15f71c9`. Evidence: `game-engine/data/diagnostics/survival-255-2026-11-03/final-009be661/`.
+
 ## Feral Druid remeasure — 2026-11-03
 
 The native follower used the frozen campaign database and ten seeds `70448,1–9` for 300 seconds. The SimC `76f8118` references and confidence-interval method match the landed-master table below.
