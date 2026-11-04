@@ -80,6 +80,7 @@ pub(super) fn prepare_application(
         1241866 => accumulate_glistening_radiance(world, target, new),
         77535 => accumulate_blood_shield(world, target, new),
         1265857 => accumulate_revel_in_pain(world, target, new),
+        209388 => accumulate_bulwark_of_order(world, target, new),
         372505 | 47753 => accumulate_capped_absorb(world, target, new),
         SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
         SHIELD_OF_THE_RIGHTEOUS => {
@@ -498,6 +499,25 @@ fn accumulate_blood_shield(world: &World, target: Entity, new: &mut AuraInstance
     if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
         shield.absorb_remaining =
             (shield.absorb_remaining + previous).min(max_health * cap_percent / 100.0);
+    }
+}
+
+/// DB2 70448 209389 effect1 caps cumulative Bulwark of Order at its authored HP percentage.
+fn accumulate_bulwark_of_order(world: &World, target: Entity, new: &mut AuraInstance) {
+    let percent = crate::spell_cast::scripts::script_effect_value(world, new.caster, 209389, 1);
+    let maximum = world
+        .get::<Health>(target)
+        .expect("living Bulwark of Order target")
+        .max;
+    let remaining = previous(world, target, new).map_or(0.0, |old| {
+        old.effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .map_or(0.0, |effect| effect.absorb_remaining)
+    });
+    if let Some(shield) = new.effects.iter_mut().find(|effect| effect.index == 0) {
+        shield.absorb_remaining =
+            (shield.absorb_remaining + remaining).min(maximum * percent / 100.0);
     }
 }
 

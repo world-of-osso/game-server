@@ -248,6 +248,101 @@ fn first_in_last_out_infernal_strike_grants_then_linearly_decays_and_expires() {
 }
 
 #[test]
+#[ignore = "requires native Paladin Bulwark of Order data"]
+fn bulwark_of_order_earns_owned_shield_from_avengers_damage_with_carry_and_cap() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents, harness};
+    fn impact(h: &mut Harness, spell_id: u32, amount: f32) -> f32 {
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell_id)
+            .unwrap()
+            .clone();
+        let ctx = crate::spell_cast::effects::EffectCtx {
+            caster: h.caster,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        let cursor = h.app.world().resource::<ObservedCombatEvents>().0.len();
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &ctx,
+            h.npc,
+            amount,
+            false,
+            false,
+        );
+        h.app.world().resource::<ObservedCombatEvents>().0[cursor..]
+            .iter()
+            .find(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(spell_id))
+            .unwrap()
+            .amount as f32
+    }
+    fn drain(h: &mut Harness) -> f32 {
+        crate::auras::absorb_damage(h.app.world_mut(), h.caster, Some(h.npc), 1, 1_000_000.0).1
+    }
+    let mut h = harness(Vec::new(), &[31935, 20271, 209389, 209388], 2).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::ActiveSpec(66));
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 100_000.0,
+        max: 200_000.0,
+    };
+    *h.app.world_mut().get_mut::<Health>(h.npc).unwrap() = Health {
+        current: 100_000_000.0,
+        max: 100_000_000.0,
+    };
+    impact(&mut h, 31935, 10_000.0);
+    assert_eq!(
+        drain(&mut h),
+        0.0,
+        "unselected Bulwark of Order must not shield"
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: h.caster,
+            spell_id: 209389,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    let first = impact(&mut h, 31935, 10_000.0);
+    let absorbed = crate::combat::replay_post_mitigation_hit(
+        h.app.world_mut(),
+        h.npc,
+        h.caster,
+        None,
+        1,
+        false,
+        false,
+        500.0,
+    )
+    .unwrap();
+    assert_eq!(absorbed.absorbed_hp, 500.0);
+    let second = impact(&mut h, 31935, 20_000.0);
+    assert!(
+        (drain(&mut h) - ((first + second) * 0.75 - 500.0)).abs() <= 2.0,
+        "native 209389 effect0 grants 75% of dealt damage and retains unspent shield"
+    );
+    impact(&mut h, 20271, 10_000.0);
+    assert_eq!(drain(&mut h), 0.0, "Judgment is not Avenger's Shield");
+    impact(&mut h, 31935, 1_000_000.0);
+    assert!(
+        (drain(&mut h) - 100_000.0).abs() <= 2.0,
+        "native effect1 caps at 50% max health"
+    );
+}
+
+#[test]
 #[ignore = "requires native Golden Hour, Echo, and Reversion spell data"]
 fn golden_hour_echo_heals_echo_holder_at_echo_percentage() {
     use crate::auras::{AuraApplication, AuraSource};

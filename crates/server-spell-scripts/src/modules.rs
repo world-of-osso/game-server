@@ -430,6 +430,7 @@ register_modules! {
     skyfury: (1002, "modules/skyfury.rs"),
     protection_fueled: (732, "modules/protection_fueled.rs"),
     protection_indomitable: (1006, "modules/protection_indomitable.rs"),
+    protection_bulwark_of_order: (1007, "modules/protection_bulwark_of_order.rs"),
     protection_fray: (1004, "modules/protection_fray.rs"),
     protection_outburst: (733, "modules/protection_outburst.rs"),
     protection_devastating_focus: (9807, "modules/protection_devastating_focus.rs"),
