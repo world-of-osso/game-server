@@ -34,6 +34,54 @@ fn opening_wcl_form_is_removed_at_recorded_time() {
 }
 
 #[test]
+#[ignore = "requires native Ghost Wolf spell data"]
+fn recorded_removal_preserves_a_natively_refreshed_opening_aura() {
+    use crate::auras::{AuraApplication, AuraSource};
+    use crate::spell_cast::test_harness::{ObservedCombatEvents, harness};
+    let mut h = harness(Vec::new(), &[2645], 7).unwrap();
+    h.app.init_resource::<ObservedCombatEvents>();
+    let actor = h.caster;
+    let trace: super::healer_wcl_trace::Trace = serde_json::from_str(
+        r#"{"provenance":"test","excluded_self":0,"party_specs":[264,264,264,264,264],
+        "actor_slots":{"46":0},"bloodlust":[],"hits":[],
+        "opening_auras":[{"source_actor":46,"target_actor":46,"spell_id":2645,
+        "stacks":1,"evidence":"first_removebuff","remove_ms":2535}]}"#,
+    )
+    .unwrap();
+    let mut removals = trace
+        .apply_opening_auras(h.app.world_mut(), &[actor; 5])
+        .unwrap();
+    h.advance(1);
+    let cursor = h.app.world().resource::<ObservedCombatEvents>().0.len();
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: actor,
+            target: actor,
+            spell_id: 2645,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(1);
+    let events = &h.app.world().resource::<ObservedCombatEvents>().0[cursor..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == shared::protocol::CombatLogKind::AuraRefreshed)
+    );
+    super::healer_wcl_trace::preserve_refreshed_opening_auras(&mut removals, events);
+    let mut next = 0;
+    super::healer_wcl_trace::remove_due_opening_auras(
+        h.app.world_mut(),
+        &removals,
+        &mut next,
+        2535,
+    );
+    assert!(crate::auras::has_aura(h.app.world(), actor, 2645));
+}
+
+#[test]
 #[ignore = "requires native Merithra spell data"]
 fn opening_wcl_aura_resolves_reversion_to_merithra() {
     use super::dps_parity::literal_rotation::execution::resolve_action;

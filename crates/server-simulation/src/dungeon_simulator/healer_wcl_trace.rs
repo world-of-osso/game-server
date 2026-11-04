@@ -34,8 +34,30 @@ pub(super) struct OpeningAura {
 
 pub(super) struct OpeningRemoval {
     time_ms: u64,
+    source: Entity,
     target: Entity,
+    spell_id: u32,
     instance_id: u32,
+    refreshed: bool,
+}
+
+pub(super) fn preserve_refreshed_opening_auras(
+    removals: &mut [OpeningRemoval],
+    events: &[shared::protocol::CombatLogEvent],
+) {
+    for event in events {
+        if event.kind != shared::protocol::CombatLogKind::AuraRefreshed {
+            continue;
+        }
+        for removal in removals.iter_mut() {
+            if event.source == Some(removal.source.to_bits())
+                && event.target == Some(removal.target.to_bits())
+                && event.spell_id == Some(removal.spell_id)
+            {
+                removal.refreshed = true;
+            }
+        }
+    }
 }
 
 pub(super) fn remove_due_opening_auras(
@@ -45,12 +67,14 @@ pub(super) fn remove_due_opening_auras(
     elapsed_ms: u64,
 ) {
     while let Some(removal) = removals.get(*next).filter(|r| r.time_ms <= elapsed_ms) {
-        crate::auras::remove_instance(
-            world,
-            removal.target,
-            removal.instance_id,
-            crate::auras::RemoveReason::Expired,
-        );
+        if !removal.refreshed {
+            crate::auras::remove_instance(
+                world,
+                removal.target,
+                removal.instance_id,
+                crate::auras::RemoveReason::Expired,
+            );
+        }
         *next += 1;
     }
 }
@@ -115,8 +139,11 @@ impl Trace {
                     .instance_id;
                 removals.push(OpeningRemoval {
                     time_ms,
+                    source,
                     target,
+                    spell_id: aura.spell_id,
                     instance_id,
+                    refreshed: false,
                 });
             }
         }

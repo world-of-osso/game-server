@@ -653,12 +653,17 @@ fn replay_profile(
     let (mut recorder, mut event_cursor) =
         start_recording_at_first_combat(&mut app, tank, healer, source, &slots)?;
     let profile_start = app.world().resource::<bevy::prelude::Time>().elapsed();
-    let opening_removals = if let Some(trace) = &wcl {
+    let mut opening_removals = if let Some(trace) = &wcl {
         trace.apply_opening_auras(app.world_mut(), &slots)?
     } else {
         Vec::new()
     };
     let mut next_opening_removal = 0;
+    let mut opening_event_cursor = app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .len();
     let party_max_hp: Vec<f32> = slots
         .iter()
         .map(|&unit| {
@@ -774,6 +779,15 @@ fn replay_profile(
             source
         };
         if let Some(wcl) = &wcl {
+            let events = &app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            super::healer_wcl_trace::preserve_refreshed_opening_auras(
+                &mut opening_removals[next_opening_removal..],
+                &events[opening_event_cursor..],
+            );
+            opening_event_cursor = events.len();
             super::healer_wcl_trace::remove_due_opening_auras(
                 app.world_mut(),
                 &opening_removals,
