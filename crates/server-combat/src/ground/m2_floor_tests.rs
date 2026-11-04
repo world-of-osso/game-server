@@ -3,6 +3,33 @@ use super::*;
 use los::bake::{adt, m2::M2File};
 
 #[test]
+fn murder_row_routed_follower_stays_on_floor_below_steep_wmo_face() {
+    let data = data_dir();
+    let mut ground = GroundMap::new(&data, HashMap::from([(2813, 6_120_027)]));
+    let map = crate::maps::InMap::continent(2813);
+    let from = shared::components::Position {
+        x: 8880.937,
+        y: 99.68066,
+        z: 4933.7715,
+    };
+    let to = shared::components::Position {
+        x: 8881.321,
+        y: 99.68092,
+        z: 4933.693,
+    };
+    let feet = Vec3::new(to.x, from.y, to.z);
+    let GroundProbe::Supported(creature_height) = ground.creature_ground_in(map, feet) else {
+        panic!("recorded tile (41,15) must contain the steep WMO face");
+    };
+    assert!((creature_height - 100.997284).abs() < 0.05);
+    let height = crate::creature_ai::admitted_route_ground(&mut ground, map, to);
+    assert!(
+        (height - 99.68).abs() < 0.05,
+        "routed step climbed to {height}"
+    );
+}
+
+#[test]
 fn m2_solid_companion_supports_steep_face_above_walkable_floor() {
     let dir = tempfile::tempdir().unwrap();
     let position = Vec3::new(0.0, 13.0, 0.0);

@@ -363,7 +363,18 @@ fn run_ground(probe: GroundProbe, from_y: f32) -> f32 {
     }
 }
 
-/// Resolve a routed follower's support across the navigation agent's footprint.
+/// Keep an admitted route on its walkable surface, not an overhead collision face.
+pub(crate) fn admitted_route_ground(ground: &mut GroundMap, map: InMap, to: Position) -> f32 {
+    let feet = Vec3::new(to.x, to.y, to.z);
+    // Recast's detail surface and collision triangles can differ by a voxel.
+    let tolerance = 2.0 * navigation::CELL_HEIGHT;
+    match ground.ground_in(map, feet) {
+        GroundProbe::Supported(height) if (height - to.y).abs() <= tolerance => height,
+        _ => to.y,
+    }
+}
+
+/// Resolve a follower's support across the navigation agent's footprint.
 pub(crate) fn follower_footprint_ground(
     ground: Option<&mut GroundMap>,
     map: Option<&InMap>,
